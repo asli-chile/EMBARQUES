@@ -1,0 +1,57 @@
+---
+description: Estándares del proyecto EMBARQUES - estructura escalable y código eficiente
+alwaysApply: true
+---
+
+# EMBARQUES - Estándares del Proyecto
+
+## Estructura Escalable
+
+```
+app/          → Rutas, layouts, páginas (App Router)
+components/   → Componentes reutilizables (ui/, layout/, features/)
+lib/          → Utilidades, helpers, config
+types/        → Tipos e interfaces TypeScript
+hooks/        → Custom hooks
+public/       → Assets estáticos
+```
+
+- Un componente por archivo. Extraer sub-componentes cuando superen ~80 líneas.
+- Componentes UI genéricos en `components/ui/`. Componentes específicos en `components/` o colocalizados.
+- Barrel exports (`index.ts`) solo cuando simplifiquen imports significativamente.
+
+## Limpieza Continua (Regla General)
+
+**Objetivo: proyecto profesional.** Siempre limpiar código innecesario, duplicado, obsoleto o basura. No dejar desechos al agregar o modificar código.
+
+## Documentación (Regla General)
+
+**Objetivo: que cualquier persona entienda.** Mantener la documentación ordenada, detallada y actualizada.
+
+- **Orden:** Estructura clara (secciones, listas, tablas). README y docs fáciles de navegar.
+- **Detalle:** Explicar el qué, el para qué y, si aplica, el cómo. Incluir ejemplos cuando ayuden.
+- **Lenguaje:** Combinar palabras simples con tecnicismos; explicar los términos técnicos la primera vez que aparezcan.
+- **Niveles:** Redactar de forma que sea útil tanto para quien no conoce el proyecto como para quien ya trabaja en él.
+
+## Sin Código Basura
+
+- No TODOs, placeholders ni comentarios `// fix later`.
+- No imports no usados. No código comentado que no aporte.
+- No console.log en producción. Usar condicional `if (process.env.NODE_ENV === 'development')`.
+- Eliminar dependencias no usadas del package.json.
+- Eliminar componentes, funciones y archivos muertos.
+- Evitar duplicación: extraer a utilidades/hooks compartidos.
+
+## Eficiencia y Optimización
+
+- Usar `next/image` para imágenes. Especificar `width` y `height` (o `fill`).
+- Lazy load con `dynamic()` cuando un componente no es crítico.
+- Evitar re-renders innecesarios: `React.memo`, `useMemo`, `useCallback` solo cuando hay evidencia de beneficio.
+- Preferir server components por defecto. Client components solo cuando requieran interactividad.
+
+## Código Limpio
+
+- DRY: extraer lógica repetida a funciones/hooks.
+- Early returns para reducir anidación.
+- Nombres descriptivos. Handlers con prefijo `handle`.
+- Tipar con `type` o `interface`. Evitar `any`.
