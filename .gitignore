@@ -12,6 +12,10 @@ node_modules
 
 # Astro
 dist/
+.astro/
+
+# Next.js (si existe residuo)
+.next/
 
 # Production
 /build

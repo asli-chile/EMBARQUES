@@ -54,6 +54,15 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
 3. Configurar las variables `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY`.
 4. Rutas de auth: `/auth/login` y `/auth/registro`. Si Supabase no está configurado, el `AuthWidget` usa datos de ejemplo.
 
+### Despliegue en Vercel
+
+1. Conectar el repositorio en [Vercel](https://vercel.com/new).
+2. Vercel detecta Astro automáticamente (build: `astro build`, output: serverless).
+3. **Variables de entorno:** En Vercel → Project → Settings → Environment Variables añadir:
+   - `PUBLIC_SUPABASE_URL` – URL del proyecto Supabase
+   - `PUBLIC_SUPABASE_ANON_KEY` – Clave anon pública de Supabase
+4. Deploy. La app quedará disponible en la URL de producción.
+
 ---
 
 ## Rutas y páginas
