@@ -13,6 +13,7 @@
     "@astrojs/node": "^9.0.4",
     "@astrojs/react": "^4.0.7",
     "@astrojs/tailwind": "^6.0.2",
+    "@astrojs/vercel": "^9.0.4",
     "@iconify/react": "^5.0.2",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
@@ -31,5 +32,5 @@
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "npm@10"
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "yarn install",
+  "installCommand": "npm ci",
   "buildCommand": "astro build",
   "framework": "astro"
 }
