@@ -1,0 +1,13 @@
+---
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import { AuthFormWrapper } from "@/components/auth/AuthFormWrapper";
+import { LoginForm } from "@/components/auth/LoginForm";
+
+const registered = Astro.url.searchParams.get("registered") === "true";
+---
+
+<AuthLayout title="Iniciar sesión - EMBARQUES">
+  <AuthFormWrapper client:load>
+    <LoginForm client:load registered={registered} />
+  </AuthFormWrapper>
+</AuthLayout>

@@ -1,0 +1,11 @@
+---
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import { AuthFormWrapper } from "@/components/auth/AuthFormWrapper";
+import { RegistroForm } from "@/components/auth/RegistroForm";
+---
+
+<AuthLayout title="Crear cuenta - EMBARQUES">
+  <AuthFormWrapper client:load>
+    <RegistroForm client:load />
+  </AuthFormWrapper>
+</AuthLayout>

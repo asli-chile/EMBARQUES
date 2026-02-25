@@ -1,0 +1,39 @@
+---
+import { brand } from "@/lib/brand";
+import "@/styles/globals.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = "ASLI - Plataforma de Gestión Logística Integral", description = "Administra embarques, clientes, transporte y documentación en una sola solución." } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      type="module"
+      src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
+    ></script>
+    <title>{title}</title>
+  </head>
+  <body
+    class="font-sans antialiased text-brand-blue bg-neutral-50"
+    style="--font-open-sans: 'Open Sans', system-ui, sans-serif"
+  >
+    <div class="min-h-screen flex flex-col">
+      <slot />
+    </div>
+  </body>
+</html>

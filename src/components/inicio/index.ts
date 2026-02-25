@@ -1,0 +1,1 @@
+export { InicioContent } from "./InicioContent";
