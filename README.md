@@ -22,26 +22,48 @@ Aplicación web para Asesorias y Servicios Logisticos Integrales Ltda. Gestión 
 
 | Tecnología | Versión | Descripción |
 |------------|---------|-------------|
-| **Next.js** | 16 | Framework React con **App Router** (sistema de rutas basado en carpetas) |
-| **React** | 19 | Biblioteca para interfaces de usuario |
+| **Astro** | 5 | Framework base para páginas (SSR, cero JS por defecto) |
+| **React** | 19 | Componentes interactivos (AuthWidget, Sidebar, formularios) |
 | **TypeScript** | 5 | Lenguaje con tipos estáticos |
 | **TailwindCSS** | 3 | Estilos con clases utilitarias |
-| **Iconify** | 6 | Iconos (usamos el set **Typicons**) |
+| **Supabase** | - | Backend: base de datos y autenticación (email/contraseña) |
+| **Iconify** | 5 | Iconos (usamos el set **Typicons**) |
+| **Yarn** | 4 (PnP) | Gestor de paquetes con Plug'n'Play |
 
 ---
 
 ## Inicio rápido
 
 ```bash
+# Opción A: Yarn 4 con PnP (recomendado)
+corepack enable   # Habilitar una vez (puede requerir permisos de administrador)
+yarn install
+yarn dev
+
+# Opción B: npm
 npm install
-npm run dev
+npx astro dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000). La raíz redirige automáticamente a `/inicio`.
+Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automáticamente a `/inicio`.
+
+### Autenticación (Supabase)
+
+1. Copiar `.env.example` a `.env`.
+2. Crear un proyecto en [Supabase](https://supabase.com) y obtener la URL y la clave anon.
+3. Configurar las variables `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY`.
+4. Rutas de auth: `/auth/login` y `/auth/registro`. Si Supabase no está configurado, el `AuthWidget` usa datos de ejemplo.
 
 ---
 
 ## Rutas y páginas
+
+### Autenticación
+
+| Ruta | Descripción |
+|------|-------------|
+| `/auth/login` | Iniciar sesión |
+| `/auth/registro` | Crear cuenta |
 
 ### Navegación pública (barra superior gris)
 
@@ -70,32 +92,32 @@ Abrir [http://localhost:3000](http://localhost:3000). La raíz redirige automát
 
 ```
 embarques/
-├── app/                    → Rutas y páginas (App Router)
-│   ├── layout.tsx          → Layout raíz (fuente, metadata)
-│   ├── page.tsx            → Redirige a /inicio
-│   ├── globals.css         → Estilos globales
-│   ├── inicio/
-│   ├── servicios/
-│   ├── sobre-nosotros/
-│   ├── tracking/
-│   ├── itinerario/
-│   ├── dashboard/
-│   ├── registros/
-│   ├── reservas/
-│   ├── transportes/
-│   ├── documentos/
-│   └── configuracion/
-├── components/
-│   ├── layout/             → Header, Sidebar, NavBanner, AppShell
-│   └── ui/                 → AuthIcon, AuthModal, AuthWidget
-├── lib/
-│   ├── site.ts             → Configuración del sitio
-│   └── i18n/               → Internacionalización (ES/EN)
-│       ├── translations.ts → Textos traducidos
-│       ├── LocaleContext.tsx
-│       └── index.ts
+├── src/
+│   ├── pages/              → Rutas (file-based routing)
+│   │   ├── index.astro     → Redirige a /inicio
+│   │   ├── inicio.astro
+│   │   ├── auth/login.astro
+│   │   ├── auth/registro.astro
+│   │   ├── reservas/
+│   │   ├── transportes/
+│   │   ├── documentos/
+│   │   └── configuracion/
+│   ├── layouts/            → BaseLayout, AuthLayout
+│   ├── components/
+│   │   ├── layout/         → Header, Sidebar, NavBanner, AppShell
+│   │   ├── ui/             → AuthIcon, AuthModal, AuthWidget
+│   │   └── auth/           → LoginForm, RegistroForm, AuthFormWrapper
+│   ├── lib/
+│   │   ├── brand.ts
+│   │   ├── site.ts
+│   │   ├── supabase/       → Cliente Supabase (browser, server)
+│   │   └── i18n/
+│   └── styles/
+│       └── globals.css
 ├── public/                 → Assets estáticos (logo, imágenes)
-└── docs/                   → Documentación técnica
+├── astro.config.mjs
+├── .yarnrc.yml             → Yarn PnP
+└── docs/
 ```
 
 ---
@@ -116,9 +138,9 @@ embarques/
 
 | Componente | Descripción |
 |------------|-------------|
-| **AuthWidget** | Botón que abre el modal de perfil de usuario. |
+| **AuthWidget** | Si no hay sesión: enlace "Iniciar sesión" a `/auth/login`. Si hay sesión: botón que abre el modal de perfil. Integrado con Supabase Auth. |
 | **AuthIcon** | Icono de auth (por defecto llave). Usa Iconify Typicons. |
-| **AuthModal** | Modal con datos del usuario (nombre, email, nivel). |
+| **AuthModal** | Modal con datos del usuario (nombre, email, nivel) y botón "Cerrar sesión". |
 
 ---
 
@@ -158,13 +180,16 @@ Opciones válidas para `authIcon`:
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run dev` | Servidor de desarrollo (Turbopack) |
-| `npm run build` | Build de producción |
-| `npm run start` | Servidor de producción (tras `build`) |
-| `npm run lint` | Ejecutar ESLint |
+| `yarn dev` | Servidor de desarrollo (puerto 4321) |
+| `yarn build` | Build de producción (SSR) |
+| `yarn preview` | Vista previa del build |
+| `yarn lint` | Ejecutar ESLint |
 
 ---
 
 ## Documentación técnica
 
-Para más detalle sobre arquitectura, flujos de datos y decisiones técnicas, ver [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md).
+| Documento | Descripción |
+|-----------|-------------|
+| [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md) | Arquitectura, flujos de datos y decisiones técnicas |
+| [docs/ESTILOS-VISUALES.md](docs/ESTILOS-VISUALES.md) | Estándares visuales: colores, tipografía, componentes UI y layout |

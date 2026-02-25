@@ -55,3 +55,15 @@ public/       → Assets estáticos
 - Early returns para reducir anidación.
 - Nombres descriptivos. Handlers con prefijo `handle`.
 - Tipar con `type` o `interface`. Evitar `any`.
+
+## Estilos Visuales (Regla General)
+
+**Objetivo: mantener un estándar visual coherente.** Estilo **cuadrado tipo Windows** + **animaciones tipo Mac**. Consultar [docs/ESTILOS-VISUALES.md](../docs/ESTILOS-VISUALES.md).
+
+- Formas: bordes rectos o `rounded`/`rounded-sm`; evitar radios muy grandes.
+- Animaciones: fluidas, `transition-colors`, `cubic-bezier` o `ease-out`.
+- Usar `brand-blue` para elementos primarios (títulos, links, botones).
+- Usar escala `neutral` para fondos, bordes y texto secundario.
+- Formularios: `rounded-lg`, `px-4 py-2.5`, `border-neutral-200`, focus ring `brand-blue/30`.
+- Modales y cards destacadas: `rounded-2xl`, `shadow-mac-modal`, `p-6`.
+- Transiciones: `transition-colors` en elementos interactivos.

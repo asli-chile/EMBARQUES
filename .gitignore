@@ -1,15 +1,17 @@
 # Dependencies
 node_modules
-/.pnp
-.pnp.js
+
+# Yarn
 .yarn/install-state.gz
+.yarn/unplugged
+.yarn/build-state.yml
+.pnp.*.ts
 
 # Testing
 /coverage
 
-# Next.js
-/.next/
-/out/
+# Astro
+dist/
 
 # Production
 /build
