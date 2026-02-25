@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { AuthIcon } from "./AuthIcon";
 import { AuthModal, type AuthUser } from "./AuthModal";
-import { createClient } from "@/lib/supabase/client";
 import { siteConfig } from "@/lib/site";
 import { useLocale } from "@/lib/i18n";
 
@@ -24,31 +23,39 @@ export function AuthWidget() {
 
   useEffect(() => {
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl) {
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
       setUser(toAuthUser(siteConfig.user.email, { full_name: siteConfig.user.name }));
       setIsLoading(false);
       return;
     }
 
-    const supabase = createClient();
+    let unsub: (() => void) | undefined;
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      const supabase = createClient();
 
-    const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(toAuthUser(session.user.email ?? "", session.user.user_metadata));
-      } else {
-        setUser(null);
-      }
-      setIsLoading(false);
-    };
+      const initSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(toAuthUser(session.user.email ?? "", session.user.user_metadata));
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+      };
 
-    initSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       initSession();
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+        initSession();
+      });
+      unsub = () => subscription.unsubscribe();
+    }).catch(() => {
+      setUser(toAuthUser(siteConfig.user.email, { full_name: siteConfig.user.name }));
+      setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsub?.();
   }, []);
 
   if (isLoading) {

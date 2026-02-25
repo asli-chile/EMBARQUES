@@ -16,6 +16,7 @@ const pathname = Astro.url.pathname;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2311224E'/><text x='16' y='22' font-size='14' fill='white' text-anchor='middle' font-family='sans-serif'>E</text></svg>" />
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,7 +31,7 @@ const pathname = Astro.url.pathname;
     ></script>
   </head>
   <body class="h-screen overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
-    <AppShell client:load pathname={pathname}>
+    <AppShell client:only="react" pathname={pathname}>
       <slot />
     </AppShell>
   </body>
