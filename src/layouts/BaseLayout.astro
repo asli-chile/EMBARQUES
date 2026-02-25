@@ -24,14 +24,6 @@ const pathname = Astro.url.pathname;
       rel="stylesheet"
     />
     <title>{title}</title>
-    <script is:inline>
-      try {
-        var s = localStorage.getItem("embarques-sidebar-open");
-        window.__SIDEBAR_OPEN__ = s !== null ? s === "true" : true;
-      } catch (e) {
-        window.__SIDEBAR_OPEN__ = true;
-      }
-    </script>
     <script
       type="module"
       src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"

@@ -8,14 +8,22 @@ const AUTO_COLLAPSE_MS = 10000;
 const HOVER_OPEN_DELAY_MS = 200;
 const STORAGE_KEY = "embarques-sidebar-open";
 
-function getInitialOpenState(): boolean {
-  if (typeof window === "undefined") return false;
-  return (window as unknown as { __SIDEBAR_OPEN__?: boolean }).__SIDEBAR_OPEN__ ?? true;
-}
-
 export function Sidebar() {
   const { t } = useLocale();
-  const [isOpen, setIsOpen] = useState(getInitialOpenState);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored !== null) {
+        setIsOpen(stored === "true");
+      } else {
+        setIsOpen(true);
+      }
+    } catch {
+      setIsOpen(true);
+    }
+  }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
