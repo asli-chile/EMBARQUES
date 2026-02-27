@@ -13,7 +13,6 @@ export const siteConfig = {
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
     { labelKey: "registros", id: "registros", href: "/registros" },
-    { labelKey: "cliente", id: "cliente", href: "/cliente" },
     { labelKey: "reportes", id: "reportes", href: "/reportes" },
     { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
     {

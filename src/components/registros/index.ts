@@ -1,0 +1,1 @@
+export { RegistrosContent } from "./RegistrosContent";

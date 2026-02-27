@@ -1,7 +1,9 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
 import { Sidebar } from "./Sidebar";
+import { ClientesContent } from "@/components/clientes";
 import { InicioContent } from "@/components/inicio";
+import { RegistrosContent } from "@/components/registros";
 import { LocaleProvider } from "@/lib/i18n";
 
 type AppShellProps = {
@@ -15,12 +17,27 @@ export function AppShell({ children, pathname }: AppShellProps) {
   if (isAuthRoute) {
     return (
       <LocaleProvider>
-        <div className="min-h-screen flex flex-col">{children}</div>
+        <div className="h-screen flex flex-col overflow-hidden">
+          <Header />
+          <NavBanner pathname={pathname} />
+          <main className="flex-1 min-h-0 overflow-auto bg-brand-blue p-4 flex flex-col items-center justify-center">
+            {children}
+          </main>
+        </div>
       </LocaleProvider>
     );
   }
 
-  const mainContent = pathname === "/inicio" ? <InicioContent /> : children;
+  const mainContent =
+    pathname === "/inicio" ? (
+      <InicioContent />
+    ) : pathname === "/registros" ? (
+      <RegistrosContent />
+    ) : pathname === "/configuracion/clientes" ? (
+      <ClientesContent />
+    ) : (
+      children
+    );
 
   return (
     <LocaleProvider>

@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import "ag-grid-community/styles/ag-grid.css";
+@import "ag-grid-community/styles/ag-theme-balham.css";
+
+/* Centrar encabezados y celdas del grid */
+.ag-header-cell-centered .ag-header-cell-label {
+  justify-content: center;
+}

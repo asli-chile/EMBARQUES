@@ -20,13 +20,13 @@ const benefitKeys = [
 ] as const;
 
 const quickLinkKeys = [
-  { key: "quickDashboard" as const, href: "/dashboard", icon: "typcn:home" },
-  { key: "quickCreate" as const, href: "/reservas/crear", icon: "typcn:plus" },
-  { key: "quickRecords" as const, href: "/registros", icon: "typcn:folder" },
+  { key: "quickDashboard" as const, href: "/dashboard", icon: "mdi:view-dashboard-outline" },
+  { key: "quickCreate" as const, href: "/reservas/crear", icon: "mdi:plus-circle-outline" },
+  { key: "quickRecords" as const, href: "/registros", icon: "mdi:folder-outline" },
   {
     key: "quickDocument" as const,
     href: "/documentos/mis-documentos",
-    icon: "typcn:document",
+    icon: "mdi:file-document-outline",
   },
 ] as const;
 
@@ -43,7 +43,7 @@ export function InicioContent() {
   return (
     <main className="flex-1 min-h-0 overflow-auto" role="main">
       {/* Hero */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-brand-dark-teal to-brand-blue text-white">
+      <header className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-brand-dark-teal to-brand-blue text-white min-h-full flex flex-col justify-center">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
             className="absolute w-[280%] h-[280%] -left-[90%] -top-[90%] -rotate-45 grid gap-1 opacity-[0.12]"
@@ -62,7 +62,7 @@ export function InicioContent() {
             ))}
           </div>
         </div>
-        <div className="relative max-w-5xl mx-auto px-4 py-12 sm:py-16 lg:py-20">
+        <div className="relative max-w-5xl mx-auto px-4 py-12 sm:py-16 lg:py-20 flex-1 flex flex-col justify-center">
           <div className="flex flex-col items-center text-center">
             <img
               src={brand.logo}
@@ -111,7 +111,7 @@ export function InicioContent() {
             {features.map(({ key, icon }) => (
               <div
                 key={key}
-                className="group p-5 rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-mac-modal hover:border-brand-blue/20 transition-all duration-200"
+                className="group p-5 rounded-lg bg-white border border-neutral-200 shadow-sm hover:shadow-mac-modal hover:border-brand-blue/20 transition-all duration-200"
               >
                 <div className="w-11 h-11 rounded-lg bg-brand-blue/10 flex items-center justify-center mb-3 group-hover:bg-brand-blue/15 transition-colors">
                   <Icon
@@ -136,26 +136,26 @@ export function InicioContent() {
           <h2 className="text-xl sm:text-2xl font-bold text-brand-blue tracking-tight text-center mb-10">
             {t.inicio.benefitsTitle}
           </h2>
-          <ul className="space-y-3 max-w-2xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {benefitKeys.map((key) => (
-              <li
+              <div
                 key={key}
-                className="flex items-center gap-3 p-4 rounded-xl bg-white border border-neutral-200 shadow-sm"
+                className="group flex items-start gap-4 p-5 rounded-lg bg-white border border-neutral-200 shadow-sm hover:shadow-mac-modal hover:border-brand-olive/30 transition-all duration-200"
               >
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-olive/20 flex items-center justify-center">
+                <span className="flex-shrink-0 w-11 h-11 rounded-lg bg-brand-olive/15 flex items-center justify-center group-hover:bg-brand-olive/25 transition-colors">
                   <Icon
                     icon="typcn:tick"
                     className="text-brand-olive"
-                    width={16}
-                    height={16}
+                    width={24}
+                    height={24}
                   />
                 </span>
-                <span className="text-sm font-medium text-neutral-800">
+                <p className="text-sm font-medium text-neutral-800 pt-1.5">
                   {t.inicio[key]}
-                </span>
-              </li>
+                </p>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       </section>
 
@@ -170,10 +170,10 @@ export function InicioContent() {
               <a
                 key={key}
                 href={href}
-                className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-brand-blue/5 border border-brand-blue/10 hover:bg-brand-blue/10 hover:border-brand-blue/20 transition-all duration-200 group"
+                className="group flex flex-col items-center gap-4 p-6 rounded-lg bg-white border border-neutral-200 shadow-sm hover:shadow-mac-modal hover:border-brand-blue/30 transition-all duration-200"
               >
-                <div className="w-12 h-12 rounded-xl bg-brand-blue flex items-center justify-center text-white group-hover:scale-105 transition-transform">
-                  <Icon icon={icon} width={24} height={24} />
+                <div className="w-14 h-14 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue border border-brand-blue/10 group-hover:bg-brand-blue/15 group-hover:border-brand-blue/20 group-hover:scale-105 transition-all duration-200">
+                  <Icon icon={icon} width={28} height={28} />
                 </div>
                 <span className="text-sm font-semibold text-brand-blue text-center">
                   {t.inicio[key]}
@@ -194,7 +194,7 @@ export function InicioContent() {
             {kpiKeys.map(({ key, value, icon }) => (
               <div
                 key={key}
-                className="p-5 rounded-2xl bg-white border border-neutral-200 shadow-sm"
+                className="p-5 rounded-lg bg-white border border-neutral-200 shadow-sm"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Icon

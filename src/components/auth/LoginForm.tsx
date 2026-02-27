@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
+import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
+import { formStyles } from "@/lib/form-styles";
 
 type LoginFormProps = {
   registered?: boolean;
@@ -38,7 +40,15 @@ export function LoginForm({ registered = false }: LoginFormProps) {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-mac-modal p-6 border border-black/5">
+    <div className={formStyles.card}>
+      <a
+        href="/inicio"
+        className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
+        aria-label={t.auth.backToHome}
+      >
+        <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
+        {t.auth.backToHome}
+      </a>
       <h1 className="text-xl font-semibold text-brand-blue tracking-tight mb-1">
         {t.auth.loginTitle}
       </h1>
@@ -47,65 +57,54 @@ export function LoginForm({ registered = false }: LoginFormProps) {
       </p>
 
       {registered && (
-        <div
-          className="mb-4 p-3 rounded-lg bg-emerald-50 text-emerald-800 text-sm"
-          role="status"
-        >
+        <div className={formStyles.successMessage} role="status">
           {t.auth.registeredSuccess}
         </div>
       )}
 
       {error && (
-        <div
-          className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm"
-          role="alert"
-        >
+        <div className={formStyles.errorMessage} role="alert">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <div>
-          <label
-            htmlFor="email"
-            className="block text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+          <label htmlFor="login-email" className={formStyles.label}>
             {t.auth.email}
           </label>
           <input
-            id="email"
+            id="login-email"
             name="email"
             type="email"
             autoComplete="email"
             required
             disabled={isPending}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className={formStyles.input}
             placeholder="correo@ejemplo.com"
           />
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+          <label htmlFor="login-password" className={formStyles.label}>
             {t.auth.password}
           </label>
           <input
-            id="password"
+            id="login-password"
             name="password"
             type="password"
             autoComplete="current-password"
             required
             disabled={isPending}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className={formStyles.input}
           />
         </div>
 
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-3 px-4 rounded-lg bg-brand-blue text-white font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          aria-busy={isPending}
+          className={formStyles.submitButton}
         >
           {isPending ? t.auth.loggingIn : t.auth.login}
         </button>

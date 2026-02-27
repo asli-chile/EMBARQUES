@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
+import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
+import { formStyles } from "@/lib/form-styles";
 
 export function RegistroForm() {
   const { t } = useLocale();
@@ -34,7 +36,15 @@ export function RegistroForm() {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-mac-modal p-6 border border-black/5">
+    <div className={formStyles.card}>
+      <a
+        href="/inicio"
+        className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
+        aria-label={t.auth.backToHome}
+      >
+        <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
+        {t.auth.backToHome}
+      </a>
       <h1 className="text-xl font-semibold text-brand-blue tracking-tight mb-1">
         {t.auth.signUpTitle}
       </h1>
@@ -43,68 +53,56 @@ export function RegistroForm() {
       </p>
 
       {error && (
-        <div
-          className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm"
-          role="alert"
-        >
+        <div className={formStyles.errorMessage} role="alert">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <div>
-          <label
-            htmlFor="name"
-            className="block text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+          <label htmlFor="reg-name" className={formStyles.label}>
             {t.auth.name}
           </label>
           <input
-            id="name"
+            id="reg-name"
             name="name"
             type="text"
             autoComplete="name"
             disabled={isPending}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className={formStyles.input}
             placeholder="Tu nombre"
           />
         </div>
 
         <div>
-          <label
-            htmlFor="email"
-            className="block text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+          <label htmlFor="reg-email" className={formStyles.label}>
             {t.auth.email}
           </label>
           <input
-            id="email"
+            id="reg-email"
             name="email"
             type="email"
             autoComplete="email"
             required
             disabled={isPending}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className={formStyles.input}
             placeholder="correo@ejemplo.com"
           />
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+          <label htmlFor="reg-password" className={formStyles.label}>
             {t.auth.password}
           </label>
           <input
-            id="password"
+            id="reg-password"
             name="password"
             type="password"
             autoComplete="new-password"
             required
             minLength={6}
             disabled={isPending}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className={formStyles.input}
             placeholder="Mínimo 6 caracteres"
           />
         </div>
@@ -112,7 +110,8 @@ export function RegistroForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-3 px-4 rounded-lg bg-brand-blue text-white font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          aria-busy={isPending}
+          className={formStyles.submitButton}
         >
           {isPending ? t.auth.creatingAccount : t.auth.signUp}
         </button>
