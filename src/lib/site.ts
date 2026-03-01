@@ -13,14 +13,13 @@ export const siteConfig = {
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
     { labelKey: "registros", id: "registros", href: "/registros" },
-    { labelKey: "reportes", id: "reportes", href: "/reportes" },
-    { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
     {
       labelKey: "reservas",
       id: "reservas",
       children: [
         { labelKey: "crearReserva", id: "crear-reserva", href: "/reservas/crear" },
         { labelKey: "misReservas", id: "mis-reservas", href: "/reservas/mis-reservas" },
+        { labelKey: "papelera", id: "papelera", href: "/reservas/papelera" },
       ],
     },
     {
@@ -41,6 +40,8 @@ export const siteConfig = {
         { labelKey: "crearProforma", id: "crear-proforma", href: "/documentos/crear-proforma" },
       ],
     },
+    { labelKey: "reportes", id: "reportes", href: "/reportes" },
+    { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
     {
       labelKey: "configuracion",
       id: "configuracion",

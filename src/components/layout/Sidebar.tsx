@@ -4,13 +4,14 @@ import { useLocale } from "@/lib/i18n";
 import { layout } from "@/lib/brand";
 import { siteConfig } from "@/lib/site";
 
-const AUTO_COLLAPSE_MS = 10000;
+const AUTO_COLLAPSE_MS = 2000;
 const HOVER_OPEN_DELAY_MS = 200;
 const STORAGE_KEY = "embarques-sidebar-open";
 
 export function Sidebar() {
   const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMouseInside, setIsMouseInside] = useState(false);
 
   useEffect(() => {
     try {
@@ -45,7 +46,16 @@ export function Sidebar() {
     }
   }, []);
 
+  const startCollapseTimer = useCallback(() => {
+    clearCollapseTimer();
+    collapseTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+      collapseTimerRef.current = null;
+    }, AUTO_COLLAPSE_MS);
+  }, [clearCollapseTimer]);
+
   const handleMouseEnter = useCallback(() => {
+    setIsMouseInside(true);
     clearCollapseTimer();
     if (!isOpen) {
       clearOpenTimer();
@@ -56,15 +66,18 @@ export function Sidebar() {
     }
   }, [clearCollapseTimer, clearOpenTimer, isOpen]);
 
-  const handleMouseLeave = useCallback(() => {
+  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
+    const relatedTarget = e.relatedTarget;
+    const isStillInside = relatedTarget instanceof Node && sidebarRef.current?.contains(relatedTarget);
+    
+    if (isStillInside) return;
+    
+    setIsMouseInside(false);
     clearOpenTimer();
-    if (!isOpen) return;
-    clearCollapseTimer();
-    collapseTimerRef.current = setTimeout(() => {
-      setIsOpen(false);
-      collapseTimerRef.current = null;
-    }, AUTO_COLLAPSE_MS);
-  }, [isOpen, clearCollapseTimer, clearOpenTimer]);
+    if (isOpen) {
+      startCollapseTimer();
+    }
+  }, [isOpen, clearOpenTimer, startCollapseTimer]);
 
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
@@ -100,6 +113,12 @@ export function Sidebar() {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [handleClickOutside]);
+
+  useEffect(() => {
+    if (isMouseInside) {
+      clearCollapseTimer();
+    }
+  }, [isMouseInside, clearCollapseTimer]);
 
   const handleItemClick = (id: string, hasChildren: boolean) => {
     if (hasChildren) {
@@ -184,8 +203,6 @@ export function Sidebar() {
       <button
         type="button"
         onClick={handleToggle}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         className={`flex-shrink-0 flex items-center justify-center h-14 w-7 ${layout.sidebar.bg} text-white hover:bg-neutral-500 transition-colors self-center`}
         aria-label={isOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
       >

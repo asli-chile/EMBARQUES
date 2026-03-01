@@ -1,0 +1,1 @@
+export { SobreNosotrosContent } from "./SobreNosotrosContent";

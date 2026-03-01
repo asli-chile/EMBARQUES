@@ -1,7 +1,8 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { SobreNosotrosContent } from "@/components/sobre-nosotros";
 ---
 
-<BaseLayout>
-  <main class="flex-1 bg-brand-blue min-h-0 overflow-auto" role="main" />
+<BaseLayout title="Sobre Nosotros - EMBARQUES">
+  <SobreNosotrosContent client:load />
 </BaseLayout>
