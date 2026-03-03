@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const missionCards = [
   { key: "proposito" as const, icon: "lucide:target", color: "blue" },
@@ -124,6 +124,7 @@ export function SobreNosotrosContent() {
   const { t } = useLocale();
   const tr = t.sobreNosotrosPage;
   const mainRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
@@ -138,11 +139,30 @@ export function SobreNosotrosContent() {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.currentTime < 0.3) {
+      video.currentTime = 0.5;
+    }
+    if (video.duration - video.currentTime < 0.5) {
+      video.currentTime = 0.5;
+    }
+  }, []);
+
   return (
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative scroll-smooth" role="main">
-      {/* Video de fondo */}
+      {/* Video de fondo con loop fluido */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          onTimeUpdate={handleTimeUpdate}
+          className="absolute inset-0 w-full h-full object-cover"
+        >
           <source src="/BACKGOUND PLANWETA.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
@@ -191,8 +211,8 @@ export function SobreNosotrosContent() {
               </blockquote>
             </div>
             <div className="order-1 lg:order-2">
-              <div className="relative">
-                <div className="aspect-[4/3] bg-black/40 backdrop-blur-md border border-white/20 overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                <div className="relative aspect-[4/3] w-full sm:flex-1 max-w-md bg-black/40 backdrop-blur-md border border-white/20 overflow-hidden">
                   <img
                     src="/images/puerto-contenedores.jpg"
                     alt="Puerto con contenedores"
@@ -201,11 +221,11 @@ export function SobreNosotrosContent() {
                       e.currentTarget.style.display = "none";
                     }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <Icon icon="lucide:ship" className="text-white/20" width={120} height={120} />
                   </div>
                 </div>
-                <div className="absolute -bottom-4 -right-4 w-24 h-24 sm:w-32 sm:h-32 bg-brand-olive/20 border border-brand-olive/40 flex items-center justify-center">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-brand-olive/20 border border-brand-olive/40 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-2xl sm:text-3xl font-bold text-brand-olive">15+</p>
                     <p className="text-[10px] sm:text-xs text-white/60">{tr.yearsExperience}</p>

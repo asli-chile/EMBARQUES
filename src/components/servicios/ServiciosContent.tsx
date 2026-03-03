@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const servicios = [
   {
@@ -76,6 +76,7 @@ export function ServiciosContent() {
   const { t } = useLocale();
   const tr = t.servicios;
   const mainRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
@@ -86,19 +87,32 @@ export function ServiciosContent() {
     return () => mainElement.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.currentTime < 0.3) {
+      video.currentTime = 0.5;
+    }
+    if (video.duration - video.currentTime < 0.5) {
+      video.currentTime = 0.5;
+    }
+  }, []);
+
   const handleScrollToTop = () => {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative scroll-smooth" role="main">
-      {/* Video de fondo */}
+      {/* Video de fondo con loop fluido */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <video
+          ref={videoRef}
           autoPlay
           loop
           muted
           playsInline
+          onTimeUpdate={handleTimeUpdate}
           className="absolute inset-0 w-full h-full object-cover"
         >
           <source src="/BACKGOUND PLANWETA.mp4" type="video/mp4" />

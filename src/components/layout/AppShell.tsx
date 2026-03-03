@@ -71,7 +71,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
         <Header />
         <NavBanner pathname={pathname} />
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <Sidebar />
+          <Sidebar pathname={pathname} />
           {mainContent}
         </div>
       </div>

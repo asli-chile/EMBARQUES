@@ -8,7 +8,11 @@ const AUTO_COLLAPSE_MS = 2000;
 const HOVER_OPEN_DELAY_MS = 200;
 const STORAGE_KEY = "embarques-sidebar-open";
 
-export function Sidebar() {
+type SidebarProps = {
+  pathname: string;
+};
+
+export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [isMouseInside, setIsMouseInside] = useState(false);
@@ -26,6 +30,19 @@ export function Sidebar() {
     }
   }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Auto-expand sección padre cuando pathname coincide con un hijo
+  useEffect(() => {
+    for (const item of siteConfig.sidebarItems) {
+      if ("children" in item && item.children) {
+        const childMatches = item.children.some((c) => c.href && pathname === c.href);
+        if (childMatches) {
+          setExpandedId(item.id);
+          return;
+        }
+      }
+    }
+  }, [pathname]);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -150,21 +167,37 @@ export function Sidebar() {
               const hasChildren = "children" in item && item.children?.length;
               const hasHref = "href" in item && item.href;
               const isExpanded = expandedId === item.id;
+              const isActive = hasHref && pathname === item.href;
+              const isParentActive =
+                hasChildren &&
+                item.children!.some((c) => c.href && pathname === c.href);
 
-              const linkClasses =
-                "flex items-center justify-between w-full text-left text-base text-neutral-200 hover:text-white hover:bg-neutral-500 px-2 py-1.5 rounded transition-colors";
+              const linkBaseClasses =
+                "flex items-center justify-between w-full text-left text-base px-2 py-1.5 rounded transition-colors";
+              const linkClasses = isActive
+                ? `${linkBaseClasses} text-white bg-brand-blue/80`
+                : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-neutral-500`;
+              const buttonClasses = isParentActive
+                ? `${linkBaseClasses} text-white bg-brand-blue/50`
+                : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-neutral-500`;
 
               return (
                 <div key={item.id} className="flex flex-col gap-2">
                   {hasHref ? (
-                    <a href={item.href!} className={linkClasses}>
+                    <a
+                      href={item.href!}
+                      className={linkClasses}
+                      aria-current={isActive ? "page" : undefined}
+                    >
                       {t.sidebar[item.labelKey]}
                     </a>
                   ) : (
                     <button
                       type="button"
                       onClick={() => handleItemClick(item.id, !!hasChildren)}
-                      className={linkClasses}
+                      className={buttonClasses}
+                      aria-expanded={hasChildren ? isExpanded : undefined}
+                      aria-current={isParentActive ? "true" : undefined}
                     >
                       {t.sidebar[item.labelKey]}
                       {hasChildren && (
@@ -183,15 +216,23 @@ export function Sidebar() {
                   )}
                   {hasChildren && isExpanded && (
                     <div className="flex flex-col gap-2 pl-2 ml-0.5 border-l border-neutral-500">
-                      {item.children!.map((child) => (
-                        <a
-                          key={child.id}
-                          href={child.href ?? "#"}
-                          className="text-base text-neutral-300 hover:text-white hover:bg-neutral-500/80 px-2 py-1 rounded transition-colors"
-                        >
-                          {t.sidebar[child.labelKey]}
-                        </a>
-                      ))}
+                      {item.children!.map((child) => {
+                        const childHref = child.href ?? "#";
+                        const isChildActive = pathname === childHref;
+                        const childClasses = isChildActive
+                          ? "text-base text-white bg-brand-blue/80 px-2 py-1 rounded transition-colors"
+                          : "text-base text-neutral-300 hover:text-white hover:bg-neutral-500/80 px-2 py-1 rounded transition-colors";
+                        return (
+                          <a
+                            key={child.id}
+                            href={childHref}
+                            className={childClasses}
+                            aria-current={isChildActive ? "page" : undefined}
+                          >
+                            {t.sidebar[child.labelKey]}
+                          </a>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

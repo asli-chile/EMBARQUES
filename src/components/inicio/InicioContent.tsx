@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand, icons } from "@/lib/brand";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface KpiData {
@@ -77,6 +77,7 @@ const kpiConfig = [
 export function InicioContent() {
   const { t } = useLocale();
   const mainRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [kpiData, setKpiData] = useState<KpiData>({
     operacionesActivas: 0,
@@ -94,6 +95,17 @@ export function InicioContent() {
     return () => mainElement.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleVideoTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.currentTime < 0.3) {
+      video.currentTime = 0.5;
+    }
+    if (video.duration - video.currentTime < 0.5) {
+      video.currentTime = 0.5;
+    }
+  }, []);
+
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
@@ -105,10 +117,12 @@ export function InicioContent() {
         const todayStr = today.toISOString().split("T")[0];
         const nextWeekStr = nextWeek.toISOString().split("T")[0];
 
+        const estadosFinalizados = ["COMPLETADO", "CANCELADO", "ARRIBADO"];
+
         const { data: operaciones, error: opError } = await supabase
           .from("operaciones")
           .select("id, contenedor, etd, estado_operacion")
-          .in("estado_operacion", ["reserva", "en_proceso", "transito"]);
+          .is("deleted_at", null);
 
         if (opError) {
           console.warn("Error fetching operaciones:", opError.message);
@@ -123,7 +137,9 @@ export function InicioContent() {
         }
 
         const ops = operaciones || [];
-        const operacionesActivas = ops.length;
+        const operacionesActivas = ops.filter(
+          (o) => !estadosFinalizados.includes(o.estado_operacion?.toUpperCase() || "")
+        ).length;
         const contenedoresUnicos = new Set(ops.map((o) => o.contenedor).filter(Boolean)).size;
         const proximosEtd = ops.filter((o) => {
           if (!o.etd) return false;
@@ -153,8 +169,16 @@ export function InicioContent() {
 
   return (
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative scroll-smooth" role="main">
-      {/* Video de fondo */}
-      <video autoPlay loop muted playsInline className="fixed inset-0 w-full h-full object-cover -z-10 contrast-[1.1] saturate-[1.2] brightness-[1.05]">
+      {/* Video de fondo con loop fluido */}
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        onTimeUpdate={handleVideoTimeUpdate}
+        className="fixed inset-0 w-full h-full object-cover -z-10 contrast-[1.1] saturate-[1.2] brightness-[1.05]"
+      >
         <source src="/BACKGOUND CONECCIONES.mp4" type="video/mp4" />
       </video>
       <div className="fixed inset-0 bg-[#0a1628]/50 -z-10" />
