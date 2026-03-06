@@ -86,7 +86,6 @@ export function MisDocumentosContent() {
       .order("tipo");
 
     if (fetchError) {
-      console.warn("Tabla documentos no disponible:", fetchError.message);
       setDocumentos([]);
       return;
     }

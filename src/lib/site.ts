@@ -45,9 +45,12 @@ export const siteConfig = {
     {
       labelKey: "configuracion",
       id: "configuracion",
+      superadminOnly: true,
       children: [
         { labelKey: "clientes", id: "clientes", href: "/configuracion/clientes" },
+        { labelKey: "asignarClientesEmpresas", id: "asignar-clientes-empresas", href: "/configuracion/asignar-clientes-empresas" },
         { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
+        { labelKey: "usuarios", id: "usuarios", href: "/configuracion/usuarios" },
       ],
     },
   ],

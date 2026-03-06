@@ -124,17 +124,9 @@ export function InicioContent() {
           .select("id, contenedor, etd, estado_operacion")
           .is("deleted_at", null);
 
-        if (opError) {
-          console.warn("Error fetching operaciones:", opError.message);
-        }
-
         const { count: docCount, error: docError } = await supabase
           .from("documentos")
           .select("id", { count: "exact", head: true });
-
-        if (docError) {
-          console.warn("Error fetching documentos:", docError.message);
-        }
 
         const ops = operaciones || [];
         const operacionesActivas = ops.filter(
@@ -153,8 +145,8 @@ export function InicioContent() {
           proximosEtd,
           documentosPendientes: docCount || 0,
         });
-      } catch (err) {
-        console.warn("Error loading KPI data:", err);
+      } catch {
+        // error cargando KPIs, se mantienen valores por defecto
       } finally {
         setLoadingKpis(false);
       }

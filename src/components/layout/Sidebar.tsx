@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { layout } from "@/lib/brand";
 import { siteConfig } from "@/lib/site";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 const AUTO_COLLAPSE_MS = 2000;
 const HOVER_OPEN_DELAY_MS = 200;
@@ -12,9 +13,18 @@ type SidebarProps = {
   pathname: string;
 };
 
+type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean };
+
 export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
+  const { isSuperadmin } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
+  const visibleItems = useMemo(() => {
+    return (siteConfig.sidebarItems as SidebarItem[]).filter(
+      (item) => !("superadminOnly" in item && item.superadminOnly) || isSuperadmin
+    );
+  }, [isSuperadmin]);
   const [isMouseInside, setIsMouseInside] = useState(false);
 
   useEffect(() => {
@@ -33,7 +43,7 @@ export function Sidebar({ pathname }: SidebarProps) {
 
   // Auto-expand sección padre cuando pathname coincide con un hijo
   useEffect(() => {
-    for (const item of siteConfig.sidebarItems) {
+    for (const item of visibleItems) {
       if ("children" in item && item.children) {
         const childMatches = item.children.some((c) => c.href && pathname === c.href);
         if (childMatches) {
@@ -42,7 +52,7 @@ export function Sidebar({ pathname }: SidebarProps) {
         }
       }
     }
-  }, [pathname]);
+  }, [pathname, visibleItems]);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -163,7 +173,7 @@ export function Sidebar({ pathname }: SidebarProps) {
           aria-label="Menú de módulos"
         >
           <nav className="flex flex-col gap-4">
-            {siteConfig.sidebarItems.map((item) => {
+            {visibleItems.map((item) => {
               const hasChildren = "children" in item && item.children?.length;
               const hasHref = "href" in item && item.href;
               const isExpanded = expandedId === item.id;

@@ -56,6 +56,11 @@ const equipo = [
     imagen: "/team/rocio-villareal.jpg",
   },
   {
+    nombre: "Rodrigo Castillo",
+    cargo: "cargoEjecutivoComercialzonal" as const,
+    imagen: "/team/rodrigo-castillo.jpg",
+  },
+  {
     nombre: "Alex Cárdenas",
     cargo: "cargoTransportes" as const,
     imagen: "/team/alex-cardenas.jpg",
@@ -375,7 +380,7 @@ export function SobreNosotrosContent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
             {equipo.map(({ nombre, cargo, imagen }) => (
               <div
                 key={nombre}

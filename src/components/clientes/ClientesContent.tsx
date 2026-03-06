@@ -3,35 +3,40 @@ import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import type { ColDef } from "ag-grid-community";
 import { Icon } from "@iconify/react";
-import { createClient } from "@/lib/supabase/client";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+const API_CLIENTES = "/api/clientes";
+
 export type ClienteRow = {
   id: string;
-  nombre_cliente: string;
-  contacto: string;
-  usuarios: string;
-  rut_empresa: string;
-  giro: string;
+  nombre: string;
+  empresa_id: string | null;
+  limite_credito: number | null;
+  condicion_pago: string;
+  descuento: number | null;
+  activo: boolean;
 };
 
 type DbCliente = {
   id: string;
-  nombre_cliente: string;
-  contacto: string | null;
-  rut_empresa: string | null;
-  giro: string | null;
+  empresa_id: string | null;
+  limite_credito?: number | null;
+  condicion_pago?: string | null;
+  descuento?: number | null;
+  activo?: boolean | null;
+  empresa_nombre?: string;
 };
 
-function toRow(db: DbCliente): ClienteRow {
+function toRow(db: DbCliente, nombreEmpresa?: string): ClienteRow {
   return {
     id: db.id,
-    nombre_cliente: db.nombre_cliente,
-    contacto: db.contacto ?? "",
-    usuarios: "—",
-    rut_empresa: db.rut_empresa ?? "",
-    giro: db.giro ?? "",
+    nombre: nombreEmpresa ?? db.empresa_nombre ?? "—",
+    empresa_id: db.empresa_id,
+    limite_credito: db.limite_credito ?? null,
+    condicion_pago: db.condicion_pago ?? "",
+    descuento: db.descuento ?? null,
+    activo: db.activo ?? true,
   };
 }
 
@@ -40,31 +45,28 @@ export function ClientesContent() {
   const [rowData, setRowData] = useState<ClienteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const supabase = useMemo(() => {
-    try {
-      return createClient();
-    } catch {
-      return null;
-    }
-  }, []);
+  const [empresas, setEmpresas] = useState<{ id: string; nombre: string }[]>([]);
 
   const fetchClientes = useCallback(async () => {
-    if (!supabase) {
-      setError("Supabase no configurado. Revisa PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY en .env");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
-    const { data, error: err } = await supabase.from("clientes").select("*").order("nombre_cliente");
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      const res = await fetch(API_CLIENTES, { credentials: "include" });
+      const json = (await res.json()) as { clientes?: DbCliente[]; empresas?: { id: string; nombre: string }[]; error?: string };
+      setLoading(false);
+      if (!res.ok) {
+        setError(json.error ?? `Error ${res.status}`);
+        return;
+      }
+      const clientes = (json.clientes ?? []) as DbCliente[];
+      const empresasList = json.empresas ?? [];
+      setEmpresas(empresasList);
+      setRowData(clientes.map((c) => toRow(c)));
+    } catch (e) {
+      setLoading(false);
+      setError(e instanceof Error ? e.message : "Error al cargar clientes");
     }
-    setRowData((data ?? []).map(toRow));
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     void fetchClientes();
@@ -72,22 +74,39 @@ export function ClientesContent() {
 
   const columnDefs = useMemo<ColDef<ClienteRow>[]>(
     () => [
-      { checkboxSelection: true, headerCheckboxSelection: true, width: 48, pinned: "left", suppressMovable: true },
-      { field: "nombre_cliente", headerName: "Nombre de cliente", sortable: true, editable: true, flex: 1, minWidth: 160 },
-      { field: "contacto", headerName: "Contacto", sortable: true, editable: true, flex: 1, minWidth: 140 },
+      { field: "nombre", headerName: "Cliente", sortable: true, editable: false, flex: 1, minWidth: 180 },
       {
-        field: "usuarios",
-        headerName: "Usuario(s)",
-        sortable: false,
-        editable: false,
+        field: "empresa_id",
+        headerName: "Empresa",
+        sortable: true,
+        editable: true,
         flex: 1,
-        minWidth: 120,
-        tooltipValueGetter: () => "Se vinculará cuando exista la tabla usuarios",
+        minWidth: 140,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: { values: ["", ...empresas.map((e) => e.id)] },
+        valueFormatter: (p) => {
+          const name = p.data?.nombre;
+          if (name && name !== "—") return name;
+          if (!p.value) return "—";
+          const found = empresas.find((e) => String(e.id) === String(p.value));
+          return found?.nombre ?? String(p.value);
+        },
       },
-      { field: "rut_empresa", headerName: "RUT empresa", sortable: true, editable: true, flex: 1, minWidth: 120 },
-      { field: "giro", headerName: "Giro", sortable: true, editable: true, flex: 1, minWidth: 120 },
+      { field: "limite_credito", headerName: "Límite crédito", sortable: true, editable: true, width: 120 },
+      { field: "condicion_pago", headerName: "Condición pago", sortable: true, editable: true, flex: 1, minWidth: 120 },
+      { field: "descuento", headerName: "Descuento", sortable: true, editable: true, width: 100 },
+      {
+        field: "activo",
+        headerName: "Activo",
+        sortable: true,
+        editable: true,
+        width: 90,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: { values: [true, false] },
+        valueFormatter: (p) => (p.value ? "Sí" : "No"),
+      },
     ],
-    []
+    [empresas]
   );
 
   const defaultColDef = useMemo<ColDef>(
@@ -101,32 +120,56 @@ export function ClientesContent() {
   );
 
   const handleAddRow = useCallback(async () => {
-    if (!supabase) return;
-    const { data, error: err } = await supabase
-      .from("clientes")
-      .insert({ nombre_cliente: "Nuevo cliente", contacto: "", rut_empresa: "", giro: "" })
-      .select("id,nombre_cliente,contacto,rut_empresa,giro")
-      .single();
-    if (err) {
-      setError(err.message);
-      return;
+    const empresaId = empresas[0]?.id ?? null;
+    try {
+      const res = await fetch(API_CLIENTES, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          empresa_id: empresaId,
+          limite_credito: null,
+          condicion_pago: null,
+          descuento: null,
+          activo: true,
+        }),
+      });
+      const json = (await res.json()) as { data?: DbCliente; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? "Error al agregar");
+        return;
+      }
+      if (json.data) {
+        const d = json.data as DbCliente;
+        const nombre = d.empresa_id ? empresas.find((e) => e.id === d.empresa_id)?.nombre : undefined;
+        gridRef.current?.api?.applyTransaction({ add: [toRow(d, nombre)] });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al agregar");
     }
-    if (data) {
-      gridRef.current?.api?.applyTransaction({ add: [toRow(data as DbCliente)] });
-    }
-  }, [supabase]);
+  }, [empresas]);
 
   const handleRemoveSelected = useCallback(async () => {
     const selected = gridRef.current?.api?.getSelectedRows();
-    if (!selected?.length || !supabase) return;
+    if (!selected?.length) return;
     const ids = selected.map((r) => r.id);
-    const { error: err } = await supabase.from("clientes").delete().in("id", ids);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      const res = await fetch(API_CLIENTES, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ids }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(json.error ?? "Error al eliminar");
+        return;
+      }
+      gridRef.current?.api?.applyTransaction({ remove: selected });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al eliminar");
     }
-    gridRef.current?.api?.applyTransaction({ remove: selected });
-  }, [supabase]);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     void fetchClientes();
@@ -135,14 +178,25 @@ export function ClientesContent() {
   const handleCellValueChanged = useCallback(
     async (e: { data: ClienteRow; colDef: { field?: string }; newValue: unknown; oldValue: unknown }) => {
       const field = e.colDef.field;
-      if (!supabase || !field || field === "usuarios" || e.newValue === e.oldValue) return;
-      const { error: err } = await supabase
-        .from("clientes")
-        .update({ [field]: e.newValue ?? null })
-        .eq("id", e.data.id);
-      if (err) setError(err.message);
+      if (!field || field === "nombre" || e.newValue === e.oldValue) return;
+      if (field === "empresa_id") {
+        const emp = empresas.find((x) => x.id === e.newValue);
+        if (emp) (e.data as ClienteRow).nombre = emp.nombre;
+      }
+      try {
+        const res = await fetch(API_CLIENTES, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id: e.data.id, [field]: e.newValue ?? null }),
+        });
+        const json = (await res.json()) as { error?: string };
+        if (!res.ok) setError(json.error ?? "Error al actualizar");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error al actualizar");
+      }
     },
-    [supabase]
+    [empresas]
   );
 
   if (loading && rowData.length === 0) {
@@ -155,6 +209,12 @@ export function ClientesContent() {
 
   return (
     <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100 relative z-10" role="main">
+      <header className="flex-shrink-0 px-4 py-3 bg-white border-b border-neutral-200">
+        <h1 className="text-lg font-semibold text-brand-blue">Clientes</h1>
+        <p className="text-sm text-neutral-500 mt-0.5">
+          Empresas cliente con términos comerciales. Asigna usuarios (personas) a cada empresa en Configuración → Usuarios para que varios accedan a los mismos datos.
+        </p>
+      </header>
       {error && (
         <div className="flex-shrink-0 px-4 py-2 bg-brand-red/10 text-brand-red text-sm border-b border-brand-red/20" role="alert">
           {error}
@@ -193,7 +253,7 @@ export function ClientesContent() {
             rowData={rowData}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
-            rowSelection="multiple"
+            rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true }}
             animateRows
             domLayout="normal"
             suppressCellFocus

@@ -11,6 +11,9 @@ export function LoginForm({ registered = false }: LoginFormProps) {
   const { t } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleTogglePassword = () => setShowPassword((p) => !p);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -89,15 +92,28 @@ export function LoginForm({ registered = false }: LoginFormProps) {
           <label htmlFor="login-password" className={formStyles.label}>
             {t.auth.password}
           </label>
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            disabled={isPending}
-            className={formStyles.input}
-          />
+          <div className="relative">
+            <input
+              id="login-password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              disabled={isPending}
+              className={`${formStyles.input} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={handleTogglePassword}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
+              tabIndex={0}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              disabled={isPending}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded transition-colors disabled:opacity-50"
+            >
+              <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={18} height={18} />
+            </button>
+          </div>
         </div>
 
         <button

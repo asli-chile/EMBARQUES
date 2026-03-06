@@ -52,7 +52,23 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
 1. Copiar `.env.example` a `.env`.
 2. Crear un proyecto en [Supabase](https://supabase.com) y obtener la URL y la clave anon.
 3. Configurar las variables `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY`.
-4. Rutas de auth: `/auth/login` y `/auth/registro`. Si Supabase no está configurado, el `AuthWidget` usa datos de ejemplo.
+4. **Opcional (crear cuentas como admin):** Añadir `SUPABASE_SERVICE_ROLE_KEY` (Dashboard → Settings → API → service_role).
+5. Rutas de auth: `/auth/login` y `/auth/registro`. Si Supabase no está configurado, el `AuthWidget` usa datos de ejemplo.
+
+### Roles y control de acceso
+
+- **admin**: Ve todo y puede crear cuentas en Configuración → Usuarios.
+- **ejecutivo / operador / usuario**: Acceso completo a operaciones.
+- **cliente**: Solo ve operaciones de los clientes asignados por el admin.
+
+Para crear cuentas: inicia sesión como admin → Configuración → Usuarios → Crear nueva cuenta.
+
+**Cómo crear tu perfil de admin:**
+1. Ve a `/auth/registro` (o "Solicitar acceso" desde el login).
+2. Usa uno de los correos del seed: `admin@asli.cl` o `rodrigo@asli.cl`.
+3. Crea la contraseña y envía el formulario.
+4. El sistema vincula automáticamente la cuenta con el perfil de admin existente (por email).
+5. Inicia sesión en `/auth/login` con ese correo y contraseña.
 
 ### Despliegue en Vercel
 
@@ -61,6 +77,7 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
 3. **Variables de entorno:** En Vercel → Project → Settings → Environment Variables añadir:
    - `PUBLIC_SUPABASE_URL` – URL del proyecto Supabase
    - `PUBLIC_SUPABASE_ANON_KEY` – Clave anon pública de Supabase
+   - `SUPABASE_SERVICE_ROLE_KEY` – Para que admins puedan crear cuentas (API create-user)
 4. Deploy. La app quedará disponible en la URL de producción.
 
 ---
@@ -72,7 +89,7 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
 | Ruta | Descripción |
 |------|-------------|
 | `/auth/login` | Iniciar sesión |
-| `/auth/registro` | Crear cuenta |
+| `/auth/registro` | Solicitar acceso |
 
 ### Navegación pública (barra superior gris)
 
@@ -93,7 +110,7 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
 | **Reservas** | `/reservas/crear`, `/reservas/mis-reservas` | Crear reservas y ver mis reservas |
 | **Transportes** | `/transportes/reserva-asli`, `/transportes/reserva-ext`, `/transportes/facturacion` | Reservas ASLI, externas y facturación |
 | **Documentos** | `/documentos/mis-documentos`, `/documentos/crear-instructivo`, `/documentos/crear-proforma` | Documentos, instructivos y proformas |
-| **Configuración** | `/configuracion/clientes`, `/configuracion/formatos-documentos` | Clientes y formatos de documentos |
+| **Configuración** | `/configuracion/clientes`, `/configuracion/formatos-documentos`, `/configuracion/usuarios` | Clientes, formatos y usuarios (solo admin) |
 
 ---
 

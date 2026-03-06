@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -76,6 +77,7 @@ type SortDirection = "asc" | "desc";
 
 export function MisReservasContent() {
   const { t } = useLocale();
+  const { isCliente } = useAuth();
   const tr = t.misReservas;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -307,7 +309,7 @@ export function MisReservasContent() {
             </p>
           </div>
           <div className="flex gap-2">
-            {selectedIds.size > 0 && (
+            {!isCliente && selectedIds.size > 0 && (
               <button
                 onClick={() => handleMoveToTrash(Array.from(selectedIds))}
                 disabled={actionLoading}
@@ -523,14 +525,16 @@ export function MisReservasContent() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => handleMoveToTrash([op.id])}
-                          disabled={actionLoading}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title={tr.moveToTrash}
-                        >
-                          <Icon icon="typcn:trash" width={18} height={18} />
-                        </button>
+                        {!isCliente && (
+                          <button
+                            onClick={() => handleMoveToTrash([op.id])}
+                            disabled={actionLoading}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title={tr.moveToTrash}
+                          >
+                            <Icon icon="typcn:trash" width={18} height={18} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

@@ -63,7 +63,7 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
       onKeyDown={handleKeyDown}
     >
       <div
-        className="absolute inset-0 bg-black/25 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40"
         onClick={handleClose}
         aria-hidden
       />

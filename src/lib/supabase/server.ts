@@ -9,13 +9,14 @@ export function createClient(cookies: AstroCookies) {
   }
   return createServerClient(url, key, {
     cookies: {
-      getAll() {
-        return cookies.getAll();
+      get(key: string) {
+        return cookies.get(key)?.value ?? undefined;
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) =>
-          cookies.set(name, value, options)
-        );
+      set(name: string, value: string, options?: Record<string, unknown>) {
+        cookies.set(name, value, options as Record<string, unknown>);
+      },
+      remove(name: string, options?: Record<string, unknown>) {
+        cookies.delete(name, options as Record<string, unknown>);
       },
     },
   });

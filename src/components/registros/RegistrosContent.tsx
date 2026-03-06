@@ -4,6 +4,7 @@ import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import type { ColDef } from "ag-grid-community";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { columnWidths } from "@/lib/registros-table-config";
 
@@ -339,6 +340,8 @@ const emptyCatalogos: CatalogosState = {
 
 export function RegistrosContent() {
   const { locale, t } = useLocale();
+  const { isCliente } = useAuth();
+  const canEdit = !isCliente;
   const gridRef = useRef<AgGridReact<OperacionRow>>(null);
   const [rowData, setRowData] = useState<OperacionRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -455,7 +458,7 @@ export function RegistrosContent() {
         field: "ejecutivo",
         headerName: t.registros.colExecutive,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.ejecutivo,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.ejecutivos] },
@@ -464,7 +467,7 @@ export function RegistrosContent() {
         field: "estado_operacion",
         headerName: t.registros.colOperationStatus,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.estadoOperacion,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: catalogos.estado_operacion },
@@ -473,7 +476,7 @@ export function RegistrosContent() {
         field: "tipo_operacion",
         headerName: t.registros.colOperationType,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.tipoOperacion,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: catalogos.tipo_operacion },
@@ -482,7 +485,7 @@ export function RegistrosContent() {
         field: "cliente",
         headerName: t.registros.colClient,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.cliente,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.empresas] },
@@ -491,7 +494,7 @@ export function RegistrosContent() {
         field: "consignatario",
         headerName: t.registros.colConsignee,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.consignatario,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.consignatarios] },
@@ -500,7 +503,7 @@ export function RegistrosContent() {
         field: "incoterm",
         headerName: t.registros.colIncoterm,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.incoterm,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.incoterm] },
@@ -509,7 +512,7 @@ export function RegistrosContent() {
         field: "forma_pago",
         headerName: t.registros.colPaymentMethod,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.formaPago,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.forma_pago] },
@@ -518,7 +521,7 @@ export function RegistrosContent() {
         field: "especie",
         headerName: t.registros.colSpecies,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.especie,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.especies] },
@@ -527,29 +530,29 @@ export function RegistrosContent() {
         field: "pais",
         headerName: t.registros.colDestCountry,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.pais,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.paises] },
       },
-      { field: "temperatura", headerName: t.registros.colTemperature, sortable: true, editable: true, width: columnWidths.temperatura },
+      { field: "temperatura", headerName: t.registros.colTemperature, sortable: true, editable: canEdit, width: columnWidths.temperatura },
       {
         field: "ventilacion",
         headerName: t.registros.colVentilation,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.ventilacion,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.ventilacion] },
       },
-      { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: true, width: columnWidths.pallets },
-      { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: true, width: columnWidths.pesoBruto },
-      { field: "peso_neto", headerName: t.registros.colNetWeight, sortable: true, editable: true, width: columnWidths.pesoNeto },
+      { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: canEdit, width: columnWidths.pallets },
+      { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: canEdit, width: columnWidths.pesoBruto },
+      { field: "peso_neto", headerName: t.registros.colNetWeight, sortable: true, editable: canEdit, width: columnWidths.pesoNeto },
       {
         field: "tipo_unidad",
         headerName: t.registros.colUnitType,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.tipoUnidad,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.tipo_unidad] },
@@ -558,7 +561,7 @@ export function RegistrosContent() {
         field: "naviera",
         headerName: t.registros.colCarrier,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.naviera,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.navieras] },
@@ -567,7 +570,7 @@ export function RegistrosContent() {
         field: "nave",
         headerName: t.registros.colVessel,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.nave,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: (params: { data: OperacionRow }) => {
@@ -582,7 +585,7 @@ export function RegistrosContent() {
         field: "pol",
         headerName: t.registros.colPOL,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.pol,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.puertos_origen] },
@@ -592,23 +595,23 @@ export function RegistrosContent() {
         field: "pod",
         headerName: t.registros.colPOD,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.pod,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.destinos.map((d) => d.nombre)] },
       },
       { field: "eta", headerName: t.registros.colETA, sortable: true, width: columnWidths.eta },
-      { field: "tt", headerName: t.registros.colTransitDays, sortable: true, editable: true, width: columnWidths.tt },
-      { field: "booking", headerName: t.registros.colBooking, sortable: true, editable: true, width: columnWidths.booking },
-      { field: "aga", headerName: t.registros.colAGA, sortable: true, editable: true, width: columnWidths.aga },
-      { field: "dus", headerName: t.registros.colDUS, sortable: true, editable: true, width: columnWidths.dus },
-      { field: "sps", headerName: t.registros.colSPS, sortable: true, editable: true, width: columnWidths.sps },
-      { field: "numero_guia_despacho", headerName: t.registros.colDispatchGuide, sortable: true, editable: true, width: columnWidths.numeroGuiaDespacho },
+      { field: "tt", headerName: t.registros.colTransitDays, sortable: true, editable: canEdit, width: columnWidths.tt },
+      { field: "booking", headerName: t.registros.colBooking, sortable: true, editable: canEdit, width: columnWidths.booking },
+      { field: "aga", headerName: t.registros.colAGA, sortable: true, editable: canEdit, width: columnWidths.aga },
+      { field: "dus", headerName: t.registros.colDUS, sortable: true, editable: canEdit, width: columnWidths.dus },
+      { field: "sps", headerName: t.registros.colSPS, sortable: true, editable: canEdit, width: columnWidths.sps },
+      { field: "numero_guia_despacho", headerName: t.registros.colDispatchGuide, sortable: true, editable: canEdit, width: columnWidths.numeroGuiaDespacho },
       {
         field: "planta_presentacion",
         headerName: t.registros.colPresentationPlant,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.plantaPresentacion,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.plantas] },
@@ -629,63 +632,63 @@ export function RegistrosContent() {
         field: "deposito",
         headerName: t.registros.colWarehouse,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.deposito,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.depositos] },
       },
       { field: "agendamiento_retiro", headerName: t.registros.colPickupSchedule, sortable: true, width: columnWidths.agendamientoRetiro },
       { field: "devolucion_unidad", headerName: t.registros.colUnitReturn, sortable: true, width: columnWidths.devolucionUnidad },
-      { field: "transporte", headerName: t.registros.colTransportCompany, sortable: true, editable: true, width: columnWidths.transporte },
-      { field: "chofer", headerName: t.registros.colDriverName, sortable: true, editable: true, width: columnWidths.chofer },
-      { field: "rut_chofer", headerName: t.registros.colDriverRUT, sortable: true, editable: true, width: columnWidths.rutChofer },
-      { field: "telefono_chofer", headerName: t.registros.colDriverPhone, sortable: true, editable: true, width: columnWidths.telefonoChofer },
-      { field: "patente_camion", headerName: t.registros.colTruckPlate, sortable: true, editable: true, width: columnWidths.patenteCamion },
-      { field: "patente_remolque", headerName: t.registros.colTrailerPlate, sortable: true, editable: true, width: columnWidths.patenteRemolque },
-      { field: "contenedor", headerName: t.registros.colContainer, sortable: true, editable: true, width: columnWidths.contenedor },
-      { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: true, width: columnWidths.sello },
-      { field: "tara", headerName: t.registros.colTare, sortable: true, editable: true, width: columnWidths.tara },
-      { field: "almacenamiento", headerName: t.registros.colStorageDays, sortable: true, editable: true, width: columnWidths.almacenamiento },
-      { field: "tramo", headerName: t.registros.colSection, sortable: true, editable: true, width: columnWidths.tramo },
-      { field: "valor_tramo", headerName: t.registros.colSectionValue, sortable: true, editable: true, width: columnWidths.valorTramo },
+      { field: "transporte", headerName: t.registros.colTransportCompany, sortable: true, editable: canEdit, width: columnWidths.transporte },
+      { field: "chofer", headerName: t.registros.colDriverName, sortable: true, editable: canEdit, width: columnWidths.chofer },
+      { field: "rut_chofer", headerName: t.registros.colDriverRUT, sortable: true, editable: canEdit, width: columnWidths.rutChofer },
+      { field: "telefono_chofer", headerName: t.registros.colDriverPhone, sortable: true, editable: canEdit, width: columnWidths.telefonoChofer },
+      { field: "patente_camion", headerName: t.registros.colTruckPlate, sortable: true, editable: canEdit, width: columnWidths.patenteCamion },
+      { field: "patente_remolque", headerName: t.registros.colTrailerPlate, sortable: true, editable: canEdit, width: columnWidths.patenteRemolque },
+      { field: "contenedor", headerName: t.registros.colContainer, sortable: true, editable: canEdit, width: columnWidths.contenedor },
+      { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
+      { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
+      { field: "almacenamiento", headerName: t.registros.colStorageDays, sortable: true, editable: canEdit, width: columnWidths.almacenamiento },
+      { field: "tramo", headerName: t.registros.colSection, sortable: true, editable: canEdit, width: columnWidths.tramo },
+      { field: "valor_tramo", headerName: t.registros.colSectionValue, sortable: true, editable: canEdit, width: columnWidths.valorTramo },
       {
         field: "porteo",
         headerName: t.registros.colPortage,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.porteo,
         cellRenderer: booleanCellRenderer,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: [true, false] },
       },
-      { field: "valor_porteo", headerName: t.registros.colPortageValue, sortable: true, editable: true, width: columnWidths.valorPorteo },
+      { field: "valor_porteo", headerName: t.registros.colPortageValue, sortable: true, editable: canEdit, width: columnWidths.valorPorteo },
       {
         field: "falso_flete",
         headerName: t.registros.colDeadFreight,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.falsoFlete,
         cellRenderer: booleanCellRenderer,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: [true, false] },
       },
-      { field: "valor_falso_flete", headerName: t.registros.colDeadFreightValue, sortable: true, editable: true, width: columnWidths.valorFalsoFlete },
-      { field: "factura_transporte", headerName: t.registros.colTransportInvoice, sortable: true, editable: true, width: columnWidths.facturaTransporte },
-      { field: "monto_facturado", headerName: t.registros.colInvoicedAmount, sortable: true, editable: true, width: columnWidths.montoFacturado },
-      { field: "numero_factura_asli", headerName: t.registros.colASLIInvoice, sortable: true, editable: true, width: columnWidths.numeroFacturaAsli },
-      { field: "concepto_facturado", headerName: t.registros.colInvoicedConcept, sortable: true, editable: true, width: columnWidths.conceptoFacturado },
+      { field: "valor_falso_flete", headerName: t.registros.colDeadFreightValue, sortable: true, editable: canEdit, width: columnWidths.valorFalsoFlete },
+      { field: "factura_transporte", headerName: t.registros.colTransportInvoice, sortable: true, editable: canEdit, width: columnWidths.facturaTransporte },
+      { field: "monto_facturado", headerName: t.registros.colInvoicedAmount, sortable: true, editable: canEdit, width: columnWidths.montoFacturado },
+      { field: "numero_factura_asli", headerName: t.registros.colASLIInvoice, sortable: true, editable: canEdit, width: columnWidths.numeroFacturaAsli },
+      { field: "concepto_facturado", headerName: t.registros.colInvoicedConcept, sortable: true, editable: canEdit, width: columnWidths.conceptoFacturado },
       {
         field: "moneda",
         headerName: t.registros.colCurrency,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.moneda,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: catalogos.moneda },
       },
-      { field: "tipo_cambio", headerName: t.registros.colExchangeRate, sortable: true, editable: true, width: columnWidths.tipoCambio },
-      { field: "margen_estimado", headerName: t.registros.colEstimatedMargin, sortable: true, editable: true, width: columnWidths.margenEstimado },
-      { field: "margen_real", headerName: t.registros.colRealMargin, sortable: true, editable: true, width: columnWidths.margenReal },
+      { field: "tipo_cambio", headerName: t.registros.colExchangeRate, sortable: true, editable: canEdit, width: columnWidths.tipoCambio },
+      { field: "margen_estimado", headerName: t.registros.colEstimatedMargin, sortable: true, editable: canEdit, width: columnWidths.margenEstimado },
+      { field: "margen_real", headerName: t.registros.colRealMargin, sortable: true, editable: canEdit, width: columnWidths.margenReal },
       { field: "fecha_confirmacion_booking", headerName: t.registros.colBookingConfirmation, sortable: true, width: columnWidths.fechaConfirmacionBooking },
       { field: "fecha_envio_documentacion", headerName: t.registros.colDocSent, sortable: true, width: columnWidths.fechaEnvioDocumentacion },
       { field: "fecha_entrega_bl", headerName: t.registros.colBLDelivery, sortable: true, width: columnWidths.fechaEntregaBl },
@@ -697,7 +700,7 @@ export function RegistrosContent() {
         field: "prioridad",
         headerName: t.registros.colPriority,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.prioridad,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: ["", ...catalogos.prioridad] },
@@ -706,16 +709,16 @@ export function RegistrosContent() {
         field: "operacion_critica",
         headerName: t.registros.colCriticalOp,
         sortable: true,
-        editable: true,
+        editable: canEdit,
         width: columnWidths.operacionCritica,
         cellRenderer: booleanCellRenderer,
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: [true, false] },
       },
       { field: "origen_registro", headerName: t.registros.colRecordOrigin, sortable: true, width: columnWidths.origenRegistro },
-      { field: "observaciones", headerName: t.registros.colObservations, sortable: true, editable: true, width: columnWidths.observaciones },
+      { field: "observaciones", headerName: t.registros.colObservations, sortable: true, editable: canEdit, width: columnWidths.observaciones },
     ],
-    [t.registros, booleanCellRenderer, catalogos]
+    [t.registros, booleanCellRenderer, catalogos, canEdit]
   );
 
   const defaultColDef = useMemo<ColDef>(
@@ -816,26 +819,29 @@ export function RegistrosContent() {
       {/* Barra de herramientas */}
       <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b border-neutral-200">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Botón Agregar */}
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
-          >
-            <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{t.registros.add}</span>
-            <span className="sm:hidden">Nuevo</span>
-          </button>
-          
-          {/* Botón Eliminar */}
-          <button
-            type="button"
-            onClick={() => void handleRemoveSelected()}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-          >
-            <Icon icon="typcn:trash" width={14} height={14} className="sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{t.registros.deleteSelection}</span>
-          </button>
+          {canEdit && (
+            <>
+              {/* Botón Agregar */}
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+              >
+                <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{t.registros.add}</span>
+                <span className="sm:hidden">Nuevo</span>
+              </button>
+              {/* Botón Eliminar */}
+              <button
+                type="button"
+                onClick={() => void handleRemoveSelected()}
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              >
+                <Icon icon="typcn:trash" width={14} height={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{t.registros.deleteSelection}</span>
+              </button>
+            </>
+          )}
           
           {/* Botón Actualizar */}
           <button

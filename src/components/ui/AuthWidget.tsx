@@ -1,62 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AuthIcon } from "./AuthIcon";
 import { AuthModal, type AuthUser } from "./AuthModal";
 import { siteConfig } from "@/lib/site";
 import { useLocale } from "@/lib/i18n";
-
-function toAuthUser(email: string, metadata?: { full_name?: string }): AuthUser {
-  return {
-    name: metadata?.full_name || "Usuario",
-    email,
-    level: "Usuario",
-  };
-}
+import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 
 export function AuthWidget() {
   const { t } = useLocale();
+  const { user, profile, isLoading } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   const handleOpen = () => setIsModalOpen(true);
   const handleClose = () => setIsModalOpen(false);
 
-  useEffect(() => {
-    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseKey) {
-      setUser(toAuthUser(siteConfig.user.email, { full_name: siteConfig.user.name }));
-      setIsLoading(false);
-      return;
-    }
-
-    let unsub: (() => void) | undefined;
-    import("@/lib/supabase/client").then(({ createClient }) => {
-      const supabase = createClient();
-
-      const initSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(toAuthUser(session.user.email ?? "", session.user.user_metadata));
-        } else {
-          setUser(null);
-        }
-        setIsLoading(false);
-      };
-
-      initSession();
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-        initSession();
-      });
-      unsub = () => subscription.unsubscribe();
-    }).catch(() => {
-      setUser(toAuthUser(siteConfig.user.email, { full_name: siteConfig.user.name }));
-      setIsLoading(false);
-    });
-
-    return () => unsub?.();
-  }, []);
+  const authUser: AuthUser | null = user
+    ? {
+        name: profile?.nombre ?? user.name,
+        email: user.email,
+        level: profile ? getRolLabel(profile.rol) : "Usuario",
+      }
+    : import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      ? null
+      : { name: siteConfig.user.name, email: siteConfig.user.email, level: siteConfig.user.level };
 
   if (isLoading) {
     return (
@@ -67,7 +32,7 @@ export function AuthWidget() {
     );
   }
 
-  if (!user) {
+  if (!authUser) {
     return (
       <a
         href="/auth/login"
@@ -89,7 +54,7 @@ export function AuthWidget() {
       >
         <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
       </button>
-      <AuthModal isOpen={isModalOpen} onClose={handleClose} user={user} />
+      <AuthModal isOpen={isModalOpen} onClose={handleClose} user={authUser} />
     </>
   );
 }

@@ -1,7 +1,10 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
 import { Sidebar } from "./Sidebar";
+import { ConfigGuard } from "./ConfigGuard";
 import { ClientesContent } from "@/components/clientes";
+import { AsignarClientesEmpresasContent } from "@/components/configuracion/AsignarClientesEmpresasContent";
+import { UsuariosContent } from "@/components/usuarios/UsuariosContent";
 import { DashboardContent } from "@/components/dashboard";
 import { InicioContent } from "@/components/inicio";
 import { ServiciosContent } from "@/components/servicios";
@@ -11,6 +14,7 @@ import { CrearReservaContent, MisReservasContent, PapeleraContent } from "@/comp
 import { ReservaAsliContent, ReservaExtContent, FacturacionContent } from "@/components/transportes";
 import { MisDocumentosContent } from "@/components/documentos";
 import { LocaleProvider } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth/AuthContext";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -23,6 +27,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
   if (isAuthRoute) {
     return (
       <LocaleProvider>
+        <AuthProvider>
         <div className="h-screen flex flex-col overflow-hidden">
           <Header />
           <NavBanner pathname={pathname} />
@@ -30,6 +35,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
             {children}
           </main>
         </div>
+        </AuthProvider>
       </LocaleProvider>
     );
   }
@@ -46,7 +52,11 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/registros" ? (
       <RegistrosContent />
     ) : pathname === "/configuracion/clientes" ? (
-      <ClientesContent />
+      <ConfigGuard><ClientesContent /></ConfigGuard>
+    ) : pathname === "/configuracion/asignar-clientes-empresas" ? (
+      <ConfigGuard><AsignarClientesEmpresasContent /></ConfigGuard>
+    ) : pathname === "/configuracion/usuarios" ? (
+      <ConfigGuard><UsuariosContent /></ConfigGuard>
     ) : pathname === "/reservas/crear" ? (
       <CrearReservaContent />
     ) : pathname === "/reservas/mis-reservas" ? (
@@ -67,6 +77,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
 
   return (
     <LocaleProvider>
+      <AuthProvider>
       <div className="h-screen flex flex-col overflow-hidden">
         <Header />
         <NavBanner pathname={pathname} />
@@ -75,6 +86,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
           {mainContent}
         </div>
       </div>
+      </AuthProvider>
     </LocaleProvider>
   );
 }

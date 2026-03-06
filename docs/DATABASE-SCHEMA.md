@@ -287,7 +287,7 @@ Este documento contiene la estructura de tablas y columnas de la base de datos e
 ---
 
 ## clientes
-> Clientes (relación con empresas)
+> Empresas cliente con términos comerciales (límite de crédito, condición de pago, etc.)
 
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
@@ -299,6 +299,18 @@ Este documento contiene la estructura de tablas y columnas de la base de datos e
 | activo | boolean | Estado activo |
 | created_at | timestamptz | Fecha creación |
 | updated_at | timestamptz | Fecha actualización |
+
+---
+
+## usuarios_empresas
+> Vincula usuarios (rol cliente o ejecutivo) con empresas. Varias personas pueden compartir acceso a la misma empresa.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| id | uuid | ID único |
+| usuario_id | uuid | FK a usuarios |
+| empresa_id | uuid | FK a empresas |
+| created_at | timestamptz | Fecha creación |
 
 ---
 

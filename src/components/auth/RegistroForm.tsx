@@ -7,6 +7,9 @@ export function RegistroForm() {
   const { t } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleTogglePassword = () => setShowPassword((p) => !p);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,13 +25,17 @@ export function RegistroForm() {
         body: formData,
         credentials: "include",
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setIsPending(false);
       if (data.success && data.redirect) {
         window.location.href = data.redirect;
-      } else if (data.error) {
-        setError(data.error);
+        return;
       }
+      setError(
+        (typeof data?.error === "string" && data.error) ||
+          (res.status === 400 && "Revisa los datos e intenta de nuevo.") ||
+          "Error al solicitar acceso. Intenta de nuevo."
+      );
     } catch {
       setIsPending(false);
       setError("Error de conexión");
@@ -94,17 +101,30 @@ export function RegistroForm() {
           <label htmlFor="reg-password" className={formStyles.label}>
             {t.auth.password}
           </label>
-          <input
-            id="reg-password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={6}
-            disabled={isPending}
-            className={formStyles.input}
-            placeholder="Mínimo 6 caracteres"
-          />
+          <div className="relative">
+            <input
+              id="reg-password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={6}
+              disabled={isPending}
+              className={`${formStyles.input} pr-10`}
+              placeholder="Mínimo 6 caracteres"
+            />
+            <button
+              type="button"
+              onClick={handleTogglePassword}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
+              tabIndex={0}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              disabled={isPending}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded transition-colors disabled:opacity-50"
+            >
+              <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={18} height={18} />
+            </button>
+          </div>
         </div>
 
         <button
