@@ -340,7 +340,7 @@ const emptyCatalogos: CatalogosState = {
 
 export function RegistrosContent() {
   const { locale, t } = useLocale();
-  const { isCliente } = useAuth();
+  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const canEdit = !isCliente;
   const gridRef = useRef<AgGridReact<OperacionRow>>(null);
   const [rowData, setRowData] = useState<OperacionRow[]>([]);
@@ -423,25 +423,38 @@ export function RegistrosContent() {
       setLoading(false);
       return;
     }
+    if (authLoading) return;
     setLoading(true);
     setError(null);
-    const { data, error: err } = await supabase
+    let q = supabase
       .from("operaciones")
       .select("*")
-      .is("deleted_at", null)
-      .order("correlativo", { ascending: false });
+      .is("deleted_at", null);
+    if (isCliente) {
+      if (empresaNombres.length === 0) {
+        setRowData([]);
+        setLoading(false);
+        return;
+      }
+      q = q.in("cliente", empresaNombres);
+    }
+    const { data, error: err } = await q.order("correlativo", { ascending: false });
     setLoading(false);
     if (err) {
       setError(err.message);
       return;
     }
     setRowData((data ?? []).map(toRow));
-  }, [supabase, t.registros.supabaseError, toRow]);
+  }, [supabase, authLoading, isCliente, empresaNombres, t.registros.supabaseError, toRow]);
 
   useEffect(() => {
     void fetchCatalogos();
-    void fetchOperaciones();
-  }, [fetchCatalogos, fetchOperaciones]);
+  }, [fetchCatalogos]);
+
+  useEffect(() => {
+    if (!authLoading) void fetchOperaciones();
+    else setRowData([]);
+  }, [authLoading, fetchOperaciones]);
 
   const booleanCellRenderer = useCallback(
     (p: { value: boolean }) => (p.value ? t.registros.yes : t.registros.no),

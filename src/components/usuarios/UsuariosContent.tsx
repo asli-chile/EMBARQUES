@@ -72,6 +72,12 @@ export function UsuariosContent() {
   const [showChangePasswordCurrent, setShowChangePasswordCurrent] = useState(false);
   const [showChangePasswordNew, setShowChangePasswordNew] = useState(false);
 
+  const [resettingUser, setResettingUser] = useState<DbUsuario | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       const controller = new AbortController();
@@ -230,6 +236,48 @@ export function UsuariosContent() {
     setActivatePassword("");
     setActivateError(null);
   };
+
+  const handleResetOpen = (u: DbUsuario) => {
+    setResettingUser(u);
+    setResetPassword("");
+    setResetError(null);
+    setShowResetPassword(false);
+  };
+
+  const handleResetClose = () => {
+    setResettingUser(null);
+    setResetPassword("");
+    setResetError(null);
+  };
+
+  const handleResetSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!resettingUser || resetPassword.length < 6) return;
+      setResetError(null);
+      setIsResetting(true);
+      try {
+        const res = await fetch("/api/auth/reset-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ usuarioId: resettingUser.id, newPassword: resetPassword }),
+        });
+        const data = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !data.success) {
+          setResetError(data.error ?? "Error al resetear usuario");
+          return;
+        }
+        handleResetClose();
+        void fetchData();
+      } catch (err) {
+        setResetError(err instanceof Error ? err.message : "Error al resetear");
+      } finally {
+        setIsResetting(false);
+      }
+    },
+    [resettingUser, resetPassword, fetchData]
+  );
 
   const handleActivateSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -756,16 +804,30 @@ export function UsuariosContent() {
                       )}
                     </td>
                     <td className="px-4 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => handleEditOpen(u)}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-brand-blue hover:bg-brand-blue/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                        aria-label={`Editar ${u.nombre}`}
-                        title="Editar rol, empresas y contraseña"
-                      >
-                        <Icon icon="typcn:edit" width={14} height={14} />
-                        Editar
-                      </button>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {u.auth_id && (
+                          <button
+                            type="button"
+                            onClick={() => handleResetOpen(u)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
+                            aria-label={`Resetear ${u.nombre}`}
+                            title="Borrar asignaciones y establecer nueva contraseña"
+                          >
+                            <Icon icon="typcn:refresh" width={14} height={14} />
+                            Resetear
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleEditOpen(u)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-brand-blue hover:bg-brand-blue/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                          aria-label={`Editar ${u.nombre}`}
+                          title="Editar rol, empresas y contraseña"
+                        >
+                          <Icon icon="typcn:edit" width={14} height={14} />
+                          Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -922,6 +984,83 @@ export function UsuariosContent() {
                   className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 >
                   {isActivating ? "Activando…" : "Crear cuenta y vincular"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {resettingUser && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-modal-title"
+          onClick={handleResetClose}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-mac-modal w-full max-w-md overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-shrink-0 px-6 py-4 border-b border-neutral-200">
+              <h2 id="reset-modal-title" className="text-lg font-semibold text-brand-blue">
+                Resetear usuario
+              </h2>
+              <p className="text-sm text-neutral-500 mt-0.5">
+                {resettingUser.nombre} — {resettingUser.email}
+              </p>
+              <p className="text-xs text-neutral-400 mt-1">
+                Se borrarán todas las asignaciones a empresas y se establecerá una nueva contraseña. Se mantienen nombre, email y rol. Da la nueva contraseña al usuario para que pueda iniciar sesión.
+              </p>
+            </div>
+            <form onSubmit={handleResetSubmit} className="p-6 space-y-4">
+              <div>
+                <label htmlFor="reset-password" className="block text-sm font-medium text-neutral-700 mb-1">
+                  Nueva contraseña (mín. 6 caracteres)
+                </label>
+                <div className="relative">
+                  <input
+                    id="reset-password"
+                    type={showResetPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword((p) => !p)}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
+                    tabIndex={0}
+                    aria-label={showResetPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                  >
+                    <Icon icon={showResetPassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
+                  </button>
+                </div>
+              </div>
+              {resetError && (
+                <p className="text-red-600 text-sm" role="alert">
+                  {resetError}
+                </p>
+              )}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleResetClose}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResetting || resetPassword.length < 6}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {isResetting ? "Reseteando…" : "Resetear y guardar contraseña"}
                 </button>
               </div>
             </form>

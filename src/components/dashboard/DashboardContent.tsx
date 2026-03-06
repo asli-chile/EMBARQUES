@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { DashboardVisitorContent } from "./DashboardVisitorContent";
 import { format, differenceInDays, addDays, subDays, formatDistanceToNow, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -59,7 +61,12 @@ const estadoColors: Record<string, { bg: string; text: string; icon: string }> =
 
 export function DashboardContent() {
   const { t, locale } = useLocale();
+  const { isExternalUser, isLoading: authLoading, isCliente, empresaNombres } = useAuth();
   const tr = t.dashboard;
+
+  if (!authLoading && isExternalUser) {
+    return <DashboardVisitorContent />;
+  }
   const [loading, setLoading] = useState(true);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [filters, setFilters] = useState<DashboardFilters>({
@@ -93,6 +100,9 @@ export function DashboardContent() {
     (selectCols: string) => {
       if (!supabase) throw new Error("Supabase not ready");
       let q = supabase.from("operaciones").select(selectCols).is("deleted_at", null);
+      if (isCliente && empresaNombres.length > 0) {
+        q = q.in("cliente", empresaNombres);
+      }
       if (filters.etdDesde) q = q.gte("etd", filters.etdDesde);
       if (filters.etdHasta) q = q.lte("etd", filters.etdHasta);
       if (filters.estado) q = q.eq("estado_operacion", filters.estado);
@@ -100,23 +110,26 @@ export function DashboardContent() {
       if (filters.naviera) q = q.eq("naviera", filters.naviera);
       return q;
     },
-    [supabase, filters]
+    [supabase, filters, isCliente, empresaNombres]
   );
 
   const fetchCatalogs = useCallback(async () => {
-    if (!supabase) return;
-    const [clientesRes, navierasRes] = await Promise.all([
-      supabase.from("operaciones").select("cliente").is("deleted_at", null).not("cliente", "is", null),
-      supabase.from("operaciones").select("naviera").is("deleted_at", null).not("naviera", "is", null),
-    ]);
+    if (!supabase || authLoading) return;
+    let qClientes = supabase.from("operaciones").select("cliente").is("deleted_at", null).not("cliente", "is", null);
+    let qNavieras = supabase.from("operaciones").select("naviera").is("deleted_at", null).not("naviera", "is", null);
+    if (isCliente && empresaNombres.length > 0) {
+      qClientes = qClientes.in("cliente", empresaNombres);
+      qNavieras = qNavieras.in("cliente", empresaNombres);
+    }
+    const [clientesRes, navierasRes] = await Promise.all([qClientes, qNavieras]);
     const clientes = [...new Set((clientesRes.data ?? []).map((r) => r.cliente).filter(Boolean) as string[])].sort();
     const navieras = [...new Set((navierasRes.data ?? []).map((r) => r.naviera).filter(Boolean) as string[])].sort();
     setClientesOpts(clientes);
     setNavierasOpts(navieras);
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   const fetchDashboardData = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     setLoading(true);
 
     const today = new Date();
@@ -182,19 +195,15 @@ export function DashboardContent() {
 
     setLastFetchedAt(new Date());
     setLoading(false);
-  }, [supabase, buildFilteredQuery]);
+  }, [supabase, authLoading, buildFilteredQuery]);
 
   useEffect(() => {
-    void fetchCatalogs();
-  }, [fetchCatalogs]);
+    if (!authLoading) void fetchCatalogs();
+  }, [authLoading, fetchCatalogs]);
 
   useEffect(() => {
-    void fetchDashboardData();
-  }, [fetchDashboardData]);
-
-  useEffect(() => {
-    void fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (!authLoading) void fetchDashboardData();
+  }, [authLoading, fetchDashboardData]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";

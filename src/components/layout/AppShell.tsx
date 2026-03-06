@@ -2,6 +2,7 @@ import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
 import { Sidebar } from "./Sidebar";
 import { ConfigGuard } from "./ConfigGuard";
+import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { ClientesContent } from "@/components/clientes";
 import { AsignarClientesEmpresasContent } from "@/components/configuracion/AsignarClientesEmpresasContent";
 import { UsuariosContent } from "@/components/usuarios/UsuariosContent";
@@ -50,7 +51,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/sobre-nosotros" ? (
       <SobreNosotrosContent />
     ) : pathname === "/registros" ? (
-      <RegistrosContent />
+      <ModuleWithVisitorInfo moduleKey="registros"><RegistrosContent /></ModuleWithVisitorInfo>
     ) : pathname === "/configuracion/clientes" ? (
       <ConfigGuard><ClientesContent /></ConfigGuard>
     ) : pathname === "/configuracion/asignar-clientes-empresas" ? (
@@ -58,19 +59,19 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/configuracion/usuarios" ? (
       <ConfigGuard><UsuariosContent /></ConfigGuard>
     ) : pathname === "/reservas/crear" ? (
-      <CrearReservaContent />
+      <ModuleWithVisitorInfo moduleKey="crearReserva"><CrearReservaContent /></ModuleWithVisitorInfo>
     ) : pathname === "/reservas/mis-reservas" ? (
-      <MisReservasContent />
+      <ModuleWithVisitorInfo moduleKey="misReservas"><MisReservasContent /></ModuleWithVisitorInfo>
     ) : pathname === "/reservas/papelera" ? (
-      <PapeleraContent />
+      <ModuleWithVisitorInfo moduleKey="papelera"><PapeleraContent /></ModuleWithVisitorInfo>
     ) : pathname === "/transportes/reserva-asli" ? (
-      <ReservaAsliContent />
+      <ModuleWithVisitorInfo moduleKey="reservaAsli"><ReservaAsliContent /></ModuleWithVisitorInfo>
     ) : pathname === "/transportes/reserva-ext" ? (
-      <ReservaExtContent />
+      <ModuleWithVisitorInfo moduleKey="reservaExt"><ReservaExtContent /></ModuleWithVisitorInfo>
     ) : pathname === "/transportes/facturacion" ? (
-      <FacturacionContent />
+      <ModuleWithVisitorInfo moduleKey="facturacion"><FacturacionContent /></ModuleWithVisitorInfo>
     ) : pathname === "/documentos/mis-documentos" ? (
-      <MisDocumentosContent />
+      <ModuleWithVisitorInfo moduleKey="misDocumentos"><MisDocumentosContent /></ModuleWithVisitorInfo>
     ) : (
       children
     );

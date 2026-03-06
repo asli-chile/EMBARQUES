@@ -77,7 +77,7 @@ type SortDirection = "asc" | "desc";
 
 export function MisReservasContent() {
   const { t } = useLocale();
-  const { isCliente } = useAuth();
+  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misReservas;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,16 +101,19 @@ export function MisReservasContent() {
   }, []);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     setLoading(true);
 
-    const { data, error } = await supabase
+    let q = supabase
       .from("operaciones")
       .select(
         "id, correlativo, ref_asli, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking, estado_operacion, created_at"
       )
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .is("deleted_at", null);
+    if (isCliente && empresaNombres.length > 0) {
+      q = q.in("cliente", empresaNombres);
+    }
+    const { data, error } = await q.order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error loading operaciones:", error);
@@ -118,11 +121,12 @@ export function MisReservasContent() {
       setOperaciones(data || []);
     }
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   useEffect(() => {
-    void fetchOperaciones();
-  }, [fetchOperaciones]);
+    if (!authLoading) void fetchOperaciones();
+    else setOperaciones([]);
+  }, [authLoading, fetchOperaciones]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

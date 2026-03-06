@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -44,6 +45,7 @@ type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 
 export function MisDocumentosContent() {
   const { t, locale } = useLocale();
+  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misDocumentos;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
@@ -63,18 +65,21 @@ export function MisDocumentosContent() {
   }, []);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     setLoading(true);
 
-    const { data } = await supabase
+    let q = supabase
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, booking, pod, etd")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .is("deleted_at", null);
+    if (isCliente && empresaNombres.length > 0) {
+      q = q.in("cliente", empresaNombres);
+    }
+    const { data } = await q.order("created_at", { ascending: false });
 
     setOperaciones(data ?? []);
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   const fetchDocumentos = useCallback(async () => {
     if (!supabase || !selectedOperacion) return;
@@ -94,8 +99,9 @@ export function MisDocumentosContent() {
   }, [supabase, selectedOperacion]);
 
   useEffect(() => {
-    void fetchOperaciones();
-  }, [fetchOperaciones]);
+    if (!authLoading) void fetchOperaciones();
+    else setOperaciones([]);
+  }, [authLoading, fetchOperaciones]);
 
   useEffect(() => {
     if (selectedOperacion) {

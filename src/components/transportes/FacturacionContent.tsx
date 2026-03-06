@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -53,6 +54,7 @@ const initialFormData: FormData = {
 
 export function FacturacionContent() {
   const { t, locale } = useLocale();
+  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.facturacion;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -73,26 +75,30 @@ export function FacturacionContent() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     setLoading(true);
 
+    let qOp = supabase
+      .from("operaciones")
+      .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, estado_operacion, factura_transporte, monto_facturado, numero_factura_asli")
+      .is("deleted_at", null);
+    if (isCliente && empresaNombres.length > 0) {
+      qOp = qOp.in("cliente", empresaNombres);
+    }
     const [operacionesRes, monedasRes] = await Promise.all([
-      supabase
-        .from("operaciones")
-        .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, estado_operacion, factura_transporte, monto_facturado, numero_factura_asli")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false }),
+      qOp.order("created_at", { ascending: false }),
       supabase.from("catalogos").select("valor").eq("tipo", "moneda").eq("activo", true),
     ]);
 
     setOperaciones(operacionesRes.data ?? []);
     setMonedas((monedasRes.data ?? []).map((m) => m.valor));
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+    if (!authLoading) void fetchData();
+    else setOperaciones([]);
+  }, [authLoading, fetchData]);
 
   const selectedOperacion = useMemo(() => {
     return operaciones.find((op) => op.id === formData.operacion_id);

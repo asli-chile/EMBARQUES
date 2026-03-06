@@ -19,6 +19,10 @@ const config: Config = {
         "brand-red": "#B91C1C",
       },
       keyframes: {
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
         "modal-in": {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
@@ -33,6 +37,7 @@ const config: Config = {
         },
       },
       animation: {
+        "fade-in-up": "fade-in-up 0.35s ease-out both",
         "modal-in": "modal-in 0.22s ease-out both",
         "modal-out": "modal-out 0.2s ease-in forwards",
         "sidebar-in": "sidebar-in 0.25s ease-out forwards",

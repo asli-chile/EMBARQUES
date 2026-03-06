@@ -30,6 +30,10 @@ type AuthContextValue = {
   isSuperadmin: boolean;
   isAdmin: boolean;
   isCliente: boolean;
+  /** Nombres de empresas asignadas al cliente (para filtrar operaciones en app). */
+  empresaNombres: string[];
+  /** Usuario externo: sin sesión o sin perfil en tabla usuarios. Ve contenido informativo. */
+  isExternalUser: boolean;
   refetch: () => Promise<void>;
 };
 
@@ -51,6 +55,7 @@ export function getRolLabel(rol: UserRole): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
+  const [empresaNombres, setEmpresaNombres] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadSession = useCallback(async () => {
@@ -74,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!session?.user) {
         setUser(null);
         setProfile(null);
+        setEmpresaNombres([]);
         setIsLoading(false);
         return;
       }
@@ -103,6 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           rol: perfil.rol as UserRole,
           activo: perfil.activo,
         });
+        if (perfil.rol === "cliente") {
+          const { data: ueData } = await supabase
+            .from("usuarios_empresas")
+            .select("empresas(nombre)")
+            .eq("usuario_id", perfil.id);
+          const nombres = (ueData ?? [])
+            .map((r) => (r.empresas as { nombre: string } | null)?.nombre)
+            .filter((n): n is string => !!n);
+          setEmpresaNombres(nombres);
+        } else {
+          setEmpresaNombres([]);
+        }
       } else {
         setProfile({
           id: session.user.id,
@@ -111,10 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           rol: "usuario",
           activo: true,
         });
+        setEmpresaNombres([]);
       }
     } catch (err) {
       setUser(null);
       setProfile(null);
+      setEmpresaNombres([]);
     } finally {
       setIsLoading(false);
     }
@@ -153,6 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSuperadmin: profile?.rol === "superadmin",
     isAdmin: profile?.rol === "admin",
     isCliente: profile?.rol === "cliente",
+    empresaNombres,
+    isExternalUser: !user,
     refetch: loadSession,
   };
 
@@ -169,6 +191,8 @@ export function useAuth() {
       isSuperadmin: false,
       isAdmin: false,
       isCliente: false,
+      empresaNombres: [],
+      isExternalUser: true,
       refetch: async () => {},
     };
   }

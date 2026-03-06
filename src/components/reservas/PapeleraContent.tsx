@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -21,6 +22,7 @@ type Operacion = {
 
 export function PapeleraContent() {
   const { t } = useLocale();
+  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papelera;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,16 +38,19 @@ export function PapeleraContent() {
   }, []);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     setLoading(true);
 
-    const { data, error } = await supabase
+    let q = supabase
       .from("operaciones")
       .select(
         "id, correlativo, ref_asli, cliente, especie, naviera, nave, booking, estado_operacion, deleted_at, created_at"
       )
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false });
+      .not("deleted_at", "is", null);
+    if (isCliente && empresaNombres.length > 0) {
+      q = q.in("cliente", empresaNombres);
+    }
+    const { data, error } = await q.order("deleted_at", { ascending: false });
 
     if (error) {
       console.error("Error loading operaciones:", error);
@@ -53,11 +58,12 @@ export function PapeleraContent() {
       setOperaciones(data || []);
     }
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   useEffect(() => {
-    void fetchOperaciones();
-  }, [fetchOperaciones]);
+    if (!authLoading) void fetchOperaciones();
+    else setOperaciones([]);
+  }, [authLoading, fetchOperaciones]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";

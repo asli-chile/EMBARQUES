@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -79,6 +80,7 @@ const initialFormData: FormData = {
 
 export function ReservaExtContent() {
   const { t, locale } = useLocale();
+  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.transporteExt;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -99,15 +101,18 @@ export function ReservaExtContent() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     setLoading(true);
 
+    let qOp = supabase
+      .from("operaciones")
+      .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, planta_presentacion, estado_operacion")
+      .is("deleted_at", null);
+    if (isCliente && empresaNombres.length > 0) {
+      qOp = qOp.in("cliente", empresaNombres);
+    }
     const [operacionesRes, depositosRes, catalogosRes] = await Promise.all([
-      supabase
-        .from("operaciones")
-        .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, planta_presentacion, estado_operacion")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false }),
+      qOp.order("created_at", { ascending: false }),
       supabase.from("depositos").select("nombre").eq("activo", true).order("nombre"),
       supabase.from("catalogos").select("valor").eq("tipo", "porteo").eq("activo", true),
     ]);
@@ -116,11 +121,12 @@ export function ReservaExtContent() {
     setDepositos((depositosRes.data ?? []).map((d) => d.nombre));
     setTransportistas((catalogosRes.data ?? []).map((c) => c.valor));
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+    if (!authLoading) void fetchData();
+    else setOperaciones([]);
+  }, [authLoading, fetchData]);
 
   const selectedOperacion = useMemo(() => {
     return operaciones.find((op) => op.id === formData.operacion_id);
