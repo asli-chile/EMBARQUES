@@ -16,6 +16,11 @@ export default defineConfig({
   ],
   output: "server",
   adapter: vercel(),
+  // Desactiva la comprobación de Origin para evitar 403 "Cross-site POST form submissions are forbidden"
+  // en Vercel/serverless (el Origin del request puede no coincidir). Para reactivar: define ORIGIN en Vercel.
+  security: {
+    checkOrigin: false,
+  },
   vite: {
     resolve: {
       alias: {
