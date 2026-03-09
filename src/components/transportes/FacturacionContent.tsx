@@ -207,13 +207,13 @@ export function FacturacionContent() {
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-neutral-700 mb-0.5">{label}</label>
       <input
         type={type}
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
         placeholder={placeholder}
-        className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+        className="w-full px-3 py-1.5 text-sm border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
       />
     </div>
   );
@@ -225,11 +225,11 @@ export function FacturacionContent() {
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-neutral-700 mb-0.5">{label}</label>
       <select
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
-        className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+        className="w-full px-3 py-1.5 text-sm border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
       >
         <option value="">{placeholder || tr.select}</option>
         {options.map((opt) => (
@@ -243,9 +243,9 @@ export function FacturacionContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-6 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-500">
-          <Icon icon="typcn:refresh" className="w-6 h-6 animate-spin" />
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-hidden p-4 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-neutral-500 text-sm">
+          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin" />
           <span>{tr.loading}</span>
         </div>
       </main>
@@ -253,81 +253,79 @@ export function FacturacionContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4">
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-blue">{tr.title}</h1>
-            <p className="text-neutral-500 text-sm mt-1">{tr.subtitle}</p>
-          </div>
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-hidden flex flex-col p-3">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div>
+          <h1 className="text-xl font-bold text-brand-blue">{tr.title}</h1>
+          <p className="text-neutral-500 text-xs mt-0.5">{tr.subtitle}</p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="flex gap-4">
-            <div className="w-80 flex-shrink-0">
-              <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden sticky top-0">
-                <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                  <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
-                    <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
-                    {tr.selectOperation}
-                  </h2>
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex gap-3">
+        <div className="w-72 flex-shrink-0 flex flex-col min-h-0">
+          <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden flex flex-col min-h-0">
+            <div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50 flex-shrink-0">
+              <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
+                <Icon icon="typcn:document" className="w-3.5 h-3.5 text-brand-blue" />
+                {tr.selectOperation}
+              </h2>
+            </div>
+            <div className="p-2 flex flex-col min-h-0">
+              <div className="mb-2 flex-shrink-0">
+                <div className="relative">
+                  <Icon
+                    icon="typcn:zoom"
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5"
+                  />
+                  <input
+                    type="text"
+                    placeholder={tr.searchPlaceholder}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-8 pr-2.5 py-1.5 text-xs border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                  />
                 </div>
-                <div className="p-3">
-                  <div className="mb-3">
-                    <div className="relative">
-                      <Icon
-                        icon="typcn:zoom"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4"
-                      />
-                      <input
-                        type="text"
-                        placeholder={tr.searchPlaceholder}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
-                      />
-                    </div>
-                  </div>
+              </div>
 
-                  <label className="flex items-center gap-2 text-sm text-neutral-600 mb-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filterPending}
-                      onChange={(e) => setFilterPending(e.target.checked)}
-                      className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                    />
-                    {tr.pendingOnly}
-                  </label>
+              <label className="flex items-center gap-2 text-xs text-neutral-600 mb-2 cursor-pointer flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={filterPending}
+                  onChange={(e) => setFilterPending(e.target.checked)}
+                  className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
+                />
+                {tr.pendingOnly}
+              </label>
 
-                  {filteredOperaciones.length === 0 ? (
-                    <p className="text-center text-neutral-500 py-4 text-sm">{tr.noOperations}</p>
-                  ) : (
-                    <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-1.5">
+              {filteredOperaciones.length === 0 ? (
+                <p className="text-center text-neutral-500 py-3 text-xs">{tr.noOperations}</p>
+              ) : (
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
                       {filteredOperaciones.map((op) => (
                         <button
                           key={op.id}
                           type="button"
                           onClick={() => handleSelectOperation(op.id)}
-                          className={`w-full text-left p-3 rounded-lg border transition-all ${
+                          className={`w-full text-left p-2 rounded-md border transition-all ${
                             formData.operacion_id === op.id
                               ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
                               : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium text-neutral-800 text-sm">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-medium text-neutral-800 text-xs truncate">
                               {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
                             </p>
                             {op.numero_factura_asli ? (
-                              <Icon icon="typcn:tick" className="w-4 h-4 text-green-500" />
+                              <Icon icon="typcn:tick" className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                             ) : (
-                              <Icon icon="typcn:time" className="w-4 h-4 text-amber-500" />
+                              <Icon icon="typcn:time" className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-xs text-neutral-500 truncate">
+                          <p className="text-[11px] text-neutral-500 truncate">
                             {op.cliente} • {op.booking}
                           </p>
-                          <p className="text-xs text-neutral-400 mt-1">
+                          <p className="text-[11px] text-neutral-400 truncate">
                             {op.naviera} • ETD: {formatDate(op.etd)}
                           </p>
                         </button>
@@ -338,30 +336,30 @@ export function FacturacionContent() {
               </div>
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col min-h-0 overflow-y-auto">
               {formData.operacion_id ? (
-                <div className="space-y-4">
+                <div className="space-y-2 flex flex-col min-h-0">
                   {selectedOperacion && (
-                    <div className="p-4 bg-brand-blue/5 rounded-lg border border-brand-blue/20">
-                      <p className="text-sm font-medium text-brand-blue">{tr.selectedOperation}</p>
-                      <p className="text-neutral-800 font-semibold mt-1">
+                    <div className="p-2 bg-brand-blue/5 rounded-md border border-brand-blue/20 flex-shrink-0">
+                      <p className="text-xs font-medium text-brand-blue">{tr.selectedOperation}</p>
+                      <p className="text-neutral-800 font-semibold text-sm truncate">
                         {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} - {selectedOperacion.cliente}
                       </p>
-                      <p className="text-sm text-neutral-600">
+                      <p className="text-xs text-neutral-600 truncate">
                         {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
                       </p>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
-                          <Icon icon="typcn:document-text" className="w-4 h-4 text-brand-blue" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-shrink-0">
+                    <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="px-2.5 py-1.5 border-b border-neutral-100 bg-neutral-50">
+                        <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
+                          <Icon icon="typcn:document-text" className="w-3.5 h-3.5 text-brand-blue" />
                           {tr.invoiceInfo}
                         </h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="p-2 grid grid-cols-2 gap-2">
                         {renderInput(tr.asliInvoice, "numero_factura_asli")}
                         {renderInput(tr.invoicedAmount, "monto_facturado", "number")}
                         {renderInput(tr.transportInvoice, "factura_transporte")}
@@ -369,14 +367,14 @@ export function FacturacionContent() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
-                          <Icon icon="typcn:chart-bar" className="w-4 h-4 text-brand-blue" />
+                    <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="px-2.5 py-1.5 border-b border-neutral-100 bg-neutral-50">
+                        <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
+                          <Icon icon="typcn:chart-bar" className="w-3.5 h-3.5 text-brand-blue" />
                           {tr.financial}
                         </h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="p-2 grid grid-cols-2 gap-2">
                         {renderSelect(tr.currency, "moneda", monedas)}
                         {renderInput(tr.exchangeRate, "tipo_cambio", "number")}
                         {renderInput(tr.estimatedMargin, "margen_estimado", "number")}
@@ -384,14 +382,14 @@ export function FacturacionContent() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden xl:col-span-2">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
-                          <Icon icon="typcn:calendar" className="w-4 h-4 text-brand-blue" />
+                    <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden sm:col-span-2">
+                      <div className="px-2.5 py-1.5 border-b border-neutral-100 bg-neutral-50">
+                        <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
+                          <Icon icon="typcn:calendar" className="w-3.5 h-3.5 text-brand-blue" />
                           {tr.paymentDates}
                         </h2>
                       </div>
-                      <div className="p-4 grid grid-cols-3 gap-3">
+                      <div className="p-2 grid grid-cols-3 gap-2">
                         {renderInput(tr.invoiceDelivery, "fecha_entrega_factura", "date")}
                         {renderInput(tr.clientPayment, "fecha_pago_cliente", "date")}
                         {renderInput(tr.transportPayment, "fecha_pago_transporte", "date")}
@@ -400,19 +398,19 @@ export function FacturacionContent() {
                   </div>
 
                   {error && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <div className="p-2 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs flex-shrink-0">
                       {error}
                     </div>
                   )}
 
                   {success && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-                      <Icon icon="typcn:tick" className="w-5 h-5" />
+                    <div className="p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-xs flex items-center gap-1.5 flex-shrink-0">
+                      <Icon icon="typcn:tick" className="w-4 h-4" />
                       {tr.saveSuccess}
                     </div>
                   )}
 
-                  <div className="flex gap-3 justify-end">
+                  <div className="flex gap-2 justify-end flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -420,23 +418,23 @@ export function FacturacionContent() {
                         setSuccess(false);
                         setError(null);
                       }}
-                      className="px-5 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors"
                     >
                       {tr.cancel}
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-blue rounded-md hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
                     >
                       {saving ? (
                         <>
-                          <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
+                          <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
                           {tr.saving}
                         </>
                       ) : (
                         <>
-                          <Icon icon="typcn:tick" className="w-4 h-4" />
+                          <Icon icon="typcn:tick" className="w-3.5 h-3.5" />
                           {tr.save}
                         </>
                       )}
@@ -444,17 +442,15 @@ export function FacturacionContent() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-64 bg-white rounded-xl border border-neutral-200">
+                <div className="flex items-center justify-center flex-1 min-h-[120px] bg-white rounded-lg border border-neutral-200">
                   <div className="text-center text-neutral-500">
-                    <Icon icon="typcn:arrow-left" className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">{tr.selectOperation}</p>
+                    <Icon icon="typcn:arrow-left" className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                    <p className="text-xs">{tr.selectOperation}</p>
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        </form>
-      </div>
+          </form>
     </main>
   );
 }

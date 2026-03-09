@@ -1,0 +1,34 @@
+---
+/**
+ * Página de gestión: Servicios por naviera y Consorcios
+ * Copiar a: src/pages/gestion.astro (o admin/gestion.astro)
+ *
+ * En tu proyecto Astro:
+ * 1. Asegúrate de tener React: npx astro add react
+ * 2. Copia components/GestionPage.tsx, ServiciosPorNaviera.tsx, ConsorciosSection.tsx
+ * 3. Copia types/servicios.ts y lib/supabase-browser.ts
+ * 4. Ajusta las rutas de import según tu estructura (ej: @/components/... si tienes alias)
+ */
+export const prerender = false;
+import GestionPage from '../components/GestionPage';
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestión · Servicios y Consorcios</title>
+  </head>
+  <body class="min-h-screen bg-slate-100 text-slate-900">
+    <header class="border-b border-slate-200 bg-white shadow-sm">
+      <div class="max-w-6xl mx-auto px-4 py-4">
+        <h1 class="text-2xl font-bold text-slate-800">Gestión de servicios y consorcios</h1>
+        <p class="text-sm text-slate-500 mt-1">Crea servicios por naviera y agrupa varios en un consorcio.</p>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+      <GestionPage client:load />
+    </main>
+  </body>
+</html>

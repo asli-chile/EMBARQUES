@@ -217,5 +217,7 @@ Opciones válidas para `authIcon`:
 
 | Documento | Descripción |
 |-----------|-------------|
+| [docs/DOCUMENTACION-FUNCIONAL.md](docs/DOCUMENTACION-FUNCIONAL.md) | **Qué hace el sistema**: propósito, módulos, roles y flujos principales |
 | [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md) | Arquitectura, flujos de datos y decisiones técnicas |
 | [docs/ESTILOS-VISUALES.md](docs/ESTILOS-VISUALES.md) | Estándares visuales: colores, tipografía, componentes UI y layout |
+| [docs/DATABASE-SCHEMA.md](docs/DATABASE-SCHEMA.md) | Esquema de base de datos y tablas en Supabase |

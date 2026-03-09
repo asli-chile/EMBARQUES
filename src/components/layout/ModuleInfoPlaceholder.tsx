@@ -7,6 +7,7 @@ export type ModuleInfo = {
   description: string;
   highlight1: string;
   highlight2: string;
+  highlight3?: string;
 };
 
 type ModuleInfoPlaceholderProps = {
@@ -33,14 +34,12 @@ export function ModuleInfoPlaceholder({ info, currentHref }: ModuleInfoPlacehold
           <p className="text-neutral-500 mt-2 text-base leading-relaxed max-w-3xl">{info.description}</p>
 
           <div className="mt-6 flex flex-col gap-3">
-            <div className="flex items-start gap-2 text-base text-neutral-600">
-              <Icon icon="typcn:media-record" className="text-brand-teal flex-shrink-0 mt-0.5" width={10} height={10} />
-              {info.highlight1}
-            </div>
-            <div className="flex items-start gap-2 text-base text-neutral-600">
-              <Icon icon="typcn:media-record" className="text-brand-teal flex-shrink-0 mt-0.5" width={10} height={10} />
-              {info.highlight2}
-            </div>
+            {[info.highlight1, info.highlight2, info.highlight3].filter(Boolean).map((text, i) => (
+              <div key={i} className="flex items-start gap-2 text-base text-neutral-600">
+                <Icon icon="typcn:media-record" className="text-brand-teal flex-shrink-0 mt-0.5" width={10} height={10} />
+                {text}
+              </div>
+            ))}
           </div>
 
           <div className="mt-6 pt-4 border-t border-neutral-100">

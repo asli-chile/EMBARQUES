@@ -10,6 +10,10 @@ import { DashboardContent } from "@/components/dashboard";
 import { InicioContent } from "@/components/inicio";
 import { ServiciosContent } from "@/components/servicios";
 import { SobreNosotrosContent } from "@/components/sobre-nosotros";
+import { TrackingContent } from "@/components/tracking/TrackingContent";
+import { ItinerarioContent } from "@/components/itinerario/ItinerarioContent";
+import { ServiciosUnicosContent } from "@/components/itinerario/ServiciosUnicosContent";
+import { ConsorciosContent } from "@/components/itinerario/ConsorciosContent";
 import { RegistrosContent } from "@/components/registros";
 import { CrearReservaContent, MisReservasContent, PapeleraContent } from "@/components/reservas";
 import { ReservaAsliContent, ReservaExtContent, FacturacionContent } from "@/components/transportes";
@@ -50,6 +54,14 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ServiciosContent />
     ) : pathname === "/sobre-nosotros" ? (
       <SobreNosotrosContent />
+    ) : pathname === "/tracking" ? (
+      <TrackingContent />
+    ) : pathname === "/itinerario" ? (
+      <ItinerarioContent />
+    ) : pathname === "/itinerario/servicios" ? (
+      <ServiciosUnicosContent />
+    ) : pathname === "/itinerario/consorcios" ? (
+      <ConsorciosContent />
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros"><RegistrosContent /></ModuleWithVisitorInfo>
     ) : pathname === "/configuracion/clientes" ? (
@@ -82,9 +94,11 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <div className="h-screen flex flex-col overflow-hidden">
         <Header />
         <NavBanner pathname={pathname} />
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
           <Sidebar pathname={pathname} />
-          {mainContent}
+          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+            {mainContent}
+          </div>
         </div>
       </div>
       </AuthProvider>
