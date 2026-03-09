@@ -162,3 +162,47 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
     return json({ error: msg }, 500);
   }
 };
+
+export const DELETE: APIRoute = async ({ cookies, params }) => {
+  const id = params.id;
+  if (!id) return json({ error: "ID de itinerario requerido" }, 400);
+
+  try {
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient(cookies);
+    } catch {
+      return json({ error: "Configuración de Supabase faltante" }, 503);
+    }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) return json({ error: "No autorizado" }, 401);
+
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+      admin = createAdminClient();
+    } catch {
+      return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para eliminar itinerarios." }, 503);
+    }
+
+    await admin.from("itinerario_escalas").delete().eq("itinerario_id", id);
+    const { error: deleteErr } = await admin.from("itinerarios").delete().eq("id", id);
+
+    if (deleteErr) {
+      const code = (deleteErr as { code?: string })?.code;
+      let msg = deleteErr.message ?? "Error al eliminar itinerario";
+      if (code === "42501") {
+        msg =
+          "Permiso denegado en la base de datos. Ejecute la migración de permisos: supabase db push.";
+      }
+      return json({ error: msg, code }, 400);
+    }
+
+    return json({ success: true }, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error inesperado";
+    return json({ error: msg }, 500);
+  }
+};

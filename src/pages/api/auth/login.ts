@@ -12,9 +12,23 @@ function isSupabaseConfigured(): boolean {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const formData = await request.formData();
-  const email = (formData.get("email") as string | null)?.trim();
-  const password = formData.get("password") as string | null;
+  const contentType = request.headers.get("content-type") ?? "";
+  let email: string | null = null;
+  let password: string | null = null;
+  if (contentType.includes("application/json")) {
+    try {
+      const body = (await request.json()) as { email?: string; password?: string };
+      email = (body?.email ?? "").trim() || null;
+      password = (body?.password ?? null) ?? null;
+    } catch {
+      email = null;
+      password = null;
+    }
+  } else {
+    const formData = await request.formData();
+    email = (formData.get("email") as string | null)?.trim() || null;
+    password = formData.get("password") as string | null;
+  }
 
   if (!email) {
     return new Response(

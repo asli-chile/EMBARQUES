@@ -2,7 +2,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { fetchPublicItinerarios, createItinerario, updateItinerario } from "@/lib/itinerarios-service";
+import { fetchPublicItinerarios, createItinerario, updateItinerario, deleteItinerario } from "@/lib/itinerarios-service";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { format, getISOWeek, differenceInCalendarDays, addDays } from "date-fns";
 import { AREAS_CANONICAL } from "@/lib/areas";
@@ -207,8 +207,13 @@ export function ItinerarioContent() {
     addRowEtdLabel: "Fecha salida (ETD)",
     addRowSubmit: "Añadir fila",
     addRowSuccess: "Fila añadida correctamente.",
+    deleteItinerary: "Eliminar",
+    deleteItineraryAria: "Eliminar itinerario (nave {{nave}}, viaje {{viaje}})",
+    confirmDeleteItinerary: "¿Eliminar este itinerario ({{nave}} / {{viaje}})? Esta acción no se puede deshacer.",
+    successDeleted: "Itinerario eliminado correctamente.",
   };
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -420,6 +425,27 @@ export function ItinerarioContent() {
     setModalError(null);
     setEditingItinerarioId(null);
   }, []);
+
+  const handleDelete = useCallback(
+    async (it: ItinerarioWithEscalas) => {
+      const msg = tr.confirmDeleteItinerary
+        .replace("{{nave}}", it.nave ?? "")
+        .replace("{{viaje}}", it.viaje ?? "");
+      if (!window.confirm(msg)) return;
+      setDeletingId(it.id);
+      try {
+        await deleteItinerario(it.id);
+        setSuccessMessage(tr.successDeleted);
+        setTimeout(() => setSuccessMessage(null), 4000);
+        loadItinerarios();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : tr.errorCreate);
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [loadItinerarios, tr]
+  );
 
   const handleOpenAddRowModal = useCallback((template: ItinerarioWithEscalas, servicioNombre: string, area: string) => {
     setAddRowContext({ template, servicioNombre, area });
@@ -797,7 +823,7 @@ export function ItinerarioContent() {
                                     </th>
                                   ))}
                                   {isLoggedIn && (
-                                    <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap w-[100px]">
+                                    <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap min-w-[180px]">
                                       {tr.colActions}
                                     </th>
                                   )}
@@ -850,15 +876,31 @@ export function ItinerarioContent() {
                                       })}
                                       {isLoggedIn && (
                                         <td className="px-3 py-3 text-center align-middle">
-                                          <button
-                                            type="button"
-                                            onClick={() => handleOpenEdit(it)}
-                                            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                                            aria-label={tr.editItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
-                                          >
-                                            <Icon icon="lucide:pencil" width={16} height={16} aria-hidden />
-                                            {tr.editItinerary}
-                                          </button>
+                                          <div className="flex items-center justify-center gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOpenEdit(it)}
+                                              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                                              aria-label={tr.editItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
+                                            >
+                                              <Icon icon="lucide:pencil" width={16} height={16} aria-hidden />
+                                              {tr.editItinerary}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleDelete(it)}
+                                              disabled={deletingId === it.id}
+                                              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 disabled:opacity-50"
+                                              aria-label={tr.deleteItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
+                                            >
+                                              {deletingId === it.id ? (
+                                                <Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" aria-hidden />
+                                              ) : (
+                                                <Icon icon="lucide:trash-2" width={16} height={16} aria-hidden />
+                                              )}
+                                              {tr.deleteItinerary}
+                                            </button>
+                                          </div>
                                         </td>
                                       )}
                                     </tr>

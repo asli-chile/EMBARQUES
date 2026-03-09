@@ -153,3 +153,24 @@ export async function updateItinerario(
 
   return { success: true, itinerario: data.itinerario };
 }
+
+export async function deleteItinerario(id: string): Promise<void> {
+  const apiUrl = getApiUrl();
+  const response = await fetch(`${apiUrl}/api/admin/itinerarios/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  let data: { error?: string; success?: boolean };
+  try {
+    data = (await response.json()) as { error?: string; success?: boolean };
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    const msg = data.error?.trim() || `Error ${response.status}: ${response.statusText}`;
+    console.error("[deleteItinerario] API error:", response.status, data);
+    throw new Error(msg);
+  }
+}

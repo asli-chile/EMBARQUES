@@ -21,12 +21,14 @@ export function LoginForm({ registered = false }: LoginFormProps) {
     setIsPending(true);
 
     const form = e.currentTarget;
-    const formData = new FormData(form);
+    const email = (form.querySelector<HTMLInputElement>('[name="email"]')?.value ?? "").trim();
+    const password = form.querySelector<HTMLInputElement>('[name="password"]')?.value ?? "";
 
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
         credentials: "include",
       });
       const data = await res.json();
