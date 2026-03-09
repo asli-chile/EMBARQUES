@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { fetchPublicItinerarios, createItinerario, updateItinerario } from "@/lib/itinerarios-service";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { format, getISOWeek, differenceInCalendarDays, addDays } from "date-fns";
@@ -125,6 +126,9 @@ function getNavesFromServicioOConsorcio(
 
 export function ItinerarioContent() {
   const { t, locale } = useLocale();
+  const { user: authUser } = useAuth() ?? {};
+  const isLoggedIn = authUser != null;
+
   const tr = t.itinerarioPage ?? {
     title: "Itinerarios de Naves",
     subtitle: "Consulta pública de itinerarios marítimos.",
@@ -602,15 +606,17 @@ export function ItinerarioContent() {
             </h1>
             <p className="text-white/90 text-sm mt-2">{tr.subtitle}</p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
-            aria-label={tr.newItinerary}
-          >
-            <Icon icon="lucide:plus" width={18} height={18} />
-            {tr.newItinerary}
-          </button>
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={handleOpenModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
+              aria-label={tr.newItinerary}
+            >
+              <Icon icon="lucide:plus" width={18} height={18} />
+              {tr.newItinerary}
+            </button>
+          )}
         </header>
 
         {successMessage && (
@@ -751,15 +757,17 @@ export function ItinerarioContent() {
                               <Icon icon="lucide:map-pin" width={16} height={16} className="shrink-0" aria-hidden />
                               {area || "Sin área"}
                             </h3>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
-                              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 transition-colors"
-                              aria-label={tr.addRow}
-                            >
-                              <Icon icon="lucide:plus" width={16} height={16} aria-hidden />
-                              {tr.addRow}
-                            </button>
+                            {isLoggedIn && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 transition-colors"
+                                aria-label={tr.addRow}
+                              >
+                                <Icon icon="lucide:plus" width={16} height={16} aria-hidden />
+                                {tr.addRow}
+                              </button>
+                            )}
                           </div>
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm" role="table">
@@ -788,9 +796,11 @@ export function ItinerarioContent() {
                                       </span>
                                     </th>
                                   ))}
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap w-[100px]">
-                                    {tr.colActions}
-                                  </th>
+                                  {isLoggedIn && (
+                                    <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap w-[100px]">
+                                      {tr.colActions}
+                                    </th>
+                                  )}
                                 </tr>
                               </thead>
                               <tbody>
@@ -838,17 +848,19 @@ export function ItinerarioContent() {
                                           </td>
                                         );
                                       })}
-                                      <td className="px-3 py-3 text-center align-middle">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleOpenEdit(it)}
-                                          className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                                          aria-label={tr.editItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
-                                        >
-                                          <Icon icon="lucide:pencil" width={16} height={16} aria-hidden />
-                                          {tr.editItinerary}
-                                        </button>
-                                      </td>
+                                      {isLoggedIn && (
+                                        <td className="px-3 py-3 text-center align-middle">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEdit(it)}
+                                            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                                            aria-label={tr.editItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
+                                          >
+                                            <Icon icon="lucide:pencil" width={16} height={16} aria-hidden />
+                                            {tr.editItinerary}
+                                          </button>
+                                        </td>
+                                      )}
                                     </tr>
                                   );
                                 })}
