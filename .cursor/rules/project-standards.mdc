@@ -67,3 +67,4 @@ public/       → Assets estáticos
 - Formularios: `rounded-lg`, `px-4 py-2.5`, `border-neutral-200`, focus ring `brand-blue/30`.
 - Modales y cards destacadas: `rounded-2xl`, `shadow-mac-modal`, `p-6`.
 - Transiciones: `transition-colors` en elementos interactivos.
+- **Página Itinerario:** usar siempre el total de la pantalla sin bordes; sin márgenes/padding exterior en el contenido principal; solo el mínimo necesario (p. ej. `px-4`/`py-4`) donde haga falta para legibilidad.

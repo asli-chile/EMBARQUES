@@ -119,7 +119,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       return json({ error: "Cuerpo de la petición inválido" }, 400);
     }
 
-    const { nave, viaje, pol, etd, servicio, consorcio, naviera, semana, servicio_id, escalas } = body;
+    const { nave, viaje, pol, etd, servicio, consorcio, naviera, operador, semana, servicio_id, escalas } = body;
     const naveStr = typeof nave === "string" ? nave.trim() : String(nave ?? "").trim();
     const viajeStr = typeof viaje === "string" ? viaje.trim() : String(viaje ?? "").trim();
     const polStr = typeof pol === "string" ? pol.trim() : String(pol ?? "").trim();
@@ -161,6 +161,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
         servicio: (servicio as string)?.trim() || "Servicio",
         consorcio: (consorcio as string)?.trim() || null,
         naviera: (naviera as string)?.trim() || null,
+        operador: (operador as string)?.trim() || null,
         nave: naveStr,
         viaje: viajeStr,
         pol: polStr,

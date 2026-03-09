@@ -49,7 +49,7 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
       return json({ error: "Cuerpo de la petición inválido" }, 400);
     }
 
-    const { nave, viaje, pol, etd, servicio, consorcio, naviera, semana, servicio_id, escalas } = body;
+    const { nave, viaje, pol, etd, servicio, consorcio, naviera, operador, semana, servicio_id, escalas } = body;
     const naveStr = typeof nave === "string" ? nave.trim() : String(nave ?? "").trim();
     const viajeStr = typeof viaje === "string" ? viaje.trim() : String(viaje ?? "").trim();
     const polStr = typeof pol === "string" ? pol.trim() : String(pol ?? "").trim();
@@ -91,6 +91,7 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
         servicio: (servicio as string)?.trim() || "Servicio",
         consorcio: (consorcio as string)?.trim() || null,
         naviera: (naviera as string)?.trim() || null,
+        operador: (operador as string)?.trim() || null,
         nave: naveStr,
         viaje: viajeStr,
         pol: polStr,
@@ -148,6 +149,70 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
           "Permiso denegado en la base de datos. Ejecute la migración de permisos: supabase db push (o aplique 20260308000005_itinerarios_admin_grants.sql).";
       }
       return json({ error: errMsg, code }, 400);
+    }
+
+    const { data: completo } = await admin
+      .from("itinerarios")
+      .select("*, escalas:itinerario_escalas(*)")
+      .eq("id", id)
+      .single();
+
+    return json({ success: true, itinerario: completo }, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Error inesperado";
+    return json({ error: msg }, 500);
+  }
+};
+
+export const PATCH: APIRoute = async ({ cookies, params, request }) => {
+  const id = params.id;
+  if (!id) return json({ error: "ID de itinerario requerido" }, 400);
+
+  try {
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient(cookies);
+    } catch {
+      return json({ error: "Configuración de Supabase faltante" }, 503);
+    }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) return json({ error: "No autorizado" }, 401);
+
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return json({ error: "Cuerpo de la petición inválido" }, 400);
+    }
+
+    const operador = body.operador;
+    const operadorStr = operador != null && typeof operador === "string" ? operador.trim() || null : null;
+
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+      admin = createAdminClient();
+    } catch {
+      return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para actualizar itinerarios." }, 503);
+    }
+    const { error: updateErr } = await admin
+      .from("itinerarios")
+      .update({
+        operador: operadorStr,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (updateErr) {
+      const code = (updateErr as { code?: string })?.code;
+      let msg = updateErr.message ?? "Error al actualizar operador";
+      if (code === "42501") {
+        msg = "Permiso denegado en la base de datos. Ejecute la migración de permisos: supabase db push.";
+      }
+      return json({ error: msg, code }, 400);
     }
 
     const { data: completo } = await admin

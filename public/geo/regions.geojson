@@ -1,0 +1,37 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "area": "AMERICA", "id": 1 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-170,-55],[-170,70],[-35,70],[-35,-55],[-170,-55]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "area": "EUROPA", "id": 2 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-25,35],[-25,71],[60,71],[60,35],[-25,35]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "area": "ASIA", "id": 3 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[50,0],[150,0],[150,75],[50,75],[50,0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "area": "INDIA-MEDIOORIENTE", "id": 4 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[25,5],[25,40],[90,40],[90,5],[25,5]]]
+      }
+    }
+  ]
+}

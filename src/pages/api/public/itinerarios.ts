@@ -8,6 +8,7 @@ type DbItinerario = {
   servicio: string;
   consorcio: string | null;
   naviera: string | null;
+  operador: string | null;
   nave: string;
   viaje: string;
   semana: number | null;
@@ -45,7 +46,7 @@ export const GET: APIRoute = async () => {
 
     const { data: itinerariosData, error: errItinerarios } = await supabase
       .from("itinerarios")
-      .select("id, servicio, consorcio, naviera, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by")
+      .select("id, servicio, consorcio, naviera, operador, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by")
       .order("etd", { ascending: true })
       .order("servicio", { ascending: true });
 

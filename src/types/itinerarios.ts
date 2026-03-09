@@ -5,6 +5,8 @@ export type Itinerario = {
   servicio: string;
   consorcio: string | null;
   naviera?: string | null;
+  /** Naviera/operador seleccionada del consorcio o servicio para este itinerario */
+  operador?: string | null;
   nave: string;
   viaje: string;
   semana: number | null;

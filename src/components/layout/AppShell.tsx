@@ -15,6 +15,8 @@ import { ItinerarioContent } from "@/components/itinerario/ItinerarioContent";
 import { ServiciosUnicosContent } from "@/components/itinerario/ServiciosUnicosContent";
 import { ConsorciosContent } from "@/components/itinerario/ConsorciosContent";
 import { RegistrosContent } from "@/components/registros";
+import { ReportesContent } from "@/components/reportes";
+import { FinanzasContent } from "@/components/finanzas";
 import { CrearReservaContent, MisReservasContent, PapeleraContent } from "@/components/reservas";
 import { ReservaAsliContent, ReservaExtContent, FacturacionContent } from "@/components/transportes";
 import { MisDocumentosContent } from "@/components/documentos";
@@ -64,6 +66,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ConsorciosContent />
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros"><RegistrosContent /></ModuleWithVisitorInfo>
+    ) : pathname === "/reportes" ? (
+      <ModuleWithVisitorInfo moduleKey="reportes"><ReportesContent /></ModuleWithVisitorInfo>
+    ) : pathname === "/finanzas" ? (
+      <ModuleWithVisitorInfo moduleKey="finanzas"><FinanzasContent /></ModuleWithVisitorInfo>
     ) : pathname === "/configuracion/clientes" ? (
       <ConfigGuard><ClientesContent /></ConfigGuard>
     ) : pathname === "/configuracion/asignar-clientes-empresas" ? (

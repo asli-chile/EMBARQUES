@@ -27,5 +27,15 @@ export default defineConfig({
         "@": path.resolve(__dirname, "src"),
       },
     },
+    // MapLibre 5.x: evita "__publicField is not defined" en el worker (target ES2022 + pre-bundle).
+    optimizeDeps: {
+      include: ["maplibre-gl"],
+      esbuildOptions: {
+        target: "es2022",
+      },
+    },
+    build: {
+      target: "es2022",
+    },
   },
 });

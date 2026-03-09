@@ -174,3 +174,26 @@ export async function deleteItinerario(id: string): Promise<void> {
     throw new Error(msg);
   }
 }
+
+export async function updateItinerarioOperador(id: string, operador: string | null): Promise<void> {
+  const apiUrl = getApiUrl();
+  const response = await fetch(`${apiUrl}/api/admin/itinerarios/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operador: operador ?? null }),
+  });
+
+  let data: { error?: string };
+  try {
+    data = (await response.json()) as { error?: string };
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    const msg = data.error?.trim() || `Error ${response.status}: ${response.statusText}`;
+    console.error("[updateItinerarioOperador] API error:", response.status, data);
+    throw new Error(msg);
+  }
+}

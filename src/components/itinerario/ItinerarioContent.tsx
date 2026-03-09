@@ -2,10 +2,11 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { fetchPublicItinerarios, createItinerario, updateItinerario, deleteItinerario } from "@/lib/itinerarios-service";
+import { fetchPublicItinerarios, createItinerario, updateItinerario, deleteItinerario, updateItinerarioOperador } from "@/lib/itinerarios-service";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { format, getISOWeek, differenceInCalendarDays, addDays } from "date-fns";
 import { AREAS_CANONICAL } from "@/lib/areas";
+import ItinerarioMap from "./ItinerarioMap";
 
 const DATE_DISPLAY = "dd/MM/yyyy";
 
@@ -124,6 +125,32 @@ function getNavesFromServicioOConsorcio(
   return [];
 }
 
+/** Obtiene la lista de navieras (operadores) del servicio o consorcio del itinerario */
+function getNavierasForItinerario(
+  it: ItinerarioWithEscalas,
+  servicios: ServicioConDetalle[],
+  consorcios: ConsorcioConDetalle[]
+): string[] {
+  const consorcioNombre = (it.consorcio ?? "").trim();
+  if (consorcioNombre) {
+    const c = consorcios.find((x) => (x.nombre ?? "").trim() === consorcioNombre);
+    if (c?.servicios?.length) {
+      const navieras = c.servicios
+        .map((s) => s.servicio_unico?.naviera_nombre?.trim())
+        .filter((n): n is string => Boolean(n));
+      return [...new Set(navieras)];
+    }
+  }
+  const servicioNombreKey = (it.servicio ?? "").trim();
+  if (servicioNombreKey) {
+    const s = servicios.find((x) => (x.nombre ?? "").trim() === servicioNombreKey);
+    if (s?.naviera_nombre?.trim()) {
+      return [s.naviera_nombre.trim()];
+    }
+  }
+  return [];
+}
+
 export function ItinerarioContent() {
   const { t, locale } = useLocale();
   const { user: authUser } = useAuth() ?? {};
@@ -211,9 +238,13 @@ export function ItinerarioContent() {
     deleteItineraryAria: "Eliminar itinerario (nave {{nave}}, viaje {{viaje}})",
     confirmDeleteItinerary: "¿Eliminar este itinerario ({{nave}} / {{viaje}})? Esta acción no se puede deshacer.",
     successDeleted: "Itinerario eliminado correctamente.",
+    colOperador: "Operador",
   };
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [operadorUpdatingId, setOperadorUpdatingId] = useState<string | null>(null);
+  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
+  const [selectedAreaFromMap, setSelectedAreaFromMap] = useState<string | null>(null);
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -271,7 +302,7 @@ export function ItinerarioContent() {
   }, [loadItinerarios]);
 
   useEffect(() => {
-    if (!modalOpen && !addRowModalOpen) return;
+    if (!modalOpen && !addRowModalOpen && !isLoggedIn) return;
     const base = getApiUrl() || "";
     Promise.all([
       fetch(`${base}/api/admin/servicios-unicos`, { credentials: "include" }).then((r) => r.ok ? r.json() : { servicios: [] }),
@@ -280,7 +311,7 @@ export function ItinerarioContent() {
       setServiciosConDetalle((s as { servicios?: ServicioConDetalle[] }).servicios ?? []);
       setConsorciosConDetalle((c as { consorcios?: ConsorcioConDetalle[] }).consorcios ?? []);
     });
-  }, [modalOpen, addRowModalOpen]);
+  }, [modalOpen, addRowModalOpen, isLoggedIn]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -425,6 +456,22 @@ export function ItinerarioContent() {
     setModalError(null);
     setEditingItinerarioId(null);
   }, []);
+
+  const handleOperadorChange = useCallback(
+    async (it: ItinerarioWithEscalas, operador: string) => {
+      const value = operador.trim() || null;
+      setOperadorUpdatingId(it.id);
+      try {
+        await updateItinerarioOperador(it.id, value);
+        loadItinerarios();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error al actualizar operador");
+      } finally {
+        setOperadorUpdatingId(null);
+      }
+    },
+    [loadItinerarios]
+  );
 
   const handleDelete = useCallback(
     async (it: ItinerarioWithEscalas) => {
@@ -622,28 +669,152 @@ export function ItinerarioContent() {
     });
   }, []);
 
+  const isMapOnlyView = !loading && !selectedAreaFromMap;
+
+  const areasWithData = itinerarios.length > 0
+    ? [...new Set(itinerarios.flatMap((it) => (it.escalas ?? []).map((e) => (e.area || "").trim()).filter(Boolean)))]
+    : [];
+  const itinerariosForPorts =
+    selectedAreaFromMap && itinerarios.length > 0
+      ? itinerarios.filter((it) =>
+          (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
+        )
+      : itinerarios;
+  const portNames = [
+    ...new Set(
+      itinerariosForPorts.flatMap((it) => {
+        const names: string[] = [];
+        if (it.pol?.trim()) names.push(it.pol.trim());
+        (it.escalas ?? []).forEach((e) => {
+          if (e.puerto?.trim()) names.push(e.puerto.trim());
+          if (e.puerto_nombre?.trim()) names.push(e.puerto_nombre.trim());
+        });
+        return names;
+      })
+    ),
+  ].filter(Boolean);
+
+  // Layout: usar siempre toda la pantalla sin bordes (mínimo padding solo donde haga falta).
   return (
-    <main className="flex-1 min-h-0 min-w-0 w-full overflow-auto bg-brand-blue" role="main">
-      <div className="w-full min-h-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {tr.title}
-            </h1>
-            <p className="text-white/90 text-sm mt-2">{tr.subtitle}</p>
+    <main
+      className="flex-1 min-h-0 min-w-0 w-full bg-brand-blue flex flex-col overflow-hidden"
+      role="main"
+    >
+      {/* Título y acciones arriba: mínimo padding para usar toda la pantalla */}
+      <header className="flex-shrink-0 flex flex-wrap items-start justify-between gap-4 w-full px-4 py-2">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            {tr.title}
+          </h1>
+          <p className="text-white/90 text-sm mt-2">{tr.subtitle}</p>
+        </div>
+        {isLoggedIn && (
+          <button
+            type="button"
+            onClick={handleOpenModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
+            aria-label={tr.newItinerary}
+          >
+            <Icon icon="lucide:plus" width={18} height={18} />
+            {tr.newItinerary}
+          </button>
+        )}
+      </header>
+
+      {/* Pantalla de selección de área: tarjeta con mapa a pantalla completa sin bordes */}
+      {!selectedAreaFromMap && (
+        <section className="flex-1 min-h-0 flex flex-col w-full overflow-hidden">
+          <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-white">
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+              {/* Columna info */}
+              <div className="w-full lg:w-1/2 flex flex-col gap-5 px-6 sm:px-8 py-6 sm:py-8 bg-gradient-to-br from-white via-brand-blue/[0.03] to-neutral-50/80 border-b lg:border-b-0 lg:border-r border-neutral-200/80">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-lg bg-brand-blue/10 px-3 py-1.5 text-xs font-medium text-brand-blue mb-4">
+                    <Icon icon="lucide:map-pin" width={14} height={14} aria-hidden />
+                    Vista global
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-brand-blue tracking-tight">
+                    Descubre tus itinerarios en el mapa
+                  </h2>
+                  <p className="mt-3 text-sm text-neutral-600 leading-relaxed max-w-md">
+                    Explora tus servicios por área (América, Europa, Asia e India-Medio Oriente),
+                    entiende mejor tus rutas y explícale a tus clientes desde qué puertos salen los buques y a qué destinos llegan.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+                    <Icon icon="lucide:help-circle" width={16} height={16} className="text-brand-blue/80" aria-hidden />
+                    ¿Cómo usar esta vista?
+                  </h3>
+                  <ul className="space-y-3 text-sm text-neutral-700">
+                    <li className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
+                        <Icon icon="lucide:mouse" width={12} height={12} aria-hidden />
+                      </span>
+                      <span>Pasa el mouse sobre las regiones para ver dónde tienes itinerarios activos.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
+                        <Icon icon="lucide:mouse-pointer" width={12} height={12} aria-hidden />
+                      </span>
+                      <span>Haz clic en una región (Asia, Europa, América, India-Medio Oriente) para filtrar la tabla de itinerarios.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
+                        <Icon icon="lucide:users" width={12} height={12} aria-hidden />
+                      </span>
+                      <span>Después de elegir un área, revisa en la tabla las semanas, naves, ETD/ETA y días de tránsito por destino.</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="mt-auto pt-4">
+                  <p className="rounded-xl bg-neutral-100/90 px-4 py-3 text-xs text-neutral-600 border border-neutral-200/60">
+                    <strong className="text-neutral-700">Tip:</strong> Combina esta vista con la tabla inferior para revisar semanas, naves y tiempos de tránsito por destino.
+                  </p>
+                </div>
+              </div>
+              {/* Columna mapa */}
+              <div className="w-full lg:w-1/2 flex-1 min-h-[220px] lg:min-h-0 relative bg-neutral-100/50">
+                <div className="absolute inset-0 overflow-hidden border-l border-neutral-200/60">
+                  <ItinerarioMap
+                    compact={false}
+                    selectedArea={selectedAreaFromMap}
+                    onSelectArea={setSelectedAreaFromMap}
+                    areasWithData={areasWithData}
+                    portNames={portNames}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          {isLoggedIn && (
+        </section>
+      )}
+
+      {/* Tablas: zona con scroll a pantalla completa cuando hay área seleccionada */}
+      <div
+        className={`overflow-auto w-full px-4 py-4 ${
+          selectedAreaFromMap ? "flex-1 min-h-0" : "hidden"
+        }`}
+      >
+        {selectedAreaFromMap && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/10 border border-white/20 px-4 py-2.5 text-sm text-white">
+            <span>
+              Mostrando itinerarios para el área{" "}
+              <span className="font-semibold">
+                {selectedAreaFromMap}
+              </span>
+              .
+            </span>
             <button
               type="button"
-              onClick={handleOpenModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
-              aria-label={tr.newItinerary}
+              onClick={() => setSelectedAreaFromMap(null)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 text-brand-blue px-3 py-1.5 text-xs font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/60"
             >
-              <Icon icon="lucide:plus" width={18} height={18} />
-              {tr.newItinerary}
+              <Icon icon="lucide:globe-2" width={14} height={14} aria-hidden />
+              Ver todas las áreas
             </button>
-          )}
-        </header>
+          </div>
+        )}
 
         {successMessage && (
           <div className="mb-4 p-3 rounded-xl bg-emerald-500/20 text-white text-sm border border-emerald-400/50 flex items-center gap-2" role="status">
@@ -675,47 +846,58 @@ export function ItinerarioContent() {
             />
             <span className="text-white text-sm">{tr.loadingItineraries}</span>
           </div>
-        ) : itinerarios.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-mac-modal border border-black/5 p-8 text-center">
-            <Icon
-              icon="lucide:ship"
-              width={48}
-              height={48}
-              className="mx-auto mb-4 text-neutral-400"
-            />
-            <p className="text-neutral-600 font-medium">{tr.emptyTitle}</p>
-            <p className="text-sm text-neutral-500 mt-1">{tr.emptySubtitle}</p>
-          </div>
-        ) : (() => {
-          type ItinerarioWithEscalasType = typeof itinerarios[0];
-          const byServicio = new Map<string, ItinerarioWithEscalasType[]>();
-          for (const it of itinerarios) {
-            const key = (it.servicio || "").trim() || "—";
-            const list = byServicio.get(key) ?? [];
-            list.push(it);
-            byServicio.set(key, list);
-          }
-          const servicioNames = [...byServicio.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-          const areaOrder = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", ""];
-          const sortArea = (a: string, b: string) => {
-            const iA = areaOrder.indexOf(a);
-            const iB = areaOrder.indexOf(b);
-            if (iA >= 0 && iB >= 0) return iA - iB;
-            if (iA >= 0) return -1;
-            if (iB >= 0) return 1;
-            return a.localeCompare(b, undefined, { sensitivity: "base" });
-          };
-
-          return (
-            <div className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm border border-white/20">
-                  <Icon icon="lucide:list" width={16} height={16} aria-hidden />
-                  {tr.resultsCount.replace("{{count}}", String(itinerarios.length))}
-                </span>
+        ) : (
+          <>
+            {itinerarios.length === 0 && !isMapOnlyView && (
+              <div className="mt-6 bg-white rounded-2xl shadow-mac-modal border border-black/5 p-8 text-center">
+                <Icon icon="lucide:ship" width={48} height={48} className="mx-auto mb-4 text-neutral-400" />
+                <p className="text-neutral-600 font-medium">{tr.emptyTitle}</p>
+                <p className="text-sm text-neutral-500 mt-1">{tr.emptySubtitle}</p>
               </div>
+            )}
 
-              {servicioNames.map((servicioNombre) => {
+            {itinerarios.length > 0 && !selectedAreaFromMap && !isMapOnlyView && (
+              <p className="text-center text-white/90 text-sm py-6 px-4">
+                {tr.mapSelectHint ?? "Selecciona una región en el mapa para ver los itinerarios."}
+              </p>
+            )}
+
+            {itinerarios.length > 0 && selectedAreaFromMap && (() => {
+              type ItinerarioWithEscalasType = typeof itinerarios[0];
+              const byServicio = new Map<string, ItinerarioWithEscalasType[]>();
+              for (const it of itinerarios) {
+                const key = (it.servicio || "").trim() || "—";
+                const list = byServicio.get(key) ?? [];
+                list.push(it);
+                byServicio.set(key, list);
+              }
+              const servicioNames = [...byServicio.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+              const areaOrder = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", ""];
+              const sortArea = (a: string, b: string) => {
+                const iA = areaOrder.indexOf(a);
+                const iB = areaOrder.indexOf(b);
+                if (iA >= 0 && iB >= 0) return iA - iB;
+                if (iA >= 0) return -1;
+                if (iB >= 0) return 1;
+                return a.localeCompare(b, undefined, { sensitivity: "base" });
+              };
+              const filteredServicioNames = servicioNames.filter((nombre) => {
+                const list = byServicio.get(nombre)!;
+                return list.some((it) =>
+                  (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
+                );
+              });
+
+              return (
+                <div className="space-y-8 mt-8">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm border border-white/20">
+                      <Icon icon="lucide:list" width={16} height={16} aria-hidden />
+                      {tr.resultsCount.replace("{{count}}", String(itinerarios.length))}
+                    </span>
+                  </div>
+
+                  {filteredServicioNames.map((servicioNombre) => {
                 const list = byServicio.get(servicioNombre)!;
                 const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
                 const areasSet = new Set<string>();
@@ -724,29 +906,48 @@ export function ItinerarioContent() {
                     areasSet.add((e.area || "").trim() || "");
                   }
                 }
-                const areas = areasSet.size > 0 ? [...areasSet].sort(sortArea) : [""];
+                const areasRaw = areasSet.size > 0 ? [...areasSet].sort(sortArea) : [""];
+                const areas = selectedAreaFromMap
+                  ? areasRaw.filter((a) => (a || "").trim() === selectedAreaFromMap)
+                  : areasRaw;
 
                 return (
-                  <section key={servicioNombre} className="space-y-6">
-                    <header className="relative bg-white rounded-2xl border border-neutral-200/80 shadow-mac-modal overflow-hidden">
+                  <section key={servicioNombre}>
+                    <div className="relative bg-white rounded-2xl border border-neutral-200/80 shadow-mac-modal overflow-hidden">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-blue" aria-hidden />
-                      <div className="p-5 sm:p-6 pl-6">
-                        <h2 className="text-xl font-bold text-brand-blue tracking-tight">
-                          {servicioNombre}
-                        </h2>
-                        {navieras.length > 0 && (
-                          <p className="text-sm text-neutral-600 mt-2 flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand-blue/10 text-brand-blue">
-                              <Icon icon="lucide:ship" width={14} height={14} className="shrink-0" aria-hidden />
-                              {tr.carriersInService}:
-                            </span>
-                            <span className="font-medium text-neutral-700">{navieras.join(", ")}</span>
-                          </p>
+                      <div className="p-5 sm:p-6 pl-6 border-b border-neutral-200/70 bg-neutral-50/60 flex items-start justify-between gap-4 flex-wrap">
+                        <div className="space-y-2">
+                          <h2 className="text-xl font-bold text-brand-blue tracking-tight">
+                            {servicioNombre}
+                          </h2>
+                          {navieras.length > 0 && (
+                            <p className="text-sm text-neutral-600 flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand-blue/10 text-brand-blue">
+                                <Icon icon="lucide:ship" width={14} height={14} className="shrink-0" aria-hidden />
+                                {tr.carriersInService}:
+                              </span>
+                              <span className="font-medium text-neutral-700">{navieras.join(", ")}</span>
+                            </p>
+                          )}
+                        </div>
+                        {areas.length === 1 && (
+                          <div className="ml-auto">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm border border-neutral-200/80">
+                              <Icon icon="lucide:map-pin" width={20} height={20} className="shrink-0 text-brand-blue/80" aria-hidden />
+                              <div className="text-right">
+                                <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-[0.18em]">
+                                  Área
+                                </p>
+                                <p className="mt-0.5 text-lg sm:text-xl font-semibold text-neutral-900 tracking-tight uppercase">
+                                  {areas[0] || "Sin área"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </header>
 
-                    {areas.map((area) => {
+                      {areas.map((area, areaIndex) => {
                       const itinerariosEnArea = list.filter((it) => {
                         const esc = it.escalas ?? [];
                         if (area === "") return esc.length === 0 || esc.every((e) => ((e.area || "").trim() || "") === "");
@@ -773,16 +974,25 @@ export function ItinerarioContent() {
                       const getEscalaForPort = (escalas: ItinerarioWithEscalasType["escalas"], portKey: string) =>
                         (escalas ?? []).find((e) => ((e.puerto_nombre || e.puerto) || "—") === portKey);
 
+                      const areaKey = `${servicioNombre}__${area || "sin-area"}`;
+                      const isExpanded = expandedAreas[areaKey] ?? false;
+
+                      const displayedItinerarios = isExpanded ? itinerariosEnArea : itinerariosEnArea.slice(0, 4);
+
                       return (
                         <div
                           key={`${servicioNombre}-${area}`}
-                          className="rounded-2xl border border-neutral-200 bg-white shadow-mac-modal overflow-hidden transition-shadow hover:shadow-lg hover:shadow-neutral-200/50"
+                          className={areaIndex === 0 ? "" : "border-t border-neutral-200"}
                         >
-                          <div className="px-4 py-3 border-b border-neutral-200 bg-gradient-to-r from-brand-blue/8 via-neutral-50/80 to-white flex items-center justify-between gap-3 flex-wrap">
-                            <h3 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 border border-neutral-200/80 text-sm font-semibold text-brand-blue uppercase tracking-wider shadow-sm">
-                              <Icon icon="lucide:map-pin" width={16} height={16} className="shrink-0" aria-hidden />
-                              {area || "Sin área"}
-                            </h3>
+                          <div className="px-4 py-3 bg-gradient-to-r from-brand-blue/8 via-neutral-50/80 to-white flex items-center justify-between gap-3 flex-wrap">
+                            {areas.length > 1 ? (
+                              <h3 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 border border-neutral-200/80 text-xs font-semibold text-brand-blue uppercase tracking-wider shadow-sm">
+                                <Icon icon="lucide:map-pin" width={16} height={16} className="shrink-0" aria-hidden />
+                                <span>{area || "Sin área"}</span>
+                              </h3>
+                            ) : (
+                              <div className="flex-1" />
+                            )}
                             {isLoggedIn && (
                               <button
                                 type="button"
@@ -806,10 +1016,14 @@ export function ItinerarioContent() {
                                     {tr.colNave}
                                   </th>
                                   <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
+                                    {tr.colOperador}
+                                  </th>
+                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
                                     {tr.colViaje}
                                   </th>
                                   <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
-                                    {tr.colPol}
+                                    <span className="block">{tr.colPol}</span>
+                                    <span className="block text-xs font-normal text-neutral-500 mt-0.5">{tr.colEtd}</span>
                                   </th>
                                   {destinosColumnas.map((portKey) => (
                                     <th
@@ -830,7 +1044,7 @@ export function ItinerarioContent() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {itinerariosEnArea.map((it, rowIndex) => {
+                                {displayedItinerarios.map((it, rowIndex) => {
                                   const escalas = it.escalas ?? [];
                                   const isEven = rowIndex % 2 === 0;
                                   return (
@@ -855,8 +1069,49 @@ export function ItinerarioContent() {
                                           <span className="text-neutral-500 text-xs block mt-0.5">{it.naviera}</span>
                                         ) : null}
                                       </td>
+                                      <td className="px-3 py-3 text-center align-middle">
+                                        {isLoggedIn ? (
+                                          (() => {
+                                            const navierasOp = getNavierasForItinerario(it, serviciosConDetalle, consorciosConDetalle);
+                                            const updating = operadorUpdatingId === it.id;
+
+                                            // Asegurar que el valor seleccionado siempre coincida con una opción visible
+                                            const trimmedOperador = (it.operador || "").trim();
+                                            const trimmedNaviera = (it.naviera || "").trim();
+
+                                            const currentValue =
+                                              trimmedOperador && navierasOp.includes(trimmedOperador)
+                                                ? trimmedOperador
+                                                : navierasOp.includes(trimmedNaviera)
+                                                ? trimmedNaviera
+                                                : "";
+
+                                            return (
+                                              <select
+                                                value={currentValue}
+                                                onChange={(e) => handleOperadorChange(it, e.target.value)}
+                                                disabled={updating}
+                                                className="w-full max-w-[140px] mx-auto px-2 py-1.5 text-sm rounded-lg border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue disabled:opacity-60"
+                                                aria-label={tr.colOperador}
+                                              >
+                                                <option value="">—</option>
+                                                {navierasOp.map((n) => (
+                                                  <option key={n} value={n}>
+                                                    {n}
+                                                  </option>
+                                                ))}
+                                              </select>
+                                            );
+                                          })()
+                                        ) : (
+                                          <span className="text-neutral-700">{it.operador || "—"}</span>
+                                        )}
+                                      </td>
                                       <td className="px-3 py-3 text-neutral-700 font-medium whitespace-nowrap text-center align-middle">{it.viaje || "—"}</td>
-                                      <td className="px-3 py-3 text-neutral-700 whitespace-nowrap text-center align-middle">{it.pol || "—"}</td>
+                                      <td className="px-3 py-3 text-neutral-700 whitespace-nowrap text-center align-middle">
+                                        <span className="block font-medium">{it.pol || "—"}</span>
+                                        <span className="block text-xs text-neutral-500 mt-0.5">{it.etd ? formatDate(it.etd) : "—"}</span>
+                                      </td>
                                       {destinosColumnas.map((portKey) => {
                                         const e = getEscalaForPort(escalas, portKey);
                                         return (
@@ -908,16 +1163,39 @@ export function ItinerarioContent() {
                                 })}
                               </tbody>
                             </table>
+                            {itinerariosEnArea.length > 4 && (
+                              <div className="px-4 py-3 border-t border-neutral-200 bg-neutral-50/60 flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedAreas((prev) => ({
+                                      ...prev,
+                                      [areaKey]: !isExpanded,
+                                    }))
+                                  }
+                                  className="text-xs font-medium text-brand-blue hover:text-brand-blue/80 transition-colors"
+                                >
+                                  {isExpanded
+                                    ? tr.showLessRows?.replace("{{count}}", String(itinerariosEnArea.length)) ??
+                                      `Ver menos (${itinerariosEnArea.length})`
+                                    : tr.showMoreRows?.replace("{{count}}", String(itinerariosEnArea.length)) ??
+                                      `Ver todas (${itinerariosEnArea.length})`}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
                     })}
+                    </div>
                   </section>
                 );
               })}
             </div>
-          );
-        })()}
+              );
+            })()}
+          </>
+        )}
       </div>
 
       {modalOpen && (
