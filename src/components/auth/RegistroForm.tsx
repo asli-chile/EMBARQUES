@@ -3,7 +3,14 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { formStyles } from "@/lib/form-styles";
 
-export function RegistroForm() {
+type RegistroFormProps = {
+  /** En modal: cierra el overlay al hacer clic en "Volver al inicio". */
+  onClose?: () => void;
+  /** En modal: abre el formulario de login en el mismo overlay. */
+  onOpenLogin?: () => void;
+};
+
+export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
   const { t } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -44,14 +51,26 @@ export function RegistroForm() {
 
   return (
     <div className={formStyles.card}>
-      <a
-        href="/inicio"
-        className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
-        aria-label={t.auth.backToHome}
-      >
-        <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
-        {t.auth.backToHome}
-      </a>
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
+          aria-label={t.auth.backToHome}
+        >
+          <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
+          {t.auth.backToHome}
+        </button>
+      ) : (
+        <a
+          href="/inicio"
+          className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
+          aria-label={t.auth.backToHome}
+        >
+          <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
+          {t.auth.backToHome}
+        </a>
+      )}
       <h1 className="text-xl font-semibold text-brand-blue tracking-tight mb-1">
         {t.auth.signUpTitle}
       </h1>
@@ -139,12 +158,22 @@ export function RegistroForm() {
 
       <p className="mt-6 text-sm text-center text-neutral-500">
         {t.auth.hasAccount}{" "}
-        <a
-          href="/auth/login"
-          className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
-        >
-          {t.auth.login}
-        </a>
+        {onOpenLogin ? (
+          <button
+            type="button"
+            onClick={onOpenLogin}
+            className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
+          >
+            {t.auth.login}
+          </button>
+        ) : (
+          <a
+            href="/auth/login"
+            className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
+          >
+            {t.auth.login}
+          </a>
+        )}
       </p>
     </div>
   );

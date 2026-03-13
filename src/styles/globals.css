@@ -9,3 +9,12 @@
 .ag-header-cell-centered .ag-header-cell-label {
   justify-content: center;
 }
+
+/* Barra de progreso indeterminada (subida de imagen stacking) */
+@keyframes stacking-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-stacking-progress {
+  animation: stacking-progress 1.5s ease-in-out infinite;
+}

@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand, icons } from "@/lib/brand";
+import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -198,10 +199,10 @@ export function InicioContent() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
-              <a href="/auth/login" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
+              <AuthFormTrigger mode="login" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
                 <Icon icon={icons.auth} width={18} height={18} />
                 {t.inicio.ctaLogin}
-              </a>
+              </AuthFormTrigger>
               <a href="#pilares" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
                 <Icon icon="lucide:layers" width={18} height={18} />
                 {t.inicio.ctaModules}
@@ -518,10 +519,10 @@ export function InicioContent() {
             <p className="text-white/60 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto">{t.inicio.ctaFinalSubtitle}</p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-6 sm:mb-8">
-              <a href="/auth/registro" className="inline-flex items-center justify-center gap-2 py-2.5 sm:py-3 px-6 sm:px-8 bg-brand-blue text-white font-semibold hover:bg-brand-blue/90 transition-colors shadow-lg shadow-brand-blue/30 text-sm sm:text-base">
+              <AuthFormTrigger mode="registro" className="inline-flex items-center justify-center gap-2 py-2.5 sm:py-3 px-6 sm:px-8 bg-brand-blue text-white font-semibold hover:bg-brand-blue/90 transition-colors shadow-lg shadow-brand-blue/30 text-sm sm:text-base">
                 <Icon icon="lucide:user-plus" width={18} height={18} />
                 {t.inicio.ctaFinalButton1}
-              </a>
+              </AuthFormTrigger>
               <a href="mailto:informaciones@asli.cl?subject=Solicitud de demo EMBARQUES" className="inline-flex items-center justify-center gap-2 py-2.5 sm:py-3 px-6 sm:px-8 bg-white/10 border border-white/30 text-white font-medium hover:bg-white/20 transition-colors text-sm sm:text-base">
                 <Icon icon="lucide:play-circle" width={18} height={18} />
                 {t.inicio.ctaFinalButton2}

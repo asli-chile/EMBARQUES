@@ -158,6 +158,8 @@ export function ServiciosUnicosContent() {
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [expandedNavieras, setExpandedNavieras] = useState<Set<string>>(new Set());
   const [copyFromServiceId, setCopyFromServiceId] = useState<string>("");
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyModalExpandedId, setCopyModalExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     nombre: "",
     naviera_id: "",
@@ -745,7 +747,7 @@ export function ServiciosUnicosContent() {
           const byAreaThenNaviera: Record<string, ByNaviera> = {};
           const areaOrderList: string[] = [...AREAS, tr.noArea];
           servicios.forEach((s) => {
-            const navieraName = s.naviera_nombre ?? s.naviera?.nombre ?? tr.unassigned;
+            const navieraName = s.naviera_nombre ?? tr.unassigned;
             const areas = getServiceAreas(s);
             if (areas.length === 0) {
               const area = tr.noArea;
@@ -785,7 +787,7 @@ export function ServiciosUnicosContent() {
             ];
             const numRegiones = regiones.length;
             const isExpanded = expandedCardId === s.id;
-            const navieraLabel = s.naviera_nombre ?? s.naviera?.nombre ?? tr.unassigned;
+            const navieraLabel = s.naviera_nombre ?? tr.unassigned;
             return (
               <li
                 key={s.id}
@@ -967,7 +969,7 @@ export function ServiciosUnicosContent() {
           aria-labelledby="modal-servicio-title"
         >
           <div ref={modalRef} className="flex flex-col min-h-0 flex-1 overflow-y-auto">
-            <div className="p-6 sm:p-8 w-full pb-24">
+            <div className="p-6 sm:p-8 w-full pb-10">
               <header className="mb-8">
                 <h2 id="modal-servicio-title" className="text-xl font-semibold text-brand-blue tracking-tight">
                   {editingId ? tr.modalTitleEdit : tr.modalTitleNew}
@@ -994,35 +996,24 @@ export function ServiciosUnicosContent() {
                     <p className="text-sm text-neutral-600 mb-4">
                       {tr.copyFromServiceHint}
                     </p>
-                    <select
-                      id="copy-from-servicio"
-                      value={copyFromServiceId}
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        setCopyFromServiceId(id);
-                        if (id) {
-                          const s = servicios.find((srv) => srv.id === id);
-                          if (s) handleCopyFromService(s);
-                        } else {
-                          setForm((prev) => ({
-                            ...prev,
-                            nombre: "",
-                            puerto_origen: "",
-                            naves: [],
-                            destinos: [{ puerto: "", puerto_nombre: "", area: "ASIA" }],
-                          }));
-                        }
-                      }}
-                      className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors bg-white"
-                      aria-label={tr.copyFromAria}
-                    >
-                      <option value="">{tr.noCopy}</option>
-                      {servicios.map((srv) => (
-                        <option key={srv.id} value={srv.id}>
-                          {srv.nombre} ({srv.naviera_nombre ?? srv.naviera?.nombre ?? tr.unassigned})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                      <button
+                        type="button"
+                        onClick={() => setCopyModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+                      >
+                        <Icon icon="lucide:rows" width={16} height={16} aria-hidden />
+                        Ver servicios por región
+                      </button>
+                      {copyFromServiceId && (
+                        <p className="text-xs text-neutral-600">
+                          Servicio seleccionado:{" "}
+                          <span className="font-medium text-neutral-800">
+                            {servicios.find((s) => s.id === copyFromServiceId)?.nombre ?? ""}
+                          </span>
+                        </p>
+                      )}
+                    </div>
                   </section>
                 )}
 
@@ -1439,7 +1430,7 @@ export function ServiciosUnicosContent() {
                 </div>
               </div>
 
-              <footer className="fixed bottom-0 left-0 right-0 flex gap-4 p-4 sm:p-6 bg-white/95 border-t border-neutral-200 backdrop-blur-sm">
+              <footer className="mt-8 flex gap-4 pt-4 border-t border-neutral-200 bg-white">
                 <div className="w-full flex gap-4">
                   <button
                     type="button"
@@ -1468,6 +1459,174 @@ export function ServiciosUnicosContent() {
                   </button>
                 </div>
               </footer>
+            </div>
+          </div>
+        </div>
+      )}
+      {copyModalOpen && servicios.length > 0 && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Seleccionar servicio para copiar"
+        >
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            aria-hidden
+            onClick={() => setCopyModalOpen(false)}
+          />
+          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 bg-neutral-50">
+              <div>
+                <h2 className="text-sm font-semibold text-neutral-900">
+                  Usar datos de otro servicio
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Explora los servicios por área y selecciona uno para copiar su configuración.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCopyModalOpen(false)}
+                className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                aria-label="Cerrar selección de servicio"
+              >
+                <Icon icon="lucide:x" width={18} height={18} aria-hidden />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
+              {(() => {
+                const AREAS_ORDER = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE"] as const;
+                const areaLabels: Record<string, string> = {
+                  ASIA: "Asia",
+                  EUROPA: "Europa",
+                  AMERICA: "América",
+                  "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                  SIN_AREA: "Sin área",
+                };
+                const grouped: Record<string, ServicioUnico[]> = {};
+                for (const srv of servicios) {
+                  const areasSrv = new Set(
+                    (srv.destinos ?? [])
+                      .map((d) => normalizeArea(d.area))
+                      .filter((a) => a && a.length > 0)
+                  );
+                  if (areasSrv.size === 0) {
+                    (grouped.SIN_AREA ??= []).push(srv);
+                  } else {
+                    for (const area of areasSrv) {
+                      (grouped[area] ??= []).push(srv);
+                    }
+                  }
+                }
+                const orderedAreas = [
+                  ...AREAS_ORDER.filter((a) => grouped[a]?.length),
+                  ...(grouped.SIN_AREA ? ["SIN_AREA"] : []),
+                ];
+                if (orderedAreas.length === 0) {
+                  return (
+                    <p className="text-sm text-neutral-500">
+                      No hay servicios con destinos configurados aún.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {orderedAreas.map((areaKey) => (
+                      <section
+                        key={areaKey}
+                        className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-3 flex flex-col gap-2"
+                      >
+                        <h3 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-brand-blue" />
+                          {areaLabels[areaKey] ?? areaKey}
+                        </h3>
+                        <div className="space-y-2">
+                          {grouped[areaKey]!.map((srv) => (
+                            <button
+                              key={srv.id}
+                              type="button"
+                              onClick={() => {
+                                handleCopyFromService(srv);
+                                setCopyFromServiceId(srv.id);
+                                setCopyModalOpen(false);
+                              }}
+                              className="w-full text-left rounded-lg border border-neutral-200 bg-white px-3 py-2.5 hover:border-brand-blue/70 hover:bg-brand-blue/5 transition-colors"
+                            >
+                              <p className="text-xs font-semibold text-neutral-900 flex items-center justify-between gap-2">
+                                <span className="truncate">{srv.nombre}</span>
+                                <span className="text-[10px] font-medium text-brand-blue uppercase">
+                                  {srv.naviera_nombre ?? tr.unassigned}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                POL: {srv.puerto_origen || "—"}
+                              </p>
+                              <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                Naves: {(srv.naves ?? []).map((n) => n.nave_nombre).join(", ") || "—"}
+                              </p>
+                              <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-2">
+                                Destinos:{" "}
+                                {(srv.destinos ?? [])
+                                  .map((d) => d.puerto_nombre || d.puerto)
+                                  .filter(Boolean)
+                                  .join(", ") || "—"}
+                              </p>
+                              <p className="mt-1 text-[11px] font-medium text-brand-blue">
+                                Ver detalle
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

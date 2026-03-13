@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
+import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 
 type SampleRow = Record<string, string>;
 
@@ -681,13 +682,13 @@ export function ReservaAsliVisitorPreview() {
                 </div>
               </div>
               <div className="mt-3 pt-2 border-t border-neutral-100 flex-shrink-0">
-                <a
-                  href="/auth/login"
+                <AuthFormTrigger
+                  mode="login"
                   className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
                 >
                   <Icon icon="typcn:key" width={16} height={16} />
                   {t.visitor.moduleCta}
-                </a>
+                </AuthFormTrigger>
               </div>
             </div>
           </div>

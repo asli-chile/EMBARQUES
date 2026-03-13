@@ -190,6 +190,11 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
 
     const operador = body.operador;
     const operadorStr = operador != null && typeof operador === "string" ? operador.trim() || null : null;
+    const stackingImagenUrlRaw = body.stacking_imagen_url;
+    const stackingImagenUrl =
+      stackingImagenUrlRaw != null && typeof stackingImagenUrlRaw === "string"
+        ? stackingImagenUrlRaw.trim() || null
+        : null;
 
     let admin: ReturnType<typeof createAdminClient>;
     try {
@@ -197,22 +202,66 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
     } catch {
       return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para actualizar itinerarios." }, 503);
     }
-    const { error: updateErr } = await admin
-      .from("itinerarios")
-      .update({
-        operador: operadorStr,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    const updatePayload: Record<string, unknown> = {
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    if ("operador" in body) {
+      updatePayload.operador = operadorStr;
+    }
+    if ("stacking_imagen_url" in body) {
+      updatePayload.stacking_imagen_url = stackingImagenUrl;
+    }
+
+    // Si se va a tocar stacking_imagen_url, obtener nave/viaje del itinerario base
+    let nave: string | null = null;
+    let viaje: string | null = null;
+    if ("stacking_imagen_url" in body) {
+      const { data: baseRow, error: baseErr } = await admin
+        .from("itinerarios")
+        .select("nave, viaje")
+        .eq("id", id)
+        .single();
+      if (baseErr) {
+        return json({ error: baseErr.message ?? "Error al leer itinerario base" }, 400);
+      }
+      nave = (baseRow as { nave: string }).nave;
+      viaje = (baseRow as { viaje: string }).viaje;
+    }
+
+    const { error: updateErr } = await admin.from("itinerarios").update(updatePayload).eq("id", id);
 
     if (updateErr) {
       const code = (updateErr as { code?: string })?.code;
-      let msg = updateErr.message ?? "Error al actualizar operador";
+      let msg = updateErr.message ?? "Error al actualizar itinerario";
       if (code === "42501") {
         msg = "Permiso denegado en la base de datos. Ejecute la migración de permisos: supabase db push.";
       }
       return json({ error: msg, code }, 400);
+    }
+
+    // Si hay nave+viaje y se actualizó stacking_imagen_url, sincronizar con otros itinerarios de la misma nave/viaje
+    if (nave && viaje && "stacking_imagen_url" in body) {
+      const bulkPayload: Record<string, unknown> = {
+        stacking_imagen_url: stackingImagenUrl,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
+      const { error: bulkErr } = await admin
+        .from("itinerarios")
+        .update(bulkPayload)
+        .eq("nave", nave)
+        .eq("viaje", viaje)
+        .neq("id", id);
+      if (bulkErr) {
+        const code = (bulkErr as { code?: string })?.code;
+        let msg = bulkErr.message ?? "Error al sincronizar stacking entre itinerarios de la misma nave/viaje";
+        if (code === "42501") {
+          msg = "Permiso denegado en la base de datos. Ejecute la migración de permisos: supabase db push.";
+        }
+        return json({ error: msg, code }, 400);
+      }
     }
 
     const { data: completo } = await admin

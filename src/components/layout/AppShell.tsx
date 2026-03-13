@@ -13,6 +13,7 @@ import { SobreNosotrosContent } from "@/components/sobre-nosotros";
 import { TrackingContent } from "@/components/tracking/TrackingContent";
 import { ItinerarioContent } from "@/components/itinerario/ItinerarioContent";
 import { ServiciosUnicosContent } from "@/components/itinerario/ServiciosUnicosContent";
+import { StackingContent } from "@/components/stacking/StackingContent";
 import { ConsorciosContent } from "@/components/itinerario/ConsorciosContent";
 import { RegistrosContent } from "@/components/registros";
 import { ReportesContent } from "@/components/reportes";
@@ -22,6 +23,8 @@ import { ReservaAsliContent, ReservaExtContent, FacturacionContent } from "@/com
 import { MisDocumentosContent } from "@/components/documentos";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
+import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -35,13 +38,15 @@ export function AppShell({ children, pathname }: AppShellProps) {
     return (
       <LocaleProvider>
         <AuthProvider>
-        <div className="h-screen flex flex-col overflow-hidden">
-          <Header />
-          <NavBanner pathname={pathname} />
-          <main className="flex-1 min-h-0 overflow-auto bg-brand-blue p-4 flex flex-col items-center justify-center">
-            {children}
-          </main>
-        </div>
+          <AuthFormModalProvider>
+            <div className="h-screen flex flex-col overflow-hidden">
+              <Header />
+              <NavBanner pathname={pathname} />
+              <main className="flex-1 min-h-0 overflow-auto bg-brand-blue p-4 flex flex-col items-center justify-center">
+                {children}
+              </main>
+            </div>
+          </AuthFormModalProvider>
         </AuthProvider>
       </LocaleProvider>
     );
@@ -60,6 +65,8 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <TrackingContent />
     ) : pathname === "/itinerario" ? (
       <ItinerarioContent />
+    ) : pathname === "/stacking" ? (
+      <StackingContent />
     ) : pathname === "/itinerario/servicios" ? (
       <ServiciosUnicosContent />
     ) : pathname === "/itinerario/consorcios" ? (
@@ -97,16 +104,19 @@ export function AppShell({ children, pathname }: AppShellProps) {
   return (
     <LocaleProvider>
       <AuthProvider>
-      <div className="h-screen flex flex-col overflow-hidden">
-        <Header />
-        <NavBanner pathname={pathname} />
-        <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
-          <Sidebar pathname={pathname} />
-          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
-            {mainContent}
+        <AuthFormModalProvider>
+          <div className="h-screen flex flex-col overflow-hidden">
+            <Header />
+            <NavBanner pathname={pathname} />
+            <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+              <Sidebar pathname={pathname} />
+              <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+                {mainContent}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+          <AuthFormModalOverlay />
+        </AuthFormModalProvider>
       </AuthProvider>
     </LocaleProvider>
   );

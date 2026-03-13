@@ -4,10 +4,12 @@ import { AuthModal, type AuthUser } from "./AuthModal";
 import { siteConfig } from "@/lib/site";
 import { useLocale } from "@/lib/i18n";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
+import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
 
 export function AuthWidget() {
   const { t } = useLocale();
   const { user, profile, isLoading } = useAuth();
+  const { openAuthForm } = useAuthFormModal();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleOpen = () => setIsModalOpen(true);
@@ -34,13 +36,14 @@ export function AuthWidget() {
 
   if (!authUser) {
     return (
-      <a
-        href="/auth/login"
+      <button
+        type="button"
+        onClick={() => openAuthForm("login")}
         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-brand-blue hover:bg-neutral-200/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
       >
         <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
         {t.auth.login}
-      </a>
+      </button>
     );
   }
 

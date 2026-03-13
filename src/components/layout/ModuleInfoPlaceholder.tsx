@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "./VisitorSidebarQuickAccess";
+import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 
 export type ModuleInfo = {
   title: string;
@@ -43,13 +44,13 @@ export function ModuleInfoPlaceholder({ info, currentHref }: ModuleInfoPlacehold
           </div>
 
           <div className="mt-6 pt-4 border-t border-neutral-100">
-            <a
-              href="/auth/login"
+            <AuthFormTrigger
+              mode="login"
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
             >
               <Icon icon="typcn:key" width={18} height={18} />
               {t.visitor.moduleCta}
-            </a>
+            </AuthFormTrigger>
           </div>
         </div>
       </div>

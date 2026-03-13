@@ -197,3 +197,26 @@ export async function updateItinerarioOperador(id: string, operador: string | nu
     throw new Error(msg);
   }
 }
+
+export async function updateItinerarioStackingImage(id: string, url: string | null): Promise<void> {
+  const apiUrl = getApiUrl();
+  const response = await fetch(`${apiUrl}/api/admin/itinerarios/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stacking_imagen_url: url ?? null }),
+  });
+
+  let data: { error?: string };
+  try {
+    data = (await response.json()) as { error?: string };
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    const msg = data.error?.trim() || `Error ${response.status}: ${response.statusText}`;
+    console.error("[updateItinerarioStackingImage] API error:", response.status, data);
+    throw new Error(msg);
+  }
+}

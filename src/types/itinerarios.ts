@@ -7,6 +7,8 @@ export type Itinerario = {
   naviera?: string | null;
   /** Naviera/operador seleccionada del consorcio o servicio para este itinerario */
   operador?: string | null;
+  /** URL pública de la imagen oficial de stacking, si existe */
+  stacking_imagen_url?: string | null;
   nave: string;
   viaje: string;
   semana: number | null;

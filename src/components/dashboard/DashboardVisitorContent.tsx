@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
+import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 
 const FEATURES = [
   { icon: "typcn:document-add", href: "/reservas/crear", color: "text-brand-blue" },
@@ -62,23 +63,23 @@ export function DashboardVisitorContent() {
                   {v.description}
                 </p>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <a
-                    href="/auth/login"
+                  <AuthFormTrigger
+                    mode="login"
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-base font-medium text-white
                       bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors
                       focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2"
                   >
                     <Icon icon="typcn:key" width={18} height={18} />
                     {v.cta}
-                  </a>
-                  <a
-                    href="/auth/signup"
+                  </AuthFormTrigger>
+                  <AuthFormTrigger
+                    mode="registro"
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-base font-medium text-brand-blue
                       bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors
                       focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2"
                   >
                     {v.ctaSubtext}
-                  </a>
+                  </AuthFormTrigger>
                 </div>
               </div>
             </div>

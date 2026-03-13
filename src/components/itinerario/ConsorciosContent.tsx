@@ -24,7 +24,9 @@ type Consorcio = {
       id: string;
       nombre: string;
       naviera_nombre?: string | null;
-      destinos?: { area?: string | null }[];
+      puerto_origen?: string | null;
+      naves?: { nave_nombre?: string | null }[];
+      destinos?: { puerto?: string | null; puerto_nombre?: string | null; area?: string | null }[];
     };
   }[];
 };
@@ -90,6 +92,7 @@ export function ConsorciosContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({ nombre: "", servicios_ids: [] as string[] });
   const modalRef = useRef<HTMLDivElement>(null);
+  const [detailsConsorcio, setDetailsConsorcio] = useState<Consorcio | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -344,6 +347,14 @@ export function ConsorciosContent() {
               {tr.carriers}: {navieras.join(", ")}
             </p>
           )}
+          <button
+            type="button"
+            onClick={() => setDetailsConsorcio(c)}
+            className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-brand-blue/40 text-[11px] font-medium text-brand-blue hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+          >
+            <Icon icon="lucide:eye" width={14} height={14} aria-hidden />
+            Ver detalle de servicios
+          </button>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -551,6 +562,92 @@ export function ConsorciosContent() {
                   </button>
                 </div>
               </footer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailsConsorcio && (
+        <div
+          className="fixed inset-0 z-40 flex flex-col bg-black/60 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Detalle del consorcio ${detailsConsorcio.nombre}`}
+        >
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 bg-neutral-50">
+                <div>
+                  <h2 className="text-sm font-semibold text-neutral-900">
+                    Consorcio: {detailsConsorcio.nombre}
+                  </h2>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Detalle de los servicios que componen este consorcio (nombre, naviera, naves y destinos).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailsConsorcio(null)}
+                  className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  aria-label="Cerrar detalle de consorcio"
+                >
+                  <Icon icon="lucide:x" width={18} height={18} aria-hidden />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
+                {(() => {
+                  const servicios = (detailsConsorcio.servicios ?? [])
+                    .map((s) => s.servicio_unico)
+                    .filter((s): s is NonNullable<Consorcio["servicios"]>[number]["servicio_unico"] => Boolean(s));
+                  if (servicios.length === 0) {
+                    return (
+                      <p className="text-sm text-neutral-500">
+                        Este consorcio aún no tiene servicios asociados.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-3">
+                      {servicios.map((s) => {
+                        const naves =
+                          (s.naves ?? [])
+                            .map((n) => (n.nave_nombre ?? "").trim())
+                            .filter(Boolean)
+                            .join(", ") || "—";
+                        const destinos =
+                          (s.destinos ?? [])
+                            .map((d) => (d.puerto_nombre || d.puerto || "").toString().trim())
+                            .filter(Boolean)
+                            .join(", ") || "—";
+                        return (
+                          <div
+                            key={s.id}
+                            className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 flex flex-col gap-1.5"
+                          >
+                            <p className="text-sm font-semibold text-neutral-900 flex items-center justify-between gap-2">
+                              <span>{s.nombre}</span>
+                              {s.naviera_nombre?.trim() && (
+                                <span className="text-xs font-medium text-brand-blue uppercase">
+                                  {s.naviera_nombre}
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-neutral-600">
+                              <span className="font-medium">POL:</span> {s.puerto_origen || "—"}
+                            </p>
+                            <p className="text-xs text-neutral-600">
+                              <span className="font-medium">Naves:</span> {naves}
+                            </p>
+                            <p className="text-xs text-neutral-600">
+                              <span className="font-medium">Destinos:</span> {destinos}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ export const siteConfig = {
     { labelKey: "sobreNosotros", href: "/sobre-nosotros" },
     { labelKey: "tracking", href: "/tracking" },
     { labelKey: "itinerario", href: "/itinerario" },
+    { labelKey: "stacking", href: "/stacking" },
   ] as const,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },

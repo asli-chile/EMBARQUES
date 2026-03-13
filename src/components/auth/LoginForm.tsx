@@ -5,9 +5,13 @@ import { formStyles } from "@/lib/form-styles";
 
 type LoginFormProps = {
   registered?: boolean;
+  /** En modal: cierra el overlay al hacer clic en "Volver al inicio". */
+  onClose?: () => void;
+  /** En modal: abre el formulario de registro en el mismo overlay. */
+  onOpenRegistro?: () => void;
 };
 
-export function LoginForm({ registered = false }: LoginFormProps) {
+export function LoginForm({ registered = false, onClose, onOpenRegistro }: LoginFormProps) {
   const { t } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -46,14 +50,26 @@ export function LoginForm({ registered = false }: LoginFormProps) {
 
   return (
     <div className={formStyles.card}>
-      <a
-        href="/inicio"
-        className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
-        aria-label={t.auth.backToHome}
-      >
-        <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
-        {t.auth.backToHome}
-      </a>
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
+          aria-label={t.auth.backToHome}
+        >
+          <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
+          {t.auth.backToHome}
+        </button>
+      ) : (
+        <a
+          href="/inicio"
+          className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
+          aria-label={t.auth.backToHome}
+        >
+          <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
+          {t.auth.backToHome}
+        </a>
+      )}
       <h1 className="text-xl font-semibold text-brand-blue tracking-tight mb-1">
         {t.auth.loginTitle}
       </h1>
@@ -130,12 +146,22 @@ export function LoginForm({ registered = false }: LoginFormProps) {
 
       <p className="mt-6 text-sm text-center text-neutral-500">
         {t.auth.noAccount}{" "}
-        <a
-          href="/auth/registro"
-          className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
-        >
-          {t.auth.signUp}
-        </a>
+        {onOpenRegistro ? (
+          <button
+            type="button"
+            onClick={onOpenRegistro}
+            className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
+          >
+            {t.auth.signUp}
+          </button>
+        ) : (
+          <a
+            href="/auth/registro"
+            className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
+          >
+            {t.auth.signUp}
+          </a>
+        )}
       </p>
     </div>
   );

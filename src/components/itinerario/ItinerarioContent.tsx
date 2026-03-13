@@ -1,11 +1,19 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { fetchPublicItinerarios, createItinerario, updateItinerario, deleteItinerario, updateItinerarioOperador } from "@/lib/itinerarios-service";
+import {
+  fetchPublicItinerarios,
+  createItinerario,
+  updateItinerario,
+  deleteItinerario,
+  updateItinerarioOperador,
+  updateItinerarioStackingImage,
+} from "@/lib/itinerarios-service";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
+import type { MapPortPoint } from "./ItinerarioMap";
 import { format, getISOWeek, differenceInCalendarDays, addDays } from "date-fns";
-import { AREAS_CANONICAL } from "@/lib/areas";
+import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
 import ItinerarioMap from "./ItinerarioMap";
 
 const DATE_DISPLAY = "dd/MM/yyyy";
@@ -153,7 +161,7 @@ function getNavierasForItinerario(
 
 export function ItinerarioContent() {
   const { t, locale } = useLocale();
-  const { user: authUser } = useAuth() ?? {};
+  const { user: authUser, isSuperadmin } = useAuth();
   const isLoggedIn = authUser != null;
 
   const tr = t.itinerarioPage ?? {
@@ -266,10 +274,50 @@ export function ItinerarioContent() {
   const [consorciosConDetalle, setConsorciosConDetalle] = useState<ConsorcioConDetalle[]>([]);
   const [selectedServicioId, setSelectedServicioId] = useState("");
   const [selectedConsorcioId, setSelectedConsorcioId] = useState("");
+  const [selectByAreaOpen, setSelectByAreaOpen] = useState(false);
+  const [selectByAreaMode, setSelectByAreaMode] = useState<"servicio" | "consorcio">("servicio");
   const [etdInputValue, setEtdInputValue] = useState("");
   const [etaInputValues, setEtaInputValues] = useState<string[]>([]);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const STACKING_DRAFTS_STORAGE_KEY = "itinerarios-stacking-drafts-v1";
 
+  const [stackingDrafts, setStackingDrafts] = useState<
+    Record<
+      string,
+      {
+        dryInicio: string;
+        dryFin: string;
+        reeferInicio: string;
+        reeferFin: string;
+        lateInicio: string;
+        lateFin: string;
+        cutoffDry: string;
+        cutoffReefer: string;
+        cutoffAnticipado: string;
+        cutoffAnticipadoDescripcion: string;
+      }
+    >
+  >({});
+  const [stackingForm, setStackingForm] = useState({
+    dryInicio: "",
+    dryFin: "",
+    reeferInicio: "",
+    reeferFin: "",
+    lateInicio: "",
+    lateFin: "",
+    cutoffDry: "",
+    cutoffReefer: "",
+    cutoffAnticipado: "",
+    cutoffAnticipadoDescripcion: "",
+  });
+  const [stackingEditMode, setStackingEditMode] = useState(false);
+  const [stackingImageUrl, setStackingImageUrl] = useState<string | null>(null);
+  const [stackingImageUploading, setStackingImageUploading] = useState(false);
+  const [stackingOcrLoading, setStackingOcrLoading] = useState(false);
+  const [stackingExtractError, setStackingExtractError] = useState<string | null>(null);
+  const [stackingModalItinerario, setStackingModalItinerario] = useState<ItinerarioWithEscalas | null>(null);
+  const [stackingModalMinimized, setStackingModalMinimized] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const stackingFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
     servicio: "",
@@ -282,6 +330,45 @@ export function ItinerarioContent() {
     etd: format(new Date(), "yyyy-MM-dd"),
     escalas: [initialEscala()] as EscalaForm[],
   });
+
+  const [stackingDeepLinkId, setStackingDeepLinkId] = useState<string | null>(null);
+
+  // Cargar borradores de stacking desde localStorage al montar (cliente)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(STACKING_DRAFTS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as typeof stackingDrafts;
+      if (parsed && typeof parsed === "object") {
+        setStackingDrafts(parsed);
+      }
+    } catch {
+      // Ignorar errores de parseo y seguir con estado vacío
+    }
+  }, []);
+
+  // Leer parámetro stackingItId de la URL para abrir directamente el modal de stacking
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("stackingItId");
+      if (id) setStackingDeepLinkId(id);
+    } catch {
+      // Ignorar errores de URL
+    }
+  }, []);
+
+  // Guardar borradores de stacking en localStorage cuando cambien
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STACKING_DRAFTS_STORAGE_KEY, JSON.stringify(stackingDrafts));
+    } catch {
+      // Ignorar errores de almacenamiento (por ejemplo, sin espacio)
+    }
+  }, [stackingDrafts]);
 
   const loadItinerarios = useCallback(async () => {
     setLoading(true);
@@ -456,6 +543,197 @@ export function ItinerarioContent() {
     setModalError(null);
     setEditingItinerarioId(null);
   }, []);
+
+  const handleOpenStackingModal = useCallback(
+    (it: ItinerarioWithEscalas) => {
+      // Buscar imagen compartida por nave+viaje si este itinerario no la tiene
+      const sharedImageUrl =
+        it.stacking_imagen_url ??
+        itinerarios.find(
+          (other) =>
+            other.id !== it.id &&
+            other.nave === it.nave &&
+            other.viaje === it.viaje &&
+            other.stacking_imagen_url
+        )?.stacking_imagen_url ??
+        null;
+
+      setStackingModalItinerario(
+        sharedImageUrl ? { ...it, stacking_imagen_url: sharedImageUrl } : it
+      );
+      setStackingModalMinimized(false);
+      setStackingEditMode(false);
+      setStackingForm((prev) => {
+        const existing = stackingDrafts[it.id];
+        if (existing) return existing;
+        return {
+          dryInicio: "",
+          dryFin: "",
+          reeferInicio: "",
+          reeferFin: "",
+          lateInicio: "",
+          lateFin: "",
+          cutoffDry: "",
+          cutoffReefer: "",
+          cutoffAnticipado: "",
+          cutoffAnticipadoDescripcion: "",
+        };
+      });
+      setStackingImageUrl(sharedImageUrl);
+    },
+    [itinerarios, stackingDrafts]
+  );
+
+  // Si venimos desde stacking con stackingItId en la URL, abrir automáticamente el modal de stacking
+  useEffect(() => {
+    if (!stackingDeepLinkId || !itinerarios || stackingModalItinerario) return;
+    const it = itinerarios.find((item) => item.id === stackingDeepLinkId);
+    if (!it) return;
+    handleOpenStackingModal(it);
+    setStackingDeepLinkId(null);
+  }, [stackingDeepLinkId, itinerarios, stackingModalItinerario, handleOpenStackingModal]);
+
+  const handleCloseStackingModal = useCallback(() => {
+    setStackingModalItinerario(null);
+    setStackingModalMinimized(false);
+    setStackingEditMode(false);
+    setStackingExtractError(null);
+
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("stackingItId")) {
+          window.location.assign("/stacking");
+        }
+      } catch {
+        // Ignorar errores de navegación
+      }
+    }
+  }, []);
+
+  const handleChangeStackingField = useCallback(
+    (field: keyof typeof stackingForm, value: string) => {
+      setStackingForm((prev) => {
+        const next = { ...prev, [field]: value };
+        if (stackingModalItinerario) {
+          setStackingDrafts((drafts) => ({
+            ...drafts,
+            [stackingModalItinerario.id]: next,
+          }));
+        }
+        return next;
+      });
+    },
+    [stackingModalItinerario]
+  );
+
+  const handleUploadStackingImageClick = useCallback(() => {
+    if (!isSuperadmin) return;
+    stackingFileInputRef.current?.click();
+  }, [isSuperadmin]);
+
+  const handleUploadStackingImageChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isSuperadmin) return;
+      const file = e.target.files?.[0];
+      if (!file || !stackingModalItinerario) return;
+      setStackingImageUploading(true);
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const bucket = "itinerarios-stacking";
+        const path = `${stackingModalItinerario.id}/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+        if (error) {
+          console.error("Error subiendo imagen de stacking:", error);
+          return;
+        }
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        if (data?.publicUrl) {
+          await updateItinerarioStackingImage(stackingModalItinerario.id, data.publicUrl);
+          setStackingImageUrl(data.publicUrl);
+          // Actualizar todos los itinerarios con misma nave+viaje
+          setItinerarios((prev) =>
+            prev.map((it) =>
+              it.nave === stackingModalItinerario.nave && it.viaje === stackingModalItinerario.viaje
+                ? { ...it, stacking_imagen_url: data.publicUrl }
+                : it
+            )
+          );
+          setStackingModalItinerario((prev) =>
+            prev ? { ...prev, stacking_imagen_url: data.publicUrl } : prev
+          );
+        }
+      } catch (err) {
+        console.error("Error inesperado al subir imagen de stacking:", err);
+      } finally {
+        setStackingImageUploading(false);
+        e.target.value = "";
+      }
+    },
+    [isSuperadmin, stackingModalItinerario]
+  );
+
+  const handleDeleteStackingImage = useCallback(async () => {
+    if (!isSuperadmin || !stackingModalItinerario) return;
+    const url = stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ?? null;
+    if (!url) return;
+    setStackingImageUploading(true);
+    try {
+      try {
+        const pathMatch = url.split("itinerarios-stacking/")[1];
+        if (pathMatch) {
+          const path = pathMatch.split("?")[0];
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          await supabase.storage.from("itinerarios-stacking").remove([path]);
+        }
+      } catch {
+        // Ignorar si falla borrar del storage; igual limpiamos la BD
+      }
+      await updateItinerarioStackingImage(stackingModalItinerario.id, null);
+      setStackingImageUrl(null);
+      // Limpiar imagen en todos los itinerarios con misma nave+viaje
+      setItinerarios((prev) =>
+        prev.map((it) =>
+          it.nave === stackingModalItinerario.nave && it.viaje === stackingModalItinerario.viaje
+            ? { ...it, stacking_imagen_url: null }
+            : it
+        )
+      );
+      setStackingModalItinerario((prev) =>
+        prev ? { ...prev, stacking_imagen_url: null } : prev
+      );
+    } catch (err) {
+      console.error("Error al borrar imagen de stacking:", err);
+    } finally {
+      setStackingImageUploading(false);
+    }
+  }, [isSuperadmin, stackingModalItinerario, stackingImageUrl]);
+
+  const handleExtractStackingFromImage = useCallback(async () => {
+    const url = stackingImageUrl ?? stackingModalItinerario?.stacking_imagen_url ?? null;
+    if (!url || !stackingModalItinerario) return;
+    setStackingExtractError(null);
+    setStackingOcrLoading(true);
+    try {
+      const { analyzeStackingImage } = await import("@/lib/stacking-ocr");
+      const parsed = await analyzeStackingImage(url);
+      const itId = stackingModalItinerario.id;
+      setStackingEditMode(true);
+      setStackingForm((prev) => {
+        const next = { ...prev, ...parsed };
+        setStackingDrafts((drafts) => ({ ...drafts, [itId]: next }));
+        return next;
+      });
+    } catch (err) {
+      setStackingExtractError(
+        err instanceof Error ? err.message : tr.stackingExtractError ?? "Error al analizar la imagen."
+      );
+    } finally {
+      setStackingOcrLoading(false);
+    }
+  }, [stackingImageUrl, stackingModalItinerario]);
 
   const handleOperadorChange = useCallback(
     async (it: ItinerarioWithEscalas, operador: string) => {
@@ -670,19 +948,48 @@ export function ItinerarioContent() {
   }, []);
 
   const isMapOnlyView = !loading && !selectedAreaFromMap;
+  const hasAreaFilter = !!selectedAreaFromMap && selectedAreaFromMap !== "ALL";
 
   const areasWithData = itinerarios.length > 0
     ? [...new Set(itinerarios.flatMap((it) => (it.escalas ?? []).map((e) => (e.area || "").trim()).filter(Boolean)))]
     : [];
   const itinerariosForPorts =
-    selectedAreaFromMap && itinerarios.length > 0
+    hasAreaFilter && itinerarios.length > 0
       ? itinerarios.filter((it) =>
           (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
         )
       : itinerarios;
+
+  /** Todos los puntos de destino (cada escala) con detalle para el mapa: POL, ETD, ETA, TT, servicio, naviera. */
+  const mapPortPoints = useMemo((): MapPortPoint[] => {
+    const out: MapPortPoint[] = [];
+    for (const it of itinerarios) {
+      const pol = (it.pol ?? "").trim();
+      const etd = it.etd ?? null;
+      const servicio = (it.servicio ?? "").trim();
+      const naviera = (it.operador ?? it.naviera ?? "").trim();
+      for (const e of it.escalas ?? []) {
+        if (!e.puerto?.trim() && !e.puerto_nombre?.trim()) continue;
+        const eta = e.eta ?? null;
+        const tt = etd && eta ? diasTransito(etd, eta) : (e.dias_transito ?? null);
+        out.push({
+          puerto: (e.puerto ?? "").trim(),
+          puerto_nombre: e.puerto_nombre?.trim() ?? null,
+          pol,
+          etd,
+          eta,
+          dias_transito: tt,
+          servicio,
+          naviera,
+        });
+      }
+    }
+    return out;
+  }, [itinerarios]);
+
   const portNames = [
     ...new Set(
-      itinerariosForPorts.flatMap((it) => {
+      itinerarios.flatMap((it) => {
         const names: string[] = [];
         if (it.pol?.trim()) names.push(it.pol.trim());
         (it.escalas ?? []).forEach((e) => {
@@ -721,67 +1028,66 @@ export function ItinerarioContent() {
         )}
       </header>
 
-      {/* Pantalla de selección de área: tarjeta con mapa a pantalla completa sin bordes */}
+      {/* Pantalla de selección de área: 25% info, 75% mapa */}
       {!selectedAreaFromMap && (
         <section className="flex-1 min-h-0 flex flex-col w-full overflow-hidden">
           <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-white">
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-              {/* Columna info */}
-              <div className="w-full lg:w-1/2 flex flex-col gap-5 px-6 sm:px-8 py-6 sm:py-8 bg-gradient-to-br from-white via-brand-blue/[0.03] to-neutral-50/80 border-b lg:border-b-0 lg:border-r border-neutral-200/80">
+              {/* Columna info: 25% del espacio */}
+              <div className="w-full lg:w-1/4 flex flex-col gap-5 px-6 sm:px-8 py-6 sm:py-8 bg-gradient-to-br from-white via-brand-blue/[0.03] to-neutral-50/80 border-b lg:border-b-0 lg:border-r border-neutral-200/80">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-lg bg-brand-blue/10 px-3 py-1.5 text-xs font-medium text-brand-blue mb-4">
                     <Icon icon="lucide:map-pin" width={14} height={14} aria-hidden />
-                    Vista global
+                    {tr.mapViewGlobal}
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-brand-blue tracking-tight">
-                    Descubre tus itinerarios en el mapa
+                    {tr.mapDiscoverTitle}
                   </h2>
                   <p className="mt-3 text-sm text-neutral-600 leading-relaxed max-w-md">
-                    Explora tus servicios por área (América, Europa, Asia e India-Medio Oriente),
-                    entiende mejor tus rutas y explícale a tus clientes desde qué puertos salen los buques y a qué destinos llegan.
+                    {tr.mapDiscoverDesc}
                   </p>
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
                     <Icon icon="lucide:help-circle" width={16} height={16} className="text-brand-blue/80" aria-hidden />
-                    ¿Cómo usar esta vista?
+                    {tr.mapHowToUse}
                   </h3>
                   <ul className="space-y-3 text-sm text-neutral-700">
                     <li className="flex items-start gap-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
                         <Icon icon="lucide:mouse" width={12} height={12} aria-hidden />
                       </span>
-                      <span>Pasa el mouse sobre las regiones para ver dónde tienes itinerarios activos.</span>
+                      <span>{tr.mapHowToHover}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
                         <Icon icon="lucide:mouse-pointer" width={12} height={12} aria-hidden />
                       </span>
-                      <span>Haz clic en una región (Asia, Europa, América, India-Medio Oriente) para filtrar la tabla de itinerarios.</span>
+                      <span>{tr.mapHowToClick}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
                         <Icon icon="lucide:users" width={12} height={12} aria-hidden />
                       </span>
-                      <span>Después de elegir un área, revisa en la tabla las semanas, naves, ETD/ETA y días de tránsito por destino.</span>
+                      <span>{tr.mapHowToTable}</span>
                     </li>
                   </ul>
                 </div>
                 <div className="mt-auto pt-4">
                   <p className="rounded-xl bg-neutral-100/90 px-4 py-3 text-xs text-neutral-600 border border-neutral-200/60">
-                    <strong className="text-neutral-700">Tip:</strong> Combina esta vista con la tabla inferior para revisar semanas, naves y tiempos de tránsito por destino.
+                    <strong className="text-neutral-700">Tip:</strong> {tr.mapTip}
                   </p>
                 </div>
               </div>
-              {/* Columna mapa */}
-              <div className="w-full lg:w-1/2 flex-1 min-h-[220px] lg:min-h-0 relative bg-neutral-100/50">
+              {/* Columna mapa: 75% del espacio */}
+              <div className="w-full lg:w-3/4 flex-1 min-h-[220px] lg:min-h-0 relative bg-neutral-100/50">
                 <div className="absolute inset-0 overflow-hidden border-l border-neutral-200/60">
                   <ItinerarioMap
                     compact={false}
                     selectedArea={selectedAreaFromMap}
                     onSelectArea={setSelectedAreaFromMap}
                     areasWithData={areasWithData}
-                    portNames={portNames}
+                    portPoints={mapPortPoints}
                   />
                 </div>
               </div>
@@ -799,11 +1105,20 @@ export function ItinerarioContent() {
         {selectedAreaFromMap && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/10 border border-white/20 px-4 py-2.5 text-sm text-white">
             <span>
-              Mostrando itinerarios para el área{" "}
-              <span className="font-semibold">
-                {selectedAreaFromMap}
-              </span>
-              .
+              {selectedAreaFromMap === "ALL" ? (
+                <>
+                  {tr.showingItinerariesFor}{" "}
+                  <span className="font-semibold">{tr.showingItinerariesAllAreas}</span>.
+                </>
+              ) : (
+                <>
+                  {tr.showingItinerariesFor} {tr.showingItinerariesForArea}{" "}
+                  <span className="font-semibold">
+                    {selectedAreaFromMap}
+                  </span>
+                  .
+                </>
+              )}
             </span>
             <button
               type="button"
@@ -811,8 +1126,21 @@ export function ItinerarioContent() {
               className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 text-brand-blue px-3 py-1.5 text-xs font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/60"
             >
               <Icon icon="lucide:globe-2" width={14} height={14} aria-hidden />
-              Ver todas las áreas
+              {tr.viewAllAreas}
             </button>
+          </div>
+        )}
+
+        {/* Si hay área seleccionada pero no hay itinerarios, mostrar mensaje claro */}
+        {selectedAreaFromMap && itinerarios.length === 0 && (
+          <div className="mt-4 bg-white/95 rounded-2xl shadow-mac-modal border border-neutral-200 p-6 text-center">
+            <Icon icon="lucide:ship" width={40} height={40} className="mx-auto mb-3 text-neutral-300" />
+            <p className="text-neutral-700 font-medium">
+              {tr.emptyTitle}
+            </p>
+            <p className="text-sm text-neutral-500 mt-1">
+              {tr.emptySubtitle}
+            </p>
           </div>
         )}
 
@@ -871,7 +1199,6 @@ export function ItinerarioContent() {
                 list.push(it);
                 byServicio.set(key, list);
               }
-              const servicioNames = [...byServicio.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
               const areaOrder = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", ""];
               const sortArea = (a: string, b: string) => {
                 const iA = areaOrder.indexOf(a);
@@ -881,12 +1208,35 @@ export function ItinerarioContent() {
                 if (iB >= 0) return 1;
                 return a.localeCompare(b, undefined, { sensitivity: "base" });
               };
-              const filteredServicioNames = servicioNames.filter((nombre) => {
-                const list = byServicio.get(nombre)!;
-                return list.some((it) =>
-                  (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
-                );
-              });
+              const servicioNames = [...byServicio.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+              const getServicioAreaIndex = (nombre: string): number => {
+                const list = byServicio.get(nombre) ?? [];
+                let minIndex = Number.POSITIVE_INFINITY;
+                for (const it of list) {
+                  for (const e of it.escalas ?? []) {
+                    const raw = ((e.area || "").trim() || "") as string;
+                    if (!raw) continue;
+                    if (hasAreaFilter && (raw || "") !== (selectedAreaFromMap || "")) continue;
+                    const idx = areaOrder.indexOf(raw);
+                    if (idx >= 0 && idx < minIndex) minIndex = idx;
+                  }
+                }
+                return Number.isFinite(minIndex) ? minIndex : Number.POSITIVE_INFINITY;
+              };
+              const filteredServicioNames = (hasAreaFilter
+                ? servicioNames.filter((nombre) => {
+                    const list = byServicio.get(nombre)!;
+                    return list.some((it) =>
+                      (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
+                    );
+                  })
+                : servicioNames).sort((a, b) => {
+                  const iA = getServicioAreaIndex(a);
+                  const iB = getServicioAreaIndex(b);
+                  if (iA !== iB) return iA - iB;
+                  return a.localeCompare(b, undefined, { sensitivity: "base" });
+                });
 
               return (
                 <div className="space-y-8 mt-8">
@@ -907,7 +1257,7 @@ export function ItinerarioContent() {
                   }
                 }
                 const areasRaw = areasSet.size > 0 ? [...areasSet].sort(sortArea) : [""];
-                const areas = selectedAreaFromMap
+                const areas = hasAreaFilter
                   ? areasRaw.filter((a) => (a || "").trim() === selectedAreaFromMap)
                   : areasRaw;
 
@@ -1036,6 +1386,9 @@ export function ItinerarioContent() {
                                       </span>
                                     </th>
                                   ))}
+                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap min-w-[100px]">
+                                    {tr.colStacking}
+                                  </th>
                                   {isLoggedIn && (
                                     <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap min-w-[180px]">
                                       {tr.colActions}
@@ -1129,6 +1482,60 @@ export function ItinerarioContent() {
                                           </td>
                                         );
                                       })}
+                                      <td className="px-3 py-3 text-center align-middle">
+                                        {(() => {
+                                          const stackingDraft = stackingDrafts[it.id];
+                                          const hasStackingDates =
+                                            stackingDraft &&
+                                            Object.values(stackingDraft).some(
+                                              (v) => typeof v === "string" && v.trim().length > 0
+                                            );
+
+                                          // Misma lógica que en handleOpenStackingModal: imagen compartida por nave+viaje
+                                          const sharedImageUrl =
+                                            it.stacking_imagen_url ??
+                                            itinerarios.find(
+                                              (other) =>
+                                                other.id !== it.id &&
+                                                other.nave === it.nave &&
+                                                other.viaje === it.viaje &&
+                                                other.stacking_imagen_url
+                                            )?.stacking_imagen_url ??
+                                            null;
+
+                                          const hasStackingImage =
+                                            typeof sharedImageUrl === "string" && sharedImageUrl.trim().length > 0;
+
+                                          const hasFullStacking = hasStackingImage && !!hasStackingDates;
+
+                                          const tIt = tr as any;
+                                          const label = hasFullStacking ? tIt.openStacking : tIt.uploadStacking;
+                                          const baseAria =
+                                            (hasFullStacking ? tIt.openStackingAria : tIt.uploadStackingAria) ??
+                                            tIt.openStackingAria;
+                                          const ariaLabel = baseAria
+                                            .replace("{{nave}}", it.nave ?? "")
+                                            .replace("{{viaje}}", it.viaje ?? "");
+
+                                          const baseButtonClasses =
+                                            "inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 transition-colors";
+                                          const colorClasses = hasFullStacking
+                                            ? "text-brand-teal bg-brand-teal/10 hover:bg-brand-teal/20 focus:ring-brand-teal/30"
+                                            : "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/30";
+
+                                          return (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOpenStackingModal(it)}
+                                              className={`${baseButtonClasses} ${colorClasses}`}
+                                              aria-label={ariaLabel}
+                                            >
+                                              <Icon icon="lucide:calendar-clock" width={16} height={16} aria-hidden />
+                                              {label}
+                                            </button>
+                                          );
+                                        })()}
+                                      </td>
                                       {isLoggedIn && (
                                         <td className="px-3 py-3 text-center align-middle">
                                           <div className="flex items-center justify-center gap-2">
@@ -1232,9 +1639,24 @@ export function ItinerarioContent() {
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label htmlFor="it-servicio" className="block text-sm font-medium text-neutral-700 mb-2">
-                        {tr.service}
-                      </label>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <label htmlFor="it-servicio" className="block text-sm font-medium text-neutral-700">
+                          {tr.service}
+                        </label>
+                        {serviciosConDetalle.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectByAreaMode("servicio");
+                              setSelectByAreaOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md text-brand-blue bg-white border border-brand-blue/30 hover:bg-brand-blue/5"
+                          >
+                            <Icon icon="lucide:map" width={12} height={12} aria-hidden />
+                            Ver por área
+                          </button>
+                        )}
+                      </div>
                       <select
                         id="it-servicio"
                         value={selectedServicioId}
@@ -1264,9 +1686,24 @@ export function ItinerarioContent() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="it-consorcio" className="block text-sm font-medium text-neutral-700 mb-2">
-                        {tr.consortium}
-                      </label>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <label htmlFor="it-consorcio" className="block text-sm font-medium text-neutral-700">
+                          {tr.consortium}
+                        </label>
+                        {consorciosConDetalle.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectByAreaMode("consorcio");
+                              setSelectByAreaOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md text-brand-blue bg-white border border-brand-blue/30 hover:bg-brand-blue/5"
+                          >
+                            <Icon icon="lucide:map" width={12} height={12} aria-hidden />
+                            Ver por área
+                          </button>
+                        )}
+                      </div>
                       <select
                         id="it-consorcio"
                         value={selectedConsorcioId}
@@ -1604,6 +2041,629 @@ export function ItinerarioContent() {
                 </button>
               </footer>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Stacking: nave / viaje / puerto y horarios (Dry, Reefer, Cut off) */}
+      {stackingModalItinerario && (
+        <div
+          className="fixed inset-0 z-50 flex h-screen min-h-screen flex-col bg-white"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stacking-modal-title"
+          onClick={(e) => e.target === e.currentTarget && handleCloseStackingModal()}
+        >
+          <div
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-neutral-50/80 flex-shrink-0">
+              <h2 id="stacking-modal-title" className="text-lg font-semibold text-brand-blue">
+                {tr.stackingModalTitle}
+              </h2>
+              <button
+                type="button"
+                onClick={handleCloseStackingModal}
+                className="p-2 rounded-lg text-neutral-500 hover:bg-neutral-200 hover:text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                aria-label={tr.cancel}
+              >
+                <Icon icon="lucide:x" width={20} height={20} aria-hidden />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
+              <div className="grid min-h-0 flex-1 grid-rows-1 gap-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)] items-stretch">
+                {/* Columna izquierda: datos y formulario stacking */}
+                <div className="flex min-h-0 flex-col space-y-5 overflow-y-auto pr-1">
+                  {/* Datos básicos: nave / viaje / POL / ETD */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-sm">
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingNave}</dt>
+                      <dd className="mt-0.5 font-medium text-neutral-800">{stackingModalItinerario.nave || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingViaje}</dt>
+                      <dd className="mt-0.5 font-medium text-neutral-800">{stackingModalItinerario.viaje || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingPol}</dt>
+                      <dd className="mt-0.5 font-medium text-neutral-800">{stackingModalItinerario.pol || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingEtd}</dt>
+                      <dd className="mt-0.5 font-medium text-neutral-800">{formatDate(stackingModalItinerario.etd ?? null)}</dd>
+                    </div>
+                  </div>
+                  {/* Bloques Stacking (Dry / Reefer) + Late / Cut off en layout moderno */}
+                  {(stackingImageUrl ?? stackingModalItinerario?.stacking_imagen_url) && stackingExtractError && (
+                    <div
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+                      role="alert"
+                    >
+                      {stackingExtractError}
+                    </div>
+                  )}
+                  <div className="rounded-xl border border-neutral-200 bg-white/80 p-4 space-y-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Icon icon="lucide:box" width={18} height={18} className="text-brand-blue" />
+                        <span className="text-sm font-semibold text-neutral-700">{tr.stackingDry}</span>
+                        <span className="mx-1 text-xs text-neutral-400">/</span>
+                        <Icon icon="lucide:snowflake" width={18} height={18} className="text-brand-teal" />
+                        <span className="text-sm font-semibold text-neutral-700">{tr.stackingReefer}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(stackingImageUrl ?? stackingModalItinerario?.stacking_imagen_url) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleExtractStackingFromImage();
+                            }}
+                            disabled={stackingOcrLoading}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-300 text-neutral-700 bg-white hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                            title={tr.stackingExtractFromImage}
+                          >
+                            <Icon icon="lucide:scan-search" width={14} height={14} aria-hidden />
+                            {tr.stackingExtractFromImage}
+                          </button>
+                        )}
+                        {isSuperadmin && (
+                          <button
+                            type="button"
+                            onClick={() => setStackingEditMode((v) => !v)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-blue/40 text-brand-blue bg-white hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                          >
+                            <Icon icon={stackingEditMode ? "lucide:check" : "lucide:pencil"} width={14} height={14} aria-hidden />
+                            {stackingEditMode ? tr.stackingEditDone : tr.stackingEdit}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {stackingOcrLoading && (
+                      <p className="text-xs text-neutral-500 flex items-center gap-2" role="status" aria-live="polite">
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" aria-hidden />
+                        {tr.stackingExtracting}
+                      </p>
+                    )}
+                    {/* Fila Dry / Reefer: inicio / fin en dos columnas simétricas */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2 rounded-lg bg-neutral-50/80 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                          {tr.stackingDry}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="min-h-[52px]">
+                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+                              {tr.stackingDryInicio}
+                            </label>
+                            {stackingEditMode ? (
+                              <input
+                                type="text"
+                                value={stackingForm.dryInicio}
+                                onChange={(e) => handleChangeStackingField("dryInicio", e.target.value)}
+                                placeholder={tr.stackingDateFormat}
+                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              />
+                            ) : (
+                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
+                                {stackingForm.dryInicio || "—"}
+                              </p>
+                            )}
+                          </div>
+                          <div className="min-h-[52px]">
+                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+                              {tr.stackingDryFin}
+                            </label>
+                            {stackingEditMode ? (
+                              <input
+                                type="text"
+                                value={stackingForm.dryFin}
+                                onChange={(e) => handleChangeStackingField("dryFin", e.target.value)}
+                                placeholder={tr.stackingDateFormat}
+                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              />
+                            ) : (
+                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
+                                {stackingForm.dryFin || "—"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-neutral-400">{tr.stackingDateFormat}</p>
+                      </div>
+                      <div className="space-y-2 rounded-lg bg-neutral-50/80 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                          {tr.stackingReefer}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="min-h-[52px]">
+                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+                              {tr.stackingReeferInicio}
+                            </label>
+                            {stackingEditMode ? (
+                              <input
+                                type="text"
+                                value={stackingForm.reeferInicio}
+                                onChange={(e) => handleChangeStackingField("reeferInicio", e.target.value)}
+                                placeholder={tr.stackingDateFormat}
+                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              />
+                            ) : (
+                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
+                                {stackingForm.reeferInicio || "—"}
+                              </p>
+                            )}
+                          </div>
+                          <div className="min-h-[52px]">
+                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
+                              {tr.stackingReeferFin}
+                            </label>
+                            {stackingEditMode ? (
+                              <input
+                                type="text"
+                                value={stackingForm.reeferFin}
+                                onChange={(e) => handleChangeStackingField("reeferFin", e.target.value)}
+                                placeholder={tr.stackingDateFormat}
+                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              />
+                            ) : (
+                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
+                                {stackingForm.reeferFin || "—"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-neutral-400">{tr.stackingDateFormat}</p>
+                      </div>
+                    </div>
+                    {/* Bloque Late / Cut off compartido (Dry + Reefer) */}
+                    <div className="mt-4 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/80 p-4 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                          {tr.stackingLateTitle}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 items-start">
+                        <div className="min-h-[52px]">
+                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                            {tr.stackingLateInicio}
+                          </label>
+                          {stackingEditMode ? (
+                            <input
+                              type="text"
+                              value={stackingForm.lateInicio}
+                              onChange={(e) => handleChangeStackingField("lateInicio", e.target.value)}
+                              placeholder={tr.stackingDateFormat}
+                              className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                            />
+                          ) : (
+                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">{stackingForm.lateInicio || "—"}</p>
+                          )}
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
+                        </div>
+                        <div className="min-h-[52px]">
+                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                            {tr.stackingLateFin}
+                          </label>
+                          {stackingEditMode ? (
+                            <input
+                              type="text"
+                              value={stackingForm.lateFin}
+                              onChange={(e) => handleChangeStackingField("lateFin", e.target.value)}
+                              placeholder={tr.stackingDateFormat}
+                              className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                            />
+                          ) : (
+                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">{stackingForm.lateFin || "—"}</p>
+                          )}
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 items-start">
+                        <div className="min-h-[52px]">
+                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                            {tr.stackingCutoffDry}
+                          </label>
+                          {stackingEditMode ? (
+                            <>
+                              <input
+                                type="text"
+                                value={stackingForm.cutoffDry}
+                                onChange={(e) => handleChangeStackingField("cutoffDry", e.target.value)}
+                                placeholder={tr.stackingDateFormat}
+                                className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleChangeStackingField("cutoffDry", stackingForm.dryFin || stackingForm.cutoffDry)
+                                }
+                                className="mt-1 text-[11px] font-medium text-brand-blue hover:underline"
+                              >
+                                {tr.stackingUseEndLabel}
+                              </button>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">
+                              {stackingForm.cutoffDry || "—"}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
+                        </div>
+                        <div className="min-h-[52px]">
+                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                            {tr.stackingCutoffReefer}
+                          </label>
+                          {stackingEditMode ? (
+                            <>
+                              <input
+                                type="text"
+                                value={stackingForm.cutoffReefer}
+                                onChange={(e) => handleChangeStackingField("cutoffReefer", e.target.value)}
+                                placeholder={tr.stackingDateFormat}
+                                className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleChangeStackingField("cutoffReefer", stackingForm.reeferFin || stackingForm.cutoffReefer)
+                                }
+                                className="mt-1 text-[11px] font-medium text-brand-blue hover:underline"
+                              >
+                                {tr.stackingUseEndLabel}
+                              </button>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">
+                              {stackingForm.cutoffReefer || "—"}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 items-start">
+                        <div className="min-h-[52px]">
+                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                            {tr.stackingCutoffAnticipado}
+                          </label>
+                          {stackingEditMode ? (
+                            <input
+                              type="text"
+                              value={stackingForm.cutoffAnticipado}
+                              onChange={(e) => handleChangeStackingField("cutoffAnticipado", e.target.value)}
+                              placeholder={tr.stackingDateFormat}
+                              className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                            />
+                          ) : (
+                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">
+                              {stackingForm.cutoffAnticipado || "—"}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
+                        </div>
+                        <div />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                          {tr.stackingCutoffAnticipadoDescripcion}
+                        </label>
+                        {stackingEditMode ? (
+                          <textarea
+                            value={stackingForm.cutoffAnticipadoDescripcion}
+                            onChange={(e) => handleChangeStackingField("cutoffAnticipadoDescripcion", e.target.value)}
+                            placeholder={tr.stackingCutoffAnticipadoDescripcionPlaceholder}
+                            className="mt-1 w-full resize-none px-3 py-1.5 text-sm rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                            rows={2}
+                          />
+                        ) : (
+                          <p className="mt-1 text-sm text-neutral-800">
+                            {stackingForm.cutoffAnticipadoDescripcion || "—"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Columna derecha: imagen oficial */}
+                <div className="flex min-h-0 flex-col overflow-hidden pl-1">
+                  <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-dashed border-neutral-300 bg-neutral-50/70 p-4">
+                    <div className="flex flex-shrink-0 items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <h3 className="text-sm font-semibold text-neutral-700">{tr.stackingOfficialTitle}</h3>
+                        <p className="text-xs text-neutral-500 mt-1">
+                          {tr.stackingOfficialDescription}
+                        </p>
+                      </div>
+                      {isSuperadmin && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleUploadStackingImageClick}
+                            disabled={stackingImageUploading}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-blue text-white hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                          >
+                            <Icon icon="lucide:upload" width={16} height={16} aria-hidden />
+                            {tr.stackingOfficialUpload}
+                          </button>
+                          {(stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url) && (
+                            <button
+                              type="button"
+                              onClick={handleDeleteStackingImage}
+                              disabled={stackingImageUploading}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                            >
+                              <Icon icon="lucide:trash-2" width={16} height={16} aria-hidden />
+                              {tr.stackingOfficialDelete}
+                            </button>
+                          )}
+                          <input
+                            ref={stackingFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleUploadStackingImageChange}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {stackingImageUploading && (
+                      <div className="mt-2 flex-shrink-0 space-y-1" role="status" aria-live="polite">
+                        <p className="text-xs text-neutral-500">{tr.stackingImageUploading}</p>
+                        <div className="h-1.5 w-full rounded-full bg-neutral-200 overflow-hidden">
+                          <div
+                            className="h-full w-1/3 rounded-full bg-brand-blue animate-stacking-progress"
+                            role="progressbar"
+                            aria-valuenow={undefined}
+                            aria-label={tr.stackingImageUploading}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-3 flex min-h-[260px] flex-1 flex-col overflow-hidden rounded-lg border border-neutral-300 bg-white">
+                      {stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ? (
+                        <iframe
+                          src={stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ?? ""}
+                          title="Stacking oficial"
+                          className="h-full w-full min-h-[260px] border-0"
+                        />
+                      ) : (
+                        <span className="flex flex-1 items-center justify-center px-4 py-8 text-center text-xs text-neutral-400">
+                          {tr.stackingOfficialNoImage}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-neutral-200 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleCloseStackingModal}
+                className="w-full px-4 py-2.5 rounded-lg bg-brand-blue text-white font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+              >
+                {tr.stackingClose}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal "Ver por área": servicios o consorcios agrupados por área */}
+      {selectByAreaOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex flex-col bg-white"
+          role="dialog"
+          aria-modal="true"
+          aria-label={selectByAreaMode === "servicio" ? tr.selectByAreaTitleService : tr.selectByAreaTitleConsorcio}
+        >
+          <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 bg-neutral-50 flex-shrink-0">
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-900">
+                {selectByAreaMode === "servicio" ? tr.selectByAreaTitleService : tr.selectByAreaTitleConsorcio}
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                {selectByAreaMode === "servicio" ? tr.selectByAreaDescService : tr.selectByAreaDescConsorcio}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectByAreaOpen(false)}
+              className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              aria-label={tr.closeSelectByArea}
+            >
+              <Icon icon="lucide:x" width={18} height={18} aria-hidden />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
+            {selectByAreaMode === "servicio"
+              ? (() => {
+                  const areaOrder = [...AREAS_CANONICAL];
+                  const areaLabels: Record<string, string> = {
+                    ASIA: "Asia",
+                    EUROPA: "Europa",
+                    AMERICA: "América",
+                    "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                    SIN_AREA: "Sin área",
+                  };
+                  const grouped: Record<string, ServicioConDetalle[]> = {};
+                  for (const srv of serviciosConDetalle) {
+                    const areasSrv = new Set(
+                      (srv.destinos ?? [])
+                        .map((d) => normalizeArea(d.area))
+                        .filter((a) => a.length > 0)
+                    );
+                    if (areasSrv.size === 0) {
+                      (grouped.SIN_AREA ??= []).push(srv);
+                    } else {
+                      for (const area of areasSrv) {
+                        (grouped[area] ??= []).push(srv);
+                      }
+                    }
+                  }
+                  const orderedAreas = [
+                    ...areaOrder.filter((a) => (grouped[a]?.length ?? 0) > 0),
+                    ...(grouped.SIN_AREA?.length ? ["SIN_AREA"] : []),
+                  ];
+                  if (orderedAreas.length === 0) {
+                    return (
+                      <p className="text-sm text-neutral-500">
+                        No hay servicios con destinos configurados.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {orderedAreas.map((areaKey) => (
+                        <section
+                          key={areaKey}
+                          className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-3 flex flex-col gap-2"
+                        >
+                          <h3 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-brand-blue" aria-hidden />
+                            {areaLabels[areaKey] ?? areaKey}
+                          </h3>
+                          <div className="space-y-2">
+                            {(grouped[areaKey] ?? []).map((srv) => (
+                              <button
+                                key={srv.id}
+                                type="button"
+                                onClick={() => {
+                                  applyServicioToForm(srv);
+                                  setSelectedServicioId(srv.id);
+                                  setSelectedConsorcioId("");
+                                  setSelectByAreaOpen(false);
+                                }}
+                                className="w-full text-left rounded-lg border border-neutral-200 bg-white px-3 py-2.5 hover:border-brand-blue/70 hover:bg-brand-blue/5 transition-colors"
+                              >
+                                <p className="text-xs font-semibold text-neutral-900 flex items-center justify-between gap-2">
+                                  <span className="truncate">{srv.nombre}</span>
+                                  <span className="text-[10px] font-medium text-brand-blue uppercase shrink-0">
+                                    {srv.naviera_nombre?.trim() ?? "—"}
+                                  </span>
+                                </p>
+                                <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                  POL: {srv.puerto_origen?.trim() || "—"}
+                                </p>
+                                <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                  Naves: {(srv.naves ?? []).map((n) => n.nave_nombre ?? "").filter(Boolean).join(", ") || "—"}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  );
+                })()
+              : (() => {
+                  const areaOrder = [...AREAS_CANONICAL];
+                  const areaLabels: Record<string, string> = {
+                    ASIA: "Asia",
+                    EUROPA: "Europa",
+                    AMERICA: "América",
+                    "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                    SIN_AREA: "Sin área",
+                  };
+                  const grouped: Record<string, ConsorcioConDetalle[]> = {};
+                  for (const con of consorciosConDetalle) {
+                    const areasCon = new Set<string>();
+                    for (const { servicio_unico } of con.servicios ?? []) {
+                      if (!servicio_unico?.destinos?.length) continue;
+                      for (const d of servicio_unico.destinos) {
+                        const a = normalizeArea(d.area);
+                        if (a.length > 0) areasCon.add(a);
+                      }
+                    }
+                    if (areasCon.size === 0) {
+                      (grouped.SIN_AREA ??= []).push(con);
+                    } else {
+                      for (const area of areasCon) {
+                        (grouped[area] ??= []).push(con);
+                      }
+                    }
+                  }
+                  const orderedAreas = [
+                    ...areaOrder.filter((a) => (grouped[a]?.length ?? 0) > 0),
+                    ...(grouped.SIN_AREA?.length ? ["SIN_AREA"] : []),
+                  ];
+                  if (orderedAreas.length === 0) {
+                    return (
+                      <p className="text-sm text-neutral-500">
+                        No hay consorcios con servicios que tengan destinos configurados.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {orderedAreas.map((areaKey) => (
+                        <section
+                          key={areaKey}
+                          className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-3 flex flex-col gap-2"
+                        >
+                          <h3 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-brand-blue" aria-hidden />
+                            {areaLabels[areaKey] ?? areaKey}
+                          </h3>
+                          <div className="space-y-2">
+                            {(grouped[areaKey] ?? []).map((con) => (
+                              <button
+                                key={con.id}
+                                type="button"
+                                onClick={() => {
+                                  applyConsorcioToForm(con);
+                                  setSelectedConsorcioId(con.id);
+                                  setSelectedServicioId("");
+                                  setSelectByAreaOpen(false);
+                                }}
+                                className="w-full text-left rounded-lg border border-neutral-200 bg-white px-3 py-2.5 hover:border-brand-blue/70 hover:bg-brand-blue/5 transition-colors"
+                              >
+                                <p className="text-xs font-semibold text-neutral-900 truncate">
+                                  {con.nombre}
+                                </p>
+                                <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                  Servicios: {(con.servicios ?? []).length}
+                                </p>
+                                <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                  Navieras: {[
+                                    ...new Set(
+                                      (con.servicios ?? [])
+                                        .map((s) => s.servicio_unico?.naviera_nombre?.trim())
+                                        .filter((n): n is string => Boolean(n))
+                                    ),
+                                  ].join(", ") || "—"}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  );
+                })()}
           </div>
         </div>
       )}

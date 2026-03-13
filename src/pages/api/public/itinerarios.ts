@@ -9,6 +9,7 @@ type DbItinerario = {
   consorcio: string | null;
   naviera: string | null;
   operador: string | null;
+  stacking_imagen_url: string | null;
   nave: string;
   viaje: string;
   semana: number | null;
@@ -40,15 +41,37 @@ function jsonResponse(body: object, status = 200) {
   });
 }
 
+const ITINERARIOS_SELECT =
+  "id, servicio, consorcio, naviera, operador, stacking_imagen_url, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by";
+const ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE =
+  "id, servicio, consorcio, naviera, operador, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by";
+
 export const GET: APIRoute = async () => {
   try {
     const supabase = createAnonClient();
 
-    const { data: itinerariosData, error: errItinerarios } = await supabase
+    let itinerariosData: unknown[] | null = null;
+    let errItinerarios: { message?: string; code?: string } | null = null;
+
+    let res = await supabase
       .from("itinerarios")
-      .select("id, servicio, consorcio, naviera, operador, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by")
+      .select(ITINERARIOS_SELECT)
       .order("etd", { ascending: true })
       .order("servicio", { ascending: true });
+
+    errItinerarios = res.error;
+    itinerariosData = res.data;
+
+    // Si falla por columna inexistente (ej. migración stacking_imagen_url no aplicada), reintentar sin ella
+    if (errItinerarios && (errItinerarios.code === "42703" || /column.*does not exist|no existe/i.test(errItinerarios.message ?? ""))) {
+      res = await supabase
+        .from("itinerarios")
+        .select(ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE)
+        .order("etd", { ascending: true })
+        .order("servicio", { ascending: true });
+      errItinerarios = res.error;
+      itinerariosData = res.data;
+    }
 
     if (errItinerarios) {
       if (errItinerarios.code === "42P01") {
@@ -57,7 +80,11 @@ export const GET: APIRoute = async () => {
       return jsonResponse({ error: errItinerarios.message }, 500);
     }
 
-    const itinerarios = (itinerariosData ?? []) as DbItinerario[];
+    const raw = (itinerariosData ?? []) as Record<string, unknown>[];
+    const itinerarios: DbItinerario[] = raw.map((row) => ({
+      ...row,
+      stacking_imagen_url: "stacking_imagen_url" in row ? row.stacking_imagen_url : null,
+    })) as DbItinerario[];
 
     if (itinerarios.length === 0) {
       return jsonResponse({ success: true, itinerarios: [] });
