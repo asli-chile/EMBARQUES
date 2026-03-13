@@ -12,6 +12,33 @@ type StackingContentProps = {
   data?: StackingData | null;
 };
 
+const STACKING_DRAFTS_STORAGE_KEY = "itinerarios-stacking-drafts-v1";
+
+type StackingDraft = {
+  dryInicio: string;
+  dryFin: string;
+  reeferInicio: string;
+  reeferFin: string;
+  lateInicio: string;
+  lateFin: string;
+  cutoffDry: string;
+  cutoffReefer: string;
+  cutoffAnticipado: string;
+  cutoffAnticipadoDescripcion: string;
+};
+
+function getDraftFromStorage(itinerarioId: string): StackingDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STACKING_DRAFTS_STORAGE_KEY);
+    if (!raw) return null;
+    const drafts = JSON.parse(raw) as Record<string, StackingDraft>;
+    return drafts[itinerarioId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const TODAY_START_MS = () =>
   new Date(
     new Date().getFullYear(),
@@ -362,9 +389,12 @@ export function StackingContent({ data = null }: StackingContentProps) {
               </div>
             )}
 
-            {sortedFiltered.length > 0 && (
-              <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] gap-4 p-4 lg:p-6">
-                {/* Lista de itinerarios */}
+            {sortedFiltered.length > 0 && (() => {
+              const trIt = (t as { itinerarioPage?: Record<string, string> }).itinerarioPage ?? {};
+              const draft = selected ? getDraftFromStorage(selected.id) : null;
+              return (
+              <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,0.25fr)_minmax(0,0.25fr)_minmax(0,0.5fr)] gap-4 p-4 lg:p-6">
+                {/* Col 1 (25%): Lista de itinerarios */}
                 <div className="flex flex-col min-h-0 rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden">
                   <div className="flex-shrink-0 px-4 py-4 border-b border-neutral-100 bg-neutral-50/50">
                     <h2 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
@@ -414,8 +444,67 @@ export function StackingContent({ data = null }: StackingContentProps) {
                   </div>
                 </div>
 
-                {/* Panel detalle: datos + imagen */}
+                {/* Col 2 (25%): Fechas del formulario de stacking */}
                 <div className="flex flex-col min-h-0 rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden">
+                  <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-100 bg-neutral-50/50">
+                    <h2 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+                      <Icon icon="lucide:calendar-clock" width={18} height={18} className="text-brand-teal" aria-hidden />
+                      Fechas de stacking
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {selected ? (draft ? "Datos ingresados en el formulario" : "Sin fechas cargadas para este itinerario") : "Seleccione un itinerario"}
+                    </p>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-y-auto p-3 text-sm">
+                    {selected && (
+                      <>
+                        <div className="space-y-3">
+                          <div className="rounded-lg bg-neutral-50/80 p-2">
+                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">{trIt.stackingDry ?? "Stacking Dry"}</p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingDryInicio ?? "Inicio"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.dryInicio || "—"}</p></div>
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingDryFin ?? "Fin"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.dryFin || "—"}</p></div>
+                            </div>
+                          </div>
+                          <div className="rounded-lg bg-neutral-50/80 p-2">
+                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">{trIt.stackingReefer ?? "Stacking Reefer"}</p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingReeferInicio ?? "Inicio"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.reeferInicio || "—"}</p></div>
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingReeferFin ?? "Fin"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.reeferFin || "—"}</p></div>
+                            </div>
+                          </div>
+                          <div className="rounded-lg bg-neutral-50/80 p-2">
+                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">{trIt.stackingLateTitle ?? "Late / Cut off"}</p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingLateInicio ?? "Late inicio"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.lateInicio || "—"}</p></div>
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingLateFin ?? "Late fin"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.lateFin || "—"}</p></div>
+                            </div>
+                            <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingCutoffDry ?? "Cut off Dry"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.cutoffDry || "—"}</p></div>
+                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingCutoffReefer ?? "Cut off Reefer"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.cutoffReefer || "—"}</p></div>
+                            </div>
+                            <div className="mt-1.5">
+                              <span className="text-[10px] text-neutral-500">{trIt.stackingCutoffAnticipado ?? "Cut off anticipado"}</span>
+                              <p className="font-mono text-neutral-800 tabular-nums">{draft?.cutoffAnticipado || "—"}</p>
+                              {draft?.cutoffAnticipadoDescripcion ? (
+                                <p className="text-xs text-neutral-600 mt-0.5">{draft.cutoffAnticipadoDescripcion}</p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {!selected && (
+                      <div className="flex flex-col items-center justify-center gap-2 text-neutral-400 text-center px-4 py-8">
+                        <Icon icon="lucide:mouse-pointer-click" width={28} height={28} aria-hidden />
+                        <span className="text-xs">{tr.emptyTitle}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Col 3 (50%): Datos del itinerario + imagen */}
+                <div className="flex flex-col min-h-0 rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden mt-4 lg:mt-0">
                   {selected ? (
                     <>
                       <div className="flex-shrink-0 flex flex-wrap items-start gap-3 px-4 py-4 border-b border-neutral-100 bg-neutral-50/30">
@@ -454,7 +543,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm ml-auto">
+                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm">
                           <div className="flex flex-col items-start gap-1 text-[11px] text-neutral-600">
                             <span className="inline-flex items-center gap-1 font-medium">
                               <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-olive" aria-hidden />
@@ -470,7 +559,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
                             <span>{daysUntilLabel(selected.etd, 0)}</span>
                           </div>
                         </div>
-                        {isSuperadmin && selected && (
+                        {isSuperadmin && (
                           <a
                             href={`/itinerario?stackingItId=${encodeURIComponent(selected.id)}`}
                             className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand-blue text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
@@ -504,7 +593,8 @@ export function StackingContent({ data = null }: StackingContentProps) {
                   )}
                 </div>
               </section>
-            )}
+              );
+            })()}
           </>
         )}
       </div>
