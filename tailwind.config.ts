@@ -35,12 +35,22 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(0)" },
         },
+        "auth-modal-in": {
+          "0%": { opacity: "0", transform: "scale(0.97)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "auth-backdrop-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         "fade-in-up": "fade-in-up 0.35s ease-out both",
         "modal-in": "modal-in 0.22s ease-out both",
         "modal-out": "modal-out 0.2s ease-in forwards",
         "sidebar-in": "sidebar-in 0.25s ease-out forwards",
+        "auth-modal-in": "auth-modal-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
+        "auth-backdrop-in": "auth-backdrop-in 0.2s ease-out both",
       },
       boxShadow: {
         "mac-modal":
