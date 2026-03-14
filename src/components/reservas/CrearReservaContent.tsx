@@ -99,6 +99,16 @@ const sectionIcons: Record<SectionKey, string> = {
   observaciones: "typcn:document-text",
 };
 
+const SECTION_ORDER: SectionKey[] = [
+  "general",
+  "comercial",
+  "carga",
+  "naviera",
+  "planta",
+  "deposito",
+  "observaciones",
+];
+
 export function CrearReservaContent() {
   const { t } = useLocale();
   const tr = t.crearReserva;
@@ -484,11 +494,11 @@ export function CrearReservaContent() {
   };
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+    "w-full px-4 py-2.5 rounded-lg border border-neutral-300 bg-white text-neutral-800 placeholder:text-neutral-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue focus:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed";
 
   const selectClass = inputClass;
 
-  const labelClass = "block text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-1.5";
+  const labelClass = "block text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-1.5";
 
   const renderCatalogoSelect = (
     name: keyof FormData,
@@ -594,20 +604,20 @@ export function CrearReservaContent() {
         autoComplete="off"
       />
       {showClienteSuggestions && clienteInput.trim() && (
-        <div className="absolute z-[9999] w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+        <div className="absolute z-[9999] w-full mt-1 bg-white border border-neutral-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {clientesFiltrados.length > 0 ? (
             clientesFiltrados.map((cliente) => (
               <button
                 key={cliente.id}
                 type="button"
                 onMouseDown={() => handleSelectCliente(cliente)}
-                className="w-full px-4 py-2 text-left hover:bg-brand-blue/10 transition-colors text-sm"
+                className="w-full px-4 py-2.5 text-left hover:bg-brand-blue/10 text-neutral-800 font-medium transition-colors text-sm border-b border-neutral-100 last:border-b-0"
               >
                 {cliente.nombre}
               </button>
             ))
           ) : (
-            <div className="px-4 py-3 text-sm text-neutral-500">
+            <div className="px-4 py-3 text-sm text-neutral-600">
               No se encontró "{clienteInput}"
               <button
                 type="button"
@@ -626,9 +636,9 @@ export function CrearReservaContent() {
   const renderAddClienteModal = () => {
     if (!showAddClienteModal) return null;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
-          <h3 className="text-lg font-semibold text-neutral-800 mb-2">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-md">
+          <h3 className="text-xl font-bold text-brand-blue mb-2">
             Agregar nueva empresa
           </h3>
           <p className="text-neutral-600 mb-4">
@@ -797,20 +807,22 @@ export function CrearReservaContent() {
     const isExpanded = expandedSections.has(key);
     const isComplete = sectionValidation[key];
     return (
-      <div className="border border-neutral-200 rounded-lg bg-white overflow-visible">
+      <div className="rounded-xl border border-neutral-200 bg-white shadow-md overflow-hidden transition-shadow hover:shadow-lg">
         <button
           type="button"
           onClick={() => toggleSection(key)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-blue/30"
+          className="w-full flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-brand-blue/10 to-transparent border-b border-neutral-200 hover:from-brand-blue/15 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-blue/30"
           aria-expanded={isExpanded}
         >
-          <span className="flex items-center gap-2 text-brand-blue font-bold text-base">
-            <Icon icon={sectionIcons[key]} width={20} height={20} />
+          <span className="flex items-center gap-3 text-brand-blue font-bold text-base">
+            <span className="w-9 h-9 rounded-lg bg-brand-blue/15 flex items-center justify-center">
+              <Icon icon={sectionIcons[key]} width={20} height={20} className="text-brand-blue" />
+            </span>
             {title}
           </span>
           <span className="flex items-center gap-2">
             {isComplete && (
-              <span className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
                 <Icon
                   icon="typcn:tick"
                   width={16}
@@ -823,21 +835,25 @@ export function CrearReservaContent() {
               icon={isExpanded ? "typcn:minus" : "typcn:plus"}
               width={18}
               height={18}
-              className="text-neutral-500"
+              className="text-neutral-600"
             />
           </span>
         </button>
-        {isExpanded && <div className="p-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>}
+        {isExpanded && (
+          <div className="p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 bg-neutral-50/50">
+            {children}
+          </div>
+        )}
       </div>
     );
   };
 
   if (loadingCatalogos) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-4" role="main">
+      <main className="flex-1 min-h-0 overflow-auto bg-neutral-200 p-4" role="main">
         <div className="w-full flex items-center justify-center min-h-[300px]">
-          <div className="flex items-center gap-3 text-neutral-500">
-            <Icon icon="typcn:refresh" width={24} height={24} className="animate-spin" />
+          <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-white border border-neutral-200 shadow-md text-neutral-600 font-medium">
+            <Icon icon="typcn:refresh" width={24} height={24} className="animate-spin text-brand-blue" />
             <span>{tr.loading}</span>
           </div>
         </div>
@@ -845,10 +861,30 @@ export function CrearReservaContent() {
     );
   }
 
+  const sectionTitles: Record<SectionKey, string> = {
+    general: tr.sectionGeneral,
+    comercial: tr.sectionComercial,
+    carga: tr.sectionCarga,
+    naviera: tr.sectionNaviera,
+    planta: tr.sectionPlanta,
+    deposito: tr.sectionDeposito,
+    observaciones: tr.sectionObservaciones,
+  };
+  const sectionDescs: Record<SectionKey, string> = {
+    general: (tr as Record<string, string>).sectionGeneralDesc ?? "",
+    comercial: (tr as Record<string, string>).sectionComercialDesc ?? "",
+    carga: (tr as Record<string, string>).sectionCargaDesc ?? "",
+    naviera: (tr as Record<string, string>).sectionNavieraDesc ?? "",
+    planta: (tr as Record<string, string>).sectionPlantaDesc ?? "",
+    deposito: (tr as Record<string, string>).sectionDepositoDesc ?? "",
+    observaciones: (tr as Record<string, string>).sectionObservacionesDesc ?? "",
+  };
+  const stepsPanelTitle = (tr as Record<string, string>).stepsPanelTitle ?? "Qué completar en cada paso";
+
   return (
-    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-100" role="main">
-      <div className="w-full p-4">
-        <div className="mb-6">
+    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-200" role="main">
+      <div className="w-full max-w-full px-4 sm:px-6 py-4 sm:py-6">
+        <div className="mb-6 rounded-xl bg-white border border-neutral-200 shadow-md p-5 pl-6 border-l-4 border-l-brand-blue">
           <h1 className="text-2xl font-bold text-brand-blue tracking-tight">
             {tr.title}
           </h1>
@@ -858,13 +894,13 @@ export function CrearReservaContent() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm" role="alert">
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium shadow-sm" role="alert">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-4 rounded-lg bg-emerald-50 border border-emerald-200" role="status">
+          <div className="mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 shadow-sm" role="status">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-emerald-800">
                 <Icon icon="typcn:tick" width={20} height={20} className="text-emerald-600" />
@@ -881,7 +917,43 @@ export function CrearReservaContent() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <aside className="rounded-xl border border-neutral-200 bg-white shadow-md p-5 h-fit lg:sticky lg:top-4" aria-label={stepsPanelTitle}>
+            <h2 className="text-base font-bold text-brand-blue tracking-tight mb-4">
+              {stepsPanelTitle}
+            </h2>
+            <ol className="space-y-4">
+              {SECTION_ORDER.map((key) => {
+                const isActive = expandedSections.has(key);
+                return (
+                  <li
+                    key={key}
+                    className={`rounded-lg border p-3 transition-colors ${
+                      isActive
+                        ? "border-brand-blue/40 bg-brand-blue/5"
+                        : "border-neutral-200 bg-neutral-50/50"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="w-8 h-8 rounded-lg bg-brand-blue/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Icon icon={sectionIcons[key]} width={16} height={16} className="text-brand-blue" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-neutral-800 text-sm">
+                          {sectionTitles[key]}
+                        </p>
+                        <p className="text-neutral-600 text-sm mt-1">
+                          {sectionDescs[key]}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </aside>
+
+          <form onSubmit={handleSubmit} className="space-y-5 min-w-0">
           {renderSection(
             "general",
             tr.sectionGeneral,
@@ -971,7 +1043,7 @@ export function CrearReservaContent() {
                   <label className={labelClass}>
                     TT (días)
                   </label>
-                  <div className={`${inputClass} bg-neutral-50 flex items-center justify-center font-semibold text-brand-blue`}>
+                  <div className="rounded-lg border border-neutral-300 bg-brand-blue/5 px-4 py-2.5 flex items-center justify-center font-bold text-brand-blue text-lg">
                     {transitTime !== null ? transitTime : "-"}
                   </div>
                 </div>
@@ -1067,7 +1139,7 @@ export function CrearReservaContent() {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-4">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-6 mt-2 border-t border-neutral-200 bg-white/80 rounded-xl p-4 -mx-1">
             <button
               type="button"
               onClick={() => {
@@ -1121,7 +1193,7 @@ export function CrearReservaContent() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-base font-semibold bg-brand-blue text-white shadow-md hover:bg-brand-blue/90 hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -1137,6 +1209,7 @@ export function CrearReservaContent() {
             </button>
           </div>
         </form>
+        </div>
       </div>
       {renderAddClienteModal()}
       {renderPreviewModal()}
