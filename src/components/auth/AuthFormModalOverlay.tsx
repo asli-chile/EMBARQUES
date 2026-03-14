@@ -52,17 +52,17 @@ export function AuthFormModalOverlay() {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Panel izquierdo: marca y bienvenida */}
-        <div className="hidden md:flex flex-1 flex-col justify-center px-10 py-12 bg-gradient-to-br from-brand-blue via-[#0d1a3a] to-[#0a1530] text-white min-h-[420px]">
-          <div className="flex flex-col items-start gap-6">
-            <div className="flex items-center justify-center w-full max-w-[200px] h-16">
-              <img
-                src={brand.logoWhite}
-                alt={brand.companyTitle}
-                className="w-full h-full object-contain object-left"
-                width={200}
-                height={64}
-              />
-            </div>
+        <div className="hidden md:flex flex-1 flex-col px-10 py-12 bg-gradient-to-br from-brand-blue via-[#0d1a3a] to-[#0a1530] text-white min-h-[420px]">
+          <div className="flex-1 flex items-center justify-center min-h-[180px] w-full">
+            <img
+              src={brand.logo}
+              alt={brand.companyTitle}
+              className="max-h-24 w-auto max-w-full object-contain brightness-0 invert"
+              width={320}
+              height={96}
+            />
+          </div>
+          <div className="flex flex-col items-start gap-6 shrink-0">
             <div className="space-y-2">
               <h2 className="text-xl font-bold tracking-tight text-white">
                 {WELCOME_TITLE}
@@ -100,15 +100,15 @@ export function AuthFormModalOverlay() {
         <div className="flex-1 min-w-0 flex flex-col bg-neutral-50/95 overflow-y-auto min-h-[380px]">
           <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-4 bg-white/95 backdrop-blur border-b border-neutral-200/60 shrink-0">
             {/* Logo ASLI en el panel del formulario */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <img
                 src={brand.logo}
-                alt=""
-                className="w-10 h-10 object-contain shrink-0"
-                width={40}
-                height={40}
+                alt={brand.companyTitle}
+                className="h-11 w-auto max-w-[160px] object-contain object-left shrink-0"
+                width={160}
+                height={44}
               />
-              <span className="text-sm font-semibold text-brand-blue truncate">
+              <span className="text-sm font-semibold text-brand-blue truncate hidden sm:inline">
                 EMBARQUES
               </span>
             </div>
@@ -121,9 +121,16 @@ export function AuthFormModalOverlay() {
               <Icon icon="lucide:x" width={20} height={20} />
             </button>
           </div>
-          {/* Título compacto en móvil */}
-          <div className="md:hidden px-6 pt-4 pb-2 text-center border-b border-neutral-200/60 bg-white/80">
-            <p className="text-sm font-medium text-brand-blue">{WELCOME_TITLE}</p>
+          {/* Título y logo en móvil */}
+          <div className="md:hidden px-6 pt-4 pb-3 text-center border-b border-neutral-200/60 bg-white/80">
+            <img
+              src={brand.logo}
+              alt={brand.companyTitle}
+              className="h-10 w-auto max-w-[140px] mx-auto object-contain"
+              width={140}
+              height={40}
+            />
+            <p className="text-sm font-medium text-brand-blue mt-3">{WELCOME_TITLE}</p>
             <p className="text-xs text-neutral-500 mt-0.5">{WELCOME_SUBTITLE}</p>
           </div>
           <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-0 w-full max-w-md mx-auto">
