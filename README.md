@@ -1,6 +1,6 @@
 # EMBARQUES
 
-Aplicación web para Asesorias y Servicios Logisticos Integrales Ltda. Gestión de logística, reservas, transportes, documentos y configuración.
+Aplicación web para Asesorias y Servicios Logisticos Integrales Ltda. (ASLI) Gestión de logística, reservas, transportes, documentos y configuración.
 
 ---
 
