@@ -142,6 +142,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const authId = newAuthUser.user.id;
+  const nombreFinal = nombre || email.split("@")[0];
+
+  let usuarioId: string | undefined;
 
   const { data: usuarioRow } = await adminClient
     .from("usuarios")
@@ -149,11 +152,48 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     .eq("auth_id", authId)
     .single();
 
-  const usuarioId = usuarioRow?.id;
+  if (usuarioRow?.id) {
+    usuarioId = usuarioRow.id;
+  } else {
+    const { data: inserted, error: insertErr } = await adminClient
+      .from("usuarios")
+      .insert({
+        auth_id: authId,
+        email,
+        nombre: nombreFinal,
+        rol,
+        activo: true,
+      })
+      .select("id")
+      .single();
+
+    if (insertErr) {
+      if (insertErr.code === "23505") {
+        const { data: existing } = await adminClient
+          .from("usuarios")
+          .select("id")
+          .eq("email", email)
+          .single();
+        usuarioId = existing?.id;
+      }
+      if (!usuarioId) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Usuario creado en Auth pero falló guardar en tabla usuarios: ${insertErr.message}`,
+          }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      usuarioId = inserted?.id;
+    }
+  }
+
   if (usuarioId && (rol === "cliente" || rol === "ejecutivo") && empresaIds.length > 0) {
     const rows = empresaIds
       .filter((id): id is string => typeof id === "string" && id.length > 0)
-      .map((empresaId) => ({ usuario_id: usuarioId, empresa_id: empresaId }));
+      .map((empresaId) => ({ usuario_id: usuarioId!, empresa_id: empresaId }));
 
     if (rows.length > 0) {
       await adminClient.from("usuarios_empresas").insert(rows);
