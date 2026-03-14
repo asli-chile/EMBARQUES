@@ -97,7 +97,7 @@ export function ReservaAsliContent() {
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, planta_presentacion, estado_operacion")
       .is("deleted_at", null);
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       qOp = qOp.in("cliente", empresaNombres);
     }
     const [operacionesRes, depositosRes] = await Promise.all([

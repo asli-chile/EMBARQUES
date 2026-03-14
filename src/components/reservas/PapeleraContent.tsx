@@ -47,7 +47,7 @@ export function PapeleraContent() {
         "id, correlativo, ref_asli, cliente, especie, naviera, nave, booking, estado_operacion, deleted_at, created_at"
       )
       .not("deleted_at", "is", null);
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
     }
     const { data, error } = await q.order("deleted_at", { ascending: false });

@@ -104,7 +104,7 @@ export function FinanzasContent() {
       .select("id, ingreso, semana, estado_operacion, cliente, naviera, monto_facturado, margen_real")
       .is("deleted_at", null);
 
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       baseQuery = baseQuery.in("cliente", empresaNombres);
     }
 

@@ -110,7 +110,7 @@ export function MisReservasContent() {
         "id, correlativo, ref_asli, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking, estado_operacion, created_at"
       )
       .is("deleted_at", null);
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
     }
     const { data, error } = await q.order("created_at", { ascending: false });

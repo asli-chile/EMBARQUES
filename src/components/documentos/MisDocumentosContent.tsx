@@ -72,7 +72,7 @@ export function MisDocumentosContent() {
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, booking, pod, etd")
       .is("deleted_at", null);
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
     }
     const { data } = await q.order("created_at", { ascending: false });

@@ -82,7 +82,7 @@ export function FacturacionContent() {
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, estado_operacion, factura_transporte, monto_facturado, numero_factura_asli")
       .is("deleted_at", null);
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       qOp = qOp.in("cliente", empresaNombres);
     }
     const [operacionesRes, monedasRes] = await Promise.all([

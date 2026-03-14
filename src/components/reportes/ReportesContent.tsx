@@ -116,22 +116,28 @@ export function ReportesContent() {
       )
       .is("deleted_at", null);
 
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       baseQuery = baseQuery.in("cliente", empresaNombres);
     }
 
+    let clientesQuery = supabase
+      .from("operaciones")
+      .select("cliente")
+      .is("deleted_at", null)
+      .not("cliente", "is", null);
+    let navierasQuery = supabase
+      .from("operaciones")
+      .select("naviera")
+      .is("deleted_at", null)
+      .not("naviera", "is", null);
+    if (empresaNombres.length > 0) {
+      clientesQuery = clientesQuery.in("cliente", empresaNombres);
+      navierasQuery = navierasQuery.in("cliente", empresaNombres);
+    }
     const [opsRes, clientesRes, navierasRes] = await Promise.all([
       baseQuery.order("ingreso", { ascending: false }),
-      supabase
-        .from("operaciones")
-        .select("cliente")
-        .is("deleted_at", null)
-        .not("cliente", "is", null),
-      supabase
-        .from("operaciones")
-        .select("naviera")
-        .is("deleted_at", null)
-        .not("naviera", "is", null),
+      clientesQuery,
+      navierasQuery,
     ]);
 
     if (opsRes.error) {
@@ -163,7 +169,7 @@ export function ReportesContent() {
     setClientesOpts(clientes);
     setNavierasOpts(navieras);
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres, locale]);
+  }, [supabase, authLoading, empresaNombres, locale]);
 
   useEffect(() => {
     void loadCatalogsAndData();

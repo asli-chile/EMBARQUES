@@ -430,13 +430,12 @@ export function RegistrosContent() {
       .from("operaciones")
       .select("*")
       .is("deleted_at", null);
-    if (isCliente) {
-      if (empresaNombres.length === 0) {
-        setRowData([]);
-        setLoading(false);
-        return;
-      }
+    if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
+    } else if (isCliente) {
+      setRowData([]);
+      setLoading(false);
+      return;
     }
     const { data, error: err } = await q.order("correlativo", { ascending: false });
     setLoading(false);

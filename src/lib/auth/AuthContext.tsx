@@ -30,7 +30,7 @@ type AuthContextValue = {
   isSuperadmin: boolean;
   isAdmin: boolean;
   isCliente: boolean;
-  /** Nombres de empresas asignadas al cliente (para filtrar operaciones en app). */
+  /** Nombres de empresas asignadas (cliente o ejecutivo) para filtrar operaciones en app. */
   empresaNombres: string[];
   /** Usuario externo: sin sesión o sin perfil en tabla usuarios. Ve contenido informativo. */
   isExternalUser: boolean;
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           rol: perfil.rol as UserRole,
           activo: perfil.activo,
         });
-        if (perfil.rol === "cliente") {
+        if (perfil.rol === "cliente" || perfil.rol === "ejecutivo") {
           const { data: ueData } = await supabase
             .from("usuarios_empresas")
             .select("empresas(nombre)")

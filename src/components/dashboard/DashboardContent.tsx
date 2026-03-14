@@ -100,7 +100,7 @@ export function DashboardContent() {
     (selectCols: string) => {
       if (!supabase) throw new Error("Supabase not ready");
       let q = supabase.from("operaciones").select(selectCols).is("deleted_at", null);
-      if (isCliente && empresaNombres.length > 0) {
+      if (empresaNombres.length > 0) {
         q = q.in("cliente", empresaNombres);
       }
       if (filters.etdDesde) q = q.gte("etd", filters.etdDesde);
@@ -110,14 +110,14 @@ export function DashboardContent() {
       if (filters.naviera) q = q.eq("naviera", filters.naviera);
       return q;
     },
-    [supabase, filters, isCliente, empresaNombres]
+    [supabase, filters, empresaNombres]
   );
 
   const fetchCatalogs = useCallback(async () => {
     if (!supabase || authLoading) return;
     let qClientes = supabase.from("operaciones").select("cliente").is("deleted_at", null).not("cliente", "is", null);
     let qNavieras = supabase.from("operaciones").select("naviera").is("deleted_at", null).not("naviera", "is", null);
-    if (isCliente && empresaNombres.length > 0) {
+    if (empresaNombres.length > 0) {
       qClientes = qClientes.in("cliente", empresaNombres);
       qNavieras = qNavieras.in("cliente", empresaNombres);
     }
@@ -126,7 +126,7 @@ export function DashboardContent() {
     const navieras = [...new Set((navierasRes.data ?? []).map((r) => r.naviera).filter(Boolean) as string[])].sort();
     setClientesOpts(clientes);
     setNavierasOpts(navieras);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, empresaNombres]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!supabase || authLoading) return;
