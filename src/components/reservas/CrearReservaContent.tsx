@@ -488,7 +488,7 @@ export function CrearReservaContent() {
 
   const selectClass = inputClass;
 
-  const labelClass = "block text-xs font-medium text-neutral-600 uppercase tracking-wider mb-1.5";
+  const labelClass = "block text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-1.5";
 
   const renderCatalogoSelect = (
     name: keyof FormData,
@@ -739,7 +739,7 @@ export function CrearReservaContent() {
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {previewData.map((section, idx) => (
               <div key={idx} className="border border-neutral-200 rounded-lg overflow-hidden">
-                <div className="bg-neutral-50 px-4 py-2 font-medium text-brand-blue text-sm">
+                <div className="bg-neutral-50 px-4 py-2.5 font-bold text-brand-blue text-base">
                   {section.section}
                 </div>
                 <div className="p-4 grid gap-3 sm:grid-cols-2">
@@ -804,7 +804,7 @@ export function CrearReservaContent() {
           className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-blue/30"
           aria-expanded={isExpanded}
         >
-          <span className="flex items-center gap-2 text-brand-blue font-medium">
+          <span className="flex items-center gap-2 text-brand-blue font-bold text-base">
             <Icon icon={sectionIcons[key]} width={20} height={20} />
             {title}
           </span>
@@ -849,10 +849,10 @@ export function CrearReservaContent() {
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-100" role="main">
       <div className="w-full p-4">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-brand-blue tracking-tight">
+          <h1 className="text-2xl font-bold text-brand-blue tracking-tight">
             {tr.title}
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-base text-neutral-600 mt-1 font-medium">
             {tr.subtitle}
           </p>
         </div>
