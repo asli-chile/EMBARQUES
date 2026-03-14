@@ -6,38 +6,17 @@ import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { format } from "date-fns";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import {
+  STACKING_DRAFTS_STORAGE_KEY,
+  getDraftForItinerary,
+  saveDraftToStorage,
+  type StackingDraft,
+} from "@/lib/stacking-drafts";
 
 type StackingContentProps = {
   /** Datos del embarque y horarios de recepción stacking. Si no se pasa, se intenta cargar automáticamente. */
   data?: StackingData | null;
 };
-
-const STACKING_DRAFTS_STORAGE_KEY = "itinerarios-stacking-drafts-v1";
-
-type StackingDraft = {
-  dryInicio: string;
-  dryFin: string;
-  reeferInicio: string;
-  reeferFin: string;
-  lateInicio: string;
-  lateFin: string;
-  cutoffDry: string;
-  cutoffReefer: string;
-  cutoffAnticipado: string;
-  cutoffAnticipadoDescripcion: string;
-};
-
-function getDraftFromStorage(itinerarioId: string): StackingDraft | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STACKING_DRAFTS_STORAGE_KEY);
-    if (!raw) return null;
-    const drafts = JSON.parse(raw) as Record<string, StackingDraft>;
-    return drafts[itinerarioId] ?? null;
-  } catch {
-    return null;
-  }
-}
 
 const TODAY_START_MS = () =>
   new Date(
@@ -120,6 +99,35 @@ function daysUntilLabel(dateStr: string | null, offsetDays = 0): string {
   return `${n} d`;
 }
 
+/** Fecha de cierre de stacking (ETD + offset en días). */
+function getStackingCloseDate(etd: string | null): string {
+  const base = parseCalendarDate(etd ?? "");
+  if (!base) return "—";
+  const d = new Date(base);
+  d.setDate(d.getDate() + STACKING_CLOSE_OFFSET_DAYS);
+  return format(d, "dd/MM/yyyy");
+}
+
+function readDraftsFromStorage(): Record<string, StackingDraft> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(STACKING_DRAFTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, StackingDraft>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Primera ETA de las escalas (por orden), para mostrar en lista. */
+function getFirstEta(escalas: ItinerarioWithEscalas["escalas"]): string | null {
+  if (!escalas?.length) return null;
+  const sorted = [...escalas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+  const first = sorted.find((e) => e.eta?.trim());
+  return first?.eta ?? null;
+}
+
 function isTodayEtd(etd: string | null): boolean {
   if (!etd?.trim()) return false;
   try {
@@ -142,6 +150,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [stackingDraft, setStackingDraft] = useState<StackingDraft | null>(null);
   const [filterNaviera, setFilterNaviera] = useState("");
   const [filterPol, setFilterPol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -254,6 +263,15 @@ export function StackingContent({ data = null }: StackingContentProps) {
     }
   }, [selectedId, sortedFiltered]);
 
+  useEffect(() => {
+    if (!selected) {
+      setStackingDraft(null);
+      return;
+    }
+    const drafts = readDraftsFromStorage();
+    setStackingDraft(getDraftForItinerary(drafts, selected));
+  }, [selected]);
+
   const showEmptyState = !hasPropData && !loading && !error && stackingItinerarios.length === 0;
   const showNoResultsAfterFilter =
     !hasPropData && !loading && !error && stackingItinerarios.length > 0 && sortedFiltered.length === 0;
@@ -266,7 +284,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
     >
       <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto">
         {hasPropData && data && (
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             <StackingTable data={data} tr={tr} />
           </div>
         )}
@@ -274,30 +292,30 @@ export function StackingContent({ data = null }: StackingContentProps) {
         {!hasPropData && (
           <>
             {/* Cabecera moderna: título + filtros */}
-            <header className="flex-shrink-0 px-4 sm:px-6 py-4 bg-white/90 backdrop-blur-sm border-b border-neutral-200/80 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-blue/10 text-brand-blue">
-                    <Icon icon="lucide:ship" width={22} height={22} aria-hidden />
+            <header className="flex-shrink-0 px-3 py-3 sm:px-6 sm:py-4 bg-white/90 backdrop-blur-sm border-b border-neutral-200/80 shadow-sm">
+              <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-brand-blue/10 text-brand-blue">
+                    <Icon icon="lucide:ship" width={20} height={20} className="sm:w-[22px] sm:h-[22px]" aria-hidden />
                   </div>
-                  <div>
-                    <h1 className="text-lg font-semibold text-brand-blue tracking-tight">
+                  <div className="min-w-0">
+                    <h1 className="text-base sm:text-lg font-semibold text-brand-blue tracking-tight truncate">
                       {tr.title}
                     </h1>
                     <p className="text-xs text-neutral-500 mt-0.5">
-                      Solo itinerarios con ETD pendiente
+                      {(tr as { subtitle?: string }).subtitle ?? "Solo itinerarios con ETD pendiente"}
                     </p>
                   </div>
                 </div>
                 {stackingItinerarios.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Icon icon="lucide:building-2" width={16} height={16} className="text-neutral-500" aria-hidden />
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <label className="flex items-center gap-2 text-sm flex-1 sm:flex-initial min-w-0 sm:min-w-[160px]">
+                      <Icon icon="lucide:building-2" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
                       <span className="sr-only">{tr.filterNaviera}</span>
                       <select
                         value={filterNaviera}
                         onChange={(e) => setFilterNaviera(e.target.value)}
-                        className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue min-w-[160px] transition-colors"
+                        className="w-full sm:min-w-[140px] rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
                         aria-label={tr.filterNaviera}
                       >
                         <option value="">{tr.filterAll}</option>
@@ -308,13 +326,13 @@ export function StackingContent({ data = null }: StackingContentProps) {
                         ))}
                       </select>
                     </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <Icon icon="lucide:anchor" width={16} height={16} className="text-neutral-500" aria-hidden />
+                    <label className="flex items-center gap-2 text-sm flex-1 sm:flex-initial min-w-0 sm:min-w-[130px]">
+                      <Icon icon="lucide:anchor" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
                       <span className="sr-only">{tr.filterPol}</span>
                       <select
                         value={filterPol}
                         onChange={(e) => setFilterPol(e.target.value)}
-                        className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue min-w-[130px] transition-colors"
+                        className="w-full sm:min-w-[110px] rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
                         aria-label={tr.filterPol}
                       >
                         <option value="">{tr.filterAllPol}</option>
@@ -332,23 +350,23 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
             {loading && (
               <div
-                className="flex-1 flex flex-col items-center justify-center gap-4 px-4 py-16"
+                className="flex-1 flex flex-col items-center justify-center gap-4 px-3 sm:px-4 py-10 sm:py-16"
                 role="status"
                 aria-live="polite"
               >
                 <span className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" aria-hidden />
                 <p className="text-sm text-neutral-500">
-                  {t.itinerarioPage?.loadingItineraries ?? "Cargando itinerarios…"}
+                  {(tr as { loading?: string }).loading ?? t.itinerarioPage?.loadingItineraries ?? "Cargando itinerarios…"}
                 </p>
               </div>
             )}
 
             {error && (
               <div
-                className="flex-1 flex items-center justify-center px-4 py-12"
+                className="flex-1 flex items-center justify-center px-3 sm:px-4 py-8 sm:py-12"
                 role="alert"
               >
-                <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-700 text-sm shadow-sm max-w-md">
+                <div className="flex items-center gap-3 rounded-xl sm:rounded-2xl border border-red-200 bg-red-50 px-4 sm:px-5 py-3 sm:py-4 text-red-700 text-sm shadow-sm max-w-md">
                   <Icon icon="lucide:alert-circle" width={20} height={20} className="shrink-0" aria-hidden />
                   {error}
                 </div>
@@ -357,11 +375,11 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
             {showEmptyState && (
               <div
-                className="flex-1 flex flex-col items-center justify-center px-4 py-16 text-center max-w-md mx-auto"
+                className="flex-1 flex flex-col items-center justify-center px-3 sm:px-4 py-10 sm:py-16 text-center max-w-md mx-auto"
                 role="status"
                 aria-live="polite"
               >
-                <div className="rounded-2xl bg-white/80 border border-neutral-200 p-8 shadow-sm">
+                <div className="rounded-xl sm:rounded-2xl bg-white/80 border border-neutral-200 p-6 sm:p-8 shadow-sm">
                   <div className="flex justify-center text-neutral-300 mb-4">
                     <Icon icon="lucide:calendar-x" width={48} height={48} aria-hidden />
                   </div>
@@ -374,10 +392,10 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
             {showNoResultsAfterFilter && (
               <div
-                className="flex-1 flex flex-col items-center justify-center px-4 py-16 text-center max-w-md mx-auto"
+                className="flex-1 flex flex-col items-center justify-center px-3 sm:px-4 py-10 sm:py-16 text-center max-w-md mx-auto"
                 role="status"
               >
-                <div className="rounded-2xl bg-white/80 border border-neutral-200 p-8 shadow-sm">
+                <div className="rounded-xl sm:rounded-2xl bg-white/80 border border-neutral-200 p-6 sm:p-8 shadow-sm">
                   <div className="flex justify-center text-neutral-300 mb-4">
                     <Icon icon="lucide:filter-x" width={48} height={48} aria-hidden />
                   </div>
@@ -390,30 +408,32 @@ export function StackingContent({ data = null }: StackingContentProps) {
             )}
 
             {sortedFiltered.length > 0 && (() => {
-              const trIt = (t as { itinerarioPage?: Record<string, string> }).itinerarioPage ?? {};
-              const draft = selected ? getDraftFromStorage(selected.id) : null;
+              const countLabel = sortedFiltered.length === 1
+                ? ((tr as { itineraryCount?: string }).itineraryCount ?? "{{count}} itinerario").replace("{{count}}", "1")
+                : ((tr as { itineraryCount_other?: string }).itineraryCount_other ?? "{{count}} itinerarios").replace("{{count}}", String(sortedFiltered.length));
               return (
-              <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,0.25fr)_minmax(0,0.25fr)_minmax(0,0.5fr)] gap-4 p-4 lg:p-6">
-                {/* Col 1 (25%): Lista de itinerarios */}
-                <div className="flex flex-col min-h-0 rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden">
-                  <div className="flex-shrink-0 px-4 py-4 border-b border-neutral-100 bg-neutral-50/50">
+              <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] gap-3 p-3 sm:gap-4 sm:p-4 lg:gap-5 lg:p-5">
+                {/* Col 1: Lista de itinerarios */}
+                <div className="flex flex-col min-h-0 rounded-xl sm:rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden">
+                  <div className="flex-shrink-0 px-3 py-3 sm:px-4 sm:py-4 border-b border-neutral-100 bg-neutral-50/50">
                     <h2 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
-                      <Icon icon="lucide:list" width={18} height={18} className="text-brand-blue" aria-hidden />
-                      {t.itinerarioPage?.title ?? "Itinerarios con stacking"}
+                      <Icon icon="lucide:list" width={18} height={18} className="text-brand-blue shrink-0" aria-hidden />
+                      {(tr as { listTitle?: string }).listTitle ?? t.itinerarioPage?.title ?? "Itinerarios con stacking"}
                     </h2>
                     <p className="text-xs text-neutral-500 mt-1.5">
-                      {sortedFiltered.length} {sortedFiltered.length === 1 ? "itinerario" : "itinerarios"} con ETD pendiente
+                      {countLabel}
                     </p>
                   </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto p-2 scroll-smooth">
+                  <div className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-2 scroll-smooth">
                     {sortedFiltered.map((it) => {
                       const isActive = selected?.id === it.id;
+                      const firstEta = getFirstEta(it.escalas);
                       return (
                         <button
                           key={it.id}
                           type="button"
                           onClick={() => setSelectedId(it.id)}
-                          className={`w-full text-left px-3 py-3 rounded-xl text-sm transition-all duration-200 ease-out ${isActive ? "bg-brand-blue/10 text-brand-blue font-medium shadow-sm ring-1 ring-brand-blue/20" : "hover:bg-neutral-50 text-neutral-700 hover:shadow-sm"}`}
+                          className={`w-full text-left px-2.5 py-2.5 sm:px-3 sm:py-3 rounded-lg sm:rounded-xl text-sm transition-all duration-200 ease-out ${isActive ? "bg-brand-blue/10 text-brand-blue font-medium shadow-sm ring-1 ring-brand-blue/20" : "hover:bg-neutral-50 text-neutral-700 hover:shadow-sm"}`}
                         >
                           <div className="flex items-start gap-2">
                             <span className="flex shrink-0 mt-0.5 text-neutral-400">
@@ -424,18 +444,31 @@ export function StackingContent({ data = null }: StackingContentProps) {
                                 <span className="truncate font-medium">
                                   {it.nave || "—"} · {it.viaje || "—"}
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-xs text-neutral-500 shrink-0 tabular-nums font-mono">
-                                  {formatEtdDisplay(it.etd)}
-                                  {isTodayEtd(it.etd) && (
-                                    <span className="inline-flex items-center rounded-full bg-brand-olive/10 text-brand-olive px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                                      HOY
-                                    </span>
-                                  )}
-                                </span>
+                                {isTodayEtd(it.etd) && (
+                                  <span className="inline-flex shrink-0 items-center rounded-full bg-brand-olive/10 text-brand-olive px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                                    {(tr as { todayTag?: string }).todayTag ?? "HOY"}
+                                  </span>
+                                )}
                               </div>
                               <p className="mt-0.5 text-xs text-neutral-500 truncate">
-                                {(it.operador || it.naviera || it.servicio || "").trim() || it.pol || "—"}
+                                {(it.operador || it.naviera || it.servicio || "").trim() || "—"}
                               </p>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-neutral-600">
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-medium text-neutral-500">{(tr as { polLabel?: string }).polLabel ?? "POL"}</span>
+                                  <span className="font-mono tabular-nums truncate max-w-[72px]" title={it.pol || ""}>
+                                    {it.pol || "—"}
+                                  </span>
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-medium text-neutral-500">ETD</span>
+                                  <span className="font-mono tabular-nums">{formatEtdDisplay(it.etd)}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-medium text-neutral-500">ETA</span>
+                                  <span className="font-mono tabular-nums">{formatEtdDisplay(firstEta)}</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </button>
@@ -444,94 +477,35 @@ export function StackingContent({ data = null }: StackingContentProps) {
                   </div>
                 </div>
 
-                {/* Col 2 (25%): Fechas del formulario de stacking */}
-                <div className="flex flex-col min-h-0 rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden">
-                  <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-100 bg-neutral-50/50">
-                    <h2 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
-                      <Icon icon="lucide:calendar-clock" width={18} height={18} className="text-brand-teal" aria-hidden />
-                      Fechas de stacking
-                    </h2>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {selected ? (draft ? "Datos ingresados en el formulario" : "Sin fechas cargadas para este itinerario") : "Seleccione un itinerario"}
-                    </p>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto p-3 text-sm">
-                    {selected && (
-                      <>
-                        <div className="space-y-3">
-                          <div className="rounded-lg bg-neutral-50/80 p-2">
-                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">{trIt.stackingDry ?? "Stacking Dry"}</p>
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingDryInicio ?? "Inicio"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.dryInicio || "—"}</p></div>
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingDryFin ?? "Fin"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.dryFin || "—"}</p></div>
-                            </div>
-                          </div>
-                          <div className="rounded-lg bg-neutral-50/80 p-2">
-                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">{trIt.stackingReefer ?? "Stacking Reefer"}</p>
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingReeferInicio ?? "Inicio"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.reeferInicio || "—"}</p></div>
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingReeferFin ?? "Fin"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.reeferFin || "—"}</p></div>
-                            </div>
-                          </div>
-                          <div className="rounded-lg bg-neutral-50/80 p-2">
-                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">{trIt.stackingLateTitle ?? "Late / Cut off"}</p>
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingLateInicio ?? "Late inicio"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.lateInicio || "—"}</p></div>
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingLateFin ?? "Late fin"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.lateFin || "—"}</p></div>
-                            </div>
-                            <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingCutoffDry ?? "Cut off Dry"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.cutoffDry || "—"}</p></div>
-                              <div><span className="text-[10px] text-neutral-500">{trIt.stackingCutoffReefer ?? "Cut off Reefer"}</span><p className="font-mono text-neutral-800 tabular-nums">{draft?.cutoffReefer || "—"}</p></div>
-                            </div>
-                            <div className="mt-1.5">
-                              <span className="text-[10px] text-neutral-500">{trIt.stackingCutoffAnticipado ?? "Cut off anticipado"}</span>
-                              <p className="font-mono text-neutral-800 tabular-nums">{draft?.cutoffAnticipado || "—"}</p>
-                              {draft?.cutoffAnticipadoDescripcion ? (
-                                <p className="text-xs text-neutral-600 mt-0.5">{draft.cutoffAnticipadoDescripcion}</p>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {!selected && (
-                      <div className="flex flex-col items-center justify-center gap-2 text-neutral-400 text-center px-4 py-8">
-                        <Icon icon="lucide:mouse-pointer-click" width={28} height={28} aria-hidden />
-                        <span className="text-xs">{tr.emptyTitle}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Col 3 (50%): Datos del itinerario + imagen */}
-                <div className="flex flex-col min-h-0 rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden mt-4 lg:mt-0">
+                {/* Col 2: Datos del itinerario + imagen */}
+                <div className="flex flex-col min-h-0 rounded-xl sm:rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden mt-3 sm:mt-4 lg:mt-0">
                   {selected ? (
                     <>
-                      <div className="flex-shrink-0 flex flex-wrap items-start gap-3 px-4 py-4 border-b border-neutral-100 bg-neutral-50/30">
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm">
-                          <Icon icon="lucide:ship" width={16} height={16} className="text-brand-blue" aria-hidden />
-                          <div>
+                      <div className="flex-shrink-0 flex flex-wrap items-start gap-2 sm:gap-3 px-3 py-3 sm:px-4 sm:py-4 border-b border-neutral-100 bg-neutral-50/30">
+                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
+                          <Icon icon="lucide:ship" width={16} height={16} className="text-brand-blue shrink-0" aria-hidden />
+                          <div className="min-w-0">
                             <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">{tr.nave}</span>
-                            <span className="text-sm font-medium text-neutral-800">{selected.nave || "—"}</span>
+                            <span className="text-sm font-medium text-neutral-800 truncate block">{selected.nave || "—"}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm">
-                          <Icon icon="lucide:route" width={16} height={16} className="text-brand-teal" aria-hidden />
-                          <div>
+                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
+                          <Icon icon="lucide:route" width={16} height={16} className="text-brand-teal shrink-0" aria-hidden />
+                          <div className="min-w-0">
                             <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">{tr.viaje}</span>
-                            <span className="text-sm font-medium text-neutral-800">{selected.viaje || "—"}</span>
+                            <span className="text-sm font-medium text-neutral-800 truncate block">{selected.viaje || "—"}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm">
-                          <Icon icon="lucide:anchor" width={16} height={16} className="text-neutral-500" aria-hidden />
-                          <div>
-                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">POL</span>
+                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
+                          <Icon icon="lucide:anchor" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">{(tr as { polLabel?: string }).polLabel ?? "POL"}</span>
                             <span className="text-sm font-medium text-neutral-800">{selected.pol || "—"}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm">
-                          <Icon icon="lucide:calendar" width={16} height={16} className="text-neutral-500" aria-hidden />
-                          <div>
+                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
+                          <Icon icon="lucide:calendar" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
+                          <div className="min-w-0">
                             <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">ETD</span>
                             <span className="inline-flex items-center gap-1 text-sm font-medium text-neutral-800 tabular-nums font-mono">
                               {formatEtdDisplay(selected.etd)}
@@ -543,58 +517,116 @@ export function StackingContent({ data = null }: StackingContentProps) {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-3 py-2 shadow-sm">
-                          <div className="flex flex-col items-start gap-1 text-[11px] text-neutral-600">
-                            <span className="inline-flex items-center gap-1 font-medium">
-                              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-olive" aria-hidden />
-                              STACKING
+                        <div
+                          className="flex flex-col gap-1.5 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0"
+                          title={(tr as { stackingIndicatorsHelp?: string }).stackingIndicatorsHelp}
+                        >
+                          <div className="flex flex-col gap-1 text-[11px]">
+                            <span className="inline-flex items-center gap-1.5 font-medium text-neutral-700">
+                              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-olive shrink-0" aria-hidden />
+                              {(tr as { stackingDaysLabel?: string }).stackingDaysLabel ?? "Días para cierre de stacking"}:{" "}
+                              <span className="font-mono text-neutral-800 tabular-nums">
+                                {daysUntilLabel(selected.etd, STACKING_CLOSE_OFFSET_DAYS)}
+                              </span>
                             </span>
-                            <span className="inline-flex items-center gap-1 font-medium">
-                              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-blue" aria-hidden />
-                              ETD
+                            <span className="inline-flex items-center gap-1.5 font-medium text-neutral-700">
+                              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-blue shrink-0" aria-hidden />
+                              {(tr as { zarpeDaysLabel?: string }).zarpeDaysLabel ?? "Días para zarpe"}:{" "}
+                              <span className="font-mono text-neutral-800 tabular-nums">
+                                {daysUntilLabel(selected.etd, 0)}
+                              </span>
                             </span>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 text-[11px] font-mono text-neutral-800">
-                            <span>{daysUntilLabel(selected.etd, STACKING_CLOSE_OFFSET_DAYS)}</span>
-                            <span>{daysUntilLabel(selected.etd, 0)}</span>
                           </div>
                         </div>
                         {isSuperadmin && (
                           <a
                             href={`/itinerario?stackingItId=${encodeURIComponent(selected.id)}`}
-                            className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand-blue text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                            className="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-brand-blue text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold shadow-sm hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
                           >
                             <Icon icon="lucide:pencil" width={14} height={14} aria-hidden />
-                            Editar stacking
+                            {(tr as { editStacking?: string }).editStacking ?? "Editar stacking"}
                           </a>
                         )}
                       </div>
-                      <div className="flex-1 min-h-[360px] flex items-stretch justify-center bg-neutral-100/80 rounded-b-2xl overflow-hidden">
+                      {/* Tarjeta: Cierre de stacking y Cut off Reefer (editable para superadmin) */}
+                      <div className="flex-shrink-0 mx-3 mb-3 sm:mx-4 sm:mb-4 rounded-lg sm:rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-neutral-100">
+                          <div className="px-3 py-2.5 sm:px-4 sm:py-3">
+                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">
+                              {(tr as { cardCierreStacking?: string }).cardCierreStacking ?? "Cierre de stacking"}
+                            </p>
+                            {isSuperadmin ? (
+                              <input
+                                type="text"
+                                value={stackingDraft?.reeferFin ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setStackingDraft((prev) => ({ ...(prev ?? {}), reeferFin: v } as StackingDraft));
+                                }}
+                                onBlur={(e) => {
+                                  saveDraftToStorage(selected.nave, { reeferFin: e.target.value.trim() });
+                                  setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected));
+                                }}
+                                placeholder={getStackingCloseDate(selected.etd)}
+                                className="mt-1 w-full text-sm font-mono tabular-nums rounded-lg border border-neutral-200 px-2.5 py-1.5 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                              />
+                            ) : (
+                              <p className="mt-1 text-sm font-medium text-neutral-800 font-mono tabular-nums">
+                                {stackingDraft?.reeferFin?.trim() || getStackingCloseDate(selected.etd)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="px-3 py-2.5 sm:px-4 sm:py-3">
+                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">
+                              {(tr as { cardCutoffReefer?: string }).cardCutoffReefer ?? "Cut off Reefer"}
+                            </p>
+                            {isSuperadmin ? (
+                              <input
+                                type="text"
+                                value={stackingDraft?.cutoffReefer ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setStackingDraft((prev) => ({ ...(prev ?? {}), cutoffReefer: v } as StackingDraft));
+                                }}
+                                onBlur={(e) => {
+                                  saveDraftToStorage(selected.nave, { cutoffReefer: e.target.value.trim() });
+                                  setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected));
+                                }}
+                                placeholder={(tr as { placeholderDateFormat?: string }).placeholderDateFormat ?? "DD/MM/AAAA HH:MM"}
+                                className="mt-1 w-full text-sm font-mono tabular-nums rounded-lg border border-neutral-200 px-2.5 py-1.5 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                              />
+                            ) : (
+                              <p className="mt-1 text-sm font-medium text-neutral-800 font-mono tabular-nums">
+                                {stackingDraft?.cutoffReefer?.trim() ?? "—"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-h-[260px] sm:min-h-[320px] lg:min-h-[360px] flex items-start justify-center bg-neutral-100/80 rounded-b-xl sm:rounded-b-2xl overflow-auto p-2 sm:p-3">
                         {selected.stacking_imagen_url ? (
-                          <iframe
+                          <img
                             src={selected.stacking_imagen_url}
-                            title="Stacking oficial"
-                            className="w-full flex-1 min-h-[360px] border-0"
+                            alt="Stacking oficial"
+                            className="w-full max-w-full h-auto object-contain object-top block"
                           />
                         ) : (
-                          <span className="flex items-center justify-center gap-2 text-sm text-neutral-400 px-4 py-12 text-center">
+                          <span className="flex items-center justify-center gap-2 text-sm text-neutral-400 px-4 py-8 sm:py-12 text-center">
                             <Icon icon="lucide:image-off" width={20} height={20} aria-hidden />
-                            {t.itinerarioPage?.stackingOfficialNoImage ??
-                              "Este itinerario no tiene imagen de stacking asociada."}
+                            {(tr as { noImageHint?: string }).noImageHint ?? t.itinerarioPage?.stackingOfficialNoImage ?? "Este itinerario no tiene imagen de stacking asociada."}
                           </span>
                         )}
                       </div>
                     </>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-neutral-400 text-center px-4 min-h-[240px]">
+                    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-neutral-400 text-center px-4 min-h-[200px] sm:min-h-[240px]">
                       <Icon icon="lucide:mouse-pointer-click" width={32} height={32} aria-hidden />
-                      <span className="text-sm">{tr.emptyTitle}</span>
+                      <span className="text-sm">{(tr as { selectItinerary?: string }).selectItinerary ?? tr.emptyTitle}</span>
                     </div>
                   )}
                 </div>
               </section>
-              );
-            })()}
+            );})()}
           </>
         )}
       </div>

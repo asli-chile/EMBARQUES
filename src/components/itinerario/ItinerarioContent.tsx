@@ -14,6 +14,14 @@ import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import type { MapPortPoint } from "./ItinerarioMap";
 import { format, getISOWeek, differenceInCalendarDays, addDays } from "date-fns";
 import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
+import {
+  STACKING_DRAFTS_STORAGE_KEY,
+  getStackingDraftKey,
+  getDraftForItinerary,
+  normalizeNave,
+  normalizeDraftsKeys,
+  type StackingDraft,
+} from "@/lib/stacking-drafts";
 import ItinerarioMap from "./ItinerarioMap";
 
 const DATE_DISPLAY = "dd/MM/yyyy";
@@ -278,25 +286,8 @@ export function ItinerarioContent() {
   const [selectByAreaMode, setSelectByAreaMode] = useState<"servicio" | "consorcio">("servicio");
   const [etdInputValue, setEtdInputValue] = useState("");
   const [etaInputValues, setEtaInputValues] = useState<string[]>([]);
-  const STACKING_DRAFTS_STORAGE_KEY = "itinerarios-stacking-drafts-v1";
 
-  const [stackingDrafts, setStackingDrafts] = useState<
-    Record<
-      string,
-      {
-        dryInicio: string;
-        dryFin: string;
-        reeferInicio: string;
-        reeferFin: string;
-        lateInicio: string;
-        lateFin: string;
-        cutoffDry: string;
-        cutoffReefer: string;
-        cutoffAnticipado: string;
-        cutoffAnticipadoDescripcion: string;
-      }
-    >
-  >({});
+  const [stackingDrafts, setStackingDrafts] = useState<Record<string, StackingDraft>>({});
   const [stackingForm, setStackingForm] = useState({
     dryInicio: "",
     dryFin: "",
@@ -333,15 +324,15 @@ export function ItinerarioContent() {
 
   const [stackingDeepLinkId, setStackingDeepLinkId] = useState<string | null>(null);
 
-  // Cargar borradores de stacking desde localStorage al montar (cliente)
+  // Cargar borradores de stacking desde localStorage al montar (cliente); normalizar claves para sincronizar por nombre de nave
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const raw = window.localStorage.getItem(STACKING_DRAFTS_STORAGE_KEY);
       if (!raw) return;
-      const parsed = JSON.parse(raw) as typeof stackingDrafts;
+      const parsed = JSON.parse(raw) as Record<string, StackingDraft>;
       if (parsed && typeof parsed === "object") {
-        setStackingDrafts(parsed);
+        setStackingDrafts(normalizeDraftsKeys(parsed));
       }
     } catch {
       // Ignorar errores de parseo y seguir con estado vacío
@@ -546,16 +537,18 @@ export function ItinerarioContent() {
 
   const handleOpenStackingModal = useCallback(
     (it: ItinerarioWithEscalas) => {
-      // Buscar imagen compartida por nave+viaje si este itinerario no la tiene
+      // Buscar imagen compartida por nombre de nave (misma nave = misma imagen en todos los itinerarios)
+      const naveNorm = normalizeNave(it.nave);
       const sharedImageUrl =
         it.stacking_imagen_url ??
-        itinerarios.find(
-          (other) =>
-            other.id !== it.id &&
-            other.nave === it.nave &&
-            other.viaje === it.viaje &&
-            other.stacking_imagen_url
-        )?.stacking_imagen_url ??
+        (naveNorm
+          ? itinerarios.find(
+              (other) =>
+                other.id !== it.id &&
+                normalizeNave(other.nave) === naveNorm &&
+                other.stacking_imagen_url
+            )?.stacking_imagen_url
+          : null) ??
         null;
 
       setStackingModalItinerario(
@@ -564,7 +557,7 @@ export function ItinerarioContent() {
       setStackingModalMinimized(false);
       setStackingEditMode(false);
       setStackingForm((prev) => {
-        const existing = stackingDrafts[it.id];
+        const existing = getDraftForItinerary(stackingDrafts, it);
         if (existing) return existing;
         return {
           dryInicio: "",
@@ -616,10 +609,8 @@ export function ItinerarioContent() {
       setStackingForm((prev) => {
         const next = { ...prev, [field]: value };
         if (stackingModalItinerario) {
-          setStackingDrafts((drafts) => ({
-            ...drafts,
-            [stackingModalItinerario.id]: next,
-          }));
+          const key = getStackingDraftKey(stackingModalItinerario.nave);
+          setStackingDrafts((drafts) => ({ ...drafts, [key]: next }));
         }
         return next;
       });
@@ -652,12 +643,11 @@ export function ItinerarioContent() {
         if (data?.publicUrl) {
           await updateItinerarioStackingImage(stackingModalItinerario.id, data.publicUrl);
           setStackingImageUrl(data.publicUrl);
-          // Actualizar todos los itinerarios con misma nave+viaje
+          // Sincronizar en estado: todos los itinerarios con la misma nave muestran la imagen
+          const naveNorm = normalizeNave(stackingModalItinerario.nave);
           setItinerarios((prev) =>
             prev.map((it) =>
-              it.nave === stackingModalItinerario.nave && it.viaje === stackingModalItinerario.viaje
-                ? { ...it, stacking_imagen_url: data.publicUrl }
-                : it
+              normalizeNave(it.nave) === naveNorm ? { ...it, stacking_imagen_url: data.publicUrl } : it
             )
           );
           setStackingModalItinerario((prev) =>
@@ -693,12 +683,11 @@ export function ItinerarioContent() {
       }
       await updateItinerarioStackingImage(stackingModalItinerario.id, null);
       setStackingImageUrl(null);
-      // Limpiar imagen en todos los itinerarios con misma nave+viaje
+      // Sincronizar en estado: quitar imagen de todos los itinerarios con la misma nave
+      const naveNorm = normalizeNave(stackingModalItinerario.nave);
       setItinerarios((prev) =>
         prev.map((it) =>
-          it.nave === stackingModalItinerario.nave && it.viaje === stackingModalItinerario.viaje
-            ? { ...it, stacking_imagen_url: null }
-            : it
+          normalizeNave(it.nave) === naveNorm ? { ...it, stacking_imagen_url: null } : it
         )
       );
       setStackingModalItinerario((prev) =>
@@ -719,11 +708,11 @@ export function ItinerarioContent() {
     try {
       const { analyzeStackingImage } = await import("@/lib/stacking-ocr");
       const parsed = await analyzeStackingImage(url);
-      const itId = stackingModalItinerario.id;
+      const key = getStackingDraftKey(stackingModalItinerario.nave);
       setStackingEditMode(true);
       setStackingForm((prev) => {
         const next = { ...prev, ...parsed };
-        setStackingDrafts((drafts) => ({ ...drafts, [itId]: next }));
+        setStackingDrafts((drafts) => ({ ...drafts, [key]: next }));
         return next;
       });
     } catch (err) {
@@ -1484,29 +1473,23 @@ export function ItinerarioContent() {
                                       })}
                                       <td className="px-3 py-3 text-center align-middle">
                                         {(() => {
-                                          const stackingDraft = stackingDrafts[it.id];
-                                          const hasStackingDates =
-                                            stackingDraft &&
-                                            Object.values(stackingDraft).some(
-                                              (v) => typeof v === "string" && v.trim().length > 0
-                                            );
-
-                                          // Misma lógica que en handleOpenStackingModal: imagen compartida por nave+viaje
+                                          // Imagen compartida por nombre de nave; Ver stacking = solo si hay imagen
+                                          const naveNorm = normalizeNave(it.nave);
                                           const sharedImageUrl =
                                             it.stacking_imagen_url ??
-                                            itinerarios.find(
-                                              (other) =>
-                                                other.id !== it.id &&
-                                                other.nave === it.nave &&
-                                                other.viaje === it.viaje &&
-                                                other.stacking_imagen_url
-                                            )?.stacking_imagen_url ??
+                                            (naveNorm
+                                              ? itinerarios.find(
+                                                  (other) =>
+                                                    other.id !== it.id &&
+                                                    normalizeNave(other.nave) === naveNorm &&
+                                                    other.stacking_imagen_url
+                                                )?.stacking_imagen_url
+                                              : null) ??
                                             null;
 
                                           const hasStackingImage =
                                             typeof sharedImageUrl === "string" && sharedImageUrl.trim().length > 0;
-
-                                          const hasFullStacking = hasStackingImage && !!hasStackingDates;
+                                          const hasFullStacking = hasStackingImage;
 
                                           const tIt = tr as any;
                                           const label = hasFullStacking ? tIt.openStacking : tIt.uploadStacking;
@@ -2071,391 +2054,103 @@ export function ItinerarioContent() {
                 <Icon icon="lucide:x" width={20} height={20} aria-hidden />
               </button>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
-              <div className="grid min-h-0 flex-1 grid-rows-1 gap-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)] items-stretch">
-                {/* Columna izquierda: datos y formulario stacking */}
-                <div className="flex min-h-0 flex-col space-y-5 overflow-y-auto pr-1">
-                  {/* Datos básicos: nave / viaje / POL / ETD */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-sm">
-                    <div>
-                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingNave}</dt>
-                      <dd className="mt-0.5 font-medium text-neutral-800">{stackingModalItinerario.nave || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingViaje}</dt>
-                      <dd className="mt-0.5 font-medium text-neutral-800">{stackingModalItinerario.viaje || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingPol}</dt>
-                      <dd className="mt-0.5 font-medium text-neutral-800">{stackingModalItinerario.pol || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{tr.stackingEtd}</dt>
-                      <dd className="mt-0.5 font-medium text-neutral-800">{formatDate(stackingModalItinerario.etd ?? null)}</dd>
-                    </div>
-                  </div>
-                  {/* Bloques Stacking (Dry / Reefer) + Late / Cut off en layout moderno */}
-                  {(stackingImageUrl ?? stackingModalItinerario?.stacking_imagen_url) && stackingExtractError && (
-                    <div
-                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
-                      role="alert"
-                    >
-                      {stackingExtractError}
+            <div className="flex min-h-0 flex-1 flex-col px-6 py-5 overflow-hidden">
+              {/* Datos del itinerario (compactos) */}
+              <div className="flex-shrink-0 flex flex-wrap items-center gap-3 mb-4">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue/10 text-brand-blue text-sm font-medium">
+                  <Icon icon="lucide:ship" width={14} height={14} aria-hidden />
+                  {stackingModalItinerario.nave || "—"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 text-neutral-700 text-sm font-medium">
+                  <Icon icon="lucide:route" width={14} height={14} aria-hidden />
+                  {stackingModalItinerario.viaje || "—"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 text-neutral-700 text-sm">
+                  {stackingModalItinerario.pol || "—"} · {formatDate(stackingModalItinerario.etd ?? null)}
+                </span>
+              </div>
+
+              {/* Mensaje: información oficial de la línea */}
+              <div className="flex-shrink-0 flex items-center gap-3 rounded-xl border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 mb-4">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-blue/10 text-brand-blue shrink-0">
+                  <Icon icon="lucide:badge-check" width={22} height={22} aria-hidden />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-brand-blue">
+                    {(tr as { stackingOfficialLineInfo?: string }).stackingOfficialLineInfo ?? tr.stackingOfficialTitle}
+                  </p>
+                  <p className="text-xs text-neutral-600 mt-0.5">
+                    {tr.stackingOfficialDescription}
+                  </p>
+                </div>
+              </div>
+
+              {/* Área de imagen: acciones admin + imagen */}
+              <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-neutral-200 bg-neutral-50/50 overflow-hidden shadow-sm">
+                <div className="flex flex-shrink-0 items-center justify-between gap-3 flex-wrap px-4 py-3 border-b border-neutral-200 bg-white">
+                  <span className="text-sm font-medium text-neutral-700">{tr.stackingOfficialTitle}</span>
+                  {isSuperadmin && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleUploadStackingImageClick}
+                        disabled={stackingImageUploading}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-blue text-white hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                      >
+                        <Icon icon="lucide:upload" width={16} height={16} aria-hidden />
+                        {tr.stackingOfficialUpload}
+                      </button>
+                      {(stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url) && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteStackingImage}
+                          disabled={stackingImageUploading}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                        >
+                          <Icon icon="lucide:trash-2" width={16} height={16} aria-hidden />
+                          {tr.stackingOfficialDelete}
+                        </button>
+                      )}
+                      <input
+                        ref={stackingFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUploadStackingImageChange}
+                      />
                     </div>
                   )}
-                  <div className="rounded-xl border border-neutral-200 bg-white/80 p-4 space-y-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Icon icon="lucide:box" width={18} height={18} className="text-brand-blue" />
-                        <span className="text-sm font-semibold text-neutral-700">{tr.stackingDry}</span>
-                        <span className="mx-1 text-xs text-neutral-400">/</span>
-                        <Icon icon="lucide:snowflake" width={18} height={18} className="text-brand-teal" />
-                        <span className="text-sm font-semibold text-neutral-700">{tr.stackingReefer}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {(stackingImageUrl ?? stackingModalItinerario?.stacking_imagen_url) && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleExtractStackingFromImage();
-                            }}
-                            disabled={stackingOcrLoading}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-300 text-neutral-700 bg-white hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors disabled:opacity-60 disabled:pointer-events-none"
-                            title={tr.stackingExtractFromImage}
-                          >
-                            <Icon icon="lucide:scan-search" width={14} height={14} aria-hidden />
-                            {tr.stackingExtractFromImage}
-                          </button>
-                        )}
-                        {isSuperadmin && (
-                          <button
-                            type="button"
-                            onClick={() => setStackingEditMode((v) => !v)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-blue/40 text-brand-blue bg-white hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
-                          >
-                            <Icon icon={stackingEditMode ? "lucide:check" : "lucide:pencil"} width={14} height={14} aria-hidden />
-                            {stackingEditMode ? tr.stackingEditDone : tr.stackingEdit}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    {stackingOcrLoading && (
-                      <p className="text-xs text-neutral-500 flex items-center gap-2" role="status" aria-live="polite">
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" aria-hidden />
-                        {tr.stackingExtracting}
-                      </p>
-                    )}
-                    {/* Fila Dry / Reefer: inicio / fin en dos columnas simétricas */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2 rounded-lg bg-neutral-50/80 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                          {tr.stackingDry}
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="min-h-[52px]">
-                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
-                              {tr.stackingDryInicio}
-                            </label>
-                            {stackingEditMode ? (
-                              <input
-                                type="text"
-                                value={stackingForm.dryInicio}
-                                onChange={(e) => handleChangeStackingField("dryInicio", e.target.value)}
-                                placeholder={tr.stackingDateFormat}
-                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                              />
-                            ) : (
-                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
-                                {stackingForm.dryInicio || "—"}
-                              </p>
-                            )}
-                          </div>
-                          <div className="min-h-[52px]">
-                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
-                              {tr.stackingDryFin}
-                            </label>
-                            {stackingEditMode ? (
-                              <input
-                                type="text"
-                                value={stackingForm.dryFin}
-                                onChange={(e) => handleChangeStackingField("dryFin", e.target.value)}
-                                placeholder={tr.stackingDateFormat}
-                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                              />
-                            ) : (
-                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
-                                {stackingForm.dryFin || "—"}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-neutral-400">{tr.stackingDateFormat}</p>
-                      </div>
-                      <div className="space-y-2 rounded-lg bg-neutral-50/80 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                          {tr.stackingReefer}
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="min-h-[52px]">
-                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
-                              {tr.stackingReeferInicio}
-                            </label>
-                            {stackingEditMode ? (
-                              <input
-                                type="text"
-                                value={stackingForm.reeferInicio}
-                                onChange={(e) => handleChangeStackingField("reeferInicio", e.target.value)}
-                                placeholder={tr.stackingDateFormat}
-                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                              />
-                            ) : (
-                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
-                                {stackingForm.reeferInicio || "—"}
-                              </p>
-                            )}
-                          </div>
-                          <div className="min-h-[52px]">
-                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wide">
-                              {tr.stackingReeferFin}
-                            </label>
-                            {stackingEditMode ? (
-                              <input
-                                type="text"
-                                value={stackingForm.reeferFin}
-                                onChange={(e) => handleChangeStackingField("reeferFin", e.target.value)}
-                                placeholder={tr.stackingDateFormat}
-                                className="mt-1 w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                              />
-                            ) : (
-                              <p className="mt-1 text-xs font-mono text-neutral-800 tabular-nums">
-                                {stackingForm.reeferFin || "—"}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-neutral-400">{tr.stackingDateFormat}</p>
-                      </div>
-                    </div>
-                    {/* Bloque Late / Cut off compartido (Dry + Reefer) */}
-                    <div className="mt-4 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/80 p-4 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                          {tr.stackingLateTitle}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 items-start">
-                        <div className="min-h-[52px]">
-                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                            {tr.stackingLateInicio}
-                          </label>
-                          {stackingEditMode ? (
-                            <input
-                              type="text"
-                              value={stackingForm.lateInicio}
-                              onChange={(e) => handleChangeStackingField("lateInicio", e.target.value)}
-                              placeholder={tr.stackingDateFormat}
-                              className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                            />
-                          ) : (
-                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">{stackingForm.lateInicio || "—"}</p>
-                          )}
-                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
-                        </div>
-                        <div className="min-h-[52px]">
-                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                            {tr.stackingLateFin}
-                          </label>
-                          {stackingEditMode ? (
-                            <input
-                              type="text"
-                              value={stackingForm.lateFin}
-                              onChange={(e) => handleChangeStackingField("lateFin", e.target.value)}
-                              placeholder={tr.stackingDateFormat}
-                              className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                            />
-                          ) : (
-                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">{stackingForm.lateFin || "—"}</p>
-                          )}
-                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 items-start">
-                        <div className="min-h-[52px]">
-                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                            {tr.stackingCutoffDry}
-                          </label>
-                          {stackingEditMode ? (
-                            <>
-                              <input
-                                type="text"
-                                value={stackingForm.cutoffDry}
-                                onChange={(e) => handleChangeStackingField("cutoffDry", e.target.value)}
-                                placeholder={tr.stackingDateFormat}
-                                className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleChangeStackingField("cutoffDry", stackingForm.dryFin || stackingForm.cutoffDry)
-                                }
-                                className="mt-1 text-[11px] font-medium text-brand-blue hover:underline"
-                              >
-                                {tr.stackingUseEndLabel}
-                              </button>
-                            </>
-                          ) : (
-                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">
-                              {stackingForm.cutoffDry || "—"}
-                            </p>
-                          )}
-                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
-                        </div>
-                        <div className="min-h-[52px]">
-                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                            {tr.stackingCutoffReefer}
-                          </label>
-                          {stackingEditMode ? (
-                            <>
-                              <input
-                                type="text"
-                                value={stackingForm.cutoffReefer}
-                                onChange={(e) => handleChangeStackingField("cutoffReefer", e.target.value)}
-                                placeholder={tr.stackingDateFormat}
-                                className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleChangeStackingField("cutoffReefer", stackingForm.reeferFin || stackingForm.cutoffReefer)
-                                }
-                                className="mt-1 text-[11px] font-medium text-brand-blue hover:underline"
-                              >
-                                {tr.stackingUseEndLabel}
-                              </button>
-                            </>
-                          ) : (
-                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">
-                              {stackingForm.cutoffReefer || "—"}
-                            </p>
-                          )}
-                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 items-start">
-                        <div className="min-h-[52px]">
-                          <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                            {tr.stackingCutoffAnticipado}
-                          </label>
-                          {stackingEditMode ? (
-                            <input
-                              type="text"
-                              value={stackingForm.cutoffAnticipado}
-                              onChange={(e) => handleChangeStackingField("cutoffAnticipado", e.target.value)}
-                              placeholder={tr.stackingDateFormat}
-                              className="mt-1 w-full px-3 py-1.5 text-sm font-mono rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                            />
-                          ) : (
-                            <p className="mt-1 text-sm font-mono text-neutral-800 tabular-nums">
-                              {stackingForm.cutoffAnticipado || "—"}
-                            </p>
-                          )}
-                          <p className="text-[11px] text-neutral-400 mt-0.5">{tr.stackingDateFormat}</p>
-                        </div>
-                        <div />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wide">
-                          {tr.stackingCutoffAnticipadoDescripcion}
-                        </label>
-                        {stackingEditMode ? (
-                          <textarea
-                            value={stackingForm.cutoffAnticipadoDescripcion}
-                            onChange={(e) => handleChangeStackingField("cutoffAnticipadoDescripcion", e.target.value)}
-                            placeholder={tr.stackingCutoffAnticipadoDescripcionPlaceholder}
-                            className="mt-1 w-full resize-none px-3 py-1.5 text-sm rounded-lg border border-neutral-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                            rows={2}
-                          />
-                        ) : (
-                          <p className="mt-1 text-sm text-neutral-800">
-                            {stackingForm.cutoffAnticipadoDescripcion || "—"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </div>
-
-                {/* Columna derecha: imagen oficial */}
-                <div className="flex min-h-0 flex-col overflow-hidden pl-1">
-                  <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-dashed border-neutral-300 bg-neutral-50/70 p-4">
-                    <div className="flex flex-shrink-0 items-center justify-between gap-3 flex-wrap">
-                      <div>
-                        <h3 className="text-sm font-semibold text-neutral-700">{tr.stackingOfficialTitle}</h3>
-                        <p className="text-xs text-neutral-500 mt-1">
-                          {tr.stackingOfficialDescription}
-                        </p>
-                      </div>
-                      {isSuperadmin && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={handleUploadStackingImageClick}
-                            disabled={stackingImageUploading}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-blue text-white hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors disabled:opacity-60 disabled:pointer-events-none"
-                          >
-                            <Icon icon="lucide:upload" width={16} height={16} aria-hidden />
-                            {tr.stackingOfficialUpload}
-                          </button>
-                          {(stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url) && (
-                            <button
-                              type="button"
-                              onClick={handleDeleteStackingImage}
-                              disabled={stackingImageUploading}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 transition-colors disabled:opacity-60 disabled:pointer-events-none"
-                            >
-                              <Icon icon="lucide:trash-2" width={16} height={16} aria-hidden />
-                              {tr.stackingOfficialDelete}
-                            </button>
-                          )}
-                          <input
-                            ref={stackingFileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleUploadStackingImageChange}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    {stackingImageUploading && (
-                      <div className="mt-2 flex-shrink-0 space-y-1" role="status" aria-live="polite">
-                        <p className="text-xs text-neutral-500">{tr.stackingImageUploading}</p>
-                        <div className="h-1.5 w-full rounded-full bg-neutral-200 overflow-hidden">
-                          <div
-                            className="h-full w-1/3 rounded-full bg-brand-blue animate-stacking-progress"
-                            role="progressbar"
-                            aria-valuenow={undefined}
-                            aria-label={tr.stackingImageUploading}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <div className="mt-3 flex min-h-[260px] flex-1 flex-col overflow-hidden rounded-lg border border-neutral-300 bg-white">
-                      {stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ? (
-                        <iframe
-                          src={stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ?? ""}
-                          title="Stacking oficial"
-                          className="h-full w-full min-h-[260px] border-0"
-                        />
-                      ) : (
-                        <span className="flex flex-1 items-center justify-center px-4 py-8 text-center text-xs text-neutral-400">
-                          {tr.stackingOfficialNoImage}
-                        </span>
-                      )}
-                    </div>
+                {stackingImageUploading && (
+                  <div className="flex-shrink-0 px-4 py-2 bg-brand-blue/5 border-b border-brand-blue/10" role="status" aria-live="polite">
+                    <p className="text-xs text-brand-blue flex items-center gap-2">
+                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" aria-hidden />
+                      {tr.stackingImageUploading}
+                    </p>
                   </div>
+                )}
+                <div className="flex min-h-[320px] flex-1 overflow-auto p-4">
+                  {stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ? (
+                    <div className="w-full min-h-[280px] rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-inner flex justify-center">
+                      <img
+                        src={stackingImageUrl ?? stackingModalItinerario.stacking_imagen_url ?? ""}
+                        alt={tr.stackingOfficialTitle}
+                        className="w-full max-w-full h-auto object-contain object-top block"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 bg-white/80 px-6 py-12 text-center">
+                      <div className="flex items-center justify-center w-14 h-14 rounded-full bg-neutral-100 text-neutral-400 mb-3">
+                        <Icon icon="lucide:image-plus" width={28} height={28} aria-hidden />
+                      </div>
+                      <p className="text-sm font-medium text-neutral-600">{tr.stackingOfficialNoImage}</p>
+                      {isSuperadmin && (
+                        <p className="text-xs text-neutral-500 mt-1">
+                          {tr.stackingOfficialUpload} para agregar la información oficial.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
