@@ -11,7 +11,7 @@ const missionCards = [
 ] as const;
 
 const diferenciales = [
-  { key: "experienciaFruticola" as const, icon: "lucide:apple", color: "green" },
+  { key: "experienciaFruticola" as const, icon: "lucide:apple", color: "emerald" },
   { key: "redLogistica" as const, icon: "lucide:network", color: "blue" },
   { key: "acompanamiento" as const, icon: "lucide:users", color: "violet" },
   { key: "puertaPuerta" as const, icon: "lucide:door-open", color: "amber" },
@@ -77,12 +77,56 @@ const equipo = [
   },
 ] as const;
 
-const colorStyles: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
-  blue: { bg: "bg-blue-500/10", border: "border-blue-500/30 hover:border-blue-400/60", text: "text-blue-400", iconBg: "bg-blue-500/20" },
-  emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/30 hover:border-emerald-400/60", text: "text-emerald-400", iconBg: "bg-emerald-500/20" },
-  violet: { bg: "bg-violet-500/10", border: "border-violet-500/30 hover:border-violet-400/60", text: "text-violet-400", iconBg: "bg-violet-500/20" },
-  amber: { bg: "bg-amber-500/10", border: "border-amber-500/30 hover:border-amber-400/60", text: "text-amber-400", iconBg: "bg-amber-500/20" },
-  green: { bg: "bg-green-500/10", border: "border-green-500/30 hover:border-green-400/60", text: "text-green-400", iconBg: "bg-green-500/20" },
+const colorStyles: Record<string, {
+  border: string;
+  iconGradient: string;
+  iconBorder: string;
+  iconColor: string;
+  iconGlow: string;
+  accent: string;
+  glow: string;
+  tag: string;
+}> = {
+  blue: {
+    border: "border-blue-500/25 hover:border-blue-400/60",
+    iconGradient: "from-blue-500/30 to-blue-900/20",
+    iconBorder: "border-blue-500/40",
+    iconColor: "text-blue-300",
+    iconGlow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]",
+    accent: "bg-blue-500",
+    glow: "group-hover:shadow-blue-500/10",
+    tag: "bg-blue-500/20 border-blue-500/40 text-blue-300",
+  },
+  emerald: {
+    border: "border-emerald-500/25 hover:border-emerald-400/60",
+    iconGradient: "from-emerald-500/30 to-emerald-900/20",
+    iconBorder: "border-emerald-500/40",
+    iconColor: "text-emerald-300",
+    iconGlow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]",
+    accent: "bg-emerald-500",
+    glow: "group-hover:shadow-emerald-500/10",
+    tag: "bg-emerald-500/20 border-emerald-500/40 text-emerald-300",
+  },
+  violet: {
+    border: "border-violet-500/25 hover:border-violet-400/60",
+    iconGradient: "from-violet-500/30 to-violet-900/20",
+    iconBorder: "border-violet-500/40",
+    iconColor: "text-violet-300",
+    iconGlow: "drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]",
+    accent: "bg-violet-500",
+    glow: "group-hover:shadow-violet-500/10",
+    tag: "bg-violet-500/20 border-violet-500/40 text-violet-300",
+  },
+  amber: {
+    border: "border-amber-500/25 hover:border-amber-400/60",
+    iconGradient: "from-amber-500/30 to-amber-900/20",
+    iconBorder: "border-amber-500/40",
+    iconColor: "text-amber-300",
+    iconGlow: "drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]",
+    accent: "bg-amber-500",
+    glow: "group-hover:shadow-amber-500/10",
+    tag: "bg-amber-500/20 border-amber-500/40 text-amber-300",
+  },
 };
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
@@ -173,17 +217,17 @@ export function SobreNosotrosContent() {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* HERO - Quiénes Somos */}
+      {/* Hero */}
       <header className="relative text-white py-20 sm:py-28 lg:py-36">
-        <div className="max-w-5xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
-            <span className="inline-block px-4 py-1.5 bg-brand-olive/30 border border-brand-olive/50 text-xs font-semibold text-white uppercase tracking-wider mb-4 sm:mb-6">
+            <span className="inline-block px-4 py-1.5 bg-brand-olive/20 border border-brand-olive/40 text-xs font-semibold text-brand-olive uppercase tracking-wider mb-4 sm:mb-6 rounded-full">
               {tr.heroTag}
             </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 sm:mb-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold tracking-tight text-white mb-4 sm:mb-6">
               {tr.heroTitle}
             </h1>
-            <p className="text-lg sm:text-xl text-brand-olive font-medium mb-4">
+            <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed mb-4">
               {tr.heroSubtitle}
             </p>
             <p className="text-base sm:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
@@ -198,7 +242,7 @@ export function SobreNosotrosContent() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="order-2 lg:order-1">
-              <span className="inline-block px-4 py-1.5 bg-blue-500/30 border border-blue-500/50 text-xs font-semibold text-white uppercase tracking-wider mb-4">
+              <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-4 rounded-full">
                 {tr.historyTag}
               </span>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-6">
@@ -209,15 +253,16 @@ export function SobreNosotrosContent() {
                 <p>{tr.historyP2}</p>
                 <p>{tr.historyP3}</p>
               </div>
-              <blockquote className="mt-6 pl-4 border-l-4 border-brand-olive">
+              <blockquote className="mt-6 pl-4 border-l-4 border-brand-olive rounded-r-lg bg-black/30 backdrop-blur-sm py-2 pr-4">
                 <p className="text-white/90 italic text-base sm:text-lg">
-                  "{tr.historyQuote}"
+                  &quot;{tr.historyQuote}&quot;
                 </p>
               </blockquote>
             </div>
             <div className="order-1 lg:order-2">
               <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                <div className="relative aspect-[4/3] w-full sm:flex-1 max-w-md bg-black/40 backdrop-blur-md border border-white/20 overflow-hidden">
+                <div className="relative aspect-[4/3] w-full sm:flex-1 max-w-md bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden shadow-xl shadow-black/30">
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 opacity-70 rounded-t-2xl" />
                   <img
                     src="/images/puerto-contenedores.jpg"
                     alt="Puerto con contenedores"
@@ -227,13 +272,13 @@ export function SobreNosotrosContent() {
                     }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <Icon icon="lucide:ship" className="text-white/20" width={120} height={120} />
+                    <Icon icon="lucide:ship" className="text-white/10" width={120} height={120} />
                   </div>
                 </div>
-                <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-brand-olive/20 border border-brand-olive/40 flex items-center justify-center">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-black/40 backdrop-blur-md border border-brand-olive/40 rounded-2xl flex items-center justify-center shadow-xl shadow-black/20">
                   <div className="text-center">
                     <p className="text-2xl sm:text-3xl font-bold text-brand-olive">15+</p>
-                    <p className="text-[10px] sm:text-xs text-white/60">{tr.yearsExperience}</p>
+                    <p className="text-[10px] sm:text-xs text-white/60 uppercase tracking-wide">{tr.yearsExperience}</p>
                   </div>
                 </div>
               </div>
@@ -243,49 +288,55 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Propósito / Misión / Visión / Valores */}
-      <section className="py-16 sm:py-24 bg-black/40 backdrop-blur-md">
+      <section className="py-16 sm:py-24 bg-black/50 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-emerald-500/30 border border-emerald-500/50 text-xs font-semibold text-white uppercase tracking-wider mb-4">
+            <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-4 rounded-full">
               {tr.missionTag}
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
               {tr.missionTitle}
             </h2>
-            <p className="text-white/60 max-w-xl mx-auto text-sm sm:text-base">
+            <p className="text-white/50 max-w-xl mx-auto text-sm sm:text-base">
               {tr.missionSubtitle}
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {missionCards.map(({ key, icon, color }) => {
-              const styles = colorStyles[color];
+              const c = colorStyles[color];
               const isValores = key === "valores";
               return (
                 <div
                   key={key}
-                  className={`group relative bg-black/40 backdrop-blur-md border ${styles.border} p-5 sm:p-6 transition-all duration-300 hover:-translate-y-1 hover:bg-black/50 shadow-lg shadow-black/20`}
+                  className={`group relative bg-black/40 backdrop-blur-md border ${c.border} rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-black/55 shadow-xl shadow-black/30 ${c.glow}`}
                 >
-                  <div className={`w-12 h-12 sm:w-14 sm:h-14 ${styles.iconBg} flex items-center justify-center mb-4`}>
-                    <Icon icon={icon} className={styles.text} width={28} height={28} />
+                  <div className={`absolute top-0 left-0 right-0 h-[2px] ${c.accent} opacity-70`} />
+                  <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
+                    <Icon icon={icon} width={120} height={120} />
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white mb-3">
-                    {tr[`${key}Title` as keyof typeof tr]}
-                  </h3>
-                  {isValores ? (
-                    <ul className="space-y-1.5 text-white/60 text-sm">
-                      {(tr.valoresList as string[]).map((valor, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <Icon icon="lucide:check" className={styles.text} width={14} height={14} />
-                          {valor}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-white/60 text-sm leading-relaxed">
-                      {tr[`${key}Desc` as keyof typeof tr]}
-                    </p>
-                  )}
+                  <div className="relative p-5 sm:p-6">
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${c.iconGradient} border ${c.iconBorder} flex items-center justify-center mb-4 shadow-lg flex-shrink-0`}>
+                      <Icon icon={icon} className={`${c.iconColor} ${c.iconGlow}`} width={28} height={28} />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      {tr[`${key}Title` as keyof typeof tr]}
+                    </h3>
+                    {isValores ? (
+                      <ul className="space-y-1.5 text-white/50 text-sm">
+                        {(tr.valoresList as string[]).map((valor, i) => (
+                          <li key={i} className="flex items-center gap-2">
+                            <Icon icon="lucide:check" className={c.iconColor} width={14} height={14} />
+                            {valor}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-white/50 text-sm leading-relaxed">
+                        {tr[`${key}Desc` as keyof typeof tr]}
+                      </p>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -297,34 +348,40 @@ export function SobreNosotrosContent() {
       <section className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-violet-500/30 border border-violet-500/50 text-xs font-semibold text-white uppercase tracking-wider mb-4">
+            <span className="inline-block px-4 py-1.5 bg-violet-500/20 border border-violet-500/40 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-4 rounded-full">
               {tr.diferencialesTag}
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
               {tr.diferencialesTitle}
             </h2>
-            <p className="text-white/60 max-w-xl mx-auto text-sm sm:text-base">
+            <p className="text-white/50 max-w-xl mx-auto text-sm sm:text-base">
               {tr.diferencialesSubtitle}
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {diferenciales.map(({ key, icon, color }) => {
-              const styles = colorStyles[color];
+              const c = colorStyles[color];
               return (
                 <div
                   key={key}
-                  className={`group text-center p-6 sm:p-8 bg-black/40 backdrop-blur-md border ${styles.border} transition-all duration-300 hover:-translate-y-1`}
+                  className={`group relative bg-black/40 backdrop-blur-md border ${c.border} rounded-2xl overflow-hidden text-center transition-all duration-300 hover:-translate-y-1 hover:bg-black/55 shadow-xl shadow-black/30 ${c.glow}`}
                 >
-                  <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 ${styles.iconBg} flex items-center justify-center`}>
-                    <Icon icon={icon} className={styles.text} width={36} height={36} />
+                  <div className={`absolute top-0 left-0 right-0 h-[2px] ${c.accent} opacity-70`} />
+                  <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
+                    <Icon icon={icon} width={100} height={100} />
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold text-white mb-2">
-                    {tr[`${key}Title` as keyof typeof tr]}
-                  </h3>
-                  <p className="text-white/50 text-sm">
-                    {tr[`${key}Desc` as keyof typeof tr]}
-                  </p>
+                  <div className="relative p-6 sm:p-8">
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-br ${c.iconGradient} border ${c.iconBorder} flex items-center justify-center shadow-lg`}>
+                      <Icon icon={icon} className={`${c.iconColor} ${c.iconGlow}`} width={32} height={32} />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-2">
+                      {tr[`${key}Title` as keyof typeof tr]}
+                    </h3>
+                    <p className="text-white/50 text-sm leading-relaxed">
+                      {tr[`${key}Desc` as keyof typeof tr]}
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -333,30 +390,34 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Métricas de Confianza */}
-      <section className="py-16 sm:py-24 bg-gradient-to-r from-brand-olive/20 via-brand-olive/10 to-brand-olive/20">
+      <section className="py-16 sm:py-24 bg-black/50 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-brand-olive/30 border border-brand-olive/50 text-xs font-semibold text-white uppercase tracking-wider mb-4">
+          <div className="text-center mb-8">
+            <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-3 rounded-full">
               {tr.metricasTag}
             </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
+            <h2 className="text-2xl lg:text-4xl font-bold text-white mb-2">
               {tr.metricasTitle}
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {metricas.map(({ key, value, suffix, icon }) => (
               <div
                 key={key}
-                className="text-center p-6 sm:p-8 bg-black/40 backdrop-blur-md border border-white/20 hover:border-brand-olive/50 transition-all"
+                className="group relative text-center p-5 sm:p-6 bg-black/40 backdrop-blur-md border border-white/15 hover:border-emerald-500/40 rounded-2xl shadow-xl shadow-black/20 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
               >
-                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-4 bg-brand-olive/20 flex items-center justify-center">
-                  <Icon icon={icon} className="text-brand-olive" width={24} height={24} />
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-500 opacity-50 rounded-t-2xl" />
+                <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
+                  <Icon icon={icon} width={80} height={80} />
                 </div>
-                <p className="text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-olive mb-2">
+                <div className="relative z-10 w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-emerald-500/30 to-emerald-900/20 border border-emerald-500/40 rounded-xl flex items-center justify-center">
+                  <Icon icon={icon} className="text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" width={22} height={22} />
+                </div>
+                <p className="text-3xl lg:text-4xl font-black text-white mb-1">
                   <AnimatedCounter target={value} suffix={suffix} />
                 </p>
-                <p className="text-white/60 text-xs sm:text-sm">
+                <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-wide leading-tight">
                   {tr[`${key}Label` as keyof typeof tr]}
                 </p>
               </div>
@@ -367,26 +428,27 @@ export function SobreNosotrosContent() {
 
       {/* Nuestro Equipo */}
       <section className="py-16 sm:py-24">
-        <div className="max-w-5xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-blue-500/30 border border-blue-500/50 text-xs font-semibold text-white uppercase tracking-wider mb-4">
+            <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-4 rounded-full">
               {tr.equipoTag}
             </span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
               {tr.equipoTitle}
             </h2>
-            <p className="text-white/60 max-w-xl mx-auto text-sm sm:text-base">
+            <p className="text-white/50 max-w-xl mx-auto text-sm sm:text-base">
               {tr.equipoSubtitle}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
             {equipo.map(({ nombre, cargo, imagen }) => (
               <div
                 key={nombre}
-                className="group text-center p-4 sm:p-6 bg-black/40 backdrop-blur-md border border-white/20 hover:border-brand-teal/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-brand-teal/10"
+                className="group relative text-center p-4 sm:p-6 bg-black/40 backdrop-blur-md border border-white/15 hover:border-blue-400/50 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-xl shadow-black/20 hover:shadow-blue-500/10"
               >
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4 rounded-full overflow-hidden border-3 border-brand-teal/60 group-hover:border-brand-teal transition-colors shadow-lg">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 opacity-50 rounded-t-2xl" />
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4 rounded-full overflow-hidden border-2 border-blue-500/40 group-hover:border-blue-400/70 transition-colors shadow-lg ring-2 ring-black/20">
                   <img
                     src={imagen}
                     alt={nombre}
@@ -395,12 +457,12 @@ export function SobreNosotrosContent() {
                       e.currentTarget.style.display = "none";
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-teal/20 to-brand-blue/20 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-blue-900/30 flex items-center justify-center">
                     <Icon icon="lucide:user" className="text-white/40" width={40} height={40} />
                   </div>
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-white mb-1">{nombre}</h3>
-                <p className="text-brand-teal/80 text-xs sm:text-sm">{tr[cargo as keyof typeof tr]}</p>
+                <p className="text-white/60 text-xs sm:text-sm">{tr[cargo as keyof typeof tr]}</p>
               </div>
             ))}
           </div>
@@ -410,56 +472,66 @@ export function SobreNosotrosContent() {
       {/* CTA Final */}
       <section className="py-16 sm:py-24">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="bg-gradient-to-br from-brand-olive/20 to-brand-olive/5 backdrop-blur-md border border-brand-olive/30 p-8 sm:p-12 lg:p-16 text-center shadow-xl shadow-black/30">
-            <Icon icon="lucide:handshake" className="text-brand-olive mx-auto mb-4 sm:mb-6" width={48} height={48} />
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
-              {tr.ctaTitle}
-            </h2>
-            <p className="text-white/60 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto">
-              {tr.ctaSubtitle}
-            </p>
+          <div className="relative bg-black/50 backdrop-blur-md border border-brand-olive/30 rounded-2xl overflow-hidden p-8 sm:p-12 lg:p-16 text-center shadow-xl shadow-black/30">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-olive opacity-70" />
+            <div className="absolute -bottom-8 -right-8 opacity-[0.04] pointer-events-none">
+              <Icon icon="lucide:handshake" width={180} height={180} />
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              <a
-                href="mailto:informaciones@asli.cl?subject=Consulta desde web"
-                className="inline-flex items-center justify-center gap-2 py-3 px-8 bg-brand-olive text-white font-semibold hover:bg-brand-olive/90 transition-colors shadow-lg shadow-brand-olive/30"
-              >
-                <Icon icon="lucide:mail" width={20} height={20} />
-                {tr.ctaButton1}
-              </a>
-              <a
-                href="https://wa.me/56968394225"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 py-3 px-8 bg-white/10 border border-white/30 text-white font-medium hover:bg-white/20 transition-colors"
-              >
-                <Icon icon="lucide:message-circle" width={20} height={20} />
-                {tr.ctaButton2}
-              </a>
+            <div className="relative z-10">
+              <div className="w-16 h-16 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-brand-olive/30 to-brand-olive/10 border border-brand-olive/40 rounded-2xl flex items-center justify-center shadow-lg">
+                <Icon icon="lucide:handshake" className="text-brand-olive drop-shadow-[0_0_10px_rgba(102,153,0,0.6)]" width={32} height={32} />
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
+                {tr.ctaTitle}
+              </h2>
+              <p className="text-white/60 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
+                {tr.ctaSubtitle}
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                <a
+                  href="mailto:informaciones@asli.cl?subject=Consulta desde web"
+                  className="inline-flex items-center justify-center gap-2 py-3 px-8 bg-brand-olive text-white font-semibold rounded-xl hover:bg-brand-olive/90 transition-colors shadow-lg shadow-brand-olive/30"
+                >
+                  <Icon icon="lucide:mail" width={20} height={20} />
+                  {tr.ctaButton1}
+                </a>
+                <a
+                  href="https://wa.me/56968394225"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 py-3 px-8 bg-white/10 border border-white/30 rounded-xl text-white font-medium hover:bg-white/20 transition-colors"
+                >
+                  <Icon icon="lucide:message-circle" width={20} height={20} />
+                  {tr.ctaButton2}
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 sm:py-12 bg-black/80 backdrop-blur-lg text-white border-t border-white/10">
+      <footer className="py-6 bg-black/80 backdrop-blur-lg text-white border-t border-white/10">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex flex-col items-center mb-6 sm:mb-8">
-            <img src={brand.logo} alt={brand.companyTitle} width={160} height={80} className="h-10 sm:h-12 w-auto object-contain brightness-0 invert mb-4 sm:mb-6" />
-            
-            <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6">
-              <a href="https://www.linkedin.com/company/aslichile/posts/?feedView=all" target="_blank" rel="noopener noreferrer" className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="LinkedIn">
-                <Icon icon="mdi:linkedin" width={18} height={18} />
+          <div className="flex flex-col items-center mb-4">
+            <img src={brand.logo} alt={brand.companyTitle} width={160} height={80} className="h-8 sm:h-10 w-auto object-contain brightness-0 invert mb-3" />
+
+            <div className="flex gap-2 sm:gap-3 mb-3">
+              <a href="https://www.linkedin.com/company/aslichile/posts/?feedView=all" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/15 border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="LinkedIn">
+                <Icon icon="mdi:linkedin" width={16} height={16} />
               </a>
-              <a href="https://www.instagram.com/asli_chile/" target="_blank" rel="noopener noreferrer" className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="Instagram">
-                <Icon icon="mdi:instagram" width={18} height={18} />
+              <a href="https://www.instagram.com/asli_chile/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/15 border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="Instagram">
+                <Icon icon="mdi:instagram" width={16} height={16} />
               </a>
-              <a href="https://wa.me/56968394225" target="_blank" rel="noopener noreferrer" className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 border border-white/20 flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="WhatsApp">
-                <Icon icon="mdi:whatsapp" width={18} height={18} />
+              <a href="https://wa.me/56968394225" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/15 border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="WhatsApp">
+                <Icon icon="mdi:whatsapp" width={16} height={16} />
               </a>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-x-6 sm:gap-y-2 text-[11px] sm:text-xs text-white/50">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-x-6 text-[11px] sm:text-xs text-white/50">
               <span className="flex items-center gap-1.5">
                 <Icon icon="lucide:map-pin" width={12} height={12} className="text-brand-teal flex-shrink-0" />
                 <span className="text-center sm:text-left">{t.inicio.footerLocation}</span>
@@ -475,7 +547,7 @@ export function SobreNosotrosContent() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-4 sm:pt-6 text-center">
+          <div className="border-t border-white/10 pt-3 text-center">
             <p className="text-[10px] sm:text-xs text-white/30">
               © {new Date().getFullYear()} {brand.companyTitle} · {t.inicio.footerCopyright}
             </p>
@@ -487,7 +559,7 @@ export function SobreNosotrosContent() {
       <button
         type="button"
         onClick={handleScrollToTop}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/90 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center shadow-lg hover:bg-brand-blue transition-all duration-300 ${showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
+        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/90 backdrop-blur-sm border border-white/20 rounded-xl text-white flex items-center justify-center shadow-lg hover:bg-brand-blue transition-all duration-300 ${showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
         aria-label="Volver arriba"
       >
         <Icon icon="lucide:chevron-up" width={20} height={20} />

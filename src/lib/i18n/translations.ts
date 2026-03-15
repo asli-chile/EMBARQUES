@@ -47,7 +47,7 @@ export const translations = {
       
       // Pilares
       pillarsTag: "Plataforma integral",
-      pillarsTitle: "Una plataforma, tres pilares",
+      pillarsTitle: "Una plataforma, cuatro pilares",
       pillarsSubtitle: "Diseñado para freight forwarders y exportadores de fruta fresca",
       pillarOperations: "Operaciones",
       pillarOperationsDesc: "Control total desde booking hasta cierre",
@@ -67,6 +67,12 @@ export const translations = {
       pillarDocumentsF2: "Vista previa integrada",
       pillarDocumentsF3: "Storage seguro en la nube",
       pillarDocumentsF4: "Organizado por operación",
+      pillarFinance: "Finanzas & Reportes",
+      pillarFinanceDesc: "Visibilidad financiera en tiempo real",
+      pillarFinanceF1: "Rentabilidad por operación",
+      pillarFinanceF2: "Dashboard ejecutivo",
+      pillarFinanceF3: "Exportación a Excel/PDF",
+      pillarFinanceF4: "Indicadores KPI en vivo",
 
       // Stats
       statsTag: "Resultados comprobados",
@@ -1083,6 +1089,12 @@ export const translations = {
       mapAreaLabel: "Área",
       mapHint: "Haz clic en una región para filtrar itinerarios.",
       mapLoading: "Cargando mapa…",
+      mapWebGLUnavailableTitle: "Mapa no disponible",
+      mapWebGLUnavailableMessage:
+        "WebGL no está disponible en este entorno (por ejemplo, en la vista previa del editor o con la aceleración por hardware desactivada). Abre la aplicación en Chrome o Firefox para ver el mapa interactivo. Puedes seguir usando el selector de área y la tabla de itinerarios debajo.",
+      mapWebGLUnavailableHint: "Selecciona un área con los botones de abajo para filtrar itinerarios.",
+      mapRetry: "Reintentar",
+      mapOpenInBrowser: "Abrir en navegador",
       mapSelectHint: "Selecciona una región en el mapa para ver los itinerarios.",
       openMap: "Ver mapa",
       openMapAria: "Abrir panel del mapa",
@@ -1414,7 +1426,7 @@ export const translations = {
       
       // Pillars
       pillarsTag: "Integral platform",
-      pillarsTitle: "One platform, three pillars",
+      pillarsTitle: "One platform, four pillars",
       pillarsSubtitle: "Designed for freight forwarders and fresh fruit exporters",
       pillarOperations: "Operations",
       pillarOperationsDesc: "Full control from booking to closure",
@@ -1434,6 +1446,12 @@ export const translations = {
       pillarDocumentsF2: "Integrated preview",
       pillarDocumentsF3: "Secure cloud storage",
       pillarDocumentsF4: "Organized by operation",
+      pillarFinance: "Finance & Reports",
+      pillarFinanceDesc: "Real-time financial visibility",
+      pillarFinanceF1: "Profitability per operation",
+      pillarFinanceF2: "Executive dashboard",
+      pillarFinanceF3: "Export to Excel/PDF",
+      pillarFinanceF4: "Live KPI indicators",
 
       // Stats
       statsTag: "Proven results",
@@ -2448,6 +2466,12 @@ export const translations = {
       mapAreaLabel: "Area",
       mapHint: "Click a region to filter itineraries.",
       mapLoading: "Loading map…",
+      mapWebGLUnavailableTitle: "Map not available",
+      mapWebGLUnavailableMessage:
+        "WebGL is not available in this environment (e.g. editor preview or hardware acceleration disabled). Open the app in Chrome or Firefox to see the interactive map. You can still use the area selector and itinerary table below.",
+      mapWebGLUnavailableHint: "Select an area using the buttons below to filter itineraries.",
+      mapRetry: "Retry",
+      mapOpenInBrowser: "Open in browser",
       mapSelectHint: "Select a region on the map to view itineraries.",
       openMap: "View map",
       openMapAria: "Open map panel",

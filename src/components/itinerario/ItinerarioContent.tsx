@@ -23,6 +23,7 @@ import {
   type StackingDraft,
 } from "@/lib/stacking-drafts";
 import ItinerarioMap from "./ItinerarioMap";
+import { generateItinerarioPDF } from "@/lib/itinerario-pdf";
 
 const DATE_DISPLAY = "dd/MM/yyyy";
 
@@ -261,6 +262,8 @@ export function ItinerarioContent() {
   const [operadorUpdatingId, setOperadorUpdatingId] = useState<string | null>(null);
   const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
   const [selectedAreaFromMap, setSelectedAreaFromMap] = useState<string | null>(null);
+  const [pendingScrollServicio, setPendingScrollServicio] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -408,6 +411,19 @@ export function ItinerarioContent() {
     });
   }, [modalOpen, form.escalas.length]);
 
+  // Scroll al servicio pendiente tras renderizar las tablas
+  useEffect(() => {
+    if (!pendingScrollServicio || !selectedAreaFromMap) return;
+    const id = `srv-${pendingScrollServicio}`;
+    const el = document.getElementById(id);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+      setPendingScrollServicio(null);
+    }
+  }, [pendingScrollServicio, selectedAreaFromMap, itinerarios]);
+
   const applyServicioToForm = useCallback((s: ServicioConDetalle) => {
     const destinos = s.destinos && s.destinos.length > 0 ? s.destinos : [];
     setForm((prev) => ({
@@ -474,6 +490,36 @@ export function ItinerarioContent() {
     }));
     setSelectedServicioId("");
     setSelectedConsorcioId(c.id);
+  }, []);
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (pdfLoading || itinerarios.length === 0) return;
+    setPdfLoading(true);
+    try {
+      // Filtrar por área activa (igual que las tablas en pantalla)
+      const isAreaFilter = !!selectedAreaFromMap && selectedAreaFromMap !== "ALL";
+      const filtered = isAreaFilter
+        ? itinerarios.filter((it) =>
+            (it.escalas ?? []).some(
+              (e) => ((e.area || "").trim() || "") === selectedAreaFromMap
+            )
+          )
+        : itinerarios;
+      await generateItinerarioPDF(filtered, selectedAreaFromMap, locale as "es" | "en");
+    } catch (err) {
+      console.error("Error generando PDF:", err);
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [pdfLoading, itinerarios, selectedAreaFromMap, locale]);
+
+  /** Al hacer clic en un marcador del mapa: seleccionar el área y hacer scroll al servicio. */
+  const handlePortClick = useCallback((port: MapPortPoint) => {
+    const targetArea = port.area?.trim() || "ALL";
+    setSelectedAreaFromMap(targetArea);
+    if (port.servicio?.trim()) {
+      setPendingScrollServicio(port.servicio.trim());
+    }
   }, []);
 
   const handleOpenModal = useCallback(() => {
@@ -949,7 +995,7 @@ export function ItinerarioContent() {
         )
       : itinerarios;
 
-  /** Todos los puntos de destino (cada escala) con detalle para el mapa: POL, ETD, ETA, TT, servicio, naviera. */
+  /** Todos los puntos de destino (cada escala) con detalle para el mapa: POL, ETD, ETA, TT, servicio, naviera, area. */
   const mapPortPoints = useMemo((): MapPortPoint[] => {
     const out: MapPortPoint[] = [];
     for (const it of itinerarios) {
@@ -970,6 +1016,7 @@ export function ItinerarioContent() {
           dias_transito: tt,
           servicio,
           naviera,
+          area: (e.area ?? "").trim() || undefined,
         });
       }
     }
@@ -997,24 +1044,48 @@ export function ItinerarioContent() {
       role="main"
     >
       {/* Título y acciones arriba: mínimo padding para usar toda la pantalla */}
-      <header className="flex-shrink-0 flex flex-wrap items-start justify-between gap-4 w-full px-4 py-2">
+      <header className="flex-shrink-0 flex flex-wrap items-start justify-between gap-3 w-full px-4 py-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             {tr.title}
           </h1>
           <p className="text-white/90 text-sm mt-2">{tr.subtitle}</p>
         </div>
-        {isLoggedIn && (
-          <button
-            type="button"
-            onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
-            aria-label={tr.newItinerary}
-          >
-            <Icon icon="lucide:plus" width={18} height={18} />
-            {tr.newItinerary}
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Botón descargar PDF */}
+          {itinerarios.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              disabled={pdfLoading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/15 border border-white/25 text-white text-sm font-medium hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors backdrop-blur-sm"
+              aria-label={locale === "es" ? "Descargar PDF" : "Download PDF"}
+            >
+              {pdfLoading ? (
+                <>
+                  <Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" aria-hidden />
+                  {locale === "es" ? "Generando…" : "Generating…"}
+                </>
+              ) : (
+                <>
+                  <Icon icon="lucide:file-down" width={16} height={16} aria-hidden />
+                  PDF
+                </>
+              )}
+            </button>
+          )}
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={handleOpenModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
+              aria-label={tr.newItinerary}
+            >
+              <Icon icon="lucide:plus" width={18} height={18} />
+              {tr.newItinerary}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Pantalla de selección de área: 25% info, 75% mapa */}
@@ -1022,61 +1093,97 @@ export function ItinerarioContent() {
         <section className="flex-1 min-h-0 flex flex-col w-full overflow-hidden">
           <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-white">
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-              {/* Columna info: 25% del espacio */}
-              <div className="w-full lg:w-1/4 flex flex-col gap-5 px-6 sm:px-8 py-6 sm:py-8 bg-gradient-to-br from-white via-brand-blue/[0.03] to-neutral-50/80 border-b lg:border-b-0 lg:border-r border-neutral-200/80">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-lg bg-brand-blue/10 px-3 py-1.5 text-xs font-medium text-brand-blue mb-4">
-                    <Icon icon="lucide:map-pin" width={14} height={14} aria-hidden />
+              {/* Columna info: 25% — fondo navy elegante */}
+              <div className="w-full lg:w-1/4 flex flex-col gap-6 px-6 sm:px-8 py-7 sm:py-9 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
+                {/* Círculos decorativos de fondo */}
+                <div className="absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-white/[0.04] pointer-events-none" aria-hidden />
+                <div className="absolute top-0 -left-10 h-36 w-36 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
+                <div className="absolute top-1/2 right-4 h-20 w-20 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
+
+                {/* Encabezado */}
+                <div className="relative">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white/75 mb-4 border border-white/20 backdrop-blur-sm">
+                    <Icon icon="lucide:globe-2" width={12} height={12} aria-hidden />
                     {tr.mapViewGlobal}
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-brand-blue tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                     {tr.mapDiscoverTitle}
                   </h2>
-                  <p className="mt-3 text-sm text-neutral-600 leading-relaxed max-w-md">
+                  <p className="mt-3 text-sm text-white/65 leading-relaxed">
                     {tr.mapDiscoverDesc}
                   </p>
                 </div>
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
-                    <Icon icon="lucide:help-circle" width={16} height={16} className="text-brand-blue/80" aria-hidden />
-                    {tr.mapHowToUse}
-                  </h3>
-                  <ul className="space-y-3 text-sm text-neutral-700">
-                    <li className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
-                        <Icon icon="lucide:mouse" width={12} height={12} aria-hidden />
-                      </span>
-                      <span>{tr.mapHowToHover}</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
-                        <Icon icon="lucide:mouse-pointer" width={12} height={12} aria-hidden />
-                      </span>
-                      <span>{tr.mapHowToClick}</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue">
-                        <Icon icon="lucide:users" width={12} height={12} aria-hidden />
-                      </span>
-                      <span>{tr.mapHowToTable}</span>
-                    </li>
-                  </ul>
+
+                {/* Chips de regiones */}
+                {areasWithData.length > 0 && (
+                  <div className="relative">
+                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-3">Regiones</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          { area: "ASIA",               bg: "bg-amber-400/15  hover:bg-amber-400/25  border-amber-400/35  text-amber-200",  dot: "bg-amber-400" },
+                          { area: "EUROPA",             bg: "bg-sky-400/15    hover:bg-sky-400/25    border-sky-400/35    text-sky-200",    dot: "bg-sky-400" },
+                          { area: "AMERICA",            bg: "bg-emerald-400/15 hover:bg-emerald-400/25 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
+                          { area: "INDIA-MEDIOORIENTE", bg: "bg-orange-400/15 hover:bg-orange-400/25 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
+                        ] as const
+                      )
+                        .filter(({ area }) => areasWithData.includes(area))
+                        .map(({ area, bg, dot }) => (
+                          <button
+                            key={area}
+                            type="button"
+                            onClick={() => setSelectedAreaFromMap(area)}
+                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 ${bg}`}
+                          >
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${dot}`} />
+                            <span className="truncate">{area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pasos numerados */}
+                <div className="relative">
+                  <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-3">{tr.mapHowToUse}</p>
+                  <div className="space-y-3.5">
+                    {(
+                      [
+                        { icon: "lucide:mouse",         text: tr.mapHowToHover },
+                        { icon: "lucide:mouse-pointer", text: tr.mapHowToClick },
+                        { icon: "lucide:table-2",       text: tr.mapHowToTable },
+                      ] as const
+                    ).map(({ icon, text }, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 border border-white/25 text-white text-[11px] font-bold">
+                          {i + 1}
+                        </span>
+                        <span className="text-sm text-white/65 leading-snug">{text}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-auto pt-4">
-                  <p className="rounded-xl bg-neutral-100/90 px-4 py-3 text-xs text-neutral-600 border border-neutral-200/60">
-                    <strong className="text-neutral-700">Tip:</strong> {tr.mapTip}
-                  </p>
+
+                {/* Tip glassmorphic */}
+                <div className="mt-auto">
+                  <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 backdrop-blur-sm">
+                    <p className="text-xs text-white/65 leading-relaxed">
+                      <strong className="text-white/90 font-semibold">Tip:</strong> {tr.mapTip}
+                    </p>
+                  </div>
                 </div>
               </div>
+
               {/* Columna mapa: 75% del espacio */}
-              <div className="w-full lg:w-3/4 flex-1 min-h-[220px] lg:min-h-0 relative bg-neutral-100/50">
-                <div className="absolute inset-0 overflow-hidden border-l border-neutral-200/60">
+              <div className="w-full lg:w-3/4 flex-1 min-h-[280px] lg:min-h-[400px] relative">
+                <div className="absolute inset-0 overflow-hidden">
                   <ItinerarioMap
                     compact={false}
                     selectedArea={selectedAreaFromMap}
                     onSelectArea={setSelectedAreaFromMap}
                     areasWithData={areasWithData}
                     portPoints={mapPortPoints}
+                    onPortClick={handlePortClick}
                   />
                 </div>
               </div>
@@ -1251,33 +1358,32 @@ export function ItinerarioContent() {
                   : areasRaw;
 
                 return (
-                  <section key={servicioNombre}>
-                    <div className="relative bg-white rounded-2xl border border-neutral-200/80 shadow-mac-modal overflow-hidden">
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-blue" aria-hidden />
-                      <div className="p-5 sm:p-6 pl-6 border-b border-neutral-200/70 bg-neutral-50/60 flex items-start justify-between gap-4 flex-wrap">
-                        <div className="space-y-2">
-                          <h2 className="text-xl font-bold text-brand-blue tracking-tight">
+                  <section key={servicioNombre} id={`srv-${servicioNombre}`}>
+                    <div className="relative bg-white rounded-2xl overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,82,155,0.15),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-brand-blue/10">
+                      <div className="px-6 py-5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-start justify-between gap-4 flex-wrap">
+                        <div className="space-y-1.5">
+                          <h2 className="text-xl font-bold text-white tracking-tight drop-shadow-sm">
                             {servicioNombre}
                           </h2>
                           {navieras.length > 0 && (
-                            <p className="text-sm text-neutral-600 flex items-center gap-2 flex-wrap">
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand-blue/10 text-brand-blue">
+                            <p className="text-sm text-white/80 flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1.5">
                                 <Icon icon="lucide:ship" width={14} height={14} className="shrink-0" aria-hidden />
                                 {tr.carriersInService}:
                               </span>
-                              <span className="font-medium text-neutral-700">{navieras.join(", ")}</span>
+                              <span className="font-semibold text-white">{navieras.join(", ")}</span>
                             </p>
                           )}
                         </div>
                         {areas.length === 1 && (
                           <div className="ml-auto">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm border border-neutral-200/80">
-                              <Icon icon="lucide:map-pin" width={20} height={20} className="shrink-0 text-brand-blue/80" aria-hidden />
+                            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/15 backdrop-blur-sm border border-white/25">
+                              <Icon icon="lucide:map-pin" width={18} height={18} className="shrink-0 text-white/80" aria-hidden />
                               <div className="text-right">
-                                <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-[0.18em]">
+                                <p className="text-[10px] font-semibold text-white/60 uppercase tracking-[0.18em]">
                                   Área
                                 </p>
-                                <p className="mt-0.5 text-lg sm:text-xl font-semibold text-neutral-900 tracking-tight uppercase">
+                                <p className="mt-0.5 text-lg font-bold text-white tracking-tight uppercase">
                                   {areas[0] || "Sin área"}
                                 </p>
                               </div>
@@ -1323,10 +1429,10 @@ export function ItinerarioContent() {
                           key={`${servicioNombre}-${area}`}
                           className={areaIndex === 0 ? "" : "border-t border-neutral-200"}
                         >
-                          <div className="px-4 py-3 bg-gradient-to-r from-brand-blue/8 via-neutral-50/80 to-white flex items-center justify-between gap-3 flex-wrap">
+                          <div className="px-4 py-3 bg-gradient-to-r from-brand-blue/5 via-white to-white flex items-center justify-between gap-3 flex-wrap border-b border-neutral-100">
                             {areas.length > 1 ? (
-                              <h3 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/90 border border-neutral-200/80 text-xs font-semibold text-brand-blue uppercase tracking-wider shadow-sm">
-                                <Icon icon="lucide:map-pin" width={16} height={16} className="shrink-0" aria-hidden />
+                              <h3 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue text-white text-xs font-bold uppercase tracking-wider shadow-sm shadow-brand-blue/30">
+                                <Icon icon="lucide:map-pin" width={13} height={13} className="shrink-0" aria-hidden />
                                 <span>{area || "Sin área"}</span>
                               </h3>
                             ) : (
@@ -1347,39 +1453,39 @@ export function ItinerarioContent() {
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm" role="table">
                               <thead>
-                                <tr className="border-b-2 border-neutral-200 bg-neutral-100/80">
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
+                                <tr className="border-b border-neutral-200 bg-[#f4f7fd]">
+                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
                                     {tr.colSemana}
                                   </th>
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
+                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
                                     {tr.colNave}
                                   </th>
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
+                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
                                     {tr.colOperador}
                                   </th>
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
+                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
                                     {tr.colViaje}
                                   </th>
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap">
+                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
                                     <span className="block">{tr.colPol}</span>
-                                    <span className="block text-xs font-normal text-neutral-500 mt-0.5">{tr.colEtd}</span>
+                                    <span className="block text-[10px] font-normal text-neutral-400 mt-0.5 normal-case tracking-normal">{tr.colEtd}</span>
                                   </th>
                                   {destinosColumnas.map((portKey) => (
                                     <th
                                       key={portKey}
-                                      className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap min-w-[100px] bg-brand-blue/[0.06]"
+                                      className="text-center px-3 py-3 whitespace-nowrap min-w-[100px] bg-brand-blue/[0.07]"
                                     >
-                                      <span className="block text-brand-blue font-medium">{portKey}</span>
-                                      <span className="block text-xs font-normal text-neutral-500 mt-0.5">
+                                      <span className="block text-brand-blue font-bold text-xs">{portKey}</span>
+                                      <span className="block text-[10px] font-normal text-brand-blue/50 mt-0.5">
                                         {tr.eta} / {tr.daysTransit}
                                       </span>
                                     </th>
                                   ))}
-                                  <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap min-w-[100px]">
+                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide min-w-[100px]">
                                     {tr.colStacking}
                                   </th>
                                   {isLoggedIn && (
-                                    <th className="text-center px-3 py-3.5 font-semibold text-neutral-700 whitespace-nowrap min-w-[180px]">
+                                    <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide min-w-[180px]">
                                       {tr.colActions}
                                     </th>
                                   )}
@@ -1392,17 +1498,17 @@ export function ItinerarioContent() {
                                   return (
                                     <tr
                                       key={it.id}
-                                      className={`border-b border-neutral-100 last:border-0 transition-colors duration-150 ${
-                                        isEven ? "bg-white" : "bg-neutral-50/40"
-                                      } hover:bg-brand-blue/[0.04]`}
+                                      className={`border-b border-neutral-100/70 last:border-0 transition-colors duration-100 ${
+                                        isEven ? "bg-white" : "bg-[#f8faff]"
+                                      } hover:bg-brand-blue/[0.05] group`}
                                     >
                                       <td className="px-3 py-3 text-center align-middle">
                                         {it.semana != null ? (
-                                          <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-md bg-brand-blue/10 text-brand-blue font-semibold text-sm">
+                                          <span className="inline-flex items-center justify-center min-w-[2rem] h-7 px-2.5 rounded-full bg-brand-blue text-white font-bold text-xs shadow-sm shadow-brand-blue/30">
                                             {String(it.semana)}
                                           </span>
                                         ) : (
-                                          <span className="text-neutral-400">—</span>
+                                          <span className="text-neutral-300">—</span>
                                         )}
                                       </td>
                                       <td className="px-3 py-3 text-neutral-700 whitespace-nowrap text-center align-middle">
@@ -1457,16 +1563,16 @@ export function ItinerarioContent() {
                                       {destinosColumnas.map((portKey) => {
                                         const e = getEscalaForPort(escalas, portKey);
                                         return (
-                                          <td key={portKey} className="px-3 py-3 text-neutral-600 whitespace-nowrap text-center align-middle">
+                                          <td key={portKey} className="px-3 py-3 whitespace-nowrap text-center align-middle bg-brand-blue/[0.03] group-hover:bg-brand-blue/[0.07] transition-colors duration-100">
                                             {e ? (
                                               <span className="block">
-                                                <span className="text-neutral-800 font-medium">{e.eta ? formatDate(e.eta) : "—"}</span>
+                                                <span className="text-neutral-800 font-semibold tabular-nums">{e.eta ? formatDate(e.eta) : "—"}</span>
                                                 {e.dias_transito != null && (
-                                                  <span className="text-neutral-500 text-xs block mt-0.5">{e.dias_transito} d</span>
+                                                  <span className="inline-flex items-center justify-center mt-1 px-1.5 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-bold tabular-nums">{e.dias_transito}d</span>
                                                 )}
                                               </span>
                                             ) : (
-                                              <span className="text-neutral-300">—</span>
+                                              <span className="text-neutral-200">—</span>
                                             )}
                                           </td>
                                         );

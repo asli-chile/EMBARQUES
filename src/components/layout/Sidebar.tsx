@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
-import { layout } from "@/lib/brand";
 import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -156,7 +155,7 @@ export function Sidebar({ pathname }: SidebarProps) {
   return (
     <div
       ref={sidebarRef}
-      className={`flex flex-shrink-0 overflow-hidden ${layout.sidebar.bg} ${layout.sidebar.shadow} transition-[width] duration-300 ease-out ${
+      className={`flex flex-shrink-0 overflow-hidden bg-neutral-700/95 backdrop-blur-md border-r border-white/10 shadow-xl shadow-black/20 transition-[width] duration-300 ease-out ${
         isOpen ? "w-[11.75rem]" : "w-7"
       }`}
       onMouseEnter={handleMouseEnter}
@@ -172,7 +171,7 @@ export function Sidebar({ pathname }: SidebarProps) {
           role="navigation"
           aria-label="Menú de módulos"
         >
-          <nav className="flex flex-col gap-4">
+          <nav className="flex flex-col gap-1.5">
             {visibleItems.map((item) => {
               const hasChildren = "children" in item && item.children?.length;
               const hasHref = "href" in item && item.href;
@@ -183,16 +182,16 @@ export function Sidebar({ pathname }: SidebarProps) {
                 item.children!.some((c) => c.href && pathname === c.href);
 
               const linkBaseClasses =
-                "flex items-center justify-between w-full text-left text-base px-2 py-1.5 rounded transition-colors";
+                "flex items-center justify-between w-full text-left text-sm px-3 py-2 rounded-lg border border-transparent transition-all duration-200";
               const linkClasses = isActive
-                ? `${linkBaseClasses} text-white bg-brand-blue/80`
-                : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-neutral-500`;
+                ? `${linkBaseClasses} text-white bg-white/15 border-white/20`
+                : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-white/10`;
               const buttonClasses = isParentActive
-                ? `${linkBaseClasses} text-white bg-brand-blue/50`
-                : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-neutral-500`;
+                ? `${linkBaseClasses} text-white bg-white/15 border-white/20`
+                : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-white/10`;
 
               return (
-                <div key={item.id} className="flex flex-col gap-2">
+                <div key={item.id} className="flex flex-col gap-1">
                   {hasHref ? (
                     <a
                       href={item.href!}
@@ -219,19 +218,21 @@ export function Sidebar({ pathname }: SidebarProps) {
                           }
                           width={12}
                           height={12}
-                          className="flex-shrink-0"
+                          className="flex-shrink-0 opacity-80"
                         />
                       )}
                     </button>
                   )}
                   {hasChildren && isExpanded && (
-                    <div className="flex flex-col gap-2 pl-2 ml-0.5 border-l border-neutral-500">
+                    <div className="flex flex-col gap-1 pl-3 ml-1 border-l-2 border-white/20">
                       {item.children!.map((child) => {
                         const childHref = child.href ?? "#";
                         const isChildActive = pathname === childHref;
+                        const childBaseClasses =
+                          "text-sm px-3 py-1.5 rounded-lg border border-transparent transition-all duration-200";
                         const childClasses = isChildActive
-                          ? "text-base text-white bg-brand-blue/80 px-2 py-1 rounded transition-colors"
-                          : "text-base text-neutral-300 hover:text-white hover:bg-neutral-500/80 px-2 py-1 rounded transition-colors";
+                          ? `${childBaseClasses} text-white bg-brand-olive/20 border-brand-olive/40`
+                          : `${childBaseClasses} text-neutral-300 hover:text-white hover:bg-white/10`;
                         return (
                           <a
                             key={child.id}
@@ -254,7 +255,7 @@ export function Sidebar({ pathname }: SidebarProps) {
       <button
         type="button"
         onClick={handleToggle}
-        className={`flex-shrink-0 flex items-center justify-center h-14 w-7 ${layout.sidebar.bg} text-white hover:bg-neutral-500 transition-colors self-center`}
+        className="flex-shrink-0 flex items-center justify-center h-14 w-7 bg-neutral-700/95 text-white hover:bg-white/10 rounded-r-lg border-l border-white/10 transition-all duration-200 self-center"
         aria-label={isOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
       >
         <Icon
@@ -263,6 +264,7 @@ export function Sidebar({ pathname }: SidebarProps) {
           }
           width={18}
           height={18}
+          className="opacity-90"
         />
       </button>
     </div>
