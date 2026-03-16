@@ -1044,12 +1044,12 @@ export function ItinerarioContent() {
       role="main"
     >
       {/* Título y acciones arriba: mínimo padding para usar toda la pantalla */}
-      <header className="flex-shrink-0 flex flex-wrap items-start justify-between gap-3 w-full px-4 py-2">
+      <header className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 w-full px-4 py-2.5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight leading-tight">
             {tr.title}
           </h1>
-          <p className="text-white/90 text-sm mt-2">{tr.subtitle}</p>
+          <p className="text-white/70 text-xs sm:text-sm mt-0.5 sm:mt-2 hidden xs:block sm:block">{tr.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Botón descargar PDF */}
@@ -1094,7 +1094,7 @@ export function ItinerarioContent() {
           <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-white">
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
               {/* Columna info: 25% — fondo navy elegante */}
-              <div className="w-full lg:w-1/4 flex flex-col gap-6 px-6 sm:px-8 py-7 sm:py-9 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
+              <div className="w-full lg:w-1/4 flex flex-col gap-4 lg:gap-6 px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-9 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
                 {/* Círculos decorativos de fondo */}
                 <div className="absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-white/[0.04] pointer-events-none" aria-hidden />
                 <div className="absolute top-0 -left-10 h-36 w-36 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
@@ -1106,10 +1106,10 @@ export function ItinerarioContent() {
                     <Icon icon="lucide:globe-2" width={12} height={12} aria-hidden />
                     {tr.mapViewGlobal}
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-tight">
                     {tr.mapDiscoverTitle}
                   </h2>
-                  <p className="mt-3 text-sm text-white/65 leading-relaxed">
+                  <p className="mt-2 text-sm text-white/65 leading-relaxed hidden sm:block">
                     {tr.mapDiscoverDesc}
                   </p>
                 </div>
@@ -1133,7 +1133,7 @@ export function ItinerarioContent() {
                             key={area}
                             type="button"
                             onClick={() => setSelectedAreaFromMap(area)}
-                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 ${bg}`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 w-full justify-center ${bg}`}
                           >
                             <span className={`h-2 w-2 rounded-full shrink-0 ${dot}`} />
                             <span className="truncate">{area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}</span>
@@ -1143,8 +1143,8 @@ export function ItinerarioContent() {
                   </div>
                 )}
 
-                {/* Pasos numerados */}
-                <div className="relative">
+                {/* Pasos numerados — solo desktop */}
+                <div className="relative hidden lg:block">
                   <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-3">{tr.mapHowToUse}</p>
                   <div className="space-y-3.5">
                     {(
@@ -1164,8 +1164,8 @@ export function ItinerarioContent() {
                   </div>
                 </div>
 
-                {/* Tip glassmorphic */}
-                <div className="mt-auto">
+                {/* Tip glassmorphic — solo desktop */}
+                <div className="mt-auto hidden lg:block">
                   <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 backdrop-blur-sm">
                     <p className="text-xs text-white/65 leading-relaxed">
                       <strong className="text-white/90 font-semibold">Tip:</strong> {tr.mapTip}
@@ -1175,7 +1175,7 @@ export function ItinerarioContent() {
               </div>
 
               {/* Columna mapa: 75% del espacio */}
-              <div className="w-full lg:w-3/4 flex-1 min-h-[280px] lg:min-h-[400px] relative">
+              <div className="w-full lg:w-3/4 flex-1 min-h-[58vw] sm:min-h-[50vw] lg:min-h-[400px] relative">
                 <div className="absolute inset-0 overflow-hidden">
                   <ItinerarioMap
                     compact={false}
@@ -1199,7 +1199,7 @@ export function ItinerarioContent() {
         }`}
       >
         {selectedAreaFromMap && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/10 border border-white/20 px-4 py-2.5 text-sm text-white">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/10 border border-white/20 px-3 py-2 text-sm text-white">
             <span>
               {selectedAreaFromMap === "ALL" ? (
                 <>
@@ -1360,9 +1360,9 @@ export function ItinerarioContent() {
                 return (
                   <section key={servicioNombre} id={`srv-${servicioNombre}`}>
                     <div className="relative bg-white rounded-2xl overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,82,155,0.15),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-brand-blue/10">
-                      <div className="px-6 py-5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-start justify-between gap-4 flex-wrap">
-                        <div className="space-y-1.5">
-                          <h2 className="text-xl font-bold text-white tracking-tight drop-shadow-sm">
+                      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-start justify-between gap-3 flex-wrap">
+                        <div className="space-y-1">
+                          <h2 className="text-base sm:text-xl font-bold text-white tracking-tight drop-shadow-sm">
                             {servicioNombre}
                           </h2>
                           {navieras.length > 0 && (
@@ -1376,7 +1376,7 @@ export function ItinerarioContent() {
                           )}
                         </div>
                         {areas.length === 1 && (
-                          <div className="ml-auto">
+                          <div className="ml-auto hidden sm:block">
                             <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/15 backdrop-blur-sm border border-white/25">
                               <Icon icon="lucide:map-pin" width={18} height={18} className="shrink-0 text-white/80" aria-hidden />
                               <div className="text-right">
@@ -1450,7 +1450,132 @@ export function ItinerarioContent() {
                               </button>
                             )}
                           </div>
-                          <div className="overflow-x-auto">
+                          {/* ── Vista de tarjetas (mobile, < sm) ─────────────── */}
+                          <div className="sm:hidden divide-y divide-neutral-100/80">
+                            {displayedItinerarios.map((it) => {
+                              const escalas = it.escalas ?? [];
+                              const naveNorm = normalizeNave(it.nave);
+                              const sharedImageUrl =
+                                it.stacking_imagen_url ??
+                                (naveNorm
+                                  ? itinerarios.find(
+                                      (other) =>
+                                        other.id !== it.id &&
+                                        normalizeNave(other.nave) === naveNorm &&
+                                        other.stacking_imagen_url
+                                    )?.stacking_imagen_url
+                                  : null) ??
+                                null;
+                              const hasStackingImage =
+                                typeof sharedImageUrl === "string" && sharedImageUrl.trim().length > 0;
+                              return (
+                                <div key={it.id} className="p-4 odd:bg-[#f8faff] even:bg-white">
+                                  {/* Encabezado de tarjeta: semana + nave + viaje */}
+                                  <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      {it.semana != null && (
+                                        <span className="inline-flex items-center justify-center h-8 w-8 shrink-0 rounded-full bg-brand-blue text-white font-bold text-xs shadow-sm shadow-brand-blue/30">
+                                          {it.semana}
+                                        </span>
+                                      )}
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-neutral-900 text-sm leading-tight truncate">{it.nave || "—"}</p>
+                                        {it.operador || it.naviera ? (
+                                          <p className="text-xs text-neutral-500 truncate mt-0.5">{it.operador || it.naviera}</p>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide">{tr.colViaje}</p>
+                                      <p className="font-semibold text-neutral-800 text-sm">{it.viaje || "—"}</p>
+                                    </div>
+                                  </div>
+
+                                  {/* POL + ETD */}
+                                  <div className="flex items-center gap-3 mb-3 px-3 py-2.5 rounded-xl bg-brand-blue/5 border border-brand-blue/10">
+                                    <Icon icon="lucide:anchor" width={14} height={14} className="text-brand-blue/50 shrink-0" aria-hidden />
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-[10px] text-neutral-400 uppercase tracking-wide block">{tr.colPol}</span>
+                                      <span className="text-sm font-semibold text-neutral-800 truncate">{it.pol || "—"}</span>
+                                    </div>
+                                    <div className="text-right shrink-0 border-l border-brand-blue/10 pl-3">
+                                      <span className="text-[10px] text-neutral-400 uppercase tracking-wide block">{tr.colEtd}</span>
+                                      <span className="text-sm font-bold text-brand-blue tabular-nums">{it.etd ? formatDate(it.etd) : "—"}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Destinos */}
+                                  {destinosColumnas.length > 0 && (
+                                    <div className="space-y-1.5 mb-3">
+                                      {destinosColumnas.map((portKey) => {
+                                        const e = getEscalaForPort(escalas, portKey);
+                                        return (
+                                          <div key={portKey} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-brand-blue/[0.04] border border-brand-blue/[0.08]">
+                                            <Icon icon="lucide:map-pin" width={12} height={12} className="text-brand-blue/50 shrink-0" aria-hidden />
+                                            <span className="text-xs font-semibold text-brand-blue flex-1 truncate">{portKey}</span>
+                                            {e ? (
+                                              <div className="flex items-center gap-1.5 shrink-0">
+                                                <span className="text-xs font-semibold text-neutral-800 tabular-nums">{e.eta ? formatDate(e.eta) : "—"}</span>
+                                                {e.dias_transito != null && (
+                                                  <span className="inline-flex px-1.5 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-bold tabular-nums">{e.dias_transito}d</span>
+                                                )}
+                                              </div>
+                                            ) : (
+                                              <span className="text-neutral-300 text-xs">—</span>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Acciones: stacking + admin */}
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenStackingModal(it)}
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                                        hasStackingImage
+                                          ? "text-brand-teal bg-brand-teal/10 hover:bg-brand-teal/20 focus:ring-brand-teal/30"
+                                          : "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/30"
+                                      }`}
+                                    >
+                                      <Icon icon="lucide:calendar-clock" width={14} height={14} aria-hidden />
+                                      {hasStackingImage ? (tr as any).openStacking : (tr as any).uploadStacking}
+                                    </button>
+                                    {isLoggedIn && (
+                                      <div className="flex gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenEdit(it)}
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                                        >
+                                          <Icon icon="lucide:pencil" width={13} height={13} aria-hidden />
+                                          {tr.editItinerary}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDelete(it)}
+                                          disabled={deletingId === it.id}
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50"
+                                        >
+                                          {deletingId === it.id ? (
+                                            <Icon icon="lucide:loader-2" width={13} height={13} className="animate-spin" aria-hidden />
+                                          ) : (
+                                            <Icon icon="lucide:trash-2" width={13} height={13} aria-hidden />
+                                          )}
+                                          {tr.deleteItinerary}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* ── Vista de tabla (sm+) ─────────────────────────── */}
+                          <div className="overflow-x-auto hidden sm:block">
                             <table className="w-full text-sm" role="table">
                               <thead>
                                 <tr className="border-b border-neutral-200 bg-[#f4f7fd]">
@@ -1660,7 +1785,7 @@ export function ItinerarioContent() {
                               </tbody>
                             </table>
                             {itinerariosEnArea.length > 4 && (
-                              <div className="px-4 py-3 border-t border-neutral-200 bg-neutral-50/60 flex justify-end">
+                              <div className="px-4 py-3 border-t border-neutral-200 bg-neutral-50/60 flex justify-center sm:justify-end">
                                 <button
                                   type="button"
                                   onClick={() =>

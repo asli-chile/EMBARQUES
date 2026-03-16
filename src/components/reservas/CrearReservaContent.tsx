@@ -885,10 +885,10 @@ export function CrearReservaContent() {
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-200" role="main">
       <div className="w-full max-w-full px-4 sm:px-6 py-4 sm:py-6">
         <div className="mb-6 rounded-xl bg-white border border-neutral-200 shadow-md p-5 pl-6 border-l-4 border-l-brand-blue">
-          <h1 className="text-2xl font-bold text-brand-blue tracking-tight">
+          <h1 className="text-lg sm:text-2xl font-bold text-brand-blue tracking-tight">
             {tr.title}
           </h1>
-          <p className="text-base text-neutral-600 mt-1 font-medium">
+          <p className="text-sm sm:text-base text-neutral-600 mt-1 font-medium">
             {tr.subtitle}
           </p>
         </div>

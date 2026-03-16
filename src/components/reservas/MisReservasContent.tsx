@@ -301,33 +301,33 @@ export function MisReservasContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4">
-      <div className="w-full space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-blue">
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
+      <div className="w-full space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">
               {t.sidebar.misReservas}
             </h1>
-            <p className="text-neutral-500 text-sm mt-1">
+            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">
               {filteredOperaciones.length} / {operaciones.length} {tr.records}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!isCliente && selectedIds.size > 0 && (
               <button
                 onClick={() => handleMoveToTrash(Array.from(selectedIds))}
                 disabled={actionLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                <Icon icon="typcn:trash" width={18} height={18} />
+                <Icon icon="typcn:trash" width={16} height={16} />
                 {tr.delete} ({selectedIds.size})
               </button>
             )}
             <a
               href="/reservas/crear"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 transition-colors"
             >
-              <Icon icon="typcn:plus" width={18} height={18} />
+              <Icon icon="typcn:plus" width={16} height={16} />
               {tr.newBooking}
             </a>
           </div>

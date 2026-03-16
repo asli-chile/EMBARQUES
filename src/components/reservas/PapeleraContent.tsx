@@ -172,35 +172,35 @@ export function PapeleraContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4">
-      <div className="w-full space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-blue flex items-center gap-2">
-              <Icon icon="typcn:trash" width={28} height={28} />
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
+      <div className="w-full space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight flex items-center gap-2">
+              <Icon icon="typcn:trash" width={22} height={22} />
               {t.sidebar.papelera}
             </h1>
-            <p className="text-neutral-500 text-sm mt-1">
+            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">
               {operaciones.length} {tr.itemsInTrash}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {selectedIds.size > 0 && (
               <>
                 <button
                   onClick={() => handleRestore(Array.from(selectedIds))}
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
-                  <Icon icon="typcn:arrow-back" width={18} height={18} />
+                  <Icon icon="typcn:arrow-back" width={16} height={16} />
                   {tr.restore} ({selectedIds.size})
                 </button>
                 <button
                   onClick={() => handleDeletePermanently(Array.from(selectedIds))}
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
-                  <Icon icon="typcn:delete" width={18} height={18} />
+                  <Icon icon="typcn:delete" width={16} height={16} />
                   {tr.delete} ({selectedIds.size})
                 </button>
               </>
@@ -209,18 +209,18 @@ export function PapeleraContent() {
               <button
                 onClick={handleEmptyTrash}
                 disabled={actionLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
               >
-                <Icon icon="typcn:trash" width={18} height={18} />
+                <Icon icon="typcn:trash" width={16} height={16} />
                 {tr.emptyTrash}
               </button>
             )}
             <button
               onClick={fetchOperaciones}
-              className="px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-100 transition-colors"
+              className="p-2 border border-neutral-200 rounded-lg hover:bg-neutral-100 transition-colors"
               title={t.misReservas.refresh}
             >
-              <Icon icon="typcn:refresh" width={20} height={20} />
+              <Icon icon="typcn:refresh" width={18} height={18} />
             </button>
           </div>
         </div>

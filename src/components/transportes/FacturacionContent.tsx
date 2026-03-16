@@ -261,8 +261,8 @@ export function FacturacionContent() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex gap-3">
-        <div className="w-72 flex-shrink-0 flex flex-col min-h-0">
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3">
+        <div className="w-full lg:w-72 lg:flex-shrink-0 flex flex-col min-h-0 lg:min-h-0 max-h-64 lg:max-h-none">
           <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden flex flex-col min-h-0">
             <div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50 flex-shrink-0">
               <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">

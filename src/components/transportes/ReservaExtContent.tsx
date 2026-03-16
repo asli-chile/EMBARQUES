@@ -265,19 +265,19 @@ export function ReservaExtContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4">
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
       <div className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-blue">{tr.title}</h1>
-            <p className="text-neutral-500 text-sm mt-1">{tr.subtitle}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">{tr.title}</h1>
+            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">{tr.subtitle}</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="flex gap-4">
-            <div className="w-80 flex-shrink-0">
-              <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden sticky top-0">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="w-full lg:w-80 lg:flex-shrink-0">
+              <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
                 <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
                   <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
                     <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
