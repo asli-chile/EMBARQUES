@@ -385,25 +385,25 @@ export function FinanzasContent() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-emerald-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <p className="text-xs sm:text-sm text-neutral-500">{tr.totalInvoiced}</p>
             <p className="text-2xl sm:text-3xl font-bold text-emerald-600 mt-1">
               {formatCurrency(kpis.totalFacturado)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-teal-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <p className="text-xs sm:text-sm text-neutral-500">{tr.totalMargin}</p>
             <p className="text-2xl sm:text-3xl font-bold text-emerald-700 mt-1">
               {formatCurrency(kpis.totalMargen)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-blue-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <p className="text-xs sm:text-sm text-neutral-500">{tr.avgMarginPerOp}</p>
             <p className="text-2xl sm:text-3xl font-bold text-neutral-800 mt-1">
               {formatCurrency(kpis.avgMargen)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-slate-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <p className="text-xs sm:text-sm text-neutral-500">{tr.operationsWithBilling}</p>
             <p className="text-2xl sm:text-3xl font-bold text-neutral-800 mt-1">
               {kpis.opsConFacturacion}
@@ -424,7 +424,7 @@ export function FinanzasContent() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
             <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 shadow-mac-modal overflow-hidden">
-              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 overflow-x-auto">
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 overflow-x-auto rounded-t-xl">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
@@ -464,8 +464,9 @@ export function FinanzasContent() {
             </div>
 
             <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal overflow-hidden">
-              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100">
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 rounded-t-xl">
                 <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
+                  <span className="w-1 h-4 bg-emerald-500 rounded-full flex-shrink-0" />
                   <Icon icon="lucide:building" width={16} height={16} className="text-brand-blue" />
                   {tr.byClient}
                 </h2>

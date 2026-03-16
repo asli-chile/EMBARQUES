@@ -263,6 +263,7 @@ export function ItinerarioContent() {
   const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
   const [selectedAreaFromMap, setSelectedAreaFromMap] = useState<string | null>(null);
   const [pendingScrollServicio, setPendingScrollServicio] = useState<string | null>(null);
+  const [destSearch, setDestSearch] = useState("");
   const [pdfLoading, setPdfLoading] = useState(false);
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -1023,6 +1024,24 @@ export function ItinerarioContent() {
     return out;
   }, [itinerarios]);
 
+  /** Resultados de búsqueda de destino: coincidencias de puerto_nombre o puerto con destSearch */
+  const destSearchResults = useMemo((): MapPortPoint[] => {
+    const q = destSearch.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    const seen = new Set<string>();
+    const results: MapPortPoint[] = [];
+    for (const p of mapPortPoints) {
+      const name = (p.puerto_nombre || p.puerto || "").toLowerCase();
+      const key = `${p.puerto_nombre || p.puerto}__${p.servicio}`;
+      if (name.includes(q) && !seen.has(key)) {
+        seen.add(key);
+        results.push(p);
+        if (results.length >= 8) break;
+      }
+    }
+    return results;
+  }, [destSearch, mapPortPoints]);
+
   const portNames = [
     ...new Set(
       itinerarios.flatMap((it) => {
@@ -1094,7 +1113,7 @@ export function ItinerarioContent() {
           <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-white">
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
               {/* Columna info: 25% — fondo navy elegante */}
-              <div className="w-full lg:w-1/4 flex flex-col gap-4 lg:gap-6 px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-9 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden">
+              <div className="w-full lg:w-1/4 flex flex-col gap-3 px-4 sm:px-6 lg:px-6 py-4 lg:py-5 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-y-auto">
                 {/* Círculos decorativos de fondo */}
                 <div className="absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-white/[0.04] pointer-events-none" aria-hidden />
                 <div className="absolute top-0 -left-10 h-36 w-36 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
@@ -1102,14 +1121,14 @@ export function ItinerarioContent() {
 
                 {/* Encabezado */}
                 <div className="relative">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white/75 mb-4 border border-white/20 backdrop-blur-sm">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white/75 mb-2 border border-white/20 backdrop-blur-sm">
                     <Icon icon="lucide:globe-2" width={12} height={12} aria-hidden />
                     {tr.mapViewGlobal}
                   </div>
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-extrabold text-white tracking-tight leading-tight">
                     {tr.mapDiscoverTitle}
                   </h2>
-                  <p className="mt-2 text-sm text-white/65 leading-relaxed hidden sm:block">
+                  <p className="mt-1 text-xs text-white/60 leading-relaxed hidden sm:block">
                     {tr.mapDiscoverDesc}
                   </p>
                 </div>
@@ -1117,8 +1136,8 @@ export function ItinerarioContent() {
                 {/* Chips de regiones */}
                 {areasWithData.length > 0 && (
                   <div className="relative">
-                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-3">Regiones</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-2">Regiones</p>
+                    <div className="grid grid-cols-2 gap-1.5">
                       {(
                         [
                           { area: "ASIA",               bg: "bg-amber-400/15  hover:bg-amber-400/25  border-amber-400/35  text-amber-200",  dot: "bg-amber-400" },
@@ -1133,9 +1152,9 @@ export function ItinerarioContent() {
                             key={area}
                             type="button"
                             onClick={() => setSelectedAreaFromMap(area)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 w-full justify-center ${bg}`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 w-full justify-center ${bg}`}
                           >
-                            <span className={`h-2 w-2 rounded-full shrink-0 ${dot}`} />
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
                             <span className="truncate">{area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}</span>
                           </button>
                         ))}
@@ -1143,34 +1162,86 @@ export function ItinerarioContent() {
                   </div>
                 )}
 
-                {/* Pasos numerados — solo desktop */}
-                <div className="relative hidden lg:block">
-                  <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-3">{tr.mapHowToUse}</p>
-                  <div className="space-y-3.5">
-                    {(
-                      [
-                        { icon: "lucide:mouse",         text: tr.mapHowToHover },
-                        { icon: "lucide:mouse-pointer", text: tr.mapHowToClick },
-                        { icon: "lucide:table-2",       text: tr.mapHowToTable },
-                      ] as const
-                    ).map(({ icon, text }, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 border border-white/25 text-white text-[11px] font-bold">
-                          {i + 1}
-                        </span>
-                        <span className="text-sm text-white/65 leading-snug">{text}</span>
-                      </div>
-                    ))}
+                {/* Buscador de destino */}
+                <div className="relative">
+                  <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-2">Buscar destino</p>
+                  <div className="relative">
+                    <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" aria-hidden />
+                    <input
+                      type="text"
+                      value={destSearch}
+                      onChange={(e) => setDestSearch(e.target.value)}
+                      placeholder="Ej: Shangai, Rotterdam…"
+                      className="w-full pl-8 pr-8 py-2 rounded-xl bg-white/10 border border-white/20 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all"
+                    />
+                    {destSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setDestSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                        aria-label="Limpiar búsqueda"
+                      >
+                        <Icon icon="lucide:x" width={13} height={13} />
+                      </button>
+                    )}
                   </div>
+
+                  {/* Resultados */}
+                  {destSearch.trim().length >= 2 && (
+                    <div className="mt-2 rounded-xl bg-white/10 border border-white/15 overflow-hidden backdrop-blur-sm">
+                      {destSearchResults.length === 0 ? (
+                        <p className="px-3 py-3 text-xs text-white/40 text-center">Sin coincidencias</p>
+                      ) : (
+                        <ul>
+                          {destSearchResults.map((p, i) => {
+                            const areaColors: Record<string, string> = {
+                              ASIA: "bg-amber-400/20 text-amber-300",
+                              EUROPA: "bg-sky-400/20 text-sky-300",
+                              AMERICA: "bg-emerald-400/20 text-emerald-300",
+                              "INDIA-MEDIOORIENTE": "bg-orange-400/20 text-orange-300",
+                            };
+                            const areaLabel = p.area === "INDIA-MEDIOORIENTE" ? "India/ME" : (p.area ?? "");
+                            const areaClass = p.area ? (areaColors[p.area] ?? "bg-white/10 text-white/50") : "";
+                            return (
+                              <li key={i}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handlePortClick(p);
+                                    setDestSearch("");
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-white/10 transition-colors border-b border-white/10 last:border-b-0 group"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
+                                        {p.puerto_nombre || p.puerto}
+                                      </p>
+                                      <p className="text-[11px] text-white/45 truncate mt-0.5">
+                                        {[p.servicio, p.naviera].filter(Boolean).join(" · ")}
+                                      </p>
+                                    </div>
+                                    {areaLabel && (
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${areaClass}`}>
+                                        {areaLabel}
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Tip glassmorphic — solo desktop */}
-                <div className="mt-auto hidden lg:block">
-                  <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 backdrop-blur-sm">
-                    <p className="text-xs text-white/65 leading-relaxed">
-                      <strong className="text-white/90 font-semibold">Tip:</strong> {tr.mapTip}
-                    </p>
-                  </div>
+                {/* Tip compacto */}
+                <div className="rounded-xl bg-white/8 border border-white/10 px-3 py-2 backdrop-blur-sm">
+                  <p className="text-[11px] text-white/50 leading-relaxed">
+                    <strong className="text-white/75 font-semibold">Tip:</strong> {tr.mapTip}
+                  </p>
                 </div>
               </div>
 

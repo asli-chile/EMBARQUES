@@ -24,14 +24,14 @@ type Operacion = {
   created_at: string;
 };
 
-const estadoColors: Record<string, string> = {
-  PENDIENTE: "bg-amber-100 text-amber-800",
-  "EN PROCESO": "bg-blue-100 text-blue-800",
-  "EN TRÁNSITO": "bg-purple-100 text-purple-800",
-  ARRIBADO: "bg-green-100 text-green-800",
-  COMPLETADO: "bg-neutral-100 text-neutral-800",
-  CANCELADO: "bg-red-100 text-red-800",
-  ROLEADO: "bg-orange-100 text-orange-800",
+const estadoConfig: Record<string, { dot: string; bg: string; text: string; border: string }> = {
+  PENDIENTE:     { dot: "bg-amber-400",   bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
+  "EN PROCESO":  { dot: "bg-blue-400",    bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
+  "EN TRÁNSITO": { dot: "bg-violet-400",  bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  ARRIBADO:      { dot: "bg-emerald-400", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  COMPLETADO:    { dot: "bg-neutral-400", bg: "bg-neutral-100",text: "text-neutral-600", border: "border-neutral-200" },
+  CANCELADO:     { dot: "bg-red-400",     bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200" },
+  ROLEADO:       { dot: "bg-orange-400",  bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200" },
 };
 
 type SortableHeaderProps = {
@@ -40,32 +40,25 @@ type SortableHeaderProps = {
   sortField: SortField | null;
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
+  /** Clase opcional para ancho mínimo (ej. columnas ETD/ETA). */
+  className?: string;
 };
 
-function SortableHeader({ field, label, sortField, sortDirection, onSort }: SortableHeaderProps) {
+function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className="px-4 py-3 text-center font-medium text-neutral-600">
+    <th className={`px-4 py-3 text-center whitespace-nowrap ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
-        className="inline-flex items-center gap-1 hover:text-brand-blue transition-colors"
+        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          isActive ? "text-brand-blue" : "text-neutral-400 hover:text-neutral-600"
+        }`}
       >
         {label}
-        <span className="flex flex-col">
-          <Icon
-            icon="typcn:arrow-sorted-up"
-            width={10}
-            height={10}
-            className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-neutral-300"}
-          />
-          <Icon
-            icon="typcn:arrow-sorted-down"
-            width={10}
-            height={10}
-            className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-neutral-300"}
-            style={{ marginTop: -4 }}
-          />
+        <span className="flex flex-col gap-[1px]">
+          <Icon icon="typcn:arrow-sorted-up" width={9} height={9} className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-neutral-300"} />
+          <Icon icon="typcn:arrow-sorted-down" width={9} height={9} className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-neutral-300"} />
         </span>
       </button>
     </th>
@@ -289,11 +282,14 @@ export function MisReservasContent() {
     setActionLoading(false);
   };
 
+  const filterSelectClass =
+    "w-full px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
+
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-6 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-500">
-          <Icon icon="typcn:refresh" className="w-6 h-6 animate-spin" />
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
       </main>
@@ -301,171 +297,159 @@ export function MisReservasContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
-      <div className="w-full space-y-3 sm:space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">
-              {t.sidebar.misReservas}
-            </h1>
-            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">
-              {filteredOperaciones.length} / {operaciones.length} {tr.records}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {!isCliente && selectedIds.size > 0 && (
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+
+        {/* Header */}
+        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+                <Icon icon="typcn:clipboard" width={20} height={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-neutral-900 leading-tight">
+                  {t.sidebar.misReservas}
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {filteredOperaciones.length === operaciones.length
+                    ? `${operaciones.length} ${tr.records}`
+                    : `${filteredOperaciones.length} de ${operaciones.length} ${tr.records}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!isCliente && selectedIds.size > 0 && (
+                <button
+                  onClick={() => handleMoveToTrash(Array.from(selectedIds))}
+                  disabled={actionLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  <Icon icon="typcn:trash" width={15} height={15} />
+                  {tr.delete} ({selectedIds.size})
+                </button>
+              )}
               <button
-                onClick={() => handleMoveToTrash(Array.from(selectedIds))}
-                disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                onClick={fetchOperaciones}
+                className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
+                title={tr.refresh}
               >
-                <Icon icon="typcn:trash" width={16} height={16} />
-                {tr.delete} ({selectedIds.size})
+                <Icon icon="typcn:refresh" width={18} height={18} />
               </button>
-            )}
-            <a
-              href="/reservas/crear"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 transition-colors"
-            >
-              <Icon icon="typcn:plus" width={16} height={16} />
-              {tr.newBooking}
-            </a>
+              <a
+                href="/reservas/crear"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20"
+              >
+                <Icon icon="typcn:plus" width={15} height={15} />
+                {tr.newBooking}
+              </a>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="flex-1 min-w-[250px]">
-            <div className="relative">
-              <Icon
-                icon="typcn:zoom"
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5"
-              />
-              <input
-                type="text"
-                placeholder={tr.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
-              />
-            </div>
+        {/* Search + filters bar */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex-1 min-w-[220px] relative">
+            <Icon icon="typcn:zoom" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none" />
+            <input
+              type="text"
+              placeholder={tr.searchPlaceholder}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+            />
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+            className={`inline-flex items-center gap-2 px-3.5 py-2 border rounded-xl text-sm font-medium transition-colors ${
               showFilters || activeFiltersCount > 0
                 ? "border-brand-blue bg-brand-blue/5 text-brand-blue"
-                : "border-neutral-200 hover:bg-neutral-100"
+                : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600"
             }`}
           >
-            <Icon icon="typcn:filter" width={18} height={18} />
+            <Icon icon="typcn:filter" width={16} height={16} />
             {tr.filters}
             {activeFiltersCount > 0 && (
-              <span className="ml-1 px-2 py-0.5 text-xs bg-brand-blue text-white rounded-full">
+              <span className="px-1.5 py-0.5 text-xs bg-brand-blue text-white rounded-full leading-none">
                 {activeFiltersCount}
               </span>
             )}
           </button>
-          <button
-            onClick={fetchOperaciones}
-            className="px-4 py-2 border border-neutral-200 rounded-lg hover:bg-neutral-100 transition-colors"
-            title={tr.refresh}
-          >
-            <Icon icon="typcn:refresh" width={20} height={20} />
-          </button>
+          {(activeFiltersCount > 0 || searchTerm) && (
+            <button
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-500 hover:text-neutral-700 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+            >
+              <Icon icon="typcn:times" width={14} height={14} />
+              Limpiar
+            </button>
+          )}
         </div>
 
+        {/* Filter panel */}
         {showFilters && (
-          <div className="bg-white rounded-lg border border-neutral-200 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-neutral-700">{tr.advancedFilters}</h3>
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.advancedFilters}</span>
               {activeFiltersCount > 0 && (
                 <button
                   onClick={clearAllFilters}
-                  className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                  className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
                 >
-                  <Icon icon="typcn:times" width={16} height={16} />
                   {tr.clearFilters}
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.colStatus}</label>
-                <select
-                  value={estadoFilter}
-                  onChange={(e) => setEstadoFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-sm"
-                >
+                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colStatus}</label>
+                <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className={filterSelectClass}>
                   <option value="">{tr.allStates}</option>
-                  {estados.map((estado) => (
-                    <option key={estado} value={estado!}>
-                      {estado}
-                    </option>
-                  ))}
+                  {estados.map((estado) => <option key={estado} value={estado!}>{estado}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.colClient}</label>
-                <select
-                  value={clienteFilter}
-                  onChange={(e) => setClienteFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-sm"
-                >
+                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colClient}</label>
+                <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className={filterSelectClass}>
                   <option value="">{tr.allClients}</option>
-                  {clientes.map((cliente) => (
-                    <option key={cliente} value={cliente}>
-                      {cliente}
-                    </option>
-                  ))}
+                  {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.colCarrier}</label>
-                <select
-                  value={navieraFilter}
-                  onChange={(e) => setNavieraFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-sm"
-                >
+                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colCarrier}</label>
+                <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className={filterSelectClass}>
                   <option value="">{tr.allCarriers}</option>
-                  {navieras.map((naviera) => (
-                    <option key={naviera} value={naviera}>
-                      {naviera}
-                    </option>
-                  ))}
+                  {navieras.map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.colSpecies}</label>
-                <select
-                  value={especieFilter}
-                  onChange={(e) => setEspecieFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-sm"
-                >
+                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colSpecies}</label>
+                <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className={filterSelectClass}>
                   <option value="">{tr.allSpecies}</option>
-                  {especies.map((especie) => (
-                    <option key={especie} value={especie}>
-                      {especie}
-                    </option>
-                  ))}
+                  {especies.map((e) => <option key={e} value={e}>{e}</option>)}
                 </select>
               </div>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
-                <tr>
-                  <th className="px-4 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-neutral-300"
-                    />
-                  </th>
+              <thead>
+                <tr className="border-b border-neutral-100">
+                  {!isCliente && (
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 rounded border-neutral-300 accent-brand-blue"
+                      />
+                    </th>
+                  )}
                   <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableHeader field="cliente" label={tr.colClient} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableHeader field="especie" label={tr.colSpecies} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -473,80 +457,122 @@ export function MisReservasContent() {
                   <SortableHeader field="nave" label={tr.colVessel} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableHeader field="pol" label={tr.colPOL} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableHeader field="pod" label={tr.colPOD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                  <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                  <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
+                  <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
                   <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colActions}</th>
+                  {!isCliente && (
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">{tr.colActions}</th>
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody>
                 {filteredOperaciones.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="px-4 py-8 text-center text-neutral-500">
-                      {tr.noResults}
+                    <td colSpan={isCliente ? 12 : 14} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                          <Icon icon="typcn:clipboard" width={24} height={24} className="text-neutral-400" />
+                        </span>
+                        <p className="text-neutral-500 font-medium text-sm">{tr.noResults}</p>
+                        {(activeFiltersCount > 0 || searchTerm) && (
+                          <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">
+                            Limpiar filtros
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : (
-                  filteredOperaciones.map((op) => (
-                    <tr
-                      key={op.id}
-                      className={`hover:bg-neutral-50 transition-colors ${
-                        selectedIds.has(op.id) ? "bg-blue-50" : ""
-                      }`}
-                    >
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(op.id)}
-                          onChange={() => handleSelect(op.id)}
-                          className="w-4 h-4 rounded border-neutral-300"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium text-brand-blue">
-                        {op.ref_asli || op.correlativo || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-center">{op.cliente || "-"}</td>
-                      <td className="px-4 py-3 text-center">{op.especie || "-"}</td>
-                      <td className="px-4 py-3 text-center">{op.naviera || "-"}</td>
-                      <td className="px-4 py-3 text-center">{op.nave || "-"}</td>
-                      <td className="px-4 py-3 text-center">{op.pol || "-"}</td>
-                      <td className="px-4 py-3 text-center">{op.pod || "-"}</td>
-                      <td className="px-4 py-3 text-center">{formatDate(op.etd)}</td>
-                      <td className="px-4 py-3 text-center">{formatDate(op.eta)}</td>
-                      <td className="px-4 py-3 text-center">{op.tt ?? "-"}</td>
-                      <td className="px-4 py-3 text-center">{op.booking || "-"}</td>
-                      <td className="px-4 py-3 text-center">
-                        {op.estado_operacion && (
-                          <span
-                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                              estadoColors[op.estado_operacion] || "bg-neutral-100 text-neutral-800"
-                            }`}
-                          >
-                            {op.estado_operacion}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                  filteredOperaciones.map((op, idx) => {
+                    const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+                    return (
+                      <tr
+                        key={op.id}
+                        className={`border-b border-neutral-50 transition-colors ${
+                          selectedIds.has(op.id)
+                            ? "bg-brand-blue/5"
+                            : idx % 2 === 0
+                            ? "bg-white hover:bg-neutral-50/80"
+                            : "bg-neutral-50/40 hover:bg-neutral-50/80"
+                        }`}
+                      >
                         {!isCliente && (
-                          <button
-                            onClick={() => handleMoveToTrash([op.id])}
-                            disabled={actionLoading}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title={tr.moveToTrash}
-                          >
-                            <Icon icon="typcn:trash" width={18} height={18} />
-                          </button>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(op.id)}
+                              onChange={() => handleSelect(op.id)}
+                              className="w-4 h-4 rounded border-neutral-300 accent-brand-blue"
+                            />
+                          </td>
                         )}
-                      </td>
-                    </tr>
-                  ))
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-bold text-brand-blue text-xs">
+                            {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-700 font-medium">{op.cliente || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.especie || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.naviera || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.nave || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-500">{op.pol || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-500">{op.pod || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600 font-medium min-w-[7.5rem]">{formatDate(op.etd)}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600 font-medium min-w-[7.5rem]">{formatDate(op.eta)}</td>
+                        <td className="px-4 py-3 text-center">
+                          {op.tt !== null ? (
+                            <span className="text-xs font-semibold text-brand-blue bg-brand-blue/8 px-2 py-0.5 rounded-full">
+                              {op.tt}d
+                            </span>
+                          ) : <span className="text-neutral-400 text-xs">-</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs font-mono text-neutral-600">{op.booking || "-"}</td>
+                        <td className="px-4 py-3 text-center">
+                          {cfg ? (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
+                              {op.estado_operacion}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400 text-xs">-</span>
+                          )}
+                        </td>
+                        {!isCliente && (
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => handleMoveToTrash([op.id])}
+                              disabled={actionLoading}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title={tr.moveToTrash}
+                            >
+                              <Icon icon="typcn:trash" width={16} height={16} />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
+          {filteredOperaciones.length > 0 && (
+            <div className="px-4 py-2.5 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+              <span className="text-xs text-neutral-400">
+                {filteredOperaciones.length} {filteredOperaciones.length === 1 ? "registro" : "registros"}
+                {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
+              </span>
+              {selectedIds.size > 0 && (
+                <span className="text-xs text-brand-blue font-medium">
+                  {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+          )}
         </div>
+
       </div>
     </main>
   );

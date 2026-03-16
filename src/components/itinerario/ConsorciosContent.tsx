@@ -383,30 +383,45 @@ export function ConsorciosContent() {
 
   return (
     <main className="flex-1 min-h-0 min-w-0 overflow-auto bg-neutral-50" role="main">
-      <div className="w-full p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-brand-blue">
-            {tr.title}
-          </h1>
-          <button
-            type="button"
-            onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-            aria-label={tr.newConsortiumAria}
-          >
-            <Icon icon="lucide:plus" width={18} height={18} />
-            {tr.newConsortium}
-          </button>
+      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-5 py-4 sm:py-6 space-y-4">
+
+        {/* Header card */}
+        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:layers" width={20} height={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-neutral-900 leading-tight">
+                  {tr.title}
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {tr.modalDescNew}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenModal}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              aria-label={tr.newConsortiumAria}
+            >
+              <Icon icon="lucide:plus" width={18} height={18} />
+              {tr.newConsortium}
+            </button>
+          </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-2" role="alert">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-2" role="alert">
             <Icon icon="lucide:alert-circle" width={18} height={18} aria-hidden />
             {error}
           </div>
         )}
         {successMessage && (
-          <div className="mb-4 p-3 rounded-lg bg-emerald-50 text-emerald-800 text-sm border border-emerald-200 flex items-center gap-2" role="status">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2" role="status">
             <Icon icon="lucide:check-circle" width={18} height={18} aria-hidden />
             {successMessage}
           </div>
@@ -417,7 +432,7 @@ export function ConsorciosContent() {
             <Icon icon="lucide:loader-2" width={32} height={32} className="animate-spin text-brand-blue" aria-hidden />
           </div>
         ) : consorcios.length === 0 ? (
-          <div className="bg-white rounded-xl border border-neutral-200 p-8 text-center text-neutral-500">
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-8 text-center text-neutral-500">
             <Icon icon="lucide:layers" width={40} height={40} className="mx-auto mb-3 opacity-50" />
             <p className="font-medium">{tr.noConsorcios}</p>
             <p className="text-sm mt-1">{tr.noConsorciosHint}</p>

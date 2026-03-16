@@ -1,22 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
-import { formStyles } from "@/lib/form-styles";
 
-type RegistroFormProps = {
-  /** En modal: cierra el overlay al hacer clic en "Volver al inicio". */
-  onClose?: () => void;
-  /** En modal: abre el formulario de login en el mismo overlay. */
-  onOpenLogin?: () => void;
-};
-
-export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
+export function RegistroForm() {
   const { t } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const handleTogglePassword = () => setShowPassword((p) => !p);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,43 +40,27 @@ export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
   };
 
   return (
-    <div className={formStyles.card}>
-      {onClose ? (
-        <button
-          type="button"
-          onClick={onClose}
-          className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
-          aria-label={t.auth.backToHome}
-        >
-          <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
-          {t.auth.backToHome}
-        </button>
-      ) : (
-        <a
-          href="/inicio"
-          className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-brand-blue mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded"
-          aria-label={t.auth.backToHome}
-        >
-          <Icon icon="typcn:arrow-left-outline" width={16} height={16} />
-          {t.auth.backToHome}
-        </a>
-      )}
-      <h1 className="text-xl font-semibold text-brand-blue tracking-tight mb-1">
+    <div>
+      <h2 className="text-[17px] font-bold text-neutral-900 tracking-tight">
         {t.auth.signUpTitle}
-      </h1>
-      <p className="text-sm text-neutral-500 mb-6">
+      </h2>
+      <p className="text-sm text-neutral-500 mt-0.5 mb-5">
         {t.auth.signUpSubtitle}
       </p>
 
       {error && (
-        <div className={formStyles.errorMessage} role="alert">
+        <div
+          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm"
+          role="alert"
+        >
+          <Icon icon="lucide:alert-circle" width={15} height={15} className="mt-0.5 shrink-0" />
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
         <div>
-          <label htmlFor="reg-name" className={formStyles.label}>
+          <label htmlFor="reg-name" className="block text-xs font-semibold text-neutral-600 mb-1.5">
             {t.auth.name}
           </label>
           <input
@@ -95,13 +69,13 @@ export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
             type="text"
             autoComplete="name"
             disabled={isPending}
-            className={formStyles.input}
-            placeholder="Tu nombre"
+            placeholder="Tu nombre completo"
+            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
           />
         </div>
 
         <div>
-          <label htmlFor="reg-email" className={formStyles.label}>
+          <label htmlFor="reg-email" className="block text-xs font-semibold text-neutral-600 mb-1.5">
             {t.auth.email}
           </label>
           <input
@@ -111,13 +85,13 @@ export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
             autoComplete="email"
             required
             disabled={isPending}
-            className={formStyles.input}
-            placeholder="correo@ejemplo.com"
+            placeholder="correo@empresa.com"
+            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
           />
         </div>
 
         <div>
-          <label htmlFor="reg-password" className={formStyles.label}>
+          <label htmlFor="reg-password" className="block text-xs font-semibold text-neutral-600 mb-1.5">
             {t.auth.password}
           </label>
           <div className="relative">
@@ -129,19 +103,18 @@ export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
               required
               minLength={6}
               disabled={isPending}
-              className={`${formStyles.input} pr-10`}
               placeholder="Mínimo 6 caracteres"
+              className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
             />
             <button
               type="button"
-              onClick={handleTogglePassword}
-              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
-              tabIndex={0}
+              onClick={() => setShowPassword((p) => !p)}
+              tabIndex={-1}
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               disabled={isPending}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded transition-colors disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50"
             >
-              <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={18} height={18} />
+              <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
             </button>
           </div>
         </div>
@@ -150,31 +123,18 @@ export function RegistroForm({ onClose, onOpenLogin }: RegistroFormProps = {}) {
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          className={formStyles.submitButton}
+          className="mt-1 w-full py-2.5 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/40 focus:ring-offset-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {isPending ? t.auth.creatingAccount : t.auth.signUp}
+          {isPending ? (
+            <>
+              <Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />
+              {t.auth.creatingAccount}
+            </>
+          ) : (
+            t.auth.signUp
+          )}
         </button>
       </form>
-
-      <p className="mt-6 text-sm text-center text-neutral-500">
-        {t.auth.hasAccount}{" "}
-        {onOpenLogin ? (
-          <button
-            type="button"
-            onClick={onOpenLogin}
-            className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
-          >
-            {t.auth.login}
-          </button>
-        ) : (
-          <a
-            href="/auth/login"
-            className="text-brand-blue font-medium hover:underline focus:outline-none focus:underline"
-          >
-            {t.auth.login}
-          </a>
-        )}
-      </p>
     </div>
   );
 }

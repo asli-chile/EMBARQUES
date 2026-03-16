@@ -20,7 +20,7 @@ import { ReportesContent } from "@/components/reportes";
 import { FinanzasContent } from "@/components/finanzas";
 import { CrearReservaContent, MisReservasContent, PapeleraContent } from "@/components/reservas";
 import { ReservaAsliContent, ReservaExtContent, FacturacionContent } from "@/components/transportes";
-import { MisDocumentosContent } from "@/components/documentos";
+import { MisDocumentosContent, CrearInstructivoContent, CrearProformaContent } from "@/components/documentos";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
@@ -97,6 +97,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ModuleWithVisitorInfo moduleKey="facturacion"><FacturacionContent /></ModuleWithVisitorInfo>
     ) : pathname === "/documentos/mis-documentos" ? (
       <ModuleWithVisitorInfo moduleKey="misDocumentos"><MisDocumentosContent /></ModuleWithVisitorInfo>
+    ) : pathname === "/documentos/crear-instructivo" ? (
+      <ModuleWithVisitorInfo moduleKey="crearInstructivo"><CrearInstructivoContent /></ModuleWithVisitorInfo>
+    ) : pathname === "/documentos/crear-proforma" ? (
+      <ModuleWithVisitorInfo moduleKey="crearProforma"><CrearProformaContent /></ModuleWithVisitorInfo>
     ) : (
       children
     );

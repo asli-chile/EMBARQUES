@@ -41,8 +41,6 @@ type FormData = {
   inicio_stacking: string;
   fin_stacking: string;
   corte_documental: string;
-  prioridad: string;
-  operacion_critica: boolean;
   observaciones: string;
 };
 
@@ -52,8 +50,8 @@ const initialFormData: FormData = {
   ejecutivo: "",
   cliente: "",
   consignatario: "",
-  incoterm: "FOB",
-  forma_pago: "PREPAID",
+  incoterm: "",
+  forma_pago: "",
   especie: "",
   pais: "",
   temperatura: "",
@@ -75,8 +73,6 @@ const initialFormData: FormData = {
   inicio_stacking: "",
   fin_stacking: "",
   corte_documental: "",
-  prioridad: "MEDIA",
-  operacion_critica: false,
   observaciones: "",
 };
 
@@ -362,7 +358,7 @@ export function CrearReservaContent() {
       ),
       planta: Boolean(formData.planta_presentacion),
       deposito: Boolean(formData.deposito),
-      observaciones: true,
+      observaciones: Boolean(formData.observaciones.trim()),
     };
   }, [formData]);
 
@@ -494,11 +490,11 @@ export function CrearReservaContent() {
   };
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-lg border border-neutral-300 bg-white text-neutral-800 placeholder:text-neutral-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue focus:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed";
+    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed";
 
   const selectClass = inputClass;
 
-  const labelClass = "block text-sm font-semibold text-neutral-800 uppercase tracking-wider mb-1.5";
+  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
 
   const renderCatalogoSelect = (
     name: keyof FormData,
@@ -604,27 +600,28 @@ export function CrearReservaContent() {
         autoComplete="off"
       />
       {showClienteSuggestions && clienteInput.trim() && (
-        <div className="absolute z-[9999] w-full mt-1 bg-white border border-neutral-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-[9999] w-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
           {clientesFiltrados.length > 0 ? (
             clientesFiltrados.map((cliente) => (
               <button
                 key={cliente.id}
                 type="button"
                 onMouseDown={() => handleSelectCliente(cliente)}
-                className="w-full px-4 py-2.5 text-left hover:bg-brand-blue/10 text-neutral-800 font-medium transition-colors text-sm border-b border-neutral-100 last:border-b-0"
+                className="w-full px-4 py-2.5 text-left hover:bg-brand-blue/5 text-neutral-800 font-medium transition-colors text-sm border-b border-neutral-50 last:border-b-0"
               >
                 {cliente.nombre}
               </button>
             ))
           ) : (
-            <div className="px-4 py-3 text-sm text-neutral-600">
-              No se encontró "{clienteInput}"
+            <div className="px-4 py-3 text-sm text-neutral-500">
+              No se encontró "<span className="text-neutral-700 font-medium">{clienteInput}</span>"
               <button
                 type="button"
                 onMouseDown={() => setShowAddClienteModal(true)}
-                className="block mt-1 text-brand-blue hover:underline font-medium"
+                className="flex items-center gap-1.5 mt-2 text-brand-blue hover:text-brand-blue/80 font-semibold text-xs transition-colors"
               >
-                + Agregar como nueva empresa
+                <Icon icon="typcn:plus" width={14} height={14} />
+                Agregar como nueva empresa
               </button>
             </div>
           )}
@@ -636,34 +633,37 @@ export function CrearReservaContent() {
   const renderAddClienteModal = () => {
     if (!showAddClienteModal) return null;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-md">
-          <h3 className="text-xl font-bold text-brand-blue mb-2">
-            Agregar nueva empresa
-          </h3>
-          <p className="text-neutral-600 mb-4">
-            ¿Deseas agregar "<span className="font-medium">{clienteInput}</span>" a la lista de empresas?
-          </p>
-          <div className="flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddClienteModal(false);
-                setClienteInput("");
-              }}
-              className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
-              disabled={addingCliente}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleAddCliente}
-              disabled={addingCliente}
-              className="px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
-            >
-              {addingCliente ? "Agregando..." : "Agregar"}
-            </button>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                <Icon icon="typcn:business-card" width={18} height={18} className="text-brand-blue" />
+              </span>
+              <h3 className="font-bold text-neutral-900">Agregar nueva empresa</h3>
+            </div>
+            <p className="text-sm text-neutral-500 mb-4">
+              ¿Agregar <span className="font-semibold text-neutral-800">"{clienteInput}"</span> a la lista de empresas?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setShowAddClienteModal(false); setClienteInput(""); }}
+                className="px-4 py-2 text-sm text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors font-medium"
+                disabled={addingCliente}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAddCliente}
+                disabled={addingCliente}
+                className="px-4 py-2 text-sm bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold disabled:opacity-50 shadow-md shadow-brand-blue/20"
+              >
+                {addingCliente ? "Agregando..." : "Agregar"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -734,29 +734,30 @@ export function CrearReservaContent() {
     }
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-          <div className="p-6 border-b border-neutral-200">
-            <h3 className="text-xl font-semibold text-brand-blue flex items-center gap-2">
-              <Icon icon="typcn:eye" width={24} height={24} />
-              Vista previa de la reserva
-            </h3>
-            <p className="text-neutral-500 text-sm mt-1">
-              Revisa los datos antes de guardar
-            </p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+          <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3 flex-shrink-0">
+            <span className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center">
+              <Icon icon="typcn:eye" width={20} height={20} className="text-brand-blue" />
+            </span>
+            <div>
+              <h3 className="font-bold text-neutral-900 text-base">Vista previa de la reserva</h3>
+              <p className="text-neutral-500 text-xs mt-0.5">Revisa los datos antes de guardar</p>
+            </div>
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+
+          <div className="flex-1 overflow-y-auto p-5 space-y-3">
             {previewData.map((section, idx) => (
-              <div key={idx} className="border border-neutral-200 rounded-lg overflow-hidden">
-                <div className="bg-neutral-50 px-4 py-2.5 font-bold text-brand-blue text-base">
+              <div key={idx} className="border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="bg-neutral-50 px-4 py-2 text-xs font-bold text-brand-blue uppercase tracking-wider border-b border-neutral-100">
                   {section.section}
                 </div>
                 <div className="p-4 grid gap-3 sm:grid-cols-2">
                   {section.items.map((item, itemIdx) => (
                     <div key={itemIdx}>
-                      <span className="text-xs text-neutral-500 uppercase tracking-wider">{item.label}</span>
-                      <p className="text-neutral-800 font-medium">{item.value}</p>
+                      <span className="text-xs text-neutral-400 uppercase tracking-wider">{item.label}</span>
+                      <p className="text-neutral-800 font-medium text-sm mt-0.5">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -764,11 +765,11 @@ export function CrearReservaContent() {
             ))}
           </div>
 
-          <div className="p-6 border-t border-neutral-200 flex gap-3 justify-end">
+          <div className="px-6 py-4 border-t border-neutral-100 flex gap-3 justify-end flex-shrink-0">
             <button
               type="button"
               onClick={() => setShowPreview(false)}
-              className="px-4 py-2.5 text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors font-medium"
+              className="px-4 py-2.5 text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors font-medium text-sm"
             >
               Seguir editando
             </button>
@@ -779,16 +780,16 @@ export function CrearReservaContent() {
                 void handleConfirmSubmit();
               }}
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 transition-colors font-medium disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm disabled:opacity-60 shadow-md shadow-brand-blue/20"
             >
               {submitting ? (
                 <>
-                  <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
+                  <Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />
                   {tr.guardando}
                 </>
               ) : (
                 <>
-                  <Icon icon="typcn:input-checked" width={16} height={16} />
+                  <Icon icon="typcn:input-checked" width={15} height={15} />
                   Confirmar y guardar
                 </>
               )}
@@ -807,40 +808,33 @@ export function CrearReservaContent() {
     const isExpanded = expandedSections.has(key);
     const isComplete = sectionValidation[key];
     return (
-      <div className="rounded-xl border border-neutral-200 bg-white shadow-md overflow-hidden transition-shadow hover:shadow-lg">
+      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection(key)}
-          className="w-full flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-brand-blue/10 to-transparent border-b border-neutral-200 hover:from-brand-blue/15 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-blue/30"
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-50 transition-colors focus:outline-none"
           aria-expanded={isExpanded}
         >
-          <span className="flex items-center gap-3 text-brand-blue font-bold text-base">
-            <span className="w-9 h-9 rounded-lg bg-brand-blue/15 flex items-center justify-center">
-              <Icon icon={sectionIcons[key]} width={20} height={20} className="text-brand-blue" />
+          <span className="flex items-center gap-3">
+            <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isComplete ? "bg-emerald-500" : "bg-brand-blue"}`}>
+              <Icon icon={isComplete ? "typcn:tick" : sectionIcons[key]} width={16} height={16} className="text-white" />
             </span>
-            {title}
-          </span>
-          <span className="flex items-center gap-2">
+            <span className="font-semibold text-neutral-800 text-sm">{title}</span>
             {isComplete && (
-              <span className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
-                <Icon
-                  icon="typcn:tick"
-                  width={16}
-                  height={16}
-                  className="text-white"
-                />
+              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5 border border-emerald-200">
+                Listo
               </span>
             )}
-            <Icon
-              icon={isExpanded ? "typcn:minus" : "typcn:plus"}
-              width={18}
-              height={18}
-              className="text-neutral-600"
-            />
           </span>
+          <Icon
+            icon={isExpanded ? "typcn:minus" : "typcn:plus"}
+            width={16}
+            height={16}
+            className="text-neutral-400 flex-shrink-0"
+          />
         </button>
         {isExpanded && (
-          <div className="p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 bg-neutral-50/50">
+          <div className="px-4 pb-4 pt-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 border-t border-neutral-100">
             {children}
           </div>
         )}
@@ -850,7 +844,7 @@ export function CrearReservaContent() {
 
   if (loadingCatalogos) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-200 p-4" role="main">
+      <main className="flex-1 min-h-0 overflow-auto bg-neutral-50 p-4" role="main">
         <div className="w-full flex items-center justify-center min-h-[300px]">
           <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-white border border-neutral-200 shadow-md text-neutral-600 font-medium">
             <Icon icon="typcn:refresh" width={24} height={24} className="animate-spin text-brand-blue" />
@@ -882,71 +876,99 @@ export function CrearReservaContent() {
   const stepsPanelTitle = (tr as Record<string, string>).stepsPanelTitle ?? "Qué completar en cada paso";
 
   return (
-    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-200" role="main">
+    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-50" role="main">
       <div className="w-full max-w-full px-4 sm:px-6 py-4 sm:py-6">
-        <div className="mb-6 rounded-xl bg-white border border-neutral-200 shadow-md p-5 pl-6 border-l-4 border-l-brand-blue">
-          <h1 className="text-lg sm:text-2xl font-bold text-brand-blue tracking-tight">
-            {tr.title}
-          </h1>
-          <p className="text-sm sm:text-base text-neutral-600 mt-1 font-medium">
-            {tr.subtitle}
-          </p>
+        <div className="mb-5 rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+              <Icon icon="typcn:plus" width={22} height={22} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold text-neutral-900 leading-tight">
+                {tr.title}
+              </h1>
+              <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
+                {tr.subtitle}
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium shadow-sm" role="alert">
+          <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-red-700 text-sm font-medium" role="alert">
+            <Icon icon="typcn:warning" width={18} height={18} className="text-red-500 flex-shrink-0" />
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 shadow-sm" role="status">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-emerald-800">
-                <Icon icon="typcn:tick" width={20} height={20} className="text-emerald-600" />
-                <span className="font-medium">{success}</span>
+          <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200" role="status">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-emerald-800 min-w-0">
+                <Icon icon="typcn:tick" width={18} height={18} className="text-emerald-600 flex-shrink-0" />
+                <span className="font-medium text-sm">{success}</span>
               </div>
               <a
                 href="/reservas/mis-reservas"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-xs font-semibold flex-shrink-0"
               >
-                <Icon icon="typcn:arrow-right" width={16} height={16} />
-                Ir a Mis Reservas
+                Ver reservas
+                <Icon icon="typcn:arrow-right" width={14} height={14} />
               </a>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <aside className="rounded-xl border border-neutral-200 bg-white shadow-md p-5 h-fit lg:sticky lg:top-4" aria-label={stepsPanelTitle}>
-            <h2 className="text-base font-bold text-brand-blue tracking-tight mb-4">
-              {stepsPanelTitle}
-            </h2>
-            <ol className="space-y-4">
-              {SECTION_ORDER.map((key) => {
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
+          <aside className="rounded-2xl border border-neutral-200 bg-white shadow-sm h-fit lg:sticky lg:top-4 overflow-hidden" aria-label={stepsPanelTitle}>
+            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-neutral-800">
+                {stepsPanelTitle}
+              </h2>
+              <span className="text-xs font-semibold text-brand-blue bg-brand-blue/10 rounded-full px-2 py-0.5">
+                {Object.values(sectionValidation).filter(Boolean).length}/{SECTION_ORDER.length}
+              </span>
+            </div>
+            <ol className="p-3 space-y-1.5">
+              {SECTION_ORDER.map((key, idx) => {
                 const isActive = expandedSections.has(key);
+                const isComplete = sectionValidation[key];
                 return (
-                  <li
-                    key={key}
-                    className={`rounded-lg border p-3 transition-colors ${
-                      isActive
-                        ? "border-brand-blue/40 bg-brand-blue/5"
-                        : "border-neutral-200 bg-neutral-50/50"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="w-8 h-8 rounded-lg bg-brand-blue/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Icon icon={sectionIcons[key]} width={16} height={16} className="text-brand-blue" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-neutral-800 text-sm">
-                          {sectionTitles[key]}
-                        </p>
-                        <p className="text-neutral-600 text-sm mt-1">
-                          {sectionDescs[key]}
-                        </p>
+                  <li key={key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(key)}
+                      className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                        isActive
+                          ? "border-brand-blue/30 bg-brand-blue/5"
+                          : "border-transparent hover:bg-neutral-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                          isComplete
+                            ? "bg-emerald-500 text-white"
+                            : isActive
+                            ? "bg-brand-blue text-white"
+                            : "bg-neutral-100 text-neutral-500"
+                        }`}>
+                          {isComplete
+                            ? <Icon icon="typcn:tick" width={14} height={14} />
+                            : <span>{idx + 1}</span>}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`font-semibold text-xs leading-tight ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>
+                            {sectionTitles[key]}
+                          </p>
+                          {sectionDescs[key] && (
+                            <p className="text-neutral-400 text-xs mt-0.5 leading-tight line-clamp-2">
+                              {sectionDescs[key]}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   </li>
                 );
               })}
@@ -1139,7 +1161,7 @@ export function CrearReservaContent() {
             </div>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-6 mt-2 border-t border-neutral-200 bg-white/80 rounded-xl p-4 -mx-1">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 mt-1 border-t border-neutral-200 bg-white rounded-2xl px-4 py-3 shadow-sm">
             <button
               type="button"
               onClick={() => {
@@ -1172,28 +1194,26 @@ export function CrearReservaContent() {
                   inicio_stacking: "",
                   fin_stacking: "",
                   corte_documental: "",
-                  prioridad: "MEDIA",
-                  operacion_critica: false,
                   observaciones: "Datos de prueba generados automáticamente",
                 };
                 setFormData(testData);
                 setClienteInput(clientes[0]?.nombre || "");
               }}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              className="px-4 py-2.5 rounded-xl text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
             >
               Cargar prueba
             </button>
             <button
               type="button"
               onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              className="px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
             >
               {tr.limpiar}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-base font-semibold bg-brand-blue text-white shadow-md hover:bg-brand-blue/90 hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>

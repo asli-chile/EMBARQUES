@@ -194,6 +194,10 @@ export function ReservaAsliContent() {
     }
   };
 
+  const inputClass =
+    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
+  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
+
   const renderInput = (
     label: string,
     field: keyof FormData,
@@ -201,13 +205,13 @@ export function ReservaAsliContent() {
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+      <label className={labelClass}>{label}</label>
       <input
         type={type}
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
         placeholder={placeholder}
-        className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+        className={inputClass}
       />
     </div>
   );
@@ -219,11 +223,11 @@ export function ReservaAsliContent() {
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+      <label className={labelClass}>{label}</label>
       <select
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
-        className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+        className={inputClass}
       >
         <option value="">{placeholder || tr.select}</option>
         {options.map((opt) => (
@@ -237,9 +241,9 @@ export function ReservaAsliContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-6 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-500">
-          <Icon icon="typcn:refresh" className="w-6 h-6 animate-spin" />
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
       </main>
@@ -247,61 +251,92 @@ export function ReservaAsliContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">{tr.title}</h1>
-            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">{tr.subtitle}</p>
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+
+        {/* Header — mismo estilo que Mis Reservas / Papelera */}
+        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-teal flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:truck" width={20} height={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-neutral-900 leading-tight">
+                  {tr.title}
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {tr.subtitle}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void fetchData()}
+              className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
+              title={t.misReservas?.refresh ?? "Actualizar"}
+            >
+              <Icon icon="typcn:refresh" width={18} height={18} />
+            </button>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col lg:flex-row gap-4">
+            {/* Panel selección operación */}
             <div className="w-full lg:w-80 lg:flex-shrink-0">
-              <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-                <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                  <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
+                <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                     <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
+                  </span>
+                  <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
                     {tr.selectOperation}
                   </h2>
                 </div>
-                <div className="p-3">
+                <div className="p-4">
                   <div className="mb-3">
                     <div className="relative">
                       <Icon
                         icon="typcn:zoom"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none"
                       />
                       <input
                         type="text"
                         placeholder={tr.searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                        className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
                       />
                     </div>
                   </div>
 
                   {filteredOperaciones.length === 0 ? (
-                    <p className="text-center text-neutral-500 py-4 text-sm">{tr.noOperations}</p>
+                    <div className="py-8 text-center">
+                      <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2 inline-flex">
+                        <Icon icon="typcn:document" width={20} height={20} className="text-neutral-400" />
+                      </span>
+                      <p className="text-neutral-500 text-sm font-medium">{tr.noOperations}</p>
+                    </div>
                   ) : (
-                    <div className="max-h-[calc(100vh-280px)] overflow-y-auto space-y-1.5">
+                    <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
                       {filteredOperaciones.map((op) => (
                         <button
                           key={op.id}
                           type="button"
                           onClick={() => handleChange("operacion_id", op.id)}
-                          className={`w-full text-left p-3 rounded-lg border transition-all ${
+                          className={`w-full text-left p-3 rounded-xl border transition-all ${
                             formData.operacion_id === op.id
                               ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
                               : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                           }`}
                         >
-                          <p className="font-medium text-neutral-800 text-sm">
+                          <p className="font-semibold text-brand-blue text-sm">
                             {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
                           </p>
-                          <p className="text-xs text-neutral-500 truncate">
+                          <p className="text-xs text-neutral-600 truncate mt-0.5">
                             {op.cliente} • {op.booking}
                           </p>
                           <p className="text-xs text-neutral-400 mt-1">
@@ -319,24 +354,28 @@ export function ReservaAsliContent() {
               {formData.operacion_id ? (
                 <div className="space-y-4">
                   {selectedOperacion && (
-                    <div className="p-4 bg-brand-blue/5 rounded-lg border border-brand-blue/20">
-                      <p className="text-sm font-medium text-brand-blue">{tr.selectedOperation}</p>
-                      <p className="text-neutral-800 font-semibold mt-1">
-                        {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} - {selectedOperacion.cliente}
-                      </p>
-                      <p className="text-sm text-neutral-600">
-                        {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
-                      </p>
+                    <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                      <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue">
+                        <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">{tr.selectedOperation}</p>
+                        <p className="text-neutral-800 font-bold mt-1 text-sm">
+                          {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} — {selectedOperacion.cliente}
+                        </p>
+                        <p className="text-sm text-neutral-600 mt-0.5">
+                          {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
+                        </p>
+                      </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:location-arrow" className="w-4 h-4 text-brand-blue" />
-                          {tr.transportInfo}
-                        </h2>
+                        </span>
+                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.transportInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.transportCompany, "transporte")}
@@ -348,12 +387,13 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:box" className="w-4 h-4 text-brand-blue" />
-                          {tr.containerInfo}
-                        </h2>
+                        </span>
+                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.containerInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.container, "contenedor")}
@@ -363,12 +403,13 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calendar" className="w-4 h-4 text-brand-blue" />
-                          {tr.schedules}
-                        </h2>
+                        </span>
+                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.schedules}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.citation, "citacion", "datetime-local")}
@@ -378,12 +419,13 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:th-large" className="w-4 h-4 text-brand-blue" />
-                          {tr.stacking}
-                        </h2>
+                        </span>
+                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.stacking}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
@@ -394,12 +436,13 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calculator" className="w-4 h-4 text-brand-blue" />
-                          {tr.costs}
-                        </h2>
+                        </span>
+                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.costs}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.section, "tramo")}
@@ -408,12 +451,13 @@ export function ReservaAsliContent() {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                      <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
+                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                         <Icon icon="typcn:notes" className="w-4 h-4 text-brand-blue" />
-                        {tr.observations}
-                      </h2>
+                      </span>
+                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.observations}</h2>
                     </div>
                     <div className="p-4">
                       <textarea
@@ -421,20 +465,20 @@ export function ReservaAsliContent() {
                         onChange={(e) => handleChange("observaciones", e.target.value)}
                         rows={2}
                         placeholder={tr.observationsPlaceholder}
-                        className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue resize-none"
+                        className={`${inputClass} resize-none`}
                       />
                     </div>
                   </div>
 
                   {error && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
                       {error}
                     </div>
                   )}
 
                   {success && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-                      <Icon icon="typcn:tick" className="w-5 h-5" />
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium flex items-center gap-2">
+                      <Icon icon="typcn:tick" className="w-5 h-5 flex-shrink-0" />
                       {tr.saveSuccess}
                     </div>
                   )}
@@ -447,14 +491,14 @@ export function ReservaAsliContent() {
                         setSuccess(false);
                         setError(null);
                       }}
-                      className="px-5 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                      className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
                     >
                       {tr.cancel}
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
                     >
                       {saving ? (
                         <>
@@ -471,10 +515,12 @@ export function ReservaAsliContent() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-64 bg-white rounded-xl border border-neutral-200">
-                  <div className="text-center text-neutral-500">
-                    <Icon icon="typcn:arrow-left" className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">{tr.selectOperation}</p>
+                <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
+                  <div className="text-center py-8 px-4">
+                    <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
+                      <Icon icon="typcn:arrow-left" width={24} height={24} className="text-neutral-400" />
+                    </span>
+                    <p className="text-neutral-500 text-sm font-medium">{tr.selectOperation}</p>
                   </div>
                 </div>
               )}

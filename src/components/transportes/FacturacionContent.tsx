@@ -200,6 +200,10 @@ export function FacturacionContent() {
     }
   };
 
+  const inputClass =
+    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
+  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
+
   const renderInput = (
     label: string,
     field: keyof FormData,
@@ -207,13 +211,13 @@ export function FacturacionContent() {
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-xs font-medium text-neutral-700 mb-0.5">{label}</label>
+      <label className={labelClass}>{label}</label>
       <input
         type={type}
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-1.5 text-sm border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+        className={inputClass}
       />
     </div>
   );
@@ -225,11 +229,11 @@ export function FacturacionContent() {
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-xs font-medium text-neutral-700 mb-0.5">{label}</label>
+      <label className={labelClass}>{label}</label>
       <select
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
-        className="w-full px-3 py-1.5 text-sm border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+        className={inputClass}
       >
         <option value="">{placeholder || tr.select}</option>
         {options.map((opt) => (
@@ -243,9 +247,9 @@ export function FacturacionContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-hidden p-4 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-neutral-500 text-sm">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin" />
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
       </main>
@@ -253,204 +257,245 @@ export function FacturacionContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-hidden flex flex-col p-3">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-brand-blue">{tr.title}</h1>
-          <p className="text-neutral-500 text-xs mt-0.5">{tr.subtitle}</p>
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+
+        {/* Header — mismo estilo que Reserva ASLI / Reserva Externa */}
+        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-teal flex items-center justify-center flex-shrink-0">
+                <Icon icon="typcn:calculator" width={20} height={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-neutral-900 leading-tight">
+                  {tr.title}
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {tr.subtitle}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void fetchData()}
+              className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
+              title={t.misReservas?.refresh ?? "Actualizar"}
+            >
+              <Icon icon="typcn:refresh" width={18} height={18} />
+            </button>
+          </div>
         </div>
-      </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3">
-        <div className="w-full lg:w-72 lg:flex-shrink-0 flex flex-col min-h-0 lg:min-h-0 max-h-64 lg:max-h-none">
-          <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden flex flex-col min-h-0">
-            <div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50 flex-shrink-0">
-              <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
-                <Icon icon="typcn:document" className="w-3.5 h-3.5 text-brand-blue" />
-                {tr.selectOperation}
-              </h2>
-            </div>
-            <div className="p-2 flex flex-col min-h-0">
-              <div className="mb-2 flex-shrink-0">
-                <div className="relative">
-                  <Icon
-                    icon="typcn:zoom"
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5"
-                  />
+        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-4">
+          {/* Panel selección operación */}
+          <div className="w-full lg:w-80 lg:flex-shrink-0">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
+              <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+              <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
+                </span>
+                <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                  {tr.selectOperation}
+                </h2>
+              </div>
+              <div className="p-4">
+                <div className="mb-3">
+                  <div className="relative">
+                    <Icon
+                      icon="typcn:zoom"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder={tr.searchPlaceholder}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-sm text-neutral-600 mb-3 cursor-pointer">
                   <input
-                    type="text"
-                    placeholder={tr.searchPlaceholder}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 pr-2.5 py-1.5 text-xs border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                    type="checkbox"
+                    checked={filterPending}
+                    onChange={(e) => setFilterPending(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-300 accent-brand-blue focus:ring-brand-blue/20"
                   />
-                </div>
-              </div>
+                  {tr.pendingOnly}
+                </label>
 
-              <label className="flex items-center gap-2 text-xs text-neutral-600 mb-2 cursor-pointer flex-shrink-0">
-                <input
-                  type="checkbox"
-                  checked={filterPending}
-                  onChange={(e) => setFilterPending(e.target.checked)}
-                  className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                />
-                {tr.pendingOnly}
-              </label>
-
-              {filteredOperaciones.length === 0 ? (
-                <p className="text-center text-neutral-500 py-3 text-xs">{tr.noOperations}</p>
-              ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
-                      {filteredOperaciones.map((op) => (
-                        <button
-                          key={op.id}
-                          type="button"
-                          onClick={() => handleSelectOperation(op.id)}
-                          className={`w-full text-left p-2 rounded-md border transition-all ${
-                            formData.operacion_id === op.id
-                              ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
-                              : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <p className="font-medium text-neutral-800 text-xs truncate">
-                              {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
-                            </p>
-                            {op.numero_factura_asli ? (
-                              <Icon icon="typcn:tick" className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                            ) : (
-                              <Icon icon="typcn:time" className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-[11px] text-neutral-500 truncate">
-                            {op.cliente} • {op.booking}
+                {filteredOperaciones.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2 inline-flex">
+                      <Icon icon="typcn:document" width={20} height={20} className="text-neutral-400" />
+                    </span>
+                    <p className="text-neutral-500 text-sm font-medium">{tr.noOperations}</p>
+                  </div>
+                ) : (
+                  <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
+                    {filteredOperaciones.map((op) => (
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => handleSelectOperation(op.id)}
+                        className={`w-full text-left p-3 rounded-xl border transition-all ${
+                          formData.operacion_id === op.id
+                            ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
+                            : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="font-semibold text-brand-blue text-sm">
+                            {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
                           </p>
-                          <p className="text-[11px] text-neutral-400 truncate">
-                            {op.naviera} • ETD: {formatDate(op.etd)}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                          {op.numero_factura_asli ? (
+                            <Icon icon="typcn:tick" className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          ) : (
+                            <Icon icon="typcn:time" className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-xs text-neutral-600 truncate mt-0.5">
+                          {op.cliente} • {op.booking}
+                        </p>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {op.naviera} • ETD: {formatDate(op.etd)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
+          </div>
 
-            <div className="flex-1 min-w-0 flex flex-col min-h-0 overflow-y-auto">
-              {formData.operacion_id ? (
-                <div className="space-y-2 flex flex-col min-h-0">
-                  {selectedOperacion && (
-                    <div className="p-2 bg-brand-blue/5 rounded-md border border-brand-blue/20 flex-shrink-0">
-                      <p className="text-xs font-medium text-brand-blue">{tr.selectedOperation}</p>
-                      <p className="text-neutral-800 font-semibold text-sm truncate">
-                        {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} - {selectedOperacion.cliente}
+          <div className="flex-1 min-w-0">
+            {formData.operacion_id ? (
+              <div className="space-y-4">
+                {selectedOperacion && (
+                  <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                    <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue">
+                      <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">{tr.selectedOperation}</p>
+                      <p className="text-neutral-800 font-bold mt-1 text-sm">
+                        {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} — {selectedOperacion.cliente}
                       </p>
-                      <p className="text-xs text-neutral-600 truncate">
+                      <p className="text-sm text-neutral-600 mt-0.5">
                         {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
                       </p>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-shrink-0">
-                    <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-2.5 py-1.5 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
-                          <Icon icon="typcn:document-text" className="w-3.5 h-3.5 text-brand-blue" />
-                          {tr.invoiceInfo}
-                        </h2>
-                      </div>
-                      <div className="p-2 grid grid-cols-2 gap-2">
-                        {renderInput(tr.asliInvoice, "numero_factura_asli")}
-                        {renderInput(tr.invoicedAmount, "monto_facturado", "number")}
-                        {renderInput(tr.transportInvoice, "factura_transporte")}
-                        {renderInput(tr.invoicedConcept, "concepto_facturado")}
-                      </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                        <Icon icon="typcn:document-text" className="w-4 h-4 text-brand-blue" />
+                      </span>
+                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.invoiceInfo}</h2>
                     </div>
-
-                    <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="px-2.5 py-1.5 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
-                          <Icon icon="typcn:chart-bar" className="w-3.5 h-3.5 text-brand-blue" />
-                          {tr.financial}
-                        </h2>
-                      </div>
-                      <div className="p-2 grid grid-cols-2 gap-2">
-                        {renderSelect(tr.currency, "moneda", monedas)}
-                        {renderInput(tr.exchangeRate, "tipo_cambio", "number")}
-                        {renderInput(tr.estimatedMargin, "margen_estimado", "number")}
-                        {renderInput(tr.realMargin, "margen_real", "number")}
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden sm:col-span-2">
-                      <div className="px-2.5 py-1.5 border-b border-neutral-100 bg-neutral-50">
-                        <h2 className="font-semibold text-neutral-800 text-xs flex items-center gap-1.5">
-                          <Icon icon="typcn:calendar" className="w-3.5 h-3.5 text-brand-blue" />
-                          {tr.paymentDates}
-                        </h2>
-                      </div>
-                      <div className="p-2 grid grid-cols-3 gap-2">
-                        {renderInput(tr.invoiceDelivery, "fecha_entrega_factura", "date")}
-                        {renderInput(tr.clientPayment, "fecha_pago_cliente", "date")}
-                        {renderInput(tr.transportPayment, "fecha_pago_transporte", "date")}
-                      </div>
+                    <div className="p-4 grid grid-cols-2 gap-3">
+                      {renderInput(tr.asliInvoice, "numero_factura_asli")}
+                      {renderInput(tr.invoicedAmount, "monto_facturado", "number")}
+                      {renderInput(tr.transportInvoice, "factura_transporte")}
+                      {renderInput(tr.invoicedConcept, "concepto_facturado")}
                     </div>
                   </div>
 
-                  {error && (
-                    <div className="p-2 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs flex-shrink-0">
-                      {error}
+                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                        <Icon icon="typcn:chart-bar" className="w-4 h-4 text-brand-blue" />
+                      </span>
+                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.financial}</h2>
                     </div>
-                  )}
-
-                  {success && (
-                    <div className="p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-xs flex items-center gap-1.5 flex-shrink-0">
-                      <Icon icon="typcn:tick" className="w-4 h-4" />
-                      {tr.saveSuccess}
+                    <div className="p-4 grid grid-cols-2 gap-3">
+                      {renderSelect(tr.currency, "moneda", monedas)}
+                      {renderInput(tr.exchangeRate, "tipo_cambio", "number")}
+                      {renderInput(tr.estimatedMargin, "margen_estimado", "number")}
+                      {renderInput(tr.realMargin, "margen_real", "number")}
                     </div>
-                  )}
+                  </div>
 
-                  <div className="flex gap-2 justify-end flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(initialFormData);
-                        setSuccess(false);
-                        setError(null);
-                      }}
-                      className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white border border-neutral-200 rounded-md hover:bg-neutral-50 transition-colors"
-                    >
-                      {tr.cancel}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-blue rounded-md hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <>
-                          <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
-                          {tr.saving}
-                        </>
-                      ) : (
-                        <>
-                          <Icon icon="typcn:tick" className="w-3.5 h-3.5" />
-                          {tr.save}
-                        </>
-                      )}
-                    </button>
+                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden sm:col-span-2">
+                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                        <Icon icon="typcn:calendar" className="w-4 h-4 text-brand-blue" />
+                      </span>
+                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.paymentDates}</h2>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {renderInput(tr.invoiceDelivery, "fecha_entrega_factura", "date")}
+                      {renderInput(tr.clientPayment, "fecha_pago_cliente", "date")}
+                      {renderInput(tr.transportPayment, "fecha_pago_transporte", "date")}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center flex-1 min-h-[120px] bg-white rounded-lg border border-neutral-200">
-                  <div className="text-center text-neutral-500">
-                    <Icon icon="typcn:arrow-left" className="w-6 h-6 mx-auto mb-1 opacity-50" />
-                    <p className="text-xs">{tr.selectOperation}</p>
+
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                    {error}
                   </div>
+                )}
+
+                {success && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium flex items-center gap-2">
+                    <Icon icon="typcn:tick" className="w-5 h-5 flex-shrink-0" />
+                    {tr.saveSuccess}
+                  </div>
+                )}
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(initialFormData);
+                      setSuccess(false);
+                      setError(null);
+                    }}
+                    className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                  >
+                    {tr.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <>
+                        <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
+                        {tr.saving}
+                      </>
+                    ) : (
+                      <>
+                        <Icon icon="typcn:tick" className="w-4 h-4" />
+                        {tr.save}
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
-            </div>
-          </form>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
+                <div className="text-center py-8 px-4">
+                  <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
+                    <Icon icon="typcn:arrow-left" width={24} height={24} className="text-neutral-400" />
+                  </span>
+                  <p className="text-neutral-500 text-sm font-medium">{tr.selectOperation}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

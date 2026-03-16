@@ -20,6 +20,16 @@ type Operacion = {
   created_at: string;
 };
 
+const estadoConfig: Record<string, { dot: string; bg: string; text: string; border: string }> = {
+  PENDIENTE:     { dot: "bg-amber-400",   bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
+  "EN PROCESO":  { dot: "bg-blue-400",    bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
+  "EN TRÁNSITO": { dot: "bg-violet-400",  bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  ARRIBADO:      { dot: "bg-emerald-400", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  COMPLETADO:    { dot: "bg-neutral-400", bg: "bg-neutral-100", text: "text-neutral-600", border: "border-neutral-200" },
+  CANCELADO:     { dot: "bg-red-400",     bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200" },
+  ROLEADO:       { dot: "bg-orange-400",  bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200" },
+};
+
 export function PapeleraContent() {
   const { t } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
@@ -163,8 +173,8 @@ export function PapeleraContent() {
   if (loading) {
     return (
       <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-500">
-          <Icon icon="typcn:refresh" className="w-6 h-6 animate-spin" />
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
       </main>
@@ -172,149 +182,171 @@ export function PapeleraContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
-      <div className="w-full space-y-3 sm:space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight flex items-center gap-2">
-              <Icon icon="typcn:trash" width={22} height={22} />
-              {t.sidebar.papelera}
-            </h1>
-            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">
-              {operaciones.length} {tr.itemsInTrash}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {selectedIds.size > 0 && (
-              <>
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+
+        {/* Header — mismo estilo que Mis Reservas */}
+        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-neutral-600 flex items-center justify-center flex-shrink-0">
+                <Icon icon="typcn:trash" width={20} height={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-neutral-900 leading-tight">
+                  {t.sidebar.papelera}
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {operaciones.length} {tr.itemsInTrash}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {selectedIds.size > 0 && (
+                <>
+                  <button
+                    onClick={() => handleRestore(Array.from(selectedIds))}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                  >
+                    <Icon icon="typcn:arrow-back" width={15} height={15} />
+                    {tr.restore} ({selectedIds.size})
+                  </button>
+                  <button
+                    onClick={() => handleDeletePermanently(Array.from(selectedIds))}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    <Icon icon="typcn:delete" width={15} height={15} />
+                    {tr.delete} ({selectedIds.size})
+                  </button>
+                </>
+              )}
+              {operaciones.length > 0 && (
                 <button
-                  onClick={() => handleRestore(Array.from(selectedIds))}
+                  onClick={handleEmptyTrash}
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-red-200 text-red-600 bg-white rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
-                  <Icon icon="typcn:arrow-back" width={16} height={16} />
-                  {tr.restore} ({selectedIds.size})
+                  <Icon icon="typcn:trash" width={15} height={15} />
+                  {tr.emptyTrash}
                 </button>
-                <button
-                  onClick={() => handleDeletePermanently(Array.from(selectedIds))}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                >
-                  <Icon icon="typcn:delete" width={16} height={16} />
-                  {tr.delete} ({selectedIds.size})
-                </button>
-              </>
-            )}
-            {operaciones.length > 0 && (
+              )}
               <button
-                onClick={handleEmptyTrash}
-                disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                onClick={() => void fetchOperaciones()}
+                className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
+                title={t.misReservas.refresh}
               >
-                <Icon icon="typcn:trash" width={16} height={16} />
-                {tr.emptyTrash}
+                <Icon icon="typcn:refresh" width={18} height={18} />
               </button>
-            )}
-            <button
-              onClick={fetchOperaciones}
-              className="p-2 border border-neutral-200 rounded-lg hover:bg-neutral-100 transition-colors"
-              title={t.misReservas.refresh}
-            >
-              <Icon icon="typcn:refresh" width={18} height={18} />
-            </button>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+        {/* Tabla — mismo contenedor y estilo que Mis Reservas */}
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
-                <tr>
-                  <th className="px-4 py-3 text-center">
+              <thead>
+                <tr className="border-b border-neutral-100">
+                  <th className="px-4 py-3 w-10">
                     <input
                       type="checkbox"
                       checked={selectedIds.size === operaciones.length && operaciones.length > 0}
                       onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-neutral-300"
+                      className="w-4 h-4 rounded border-neutral-300 accent-brand-blue"
                     />
                   </th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colRef}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colClient}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colSpecies}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colCarrier}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colVessel}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colBooking}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colStatus}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colDeleted}</th>
-                  <th className="px-4 py-3 text-center font-medium text-neutral-600">{tr.colActions}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colRef}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colClient}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colSpecies}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colCarrier}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colVessel}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colBooking}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colStatus}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap min-w-[7.5rem]">{tr.colDeleted}</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">{tr.colActions}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody>
                 {operaciones.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-12 text-center text-neutral-500">
+                    <td colSpan={10} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center gap-2">
-                        <Icon icon="typcn:trash" className="w-12 h-12 text-neutral-300" />
-                        <span>{tr.trashEmpty}</span>
+                        <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                          <Icon icon="typcn:trash" width={24} height={24} className="text-neutral-400" />
+                        </span>
+                        <p className="text-neutral-500 font-medium text-sm">{tr.trashEmpty}</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  operaciones.map((op) => (
-                    <tr
-                      key={op.id}
-                      className={`hover:bg-neutral-50 transition-colors ${
-                        selectedIds.has(op.id) ? "bg-blue-50" : ""
-                      }`}
-                    >
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(op.id)}
-                          onChange={() => handleSelect(op.id)}
-                          className="w-4 h-4 rounded border-neutral-300"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium text-neutral-400">
-                        {op.ref_asli || op.correlativo || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-center text-neutral-500">{op.cliente || "-"}</td>
-                      <td className="px-4 py-3 text-center text-neutral-500">{op.especie || "-"}</td>
-                      <td className="px-4 py-3 text-center text-neutral-500">{op.naviera || "-"}</td>
-                      <td className="px-4 py-3 text-center text-neutral-500">{op.nave || "-"}</td>
-                      <td className="px-4 py-3 text-center text-neutral-500">{op.booking || "-"}</td>
-                      <td className="px-4 py-3 text-center">
-                        {op.estado_operacion && (
-                          <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-neutral-100 text-neutral-500">
-                            {op.estado_operacion}
+                  operaciones.map((op, idx) => {
+                    const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+                    return (
+                      <tr
+                        key={op.id}
+                        className={`border-b border-neutral-50 transition-colors ${
+                          selectedIds.has(op.id)
+                            ? "bg-brand-blue/5"
+                            : idx % 2 === 0
+                            ? "bg-white hover:bg-neutral-50/80"
+                            : "bg-neutral-50/40 hover:bg-neutral-50/80"
+                        }`}
+                      >
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(op.id)}
+                            onChange={() => handleSelect(op.id)}
+                            className="w-4 h-4 rounded border-neutral-300 accent-brand-blue"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-bold text-brand-blue text-xs">
+                            {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}
                           </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center text-neutral-400 text-xs">
-                        {formatDate(op.deleted_at)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleRestore([op.id])}
-                            disabled={actionLoading}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
-                            title={tr.restore}
-                          >
-                            <Icon icon="typcn:arrow-back" width={18} height={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePermanently([op.id])}
-                            disabled={actionLoading}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title={tr.delete}
-                          >
-                            <Icon icon="typcn:delete" width={18} height={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-700 font-medium">{op.cliente || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.especie || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.naviera || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.nave || "-"}</td>
+                        <td className="px-4 py-3 text-center text-xs font-mono text-neutral-600">{op.booking || "-"}</td>
+                        <td className="px-4 py-3 text-center">
+                          {cfg ? (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
+                              {op.estado_operacion}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs text-neutral-600 font-medium min-w-[7.5rem]">{formatDate(op.deleted_at)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleRestore([op.id])}
+                              disabled={actionLoading}
+                              className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
+                              title={tr.restore}
+                            >
+                              <Icon icon="typcn:arrow-back" width={16} height={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePermanently([op.id])}
+                              disabled={actionLoading}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              title={tr.delete}
+                            >
+                              <Icon icon="typcn:delete" width={16} height={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

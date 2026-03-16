@@ -267,9 +267,9 @@ export function MisDocumentosContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-6 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-500">
-          <Icon icon="typcn:refresh" className="w-6 h-6 animate-spin" />
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
       </main>
@@ -277,60 +277,91 @@ export function MisDocumentosContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4">
-      <div className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">{tr.title}</h1>
-            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">{tr.subtitle}</p>
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+
+        {/* Header — mismo estilo que Mis Reservas / Facturación */}
+        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+                <Icon icon="typcn:folder" width={20} height={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-neutral-900 leading-tight">
+                  {tr.title}
+                </h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {tr.subtitle}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void fetchOperaciones()}
+              className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
+              title={t.misReservas?.refresh ?? "Actualizar"}
+            >
+              <Icon icon="typcn:refresh" width={18} height={18} />
+            </button>
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4">
+          {/* Panel selección operación */}
           <div className="w-full lg:w-80 lg:flex-shrink-0">
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-              <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-2">
-                  <Icon icon="typcn:folder" className="w-4 h-4 text-brand-blue" />
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
+              <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+              <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
+                </span>
+                <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
                   {tr.selectOperation}
                 </h2>
               </div>
-              <div className="p-3">
+              <div className="p-4">
                 <div className="mb-3">
                   <div className="relative">
                     <Icon
                       icon="typcn:zoom"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none"
                     />
                     <input
                       type="text"
                       placeholder={tr.searchPlaceholder}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                      className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
                     />
                   </div>
                 </div>
 
                 {filteredOperaciones.length === 0 ? (
-                  <p className="text-center text-neutral-500 py-4 text-sm">{tr.noOperations}</p>
+                  <div className="py-8 text-center">
+                    <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2 inline-flex">
+                      <Icon icon="typcn:document" width={20} height={20} className="text-neutral-400" />
+                    </span>
+                    <p className="text-neutral-500 text-sm font-medium">{tr.noOperations}</p>
+                  </div>
                 ) : (
-                  <div className="max-h-[calc(100vh-280px)] overflow-y-auto space-y-1.5">
+                  <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
                     {filteredOperaciones.map((op) => (
                       <button
                         key={op.id}
                         type="button"
                         onClick={() => setSelectedOperacion(op.id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        className={`w-full text-left p-3 rounded-xl border transition-all ${
                           selectedOperacion === op.id
                             ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
                             : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                         }`}
                       >
-                        <p className="font-medium text-neutral-800 text-sm">
+                        <p className="font-semibold text-brand-blue text-sm">
                           {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
                         </p>
-                        <p className="text-xs text-neutral-500 truncate">
+                        <p className="text-xs text-neutral-600 truncate mt-0.5">
                           {op.cliente} • {op.booking}
                         </p>
                         <p className="text-xs text-neutral-400 mt-1">
@@ -348,24 +379,27 @@ export function MisDocumentosContent() {
             {selectedOperacion ? (
               <div className="space-y-4">
                 {operacionActual && (
-                  <div className="p-4 bg-brand-blue/5 rounded-lg border border-brand-blue/20">
-                    <p className="text-sm font-medium text-brand-blue">{tr.documentsFor}</p>
-                    <p className="text-neutral-800 font-semibold mt-1">
-                      {operacionActual.ref_asli || `A${String(operacionActual.correlativo).padStart(5, "0")}`} - {operacionActual.cliente}
-                    </p>
-                    <p className="text-sm text-neutral-600">
-                      {operacionActual.naviera} • {operacionActual.booking} • {operacionActual.pod}
-                    </p>
+                  <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                    <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue">
+                      <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">{tr.documentsFor}</p>
+                      <p className="text-neutral-800 font-bold mt-1 text-sm">
+                        {operacionActual.ref_asli || `A${String(operacionActual.correlativo).padStart(5, "0")}`} — {operacionActual.cliente}
+                      </p>
+                      <p className="text-sm text-neutral-600 mt-0.5">
+                        {operacionActual.naviera} • {operacionActual.booking} • {operacionActual.pod}
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
                     {error}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {TIPOS_DOCUMENTO.map((tipo) => {
                     const doc = documentosPorTipo.get(tipo);
                     const isUploading = uploading === tipo;
@@ -373,30 +407,33 @@ export function MisDocumentosContent() {
                     return (
                       <div
                         key={tipo}
-                        className={`bg-white rounded-xl border shadow-sm overflow-hidden ${
-                          doc ? "border-green-200" : "border-neutral-200"
+                        className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${
+                          doc ? "border-emerald-200" : "border-neutral-200"
                         }`}
                       >
-                        <div className={`px-4 py-3 border-b ${doc ? "bg-green-50 border-green-100" : "bg-neutral-50 border-neutral-100"}`}>
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-neutral-800 text-sm flex items-center gap-2">
-                              {doc ? (
-                                <Icon icon="typcn:tick" className="w-4 h-4 text-green-500" />
-                              ) : (
-                                <Icon icon="typcn:document" className="w-4 h-4 text-neutral-400" />
-                              )}
-                              {getTipoLabel(tipo)}
-                            </h3>
-                          </div>
+                        <div className={`h-[2px] ${doc ? "bg-emerald-400/60" : "bg-gradient-to-r from-brand-blue/60 to-brand-teal/60"}`} />
+                        <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                          <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : "bg-neutral-100"}`}>
+                            {doc ? (
+                              <Icon icon="typcn:tick" className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <Icon icon="typcn:document" className="w-4 h-4 text-neutral-400" />
+                            )}
+                          </span>
+                          <h3 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                            {getTipoLabel(tipo)}
+                          </h3>
                         </div>
                         <div className="p-4">
                           {doc ? (
                             <div className="space-y-3">
                               <div className="flex items-start gap-3">
-                                <Icon
-                                  icon={getFileIcon(doc.mime_type)}
-                                  className="w-8 h-8 text-brand-blue flex-shrink-0"
-                                />
+                                <span className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                                  <Icon
+                                    icon={getFileIcon(doc.mime_type)}
+                                    className="w-5 h-5 text-brand-blue"
+                                  />
+                                </span>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-neutral-800 truncate">
                                     {doc.nombre_archivo}
@@ -406,11 +443,11 @@ export function MisDocumentosContent() {
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex gap-2">
+                              <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
                                   onClick={() => handlePreview(doc)}
-                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 transition-colors"
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-brand-blue bg-brand-blue/10 rounded-xl hover:bg-brand-blue/20 transition-colors"
                                 >
                                   <Icon icon="typcn:eye" className="w-4 h-4" />
                                   {tr.preview}
@@ -418,18 +455,18 @@ export function MisDocumentosContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleDownload(doc)}
-                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200"
                                 >
                                   <Icon icon="typcn:download" className="w-4 h-4" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDelete(doc)}
-                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-700 bg-red-50 rounded-xl hover:bg-red-100 transition-colors border border-red-200"
                                 >
                                   <Icon icon="typcn:trash" className="w-4 h-4" />
                                 </button>
-                                <label className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer">
+                                <label className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200">
                                   <Icon icon="typcn:refresh" className="w-4 h-4" />
                                   {tr.replace}
                                   <input
@@ -447,7 +484,7 @@ export function MisDocumentosContent() {
                             </div>
                           ) : (
                             <label
-                              className={`block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                              className={`block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
                                 isUploading
                                   ? "border-brand-blue bg-brand-blue/5"
                                   : "border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5"
@@ -456,12 +493,14 @@ export function MisDocumentosContent() {
                               {isUploading ? (
                                 <div className="flex flex-col items-center gap-2">
                                   <Icon icon="typcn:refresh" className="w-8 h-8 text-brand-blue animate-spin" />
-                                  <span className="text-sm text-brand-blue">{tr.uploading}</span>
+                                  <span className="text-sm font-medium text-brand-blue">{tr.uploading}</span>
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-center gap-2">
-                                  <Icon icon="typcn:upload" className="w-8 h-8 text-neutral-400" />
-                                  <span className="text-sm text-neutral-600">{tr.uploadFile}</span>
+                                  <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto">
+                                    <Icon icon="typcn:upload" className="w-5 h-5 text-neutral-400" />
+                                  </span>
+                                  <span className="text-sm font-medium text-neutral-600">{tr.uploadFile}</span>
                                   <span className="text-xs text-neutral-400">PDF, Excel (máx 10MB)</span>
                                 </div>
                               )}
@@ -485,10 +524,12 @@ export function MisDocumentosContent() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64 bg-white rounded-xl border border-neutral-200">
-                <div className="text-center text-neutral-500">
-                  <Icon icon="typcn:arrow-left" className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{tr.selectOperation}</p>
+              <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
+                <div className="text-center py-8 px-4">
+                  <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
+                    <Icon icon="typcn:arrow-left" width={24} height={24} className="text-neutral-400" />
+                  </span>
+                  <p className="text-neutral-500 text-sm font-medium">{tr.selectOperation}</p>
                 </div>
               </div>
             )}
@@ -497,23 +538,26 @@ export function MisDocumentosContent() {
       </div>
 
       {previewDoc && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={closePreview}
         >
-          <div 
+          <div
             className="bg-white rounded-2xl shadow-2xl w-[90vw] h-[90vh] max-w-6xl flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-neutral-50">
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
               <div className="flex items-center gap-3">
-                <Icon 
-                  icon={isPdf(previewDoc.mime_type) ? "typcn:document" : "typcn:chart-bar"} 
-                  className="w-6 h-6 text-brand-blue" 
-                />
+                <span className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                  <Icon
+                    icon={isPdf(previewDoc.mime_type) ? "typcn:document" : "typcn:chart-bar"}
+                    className="w-5 h-5 text-brand-blue"
+                  />
+                </span>
                 <div>
-                  <h3 className="font-semibold text-neutral-800">{previewDoc.nombre_archivo}</h3>
-                  <p className="text-xs text-neutral-500">
+                  <h3 className="font-semibold text-neutral-800 text-sm">{previewDoc.nombre_archivo}</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
                     {formatFileSize(previewDoc.tamano)} • {formatDate(previewDoc.created_at)}
                   </p>
                 </div>
@@ -522,7 +566,7 @@ export function MisDocumentosContent() {
                 <button
                   type="button"
                   onClick={() => handleDownload(previewDoc)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20"
                 >
                   <Icon icon="typcn:download" className="w-4 h-4" />
                   {tr.download}
@@ -530,7 +574,7 @@ export function MisDocumentosContent() {
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+                  className="p-2.5 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors"
                 >
                   <Icon icon="typcn:times" className="w-5 h-5" />
                 </button>
@@ -545,13 +589,15 @@ export function MisDocumentosContent() {
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <Icon icon="typcn:chart-bar" className="w-24 h-24 text-neutral-300" />
+                  <span className="w-16 h-16 rounded-2xl bg-neutral-200 flex items-center justify-center">
+                    <Icon icon="typcn:chart-bar" className="w-8 h-8 text-neutral-400" />
+                  </span>
                   <p className="text-neutral-600 text-lg font-medium">{tr.excelPreviewNotAvailable}</p>
                   <p className="text-neutral-500 text-sm">{tr.downloadToView}</p>
                   <button
                     type="button"
                     onClick={() => handleDownload(previewDoc)}
-                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20"
                   >
                     <Icon icon="typcn:download" className="w-5 h-5" />
                     {tr.downloadFile}

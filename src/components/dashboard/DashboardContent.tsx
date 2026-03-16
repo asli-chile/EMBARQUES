@@ -421,133 +421,133 @@ export function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-slate-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.totalOperations}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-neutral-800 mt-0.5 sm:mt-1">{totalOperaciones}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:chart-bar" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-blue" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-amber-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.pending}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-amber-600 mt-0.5 sm:mt-1">{pendientes}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:time" className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-blue-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.inProcess}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-0.5 sm:mt-1">{enProceso}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:cog" className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-purple-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.inTransit}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-purple-600 mt-0.5 sm:mt-1">{enTransito}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:plane" className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-emerald-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.arrived}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-emerald-600 mt-0.5 sm:mt-1">{arribados}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:location" className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-green-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.completed}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-0.5 sm:mt-1">{completadas}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:tick" className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-red-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.cancelled}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-red-600 mt-0.5 sm:mt-1">{cancelados}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:times" className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-orange-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.rolled}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-orange-600 mt-0.5 sm:mt-1">{roleados}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:arrow-repeat" className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-teal-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.thisWeek}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-brand-teal mt-0.5 sm:mt-1">{thisWeekCount}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-teal/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-teal/10 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:calendar" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-teal" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-blue-500 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.thisMonth}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-brand-blue mt-0.5 sm:mt-1">{thisMonthCount}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="lucide:calendar-days" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-blue" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-neutral-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.activeClients}</p>
                 <p className="text-2xl sm:text-3xl font-bold text-neutral-700 mt-0.5 sm:mt-1">{activeClientsCount}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Icon icon="lucide:users" className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-600" />
               </div>
             </div>
@@ -556,8 +556,9 @@ export function DashboardContent() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal min-h-0 flex flex-col">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between flex-shrink-0 rounded-t-xl">
               <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
+                <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
                 <Icon icon="typcn:calendar" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
                 {tr.upcomingDepartures}
               </h2>
@@ -606,8 +607,9 @@ export function DashboardContent() {
           </div>
 
           <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal min-h-0 flex flex-col">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between flex-shrink-0 rounded-t-xl">
               <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
+                <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
                 <Icon icon="typcn:th-list" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
                 {tr.recentOperations}
               </h2>
@@ -653,8 +655,9 @@ export function DashboardContent() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4">
           <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100">
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 rounded-t-xl">
               <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
+                <span className="w-1 h-4 bg-brand-teal rounded-full flex-shrink-0" />
                 <Icon icon="typcn:chart-pie" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
                 {tr.byStatus}
               </h2>
@@ -684,8 +687,9 @@ export function DashboardContent() {
           </div>
 
           <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100">
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 rounded-t-xl">
               <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
+                <span className="w-1 h-4 bg-brand-olive rounded-full flex-shrink-0" />
                 <Icon icon="typcn:anchor" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
                 {tr.topCarriers}
               </h2>

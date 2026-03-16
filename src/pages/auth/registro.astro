@@ -1,11 +1,3 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
-import { AuthFormWrapper } from "@/components/auth/AuthFormWrapper";
-import { RegistroForm } from "@/components/auth/RegistroForm";
+return Astro.redirect("/inicio", 301);
 ---
-
-<BaseLayout title="Solicitar acceso - EMBARQUES" description="Solicita tu acceso a la plataforma EMBARQUES">
-  <AuthFormWrapper client:load>
-    <RegistroForm client:load />
-  </AuthFormWrapper>
-</BaseLayout>

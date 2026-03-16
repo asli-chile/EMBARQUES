@@ -292,7 +292,7 @@ export function Sidebar({ pathname }: SidebarProps) {
           }`}
         >
           <aside
-            className="w-40 min-w-40 pt-16 pb-3 px-2 flex-1 min-h-0 overflow-y-auto"
+            className="w-40 min-w-40 pt-4 pb-3 px-2 flex-1 min-h-0 overflow-y-auto"
             role="navigation"
             aria-label="Menú de módulos"
           >

@@ -1,13 +1,3 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
-import { AuthFormWrapper } from "@/components/auth/AuthFormWrapper";
-import { LoginForm } from "@/components/auth/LoginForm";
-
-const registered = Astro.url.searchParams.get("registered") === "true";
+return Astro.redirect("/inicio", 301);
 ---
-
-<BaseLayout title="Iniciar sesión - EMBARQUES" description="Iniciar sesión en EMBARQUES">
-  <AuthFormWrapper client:load>
-    <LoginForm client:load registered={registered} />
-  </AuthFormWrapper>
-</BaseLayout>
