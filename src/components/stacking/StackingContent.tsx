@@ -155,6 +155,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
   const [filterPol, setFilterPol] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
 
   const hasPropData = data != null;
 
@@ -291,58 +292,53 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
         {!hasPropData && (
           <>
-            {/* Cabecera moderna: título + filtros */}
-            <header className="flex-shrink-0 px-3 py-3 sm:px-6 sm:py-4 bg-white/90 backdrop-blur-sm border-b border-neutral-200/80 shadow-sm">
-              <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-brand-blue/10 text-brand-blue">
-                    <Icon icon="lucide:ship" width={20} height={20} className="sm:w-[22px] sm:h-[22px]" aria-hidden />
+            {/* Cabecera compacta */}
+            <header className="flex-shrink-0 bg-white border-b border-neutral-200 overflow-hidden">
+              <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+              <div className="px-4 py-2 flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="w-8 h-8 shrink-0 rounded-xl bg-brand-blue flex items-center justify-center shadow-sm shadow-brand-blue/20">
+                    <Icon icon="lucide:ship" width={16} height={16} className="text-white" aria-hidden />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-base sm:text-lg font-semibold text-brand-blue tracking-tight truncate">
+                    <h1 className="text-sm font-bold text-neutral-900 leading-tight truncate">
                       {tr.title}
+                      {stackingItinerarios.length > 0 && (
+                        <span className="ml-2 text-xs font-bold text-brand-blue">{sortedFiltered.length}/{stackingItinerarios.length}</span>
+                      )}
                     </h1>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {(tr as { subtitle?: string }).subtitle ?? "Solo itinerarios con ETD pendiente"}
-                    </p>
                   </div>
                 </div>
                 {stackingItinerarios.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                    <label className="flex items-center gap-2 text-sm flex-1 sm:flex-initial min-w-0 sm:min-w-[160px]">
-                      <Icon icon="lucide:building-2" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
-                      <span className="sr-only">{tr.filterNaviera}</span>
-                      <select
-                        value={filterNaviera}
-                        onChange={(e) => setFilterNaviera(e.target.value)}
-                        className="w-full sm:min-w-[140px] rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                        aria-label={tr.filterNaviera}
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <select
+                      value={filterNaviera}
+                      onChange={(e) => setFilterNaviera(e.target.value)}
+                      className="flex-1 sm:flex-initial sm:min-w-[130px] rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                      aria-label={tr.filterNaviera}
+                    >
+                      <option value="">{tr.filterAll}</option>
+                      {navieraOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    <select
+                      value={filterPol}
+                      onChange={(e) => setFilterPol(e.target.value)}
+                      className="flex-1 sm:flex-initial sm:min-w-[100px] rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                      aria-label={tr.filterPol}
+                    >
+                      <option value="">{tr.filterAllPol}</option>
+                      {polOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    {(filterNaviera || filterPol) && (
+                      <button
+                        type="button"
+                        onClick={() => { setFilterNaviera(""); setFilterPol(""); }}
+                        className="shrink-0 p-1.5 rounded-xl text-neutral-400 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 transition-colors"
+                        aria-label="Limpiar filtros"
                       >
-                        <option value="">{tr.filterAll}</option>
-                        {navieraOptions.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm flex-1 sm:flex-initial min-w-0 sm:min-w-[130px]">
-                      <Icon icon="lucide:anchor" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
-                      <span className="sr-only">{tr.filterPol}</span>
-                      <select
-                        value={filterPol}
-                        onChange={(e) => setFilterPol(e.target.value)}
-                        className="w-full sm:min-w-[110px] rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                        aria-label={tr.filterPol}
-                      >
-                        <option value="">{tr.filterAllPol}</option>
-                        {polOptions.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        <Icon icon="lucide:x" width={14} height={14} aria-hidden />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -412,62 +408,56 @@ export function StackingContent({ data = null }: StackingContentProps) {
                 ? ((tr as { itineraryCount?: string }).itineraryCount ?? "{{count}} itinerario").replace("{{count}}", "1")
                 : ((tr as { itineraryCount_other?: string }).itineraryCount_other ?? "{{count}} itinerarios").replace("{{count}}", String(sortedFiltered.length));
               return (
-              <section className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] gap-3 p-3 sm:gap-4 sm:p-4 lg:gap-5 lg:p-5">
-                {/* Col 1: Lista de itinerarios */}
-                <div className="flex flex-col min-h-0 rounded-xl sm:rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden">
-                  <div className="flex-shrink-0 px-3 py-3 sm:px-4 sm:py-4 border-b border-neutral-100 bg-neutral-50/50">
-                    <h2 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
-                      <Icon icon="lucide:list" width={18} height={18} className="text-brand-blue shrink-0" aria-hidden />
-                      {(tr as { listTitle?: string }).listTitle ?? t.itinerarioPage?.title ?? "Itinerarios con stacking"}
-                    </h2>
-                    <p className="text-xs text-neutral-500 mt-1.5">
-                      {countLabel}
-                    </p>
+              <section className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
+                {/* ── Col 1: Lista de itinerarios ── */}
+                <div className={`min-h-0 flex-col rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden lg:w-[32%] lg:flex-shrink-0 ${mobileView === "detail" ? "hidden lg:flex" : "flex"}`}>
+                  <div className="flex-shrink-0 px-3 py-2 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/60">
+                    <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
+                      {(tr as { listTitle?: string }).listTitle ?? "Itinerarios"}
+                    </span>
+                    <span className="text-[11px] font-bold text-brand-blue bg-brand-blue/8 px-2.5 py-0.5 rounded-full tabular-nums">{countLabel}</span>
                   </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-2 scroll-smooth">
+                  <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-100 scroll-smooth">
                     {sortedFiltered.map((it) => {
                       const isActive = selected?.id === it.id;
                       const firstEta = getFirstEta(it.escalas);
+                      const daysLeft = daysUntil(it.etd, 0);
+                      const urgency = daysLeft === null ? null : daysLeft <= 3 ? "red" : daysLeft <= 7 ? "amber" : "emerald";
                       return (
                         <button
                           key={it.id}
                           type="button"
-                          onClick={() => setSelectedId(it.id)}
-                          className={`w-full text-left px-2.5 py-2.5 sm:px-3 sm:py-3 rounded-lg sm:rounded-xl text-sm transition-all duration-200 ease-out ${isActive ? "bg-brand-blue/10 text-brand-blue font-medium shadow-sm ring-1 ring-brand-blue/20" : "hover:bg-neutral-50 text-neutral-700 hover:shadow-sm"}`}
+                          onClick={() => { setSelectedId(it.id); setMobileView("detail"); }}
+                          className={`w-full text-left transition-colors duration-150 ${
+                            isActive ? "bg-brand-blue/[0.05]" : "hover:bg-neutral-50/80"
+                          }`}
                         >
-                          <div className="flex items-start gap-2">
-                            <span className="flex shrink-0 mt-0.5 text-neutral-400">
-                              <Icon icon="lucide:ship" width={14} height={14} aria-hidden />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="truncate font-medium">
-                                  {it.nave || "—"} · {it.viaje || "—"}
+                          <div className={`flex border-l-[3px] ${isActive ? "border-brand-blue" : "border-transparent"}`}>
+                            <div className="flex-1 min-w-0 px-3 py-2.5">
+                              {/* Row 1: naviera label + urgency pill */}
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className={`text-[10px] font-bold uppercase tracking-widest truncate ${isActive ? "text-brand-blue" : "text-neutral-400"}`}>
+                                  {(it.operador || it.naviera || it.servicio || "").trim() || "—"}
                                 </span>
-                                {isTodayEtd(it.etd) && (
-                                  <span className="inline-flex shrink-0 items-center rounded-full bg-brand-olive/10 text-brand-olive px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                                    {(tr as { todayTag?: string }).todayTag ?? "HOY"}
+                                {daysLeft !== null && (
+                                  <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums ${
+                                    urgency === "red" ? "bg-red-50 text-red-600 border border-red-200" :
+                                    urgency === "amber" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                    "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  }`}>
+                                    {isTodayEtd(it.etd) ? "HOY" : `${daysLeft}d`}
                                   </span>
                                 )}
                               </div>
-                              <p className="mt-0.5 text-xs text-neutral-500 truncate">
-                                {(it.operador || it.naviera || it.servicio || "").trim() || "—"}
+                              {/* Row 2: nave · viaje */}
+                              <p className={`text-xs font-bold truncate leading-snug ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                                {it.nave || "—"} <span className="font-normal text-neutral-400">·</span> {it.viaje || "—"}
                               </p>
-                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-neutral-600">
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="font-medium text-neutral-500">{(tr as { polLabel?: string }).polLabel ?? "POL"}</span>
-                                  <span className="font-mono tabular-nums truncate max-w-[72px]" title={it.pol || ""}>
-                                    {it.pol || "—"}
-                                  </span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="font-medium text-neutral-500">ETD</span>
-                                  <span className="font-mono tabular-nums">{formatEtdDisplay(it.etd)}</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="font-medium text-neutral-500">ETA</span>
-                                  <span className="font-mono tabular-nums">{formatEtdDisplay(firstEta)}</span>
-                                </span>
+                              {/* Row 3: POL + ETD + ETA */}
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-neutral-400">
+                                <span>POL <span className="font-mono font-semibold text-neutral-600">{it.pol || "—"}</span></span>
+                                <span>ETD <span className="font-mono font-semibold text-neutral-600">{formatEtdDisplay(it.etd)}</span></span>
+                                {firstEta && <span>ETA <span className="font-mono font-semibold text-neutral-600">{formatEtdDisplay(firstEta)}</span></span>}
                               </div>
                             </div>
                           </div>
@@ -477,151 +467,160 @@ export function StackingContent({ data = null }: StackingContentProps) {
                   </div>
                 </div>
 
-                {/* Col 2: Datos del itinerario + imagen */}
-                <div className="flex flex-col min-h-0 rounded-xl sm:rounded-2xl border border-neutral-200/90 bg-white shadow-sm overflow-hidden mt-3 sm:mt-4 lg:mt-0">
-                  {selected ? (
+                {/* ── Col 2: Detalle del itinerario ── */}
+                <div className={`flex-1 min-h-0 flex-col rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden ${mobileView === "list" ? "hidden lg:flex" : "flex"}`}>
+                  {selected ? (() => {
+                    const daysToZarpe = daysUntil(selected.etd, 0);
+                    const daysToClose = daysUntil(selected.etd, STACKING_CLOSE_OFFSET_DAYS);
+                    const zarpeUrgency = daysToZarpe === null ? null : daysToZarpe <= 3 ? "red" : daysToZarpe <= 7 ? "amber" : "emerald";
+                    const closeUrgency = daysToClose === null ? null : daysToClose <= 2 ? "red" : daysToClose <= 5 ? "amber" : "emerald";
+                    const urgencyCardClass = (u: string | null) =>
+                      u === "red" ? "border-red-200 bg-red-50/60" :
+                      u === "amber" ? "border-amber-200 bg-amber-50/60" :
+                      "border-neutral-200 bg-neutral-50/60";
+                    const urgencyNumClass = (u: string | null) =>
+                      u === "red" ? "text-red-600" :
+                      u === "amber" ? "text-amber-600" :
+                      "text-emerald-600";
+                    return (
                     <>
-                      <div className="flex-shrink-0 flex flex-wrap items-start gap-2 sm:gap-3 px-3 py-3 sm:px-4 sm:py-4 border-b border-neutral-100 bg-neutral-50/30">
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
-                          <Icon icon="lucide:ship" width={16} height={16} className="text-brand-blue shrink-0" aria-hidden />
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">{tr.nave}</span>
-                            <span className="text-sm font-medium text-neutral-800 truncate block">{selected.nave || "—"}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
-                          <Icon icon="lucide:route" width={16} height={16} className="text-brand-teal shrink-0" aria-hidden />
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">{tr.viaje}</span>
-                            <span className="text-sm font-medium text-neutral-800 truncate block">{selected.viaje || "—"}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
-                          <Icon icon="lucide:anchor" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">{(tr as { polLabel?: string }).polLabel ?? "POL"}</span>
-                            <span className="text-sm font-medium text-neutral-800">{selected.pol || "—"}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0">
-                          <Icon icon="lucide:calendar" width={16} height={16} className="text-neutral-500 shrink-0" aria-hidden />
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide block">ETD</span>
-                            <span className="inline-flex items-center gap-1 text-sm font-medium text-neutral-800 tabular-nums font-mono">
-                              {formatEtdDisplay(selected.etd)}
-                              {isTodayEtd(selected.etd) && (
-                                <span className="inline-flex items-center rounded-full bg-brand-olive/10 text-brand-olive px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                                  HOY
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                        <div
-                          className="flex flex-col gap-1.5 rounded-lg bg-white border border-neutral-200 px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm min-w-0"
-                          title={(tr as { stackingIndicatorsHelp?: string }).stackingIndicatorsHelp}
-                        >
-                          <div className="flex flex-col gap-1 text-[11px]">
-                            <span className="inline-flex items-center gap-1.5 font-medium text-neutral-700">
-                              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-olive shrink-0" aria-hidden />
-                              {(tr as { stackingDaysLabel?: string }).stackingDaysLabel ?? "Días para cierre de stacking"}:{" "}
-                              <span className="font-mono text-neutral-800 tabular-nums">
-                                {daysUntilLabel(selected.etd, STACKING_CLOSE_OFFSET_DAYS)}
-                              </span>
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 font-medium text-neutral-700">
-                              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-brand-blue shrink-0" aria-hidden />
-                              {(tr as { zarpeDaysLabel?: string }).zarpeDaysLabel ?? "Días para zarpe"}:{" "}
-                              <span className="font-mono text-neutral-800 tabular-nums">
-                                {daysUntilLabel(selected.etd, 0)}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                        {isSuperadmin && (
-                          <a
-                            href={`/itinerario?stackingItId=${encodeURIComponent(selected.id)}`}
-                            className="ml-auto shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-brand-blue text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold shadow-sm hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                      {/* Header: gradient bar + nave/viaje + meta */}
+                      <div className="flex-shrink-0">
+                        <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                        <div className="px-3 py-2 flex items-center gap-2 border-b border-neutral-100 flex-wrap">
+                          {/* Back button — mobile only */}
+                          <button
+                            type="button"
+                            onClick={() => setMobileView("list")}
+                            className="lg:hidden shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-brand-blue hover:text-brand-blue/80 transition-colors"
                           >
-                            <Icon icon="lucide:pencil" width={14} height={14} aria-hidden />
-                            {(tr as { editStacking?: string }).editStacking ?? "Editar stacking"}
-                          </a>
-                        )}
+                            <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
+                            Lista
+                          </button>
+                          <span className="w-7 h-7 rounded-lg bg-brand-blue flex items-center justify-center shrink-0 shadow-sm shadow-brand-blue/20">
+                            <Icon icon="lucide:ship" width={14} height={14} className="text-white" aria-hidden />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-neutral-900 truncate leading-tight">
+                              {selected.nave || "—"} <span className="font-normal text-neutral-400">·</span> {selected.viaje || "—"}
+                            </p>
+                            <p className="text-[11px] text-neutral-500 truncate leading-tight">
+                              {(selected.operador || selected.naviera || selected.servicio || "").trim() || "—"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div>
+                              <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">POL</p>
+                              <p className="text-[11px] font-semibold text-neutral-800">{selected.pol || "—"}</p>
+                            </div>
+                            <div className="w-px h-5 bg-neutral-100" />
+                            <div>
+                              <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">ETD</p>
+                              <p className="text-[11px] font-semibold text-neutral-800 font-mono tabular-nums">
+                                {formatEtdDisplay(selected.etd)}
+                                {isTodayEtd(selected.etd) && (
+                                  <span className="ml-1 inline-flex items-center rounded-full bg-brand-olive/10 text-brand-olive px-1.5 py-0.5 text-[9px] font-black uppercase">HOY</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          {isSuperadmin && (
+                            <a
+                              href={`/itinerario?stackingItId=${encodeURIComponent(selected.id)}`}
+                              className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-xl bg-brand-blue text-white px-2.5 py-1 text-xs font-semibold shadow-sm shadow-brand-blue/20 hover:bg-brand-blue/90 transition-colors"
+                            >
+                              <Icon icon="lucide:pencil" width={12} height={12} aria-hidden />
+                              {(tr as { editStacking?: string }).editStacking ?? "Editar"}
+                            </a>
+                          )}
+                        </div>
                       </div>
-                      {/* Tarjeta: Cierre de stacking y Cut off Reefer (editable para superadmin) */}
-                      <div className="flex-shrink-0 mx-3 mb-3 sm:mx-4 sm:mb-4 rounded-lg sm:rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-neutral-100">
-                          <div className="px-3 py-2.5 sm:px-4 sm:py-3">
-                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">
-                              {(tr as { cardCierreStacking?: string }).cardCierreStacking ?? "Cierre de stacking"}
+
+                      {/* Countdown cards — número grande + fecha */}
+                      <div className="flex-shrink-0 px-3 py-2 flex gap-2">
+                        {/* Cierre stacking */}
+                        <div className={`flex-1 rounded-xl border px-3 py-2 flex items-center justify-between gap-2 ${urgencyCardClass(closeUrgency)}`}>
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide mb-1">
+                              {(tr as { cardCierreStacking?: string }).cardCierreStacking ?? "Cierre stacking"}
                             </p>
                             {isSuperadmin ? (
                               <input
                                 type="text"
                                 value={stackingDraft?.reeferFin ?? ""}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setStackingDraft((prev) => ({ ...(prev ?? {}), reeferFin: v } as StackingDraft));
-                                }}
-                                onBlur={(e) => {
-                                  saveDraftToStorage(selected.nave, { reeferFin: e.target.value.trim() });
-                                  setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected));
-                                }}
+                                onChange={(e) => { const v = e.target.value; setStackingDraft((prev) => ({ ...(prev ?? {}), reeferFin: v } as StackingDraft)); }}
+                                onBlur={(e) => { saveDraftToStorage(selected.nave, { reeferFin: e.target.value.trim() }); setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected)); }}
                                 placeholder={getStackingCloseDate(selected.etd)}
-                                className="mt-1 w-full text-sm font-mono tabular-nums rounded-lg border border-neutral-200 px-2.5 py-1.5 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                                className="w-full text-xs font-mono rounded-lg border border-neutral-200 bg-white px-2 py-1 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
                               />
                             ) : (
-                              <p className="mt-1 text-sm font-medium text-neutral-800 font-mono tabular-nums">
+                              <p className="text-xs font-bold font-mono text-neutral-800 tabular-nums">
                                 {stackingDraft?.reeferFin?.trim() || getStackingCloseDate(selected.etd)}
                               </p>
                             )}
                           </div>
-                          <div className="px-3 py-2.5 sm:px-4 sm:py-3">
-                            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">
+                          {daysToClose !== null && (
+                            <div className="shrink-0 text-right">
+                              <p className={`text-2xl font-black tabular-nums leading-none ${urgencyNumClass(closeUrgency)}`}>{daysToClose}</p>
+                              <p className={`text-[8px] font-bold uppercase tracking-wide ${urgencyNumClass(closeUrgency)} opacity-70`}>días</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Cut off Reefer */}
+                        <div className={`flex-1 rounded-xl border px-3 py-2 flex items-center justify-between gap-2 ${urgencyCardClass(zarpeUrgency)}`}>
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide mb-1">
                               {(tr as { cardCutoffReefer?: string }).cardCutoffReefer ?? "Cut off Reefer"}
                             </p>
                             {isSuperadmin ? (
                               <input
                                 type="text"
                                 value={stackingDraft?.cutoffReefer ?? ""}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setStackingDraft((prev) => ({ ...(prev ?? {}), cutoffReefer: v } as StackingDraft));
-                                }}
-                                onBlur={(e) => {
-                                  saveDraftToStorage(selected.nave, { cutoffReefer: e.target.value.trim() });
-                                  setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected));
-                                }}
+                                onChange={(e) => { const v = e.target.value; setStackingDraft((prev) => ({ ...(prev ?? {}), cutoffReefer: v } as StackingDraft)); }}
+                                onBlur={(e) => { saveDraftToStorage(selected.nave, { cutoffReefer: e.target.value.trim() }); setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected)); }}
                                 placeholder={(tr as { placeholderDateFormat?: string }).placeholderDateFormat ?? "DD/MM/AAAA HH:MM"}
-                                className="mt-1 w-full text-sm font-mono tabular-nums rounded-lg border border-neutral-200 px-2.5 py-1.5 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                                className="w-full text-xs font-mono rounded-lg border border-neutral-200 bg-white px-2 py-1 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
                               />
                             ) : (
-                              <p className="mt-1 text-sm font-medium text-neutral-800 font-mono tabular-nums">
+                              <p className="text-xs font-bold font-mono text-neutral-800 tabular-nums">
                                 {stackingDraft?.cutoffReefer?.trim() ?? "—"}
                               </p>
                             )}
                           </div>
+                          {daysToZarpe !== null && (
+                            <div className="shrink-0 text-right">
+                              <p className={`text-2xl font-black tabular-nums leading-none ${urgencyNumClass(zarpeUrgency)}`}>{daysToZarpe}</p>
+                              <p className={`text-[8px] font-bold uppercase tracking-wide ${urgencyNumClass(zarpeUrgency)} opacity-70`}>al zarpe</p>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex-1 min-h-[260px] sm:min-h-[320px] lg:min-h-[360px] flex items-start justify-center bg-neutral-100/80 rounded-b-xl sm:rounded-b-2xl overflow-auto p-2 sm:p-3">
+
+                      {/* Imagen stacking */}
+                      <div className="flex-1 min-h-0 overflow-auto bg-neutral-50/40 border-t border-neutral-100 p-3 flex items-start justify-center">
                         {selected.stacking_imagen_url ? (
                           <img
                             src={selected.stacking_imagen_url}
                             alt="Stacking oficial"
-                            className="w-full max-w-full h-auto object-contain object-top block"
+                            className="w-full max-w-full h-auto object-contain object-top block rounded-xl"
                           />
                         ) : (
-                          <span className="flex items-center justify-center gap-2 text-sm text-neutral-400 px-4 py-8 sm:py-12 text-center">
-                            <Icon icon="lucide:image-off" width={20} height={20} aria-hidden />
-                            {(tr as { noImageHint?: string }).noImageHint ?? t.itinerarioPage?.stackingOfficialNoImage ?? "Este itinerario no tiene imagen de stacking asociada."}
-                          </span>
+                          <div className="flex flex-col items-center gap-2.5 text-neutral-400 py-16 text-center">
+                            <span className="w-12 h-12 rounded-2xl bg-white border border-neutral-200 flex items-center justify-center shadow-sm">
+                              <Icon icon="lucide:image-off" width={22} height={22} aria-hidden />
+                            </span>
+                            <p className="text-sm font-medium">{(tr as { noImageHint?: string }).noImageHint ?? "Sin imagen de stacking"}</p>
+                          </div>
                         )}
                       </div>
                     </>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-2 text-neutral-400 text-center px-4 min-h-[200px] sm:min-h-[240px]">
-                      <Icon icon="lucide:mouse-pointer-click" width={32} height={32} aria-hidden />
-                      <span className="text-sm">{(tr as { selectItinerary?: string }).selectItinerary ?? tr.emptyTitle}</span>
+                  );})() : (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-400 text-center px-4 min-h-[200px]">
+                      <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                        <Icon icon="lucide:mouse-pointer-click" width={24} height={24} aria-hidden />
+                      </span>
+                      <p className="text-sm font-medium">{(tr as { selectItinerary?: string }).selectItinerary ?? tr.emptyTitle}</p>
                     </div>
                   )}
                 </div>
@@ -643,40 +642,40 @@ function StackingTable({ data, tr }: StackingTableProps) {
   const { embarque, lineas, lateArrivalVgmNote, contenedoresVaciosNote } = data;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div className="rounded-lg bg-neutral-50/80 px-4 py-3">
-          <dt className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">{tr.nave}</dt>
-          <dd className="mt-1 text-sm font-medium text-neutral-800">{embarque.nave || "—"}</dd>
-        </div>
-        <div className="rounded-lg bg-neutral-50/80 px-4 py-3">
-          <dt className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">{tr.viaje}</dt>
-          <dd className="mt-1 text-sm font-medium text-neutral-800">{embarque.viaje || "—"}</dd>
-        </div>
-        <div className="rounded-lg bg-neutral-50/80 px-4 py-3">
-          <dt className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">{tr.eta}</dt>
-          <dd className="mt-1 text-sm font-medium text-neutral-800">{embarque.eta || "—"}</dd>
-        </div>
-        <div className="rounded-lg bg-neutral-50/80 px-4 py-3">
-          <dt className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">{tr.servicio}</dt>
-          <dd className="mt-1 text-sm font-medium text-neutral-800">{embarque.servicio || "—"}</dd>
-        </div>
+    <div className="space-y-5">
+      {/* Embarque info card */}
+      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+        <dl className="grid grid-cols-2 md:grid-cols-4 gap-px bg-neutral-100">
+          {[
+            { label: tr.nave, value: embarque.nave },
+            { label: tr.viaje, value: embarque.viaje },
+            { label: tr.eta, value: embarque.eta },
+            { label: tr.servicio, value: embarque.servicio },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-white px-4 py-4">
+              <dt className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{label}</dt>
+              <dd className="mt-1 text-sm font-semibold text-neutral-800">{value || "—"}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
+      {/* Stacking table */}
       <div className="rounded-2xl border border-neutral-200 overflow-hidden bg-white shadow-sm">
         <table className="w-full border-collapse text-sm" role="table" aria-label={tr.title}>
           <thead>
             <tr className="bg-brand-blue text-white">
-              <th className="text-left font-semibold uppercase tracking-wide px-4 py-3.5 border-b border-white/20">
+              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
                 {tr.colTipoCarga}
               </th>
-              <th className="text-left font-semibold uppercase tracking-wide px-4 py-3.5 border-b border-white/20">
+              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
                 {tr.colFecha}
               </th>
-              <th className="text-left font-semibold uppercase tracking-wide px-4 py-3.5 border-b border-white/20">
+              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
                 {tr.colHorario}
               </th>
-              <th className="text-left font-semibold uppercase tracking-wide px-4 py-3.5 border-b border-white/20">
+              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
                 {tr.colObservaciones}
               </th>
             </tr>
@@ -685,18 +684,18 @@ function StackingTable({ data, tr }: StackingTableProps) {
             {lineas.map((linea, index) => (
               <tr
                 key={index}
-                className={`border-b border-neutral-100 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-neutral-50/50"}`}
+                className={`border-b border-neutral-100 transition-colors hover:bg-brand-blue/5 ${index % 2 === 0 ? "bg-white" : "bg-neutral-50/40"}`}
               >
-                <td className="px-4 py-3 font-medium text-neutral-800">
+                <td className="px-4 py-3 font-semibold text-neutral-800">
                   {linea.tipoCarga}
                 </td>
-                <td className="px-4 py-3 text-neutral-700">
+                <td className="px-4 py-3 font-mono text-sm text-neutral-700">
                   {linea.fecha ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-neutral-700">
                   {linea.horario ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-neutral-700">
+                <td className="px-4 py-3 text-neutral-600 text-sm">
                   {linea.nota ?? "—"}
                 </td>
               </tr>
@@ -704,16 +703,22 @@ function StackingTable({ data, tr }: StackingTableProps) {
 
             {lateArrivalVgmNote && (
               <tr className="bg-red-50 border-b border-neutral-100">
-                <td colSpan={4} className="px-4 py-3 text-red-800 text-sm font-medium">
-                  {lateArrivalVgmNote}
+                <td colSpan={4} className="px-4 py-3 text-red-700 text-sm font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                    {lateArrivalVgmNote}
+                  </span>
                 </td>
               </tr>
             )}
 
             {contenedoresVaciosNote && (
-              <tr className="bg-neutral-600 text-white">
+              <tr className="bg-neutral-700 text-white">
                 <td colSpan={4} className="px-4 py-3 text-sm font-medium">
-                  {contenedoresVaciosNote}
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                    {contenedoresVaciosNote}
+                  </span>
                 </td>
               </tr>
             )}
