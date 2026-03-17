@@ -1,7 +1,8 @@
 /**
- * API admin de itinerarios (GET con auth; POST crea itinerario)
+ * API admin de itinerarios (GET con auth; POST crea itinerario, solo superadmin)
  */
 import type { APIRoute } from "astro";
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -112,6 +113,9 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     } = await supabase.auth.getUser();
     if (authError || !user) return json({ error: "No autorizado" }, 401);
 
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+
     let body: Record<string, unknown>;
     try {
       body = (await request.json()) as Record<string, unknown>;
@@ -134,12 +138,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       return json({ error: "Debe incluir al menos una escala" }, 400);
     }
 
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para crear itinerarios." }, 503);
-    }
+    const admin = auth.admin;
 
     const etdStr = (() => {
       if (typeof etd === "number" && !Number.isNaN(etd)) {

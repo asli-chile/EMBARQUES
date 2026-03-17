@@ -68,9 +68,13 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/stacking" ? (
       <StackingContent />
     ) : pathname === "/itinerario/servicios" ? (
-      <ServiciosUnicosContent />
+      <ConfigGuard forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
+        <ServiciosUnicosContent />
+      </ConfigGuard>
     ) : pathname === "/itinerario/consorcios" ? (
-      <ConsorciosContent />
+      <ConfigGuard forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
+        <ConsorciosContent />
+      </ConfigGuard>
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros"><RegistrosContent /></ModuleWithVisitorInfo>
     ) : pathname === "/reportes" ? (

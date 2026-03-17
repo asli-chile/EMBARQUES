@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 
 const AREAS = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE"] as const;
@@ -129,6 +130,7 @@ const defaultServiciosTr: Record<string, string> = {
 
 export function ServiciosUnicosContent() {
   const { t } = useLocale();
+  const { isSuperadmin } = useAuth();
   const tr = { ...defaultServiciosTr, ...(t?.serviciosPage as Record<string, string> | undefined) };
   const [servicios, setServicios] = useState<ServicioUnico[]>([]);
   const [navieras, setNavieras] = useState<Naviera[]>([]);
@@ -716,6 +718,7 @@ export function ServiciosUnicosContent() {
                 </p>
               </div>
             </div>
+            {isSuperadmin && (
             <button
               type="button"
               onClick={handleOpenModal}
@@ -725,6 +728,7 @@ export function ServiciosUnicosContent() {
               <Icon icon="lucide:plus" width={18} height={18} />
               {tr.newService}
             </button>
+            )}
           </div>
         </div>
 

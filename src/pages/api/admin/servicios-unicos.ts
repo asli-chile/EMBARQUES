@@ -1,8 +1,9 @@
 /**
- * API admin servicios únicos (GET lista; POST crea)
+ * API admin servicios únicos (GET lista; POST crea, solo superadmin)
  * Requiere tablas: servicios_unicos, servicios_unicos_naves, servicios_unicos_destinos, navieras
  */
 import type { APIRoute } from "astro";
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 import { normalizeArea } from "@/lib/areas";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -120,6 +121,9 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     } = await supabase.auth.getUser();
     if (authError || !user) return json({ error: "No autenticado" }, 401);
 
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+
     let body: Record<string, unknown>;
     try {
       body = (await request.json()) as Record<string, unknown>;
@@ -138,15 +142,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     if (!(puerto_origen as string)?.trim())
       return json({ error: "Puerto de origen requerido" }, 400);
 
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json(
-        { error: "Para crear servicios debe configurar SUPABASE_SERVICE_ROLE_KEY en .env (Supabase → Project Settings → API)." },
-        503
-      );
-    }
+    const admin = auth.admin;
 
     const { data: nuevo, error: insErr } = await admin
       .from("servicios_unicos")

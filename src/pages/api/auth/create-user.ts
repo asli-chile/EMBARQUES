@@ -154,6 +154,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (usuarioRow?.id) {
     usuarioId = usuarioRow.id;
+    // Ensure the rol is correct — the trigger's ON CONFLICT may have preserved an old role
+    await adminClient.from("usuarios").update({ rol, activo: true }).eq("id", usuarioId);
   } else {
     const { data: inserted, error: insertErr } = await adminClient
       .from("usuarios")

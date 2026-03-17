@@ -115,6 +115,11 @@ export function DashboardContent() {
 
   const fetchCatalogs = useCallback(async () => {
     if (!supabase || authLoading) return;
+    if (isCliente && empresaNombres.length === 0) {
+      setClientesOpts([]);
+      setNavierasOpts([]);
+      return;
+    }
     let qClientes = supabase.from("operaciones").select("cliente").is("deleted_at", null).not("cliente", "is", null);
     let qNavieras = supabase.from("operaciones").select("naviera").is("deleted_at", null).not("naviera", "is", null);
     if (empresaNombres.length > 0) {
@@ -126,10 +131,22 @@ export function DashboardContent() {
     const navieras = [...new Set((navierasRes.data ?? []).map((r) => r.naviera).filter(Boolean) as string[])].sort();
     setClientesOpts(clientes);
     setNavierasOpts(navieras);
-  }, [supabase, authLoading, empresaNombres]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!supabase || authLoading) return;
+    if (isCliente && empresaNombres.length === 0) {
+      setTotalOperaciones(0);
+      setEstadosCounts([]);
+      setNavierasCounts([]);
+      setProximosZarpes([]);
+      setRecientes([]);
+      setThisWeekCount(0);
+      setThisMonthCount(0);
+      setActiveClientsCount(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const today = new Date();
@@ -195,7 +212,7 @@ export function DashboardContent() {
 
     setLastFetchedAt(new Date());
     setLoading(false);
-  }, [supabase, authLoading, buildFilteredQuery]);
+  }, [supabase, authLoading, isCliente, empresaNombres, buildFilteredQuery]);
 
   useEffect(() => {
     if (!authLoading) void fetchCatalogs();

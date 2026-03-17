@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 type NavBannerProps = {
   pathname: string;
@@ -9,6 +10,8 @@ type NavBannerProps = {
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
+  const { user, profile, isExternalUser } = useAuth();
+  const displayName = profile?.nombre || user?.name || user?.email || null;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -74,17 +77,29 @@ export function NavBanner({ pathname }: NavBannerProps) {
         })}
       </div>
 
-      {/* Desktop: selector de idioma (pill) */}
-      <button
-        type="button"
-        onClick={handleLocaleToggle}
-        className="hidden md:flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
-        aria-label="Cambiar idioma"
-        title={locale === "es" ? "Cambiar a inglés" : "Switch to Spanish"}
-      >
-        <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
-        <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
-      </button>
+      {/* Desktop: nombre de usuario + idioma */}
+      <div className="hidden md:flex items-center gap-2">
+        {!isExternalUser && user && displayName && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5">
+            <span className="w-5 h-5 rounded-full bg-brand-blue flex items-center justify-center text-white text-[10px] font-black uppercase shrink-0">
+              {displayName[0]}
+            </span>
+            <span className="text-xs font-semibold text-white/90 max-w-[140px] truncate">
+              {displayName}
+            </span>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleLocaleToggle}
+          className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
+          aria-label="Cambiar idioma"
+          title={locale === "es" ? "Cambiar a inglés" : "Switch to Spanish"}
+        >
+          <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
+          <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
+        </button>
+      </div>
 
       {/* Mobile: botón hamburguesa */}
       <button
@@ -120,6 +135,17 @@ export function NavBanner({ pathname }: NavBannerProps) {
       {isMenuOpen && (
         <div className="md:hidden absolute top-full left-2 right-2 mt-1 bg-neutral-800/95 backdrop-blur-xl rounded-xl shadow-xl shadow-black/40 border border-white/10 overflow-hidden z-50">
           <div className="py-2">
+            {!isExternalUser && user && displayName && (
+              <div className="flex items-center gap-3 px-4 py-3 mx-2 mb-1 rounded-xl bg-white/5 border border-white/10">
+                <span className="w-8 h-8 rounded-full bg-brand-blue flex items-center justify-center text-white text-sm font-black uppercase shrink-0">
+                  {displayName[0]}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+                  <p className="text-[11px] text-neutral-400 truncate">{user.email}</p>
+                </div>
+              </div>
+            )}
             {siteConfig.navItems.map(({ labelKey, href }) => {
               const isActive = pathname === href;
               return (

@@ -83,7 +83,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const { data: usuario, error: usuarioError } = await adminClient
     .from("usuarios")
-    .select("id, email, nombre, auth_id")
+    .select("id, email, nombre, rol, auth_id")
     .eq("id", usuarioId)
     .single();
 
@@ -117,6 +117,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     email_confirm: true,
     user_metadata: {
       nombre: usuario.nombre || email.split("@")[0],
+      rol: (usuario.rol as string) || "usuario",
     },
   });
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
 
@@ -79,6 +80,7 @@ const defaultConsorciosTr: Record<string, string> = {
 
 export function ConsorciosContent() {
   const { t } = useLocale();
+  const { isSuperadmin } = useAuth();
   const tr = { ...defaultConsorciosTr, ...(t?.consorciosPage as Record<string, string> | undefined) };
   const [consorcios, setConsorcios] = useState<Consorcio[]>([]);
   const [serviciosOpts, setServiciosOpts] = useState<ServicioOption[]>([]);
@@ -402,6 +404,7 @@ export function ConsorciosContent() {
                 </p>
               </div>
             </div>
+            {isSuperadmin && (
             <button
               type="button"
               onClick={handleOpenModal}
@@ -411,6 +414,7 @@ export function ConsorciosContent() {
               <Icon icon="lucide:plus" width={18} height={18} />
               {tr.newConsortium}
             </button>
+            )}
           </div>
         </div>
 

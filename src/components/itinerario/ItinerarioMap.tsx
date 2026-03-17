@@ -81,6 +81,7 @@ export default function ItinerarioMap({
     tt: string;
     servicio: string;
     naviera: string;
+    area: string;
   } | null>(null);
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   /** Capas de regiones se añaden solo tras cargar el estilo para que no se borren. */
@@ -163,6 +164,7 @@ export default function ItinerarioMap({
             tt: pt.dias_transito != null ? pt.dias_transito : null,
             servicio: pt.servicio?.trim() ?? "—",
             naviera: pt.naviera?.trim() ?? "—",
+            area: pt.area ?? "",
           },
           geometry: { type: "Point", coordinates: coords },
         });
@@ -213,6 +215,7 @@ export default function ItinerarioMap({
           tt: tt != null && typeof tt === "number" ? String(tt) : "—",
           servicio: String(p.servicio ?? "—"),
           naviera: String(p.naviera ?? "—"),
+          area: String(p.area ?? ""),
         });
         const canvas = map.getCanvas?.();
         if (canvas) canvas.style.cursor = "pointer";
@@ -370,6 +373,8 @@ export default function ItinerarioMap({
             style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
             mapStyle={MAP_STYLE}
             renderWorldCopies={false}
+            dragRotate={false}
+            touchPitch={false}
             onLoad={(e) => {
               const map = e.target as { setRenderWorldCopies?: (v: boolean) => void; resize?: () => void };
               if (typeof map.setRenderWorldCopies === "function") map.setRenderWorldCopies(false);
@@ -459,9 +464,15 @@ export default function ItinerarioMap({
             })()}
           </Map>
           </MapWebGLErrorBoundary>
-          {hoveredPortDetail && (
+          {hoveredPortDetail && (() => {
+            // AMERICA → esquina inferior derecha; otras regiones → esquina inferior izquierda
+            const isAmerica = hoveredPortDetail.area === "AMERICA";
+            const cornerClass = isAmerica
+              ? "right-4 bottom-4"
+              : "left-4 bottom-4";
+            return (
             <div
-              className="absolute left-4 bottom-14 z-10 w-[272px] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
+              className={`absolute ${cornerClass} z-10 w-[272px] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10`}
               style={{ background: "linear-gradient(160deg, #0d1e3b 0%, #0a2456 100%)" }}
               role="tooltip"
               aria-live="polite"
@@ -536,7 +547,8 @@ export default function ItinerarioMap({
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
           </>
         )}
       </div>

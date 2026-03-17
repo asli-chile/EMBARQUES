@@ -1093,7 +1093,7 @@ export function ItinerarioContent() {
               )}
             </button>
           )}
-          {isLoggedIn && (
+          {isLoggedIn && isSuperadmin && (
             <button
               type="button"
               onClick={handleOpenModal}
@@ -1112,8 +1112,8 @@ export function ItinerarioContent() {
         <section className="flex-1 min-h-0 flex flex-col w-full overflow-hidden">
           <div className="flex-1 min-h-0 w-full h-full flex flex-col overflow-hidden bg-white">
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-              {/* Columna info: 25% — fondo navy elegante */}
-              <div className="w-full lg:w-1/4 flex flex-col gap-3 px-3 sm:px-4 lg:px-6 py-3 lg:py-5 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-y-auto flex-shrink-0 lg:flex-shrink lg:flex-1">
+              {/* Columna info: 20% — fondo navy elegante */}
+              <div className="w-full lg:w-[20%] flex flex-col gap-2 px-3 py-3 bg-gradient-to-br from-[#00529b] via-[#00407a] to-[#002f5c] border-b lg:border-b-0 lg:border-r border-white/10 relative overflow-hidden flex-shrink-0 lg:flex-shrink-0">
                 {/* Círculos decorativos de fondo */}
                 <div className="absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-white/[0.04] pointer-events-none" aria-hidden />
                 <div className="absolute top-0 -left-10 h-36 w-36 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
@@ -1121,23 +1121,47 @@ export function ItinerarioContent() {
 
                 {/* Encabezado — solo desktop */}
                 <div className="relative hidden lg:block">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white/75 mb-2 border border-white/20 backdrop-blur-sm">
-                    <Icon icon="lucide:globe-2" width={12} height={12} aria-hidden />
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold text-white/70 mb-1.5 border border-white/20">
+                    <Icon icon="lucide:globe-2" width={10} height={10} aria-hidden />
                     {tr.mapViewGlobal}
                   </div>
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-extrabold text-white tracking-tight leading-tight">
+                  <h2 className="text-sm font-bold text-white leading-tight">
                     {tr.mapDiscoverTitle}
                   </h2>
-                  <p className="mt-1 text-xs text-white/60 leading-relaxed">
+                  <p className="mt-1 text-[11px] text-white/55 leading-relaxed">
                     {tr.mapDiscoverDesc}
                   </p>
                 </div>
 
-                {/* Chips de regiones — mobile: fila horizontal scrollable; desktop: grid 2 cols */}
+                {/* Chips de regiones */}
                 {areasWithData.length > 0 && (
                   <div className="relative">
-                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-2 hidden lg:block">Regiones</p>
-                    <div className="flex lg:grid lg:grid-cols-2 gap-1.5 overflow-x-auto pb-0.5 lg:pb-0 lg:overflow-x-visible scrollbar-none">
+                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.15em] mb-1.5 hidden lg:block">Regiones</p>
+                    {/* Mobile: fila compacta horizontal */}
+                    <div className="flex gap-1.5 lg:hidden overflow-x-auto scrollbar-none pb-0.5">
+                      {(
+                        [
+                          { area: "ASIA",               bg: "bg-amber-400/15 border-amber-400/35 text-amber-200",  dot: "bg-amber-400" },
+                          { area: "EUROPA",             bg: "bg-sky-400/15 border-sky-400/35 text-sky-200",         dot: "bg-sky-400" },
+                          { area: "AMERICA",            bg: "bg-emerald-400/15 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
+                          { area: "INDIA-MEDIOORIENTE", bg: "bg-orange-400/15 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
+                        ] as const
+                      )
+                        .filter(({ area }) => areasWithData.includes(area))
+                        .map(({ area, bg, dot }) => (
+                          <button
+                            key={area}
+                            type="button"
+                            onClick={() => setSelectedAreaFromMap(area)}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold uppercase shrink-0 ${bg}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+                            {area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}
+                          </button>
+                        ))}
+                    </div>
+                    {/* Desktop: grid 2 cols */}
+                    <div className="hidden lg:grid grid-cols-2 gap-1.5">
                       {(
                         [
                           { area: "ASIA",               bg: "bg-amber-400/15  hover:bg-amber-400/25  border-amber-400/35  text-amber-200",  dot: "bg-amber-400" },
@@ -1152,19 +1176,19 @@ export function ItinerarioContent() {
                             key={area}
                             type="button"
                             onClick={() => setSelectedAreaFromMap(area)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 shrink-0 lg:w-full justify-center ${bg}`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 w-full justify-center ${bg}`}
                           >
                             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
-                            <span className="whitespace-nowrap">{area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}</span>
+                            <span>{area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}</span>
                           </button>
                         ))}
                     </div>
                   </div>
                 )}
 
-                {/* Buscador de destino */}
-                <div className="relative">
-                  <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.2em] mb-2 hidden lg:block">Buscar destino</p>
+                {/* Buscador de destino — solo desktop */}
+                <div className="relative hidden lg:flex lg:flex-col">
+                  <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.15em] mb-1.5">Buscar destino</p>
                   <div className="relative">
                     <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" aria-hidden />
                     <input
@@ -1188,7 +1212,7 @@ export function ItinerarioContent() {
 
                   {/* Resultados */}
                   {destSearch.trim().length >= 2 && (
-                    <div className="mt-2 rounded-xl bg-white/10 border border-white/15 overflow-hidden backdrop-blur-sm">
+                    <div className="mt-2 rounded-xl bg-white/10 border border-white/15 overflow-y-auto max-h-[40vh] backdrop-blur-sm">
                       {destSearchResults.length === 0 ? (
                         <p className="px-3 py-3 text-xs text-white/40 text-center">Sin coincidencias</p>
                       ) : (
@@ -1237,16 +1261,17 @@ export function ItinerarioContent() {
                   )}
                 </div>
 
-                {/* Tip compacto — solo desktop */}
-                <div className="hidden lg:block rounded-xl bg-white/8 border border-white/10 px-3 py-2 backdrop-blur-sm">
-                  <p className="text-[11px] text-white/50 leading-relaxed">
-                    <strong className="text-white/75 font-semibold">Tip:</strong> {tr.mapTip}
+                {/* Tip — solo desktop, empujado al fondo */}
+                <div className="hidden lg:block mt-auto pt-2 rounded-xl bg-white/8 border border-white/10 px-2.5 py-2">
+                  <p className="text-[10px] text-white/45 leading-relaxed">
+                    <strong className="text-white/65 font-semibold">Tip:</strong> {tr.mapTip}
                   </p>
                 </div>
+
               </div>
 
-              {/* Columna mapa: 75% del espacio */}
-              <div className="w-full lg:w-3/4 flex-1 min-h-[50vw] sm:min-h-[45vw] lg:min-h-[400px] relative">
+              {/* Columna mapa: 80% del espacio */}
+              <div className="w-full lg:w-[80%] flex-1 min-h-[50vw] sm:min-h-[45vw] lg:min-h-[400px] relative">
                 <div className="absolute inset-0 overflow-hidden">
                   <ItinerarioMap
                     compact={false}
@@ -1509,7 +1534,7 @@ export function ItinerarioContent() {
                             ) : (
                               <div className="flex-1" />
                             )}
-                            {isLoggedIn && (
+                            {isLoggedIn && isSuperadmin && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}

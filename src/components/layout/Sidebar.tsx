@@ -5,7 +5,7 @@ import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 const AUTO_COLLAPSE_MS = 2000;
-const HOVER_OPEN_DELAY_MS = 200;
+const HOVER_OPEN_DELAY_MS = 0;
 const STORAGE_KEY = "embarques-sidebar-open";
 
 type SidebarProps = {
@@ -261,56 +261,60 @@ export function Sidebar({ pathname }: SidebarProps) {
         </aside>
       </div>
 
-      {/* Mobile: thin toggle strip (stays in layout, w-7) */}
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="md:hidden flex-shrink-0 flex flex-col items-center justify-center h-full w-7 bg-neutral-700/95 text-white hover:bg-white/10 border-r border-white/10 transition-all duration-200 z-10"
-        aria-label={isOpen ? "Cerrar menú lateral" : "Abrir menú lateral"}
-        aria-expanded={isOpen}
-      >
-        <Icon
-          icon={isOpen ? "typcn:arrow-left-outline" : "typcn:arrow-right-outline"}
-          width={16}
-          height={16}
-          className="opacity-80"
-        />
-      </button>
+      {/* Mobile: tab centrado en el borde del sidebar */}
+      <div className="md:hidden flex-shrink-0 relative w-3 bg-neutral-700/95">
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 flex items-center justify-center w-5 h-10 rounded-full bg-neutral-700/95 text-white border border-white/15 shadow-lg hover:bg-neutral-600 transition-all duration-200"
+          aria-label={isOpen ? "Cerrar menú lateral" : "Abrir menú lateral"}
+          aria-expanded={isOpen}
+        >
+          <Icon
+            icon={isOpen ? "typcn:arrow-left-outline" : "typcn:arrow-right-outline"}
+            width={13}
+            height={13}
+            className="opacity-80"
+          />
+        </button>
+      </div>
 
-      {/* Desktop: in-layout sidebar (existing push behavior) */}
+      {/* Desktop: sidebar con botón centrado en el borde derecho */}
       <div
         ref={sidebarRef}
-        className={`hidden md:flex flex-shrink-0 overflow-hidden bg-neutral-700/95 backdrop-blur-md border-r border-white/10 shadow-xl shadow-black/20 transition-[width] duration-300 ease-out ${
-          isOpen ? "w-[11.75rem]" : "w-7"
+        className={`hidden md:block relative flex-shrink-0 overflow-visible bg-neutral-700/95 transition-[width] duration-300 ease-out ${
+          isOpen ? "w-[11.75rem]" : "w-3"
         }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
+        {/* Panel del sidebar */}
         <div
-          className={`flex flex-col min-h-0 overflow-hidden transition-[width] duration-300 ease-out ${
-            isOpen ? "w-40" : "w-0"
+          className={`absolute inset-y-0 left-0 flex flex-col overflow-hidden bg-neutral-700/95 backdrop-blur-md border-r border-white/10 shadow-xl shadow-black/20 transition-[width] duration-300 ease-out ${
+            isOpen ? "w-[11.75rem]" : "w-0"
           }`}
         >
           <aside
-            className="w-40 min-w-40 pt-4 pb-3 px-2 flex-1 min-h-0 overflow-y-auto"
+            className="w-[11.75rem] min-w-[11.75rem] pt-4 pb-3 px-2 flex-1 min-h-0 overflow-y-auto"
             role="navigation"
             aria-label="Menú de módulos"
           >
             {navItems}
           </aside>
         </div>
+
+        {/* Botón toggle — centrado en el borde derecho */}
         <button
           type="button"
           onClick={handleToggle}
-          className="flex-shrink-0 flex items-center justify-center h-14 w-7 bg-neutral-700/95 text-white hover:bg-white/10 rounded-r-lg border-l border-white/10 transition-all duration-200 self-center"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-20 flex items-center justify-center w-5 h-10 rounded-full bg-neutral-700 border border-white/20 text-white shadow-lg hover:bg-neutral-600 hover:scale-105 transition-all duration-200"
           aria-label={isOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
+          aria-expanded={isOpen}
         >
           <Icon
-            icon={
-              isOpen ? "typcn:arrow-left-outline" : "typcn:arrow-right-outline"
-            }
-            width={18}
-            height={18}
+            icon={isOpen ? "typcn:arrow-left-outline" : "typcn:arrow-right-outline"}
+            width={14}
+            height={14}
             className="opacity-90"
           />
         </button>

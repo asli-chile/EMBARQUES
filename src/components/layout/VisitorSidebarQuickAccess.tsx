@@ -7,7 +7,8 @@ type SidebarLink = { href: string; labelKey: string };
 function getSidebarLinks(): SidebarLink[] {
   const links: SidebarLink[] = [];
   for (const item of siteConfig.sidebarItems) {
-    if ("superadminOnly" in item && item.superadminOnly) continue;
+    const isSuperadminOnly = "superadminOnly" in item && item.superadminOnly;
+    if (isSuperadminOnly) continue;
     if ("href" in item && item.href) {
       links.push({ href: item.href, labelKey: item.labelKey });
     }

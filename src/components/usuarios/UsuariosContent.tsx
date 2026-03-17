@@ -77,6 +77,7 @@ export function UsuariosContent() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -509,16 +510,31 @@ export function UsuariosContent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col bg-neutral-100 overflow-hidden" role="main">
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
-        <aside className="flex-shrink-0 lg:w-80 xl:w-96 bg-white rounded-xl border border-neutral-200 shadow-sm overflow-y-auto">
-          <div className="p-4 border-b border-neutral-200">
-            <h1 className="text-lg font-bold text-brand-blue">{t.sidebar.usuarios}</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Crea cuentas y asígnales roles. Clientes y ejecutivos ven solo las empresas asignadas.
-            </p>
-          </div>
-          <section className="p-4">
-            <h2 className="text-sm font-semibold text-neutral-800 mb-3">Crear nueva cuenta</h2>
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 sm:gap-4 sm:p-4 overflow-hidden">
+        <aside className="flex-shrink-0 lg:w-80 xl:w-96 bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+          {/* Aside header — on mobile also acts as toggle */}
+          <button
+            type="button"
+            className="lg:cursor-default w-full px-4 py-3 border-b border-neutral-200 flex items-center gap-3 text-left"
+            onClick={() => setShowCreateForm((v) => !v)}
+            aria-expanded={showCreateForm}
+          >
+            <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+              <Icon icon="lucide:users" width={18} height={18} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-sm font-bold text-neutral-900">{t.sidebar.usuarios}</h1>
+              <p className="text-xs text-neutral-500 mt-0.5">Crea cuentas y asígnales roles.</p>
+            </div>
+            <Icon
+              icon={showCreateForm ? "lucide:chevron-up" : "lucide:chevron-down"}
+              width={16} height={16}
+              className="text-neutral-400 shrink-0 lg:hidden"
+            />
+          </button>
+          <section className={`${showCreateForm ? "block" : "hidden"} lg:block p-4 overflow-y-auto flex-1`}>
+            <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Crear nueva cuenta</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label htmlFor="email" className="block text-xs font-medium text-neutral-600 mb-0.5">Correo</label>
@@ -528,7 +544,7 @@ export function UsuariosContent() {
                   required
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                   placeholder="usuario@empresa.com"
                 />
               </div>
@@ -542,7 +558,7 @@ export function UsuariosContent() {
                     minLength={6}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                     placeholder="Mín. 6 caracteres"
                   />
                   <button
@@ -565,7 +581,7 @@ export function UsuariosContent() {
                     type="text"
                     value={form.nombre}
                     onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 outline-none"
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 outline-none"
                     placeholder="Nombre"
                   />
                 </div>
@@ -581,7 +597,7 @@ export function UsuariosContent() {
                         empresaIds: e.target.value === "cliente" || e.target.value === "ejecutivo" ? f.empresaIds : [],
                       }))
                     }
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 outline-none"
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 outline-none"
                   >
                     {ROLES.map((r) => (
                       <option key={r.value} value={r.value}>
@@ -623,7 +639,7 @@ export function UsuariosContent() {
               <button
                 type="submit"
                 disabled={isCreating || ((form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0)}
-                className="w-full px-3 py-2 rounded-lg text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shadow-sm"
               >
                 Crear cuenta
               </button>
@@ -631,12 +647,13 @@ export function UsuariosContent() {
           </section>
         </aside>
 
-        <section className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+        <section className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
           <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-200 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-semibold text-neutral-800">
+              <h2 className="text-sm font-bold text-neutral-900">
                 Usuarios existentes{" "}
-                <span className="font-normal text-neutral-500">
+                <span className="font-normal text-neutral-500 text-xs">
                   ({filteredUsuarios.length}
                   {(filterRol || filterEmpresaId) && ` de ${usuarios.length}`})
                 </span>
@@ -648,7 +665,7 @@ export function UsuariosContent() {
                   <button
                     type="button"
                     onClick={handleBulkAssignOpen}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-brand-blue hover:bg-brand-blue/90 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-brand-blue hover:bg-brand-blue/90 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                     aria-label="Asignar empresas a usuarios seleccionados"
                   >
                     <Icon icon="lucide:building-2" width={14} height={14} />
@@ -665,18 +682,18 @@ export function UsuariosContent() {
               )}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <label htmlFor="filter-rol" className="text-xs font-medium text-neutral-600">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <label htmlFor="filter-rol" className="text-xs font-medium text-neutral-600 hidden sm:block">
                   Rol
                 </label>
                 <select
                   id="filter-rol"
                   value={filterRol}
                   onChange={(e) => setFilterRol(e.target.value)}
-                  className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className="rounded-xl border border-neutral-200 px-2 sm:px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                 >
-                  <option value="">Todos</option>
+                  <option value="">Todos los roles</option>
                   {ROLES.map((r) => (
                     <option key={r.value} value={r.value}>
                       {r.label}
@@ -684,15 +701,15 @@ export function UsuariosContent() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center gap-2">
-                <label htmlFor="filter-empresa" className="text-xs font-medium text-neutral-600">
-                  Empresa asignada
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <label htmlFor="filter-empresa" className="text-xs font-medium text-neutral-600 hidden sm:block">
+                  Empresa
                 </label>
                 <select
                   id="filter-empresa"
                   value={filterEmpresaId}
                   onChange={(e) => setFilterEmpresaId(e.target.value)}
-                  className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className="rounded-xl border border-neutral-200 px-2 sm:px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none max-w-[120px] sm:max-w-none"
                 >
                   <option value="">Todas</option>
                   {empresas.map((e) => (
@@ -711,17 +728,122 @@ export function UsuariosContent() {
                   }}
                   className="text-xs text-brand-blue hover:underline"
                 >
-                  Limpiar filtros
+                  Limpiar
                 </button>
               )}
             </div>
             {error && <p className="text-red-600 text-xs">{error}</p>}
           </div>
           <div className="flex-1 min-h-0 overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-neutral-50 z-10">
-                <tr className="text-neutral-600">
-                  <th className="px-4 py-2.5 text-left font-medium w-10">
+
+            {/* ── Mobile cards (< md) ── */}
+            <div className="md:hidden divide-y divide-neutral-100">
+              {filteredUsuarios.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-12 text-center px-6">
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                    <Icon icon="lucide:users" width={22} height={22} className="text-neutral-300" />
+                  </div>
+                  <p className="text-sm text-neutral-400">Sin usuarios.</p>
+                </div>
+              ) : filteredUsuarios.map((u) => {
+                const ids = empresasPorUsuario[u.id] ?? [];
+                const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
+                const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
+                const initials = (u.nombre || u.email).slice(0, 2).toUpperCase();
+                return (
+                  <div key={u.id} className="p-4 hover:bg-neutral-50 transition-colors">
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox + avatar */}
+                      <div className="flex flex-col items-center gap-2 pt-0.5">
+                        {canAssign ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.has(u.id)}
+                            onChange={() => handleToggleSelect(u)}
+                            className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
+                            aria-label={`Seleccionar ${u.nombre}`}
+                          />
+                        ) : (
+                          <span className="w-4 h-4 inline-block" aria-hidden="true" />
+                        )}
+                        <div className="w-8 h-8 rounded-full bg-brand-blue/10 flex items-center justify-center text-[11px] font-bold text-brand-blue">
+                          {initials}
+                        </div>
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-neutral-900 text-sm truncate">{u.nombre || "—"}</p>
+                            <p className="text-xs text-neutral-400 truncate">{u.email}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-blue/10 text-brand-blue">
+                              {getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}
+                            </span>
+                            {u.auth_id ? (
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">
+                                <Icon icon="lucide:check" width={9} height={9} />
+                                Activa
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-500">
+                                Sin cuenta
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {nombresEmpresas.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {nombresEmpresas.map((n) => (
+                              <span key={n} className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-brand-blue/8 text-brand-blue">
+                                {n}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          {!u.auth_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleActivateOpen(u)}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                            >
+                              <Icon icon="lucide:key-round" width={13} height={13} />
+                              Activar
+                            </button>
+                          )}
+                          {u.auth_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleResetOpen(u)}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                            >
+                              <Icon icon="lucide:refresh-cw" width={13} height={13} />
+                              Resetear
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleEditOpen(u)}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors"
+                          >
+                            <Icon icon="lucide:pencil" width={13} height={13} />
+                            Editar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Desktop table (md+) ── */}
+            <table className="hidden md:table w-full text-sm">
+              <thead className="sticky top-0 bg-neutral-50 z-10 border-b border-neutral-200">
+                <tr>
+                  <th className="px-4 py-2.5 text-left w-10">
                     {asignablesFromFiltered.length > 0 && (
                       <input
                         type="checkbox"
@@ -735,12 +857,12 @@ export function UsuariosContent() {
                       />
                     )}
                   </th>
-                  <th className="px-4 py-2.5 text-left font-medium">Nombre</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Correo</th>
-                  <th className="px-4 py-2.5 text-left font-medium w-28">Rol</th>
-                  <th className="px-4 py-2.5 text-left font-medium min-w-[140px]">Empresas asignadas</th>
-                  <th className="px-4 py-2.5 text-left font-medium w-24">Cuenta</th>
-                  <th className="px-4 py-2.5 text-left font-medium min-w-[140px]">Acciones</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Nombre</th>
+                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Correo</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide w-28">Rol</th>
+                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide min-w-[140px]">Empresas</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide w-24">Cuenta</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide min-w-[140px]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -766,18 +888,13 @@ export function UsuariosContent() {
                       )}
                     </td>
                     <td className="px-4 py-2.5 font-medium">{u.nombre}</td>
-                    <td className="px-4 py-2.5 text-neutral-600">{u.email}</td>
-                    <td className="px-4 py-2.5">{getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="hidden lg:table-cell px-4 py-2.5 text-neutral-600 text-xs truncate max-w-[160px]">{u.email}</td>
+                    <td className="px-4 py-2.5 text-xs">{getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}</td>
+                    <td className="hidden lg:table-cell px-4 py-2.5">
                       {nombresEmpresas.length > 0 ? (
                         <span className="inline-flex flex-wrap gap-1" title={nombresEmpresas.join(", ")}>
                           {nombresEmpresas.map((n) => (
-                            <span
-                              key={n}
-                              className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-brand-blue/10 text-brand-blue"
-                            >
-                              {n}
-                            </span>
+                            <span key={n} className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-brand-blue/10 text-brand-blue">{n}</span>
                           ))}
                         </span>
                       ) : (
@@ -796,22 +913,19 @@ export function UsuariosContent() {
                           onClick={() => handleActivateOpen(u)}
                           className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
                           aria-label={`Activar cuenta de ${u.nombre}`}
-                          title="Asignar contraseña y crear cuenta en Auth"
                         >
                           <Icon icon="lucide:key-round" width={14} height={14} />
-                          Activar cuenta
+                          Activar
                         </button>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-1 flex-wrap">
+                      <div className="flex items-center gap-1">
                         {u.auth_id && (
                           <button
                             type="button"
                             onClick={() => handleResetOpen(u)}
                             className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
-                            aria-label={`Resetear ${u.nombre}`}
-                            title="Borrar asignaciones y establecer nueva contraseña"
                           >
                             <Icon icon="typcn:refresh" width={14} height={14} />
                             Resetear
@@ -821,8 +935,6 @@ export function UsuariosContent() {
                           type="button"
                           onClick={() => handleEditOpen(u)}
                           className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-brand-blue hover:bg-brand-blue/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                          aria-label={`Editar ${u.nombre}`}
-                          title="Editar rol, empresas y contraseña"
                         >
                           <Icon icon="typcn:edit" width={14} height={14} />
                           Editar
@@ -840,28 +952,42 @@ export function UsuariosContent() {
 
       {bulkAssigningUsers.length > 0 && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="assign-modal-title"
           onClick={handleAssignClose}
         >
           <div
-            className="bg-white rounded-2xl shadow-mac-modal w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex-shrink-0 px-6 py-4 border-b border-neutral-200">
-              <h2 id="assign-modal-title" className="text-lg font-semibold text-brand-blue">
-                Asignar empresas a {bulkAssigningUsers.length} usuarios
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {bulkAssigningUsers.map((u) => u.nombre || u.email).join(", ")}
-              </p>
-              <p className="text-xs text-neutral-400 mt-1">
-                Las empresas seleccionadas se añadirán a las que ya tiene cada usuario.
-              </p>
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
             </div>
-            <form onSubmit={handleAssignSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:building-2" width={15} height={15} className="text-white" />
+                </div>
+                <div>
+                  <h2 id="assign-modal-title" className="text-sm font-bold text-neutral-900">
+                    Asignar empresas a {bulkAssigningUsers.length} usuario{bulkAssigningUsers.length !== 1 ? "s" : ""}
+                  </h2>
+                  <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                    {bulkAssigningUsers.map((u) => u.nombre || u.email).join(", ")}
+                  </p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">
+                    Las empresas seleccionadas se añadirán a las existentes.
+                  </p>
+                </div>
+              </div>
+              <button type="button" onClick={handleAssignClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+                <Icon icon="lucide:x" width={16} height={16} />
+              </button>
+            </div>
+            <form onSubmit={handleAssignSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Empresas asignadas
@@ -897,14 +1023,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleAssignClose}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isAssigning || assignEmpresaIds.length === 0}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 >
                   {isAssigning ? "Guardando…" : "Guardar"}
                 </button>
@@ -916,28 +1042,36 @@ export function UsuariosContent() {
 
       {activatingUser && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="activate-modal-title"
           onClick={handleActivateClose}
         >
           <div
-            className="bg-white rounded-2xl shadow-mac-modal w-full max-w-md overflow-hidden flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex-shrink-0 px-6 py-4 border-b border-neutral-200">
-              <h2 id="activate-modal-title" className="text-lg font-semibold text-brand-blue">
-                Activar cuenta
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {activatingUser.nombre} — {activatingUser.email}
-              </p>
-              <p className="text-xs text-neutral-400 mt-1">
-                Asigna una contraseña para crear la cuenta en Supabase Auth. El usuario podrá iniciar sesión.
-              </p>
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
             </div>
-            <form onSubmit={handleActivateSubmit} className="p-6 space-y-4">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:key-round" width={15} height={15} className="text-white" />
+                </div>
+                <div>
+                  <h2 id="activate-modal-title" className="text-sm font-bold text-neutral-900">Activar cuenta</h2>
+                  <p className="text-xs text-neutral-500 mt-0.5">{activatingUser.nombre} — {activatingUser.email}</p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">Asigna una contraseña para crear la cuenta. El usuario podrá iniciar sesión.</p>
+                </div>
+              </div>
+              <button type="button" onClick={handleActivateClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+                <Icon icon="lucide:x" width={16} height={16} />
+              </button>
+            </div>
+            <form onSubmit={handleActivateSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
                 <label htmlFor="activate-password" className="block text-sm font-medium text-neutral-700 mb-1">
                   Contraseña (mín. 6 caracteres)
@@ -950,7 +1084,7 @@ export function UsuariosContent() {
                     minLength={6}
                     value={activatePassword}
                     onChange={(e) => setActivatePassword(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                     placeholder="Mínimo 6 caracteres"
                   />
                   <button
@@ -974,14 +1108,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleActivateClose}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isActivating || activatePassword.length < 6}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 >
                   {isActivating ? "Activando…" : "Crear cuenta y vincular"}
                 </button>
@@ -993,28 +1127,36 @@ export function UsuariosContent() {
 
       {resettingUser && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="reset-modal-title"
           onClick={handleResetClose}
         >
           <div
-            className="bg-white rounded-2xl shadow-mac-modal w-full max-w-md overflow-hidden flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex-shrink-0 px-6 py-4 border-b border-neutral-200">
-              <h2 id="reset-modal-title" className="text-lg font-semibold text-brand-blue">
-                Resetear usuario
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {resettingUser.nombre} — {resettingUser.email}
-              </p>
-              <p className="text-xs text-neutral-400 mt-1">
-                Se borrarán todas las asignaciones a empresas y se establecerá una nueva contraseña. Se mantienen nombre, email y rol. Da la nueva contraseña al usuario para que pueda iniciar sesión.
-              </p>
+            <div className="h-[3px] bg-gradient-to-r from-amber-500 to-orange-500 flex-shrink-0" />
+            <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
             </div>
-            <form onSubmit={handleResetSubmit} className="p-6 space-y-4">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:refresh-cw" width={15} height={15} className="text-white" />
+                </div>
+                <div>
+                  <h2 id="reset-modal-title" className="text-sm font-bold text-neutral-900">Resetear usuario</h2>
+                  <p className="text-xs text-neutral-500 mt-0.5">{resettingUser.nombre} — {resettingUser.email}</p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">Se borrarán asignaciones y se establecerá nueva contraseña.</p>
+                </div>
+              </div>
+              <button type="button" onClick={handleResetClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+                <Icon icon="lucide:x" width={16} height={16} />
+              </button>
+            </div>
+            <form onSubmit={handleResetSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
                 <label htmlFor="reset-password" className="block text-sm font-medium text-neutral-700 mb-1">
                   Nueva contraseña (mín. 6 caracteres)
@@ -1027,7 +1169,7 @@ export function UsuariosContent() {
                     minLength={6}
                     value={resetPassword}
                     onChange={(e) => setResetPassword(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                     placeholder="Mínimo 6 caracteres"
                   />
                   <button
@@ -1051,14 +1193,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleResetClose}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isResetting || resetPassword.length < 6}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
                 >
                   {isResetting ? "Reseteando…" : "Resetear y guardar contraseña"}
                 </button>
@@ -1070,25 +1212,35 @@ export function UsuariosContent() {
 
       {editingUser && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-modal-title"
           onClick={handleEditClose}
         >
           <div
-            className="bg-white rounded-2xl shadow-mac-modal w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex-shrink-0 px-6 py-4 border-b border-neutral-200">
-              <h2 id="edit-modal-title" className="text-lg font-semibold text-brand-blue">
-                Editar usuario
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {editingUser.nombre} — {editingUser.email}
-              </p>
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
             </div>
-            <form onSubmit={handleEditSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:user-cog" width={15} height={15} className="text-white" />
+                </div>
+                <div>
+                  <h2 id="edit-modal-title" className="text-sm font-bold text-neutral-900">Editar usuario</h2>
+                  <p className="text-xs text-neutral-500 mt-0.5">{editingUser.nombre} — {editingUser.email}</p>
+                </div>
+              </div>
+              <button type="button" onClick={handleEditClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+                <Icon icon="lucide:x" width={16} height={16} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
                 <label htmlFor="edit-rol" className="block text-sm font-medium text-neutral-700 mb-1">
                   Rol
@@ -1103,7 +1255,7 @@ export function UsuariosContent() {
                       empresaIds: e.target.value === "cliente" || e.target.value === "ejecutivo" ? f.empresaIds : [],
                     }))
                   }
-                  className="w-full rounded-lg border border-neutral-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                 >
                   {ROLES.map((r) => (
                     <option key={r.value} value={r.value}>
@@ -1155,7 +1307,7 @@ export function UsuariosContent() {
                             type={showChangePasswordCurrent ? "text" : "password"}
                             value={changePasswordCurrent}
                             onChange={(e) => setChangePasswordCurrent(e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                             placeholder="Ingresa la contraseña actual"
                             autoComplete="current-password"
                           />
@@ -1197,7 +1349,7 @@ export function UsuariosContent() {
                             minLength={6}
                             value={changePasswordNew}
                             onChange={(e) => setChangePasswordNew(e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                             placeholder="Mínimo 6 caracteres"
                             autoComplete="new-password"
                           />
@@ -1223,7 +1375,7 @@ export function UsuariosContent() {
                           minLength={6}
                           value={changePasswordConfirm}
                           onChange={(e) => setChangePasswordConfirm(e.target.value)}
-                          className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                          className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
                           placeholder="Repite la nueva contraseña"
                           autoComplete="new-password"
                         />
@@ -1267,7 +1419,7 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleEditClose}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
                 >
                   Cancelar
                 </button>
@@ -1277,7 +1429,7 @@ export function UsuariosContent() {
                     isUpdating ||
                     ((editForm.rol === "cliente" || editForm.rol === "ejecutivo") && editForm.empresaIds.length === 0)
                   }
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 >
                   {isUpdating ? "Guardando…" : "Guardar"}
                 </button>

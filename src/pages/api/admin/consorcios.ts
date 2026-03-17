@@ -1,8 +1,9 @@
 /**
- * API admin consorcios (GET lista; POST crea)
+ * API admin consorcios (GET lista; POST crea, solo superadmin)
  * Requiere tablas: consorcios, consorcios_servicios, servicios_unicos, navieras, etc.
  */
 import type { APIRoute } from "astro";
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -166,6 +167,9 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       return json({ error: "No autenticado" }, 401);
     }
 
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+
     let body: Record<string, unknown>;
     try {
       body = (await request.json()) as Record<string, unknown>;
@@ -180,16 +184,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
 
     if (!nombre) return json({ error: "Nombre del consorcio requerido" }, 400);
 
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      if (process.env.NODE_ENV === "development") console.error("[consorcios POST] createAdminClient: SUPABASE_SERVICE_ROLE_KEY no configurado");
-      return json(
-        { error: "Para crear consorcios configure SUPABASE_SERVICE_ROLE_KEY en .env (Supabase → Project Settings → API)." },
-        503
-      );
-    }
+    const admin = auth.admin;
 
     const { data: nuevo, error: insErr } = await admin
       .from("consorcios")

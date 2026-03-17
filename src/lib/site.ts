@@ -46,6 +46,7 @@ export const siteConfig = {
     {
       labelKey: "itinerarios",
       id: "itinerarios",
+      superadminOnly: true,
       children: [
         { labelKey: "serviciosPorNaviera", id: "servicios-por-naviera", href: "/itinerario/servicios" },
         { labelKey: "consorcios", id: "consorcios", href: "/itinerario/consorcios" },
