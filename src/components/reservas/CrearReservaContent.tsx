@@ -26,6 +26,10 @@ type FormData = {
   pais: string;
   temperatura: string;
   ventilacion: string;
+  tratamiento_frio: string;
+  tratamiento_frio_o2: string;
+  tratamiento_frio_co2: string;
+  tipo_atmosfera: string;
   pallets: string;
   peso_bruto: string;
   peso_neto: string;
@@ -58,6 +62,10 @@ const initialFormData: FormData = {
   pais: "",
   temperatura: "",
   ventilacion: "CERRADO",
+  tratamiento_frio: "",
+  tratamiento_frio_o2: "",
+  tratamiento_frio_co2: "",
+  tipo_atmosfera: "",
   pallets: "",
   peso_bruto: "",
   peso_neto: "",
@@ -119,6 +127,8 @@ export function CrearReservaContent() {
   const [enviarTransporte, setEnviarTransporte] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [lastSavedPayload, setLastSavedPayload] = useState<Record<string, unknown> | null>(null);
 
   const [catalogos, setCatalogos] = useState<Record<string, CatalogoItem[]>>({});
   const [navieras, setNavieras] = useState<SelectOption[]>([]);
@@ -480,6 +490,10 @@ export function CrearReservaContent() {
         : null,
       temperatura: formData.temperatura || null,
       ventilacion: formData.ventilacion || null,
+      tratamiento_frio: formData.tratamiento_frio || null,
+      tratamiento_frio_o2: formData.tratamiento_frio_o2 ? parseInt(formData.tratamiento_frio_o2, 10) : null,
+      tratamiento_frio_co2: formData.tratamiento_frio_co2 ? parseInt(formData.tratamiento_frio_co2, 10) : null,
+      tipo_atmosfera: formData.tipo_atmosfera || null,
       pallets: formData.pallets ? parseInt(formData.pallets, 10) : null,
       peso_bruto: formData.peso_bruto ? parseFloat(formData.peso_bruto) : null,
       peso_neto: formData.peso_neto ? parseFloat(formData.peso_neto) : null,
@@ -520,10 +534,116 @@ export function CrearReservaContent() {
       return;
     }
 
+    setLastSavedPayload(payload);
     setSuccess(tr.successMessage);
     setFormData(initialFormData);
     setClienteInput("");
+    setShowEmailModal(true);
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const buildEmailContent = (p: Record<string, unknown>) => {
+    const subject = `Solicitud de Reserva — ${p.cliente ?? "Sin cliente"} — ${p.naviera ?? "Sin naviera"} — BK: ${p.booking ?? "Sin booking"}`;
+
+    const rows = [
+      ["Tipo de operación", p.tipo_operacion],
+      ["Cliente", p.cliente],
+      ["Ejecutivo", p.ejecutivo],
+      ["Consignatario", p.consignatario],
+      ["Incoterm", p.incoterm],
+      ["Forma de pago", p.forma_pago],
+    ];
+    const cargaRows = [
+      ["Especie", p.especie],
+      ["Temperatura", p.temperatura],
+      ["Ventilación", p.ventilacion],
+      ["Trat. de frío", p.tratamiento_frio],
+      ["O₂", p.tratamiento_frio_o2 != null ? `${p.tratamiento_frio_o2}%` : null],
+      ["CO₂", p.tratamiento_frio_co2 != null ? `${p.tratamiento_frio_co2}%` : null],
+      ["Tipo atmósfera", p.tipo_atmosfera],
+      ["Pallets", p.pallets],
+      ["Peso bruto", p.peso_bruto ? `${p.peso_bruto} kg` : null],
+      ["Peso neto", p.peso_neto ? `${p.peso_neto} kg` : null],
+      ["Tipo unidad", p.tipo_unidad],
+    ];
+    const navRows = [
+      ["Naviera", p.naviera],
+      ["Nave", p.nave],
+      ["POL", p.pol],
+      ["POD", p.pod],
+      ["ETD", p.etd],
+      ["ETA", p.eta],
+      ["TT", p.tt != null ? `${p.tt} días` : null],
+      ["Booking", p.booking],
+    ];
+    const plantaRows = [
+      ["Planta", p.planta_presentacion],
+      ["Depósito", p.deposito],
+    ];
+
+    const renderTable = (title: string, data: (string | unknown)[][]) => {
+      const rowsHtml = data
+        .map(([label, val]) => {
+          const v = val ?? "-";
+          return `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;white-space:nowrap">${label}</td><td style="padding:4px 0;font-size:13px;font-weight:600;color:#1f2937">${v}</td></tr>`;
+        })
+        .join("");
+      return `<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#2563eb;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">${title}</div><table style="border-collapse:collapse">${rowsHtml}</table></div>`;
+    };
+
+    let htmlBody = `<div style="font-family:Arial,sans-serif;color:#374151"><p>Estimado equipo,</p><p>Se ha creado una nueva solicitud de reserva con los siguientes datos:</p>`;
+    htmlBody += renderTable("General", rows);
+    htmlBody += renderTable("Carga", cargaRows);
+    htmlBody += renderTable("Naviera / Viaje", navRows);
+    htmlBody += renderTable("Planta / Depósito", plantaRows);
+    if (p.observaciones) {
+      htmlBody += renderTable("Observaciones", [["Nota", p.observaciones]]);
+    }
+    htmlBody += `<p>Quedo atento.</p></div>`;
+
+    return { subject, htmlBody };
+  };
+
+  const handleSendEmail = async () => {
+    if (!lastSavedPayload) return;
+    const scriptUrl = import.meta.env.PUBLIC_GMAIL_DRAFT_SCRIPT_URL;
+    if (!scriptUrl) {
+      setError("No se ha configurado la URL del script de Gmail. Contacta al administrador.");
+      setShowEmailModal(false);
+      return;
+    }
+
+    setSendingEmail(true);
+    const { subject, htmlBody } = buildEmailContent(lastSavedPayload);
+
+    try {
+      const res = await fetch(scriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          to: "informaciones@asli.cl",
+          subject,
+          htmlBody,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.draftUrl) {
+        window.open(data.draftUrl, "_blank");
+        setSuccess("Borrador creado en Gmail. Revísalo y presiona Enviar.");
+      } else if (data.success) {
+        window.open("https://mail.google.com/mail/#drafts", "_blank");
+        setSuccess("Borrador creado en Gmail. Ábrelo desde Borradores y presiona Enviar.");
+      } else {
+        setError(data.error || "Error al crear el borrador en Gmail.");
+      }
+    } catch {
+      setError("No se pudo conectar con el servicio de correo.");
+    }
+
+    setSendingEmail(false);
+    setShowEmailModal(false);
   };
 
   const inputClass =
@@ -774,6 +894,10 @@ export function CrearReservaContent() {
         { label: tr.especie, value: getDisplayValue(formData.especie, especies) },
         { label: tr.temperatura, value: formData.temperatura || "-" },
         { label: tr.ventilacion, value: formData.ventilacion || "-" },
+        { label: tr.tratamientoFrio, value: formData.tratamiento_frio || "-" },
+        { label: tr.o2, value: formData.tratamiento_frio_o2 ? `${formData.tratamiento_frio_o2}%` : "-" },
+        { label: tr.co2, value: formData.tratamiento_frio_co2 ? `${formData.tratamiento_frio_co2}%` : "-" },
+        { label: tr.tipoAtmosfera, value: formData.tipo_atmosfera || "-" },
         { label: tr.pallets, value: formData.pallets || "-" },
         { label: tr.pesoBruto, value: formData.peso_bruto ? `${formData.peso_bruto} kg` : "-" },
         { label: tr.pesoNeto, value: formData.peso_neto ? `${formData.peso_neto} kg` : "-" },
@@ -1076,6 +1200,10 @@ export function CrearReservaContent() {
               {renderSelect("pod", destinos, tr.paisDestino)}
               {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
               {renderCatalogoSelect("ventilacion", "ventilacion", tr.ventilacion)}
+              {renderCatalogoSelect("tratamiento_frio", "tratamiento_frio", tr.tratamientoFrio)}
+              {renderInput("tratamiento_frio_o2", tr.o2, "number", "Ej: 21")}
+              {renderInput("tratamiento_frio_co2", tr.co2, "number", "Ej: 5")}
+              {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera)}
               {renderInput("pallets", tr.pallets, "number", tr.placeholderCantidad)}
               {renderInput("peso_bruto", tr.pesoBruto, "number", "Kg")}
               {renderInput("peso_neto", tr.pesoNeto, "number", "Kg")}
@@ -1327,6 +1455,59 @@ export function CrearReservaContent() {
       </div>
       {renderAddClienteModal()}
       {renderPreviewModal()}
+
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:mail" width={20} height={20} className="text-brand-blue" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-neutral-900">Enviar solicitud por correo</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">La reserva ya fue guardada exitosamente</p>
+                </div>
+              </div>
+              <p className="text-sm text-neutral-600 mb-5">
+                ¿Deseas enviar los datos de esta reserva por correo a <span className="font-semibold text-neutral-800">informaciones@asli.cl</span>?
+              </p>
+              <p className="text-xs text-neutral-400 mb-5">
+                Se creará un borrador en Gmail con todos los datos y tu firma. Solo tendrás que abrirlo y presionar Enviar.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleSendEmail()}
+                  disabled={sendingEmail}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm shadow-md shadow-brand-blue/20 disabled:opacity-60"
+                >
+                  {sendingEmail ? (
+                    <>
+                      <Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />
+                      Creando borrador...
+                    </>
+                  ) : (
+                    <>
+                      <Icon icon="lucide:send" width={15} height={15} />
+                      Sí, crear borrador
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(false)}
+                  disabled={sendingEmail}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
+                >
+                  No, omitir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

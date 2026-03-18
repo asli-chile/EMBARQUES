@@ -1,5 +1,7 @@
 import { siteConfig } from "@/lib/site";
 import { AuthWidget } from "@/components/ui/AuthWidget";
+import { OnlineUsersButton } from "@/components/ui/OnlineUsersButton";
+import { VisitCounterBadge } from "@/components/ui/VisitCounterBadge";
 import { HeaderTitle } from "./HeaderTitle";
 
 export function Header() {
@@ -30,6 +32,8 @@ export function Header() {
       <div className="flex-1 md:hidden" />
 
       {/* Auth widget — visible en todas las pantallas */}
+      <VisitCounterBadge />
+      <OnlineUsersButton />
       <AuthWidget />
     </header>
   );

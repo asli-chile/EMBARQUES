@@ -27,6 +27,10 @@ export type OperacionRow = {
   pais: string;
   temperatura: string;
   ventilacion: string;
+  tratamiento_frio: string;
+  tratamiento_frio_o2: number | null;
+  tratamiento_frio_co2: number | null;
+  tipo_atmosfera: string;
   pallets: number | null;
   peso_bruto: number | null;
   peso_neto: number | null;
@@ -114,6 +118,10 @@ type DbOperacion = {
   pais: string | null;
   temperatura: string | null;
   ventilacion: string | null;
+  tratamiento_frio: string | null;
+  tratamiento_frio_o2: number | null;
+  tratamiento_frio_co2: number | null;
+  tipo_atmosfera: string | null;
   pallets: number | null;
   peso_bruto: number | null;
   peso_neto: number | null;
@@ -353,6 +361,10 @@ function createToRow(locale: string) {
       pais: db.pais ?? "",
       temperatura: db.temperatura ?? "",
       ventilacion: db.ventilacion ?? "",
+      tratamiento_frio: db.tratamiento_frio ?? "",
+      tratamiento_frio_o2: db.tratamiento_frio_o2,
+      tratamiento_frio_co2: db.tratamiento_frio_co2,
+      tipo_atmosfera: db.tipo_atmosfera ?? "",
       pallets: db.pallets,
       peso_bruto: db.peso_bruto,
       peso_neto: db.peso_neto,
@@ -434,6 +446,8 @@ type CatalogosState = {
   moneda: string[];
   prioridad: string[];
   ventilacion: string[];
+  tratamiento_frio: string[];
+  tipo_atmosfera: string[];
   navieras: string[];
   naves: { naviera: string; nombre: string }[];
   plantas: string[];
@@ -456,6 +470,8 @@ const emptyCatalogos: CatalogosState = {
   moneda: [],
   prioridad: [],
   ventilacion: [],
+  tratamiento_frio: [],
+  tipo_atmosfera: [],
   navieras: [],
   naves: [],
   plantas: [],
@@ -474,6 +490,7 @@ export function RegistrosContent() {
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const canEdit = !isCliente;
   const gridRef = useRef<AgGridReact<OperacionRow>>(null);
+  const [selectionCount, setSelectionCount] = useState(0);
   const [rowData, setRowData] = useState<OperacionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -541,6 +558,8 @@ export function RegistrosContent() {
       moneda: getByCategoria("moneda"),
       prioridad: getByCategoria("prioridad"),
       ventilacion: getByCategoria("ventilacion"),
+      tratamiento_frio: getByCategoria("tratamiento_frio"),
+      tipo_atmosfera: getByCategoria("tipo_atmosfera"),
       navieras: (navierasRes.data ?? []).map((n) => n.nombre),
       naves: (navesRes.data ?? [])
         .map((n: Record<string, unknown>) => ({
@@ -657,6 +676,22 @@ export function RegistrosContent() {
       {
         field: "ventilacion", headerName: t.registros.colVentilation, sortable: true, editable: canEdit, width: columnWidths.ventilacion,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ventilacion] },
+      },
+      {
+        field: "tratamiento_frio", headerName: t.registros.colColdTreatment, sortable: true, editable: canEdit, width: columnWidths.tratamientoFrio,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.tratamiento_frio] },
+      },
+      {
+        field: "tratamiento_frio_o2", headerName: t.registros.colO2, sortable: true, editable: canEdit, width: columnWidths.tratamientoFrioO2,
+        valueFormatter: (p) => p.value != null ? `${p.value}%` : "",
+      },
+      {
+        field: "tratamiento_frio_co2", headerName: t.registros.colCO2, sortable: true, editable: canEdit, width: columnWidths.tratamientoFrioCo2,
+        valueFormatter: (p) => p.value != null ? `${p.value}%` : "",
+      },
+      {
+        field: "tipo_atmosfera", headerName: t.registros.colAtmosphereType, sortable: true, editable: canEdit, width: columnWidths.tipoAtmosfera,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.tipo_atmosfera] },
       },
       { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: canEdit, width: columnWidths.pallets },
       { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: canEdit, width: columnWidths.pesoBruto },
@@ -1021,33 +1056,30 @@ export function RegistrosContent() {
                 <span className="hidden sm:inline">{t.registros.newBooking}</span>
                 <span className="sm:hidden">Nuevo</span>
               </a>
-              {/* Botón Enviar a Transportes */}
-              <button
-                type="button"
-                onClick={() => {
-                  const sel = getSelectedRows();
-                  if (!sel.length) {
-                    setError("Selecciona al menos una operación para enviar a transportes");
-                    setTimeout(() => setError(null), 3000);
-                    return;
-                  }
-                  setShowTransportModal(true);
-                }}
-                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-              >
-                <Icon icon="lucide:truck" width={14} height={14} className="sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Enviar a Transportes</span>
-                <span className="sm:hidden">Transporte</span>
-              </button>
-              {/* Botón Eliminar */}
-              <button
-                type="button"
-                onClick={() => void handleRemoveSelected()}
-                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-              >
-                <Icon icon="typcn:trash" width={14} height={14} className="sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">{t.registros.deleteSelection}</span>
-              </button>
+              {/* Botón Enviar a Transportes — solo visible con selección */}
+              {selectionCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowTransportModal(true)}
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                >
+                  <Icon icon="lucide:truck" width={14} height={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Enviar a Transportes ({selectionCount})</span>
+                  <span className="sm:hidden">Transporte ({selectionCount})</span>
+                </button>
+              )}
+              {/* Botón Eliminar — solo visible con selección */}
+              {selectionCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void handleRemoveSelected()}
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                >
+                  <Icon icon="typcn:trash" width={14} height={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{t.registros.deleteSelection} ({selectionCount})</span>
+                  <span className="sm:hidden">Eliminar ({selectionCount})</span>
+                </button>
+              )}
             </>
           )}
           
@@ -1091,6 +1123,7 @@ export function RegistrosContent() {
             domLayout="normal"
             getRowId={(params) => params.data.id}
             onCellValueChanged={handleCellValueChanged}
+            onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
             rowHeight={30}
             headerHeight={34}
           />
