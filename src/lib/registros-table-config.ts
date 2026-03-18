@@ -46,6 +46,7 @@ export const columnWidths = {
   // ─── NAVIERA / EMBARQUE ────────────────────────────────────────────────────
   naviera: 150,
   nave: 190,
+  viaje: 120,
   pol: 150,
   etd: 155,
   pod: 155,

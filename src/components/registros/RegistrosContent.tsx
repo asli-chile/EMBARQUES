@@ -128,6 +128,7 @@ type DbOperacion = {
   tipo_unidad: string | null;
   naviera: string | null;
   nave: string | null;
+  viaje: string | null;
   pol: string | null;
   etd: string | null;
   pod: string | null;
@@ -371,6 +372,7 @@ function createToRow(locale: string) {
       tipo_unidad: db.tipo_unidad ?? "",
       naviera: db.naviera ?? "",
       nave: db.nave ?? "",
+      viaje: db.viaje ?? "",
       pol: db.pol ?? "",
       etd: formatDate(db.etd, locale),
       pod: db.pod ?? "",
@@ -718,6 +720,7 @@ export function RegistrosContent() {
           return { values: navesDisponibles };
         },
       },
+      { field: "viaje", headerName: t.registros.colViaje, sortable: true, editable: canEdit, width: columnWidths.viaje },
       {
         field: "pol", headerName: t.registros.colPOL, sortable: true, editable: canEdit, width: columnWidths.pol,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.puertos_origen },

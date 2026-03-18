@@ -1497,41 +1497,41 @@ export function CrearReservaContent() {
 
         </form>
         </div>{/* ← cierra grid */}
-
-        {/* Barra de acciones — sticky al fondo del scroll, siempre visible en móvil y desktop */}
-        <div
-          className="sticky bottom-0 z-10 border-t border-neutral-200 bg-white -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mt-2"
-          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
-        >
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
-              className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
-            >
-              {tr.limpiar}
-            </button>
-            <button
-              type="submit"
-              form="reserva-form"
-              disabled={submitting}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <>
-                  <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
-                  {tr.guardando}
-                </>
-              ) : (
-                <>
-                  <Icon icon="typcn:input-checked" width={16} height={16} />
-                  {tr.guardar}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
       </div>{/* ← cierra flex-1 overflow-auto */}
+
+      {/* Barra de acciones — fuera del scroll, siempre visible en todos los navegadores */}
+      <div
+        className="shrink-0 border-t border-neutral-200 bg-white px-4 sm:px-6 py-3"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
+            className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+          >
+            {tr.limpiar}
+          </button>
+          <button
+            type="submit"
+            form="reserva-form"
+            disabled={submitting}
+            className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <>
+                <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
+                {tr.guardando}
+              </>
+            ) : (
+              <>
+                <Icon icon="typcn:input-checked" width={16} height={16} />
+                {tr.guardar}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
 
       {renderAddClienteModal()}
       {renderPreviewModal()}
