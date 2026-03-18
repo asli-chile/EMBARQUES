@@ -14,7 +14,7 @@ export function getOrCreateSessionId(): string {
   return id;
 }
 
-const HEARTBEAT_MS = 60_000; // actualizar last_seen cada 60s
+const HEARTBEAT_MS = 15_000;
 
 /**
  * Registra la sesión actual en `sesiones_activas` y la mantiene viva con heartbeat.

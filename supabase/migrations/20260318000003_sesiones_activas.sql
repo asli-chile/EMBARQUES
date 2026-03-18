@@ -29,3 +29,7 @@ CREATE POLICY "sesiones_select_all" ON public.sesiones_activas
 
 GRANT SELECT, INSERT, UPDATE ON public.sesiones_activas TO anon;
 GRANT SELECT, INSERT, UPDATE ON public.sesiones_activas TO authenticated;
+
+-- Habilitar Realtime para actualizaciones instantáneas en el frontend
+ALTER TABLE public.sesiones_activas REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.sesiones_activas;

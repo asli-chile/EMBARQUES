@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
@@ -32,7 +32,7 @@ const ROL_LABEL: Record<string, string> = {
   visitante: "Visitante",
 };
 
-const REFRESH_MS = 30_000;
+const FALLBACK_POLL_MS = 10_000;
 const ONLINE_THRESHOLD_MIN = 3;
 
 export function OnlineUsersButton() {
@@ -41,14 +41,13 @@ export function OnlineUsersButton() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Registra la sesión del usuario actual (anon o auth) — corre para todos
   useSessionPresence();
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
   }, []);
 
-  const fetchSessions = () => {
+  const fetchSessions = useCallback(() => {
     if (!supabase) return;
     const threshold = new Date(Date.now() - ONLINE_THRESHOLD_MIN * 60 * 1000).toISOString();
     supabase
@@ -58,16 +57,31 @@ export function OnlineUsersButton() {
       .order("last_seen", { ascending: false })
       .then(({ data, error }) => { if (!error) setSessions(data ?? []); })
       .catch(() => {});
-  };
+  }, [supabase]);
 
-  // Cargar y refrescar lista (solo si superadmin)
+  // Supabase Realtime: re-fetch al detectar cualquier cambio en la tabla
   useEffect(() => {
-    if (!isSuperadmin) return;
+    if (!isSuperadmin || !supabase) return;
+
     fetchSessions();
-    const interval = setInterval(fetchSessions, REFRESH_MS);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperadmin, supabase]);
+
+    const channel = supabase
+      .channel("online-users-realtime")
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "sesiones_activas" },
+        () => fetchSessions()
+      )
+      .subscribe();
+
+    // Polling de respaldo por si Realtime no está habilitado en la tabla
+    const fallback = setInterval(fetchSessions, FALLBACK_POLL_MS);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(fallback);
+    };
+  }, [isSuperadmin, supabase, fetchSessions]);
 
   // Cerrar popover al click fuera
   useEffect(() => {
@@ -79,6 +93,14 @@ export function OnlineUsersButton() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
   const authUsers = useMemo(() => {
@@ -115,92 +137,114 @@ export function OnlineUsersButton() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200]">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <p className="text-sm font-semibold text-neutral-800">En línea ahora</p>
-            <span className="ml-auto text-xs font-medium text-neutral-500 bg-neutral-100 rounded-full px-2 py-0.5">
-              {total} conectado{total !== 1 ? "s" : ""}
-            </span>
-          </div>
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[199] bg-black/20 md:bg-transparent"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
 
-          <ul className="max-h-80 overflow-y-auto divide-y divide-neutral-100">
-            {sessions.length === 0 ? (
-              <li className="px-4 py-4 text-sm text-neutral-400 text-center">
-                Sin usuarios conectados
-              </li>
-            ) : (
-              <>
-                {authUsers.map((s) => {
-                  const isMe = s.session_id === profile?.id || s.email === profile?.email;
-                  const initials = s.nombre
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((p) => p[0])
-                    .join("")
-                    .toUpperCase();
-                  return (
-                    <li
-                      key={s.session_id}
-                      className={`flex items-center gap-3 px-4 py-2.5 ${isMe ? "bg-brand-blue/5" : ""}`}
-                    >
-                      <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold shrink-0">
-                        {initials}
+          {/* Panel: bottom sheet en móvil, popover en desktop */}
+          <div className="fixed inset-x-0 bottom-0 z-[200] md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:w-80 rounded-t-2xl md:rounded-xl border border-neutral-200 bg-white shadow-lg max-h-[70vh] md:max-h-[28rem] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100 shrink-0">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <p className="text-sm font-semibold text-neutral-800">En línea ahora</p>
+              <span className="ml-auto text-xs font-medium text-neutral-500 bg-neutral-100 rounded-full px-2 py-0.5">
+                {total} conectado{total !== 1 ? "s" : ""}
+              </span>
+              {/* Botón cerrar visible en móvil */}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="md:hidden ml-1 p-1 text-neutral-400 hover:text-neutral-600"
+                aria-label="Cerrar"
+              >
+                <Icon icon="lucide:x" width={16} height={16} />
+              </button>
+            </div>
+
+            {/* Lista */}
+            <ul className="flex-1 overflow-y-auto divide-y divide-neutral-100">
+              {sessions.length === 0 ? (
+                <li className="px-4 py-4 text-sm text-neutral-400 text-center">
+                  Sin usuarios conectados
+                </li>
+              ) : (
+                <>
+                  {authUsers.map((s) => {
+                    const isMe = s.session_id === profile?.id || s.email === profile?.email;
+                    const initials = s.nombre
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((p) => p[0])
+                      .join("")
+                      .toUpperCase();
+                    return (
+                      <li
+                        key={s.session_id}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${isMe ? "bg-brand-blue/5" : ""}`}
+                      >
+                        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold shrink-0">
+                          {initials}
+                          <span className="absolute bottom-0 right-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-white">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          </span>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-neutral-800 truncate">
+                            {s.nombre}
+                            {isMe && (
+                              <span className="ml-1.5 text-[10px] text-neutral-400 font-normal">(tú)</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-neutral-500 truncate">{s.email}</p>
+                        </div>
+                        <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROL_COLOR[s.rol] ?? "bg-neutral-100 text-neutral-600"}`}>
+                          {ROL_LABEL[s.rol] ?? s.rol}
+                        </span>
+                      </li>
+                    );
+                  })}
+
+                  {guests.length > 0 && (
+                    <li className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 shrink-0">
+                        <Icon icon="lucide:eye" width={15} height={15} />
                         <span className="absolute bottom-0 right-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-white">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                         </span>
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-neutral-800 truncate">
-                          {s.nombre}
-                          {isMe && (
-                            <span className="ml-1.5 text-[10px] text-neutral-400 font-normal">(tú)</span>
-                          )}
+                        <p className="text-sm font-medium text-neutral-600">
+                          {guests.length} visitante{guests.length !== 1 ? "s" : ""}
                         </p>
-                        <p className="text-xs text-neutral-500 truncate">{s.email}</p>
+                        <p className="text-xs text-neutral-400">Sin sesión iniciada</p>
                       </div>
-                      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROL_COLOR[s.rol] ?? "bg-neutral-100 text-neutral-600"}`}>
-                        {ROL_LABEL[s.rol] ?? s.rol}
+                      <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-500">
+                        Anónimo
                       </span>
                     </li>
-                  );
-                })}
+                  )}
+                </>
+              )}
+            </ul>
 
-                {guests.length > 0 && (
-                  <li className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 shrink-0">
-                      <Icon icon="lucide:eye" width={15} height={15} />
-                      <span className="absolute bottom-0 right-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-white">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                      </span>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-neutral-600">
-                        {guests.length} visitante{guests.length !== 1 ? "s" : ""}
-                      </p>
-                      <p className="text-xs text-neutral-400">Sin sesión iniciada</p>
-                    </div>
-                    <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-500">
-                      Anónimo
-                    </span>
-                  </li>
-                )}
-              </>
-            )}
-          </ul>
-
-          <div className="px-4 py-2 border-t border-neutral-100 flex items-center justify-between">
-            <span className="text-[10px] text-neutral-400">Activos últimos {ONLINE_THRESHOLD_MIN} min</span>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); fetchSessions(); }}
-              className="text-[11px] text-brand-blue hover:underline flex items-center gap-1"
-            >
-              <Icon icon="lucide:refresh-cw" width={11} height={11} />
-              Actualizar
-            </button>
+            {/* Footer */}
+            <div className="px-4 py-2 border-t border-neutral-100 flex items-center justify-between shrink-0">
+              <span className="text-[10px] text-neutral-400">Actualización en tiempo real</span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); fetchSessions(); }}
+                className="text-[11px] text-brand-blue hover:underline flex items-center gap-1"
+              >
+                <Icon icon="lucide:refresh-cw" width={11} height={11} />
+                Actualizar
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
