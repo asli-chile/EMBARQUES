@@ -58,68 +58,75 @@ function fmtDate(dateStr: string | null | undefined): string {
   try { return format(new Date(dateStr), "dd-MM-yyyy", { locale: es }); } catch { return dateStr; }
 }
 
-function buildReservaBody(op: Operacion): string {
-  return [
-    "SOLICITUD DE RESERVA",
-    "─────────────────────────────",
-    `Ref. ASLI:        ${op.ref_asli ?? "-"}`,
-    `Cliente:          ${op.cliente ?? "-"}`,
-    `Estado:           ${op.estado_operacion ?? "-"}`,
-    "",
-    "CARGA",
-    `Especie:          ${op.especie ?? "-"}`,
-    `Contenedor:       ${op.tipo_unidad ?? "-"}`,
-    `Pallets:          ${op.pallets ?? "-"}`,
-    `Peso Neto:        ${op.peso_neto ? `${op.peso_neto.toLocaleString("es-CL")} kg` : "-"}`,
-    `Temperatura:      ${op.temperatura !== null && op.temperatura !== undefined ? `${op.temperatura}°C` : "-"}`,
-    `Ventilación:      ${op.ventilacion ?? "-"}`,
-    `Consignatario:    ${op.consignatario ?? "-"}`,
-    "",
-    "EMBARQUE",
-    `Naviera:          ${op.naviera ?? "-"}`,
-    `Nave:             ${op.nave ?? "-"}`,
-    `Booking:          ${op.booking ?? "-"}`,
-    `POL:              ${op.pol ?? "-"}`,
-    `POD:              ${op.pod ?? "-"}`,
-    `ETD:              ${fmtDate(op.etd)}`,
-    `ETA:              ${fmtDate(op.eta)}`,
-    `Tránsito:         ${op.tt ? `${op.tt} días` : "-"}`,
-  ].join("\n");
+function renderHtmlTable(title: string, data: [string, unknown][]) {
+  const rowsHtml = data
+    .map(([label, val]) => {
+      const v = val ?? "-";
+      return `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;white-space:nowrap">${label}</td><td style="padding:4px 0;font-size:13px;font-weight:600;color:#1f2937">${v}</td></tr>`;
+    })
+    .join("");
+  return `<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#2563eb;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">${title}</div><table style="border-collapse:collapse">${rowsHtml}</table></div>`;
 }
 
-function buildTransporteBody(op: Operacion): string {
-  return [
-    "SOLICITUD DE TRANSPORTE",
-    "─────────────────────────────",
-    `Ref. ASLI:        ${op.ref_asli ?? "-"}`,
-    `Cliente:          ${op.cliente ?? "-"}`,
-    "",
-    "RESERVA",
-    `Naviera:          ${op.naviera ?? "-"}`,
-    `Nave:             ${op.nave ?? "-"}`,
-    `Booking:          ${op.booking ?? "-"}`,
-    `POL:              ${op.pol ?? "-"}`,
-    `POD:              ${op.pod ?? "-"}`,
-    `ETD:              ${fmtDate(op.etd)}`,
-    `Contenedor:       ${op.tipo_unidad ?? "-"}`,
-    `Especie:          ${op.especie ?? "-"}`,
-    "",
-    "DEPÓSITO / PLANTA",
-    `Planta:           ${op.planta_presentacion ?? "-"}`,
-    `Depósito:         ${op.deposito ?? "-"}`,
-    `Citación:         ${fmtDate(op.citacion)}`,
-    `Stacking Inicio:  ${fmtDate(op.inicio_stacking)}`,
-    `Stacking Fin:     ${fmtDate(op.fin_stacking)}`,
-  ].join("\n");
-}
-
-function openMailto(op: Operacion, type: EmailType) {
+function buildEmailContent(op: Operacion, type: EmailType) {
   const subject =
     type === "reserva"
-      ? `Solicitud de Reserva - ${op.ref_asli ?? op.correlativo ?? ""} - ${op.cliente ?? ""}`
-      : `Solicitud de Transporte - ${op.ref_asli ?? op.correlativo ?? ""} - ${op.cliente ?? ""}`;
-  const body = type === "reserva" ? buildReservaBody(op) : buildTransporteBody(op);
-  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      ? `Solicitud de Reserva — ${op.ref_asli ?? op.correlativo ?? ""} — ${op.cliente ?? ""}`
+      : `Solicitud de Transporte — ${op.ref_asli ?? op.correlativo ?? ""} — ${op.cliente ?? ""}`;
+
+  let htmlBody = `<div style="font-family:Arial,sans-serif;color:#374151">`;
+
+  if (type === "reserva") {
+    htmlBody += `<p>Estimado equipo,</p><p>Se solicita la siguiente reserva:</p>`;
+    htmlBody += renderHtmlTable("General", [
+      ["Ref. ASLI", op.ref_asli],
+      ["Cliente", op.cliente],
+      ["Estado", op.estado_operacion],
+    ]);
+    htmlBody += renderHtmlTable("Carga", [
+      ["Especie", op.especie],
+      ["Tipo unidad", op.tipo_unidad],
+      ["Pallets", op.pallets],
+      ["Peso Neto", op.peso_neto ? `${op.peso_neto.toLocaleString("es-CL")} kg` : null],
+      ["Temperatura", op.temperatura != null ? `${op.temperatura}°C` : null],
+      ["Ventilación", op.ventilacion],
+      ["Consignatario", op.consignatario],
+    ]);
+    htmlBody += renderHtmlTable("Embarque", [
+      ["Naviera", op.naviera],
+      ["Nave", op.nave],
+      ["Booking", op.booking],
+      ["POL", op.pol],
+      ["POD", op.pod],
+      ["ETD", fmtDate(op.etd)],
+      ["ETA", fmtDate(op.eta)],
+      ["Tránsito", op.tt ? `${op.tt} días` : null],
+    ]);
+  } else {
+    htmlBody += `<p>Estimado equipo,</p><p>Se solicita el siguiente transporte:</p>`;
+    htmlBody += renderHtmlTable("Reserva", [
+      ["Ref. ASLI", op.ref_asli],
+      ["Cliente", op.cliente],
+      ["Naviera", op.naviera],
+      ["Nave", op.nave],
+      ["Booking", op.booking],
+      ["POL", op.pol],
+      ["POD", op.pod],
+      ["ETD", fmtDate(op.etd)],
+      ["Tipo unidad", op.tipo_unidad],
+      ["Especie", op.especie],
+    ]);
+    htmlBody += renderHtmlTable("Depósito / Planta", [
+      ["Planta", op.planta_presentacion],
+      ["Depósito", op.deposito],
+      ["Citación", fmtDate(op.citacion)],
+      ["Stacking Inicio", fmtDate(op.inicio_stacking)],
+      ["Stacking Fin", fmtDate(op.fin_stacking)],
+    ]);
+  }
+
+  htmlBody += `<p>Quedo atento.</p></div>`;
+  return { subject, htmlBody };
 }
 
 async function copyToClipboard(op: Operacion): Promise<boolean> {
@@ -307,10 +314,47 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
 // ─── EmailModal ───────────────────────────────────────────────────────────────
 
 function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
-  const handleSend = (type: EmailType) => {
-    openMailto(op, type);
+  const [sending, setSending] = useState<EmailType | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSend = async (type: EmailType) => {
+    const scriptUrl = import.meta.env.PUBLIC_GMAIL_DRAFT_SCRIPT_URL;
+    if (!scriptUrl) {
+      setError("No se ha configurado la URL del script de Gmail.");
+      return;
+    }
+
+    setSending(type);
+    setError(null);
+    const { subject, htmlBody } = buildEmailContent(op, type);
+
+    try {
+      const res = await fetch(scriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ to: "informaciones@asli.cl", subject, htmlBody }),
+      });
+      const data = await res.json();
+      if (data.success && data.draftUrl) {
+        window.open(data.draftUrl, "_blank");
+      } else if (data.success) {
+        window.open("https://mail.google.com/mail/#drafts", "_blank");
+      } else {
+        setError(data.error || "Error al crear el borrador en Gmail.");
+        setSending(null);
+        return;
+      }
+    } catch {
+      setError("No se pudo conectar con el servicio de correo.");
+      setSending(null);
+      return;
+    }
+
+    setSending(null);
     onClose();
   };
+
+  const disabled = sending !== null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
@@ -325,16 +369,25 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>
+        )}
+
         <p className="text-xs text-neutral-500 mb-4">¿Qué tipo de solicitud deseas enviar?</p>
 
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => handleSend("reserva")}
-            className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group"
+            disabled={disabled}
+            onClick={() => void handleSend("reserva")}
+            className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/20 transition-colors">
-              <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-brand-blue" />
+              {sending === "reserva" ? (
+                <Icon icon="typcn:refresh" width={18} height={18} className="text-brand-blue animate-spin" />
+              ) : (
+                <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-brand-blue" />
+              )}
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-800">Solicitud de Reserva</p>
@@ -345,11 +398,16 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
 
           <button
             type="button"
-            onClick={() => handleSend("transporte")}
-            className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group"
+            disabled={disabled}
+            onClick={() => void handleSend("transporte")}
+            className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-              <Icon icon="lucide:truck" width={18} height={18} className="text-emerald-600" />
+              {sending === "transporte" ? (
+                <Icon icon="typcn:refresh" width={18} height={18} className="text-emerald-600 animate-spin" />
+              ) : (
+                <Icon icon="lucide:truck" width={18} height={18} className="text-emerald-600" />
+              )}
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-800">Solicitud de Transporte</p>
@@ -362,7 +420,8 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
+          disabled={disabled}
+          className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
         >
           Cancelar
         </button>
