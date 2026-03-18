@@ -29,6 +29,10 @@ const pathname = Astro.url.pathname;
       type="module"
       src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
     ></script>
+    <style is:global>
+      vercel-live-feedback, #vercel-live-feedback, .__vercel_live_token,
+      [data-vercel-toolbar], vercel-toolbar { display: none !important; }
+    </style>
   </head>
   <body class="h-screen overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
     <AppShell client:only="react" pathname={pathname}>

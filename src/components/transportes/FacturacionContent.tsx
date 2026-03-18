@@ -235,11 +235,11 @@ export function FacturacionContent() {
     };
 
     if (op.numero_factura_asli) {
-      // Ya tiene número guardado — usarlo directamente
       loadForm(op.numero_factura_asli);
-    } else {
-      // Generar y reservar inmediatamente en la base de datos
+    } else if (!isCliente) {
       reserveNextInvoiceNumber(op.id).then((num) => loadForm(num));
+    } else {
+      loadForm("");
     }
     setSuccess(false);
     setError(null);
@@ -247,7 +247,7 @@ export function FacturacionContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase || !formData.operacion_id) return;
+    if (!supabase || !formData.operacion_id || isCliente) return;
     setSaving(true);
     setError(null);
 
@@ -818,7 +818,8 @@ export function FacturacionContent() {
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
         placeholder={placeholder}
-        className={inputClass}
+        readOnly={isCliente}
+        className={`${inputClass} ${isCliente ? "cursor-default opacity-70" : ""}`}
       />
     </div>
   );
@@ -826,7 +827,7 @@ export function FacturacionContent() {
   const renderSelect = (label: string, field: keyof FormData, options: string[], placeholder?: string) => (
     <div>
       <label className={labelClass}>{label}</label>
-      <select value={formData[field]} onChange={(e) => handleChange(field, e.target.value)} className={inputClass}>
+      <select value={formData[field]} onChange={(e) => handleChange(field, e.target.value)} disabled={isCliente} className={`${inputClass} ${isCliente ? "cursor-default opacity-70" : ""}`}>
         <option value="">{placeholder || tr.select}</option>
         {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
       </select>
@@ -1144,7 +1145,7 @@ export function FacturacionContent() {
                   </div>
 
                   {/* ── Costos extra rápidos ── */}
-                  {costosExtra.length > 0 && (
+                  {!isCliente && costosExtra.length > 0 && (
                     <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-start gap-3">
                       <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
                         <Icon icon="lucide:zap" width={12} height={12} className="text-sky-500" />
@@ -1187,24 +1188,25 @@ export function FacturacionContent() {
                   ) : (
                     <div className="p-4 space-y-2">
                       {/* Header de columnas */}
-                      <div className="hidden sm:grid grid-cols-[1fr_80px_120px_100px_36px] gap-2 px-1">
+                      <div className={`hidden sm:grid gap-2 px-1 ${isCliente ? "grid-cols-[1fr_80px_120px_100px]" : "grid-cols-[1fr_80px_120px_100px_36px]"}`}>
                         <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Descripción</span>
                         <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide text-center">Qty</span>
                         <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Monto unit.</span>
                         <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Moneda</span>
-                        <span />
+                        {!isCliente && <span />}
                       </div>
 
                       {itemsProforma.map((item) => {
                         const subtotal = parseFloat(item.cantidad || "1") * parseFloat(item.monto_unitario || "0");
                         return (
-                          <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1fr_80px_120px_100px_36px] gap-2 items-center p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                          <div key={item.id} className={`grid grid-cols-1 gap-2 items-center p-3 rounded-xl bg-neutral-50 border border-neutral-100 ${isCliente ? "sm:grid-cols-[1fr_80px_120px_100px]" : "sm:grid-cols-[1fr_80px_120px_100px_36px]"}`}>
                             <input
                               type="text"
                               value={item.descripcion}
                               onChange={(e) => updateItem(item.id, "descripcion", e.target.value)}
                               placeholder="Descripción del ítem..."
-                              className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                              readOnly={isCliente}
+                              className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
                             />
                             <input
                               type="number"
@@ -1212,7 +1214,8 @@ export function FacturacionContent() {
                               onChange={(e) => updateItem(item.id, "cantidad", e.target.value)}
                               placeholder="1"
                               min="1"
-                              className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs text-center focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                              readOnly={isCliente}
+                              className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs text-center focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
                             />
                             <div className="relative">
                               <input
@@ -1220,7 +1223,8 @@ export function FacturacionContent() {
                                 value={item.monto_unitario}
                                 onChange={(e) => updateItem(item.id, "monto_unitario", e.target.value)}
                                 placeholder="0.00"
-                                className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                                readOnly={isCliente}
+                                className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
                               />
                               {subtotal > 0 && (
                                 <span className="absolute -bottom-4 left-0 text-[9px] text-brand-blue font-medium">
@@ -1231,17 +1235,20 @@ export function FacturacionContent() {
                             <select
                               value={item.moneda}
                               onChange={(e) => updateItem(item.id, "moneda", e.target.value)}
-                              className="w-full px-2 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all"
+                              disabled={isCliente}
+                              className={`w-full px-2 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
                             >
                               {monedas.map((m) => <option key={m} value={m}>{m}</option>)}
                             </select>
-                            <button
-                              type="button"
-                              onClick={() => removeItem(item.id)}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                            >
-                              <Icon icon="lucide:trash-2" width={14} height={14} />
-                            </button>
+                            {!isCliente && (
+                              <button
+                                type="button"
+                                onClick={() => removeItem(item.id)}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                              >
+                                <Icon icon="lucide:trash-2" width={14} height={14} />
+                              </button>
+                            )}
                           </div>
                         );
                       })}
@@ -1292,28 +1299,35 @@ export function FacturacionContent() {
                 )}
 
                 {/* Acciones */}
-                <div className="flex flex-wrap items-center gap-3 justify-end">
-                  <div className="flex gap-3 ml-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setFormData(initialFormData); setItemsProforma([]); setSuccess(false); setError(null); }}
-                      className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
-                    >
-                      {tr.cancel}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.saving}</>
-                      ) : (
-                        <><Icon icon="lucide:save" className="w-4 h-4" />{tr.save}</>
-                      )}
-                    </button>
+                {isCliente ? (
+                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                    <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
+                    <span>Solo lectura. No tienes permisos para crear o editar facturas.</span>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3 justify-end">
+                    <div className="flex gap-3 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => { setFormData(initialFormData); setItemsProforma([]); setSuccess(false); setError(null); }}
+                        className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                      >
+                        {tr.cancel}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
+                      >
+                        {saving ? (
+                          <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.saving}</>
+                        ) : (
+                          <><Icon icon="lucide:save" className="w-4 h-4" />{tr.save}</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               </div>
             ) : (

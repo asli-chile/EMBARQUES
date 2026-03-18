@@ -299,7 +299,7 @@ async function applyTagsToXlsxBuffer(
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function FormatosDocumentosContent() {
-  useAuth(); // ensure auth context
+  const { isCliente } = useAuth();
 
   const [formatos, setFormatos] = useState<FormatoDocumento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -619,10 +619,12 @@ export function FormatosDocumentosContent() {
           <h1 className="text-base font-bold text-neutral-900">Formatos de Documentos</h1>
           <p className="text-xs text-neutral-500 mt-0.5">Plantillas HTML o Excel con etiquetas dinámicas.</p>
         </div>
-        <button onClick={handleNuevo} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 transition-colors shadow-sm">
-          <Icon icon="lucide:plus" width={15} height={15} />
-          Nuevo formato
-        </button>
+        {!isCliente && (
+          <button onClick={handleNuevo} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 transition-colors shadow-sm">
+            <Icon icon="lucide:plus" width={15} height={15} />
+            Nuevo formato
+          </button>
+        )}
       </div>
 
       <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -656,10 +658,12 @@ export function FormatosDocumentosContent() {
             <p className="text-sm text-neutral-500 mb-5 max-w-sm">
               Crea tu primer formato HTML o sube una plantilla Excel con etiquetas <code className="bg-neutral-100 px-1 rounded text-xs">{"{{como_estas}}"}</code>.
             </p>
-            <button onClick={handleNuevo} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 transition-colors shadow-sm">
-              <Icon icon="lucide:plus" width={15} height={15} />
-              Crear primer formato
-            </button>
+            {!isCliente && (
+              <button onClick={handleNuevo} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 transition-colors shadow-sm">
+                <Icon icon="lucide:plus" width={15} height={15} />
+                Crear primer formato
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -707,20 +711,24 @@ export function FormatosDocumentosContent() {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleAbrirGenerar(f)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors"
-                      >
-                        <Icon icon="lucide:zap" width={12} height={12} />
-                        Generar
-                      </button>
-                      <button
-                        onClick={() => handleEditar(f)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg text-brand-blue bg-brand-blue/10 hover:bg-brand-blue hover:text-white transition-all border border-brand-blue/20"
-                        title="Editar"
-                      >
-                        <Icon icon="lucide:pencil" width={13} height={13} />
-                      </button>
+                      {!isCliente && (
+                        <button
+                          onClick={() => handleAbrirGenerar(f)}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors"
+                        >
+                          <Icon icon="lucide:zap" width={12} height={12} />
+                          Generar
+                        </button>
+                      )}
+                      {!isCliente && (
+                        <button
+                          onClick={() => handleEditar(f)}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg text-brand-blue bg-brand-blue/10 hover:bg-brand-blue hover:text-white transition-all border border-brand-blue/20"
+                          title="Editar"
+                        >
+                          <Icon icon="lucide:pencil" width={13} height={13} />
+                        </button>
+                      )}
                       {isExcel && f.excel_path && (
                         <button
                           onClick={() => handleDescargarPlantilla(f)}
@@ -730,13 +738,15 @@ export function FormatosDocumentosContent() {
                           <Icon icon="lucide:download" width={13} height={13} />
                         </button>
                       )}
-                      <button
-                        onClick={() => setConfirmDelete({ id: f.id, nombre: f.nombre, excel_path: f.excel_path })}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors border border-neutral-200 hover:border-red-200"
-                        title="Eliminar"
-                      >
-                        <Icon icon="lucide:trash-2" width={13} height={13} />
-                      </button>
+                      {!isCliente && (
+                        <button
+                          onClick={() => setConfirmDelete({ id: f.id, nombre: f.nombre, excel_path: f.excel_path })}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors border border-neutral-200 hover:border-red-200"
+                          title="Eliminar"
+                        >
+                          <Icon icon="lucide:trash-2" width={13} height={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

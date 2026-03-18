@@ -520,31 +520,42 @@ export function MisDocumentosContent() {
                                 >
                                   <Icon icon="lucide:download" className="w-3.5 h-3.5" />
                                 </button>
-                                <label
-                                  className="inline-flex items-center justify-center w-7 h-7 text-neutral-500 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200"
-                                  title={tr.replace}
-                                >
-                                  <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
-                                  <input
-                                    type="file"
-                                    accept=".pdf,.xls,.xlsx"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleUpload(tipo, file);
-                                      e.target.value = "";
-                                    }}
-                                  />
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(doc)}
-                                  className="inline-flex items-center justify-center w-7 h-7 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
-                                  title="Eliminar"
-                                >
-                                  <Icon icon="lucide:trash-2" className="w-3.5 h-3.5" />
-                                </button>
+                                {!isCliente && (
+                                  <label
+                                    className="inline-flex items-center justify-center w-7 h-7 text-neutral-500 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200"
+                                    title={tr.replace}
+                                  >
+                                    <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
+                                    <input
+                                      type="file"
+                                      accept=".pdf,.xls,.xlsx"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleUpload(tipo, file);
+                                        e.target.value = "";
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                                {!isCliente && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(doc)}
+                                    className="inline-flex items-center justify-center w-7 h-7 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                                    title="Eliminar"
+                                  >
+                                    <Icon icon="lucide:trash-2" className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
+                            </div>
+                          ) : isCliente ? (
+                            <div className="flex items-center gap-3 px-3 py-3 rounded-xl border-2 border-dashed border-neutral-200">
+                              <span className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                                <Icon icon="lucide:file-x" className="w-4 h-4 text-neutral-300" />
+                              </span>
+                              <p className="text-xs text-neutral-400">Sin documento</p>
                             </div>
                           ) : (
                             <label

@@ -430,7 +430,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
   // ─── CSS ──────────────────────────────────────────────────────────────────
   const inputCls = "w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all text-sm";
 
-  const canGenerate = !!selectedOp && !!selectedFormato && !loadingTags;
+  const canGenerate = !!selectedOp && !!selectedFormato && !loadingTags && !isCliente;
   const isExcel = (selectedFormato?.template_type ?? "html") === "excel";
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -662,14 +662,16 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                           </p>
                         </div>
                         {/* Botón generar mobile */}
-                        <button
-                          onClick={handleGenerar}
-                          disabled={generating || !canGenerate}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-50 shrink-0 ${cfg.colorBtn}`}
-                        >
-                          <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={13} height={13} className={generating ? "animate-spin" : ""} />
-                          {generating ? "..." : isExcel ? "Excel" : "PDF"}
-                        </button>
+                        {!isCliente && (
+                          <button
+                            onClick={handleGenerar}
+                            disabled={generating || !canGenerate}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-50 shrink-0 ${cfg.colorBtn}`}
+                          >
+                            <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={13} height={13} className={generating ? "animate-spin" : ""} />
+                            {generating ? "..." : isExcel ? "Excel" : "PDF"}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -723,19 +725,28 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
                           {/* Botón generar al final del form */}
                           <div className="pt-2 pb-6">
-                            <button
-                              onClick={handleGenerar}
-                              disabled={generating || !canGenerate}
-                              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white shadow-sm transition-colors disabled:opacity-50 ${cfg.colorBtn}`}
-                            >
-                              <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={16} height={16} className={generating ? "animate-spin" : ""} />
-                              {generating ? "Generando documento..." : isExcel ? "Descargar Excel con datos" : "Generar e imprimir PDF"}
-                            </button>
-                            <p className="text-[10px] text-neutral-400 text-center mt-2">
-                              {isExcel
-                                ? "Se descarga el archivo Excel con todos los datos reemplazados."
-                                : "Se abre el documento en una nueva ventana lista para imprimir o guardar como PDF."}
-                            </p>
+                            {isCliente ? (
+                              <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                                <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
+                                <span>No tienes permisos para generar documentos. Contacta a tu ejecutivo.</span>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={handleGenerar}
+                                  disabled={generating || !canGenerate}
+                                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white shadow-sm transition-colors disabled:opacity-50 ${cfg.colorBtn}`}
+                                >
+                                  <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={16} height={16} className={generating ? "animate-spin" : ""} />
+                                  {generating ? "Generando documento..." : isExcel ? "Descargar Excel con datos" : "Generar e imprimir PDF"}
+                                </button>
+                                <p className="text-[10px] text-neutral-400 text-center mt-2">
+                                  {isExcel
+                                    ? "Se descarga el archivo Excel con todos los datos reemplazados."
+                                    : "Se abre el documento en una nueva ventana lista para imprimir o guardar como PDF."}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                       )}
