@@ -3,27 +3,16 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 
-/** Clave de sessionStorage para no registrar más de una visita por pestaña */
-const VISIT_RECORDED_KEY = "_visit_recorded";
-/** Clave compartida con OnlineUsersButton para el ID de sesión */
-const SESSION_ID_KEY = "_pres_id";
-
-function getOrCreateSessionId(): string {
-  if (typeof window === "undefined") return "ssr";
-  let id = sessionStorage.getItem(SESSION_ID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_ID_KEY, id);
-  }
-  return id;
-}
+const REFRESH_MS = 30_000;
+const ONLINE_THRESHOLD_MIN = 3;
 
 /**
- * - Registra la visita para TODOS (anon + auth).
- * - Muestra el contador solo a superadmin / admin.
+ * Muestra el conteo de personas en línea ahora mismo (auth + anon).
+ * Solo visible para superadmin.
+ * El tracking de la sesión lo maneja OnlineUsersButton → useSessionPresence.
  */
 export function VisitCounterBadge() {
-  const { profile, isSuperadmin, isLoading } = useAuth();
+  const { isSuperadmin } = useAuth();
   const [count, setCount] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -31,79 +20,58 @@ export function VisitCounterBadge() {
     try { return createClient(); } catch { return null; }
   }, []);
 
-  // ── Registrar visita (corre para TODOS, espera a que la auth resuelva) ───────
-  useEffect(() => {
-    if (!supabase || isLoading) return;
-    if (sessionStorage.getItem(VISIT_RECORDED_KEY)) return; // ya registrada
-
-    const sessionId = getOrCreateSessionId();
-    sessionStorage.setItem(VISIT_RECORDED_KEY, "1");
-
-    supabase
-      .from("visitas")
-      .upsert(
-        { session_id: sessionId, es_autenticado: !!profile },
-        { onConflict: "session_id" }
-      )
-      .then(() => {
-        if (isSuperadmin) fetchCount();
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading]); // una sola vez cuando la auth termina de cargar
-
-  // ── Obtener conteo total (solo para admin) ───────────────────────────────────
   const fetchCount = () => {
     if (!supabase) return;
+    const threshold = new Date(Date.now() - ONLINE_THRESHOLD_MIN * 60 * 1000).toISOString();
     supabase
-      .from("visitas")
+      .from("sesiones_activas")
       .select("*", { count: "exact", head: true })
-      .then(({ count: c }) => setCount(c ?? 0));
+      .gte("last_seen", threshold)
+      .then(({ count: c, error }) => {
+        if (!error) setCount(c ?? 0);
+      });
   };
 
   useEffect(() => {
-    if (!supabase || !isSuperadmin) return;
+    if (!isSuperadmin) return;
     fetchCount();
+    const interval = setInterval(fetchCount, REFRESH_MS);
+    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperadmin]);
+  }, [isSuperadmin, supabase]);
 
-  // Solo renderizar el badge visual para superadmin/admin
   if (!isSuperadmin) return null;
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { fetchCount(); setOpen((v) => !v); }}
         className="flex items-center gap-1.5 h-10 px-2.5 text-neutral-500 hover:bg-neutral-200/80 rounded-full transition-all duration-200 text-xs font-medium"
-        title="Total de visitas al sistema"
-        aria-label="Contador de visitas"
+        title="Personas en el sitio ahora"
+        aria-label="Contador de visitantes en línea"
       >
         <Icon icon="lucide:eye" width={16} height={16} />
         <span className="tabular-nums">
-          {count === null ? "–" : count.toLocaleString("es-CL")}
+          {count === null ? "–" : count}
         </span>
       </button>
 
       {open && (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-[199]"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200] p-4">
+          <div className="fixed inset-0 z-[199]" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200] p-4">
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              Visitas al sistema
+              En el sitio ahora
             </p>
             <div className="flex items-end gap-2">
               <span className="text-3xl font-bold text-brand-blue tabular-nums leading-none">
-                {count === null ? "–" : count.toLocaleString("es-CL")}
+                {count === null ? "–" : count}
               </span>
-              <span className="text-xs text-neutral-400 pb-0.5">sesiones únicas</span>
+              <span className="text-xs text-neutral-400 pb-0.5">personas</span>
             </div>
             <p className="text-[11px] text-neutral-400 mt-2">
-              Una visita por pestaña de navegador, autenticada o anónima.
+              Con actividad en los últimos {ONLINE_THRESHOLD_MIN} minutos. Incluye visitantes sin sesión.
             </p>
             <button
               type="button"

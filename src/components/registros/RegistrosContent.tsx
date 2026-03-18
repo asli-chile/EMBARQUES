@@ -539,7 +539,7 @@ export function RegistrosContent() {
       supabase.from("puertos_origen").select("nombre").eq("activo", true).order("nombre"),
       supabase.from("especies").select("nombre").eq("activo", true).order("nombre"),
       supabase.from("consignatarios").select("nombre").eq("activo", true).order("nombre"),
-      supabase.from("usuarios").select("nombre").eq("activo", true).order("nombre"),
+      supabase.from("usuarios").select("nombre").in("rol", ["ejecutivo", "admin", "superadmin"]).eq("activo", true).order("nombre"),
       supabase.from("empresas").select("nombre").order("nombre"),
     ]);
 

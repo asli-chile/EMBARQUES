@@ -2,13 +2,15 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useSessionPresence } from "@/lib/useSessionPresence";
 
-type PresenceUser = {
-  user_id: string;
+type SessionRow = {
+  session_id: string;
   nombre: string;
   email: string;
   rol: string;
-  es_guest: boolean;
+  es_autenticado: boolean;
+  last_seen: string;
 };
 
 const ROL_COLOR: Record<string, string> = {
@@ -30,82 +32,43 @@ const ROL_LABEL: Record<string, string> = {
   visitante: "Visitante",
 };
 
-/** ID estable por sesión de navegador (persiste hasta cerrar la pestaña) */
-function getSessionId(): string {
-  if (typeof window === "undefined") return "ssr";
-  let id = sessionStorage.getItem("_pres_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem("_pres_id", id);
-  }
-  return id;
-}
+const REFRESH_MS = 30_000;
+const ONLINE_THRESHOLD_MIN = 3;
 
-/**
- * - Registra presencia de TODOS los usuarios (autenticados y visitantes).
- * - El botón visible + popover solo aparece para superadmin / admin.
- */
 export function OnlineUsersButton() {
   const { profile, isSuperadmin } = useAuth();
-  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Registra la sesión del usuario actual (anon o auth) — corre para todos
+  useSessionPresence();
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
   }, []);
 
-  const guestId = useMemo(() => getSessionId(), []);
-
-  // ── Presencia: corre para TODOS (auth + visitantes) ─────────────────────────
-  useEffect(() => {
+  const fetchSessions = () => {
     if (!supabase) return;
+    const threshold = new Date(Date.now() - ONLINE_THRESHOLD_MIN * 60 * 1000).toISOString();
+    supabase
+      .from("sesiones_activas")
+      .select("session_id, nombre, email, rol, es_autenticado, last_seen")
+      .gte("last_seen", threshold)
+      .order("last_seen", { ascending: false })
+      .then(({ data }) => setSessions(data ?? []));
+  };
 
-    const presenceKey = profile?.id ?? guestId;
+  // Cargar y refrescar lista (solo si superadmin)
+  useEffect(() => {
+    if (!isSuperadmin) return;
+    fetchSessions();
+    const interval = setInterval(fetchSessions, REFRESH_MS);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperadmin, supabase]);
 
-    const channel = supabase.channel("presencia-usuarios", {
-      config: { presence: { key: presenceKey } },
-    });
-
-    const syncUsers = () => {
-      const state = channel.presenceState<PresenceUser>();
-      const users: PresenceUser[] = Object.values(state).flatMap(
-        (arr) => arr as PresenceUser[]
-      );
-      setOnlineUsers(users);
-    };
-
-    channel
-      .on("presence", { event: "sync" }, syncUsers)
-      .on("presence", { event: "join" }, syncUsers)
-      .on("presence", { event: "leave" }, syncUsers)
-      .subscribe(async (status: string) => {
-        if (status !== "SUBSCRIBED") return;
-        if (profile) {
-          await channel.track({
-            user_id: profile.id,
-            nombre: profile.nombre,
-            email: profile.email,
-            rol: profile.rol,
-            es_guest: false,
-          });
-        } else {
-          await channel.track({
-            user_id: guestId,
-            nombre: "Visitante",
-            email: "",
-            rol: "visitante",
-            es_guest: true,
-          });
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile, supabase, guestId]);
-
-  // ── Cerrar popover al click fuera ────────────────────────────────────────────
+  // Cerrar popover al click fuera
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -117,52 +80,60 @@ export function OnlineUsersButton() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Solo el botón visible para superadmin/admin
+  // Solo renderizar botón para superadmin
   if (!isSuperadmin) return null;
 
-  const authUsers = onlineUsers.filter((u) => !u.es_guest);
-  const guests = onlineUsers.filter((u) => u.es_guest);
-  const totalCount = onlineUsers.length;
+  const authUsers = useMemo(() => {
+    const byEmail = new Map<string, SessionRow>();
+    for (const s of sessions) {
+      if (!s.es_autenticado) continue;
+      const existing = byEmail.get(s.email);
+      if (!existing || s.last_seen > existing.last_seen) {
+        byEmail.set(s.email, s);
+      }
+    }
+    return Array.from(byEmail.values());
+  }, [sessions]);
+  const guests = useMemo(() => sessions.filter((s) => !s.es_autenticado), [sessions]);
+  const total = authUsers.length + (guests.length > 0 ? 1 : 0);
 
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { fetchSessions(); setOpen((v) => !v); }}
         className="relative flex items-center justify-center w-10 h-10 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
-        aria-label={`Ver usuarios en línea (${totalCount})`}
+        aria-label={`Ver usuarios en línea (${total})`}
         title="Usuarios en línea"
       >
         <Icon icon="lucide:users" width={20} height={20} />
-        {totalCount > 0 && (
+        {total > 0 && (
           <span className="absolute top-1 right-1 flex h-4 min-w-[16px] px-0.5 items-center justify-center rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none pointer-events-none">
-            {totalCount}
+            {total}
           </span>
         )}
       </button>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200]">
-          {/* Header del popover */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <p className="text-sm font-semibold text-neutral-800">Usuarios en línea</p>
+            <p className="text-sm font-semibold text-neutral-800">En línea ahora</p>
             <span className="ml-auto text-xs font-medium text-neutral-500 bg-neutral-100 rounded-full px-2 py-0.5">
-              {totalCount} conectado{totalCount !== 1 ? "s" : ""}
+              {total} conectado{total !== 1 ? "s" : ""}
             </span>
           </div>
 
           <ul className="max-h-80 overflow-y-auto divide-y divide-neutral-100">
-            {onlineUsers.length === 0 ? (
+            {sessions.length === 0 ? (
               <li className="px-4 py-4 text-sm text-neutral-400 text-center">
                 Sin usuarios conectados
               </li>
             ) : (
               <>
-                {/* Usuarios autenticados */}
-                {authUsers.map((u) => {
-                  const isMe = u.user_id === profile?.id;
-                  const initials = u.nombre
+                {authUsers.map((s) => {
+                  const isMe = s.session_id === profile?.id || s.email === profile?.email;
+                  const initials = s.nombre
                     .split(" ")
                     .slice(0, 2)
                     .map((p) => p[0])
@@ -170,7 +141,7 @@ export function OnlineUsersButton() {
                     .toUpperCase();
                   return (
                     <li
-                      key={u.user_id}
+                      key={s.session_id}
                       className={`flex items-center gap-3 px-4 py-2.5 ${isMe ? "bg-brand-blue/5" : ""}`}
                     >
                       <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold shrink-0">
@@ -181,23 +152,20 @@ export function OnlineUsersButton() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-neutral-800 truncate">
-                          {u.nombre}
+                          {s.nombre}
                           {isMe && (
                             <span className="ml-1.5 text-[10px] text-neutral-400 font-normal">(tú)</span>
                           )}
                         </p>
-                        <p className="text-xs text-neutral-500 truncate">{u.email}</p>
+                        <p className="text-xs text-neutral-500 truncate">{s.email}</p>
                       </div>
-                      <span
-                        className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROL_COLOR[u.rol] ?? "bg-neutral-100 text-neutral-600"}`}
-                      >
-                        {ROL_LABEL[u.rol] ?? u.rol}
+                      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROL_COLOR[s.rol] ?? "bg-neutral-100 text-neutral-600"}`}>
+                        {ROL_LABEL[s.rol] ?? s.rol}
                       </span>
                     </li>
                   );
                 })}
 
-                {/* Visitantes no autenticados — agrupados */}
                 {guests.length > 0 && (
                   <li className="flex items-center gap-3 px-4 py-2.5">
                     <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 shrink-0">
@@ -220,6 +188,18 @@ export function OnlineUsersButton() {
               </>
             )}
           </ul>
+
+          <div className="px-4 py-2 border-t border-neutral-100 flex items-center justify-between">
+            <span className="text-[10px] text-neutral-400">Activos últimos {ONLINE_THRESHOLD_MIN} min</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); fetchSessions(); }}
+              className="text-[11px] text-brand-blue hover:underline flex items-center gap-1"
+            >
+              <Icon icon="lucide:refresh-cw" width={11} height={11} />
+              Actualizar
+            </button>
+          </div>
         </div>
       )}
     </div>

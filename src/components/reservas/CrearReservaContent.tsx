@@ -188,7 +188,7 @@ export function CrearReservaContent() {
         supabase.from("destinos").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("puertos_origen").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("consignatarios").select("id, nombre").eq("activo", true).order("nombre"),
-        supabase.from("usuarios").select("id, nombre").in("rol", ["ejecutivo", "admin"]).eq("activo", true).order("nombre"),
+        supabase.from("usuarios").select("id, nombre").in("rol", ["ejecutivo", "admin", "superadmin"]).eq("activo", true).order("nombre"),
         supabase.from("empresas").select("id, nombre").order("nombre"),
         supabase.from("especies").select("id, nombre").order("nombre"),
       ]);
