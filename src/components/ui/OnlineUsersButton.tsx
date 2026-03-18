@@ -56,7 +56,8 @@ export function OnlineUsersButton() {
       .select("session_id, nombre, email, rol, es_autenticado, last_seen")
       .gte("last_seen", threshold)
       .order("last_seen", { ascending: false })
-      .then(({ data }) => setSessions(data ?? []));
+      .then(({ data, error }) => { if (!error) setSessions(data ?? []); })
+      .catch(() => {});
   };
 
   // Cargar y refrescar lista (solo si superadmin)
@@ -80,9 +81,6 @@ export function OnlineUsersButton() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Solo renderizar botón para superadmin
-  if (!isSuperadmin) return null;
-
   const authUsers = useMemo(() => {
     const byEmail = new Map<string, SessionRow>();
     for (const s of sessions) {
@@ -96,6 +94,8 @@ export function OnlineUsersButton() {
   }, [sessions]);
   const guests = useMemo(() => sessions.filter((s) => !s.es_autenticado), [sessions]);
   const total = authUsers.length + (guests.length > 0 ? 1 : 0);
+
+  if (!isSuperadmin) return null;
 
   return (
     <div ref={containerRef} className="relative">

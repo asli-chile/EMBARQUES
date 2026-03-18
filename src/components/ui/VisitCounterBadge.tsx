@@ -29,7 +29,8 @@ export function VisitCounterBadge() {
       .gte("last_seen", threshold)
       .then(({ count: c, error }) => {
         if (!error) setCount(c ?? 0);
-      });
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
