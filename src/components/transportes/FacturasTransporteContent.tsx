@@ -47,6 +47,20 @@ function fmtMonto(m: number | null, moneda: string | null) {
   return `${moneda || ""} ${m.toLocaleString("es-CL", { minimumFractionDigits: 2 })}`.trim();
 }
 
+const FACTURA_FIELDS_TO_CLEAR = {
+  numero_factura_asli: null,
+  factura_transporte: null,
+  monto_facturado: null,
+  concepto_facturado: null,
+  moneda: null,
+  tipo_cambio: null,
+  margen_estimado: null,
+  margen_real: null,
+  fecha_entrega_factura: null,
+  fecha_pago_cliente: null,
+  fecha_pago_transporte: null,
+};
+
 export function FacturasTransporteContent() {
   const { isCliente, empresaNombres } = useAuth();
   const [facturas, setFacturas] = useState<Factura[]>([]);
@@ -58,6 +72,8 @@ export function FacturasTransporteContent() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Factura | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
   const empresasKey = useMemo(() => empresaNombres.join(","), [empresaNombres]);
@@ -146,6 +162,20 @@ export function FacturasTransporteContent() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await supabase
+      .from("operaciones")
+      .update(FACTURA_FIELDS_TO_CLEAR)
+      .eq("id", deleteTarget.id);
+    setDeleting(false);
+    if (!error) {
+      setDeleteTarget(null);
+      void fetchData();
+    }
+  }, [deleteTarget, supabase, fetchData]);
 
   const estadoColor: Record<string, string> = {
     abierta: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -284,6 +314,9 @@ export function FacturasTransporteContent() {
                     <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Pago cliente</th>
                     <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Pago transporte</th>
                     <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Estado</th>
+                    {!isCliente && (
+                      <th className="text-center px-3 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider w-12" />
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-50">
@@ -335,6 +368,18 @@ export function FacturasTransporteContent() {
                           {f.estado_operacion}
                         </span>
                       </td>
+                      {!isCliente && (
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(f)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all duration-200"
+                            title="Eliminar factura"
+                          >
+                            <Icon icon="lucide:trash-2" width={14} height={14} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -343,6 +388,53 @@ export function FacturasTransporteContent() {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmación de borrado */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+          <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:alert-triangle" width={20} height={20} className="text-red-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-neutral-900">Eliminar factura</h3>
+                <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed">
+                  Se borrarán todos los datos de facturación de la operación{" "}
+                  <span className="font-bold text-brand-blue">{fmtRef(deleteTarget)}</span>
+                  {deleteTarget.numero_factura_asli && (
+                    <> (factura <span className="font-bold">{deleteTarget.numero_factura_asli}</span>)</>
+                  )}
+                  . La operación no se eliminará, solo su información de facturación.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-red-600 border border-red-700 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? (
+                  <Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />
+                ) : (
+                  <Icon icon="lucide:trash-2" width={14} height={14} />
+                )}
+                {deleting ? "Eliminando..." : "Eliminar factura"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

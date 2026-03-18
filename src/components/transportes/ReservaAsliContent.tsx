@@ -127,7 +127,7 @@ const initialFormData: FormData = {
 
 export function ReservaAsliContent() {
   const { t } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.transporteAsli;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -147,10 +147,11 @@ export function ReservaAsliContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPending, setFilterPending] = useState(false);
   const [confirmNewItem, setConfirmNewItem] = useState<{
-    type: 'empresa' | 'chofer' | 'equipo'; 
-    value: string; 
-    callback: () => Promise<void>; 
+    type: 'empresa' | 'chofer' | 'equipo';
+    value: string;
+    callback: () => Promise<void>;
   } | null>(null);
+  const [confirmDeleteReserva, setConfirmDeleteReserva] = useState(false);
   // Panel activo en mobile: "select" = lista de operaciones, "form" = formulario
   const [mobilePanel, setMobilePanel] = useState<"select" | "form">("select");
 
@@ -637,6 +638,55 @@ export function ReservaAsliContent() {
     }
   };
 
+  const handleDeleteReserva = async (operacionId?: string) => {
+    const targetId = operacionId || formData.operacion_id;
+    if (!supabase || !targetId) return;
+    setSaving(true);
+    setError(null);
+
+    const cleared: Record<string, unknown> = {
+      enviado_transporte: false,
+      transporte: null,
+      chofer: null,
+      rut_chofer: null,
+      telefono_chofer: null,
+      patente_camion: null,
+      patente_remolque: null,
+      contenedor: null,
+      sello: null,
+      tara: null,
+      citacion: null,
+      llegada_planta: null,
+      salida_planta: null,
+      deposito: null,
+      agendamiento_retiro: null,
+      inicio_stacking: null,
+      fin_stacking: null,
+      ingreso_stacking: null,
+      tramo: null,
+      valor_tramo: null,
+      moneda: null,
+      observaciones: null,
+    };
+
+    const { error: err } = await supabase
+      .from("operaciones")
+      .update(cleared)
+      .eq("id", targetId);
+
+    setSaving(false);
+    setConfirmDeleteReserva(false);
+
+    if (err) {
+      setError(err.message);
+    } else {
+      if (formData.operacion_id === targetId) setFormData(initialFormData);
+      setOperaciones((prev) => prev.filter((o) => o.id !== targetId));
+      setSuccessMsg("Operación eliminada de transportes");
+      setTimeout(() => setSuccessMsg(null), 4000);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     try {
@@ -840,18 +890,30 @@ export function ReservaAsliContent() {
                         if (!op.tramo) pendientes.push("Tramo");
                         const completo = pendientes.length === 0;
                         return (
-                          <button
+                          <div
                             key={op.id}
-                            type="button"
-                            onClick={() => handleChange("operacion_id", op.id)}
-                            className={`w-full text-left p-3 rounded-xl border transition-all ${
+                            className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
                               isActive
                                 ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
                                 : completo
                                   ? "border-emerald-200 bg-emerald-50/40 hover:border-emerald-300 hover:bg-emerald-50"
                                   : "border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50"
                             }`}
+                            onClick={() => handleChange("operacion_id", op.id)}
                           >
+                            {isSuperadmin && (
+                              <button
+                                type="button"
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  void handleDeleteReserva(op.id);
+                                }}
+                                className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                                title="Quitar de transportes"
+                              >
+                                <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <div className="flex items-start justify-between gap-2 mb-0.5">
                               <p className={`font-bold text-sm ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
                                 {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
@@ -877,7 +939,7 @@ export function ReservaAsliContent() {
                                 ))}
                               </div>
                             )}
-                          </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -1102,35 +1164,47 @@ export function ReservaAsliContent() {
                     </div>
                   )}
 
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(initialFormData);
-                        setSuccess(false);
-                        setError(null);
-                      }}
-                      className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
-                    >
-                      {tr.cancel}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <>
-                          <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
-                          {tr.saving}
-                        </>
-                      ) : (
-                        <>
-                          <Icon icon="typcn:tick" className="w-4 h-4" />
-                          {tr.save}
-                        </>
-                      )}
-                    </button>
+                  <div className="flex gap-3 justify-between">
+                    {isSuperadmin && formData.operacion_id && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteReserva(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+                      >
+                        <Icon icon="typcn:trash" className="w-4 h-4" />
+                        Eliminar reserva
+                      </button>
+                    )}
+                    <div className="flex gap-3 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(initialFormData);
+                          setSuccess(false);
+                          setError(null);
+                        }}
+                        className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                      >
+                        {tr.cancel}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
+                      >
+                        {saving ? (
+                          <>
+                            <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
+                            {tr.saving}
+                          </>
+                        ) : (
+                          <>
+                            <Icon icon="typcn:tick" className="w-4 h-4" />
+                            {tr.save}
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1200,6 +1274,41 @@ export function ReservaAsliContent() {
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Creando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDeleteReserva && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                <Icon icon="typcn:trash" width={18} height={18} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-neutral-900">Eliminar reserva de transporte</h3>
+                <p className="text-xs text-neutral-500">Se borrarán todos los datos de transporte de esta operación</p>
+              </div>
+            </div>
+            <p className="text-sm text-neutral-700 mb-6">
+              Esta acción limpiará empresa, chofer, equipo, contenedor, horarios, stacking, tramo y observaciones de la operación seleccionada. ¿Continuar?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteReserva(false)}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteReserva()}
+                disabled={saving}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {saving ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>

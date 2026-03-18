@@ -5,6 +5,7 @@ import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 const AUTO_COLLAPSE_MS = 2000;
+const HOVER_OPEN_DELAY_MS = 1000;
 const STORAGE_KEY = "embarques-sidebar-open";
 
 type SidebarProps = {
@@ -84,7 +85,10 @@ export function Sidebar({ pathname }: SidebarProps) {
     clearCollapseTimer();
     clearOpenTimer();
     if (!isOpen) {
-      setIsOpen(true);
+      openTimerRef.current = setTimeout(() => {
+        setIsOpen(true);
+        openTimerRef.current = null;
+      }, HOVER_OPEN_DELAY_MS);
     }
   }, [clearCollapseTimer, clearOpenTimer, isOpen]);
 
