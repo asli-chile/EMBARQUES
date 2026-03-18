@@ -1,89 +1,114 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 
-const REFRESH_MS = 30_000;
-const ONLINE_THRESHOLD_MIN = 3;
+const VISITED_KEY = "_visit_counted";
 
 /**
- * Muestra el conteo de personas en línea ahora mismo (auth + anon).
+ * Contador persistente de visitas totales a la página.
+ * Incrementa una vez por sesión de navegador (sessionStorage).
  * Solo visible para superadmin.
- * El tracking de la sesión lo maneja OnlineUsersButton → useSessionPresence.
  */
 export function VisitCounterBadge() {
   const { isSuperadmin } = useAuth();
-  const [count, setCount] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
+  const counted = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
   }, []);
 
-  const fetchCount = () => {
+  const fetchTotal = () => {
     if (!supabase) return;
-    const threshold = new Date(Date.now() - ONLINE_THRESHOLD_MIN * 60 * 1000).toISOString();
     supabase
-      .from("sesiones_activas")
-      .select("*", { count: "exact", head: true })
-      .gte("last_seen", threshold)
-      .then(({ count: c, error }) => {
-        if (!error) setCount(c ?? 0);
+      .from("conteo_visitas")
+      .select("total")
+      .eq("id", 1)
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data) setTotal(data.total);
       })
       .catch(() => {});
   };
 
   useEffect(() => {
-    if (!isSuperadmin) return;
-    fetchCount();
-    const interval = setInterval(fetchCount, REFRESH_MS);
-    return () => clearInterval(interval);
+    if (!supabase || counted.current) return;
+    const alreadyCounted = sessionStorage.getItem(VISITED_KEY);
+    if (alreadyCounted) {
+      counted.current = true;
+      fetchTotal();
+      return;
+    }
+
+    counted.current = true;
+    supabase
+      .rpc("incrementar_visitas")
+      .then(({ data, error }) => {
+        if (!error && data != null) {
+          setTotal(data as number);
+          sessionStorage.setItem(VISITED_KEY, "1");
+        } else {
+          fetchTotal();
+        }
+      })
+      .catch(() => fetchTotal());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperadmin, supabase]);
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   if (!isSuperadmin) return null;
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => { fetchCount(); setOpen((v) => !v); }}
+        onClick={() => { fetchTotal(); setOpen((v) => !v); }}
         className="flex items-center gap-1.5 h-10 px-2.5 text-neutral-500 hover:bg-neutral-200/80 rounded-full transition-all duration-200 text-xs font-medium"
-        title="Personas en el sitio ahora"
-        aria-label="Contador de visitantes en línea"
+        title="Total de visitas a la página"
+        aria-label="Contador de visitas"
       >
         <Icon icon="lucide:eye" width={16} height={16} />
         <span className="tabular-nums">
-          {count === null ? "–" : count}
+          {total === null ? "–" : total.toLocaleString("es-CL")}
         </span>
       </button>
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-[199]" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200] p-4">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              En el sitio ahora
-            </p>
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold text-brand-blue tabular-nums leading-none">
-                {count === null ? "–" : count}
-              </span>
-              <span className="text-xs text-neutral-400 pb-0.5">personas</span>
-            </div>
-            <p className="text-[11px] text-neutral-400 mt-2">
-              Con actividad en los últimos {ONLINE_THRESHOLD_MIN} minutos. Incluye visitantes sin sesión.
-            </p>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); fetchCount(); }}
-              className="mt-3 flex items-center gap-1 text-[11px] text-brand-blue hover:underline"
-            >
-              <Icon icon="lucide:refresh-cw" width={11} height={11} />
-              Actualizar
-            </button>
+        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200] p-4">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
+            Visitas totales
+          </p>
+          <div className="flex items-end gap-2">
+            <span className="text-3xl font-bold text-brand-blue tabular-nums leading-none">
+              {total === null ? "–" : total.toLocaleString("es-CL")}
+            </span>
+            <span className="text-xs text-neutral-400 pb-0.5">visitas</span>
           </div>
-        </>
+          <p className="text-[11px] text-neutral-400 mt-2">
+            Cada sesión de navegador cuenta como una visita.
+          </p>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); fetchTotal(); }}
+            className="mt-3 flex items-center gap-1 text-[11px] text-brand-blue hover:underline"
+          >
+            <Icon icon="lucide:refresh-cw" width={11} height={11} />
+            Actualizar
+          </button>
+        </div>
       )}
     </div>
   );
