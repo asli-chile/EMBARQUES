@@ -36,6 +36,7 @@ type FormData = {
   tipo_unidad: string;
   naviera: string;
   nave: string;
+  viaje: string;
   pol: string;
   pod: string;
   etd: string;
@@ -72,6 +73,7 @@ const initialFormData: FormData = {
   tipo_unidad: "40RF",
   naviera: "",
   nave: "",
+  viaje: "",
   pol: "",
   pod: "",
   etd: "",
@@ -142,6 +144,10 @@ export function CrearReservaContent() {
   const [clientes, setClientes] = useState<SelectOption[]>([]);
   const [especies, setEspecies] = useState<SelectOption[]>([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
+
+  // Estado para sugerencias de viaje desde itinerario
+  const [viajesSugeridos, setViajesSugeridos] = useState<string[]>([]);
+  const [viajeInputManual, setViajeInputManual] = useState(false);
 
   // Estados para el combobox de clientes
   const [clienteInput, setClienteInput] = useState("");
@@ -307,6 +313,39 @@ export function CrearReservaContent() {
     void fetchNavesNaviera();
   }, [formData.naviera, supabase, naves]);
 
+  // Al cambiar la nave, buscar viajes disponibles en itinerarios
+  useEffect(() => {
+    if (!formData.nave || !supabase) {
+      setViajesSugeridos([]);
+      return;
+    }
+    const naveName = navesFiltered.find((n) => n.id === formData.nave)?.nombre
+      ?? naves.find((n) => n.id === formData.nave)?.nombre;
+    if (!naveName) return;
+
+    const fetchViajes = async () => {
+      const { data } = await supabase
+        .from("itinerarios")
+        .select("viaje")
+        .eq("nave", naveName)
+        .not("viaje", "is", null);
+
+      if (data && data.length > 0) {
+        const unique = [...new Set(data.map((d) => d.viaje as string).filter(Boolean))];
+        setViajesSugeridos(unique);
+        // Auto-seleccionar si solo hay un viaje y el usuario no ha escrito nada
+        if (unique.length === 1 && !formData.viaje) {
+          setFormData((prev) => ({ ...prev, viaje: unique[0] }));
+          setViajeInputManual(false);
+        }
+      } else {
+        setViajesSugeridos([]);
+      }
+    };
+    void fetchViajes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.nave, supabase]);
+
   const toggleSection = (section: SectionKey) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -327,7 +366,14 @@ export function CrearReservaContent() {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      if (name === "nave") {
+        // Al cambiar nave, resetear viaje para que el efecto lo auto-rellene
+        setViajesSugeridos([]);
+        setViajeInputManual(false);
+        setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      }
     }
   };
 
@@ -396,6 +442,7 @@ export function CrearReservaContent() {
       naviera: Boolean(
         formData.naviera &&
         formData.nave &&
+        formData.viaje &&
         formData.pol &&
         formData.pod &&
         formData.etd &&
@@ -503,6 +550,7 @@ export function CrearReservaContent() {
       nave: formData.nave
         ? navesFiltered.find((n) => n.id === formData.nave)?.nombre
         : null,
+      viaje: formData.viaje || null,
       pol: formData.pol
         ? puertosOrigen.find((p) => p.id === formData.pol)?.nombre
         : null,
@@ -569,6 +617,7 @@ export function CrearReservaContent() {
     const navRows = [
       ["Naviera", p.naviera],
       ["Nave", p.nave],
+      ["Viaje", p.viaje],
       ["POL", p.pol],
       ["POD", p.pod],
       ["ETD", p.etd],
@@ -1245,6 +1294,63 @@ export function CrearReservaContent() {
             <>
               {renderSelect("naviera", navieras, tr.naviera)}
               {renderSelect("nave", navesFiltered, tr.nave)}
+              {/* Campo Viaje: select con sugerencias de itinerario o input manual */}
+              <div>
+                <label htmlFor="viaje" className={labelClass}>
+                  {tr.viaje}
+                  {viajesSugeridos.length > 0 && !viajeInputManual && (
+                    <span className="ml-2 text-brand-blue font-normal normal-case">
+                      desde itinerario
+                    </span>
+                  )}
+                </label>
+                {viajesSugeridos.length > 0 && !viajeInputManual ? (
+                  <div className="flex gap-2">
+                    <select
+                      id="viaje"
+                      name="viaje"
+                      value={formData.viaje}
+                      onChange={handleChange}
+                      className={`${selectClass} flex-1`}
+                    >
+                      <option value="">{tr.selectPlaceholder}</option>
+                      {viajesSugeridos.map((v) => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => { setViajeInputManual(true); setFormData((prev) => ({ ...prev, viaje: "" })); }}
+                      className="text-xs text-neutral-500 hover:text-neutral-700 px-2 shrink-0"
+                      title={tr.viajeManual}
+                    >
+                      <Icon icon="lucide:pencil" width={14} height={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      id="viaje"
+                      name="viaje"
+                      type="text"
+                      value={formData.viaje}
+                      onChange={handleChange}
+                      placeholder="Ej: 241N"
+                      className={`${inputClass} flex-1`}
+                    />
+                    {viajesSugeridos.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setViajeInputManual(false)}
+                        className="text-xs text-brand-blue hover:underline px-2 shrink-0"
+                        title={tr.viajeDesdeItinerario}
+                      >
+                        <Icon icon="lucide:list" width={14} height={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               {renderSelect("pol", puertosOrigen, tr.pol)}
               {renderSelect("pod", destinos, tr.pod)}
               <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-3 gap-3">
@@ -1390,39 +1496,42 @@ export function CrearReservaContent() {
 
 
         </form>
-        </div>
-      </div>
+        </div>{/* ← cierra grid */}
 
-      {/* Barra de acciones — siempre visible al fondo, fuera del scroll */}
-      <div className="shrink-0 border-t border-neutral-200 bg-white px-4 py-2.5 safe-bottom">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
-            className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
-          >
-            {tr.limpiar}
-          </button>
-          <button
-            type="submit"
-            form="reserva-form"
-            disabled={submitting}
-            className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {submitting ? (
-              <>
-                <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
-                {tr.guardando}
-              </>
-            ) : (
-              <>
-                <Icon icon="typcn:input-checked" width={16} height={16} />
-                {tr.guardar}
-              </>
-            )}
-          </button>
+        {/* Barra de acciones — sticky al fondo del scroll, siempre visible en móvil y desktop */}
+        <div
+          className="sticky bottom-0 z-10 border-t border-neutral-200 bg-white -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mt-2"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
+              className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+            >
+              {tr.limpiar}
+            </button>
+            <button
+              type="submit"
+              form="reserva-form"
+              disabled={submitting}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <>
+                  <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
+                  {tr.guardando}
+                </>
+              ) : (
+                <>
+                  <Icon icon="typcn:input-checked" width={16} height={16} />
+                  {tr.guardar}
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      </div>{/* ← cierra flex-1 overflow-auto */}
 
       {renderAddClienteModal()}
       {renderPreviewModal()}
