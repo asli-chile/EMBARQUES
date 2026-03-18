@@ -78,6 +78,7 @@ export function UsuariosContent() {
   const [isResetting, setIsResetting] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [viewingUser, setViewingUser] = useState<DbUsuario | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -237,6 +238,9 @@ export function UsuariosContent() {
     setActivatePassword("");
     setActivateError(null);
   };
+
+  const handleViewOpen = (u: DbUsuario) => setViewingUser(u);
+  const handleViewClose = () => setViewingUser(null);
 
   const handleResetOpen = (u: DbUsuario) => {
     setResettingUser(u);
@@ -774,7 +778,13 @@ export function UsuariosContent() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <div className="min-w-0">
-                            <p className="font-semibold text-neutral-900 text-sm truncate">{u.nombre || "—"}</p>
+                            <button
+                              type="button"
+                              onClick={() => handleViewOpen(u)}
+                              className="font-semibold text-neutral-900 text-sm truncate hover:text-brand-blue hover:underline text-left"
+                            >
+                              {u.nombre || "—"}
+                            </button>
                             <p className="text-xs text-neutral-400 truncate">{u.email}</p>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -887,7 +897,15 @@ export function UsuariosContent() {
                         <span className="w-4 inline-block" aria-hidden="true" />
                       )}
                     </td>
-                    <td className="px-4 py-2.5 font-medium">{u.nombre}</td>
+                    <td className="px-4 py-2.5 font-medium">
+                      <button
+                        type="button"
+                        onClick={() => handleViewOpen(u)}
+                        className="text-left font-medium text-neutral-900 hover:text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
+                      >
+                        {u.nombre || "—"}
+                      </button>
+                    </td>
                     <td className="hidden lg:table-cell px-4 py-2.5 text-neutral-600 text-xs truncate max-w-[160px]">{u.email}</td>
                     <td className="px-4 py-2.5 text-xs">{getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}</td>
                     <td className="hidden lg:table-cell px-4 py-2.5">
@@ -1438,6 +1456,141 @@ export function UsuariosContent() {
           </div>
         </div>
       )}
+
+      {viewingUser && (() => {
+        const ids = empresasPorUsuario[viewingUser.id] ?? [];
+        const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
+        const initials = (viewingUser.nombre || viewingUser.email).slice(0, 2).toUpperCase();
+        const rolLabel = getRolLabel(viewingUser.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario");
+        return (
+          <div
+            className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="view-user-modal-title"
+            onClick={handleViewClose}
+          >
+            <div
+              className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+              <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-10 h-1 rounded-full bg-neutral-200" />
+              </div>
+              {/* Header */}
+              <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-sm font-bold text-brand-blue flex-shrink-0">
+                    {initials}
+                  </div>
+                  <div>
+                    <h2 id="view-user-modal-title" className="text-sm font-bold text-neutral-900">
+                      {viewingUser.nombre || viewingUser.email}
+                    </h2>
+                    <p className="text-xs text-neutral-500 mt-0.5">{viewingUser.email}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleViewClose}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0"
+                  aria-label="Cerrar"
+                >
+                  <Icon icon="lucide:x" width={16} height={16} />
+                </button>
+              </div>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+                {/* Rol */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
+                  <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                    <Icon icon="lucide:shield" width={15} height={15} className="text-brand-blue" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-neutral-500 mb-0.5">Rol</p>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-blue/10 text-brand-blue">
+                      {rolLabel}
+                    </span>
+                  </div>
+                </div>
+                {/* Estado cuenta */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${viewingUser.auth_id ? "bg-green-100" : "bg-neutral-100"}`}>
+                    <Icon
+                      icon={viewingUser.auth_id ? "lucide:check-circle" : "lucide:circle-off"}
+                      width={15}
+                      height={15}
+                      className={viewingUser.auth_id ? "text-green-600" : "text-neutral-400"}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-neutral-500 mb-0.5">Estado de cuenta</p>
+                    {viewingUser.auth_id ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        <Icon icon="lucide:check" width={10} height={10} />
+                        Activa
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
+                        Sin cuenta
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Empresas */}
+                <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                      <Icon icon="lucide:building-2" width={15} height={15} className="text-brand-blue" />
+                    </div>
+                    <p className="text-xs font-medium text-neutral-500">
+                      Empresas asignadas
+                      {nombresEmpresas.length > 0 && (
+                        <span className="ml-1 text-neutral-400">({nombresEmpresas.length})</span>
+                      )}
+                    </p>
+                  </div>
+                  {nombresEmpresas.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 mt-1 ml-10">
+                      {nombresEmpresas.map((n) => (
+                        <span key={n} className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+                          {n}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-400 ml-10">Sin empresas asignadas</p>
+                  )}
+                </div>
+                {/* ID interno */}
+                <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                  <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide mb-0.5">ID interno</p>
+                  <p className="text-xs text-neutral-500 font-mono break-all">{viewingUser.id}</p>
+                </div>
+              </div>
+              {/* Footer */}
+              <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-neutral-100 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { handleViewClose(); handleEditOpen(viewingUser); }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                >
+                  <Icon icon="lucide:pencil" width={14} height={14} />
+                  Editar usuario
+                </button>
+                <button
+                  type="button"
+                  onClick={handleViewClose}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useAuth } from "@/lib/auth/AuthContext";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
 import { format, parse, differenceInDays } from "date-fns";
@@ -108,11 +110,13 @@ const SECTION_ORDER: SectionKey[] = [
 export function CrearReservaContent() {
   const { t } = useLocale();
   const tr = t.crearReserva;
+  const { profile, empresaNombres } = useAuth();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
     new Set(["general", "comercial", "carga"])
   );
   const [submitting, setSubmitting] = useState(false);
+  const [enviarTransporte, setEnviarTransporte] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -137,6 +141,7 @@ export function CrearReservaContent() {
   const [addingCliente, setAddingCliente] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+  const clienteInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -262,6 +267,14 @@ export function CrearReservaContent() {
     void fetchCatalogos();
   }, [fetchCatalogos]);
 
+  // Cerrar dropdown al hacer scroll (evita desincronía con el portal)
+  useEffect(() => {
+    if (!showClienteSuggestions) return;
+    const close = () => setShowClienteSuggestions(false);
+    window.addEventListener("scroll", close, true);
+    return () => window.removeEventListener("scroll", close, true);
+  }, [showClienteSuggestions]);
+
   useEffect(() => {
     if (!formData.naviera || !supabase) {
       setNavesFiltered(naves);
@@ -310,11 +323,34 @@ export function CrearReservaContent() {
   };
 
   // Funciones para el combobox de clientes
+
+  // Lista de clientes permitidos según el rol del usuario
+  const clientesFiltradosPorRol = useMemo(() => {
+    const rol = profile?.rol;
+    if ((rol === "ejecutivo" || rol === "cliente") && empresaNombres.length > 0) {
+      return clientes.filter((c) => empresaNombres.includes(c.nombre));
+    }
+    return clientes;
+  }, [clientes, profile?.rol, empresaNombres]);
+
+  // Auto-seleccionar empresa para rol "cliente" cuando solo tiene una opción
+  useEffect(() => {
+    if (
+      profile?.rol === "cliente" &&
+      clientesFiltradosPorRol.length >= 1 &&
+      !formData.cliente
+    ) {
+      const empresa = clientesFiltradosPorRol[0];
+      setClienteInput(empresa.nombre);
+      setFormData((prev) => ({ ...prev, cliente: empresa.id }));
+    }
+  }, [profile?.rol, clientesFiltradosPorRol]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const clientesFiltrados = useMemo(() => {
-    if (!clienteInput.trim()) return clientes;
+    if (!clienteInput.trim()) return clientesFiltradosPorRol;
     const search = clienteInput.toLowerCase();
-    return clientes.filter((c) => c.nombre.toLowerCase().includes(search));
-  }, [clienteInput, clientes]);
+    return clientesFiltradosPorRol.filter((c) => c.nombre.toLowerCase().includes(search));
+  }, [clienteInput, clientesFiltradosPorRol]);
 
   const clienteExisteExacto = useMemo(() => {
     const search = clienteInput.trim().toLowerCase();
@@ -472,6 +508,7 @@ export function CrearReservaContent() {
         : null,
       observaciones: formData.observaciones || null,
       origen_registro: "reserva_web",
+      enviado_transporte: enviarTransporte,
     };
 
     const { error: insertError } = await supabase.from("operaciones").insert(payload);
@@ -579,56 +616,90 @@ export function CrearReservaContent() {
     </div>
   );
 
-  const renderClienteCombobox = () => (
-    <div className="relative">
-      <label htmlFor="cliente" className={labelClass}>
-        {tr.cliente}
-        {clientes.length > 0 && (
-          <span className="ml-2 text-neutral-400 font-normal">({clientes.length})</span>
-        )}
-      </label>
-      <input
-        id="cliente"
-        name="cliente"
-        type="text"
-        value={clienteInput}
-        onChange={handleClienteInputChange}
-        onFocus={() => setShowClienteSuggestions(true)}
-        onBlur={handleClienteBlur}
-        placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
-        className={inputClass}
-        autoComplete="off"
-      />
-      {showClienteSuggestions && clienteInput.trim() && (
-        <div className="absolute z-[9999] w-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-          {clientesFiltrados.length > 0 ? (
-            clientesFiltrados.map((cliente) => (
-              <button
-                key={cliente.id}
-                type="button"
-                onMouseDown={() => handleSelectCliente(cliente)}
-                className="w-full px-4 py-2.5 text-left hover:bg-brand-blue/5 text-neutral-800 font-medium transition-colors text-sm border-b border-neutral-50 last:border-b-0"
-              >
-                {cliente.nombre}
-              </button>
-            ))
-          ) : (
-            <div className="px-4 py-3 text-sm text-neutral-500">
-              No se encontró "<span className="text-neutral-700 font-medium">{clienteInput}</span>"
-              <button
-                type="button"
-                onMouseDown={() => setShowAddClienteModal(true)}
-                className="flex items-center gap-1.5 mt-2 text-brand-blue hover:text-brand-blue/80 font-semibold text-xs transition-colors"
-              >
-                <Icon icon="typcn:plus" width={14} height={14} />
-                Agregar como nueva empresa
-              </button>
-            </div>
+  const renderClienteCombobox = () => {
+    const isClienteRole = profile?.rol === "cliente";
+    const isReadOnly = isClienteRole && clientesFiltradosPorRol.length >= 1;
+    const canAddNew = !isReadOnly;
+
+    // Posición del dropdown via portal (fixed, coordenadas del input en viewport)
+    const rect = clienteInputRef.current?.getBoundingClientRect();
+    const dropdownPortal =
+      showClienteSuggestions &&
+      clienteInput.trim() &&
+      rect &&
+      typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="bg-white border border-neutral-200 rounded-xl shadow-xl max-h-60 overflow-y-auto"
+              style={{
+                position: "fixed",
+                top: rect.bottom + 4,
+                left: rect.left,
+                width: rect.width,
+                zIndex: 9999,
+              }}
+            >
+              {clientesFiltrados.length > 0 ? (
+                clientesFiltrados.map((cliente) => (
+                  <button
+                    key={cliente.id}
+                    type="button"
+                    onMouseDown={() => handleSelectCliente(cliente)}
+                    className="w-full px-4 py-2.5 text-left hover:bg-brand-blue/5 text-neutral-800 font-medium transition-colors text-sm border-b border-neutral-50 last:border-b-0"
+                  >
+                    {cliente.nombre}
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-neutral-500">
+                  No se encontró "<span className="text-neutral-700 font-medium">{clienteInput}</span>"
+                  {canAddNew && (
+                    <button
+                      type="button"
+                      onMouseDown={() => setShowAddClienteModal(true)}
+                      className="flex items-center gap-1.5 mt-2 text-brand-blue hover:text-brand-blue/80 font-semibold text-xs transition-colors"
+                    >
+                      <Icon icon="typcn:plus" width={14} height={14} />
+                      Agregar como nueva empresa
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>,
+            document.body
+          )
+        : null;
+
+    return (
+      <div className="relative">
+        <label htmlFor="cliente" className={labelClass}>
+          {tr.cliente}
+          {clientesFiltradosPorRol.length > 0 && (
+            <span className="ml-2 text-neutral-400 font-normal">({clientesFiltradosPorRol.length})</span>
           )}
-        </div>
-      )}
-    </div>
-  );
+          {isReadOnly && (
+            <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>
+          )}
+        </label>
+        <input
+          ref={clienteInputRef}
+          id="cliente"
+          name="cliente"
+          type="text"
+          value={clienteInput}
+          onChange={handleClienteInputChange}
+          onFocus={() => { if (!isReadOnly) setShowClienteSuggestions(true); }}
+          onBlur={handleClienteBlur}
+          placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
+          className={`${inputClass} ${isReadOnly ? "opacity-70 cursor-default" : ""}`}
+          autoComplete="off"
+          readOnly={isReadOnly}
+          disabled={isReadOnly}
+        />
+        {dropdownPortal}
+      </div>
+    );
+  };
 
   const renderAddClienteModal = () => {
     if (!showAddClienteModal) return null;
@@ -1210,6 +1281,29 @@ export function CrearReservaContent() {
             >
               {tr.limpiar}
             </button>
+            <label className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border cursor-pointer transition-all select-none ${
+              enviarTransporte
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm'
+                : 'bg-neutral-50 text-neutral-500 border-neutral-200 hover:bg-neutral-100'
+            }`}
+            >
+              <input
+                type="checkbox"
+                checked={enviarTransporte}
+                onChange={(e) => setEnviarTransporte(e.target.checked)}
+                className="sr-only"
+              />
+              <Icon
+                icon={enviarTransporte ? "lucide:truck" : "lucide:truck"}
+                width={16}
+                height={16}
+                className={enviarTransporte ? "text-emerald-600" : "text-neutral-400"}
+              />
+              Enviar a Transportes
+              {enviarTransporte && (
+                <Icon icon="lucide:check" width={14} height={14} className="text-emerald-600" />
+              )}
+            </label>
             <button
               type="submit"
               disabled={submitting}

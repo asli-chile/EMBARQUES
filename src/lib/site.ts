@@ -30,6 +30,7 @@ export const siteConfig = {
         { labelKey: "reservaAsli", id: "reserva-asli", href: "/transportes/reserva-asli" },
         { labelKey: "reservaExt", id: "reserva-ext", href: "/transportes/reserva-ext" },
         { labelKey: "facturacion", id: "facturacion", href: "/transportes/facturacion" },
+        { labelKey: "facturasTransporte", id: "facturas-transporte", href: "/transportes/facturas" },
       ],
     },
     {
@@ -59,8 +60,10 @@ export const siteConfig = {
       children: [
         { labelKey: "clientes", id: "clientes", href: "/configuracion/clientes" },
         { labelKey: "asignarClientesEmpresas", id: "asignar-clientes-empresas", href: "/configuracion/asignar-clientes-empresas" },
-        { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
         { labelKey: "usuarios", id: "usuarios", href: "/configuracion/usuarios" },
+        { labelKey: "configuracionTransportes", id: "configuracion-transportes", href: "/configuracion/transportes" },
+        { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
+        { labelKey: "consignatarios", id: "consignatarios", href: "/configuracion/consignatarios" },
       ],
     },
   ],

@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(cd:*)",
-      "Bash(cd:*2)"
+      "Bash(find:*)",
+      "Bash(grep -r usuarios 'C:\\\\Users\\\\rodri\\\\OneDrive\\\\Desktop\\\\EMBARQUES - ANTIGRAVITY\\\\src\\\\pages\\\\api' --include=*.ts)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"Portal\\\\|createPortal\" '/c/Users/rodri/OneDrive/Desktop/EMBARQUES - ANTIGRAVITY/src' --include=*.tsx --include=*.ts)",
+      "Bash(npx supabase:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(grep -r consignatarios '/c/Users/rodri/OneDrive/Desktop/EMBARQUES - ANTIGRAVITY/src' --include=*.tsx --include=*.ts --include=*.astro)",
+      "Bash(grep:*)",
+      "Bash(node -e \"require\\(''xlsx-js-style''\\); console.log\\(''ok''\\)\")"
     ]
   }
 }

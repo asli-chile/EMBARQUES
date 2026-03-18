@@ -5,7 +5,6 @@ import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 const AUTO_COLLAPSE_MS = 2000;
-const HOVER_OPEN_DELAY_MS = 0;
 const STORAGE_KEY = "embarques-sidebar-open";
 
 type SidebarProps = {
@@ -83,12 +82,9 @@ export function Sidebar({ pathname }: SidebarProps) {
   const handleMouseEnter = useCallback(() => {
     setIsMouseInside(true);
     clearCollapseTimer();
+    clearOpenTimer();
     if (!isOpen) {
-      clearOpenTimer();
-      openTimerRef.current = setTimeout(() => {
-        setIsOpen(true);
-        openTimerRef.current = null;
-      }, HOVER_OPEN_DELAY_MS);
+      setIsOpen(true);
     }
   }, [clearCollapseTimer, clearOpenTimer, isOpen]);
 
@@ -282,12 +278,16 @@ export function Sidebar({ pathname }: SidebarProps) {
       {/* Desktop: sidebar con botón centrado en el borde derecho */}
       <div
         ref={sidebarRef}
-        className={`hidden md:block relative flex-shrink-0 overflow-visible bg-neutral-700/95 transition-[width] duration-300 ease-out ${
+        className={`hidden md:block relative flex-shrink-0 overflow-visible bg-neutral-700/95 z-10 transition-[width] duration-300 ease-out ${
           isOpen ? "w-[11.75rem]" : "w-3"
         }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
+        {/* Zona de hover invisible cuando está colapsado */}
+        {!isOpen && (
+          <div className="absolute inset-y-0 left-0 w-6 cursor-pointer" />
+        )}
         {/* Panel del sidebar */}
         <div
           className={`absolute inset-y-0 left-0 flex flex-col overflow-hidden bg-neutral-700/95 backdrop-blur-md border-r border-white/10 shadow-xl shadow-black/20 transition-[width] duration-300 ease-out ${

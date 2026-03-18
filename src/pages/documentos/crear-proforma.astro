@@ -1,5 +1,8 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { CrearProformaContent } from "@/components/documentos/CrearProformaContent";
 ---
 
-<BaseLayout title="Crear Proforma - EMBARQUES" />
+<BaseLayout title="Crear Proforma - ASLI">
+  <CrearProformaContent client:load />
+</BaseLayout>

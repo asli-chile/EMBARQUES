@@ -1,5 +1,8 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { CrearInstructivoContent } from "@/components/documentos/CrearInstructivoContent";
 ---
 
-<BaseLayout title="Crear Instructivo - EMBARQUES" />
+<BaseLayout title="Crear Instructivo - ASLI">
+  <CrearInstructivoContent client:load />
+</BaseLayout>

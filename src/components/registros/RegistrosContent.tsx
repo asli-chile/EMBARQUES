@@ -93,6 +93,7 @@ export type OperacionRow = {
   prioridad: string;
   operacion_critica: boolean;
   origen_registro: string;
+  enviado_transporte: boolean;
   observaciones: string;
 };
 
@@ -179,6 +180,7 @@ type DbOperacion = {
   prioridad: string | null;
   operacion_critica: boolean | null;
   origen_registro: string | null;
+  enviado_transporte: boolean | null;
   observaciones: string | null;
 };
 
@@ -289,6 +291,7 @@ function createToRow(locale: string) {
       prioridad: db.prioridad ?? "",
       operacion_critica: db.operacion_critica ?? false,
       origen_registro: db.origen_registro ?? "manual",
+      enviado_transporte: db.enviado_transporte ?? false,
       observaciones: db.observaciones ?? "",
     };
   };
@@ -346,6 +349,7 @@ export function RegistrosContent() {
   const [rowData, setRowData] = useState<OperacionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [catalogos, setCatalogos] = useState<CatalogosState>(emptyCatalogos);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -376,9 +380,9 @@ export function RegistrosContent() {
       empresasRes,
     ] = await Promise.all([
       supabase.from("catalogos").select("categoria, valor").eq("activo", true).order("orden"),
-      supabase.from("navieras").select("nombre").eq("activa", true).order("nombre"),
-      supabase.from("naves").select("naviera, nombre").eq("activa", true).order("nombre"),
-      supabase.from("plantas").select("nombre").eq("activa", true).order("nombre"),
+      supabase.from("navieras").select("nombre").order("nombre"),
+      supabase.from("navieras_naves").select("naves(nombre), navieras(nombre)"),
+      supabase.from("plantas").select("nombre").eq("activo", true).order("nombre"),
       supabase.from("depositos").select("nombre").eq("activo", true).order("nombre"),
       supabase.from("destinos").select("nombre, pais").eq("activo", true).order("nombre"),
       supabase.from("puertos_origen").select("nombre").eq("activo", true).order("nombre"),
@@ -404,7 +408,13 @@ export function RegistrosContent() {
       prioridad: getByCategoria("prioridad"),
       ventilacion: getByCategoria("ventilacion"),
       navieras: (navierasRes.data ?? []).map((n) => n.nombre),
-      naves: (navesRes.data ?? []).map((n) => ({ naviera: n.naviera, nombre: n.nombre })),
+      naves: (navesRes.data ?? [])
+        .map((n: Record<string, unknown>) => ({
+          naviera: ((n.navieras as Record<string, string>)?.nombre) ?? "",
+          nombre: ((n.naves as Record<string, string>)?.nombre) ?? "",
+        }))
+        .filter((n) => n.nombre)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)),
       plantas: (plantasRes.data ?? []).map((p) => p.nombre),
       depositos: (depositosRes.data ?? []).map((d) => d.nombre),
       destinos: destinosData.map((d) => ({ nombre: d.nombre, pais: d.pais ?? "" })),
@@ -728,6 +738,15 @@ export function RegistrosContent() {
         cellEditorParams: { values: [true, false] },
       },
       { field: "origen_registro", headerName: t.registros.colRecordOrigin, sortable: true, width: columnWidths.origenRegistro },
+      {
+        field: "enviado_transporte",
+        headerName: "Enviado Transp.",
+        sortable: true,
+        width: 130,
+        cellRenderer: booleanCellRenderer,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: { values: [true, false] },
+      },
       { field: "observaciones", headerName: t.registros.colObservations, sortable: true, editable: canEdit, width: columnWidths.observaciones },
     ],
     [t.registros, booleanCellRenderer, catalogos, canEdit]
@@ -783,6 +802,30 @@ export function RegistrosContent() {
     void fetchOperaciones();
   }, [fetchOperaciones]);
 
+  const handleSendToTransport = useCallback(async () => {
+    const selected = gridRef.current?.api?.getSelectedRows() as OperacionRow[] | undefined;
+    if (!selected?.length || !supabase) return;
+    const ids = selected.map((r) => r.id);
+    const { error: err } = await supabase
+      .from("operaciones")
+      .update({ enviado_transporte: true })
+      .in("id", ids);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    selected.forEach((row) => {
+      const node = gridRef.current?.api?.getRowNode(row.id);
+      if (node) {
+        node.setDataValue("enviado_transporte", true);
+      }
+    });
+    gridRef.current?.api?.deselectAll();
+    const count = selected.length;
+    setSuccessMsg(`${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Transportes`);
+    setTimeout(() => setSuccessMsg(null), 4000);
+  }, [supabase]);
+
   const handleCellValueChanged = useCallback(
     async (e: { data: OperacionRow; colDef: { field?: string }; newValue: unknown; oldValue: unknown; node: { setDataValue: (field: string, value: unknown) => void } }) => {
       const field = e.colDef.field;
@@ -827,7 +870,14 @@ export function RegistrosContent() {
           {error}
         </div>
       )}
-      
+
+      {successMsg && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg animate-fade-in">
+          <Icon icon="lucide:check-circle" className="w-5 h-5 shrink-0" />
+          {successMsg}
+        </div>
+      )}
+
       {/* Barra de herramientas */}
       <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b border-neutral-200">
         <div className="flex items-center gap-2 flex-wrap">
@@ -842,6 +892,16 @@ export function RegistrosContent() {
                 <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">{t.registros.add}</span>
                 <span className="sm:hidden">Nuevo</span>
+              </button>
+              {/* Botón Enviar a Transportes */}
+              <button
+                type="button"
+                onClick={() => void handleSendToTransport()}
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              >
+                <Icon icon="lucide:truck" width={14} height={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Enviar a Transportes</span>
+                <span className="sm:hidden">Transporte</span>
               </button>
               {/* Botón Eliminar */}
               <button
