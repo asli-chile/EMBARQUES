@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type Ref, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import type { ColDef } from "ag-grid-community";
@@ -206,6 +206,134 @@ function formatDateTime(value: string | null, _locale: string): string {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+// ─── Helpers de parseo de fecha ───────────────────────────────────────────────
+function parseDateInput(val: string): string | null {
+  if (!val?.trim()) return null;
+  const m1 = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m1) return `${m1[3]}-${m1[2].padStart(2, "0")}-${m1[1].padStart(2, "0")}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val.substring(0, 10);
+  return null;
+}
+
+function parseDateTimeInput(val: string): string | null {
+  if (!val?.trim()) return null;
+  const m = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}T${m[4].padStart(2, "0")}:${m[5]}:00`;
+  const d = parseDateInput(val);
+  return d ? `${d}T00:00:00` : null;
+}
+
+const DATE_FIELDS = new Set(["etd", "eta"]);
+const DATETIME_FIELDS = new Set([
+  "citacion", "llegada_planta", "salida_planta", "inicio_stacking",
+  "fin_stacking", "ingreso_stacking", "corte_documental",
+  "inf_late", "late_inicio", "late_fin", "xlate_inicio", "xlate_fin",
+  "agendamiento_retiro", "devolucion_unidad",
+  "fecha_confirmacion_booking", "fecha_envio_documentacion",
+  "fecha_entrega_bl", "fecha_entrega_factura",
+  "fecha_pago_cliente", "fecha_pago_transporte", "fecha_cierre",
+]);
+
+// ─── Campos que permiten agregar valores nuevos a la BD ───────────────────────
+const ADDABLE_FIELDS = {
+  naviera:             { table: "navieras",       label: "Navieras",           catalogKey: "navieras"       },
+  especie:             { table: "especies",        label: "Especies",           catalogKey: "especies"       },
+  planta_presentacion: { table: "plantas",         label: "Plantas",            catalogKey: "plantas"        },
+  deposito:            { table: "depositos",       label: "Depósitos",          catalogKey: "depositos"      },
+  pol:                 { table: "puertos_origen",  label: "Puertos de Origen",  catalogKey: "puertos_origen" },
+  cliente:             { table: "empresas",        label: "Empresas",           catalogKey: "empresas"       },
+  pod:                 { table: "destinos",        label: "Destinos (POD)",     catalogKey: "destinos"       },
+  consignatario:       { table: "consignatarios",  label: "Consignatarios",     catalogKey: "consignatarios" },
+} as const;
+
+// ─── Editor combinado: dropdown filtrable + texto libre ───────────────────────
+interface ComboboxEditorProps {
+  value: string;
+  values: string[];
+  stopEditing: (cancel?: boolean) => void;
+}
+
+const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
+  props: ComboboxEditorProps,
+  ref: Ref<{ getValue: () => string; isPopup: () => boolean }>
+) {
+  const [inputVal, setInputVal] = useState<string>(props.value ?? "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = inputVal.toLowerCase();
+    if (!q) return props.values.slice(0, 100);
+    return props.values.filter((v) => v.toLowerCase().includes(q)).slice(0, 100);
+  }, [inputVal, props.values]);
+
+  // isPopup:true → AG Grid renderiza el editor fuera de la celda,
+  // evitando que el overflow:hidden de la grilla corte el desplegable.
+  useImperativeHandle(ref, () => ({
+    getValue: () => inputVal,
+    isPopup: () => true,
+  }));
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const choose = (v: string) => {
+    setInputVal(v);
+    setTimeout(() => props.stopEditing(), 0);
+  };
+
+  return (
+    <div
+      style={{
+        background: "white",
+        border: "2px solid #107C41",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+        minWidth: 180,
+        fontFamily: "'Calibri', 'Segoe UI', sans-serif",
+        fontSize: 13,
+      }}
+    >
+      <input
+        ref={inputRef}
+        value={inputVal}
+        onChange={(e) => setInputVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { props.stopEditing(); e.preventDefault(); }
+          if (e.key === "Escape") { props.stopEditing(true); }
+          if (e.key === "Tab") { props.stopEditing(); }
+        }}
+        style={{
+          width: "100%", padding: "4px 8px",
+          border: "none", borderBottom: "1px solid #D5D5D5",
+          outline: "none", fontSize: 13,
+          fontFamily: "'Calibri', 'Segoe UI', sans-serif",
+          boxSizing: "border-box", background: "#fff",
+        }}
+        placeholder="Buscar o escribir..."
+      />
+      {filtered.length > 0 && (
+        <div style={{ maxHeight: 220, overflowY: "auto" }}>
+          {filtered.map((v) => (
+            <div
+              key={v}
+              onMouseDown={() => choose(v)}
+              style={{
+                padding: "4px 10px", cursor: "pointer",
+                borderBottom: "1px solid #f0f0f0", whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#BDD7EE")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
+            >
+              {v}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
 function createToRow(locale: string) {
   return function toRow(db: DbOperacion): OperacionRow {
     return {
@@ -351,7 +479,13 @@ export function RegistrosContent() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [catalogos, setCatalogos] = useState<CatalogosState>(emptyCatalogos);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showTransportModal, setShowTransportModal] = useState(false);
+  const [addNewModal, setAddNewModal] = useState<{
+    field: string;
+    newValue: string;
+    table: string;
+    label: string;
+  } | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -472,195 +606,131 @@ export function RegistrosContent() {
 
   const columnDefs = useMemo<ColDef<OperacionRow>[]>(
     () => [
+      // ── Fijas ────────────────────────────────────────────────────────────────
       { checkboxSelection: true, headerCheckboxSelection: true, width: columnWidths.checkbox, pinned: "left", suppressMovable: true },
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left" },
+
+      // ── General ──────────────────────────────────────────────────────────────
       { field: "ingreso", headerName: t.registros.colEntryDate, sortable: true, width: columnWidths.ingreso },
-      { field: "semana", headerName: t.registros.colWeek, sortable: true, width: columnWidths.semana },
+      { field: "semana", headerName: t.registros.colWeek, sortable: true, editable: canEdit, width: columnWidths.semana },
       {
-        field: "ejecutivo",
-        headerName: t.registros.colExecutive,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.ejecutivo,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.ejecutivos] },
+        field: "ejecutivo", headerName: t.registros.colExecutive, sortable: true, editable: canEdit, width: columnWidths.ejecutivo,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ejecutivos] },
       },
       {
-        field: "estado_operacion",
-        headerName: t.registros.colOperationStatus,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.estadoOperacion,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: catalogos.estado_operacion },
+        field: "estado_operacion", headerName: t.registros.colOperationStatus, sortable: true, editable: canEdit, width: columnWidths.estadoOperacion,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.estado_operacion },
       },
       {
-        field: "tipo_operacion",
-        headerName: t.registros.colOperationType,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.tipoOperacion,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: catalogos.tipo_operacion },
+        field: "tipo_operacion", headerName: t.registros.colOperationType, sortable: true, editable: canEdit, width: columnWidths.tipoOperacion,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.tipo_operacion },
       },
       {
-        field: "cliente",
-        headerName: t.registros.colClient,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.cliente,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.empresas] },
+        field: "cliente", headerName: t.registros.colClient, sortable: true, editable: canEdit, width: columnWidths.cliente,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.empresas },
       },
       {
-        field: "consignatario",
-        headerName: t.registros.colConsignee,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.consignatario,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.consignatarios] },
+        field: "consignatario", headerName: t.registros.colConsignee, sortable: true, editable: canEdit, width: columnWidths.consignatario,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.consignatarios },
+      },
+
+      // ── Comercial ─────────────────────────────────────────────────────────────
+      {
+        field: "incoterm", headerName: t.registros.colIncoterm, sortable: true, editable: canEdit, width: columnWidths.incoterm,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.incoterm] },
       },
       {
-        field: "incoterm",
-        headerName: t.registros.colIncoterm,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.incoterm,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.incoterm] },
+        field: "forma_pago", headerName: t.registros.colPaymentMethod, sortable: true, editable: canEdit, width: columnWidths.formaPago,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.forma_pago] },
+      },
+
+      // ── Carga ─────────────────────────────────────────────────────────────────
+      {
+        field: "especie", headerName: t.registros.colSpecies, sortable: true, editable: canEdit, width: columnWidths.especie,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.especies },
       },
       {
-        field: "forma_pago",
-        headerName: t.registros.colPaymentMethod,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.formaPago,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.forma_pago] },
-      },
-      {
-        field: "especie",
-        headerName: t.registros.colSpecies,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.especie,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.especies] },
-      },
-      {
-        field: "pais",
-        headerName: t.registros.colDestCountry,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.pais,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.paises] },
+        field: "pais", headerName: t.registros.colDestCountry, sortable: true, editable: canEdit, width: columnWidths.pais,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.paises] },
       },
       { field: "temperatura", headerName: t.registros.colTemperature, sortable: true, editable: canEdit, width: columnWidths.temperatura },
       {
-        field: "ventilacion",
-        headerName: t.registros.colVentilation,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.ventilacion,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.ventilacion] },
+        field: "ventilacion", headerName: t.registros.colVentilation, sortable: true, editable: canEdit, width: columnWidths.ventilacion,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ventilacion] },
       },
       { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: canEdit, width: columnWidths.pallets },
       { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: canEdit, width: columnWidths.pesoBruto },
       { field: "peso_neto", headerName: t.registros.colNetWeight, sortable: true, editable: canEdit, width: columnWidths.pesoNeto },
       {
-        field: "tipo_unidad",
-        headerName: t.registros.colUnitType,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.tipoUnidad,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.tipo_unidad] },
+        field: "tipo_unidad", headerName: t.registros.colUnitType, sortable: true, editable: canEdit, width: columnWidths.tipoUnidad,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.tipo_unidad] },
+      },
+
+      // ── Naviera / Embarque ─────────────────────────────────────────────────────
+      {
+        field: "naviera", headerName: t.registros.colCarrier, sortable: true, editable: canEdit, width: columnWidths.naviera,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.navieras },
       },
       {
-        field: "naviera",
-        headerName: t.registros.colCarrier,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.naviera,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.navieras] },
-      },
-      {
-        field: "nave",
-        headerName: t.registros.colVessel,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.nave,
-        cellEditor: "agSelectCellEditor",
+        field: "nave", headerName: t.registros.colVessel, sortable: true, editable: canEdit, width: columnWidths.nave,
+        cellEditor: ComboboxCellEditor,
+        cellEditorPopup: true,
         cellEditorParams: (params: { data: OperacionRow }) => {
-          const navieraSeleccionada = params.data.naviera;
-          const navesDisponibles = navieraSeleccionada
-            ? catalogos.naves.filter((n) => n.naviera === navieraSeleccionada).map((n) => n.nombre)
+          const nav = params.data.naviera;
+          const navesDisponibles = nav
+            ? catalogos.naves.filter((n) => n.naviera === nav).map((n) => n.nombre)
             : catalogos.naves.map((n) => n.nombre);
-          return { values: ["", ...navesDisponibles] };
+          return { values: navesDisponibles };
         },
       },
       {
-        field: "pol",
-        headerName: t.registros.colPOL,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.pol,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.puertos_origen] },
+        field: "pol", headerName: t.registros.colPOL, sortable: true, editable: canEdit, width: columnWidths.pol,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.puertos_origen },
       },
-      { field: "etd", headerName: t.registros.colETD, sortable: true, width: columnWidths.etd },
+      { field: "etd", headerName: t.registros.colETD, sortable: true, editable: canEdit, width: columnWidths.etd },
       {
-        field: "pod",
-        headerName: t.registros.colPOD,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.pod,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.destinos.map((d) => d.nombre)] },
+        field: "pod", headerName: t.registros.colPOD, sortable: true, editable: canEdit, width: columnWidths.pod,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.destinos.map((d) => d.nombre) },
       },
-      { field: "eta", headerName: t.registros.colETA, sortable: true, width: columnWidths.eta },
+      { field: "eta", headerName: t.registros.colETA, sortable: true, editable: canEdit, width: columnWidths.eta },
       { field: "tt", headerName: t.registros.colTransitDays, sortable: true, editable: canEdit, width: columnWidths.tt },
       { field: "booking", headerName: t.registros.colBooking, sortable: true, editable: canEdit, width: columnWidths.booking },
+
+      // ── Documentación ─────────────────────────────────────────────────────────
       { field: "aga", headerName: t.registros.colAGA, sortable: true, editable: canEdit, width: columnWidths.aga },
       { field: "dus", headerName: t.registros.colDUS, sortable: true, editable: canEdit, width: columnWidths.dus },
       { field: "sps", headerName: t.registros.colSPS, sortable: true, editable: canEdit, width: columnWidths.sps },
       { field: "numero_guia_despacho", headerName: t.registros.colDispatchGuide, sortable: true, editable: canEdit, width: columnWidths.numeroGuiaDespacho },
+
+      // ── Planta / Stacking ──────────────────────────────────────────────────────
       {
-        field: "planta_presentacion",
-        headerName: t.registros.colPresentationPlant,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.plantaPresentacion,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.plantas] },
+        field: "planta_presentacion", headerName: t.registros.colPresentationPlant, sortable: true, editable: canEdit, width: columnWidths.plantaPresentacion,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.plantas },
       },
-      { field: "citacion", headerName: t.registros.colCitation, sortable: true, width: columnWidths.citacion },
-      { field: "llegada_planta", headerName: t.registros.colPlantArrival, sortable: true, width: columnWidths.llegadaPlanta },
-      { field: "salida_planta", headerName: t.registros.colPlantDeparture, sortable: true, width: columnWidths.salidaPlanta },
-      { field: "inicio_stacking", headerName: t.registros.colStackingStart, sortable: true, width: columnWidths.inicioStacking },
-      { field: "fin_stacking", headerName: t.registros.colStackingEnd, sortable: true, width: columnWidths.finStacking },
-      { field: "ingreso_stacking", headerName: t.registros.colStackingEntry, sortable: true, width: columnWidths.ingresoStacking },
-      { field: "corte_documental", headerName: t.registros.colDocCutoff, sortable: true, width: columnWidths.corteDocumental },
-      { field: "inf_late", headerName: t.registros.colLateInfo, sortable: true, width: columnWidths.infLate },
-      { field: "late_inicio", headerName: t.registros.colLateStart, sortable: true, width: columnWidths.lateInicio },
-      { field: "late_fin", headerName: t.registros.colLateEnd, sortable: true, width: columnWidths.lateFin },
-      { field: "xlate_inicio", headerName: t.registros.colXLateStart, sortable: true, width: columnWidths.xlateInicio },
-      { field: "xlate_fin", headerName: t.registros.colXLateEnd, sortable: true, width: columnWidths.xlateFin },
+      { field: "citacion", headerName: t.registros.colCitation, sortable: true, editable: canEdit, width: columnWidths.citacion },
+      { field: "llegada_planta", headerName: t.registros.colPlantArrival, sortable: true, editable: canEdit, width: columnWidths.llegadaPlanta },
+      { field: "salida_planta", headerName: t.registros.colPlantDeparture, sortable: true, editable: canEdit, width: columnWidths.salidaPlanta },
+      { field: "inicio_stacking", headerName: t.registros.colStackingStart, sortable: true, editable: canEdit, width: columnWidths.inicioStacking },
+      { field: "fin_stacking", headerName: t.registros.colStackingEnd, sortable: true, editable: canEdit, width: columnWidths.finStacking },
+      { field: "ingreso_stacking", headerName: t.registros.colStackingEntry, sortable: true, editable: canEdit, width: columnWidths.ingresoStacking },
+      { field: "corte_documental", headerName: t.registros.colDocCutoff, sortable: true, editable: canEdit, width: columnWidths.corteDocumental },
+
+      // ── Late / xLate ───────────────────────────────────────────────────────────
+      { field: "inf_late", headerName: t.registros.colLateInfo, sortable: true, editable: canEdit, width: columnWidths.infLate },
+      { field: "late_inicio", headerName: t.registros.colLateStart, sortable: true, editable: canEdit, width: columnWidths.lateInicio },
+      { field: "late_fin", headerName: t.registros.colLateEnd, sortable: true, editable: canEdit, width: columnWidths.lateFin },
+      { field: "xlate_inicio", headerName: t.registros.colXLateStart, sortable: true, editable: canEdit, width: columnWidths.xlateInicio },
+      { field: "xlate_fin", headerName: t.registros.colXLateEnd, sortable: true, editable: canEdit, width: columnWidths.xlateFin },
+
+      // ── Depósito / Retiro ──────────────────────────────────────────────────────
       {
-        field: "deposito",
-        headerName: t.registros.colWarehouse,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.deposito,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.depositos] },
+        field: "deposito", headerName: t.registros.colWarehouse, sortable: true, editable: canEdit, width: columnWidths.deposito,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.depositos },
       },
-      { field: "agendamiento_retiro", headerName: t.registros.colPickupSchedule, sortable: true, width: columnWidths.agendamientoRetiro },
-      { field: "devolucion_unidad", headerName: t.registros.colUnitReturn, sortable: true, width: columnWidths.devolucionUnidad },
+      { field: "agendamiento_retiro", headerName: t.registros.colPickupSchedule, sortable: true, editable: canEdit, width: columnWidths.agendamientoRetiro },
+      { field: "devolucion_unidad", headerName: t.registros.colUnitReturn, sortable: true, editable: canEdit, width: columnWidths.devolucionUnidad },
+
+      // ── Transporte ─────────────────────────────────────────────────────────────
       { field: "transporte", headerName: t.registros.colTransportCompany, sortable: true, editable: canEdit, width: columnWidths.transporte },
       { field: "chofer", headerName: t.registros.colDriverName, sortable: true, editable: canEdit, width: columnWidths.chofer },
       { field: "rut_chofer", headerName: t.registros.colDriverRUT, sortable: true, editable: canEdit, width: columnWidths.rutChofer },
@@ -670,82 +740,57 @@ export function RegistrosContent() {
       { field: "contenedor", headerName: t.registros.colContainer, sortable: true, editable: canEdit, width: columnWidths.contenedor },
       { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
       { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
+
+      // ── Costos Transporte ──────────────────────────────────────────────────────
       { field: "almacenamiento", headerName: t.registros.colStorageDays, sortable: true, editable: canEdit, width: columnWidths.almacenamiento },
       { field: "tramo", headerName: t.registros.colSection, sortable: true, editable: canEdit, width: columnWidths.tramo },
       { field: "valor_tramo", headerName: t.registros.colSectionValue, sortable: true, editable: canEdit, width: columnWidths.valorTramo },
       {
-        field: "porteo",
-        headerName: t.registros.colPortage,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.porteo,
-        cellRenderer: booleanCellRenderer,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: [true, false] },
+        field: "porteo", headerName: t.registros.colPortage, sortable: true, editable: canEdit, width: columnWidths.porteo,
+        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
       { field: "valor_porteo", headerName: t.registros.colPortageValue, sortable: true, editable: canEdit, width: columnWidths.valorPorteo },
       {
-        field: "falso_flete",
-        headerName: t.registros.colDeadFreight,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.falsoFlete,
-        cellRenderer: booleanCellRenderer,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: [true, false] },
+        field: "falso_flete", headerName: t.registros.colDeadFreight, sortable: true, editable: canEdit, width: columnWidths.falsoFlete,
+        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
       { field: "valor_falso_flete", headerName: t.registros.colDeadFreightValue, sortable: true, editable: canEdit, width: columnWidths.valorFalsoFlete },
       { field: "factura_transporte", headerName: t.registros.colTransportInvoice, sortable: true, editable: canEdit, width: columnWidths.facturaTransporte },
+
+      // ── Facturación ────────────────────────────────────────────────────────────
       { field: "monto_facturado", headerName: t.registros.colInvoicedAmount, sortable: true, editable: canEdit, width: columnWidths.montoFacturado },
       { field: "numero_factura_asli", headerName: t.registros.colASLIInvoice, sortable: true, editable: canEdit, width: columnWidths.numeroFacturaAsli },
       { field: "concepto_facturado", headerName: t.registros.colInvoicedConcept, sortable: true, editable: canEdit, width: columnWidths.conceptoFacturado },
       {
-        field: "moneda",
-        headerName: t.registros.colCurrency,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.moneda,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: catalogos.moneda },
+        field: "moneda", headerName: t.registros.colCurrency, sortable: true, editable: canEdit, width: columnWidths.moneda,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.moneda },
       },
       { field: "tipo_cambio", headerName: t.registros.colExchangeRate, sortable: true, editable: canEdit, width: columnWidths.tipoCambio },
       { field: "margen_estimado", headerName: t.registros.colEstimatedMargin, sortable: true, editable: canEdit, width: columnWidths.margenEstimado },
       { field: "margen_real", headerName: t.registros.colRealMargin, sortable: true, editable: canEdit, width: columnWidths.margenReal },
-      { field: "fecha_confirmacion_booking", headerName: t.registros.colBookingConfirmation, sortable: true, width: columnWidths.fechaConfirmacionBooking },
-      { field: "fecha_envio_documentacion", headerName: t.registros.colDocSent, sortable: true, width: columnWidths.fechaEnvioDocumentacion },
-      { field: "fecha_entrega_bl", headerName: t.registros.colBLDelivery, sortable: true, width: columnWidths.fechaEntregaBl },
-      { field: "fecha_entrega_factura", headerName: t.registros.colInvoiceDelivery, sortable: true, width: columnWidths.fechaEntregaFactura },
-      { field: "fecha_pago_cliente", headerName: t.registros.colClientPayment, sortable: true, width: columnWidths.fechaPagoCliente },
-      { field: "fecha_pago_transporte", headerName: t.registros.colTransportPayment, sortable: true, width: columnWidths.fechaPagoTransporte },
-      { field: "fecha_cierre", headerName: t.registros.colCloseDate, sortable: true, width: columnWidths.fechaCierre },
+
+      // ── Fechas administrativas ─────────────────────────────────────────────────
+      { field: "fecha_confirmacion_booking", headerName: t.registros.colBookingConfirmation, sortable: true, editable: canEdit, width: columnWidths.fechaConfirmacionBooking },
+      { field: "fecha_envio_documentacion", headerName: t.registros.colDocSent, sortable: true, editable: canEdit, width: columnWidths.fechaEnvioDocumentacion },
+      { field: "fecha_entrega_bl", headerName: t.registros.colBLDelivery, sortable: true, editable: canEdit, width: columnWidths.fechaEntregaBl },
+      { field: "fecha_entrega_factura", headerName: t.registros.colInvoiceDelivery, sortable: true, editable: canEdit, width: columnWidths.fechaEntregaFactura },
+      { field: "fecha_pago_cliente", headerName: t.registros.colClientPayment, sortable: true, editable: canEdit, width: columnWidths.fechaPagoCliente },
+      { field: "fecha_pago_transporte", headerName: t.registros.colTransportPayment, sortable: true, editable: canEdit, width: columnWidths.fechaPagoTransporte },
+      { field: "fecha_cierre", headerName: t.registros.colCloseDate, sortable: true, editable: canEdit, width: columnWidths.fechaCierre },
+
+      // ── Otros ──────────────────────────────────────────────────────────────────
       {
-        field: "prioridad",
-        headerName: t.registros.colPriority,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.prioridad,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: ["", ...catalogos.prioridad] },
+        field: "prioridad", headerName: t.registros.colPriority, sortable: true, editable: canEdit, width: columnWidths.prioridad,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.prioridad] },
       },
       {
-        field: "operacion_critica",
-        headerName: t.registros.colCriticalOp,
-        sortable: true,
-        editable: canEdit,
-        width: columnWidths.operacionCritica,
-        cellRenderer: booleanCellRenderer,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: [true, false] },
+        field: "operacion_critica", headerName: t.registros.colCriticalOp, sortable: true, editable: canEdit, width: columnWidths.operacionCritica,
+        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
       { field: "origen_registro", headerName: t.registros.colRecordOrigin, sortable: true, width: columnWidths.origenRegistro },
       {
-        field: "enviado_transporte",
-        headerName: "Enviado Transp.",
-        sortable: true,
-        width: 130,
-        cellRenderer: booleanCellRenderer,
-        cellEditor: "agSelectCellEditor",
-        cellEditorParams: { values: [true, false] },
+        field: "enviado_transporte", headerName: "Enviado Transp.", sortable: true, width: 130,
+        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
       { field: "observaciones", headerName: t.registros.colObservations, sortable: true, editable: canEdit, width: columnWidths.observaciones },
     ],
@@ -756,7 +801,16 @@ export function RegistrosContent() {
     () => ({
       resizable: true,
       filter: false,
-      cellStyle: { textAlign: "center" },
+      cellStyle: {
+        textAlign: "center",
+        fontSize: "13px",
+        fontFamily: "'Calibri', 'Segoe UI', system-ui, sans-serif",
+        paddingLeft: "6px",
+        paddingRight: "6px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      },
       headerClass: "ag-header-cell-centered",
     }),
     []
@@ -802,9 +856,14 @@ export function RegistrosContent() {
     void fetchOperaciones();
   }, [fetchOperaciones]);
 
-  const handleSendToTransport = useCallback(async () => {
-    const selected = gridRef.current?.api?.getSelectedRows() as OperacionRow[] | undefined;
-    if (!selected?.length || !supabase) return;
+  const getSelectedRows = useCallback(() => {
+    return (gridRef.current?.api?.getSelectedRows() as OperacionRow[] | undefined) ?? [];
+  }, []);
+
+  const handleSendToAsli = useCallback(async () => {
+    const selected = getSelectedRows();
+    if (!selected.length || !supabase) return;
+    setShowTransportModal(false);
     const ids = selected.map((r) => r.id);
     const { error: err } = await supabase
       .from("operaciones")
@@ -822,16 +881,50 @@ export function RegistrosContent() {
     });
     gridRef.current?.api?.deselectAll();
     const count = selected.length;
-    setSuccessMsg(`${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Transportes`);
+    setSuccessMsg(`${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva ASLI`);
     setTimeout(() => setSuccessMsg(null), 4000);
-  }, [supabase]);
+  }, [supabase, getSelectedRows]);
+
+  const handleSendToExterna = useCallback(async () => {
+    const selected = getSelectedRows();
+    if (!selected.length || !supabase) return;
+    setShowTransportModal(false);
+    const rows = selected.map((r) => ({
+      cliente: r.cliente || null,
+      booking: r.booking || null,
+      naviera: r.naviera || null,
+      nave: r.nave || null,
+      pod: r.pod || null,
+      etd: r.etd || null,
+      planta_presentacion: r.planta_presentacion || null,
+    }));
+    const { error: err } = await supabase
+      .from("transportes_reservas_ext")
+      .insert(rows);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    gridRef.current?.api?.deselectAll();
+    const count = selected.length;
+    setSuccessMsg(`${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva Externa`);
+    setTimeout(() => setSuccessMsg(null), 4000);
+  }, [supabase, getSelectedRows]);
 
   const handleCellValueChanged = useCallback(
     async (e: { data: OperacionRow; colDef: { field?: string }; newValue: unknown; oldValue: unknown; node: { setDataValue: (field: string, value: unknown) => void } }) => {
       const field = e.colDef.field;
       if (!supabase || !field || e.newValue === e.oldValue) return;
 
-      const updates: Record<string, unknown> = { [field]: e.newValue ?? null };
+      // Convertir fechas al formato ISO para guardar en BD
+      let dbValue: unknown = e.newValue ?? null;
+      if (DATE_FIELDS.has(field)) {
+        dbValue = parseDateInput(String(e.newValue ?? "")) ?? null;
+      } else if (DATETIME_FIELDS.has(field)) {
+        dbValue = parseDateTimeInput(String(e.newValue ?? "")) ?? null;
+      }
+
+      const updates: Record<string, unknown> = { [field]: dbValue };
 
       if (field === "pod" && e.newValue) {
         const destino = catalogos.destinos.find((d) => d.nombre === e.newValue);
@@ -845,10 +938,46 @@ export function RegistrosContent() {
         .from("operaciones")
         .update(updates)
         .eq("id", e.data.id);
-      if (err) setError(err.message);
+      if (err) { setError(err.message); return; }
+
+      // Ofrecer agregar valor nuevo al catálogo correspondiente
+      if (field in ADDABLE_FIELDS && e.newValue) {
+        const info = ADDABLE_FIELDS[field as keyof typeof ADDABLE_FIELDS];
+        let existing: string[];
+        if (field === "pod") {
+          existing = catalogos.destinos.map((d) => d.nombre);
+        } else {
+          existing = (catalogos[info.catalogKey as keyof CatalogosState] as string[]) ?? [];
+        }
+        if (!existing.includes(String(e.newValue))) {
+          setAddNewModal({ field, newValue: String(e.newValue), table: info.table, label: info.label });
+        }
+      }
     },
-    [supabase, catalogos.destinos]
+    [supabase, catalogos]
   );
+
+  const handleConfirmAddNew = useCallback(async () => {
+    if (!addNewModal || !supabase) return;
+    const { table, newValue, label } = addNewModal;
+    let insertData: Record<string, unknown>;
+    if (table === "destinos") {
+      insertData = { nombre: newValue, pais: "", activo: true };
+    } else if (table === "navieras") {
+      insertData = { nombre: newValue };
+    } else {
+      insertData = { nombre: newValue, activo: true };
+    }
+    const { error: err } = await supabase.from(table).insert(insertData);
+    if (err) {
+      setError(`Error al agregar a ${label}: ${err.message}`);
+    } else {
+      await fetchCatalogos();
+      setSuccessMsg(`"${newValue}" agregado correctamente a ${label}`);
+      setTimeout(() => setSuccessMsg(null), 3500);
+    }
+    setAddNewModal(null);
+  }, [addNewModal, supabase, fetchCatalogos]);
 
   if (loading && rowData.length === 0) {
     return (
@@ -883,20 +1012,27 @@ export function RegistrosContent() {
         <div className="flex items-center gap-2 flex-wrap">
           {canEdit && (
             <>
-              {/* Botón Agregar */}
-              <button
-                type="button"
-                onClick={() => setShowAddModal(true)}
+              {/* Botón Agregar Reserva */}
+              <a
+                href="/reservas/crear"
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
               >
                 <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">{t.registros.add}</span>
+                <span className="hidden sm:inline">{t.registros.newBooking}</span>
                 <span className="sm:hidden">Nuevo</span>
-              </button>
+              </a>
               {/* Botón Enviar a Transportes */}
               <button
                 type="button"
-                onClick={() => void handleSendToTransport()}
+                onClick={() => {
+                  const sel = getSelectedRows();
+                  if (!sel.length) {
+                    setError("Selecciona al menos una operación para enviar a transportes");
+                    setTimeout(() => setError(null), 3000);
+                    return;
+                  }
+                  setShowTransportModal(true);
+                }}
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
               >
                 <Icon icon="lucide:truck" width={14} height={14} className="sm:w-4 sm:h-4" />
@@ -940,7 +1076,7 @@ export function RegistrosContent() {
       
       {/* Contenedor de la tabla */}
       <div className="flex-1 min-h-0 p-2 sm:p-4 overflow-hidden flex flex-col">
-        <div className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full rounded overflow-hidden border border-neutral-200" style={{ minHeight: 300 }}>
+        <div className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden" style={{ minHeight: 300 }}>
           <AgGridReact<OperacionRow>
             ref={gridRef}
             rowData={rowData}
@@ -948,71 +1084,107 @@ export function RegistrosContent() {
             defaultColDef={defaultColDef}
             localeText={t.agGrid}
             rowSelection="multiple"
+            suppressRowClickSelection
+            singleClickEdit
+            stopEditingWhenCellsLoseFocus
             animateRows
             domLayout="normal"
-            suppressCellFocus
             getRowId={(params) => params.data.id}
             onCellValueChanged={handleCellValueChanged}
-            rowHeight={36}
-            headerHeight={40}
+            rowHeight={30}
+            headerHeight={34}
           />
         </div>
       </div>
 
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 flex items-center justify-between flex-shrink-0">
-              <h2 className="text-base sm:text-lg font-semibold text-neutral-800">{t.registros.addNewTitle}</h2>
+      {/* Modal: confirmar agregar nuevo valor al catálogo */}
+      {addNewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+          <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+                <Icon icon="lucide:plus-circle" width={20} height={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900">Nuevo valor detectado</h3>
+                <p className="text-xs text-neutral-500">{addNewModal.label}</p>
+              </div>
+            </div>
+            <p className="text-sm text-neutral-700 mb-1">¿Deseas agregar este valor a la base de datos?</p>
+            <div className="mt-2 mb-5 px-3 py-2 rounded-lg bg-neutral-100 border border-neutral-200 text-sm font-semibold text-neutral-800 truncate">
+              "{addNewModal.newValue}"
+            </div>
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
-                className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+                onClick={() => void handleConfirmAddNew()}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors"
               >
-                <Icon icon="typcn:times" width={20} height={20} className="text-neutral-500" />
+                Sí, agregar
               </button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-3 overflow-auto">
-              <a
-                href="/reservas/crear"
-                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-neutral-50 hover:bg-brand-blue/5 border border-neutral-200 hover:border-brand-blue/30 rounded-xl transition-all group"
-              >
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-brand-blue/20 transition-colors flex-shrink-0">
-                  <Icon icon="typcn:export" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-blue" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-neutral-800 group-hover:text-brand-blue transition-colors text-sm sm:text-base">
-                    {t.registros.newBooking}
-                  </p>
-                  <p className="text-xs sm:text-sm text-neutral-500 truncate">{t.registros.newBookingDesc}</p>
-                </div>
-                <Icon icon="typcn:chevron-right" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
-              </a>
-              <a
-                href="/transportes/reserva-asli"
-                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-neutral-50 hover:bg-brand-blue/5 border border-neutral-200 hover:border-brand-blue/30 rounded-xl transition-all group"
-              >
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-purple-200 transition-colors flex-shrink-0">
-                  <Icon icon="typcn:location-arrow" className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-neutral-800 group-hover:text-brand-blue transition-colors text-sm sm:text-base">
-                    {t.registros.newTransport}
-                  </p>
-                  <p className="text-xs sm:text-sm text-neutral-500 truncate">{t.registros.newTransportDesc}</p>
-                </div>
-                <Icon icon="typcn:chevron-right" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
-              </a>
-            </div>
-            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-neutral-50 border-t border-neutral-200 flex-shrink-0">
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
-                className="w-full px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                onClick={() => setAddNewModal(null)}
+                className="flex-1 px-4 py-2 text-sm font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
               >
-                {t.registros.cancel}
+                No, solo esta vez
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal selección tipo de transporte */}
+      {showTransportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+          <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900">Enviar a Transportes</h3>
+                <p className="text-xs text-neutral-500">
+                  {getSelectedRows().length} operación{getSelectedRows().length > 1 ? "es" : ""} seleccionada{getSelectedRows().length > 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-neutral-500 mb-4">Selecciona el tipo de reserva de transporte:</p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => void handleSendToAsli()}
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0 group-hover:bg-brand-blue/20 transition-colors">
+                  <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-800">Reserva ASLI</p>
+                  <p className="text-[11px] text-neutral-400">Transporte gestionado por ASLI</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSendToExterna()}
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition-colors">
+                  <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-800">Reserva Externa</p>
+                  <p className="text-[11px] text-neutral-400">Transporte de carga externa</p>
+                </div>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTransportModal(false)}
+              className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}

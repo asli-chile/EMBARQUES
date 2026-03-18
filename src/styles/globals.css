@@ -5,9 +5,91 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Centrar encabezados y celdas del grid */
+/* ── Centrar encabezados ── */
 .ag-header-cell-centered .ag-header-cell-label {
   justify-content: center;
+}
+
+/* ── Estilo Excel para la tabla de registros ── */
+.ag-theme-balham {
+  --ag-font-family: "Calibri", "Segoe UI", system-ui, sans-serif;
+  --ag-font-size: 13px;
+
+  /* Cabecera — verde Excel */
+  --ag-header-background-color: #1D6F42;
+  --ag-header-foreground-color: #FFFFFF;
+  --ag-header-cell-hover-background-color: #185A35;
+  --ag-header-column-separator-display: block;
+  --ag-header-column-separator-color: rgba(255, 255, 255, 0.35);
+  --ag-header-column-separator-width: 1px;
+  --ag-header-column-resize-handle-color: rgba(255, 255, 255, 0.6);
+
+  /* Filas — blancas y alternas muy sutiles */
+  --ag-background-color: #FFFFFF;
+  --ag-odd-row-background-color: #F2F9F5;
+  --ag-row-hover-color: #E6F3EA;
+  --ag-selected-row-background-color: #BDD7EE;
+  --ag-range-selection-background-color: rgba(189, 215, 238, 0.3);
+  --ag-range-selection-border-color: #107C41;
+
+  /* Bordes — grilla visible en todas las celdas */
+  --ag-border-color: #C8C8C8;
+  --ag-row-border-color: #D5D5D5;
+  --ag-row-border-width: 1px;
+  --ag-row-border-style: solid;
+
+  /* Pinned columns */
+  --ag-pinned-column-border-color: #ADADAD;
+}
+
+/* Línea vertical entre celdas (columnas) */
+.ag-theme-balham .ag-cell {
+  border-right: 1px solid #D5D5D5;
+}
+
+/* Texto cabecera: negrita y algo más compacto */
+.ag-theme-balham .ag-header-cell-text {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+
+/* Icono de sort en cabecera — blanco */
+.ag-theme-balham .ag-sort-indicator-icon,
+.ag-theme-balham .ag-header-icon {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Checkbox en cabecera — visible sobre fondo verde */
+.ag-theme-balham .ag-header-select-all .ag-checkbox-input-wrapper::after {
+  color: #FFFFFF;
+}
+
+/* Celda seleccionada (rango) */
+.ag-theme-balham .ag-cell.ag-cell-range-selected {
+  background-color: rgba(189, 215, 238, 0.35) !important;
+}
+
+/* Celda en edición */
+.ag-theme-balham .ag-cell.ag-cell-inline-editing {
+  border: 2px solid #107C41 !important;
+  box-shadow: 0 0 0 2px rgba(16, 124, 65, 0.2);
+}
+
+/* Fila seleccionada check */
+.ag-theme-balham .ag-row-selected {
+  background-color: #BDD7EE !important;
+}
+
+/* Columnas pinned — separador más visible */
+.ag-theme-balham .ag-pinned-left-cols-container .ag-cell:last-child {
+  border-right: 2px solid #ADADAD;
+}
+
+/* Sin radio en la grilla */
+.ag-theme-balham .ag-root-wrapper {
+  border-radius: 0;
+  border: 1px solid #BDBDBD;
 }
 
 /* Barra de progreso indeterminada (subida de imagen stacking) */

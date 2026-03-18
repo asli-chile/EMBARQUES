@@ -6,6 +6,7 @@ import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { ClientesContent } from "@/components/clientes";
 import { AsignarClientesEmpresasContent } from "@/components/configuracion/AsignarClientesEmpresasContent";
 import { TransportesConfigContent } from "@/components/configuracion/TransportesConfigContent";
+import { ConsignatariosContent } from "@/components/configuracion/ConsignatariosContent";
 import { UsuariosContent } from "@/components/usuarios/UsuariosContent";
 import { DashboardContent } from "@/components/dashboard";
 import { InicioContent } from "@/components/inicio";
@@ -90,6 +91,8 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ConfigGuard><TransportesConfigContent /></ConfigGuard>
     ) : pathname === "/configuracion/usuarios" ? (
       <ConfigGuard><UsuariosContent /></ConfigGuard>
+    ) : pathname === "/configuracion/consignatarios" ? (
+      <ConfigGuard><ConsignatariosContent /></ConfigGuard>
     ) : pathname === "/reservas/crear" ? (
       <ModuleWithVisitorInfo moduleKey="crearReserva"><CrearReservaContent /></ModuleWithVisitorInfo>
     ) : pathname === "/reservas/mis-reservas" ? (

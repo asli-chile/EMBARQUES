@@ -281,42 +281,28 @@ export function ConsignatariosContent() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Nombre</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Cliente</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Destino</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden md:table-cell">Consignee</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Notify</th>
-                    <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Estado</th>
-                    {canEdit && <th className="px-4 py-3" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-50">
-                  {filtered.map((c) => (
-                    <tr key={c.id} className={`hover:bg-neutral-50 transition-colors ${!c.activo ? "opacity-50" : ""}`}>
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-neutral-800 text-xs">{c.nombre}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[11px] font-semibold">
-                          {c.cliente || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-neutral-600">{c.destino || "—"}</td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <p className="text-xs text-neutral-700 font-medium">{c.consignee_company || "—"}</p>
-                        {c.consignee_attn && <p className="text-[11px] text-neutral-400">{c.consignee_attn}</p>}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <p className="text-xs text-neutral-700 font-medium">{c.notify_company || "—"}</p>
-                        {c.notify_attn && <p className="text-[11px] text-neutral-400">{c.notify_attn}</p>}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+            <>
+              {/* ── Cards móvil (< md) ── */}
+              <div className="md:hidden divide-y divide-neutral-100">
+                {filtered.map((c) => (
+                  <div key={c.id} className={`p-4 hover:bg-neutral-50 transition-colors ${!c.activo ? "opacity-50" : ""}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-neutral-800 truncate">{c.nombre}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[11px] font-semibold">
+                            {c.cliente || "—"}
+                          </span>
+                          {c.destino && (
+                            <span className="text-[11px] text-neutral-500 flex items-center gap-0.5">
+                              <Icon icon="lucide:map-pin" width={10} />{c.destino}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         {canEdit ? (
-                          <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"}`}>
+                          <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
                             <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />
                             {c.activo ? "Activo" : "Inactivo"}
                           </button>
@@ -325,24 +311,87 @@ export function ConsignatariosContent() {
                             {c.activo ? "Activo" : "Inactivo"}
                           </span>
                         )}
-                      </td>
-                      {canEdit && (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1 justify-end">
+                        {canEdit && (
+                          <>
                             <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-brand-blue/10 text-brand-blue transition-colors" title="Editar">
-                              <Icon icon="lucide:pencil" width={13} />
+                              <Icon icon="lucide:pencil" width={14} />
                             </button>
                             <button onClick={() => setConfirmDelete({ id: c.id, nombre: c.nombre })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar">
-                              <Icon icon="lucide:trash-2" width={13} />
+                              <Icon icon="lucide:trash-2" width={14} />
                             </button>
-                          </div>
-                        </td>
-                      )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-100">
+                      <div>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide mb-0.5">Consignee</p>
+                        <p className="text-xs text-neutral-700 font-medium">{c.consignee_company || "—"}</p>
+                        {c.consignee_attn && <p className="text-[11px] text-neutral-400">{c.consignee_attn}</p>}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide mb-0.5">Notify</p>
+                        <p className="text-xs text-neutral-700 font-medium">{c.notify_company || "—"}</p>
+                        {c.notify_attn && <p className="text-[11px] text-neutral-400">{c.notify_attn}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Tabla desktop (≥ md) ── */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-100 bg-neutral-50">
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Nombre</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Cliente</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Destino</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Consignee</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Notify</th>
+                      <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Estado</th>
+                      {canEdit && <th className="px-4 py-3" />}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {filtered.map((c) => (
+                      <tr key={c.id} className={`hover:bg-neutral-50 transition-colors ${!c.activo ? "opacity-50" : ""}`}>
+                        <td className="px-4 py-3"><p className="font-semibold text-neutral-800 text-xs">{c.nombre}</p></td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[11px] font-semibold">{c.cliente || "—"}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-neutral-600">{c.destino || "—"}</td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <p className="text-xs text-neutral-700 font-medium">{c.consignee_company || "—"}</p>
+                          {c.consignee_attn && <p className="text-[11px] text-neutral-400">{c.consignee_attn}</p>}
+                        </td>
+                        <td className="px-4 py-3 hidden xl:table-cell">
+                          <p className="text-xs text-neutral-700 font-medium">{c.notify_company || "—"}</p>
+                          {c.notify_attn && <p className="text-[11px] text-neutral-400">{c.notify_attn}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {canEdit ? (
+                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"}`}>
+                              <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />{c.activo ? "Activo" : "Inactivo"}
+                            </button>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>{c.activo ? "Activo" : "Inactivo"}</span>
+                          )}
+                        </td>
+                        {canEdit && (
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1 justify-end">
+                              <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-brand-blue/10 text-brand-blue transition-colors" title="Editar"><Icon icon="lucide:pencil" width={13} /></button>
+                              <button onClick={() => setConfirmDelete({ id: c.id, nombre: c.nombre })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar"><Icon icon="lucide:trash-2" width={13} /></button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

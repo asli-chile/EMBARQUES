@@ -232,8 +232,8 @@ export function FacturasTransporteContent() {
         )}
 
         {/* Filtros */}
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-3 sm:p-4 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-3 sm:items-center">
+          <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
             <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
             <input
               type="text"
@@ -243,42 +243,44 @@ export function FacturasTransporteContent() {
               className="w-full pl-8 pr-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
             />
           </div>
-          {!isCliente && (
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            {!isCliente && (
+              <select
+                value={filterCliente}
+                onChange={(e) => setFilterCliente(e.target.value)}
+                className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue w-full"
+              >
+                <option value="all">Todos los clientes</option>
+                {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
             <select
-              value={filterCliente}
-              onChange={(e) => setFilterCliente(e.target.value)}
-              className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue w-full"
             >
-              <option value="all">Todos los clientes</option>
-              {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+              <option value="all">Todos los estados</option>
+              <option value="abierta">Abierta</option>
+              <option value="cerrada">Cerrada</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="cancelada">Cancelada</option>
             </select>
-          )}
-          <select
-            value={filterEstado}
-            onChange={(e) => setFilterEstado(e.target.value)}
-            className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
-          >
-            <option value="all">Todos los estados</option>
-            <option value="abierta">Abierta</option>
-            <option value="cerrada">Cerrada</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
-            title="Desde (entrega factura)"
-          />
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
-            title="Hasta (entrega factura)"
-          />
-          <label className="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer px-2 py-1 rounded-lg hover:bg-neutral-50">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue w-full"
+              title="Desde (entrega factura)"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue w-full"
+              title="Hasta (entrega factura)"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-neutral-50 w-full sm:w-auto">
             <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="w-3.5 h-3.5 accent-brand-blue" />
             Ver todas (sin filtrar por factura)
           </label>
@@ -300,91 +302,153 @@ export function FacturasTransporteContent() {
               <p className="text-neutral-400 text-xs mt-1">Registra facturas en la sección de Facturación de Transporte.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Ref</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Cliente</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">N° Factura ASLI</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Fact. Transporte</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Monto</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden md:table-cell">Transporte</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Entrega</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Pago cliente</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Pago transporte</th>
-                    <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Estado</th>
-                    {!isCliente && (
-                      <th className="text-center px-3 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider w-12" />
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-50">
-                  {filtered.map((f) => (
-                    <tr key={f.id} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-xs text-brand-blue">{fmtRef(f)}</p>
-                        {f.booking && <p className="text-[11px] text-neutral-400 mt-0.5">{f.booking}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-xs font-semibold text-neutral-800">{f.cliente}</p>
-                        {f.naviera && <p className="text-[11px] text-neutral-400">{f.naviera}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {f.numero_factura_asli ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[11px] font-bold">
+            <>
+              {/* ── Cards móvil (< md) ── */}
+              <div className="md:hidden divide-y divide-neutral-100">
+                {filtered.map((f) => (
+                  <div key={f.id} className="p-4 hover:bg-neutral-50 transition-colors">
+                    {/* Fila 1: Ref + estado + acciones */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-brand-blue">{fmtRef(f)}</span>
+                        {f.numero_factura_asli && (
+                          <span className="px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[11px] font-bold">
                             {f.numero_factura_asli}
                           </span>
-                        ) : <span className="text-neutral-300 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-neutral-600">{f.factura_transporte || "—"}</td>
-                      <td className="px-4 py-3 text-right">
-                        {f.monto_facturado != null ? (
-                          <span className="font-bold text-xs text-neutral-800">{fmtMonto(f.monto_facturado, f.moneda)}</span>
-                        ) : <span className="text-neutral-300 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-neutral-600 hidden md:table-cell">{f.transporte || "—"}</td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        {f.fecha_entrega_factura ? (
-                          <span className="text-xs text-neutral-700">{fmtDate(f.fecha_entrega_factura)}</span>
-                        ) : <span className="text-neutral-300 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        {f.fecha_pago_cliente ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700">
-                            <Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_cliente)}
-                          </span>
-                        ) : <span className="text-amber-500 text-xs flex items-center gap-1"><Icon icon="lucide:clock" width={11} />Pendiente</span>}
-                      </td>
-                      <td className="px-4 py-3 hidden xl:table-cell">
-                        {f.fecha_pago_transporte ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700">
-                            <Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_transporte)}
-                          </span>
-                        ) : <span className="text-amber-500 text-xs flex items-center gap-1"><Icon icon="lucide:clock" width={11} />Pendiente</span>}
-                      </td>
-                      <td className="px-4 py-3 text-center hidden sm:table-cell">
+                        )}
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${estadoColor[f.estado_operacion] ?? "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
                           {f.estado_operacion}
                         </span>
-                      </td>
+                      </div>
                       {!isCliente && (
-                        <td className="px-3 py-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(f)}
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all duration-200"
-                            title="Eliminar factura"
-                          >
-                            <Icon icon="lucide:trash-2" width={14} height={14} />
-                          </button>
-                        </td>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(f)}
+                          className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Eliminar factura"
+                        >
+                          <Icon icon="lucide:trash-2" width={14} height={14} />
+                        </button>
                       )}
+                    </div>
+
+                    {/* Fila 2: cliente + monto */}
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-800">{f.cliente}</p>
+                        {f.naviera && <p className="text-[11px] text-neutral-400">{f.naviera}{f.booking ? ` · ${f.booking}` : ""}</p>}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        {f.monto_facturado != null ? (
+                          <p className="font-bold text-sm text-neutral-900">{fmtMonto(f.monto_facturado, f.moneda)}</p>
+                        ) : <p className="text-neutral-300 text-xs">Sin monto</p>}
+                      </div>
+                    </div>
+
+                    {/* Fila 3: detalles secundarios */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 pt-2 border-t border-neutral-100">
+                      {f.factura_transporte && (
+                        <span className="text-[11px] text-neutral-500">
+                          <span className="font-medium text-neutral-600">Fact. transp.:</span> {f.factura_transporte}
+                        </span>
+                      )}
+                      {f.transporte && (
+                        <span className="text-[11px] text-neutral-500">
+                          <span className="font-medium text-neutral-600">Transporte:</span> {f.transporte}
+                        </span>
+                      )}
+                      {f.fecha_entrega_factura && (
+                        <span className="text-[11px] text-neutral-500">
+                          <span className="font-medium text-neutral-600">Entrega:</span> {fmtDate(f.fecha_entrega_factura)}
+                        </span>
+                      )}
+                      <span className={`text-[11px] flex items-center gap-1 ${f.fecha_pago_cliente ? "text-emerald-600" : "text-amber-500"}`}>
+                        <Icon icon={f.fecha_pago_cliente ? "lucide:check-circle" : "lucide:clock"} width={10} />
+                        {f.fecha_pago_cliente ? `Pago cliente: ${fmtDate(f.fecha_pago_cliente)}` : "Pago cliente pendiente"}
+                      </span>
+                      <span className={`text-[11px] flex items-center gap-1 ${f.fecha_pago_transporte ? "text-emerald-600" : "text-amber-500"}`}>
+                        <Icon icon={f.fecha_pago_transporte ? "lucide:check-circle" : "lucide:clock"} width={10} />
+                        {f.fecha_pago_transporte ? `Pago transp.: ${fmtDate(f.fecha_pago_transporte)}` : "Pago transp. pendiente"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Tabla desktop (≥ md) ── */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-100 bg-neutral-50">
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Ref</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Cliente</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">N° Factura ASLI</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Fact. Transporte</th>
+                      <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Monto</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Transporte</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Entrega</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Pago cliente</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Pago transporte</th>
+                      <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Estado</th>
+                      {!isCliente && <th className="px-3 py-3 w-12" />}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {filtered.map((f) => (
+                      <tr key={f.id} className="hover:bg-neutral-50 transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="font-bold text-xs text-brand-blue">{fmtRef(f)}</p>
+                          {f.booking && <p className="text-[11px] text-neutral-400 mt-0.5">{f.booking}</p>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-xs font-semibold text-neutral-800">{f.cliente}</p>
+                          {f.naviera && <p className="text-[11px] text-neutral-400">{f.naviera}</p>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {f.numero_factura_asli ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[11px] font-bold">
+                              {f.numero_factura_asli}
+                            </span>
+                          ) : <span className="text-neutral-300 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-neutral-600">{f.factura_transporte || "—"}</td>
+                        <td className="px-4 py-3 text-right">
+                          {f.monto_facturado != null ? (
+                            <span className="font-bold text-xs text-neutral-800">{fmtMonto(f.monto_facturado, f.moneda)}</span>
+                          ) : <span className="text-neutral-300 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-neutral-600 hidden lg:table-cell">{f.transporte || "—"}</td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          {f.fecha_entrega_factura ? <span className="text-xs">{fmtDate(f.fecha_entrega_factura)}</span> : <span className="text-neutral-300 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3 hidden xl:table-cell">
+                          {f.fecha_pago_cliente ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_cliente)}</span>
+                          ) : <span className="text-amber-500 text-xs flex items-center gap-1"><Icon icon="lucide:clock" width={11} />Pendiente</span>}
+                        </td>
+                        <td className="px-4 py-3 hidden xl:table-cell">
+                          {f.fecha_pago_transporte ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_transporte)}</span>
+                          ) : <span className="text-amber-500 text-xs flex items-center gap-1"><Icon icon="lucide:clock" width={11} />Pendiente</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${estadoColor[f.estado_operacion] ?? "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
+                            {f.estado_operacion}
+                          </span>
+                        </td>
+                        {!isCliente && (
+                          <td className="px-3 py-3 text-center">
+                            <button type="button" onClick={() => setDeleteTarget(f)} className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all" title="Eliminar factura">
+                              <Icon icon="lucide:trash-2" width={14} height={14} />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

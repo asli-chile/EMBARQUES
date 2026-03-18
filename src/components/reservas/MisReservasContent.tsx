@@ -81,6 +81,9 @@ export function MisReservasContent() {
   const [especieFilter, setEspecieFilter] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
+  const [showTransportModal, setShowTransportModal] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showFilters, setShowFilters] = useState(false);
@@ -282,6 +285,60 @@ export function MisReservasContent() {
     setActionLoading(false);
   };
 
+  const getSelectedOps = useCallback(() => {
+    return operaciones.filter((op) => selectedIds.has(op.id));
+  }, [operaciones, selectedIds]);
+
+  const handleSendToAsli = useCallback(async () => {
+    const selected = getSelectedOps();
+    if (!selected.length || !supabase) return;
+    setShowTransportModal(false);
+    setActionLoading(true);
+    const ids = selected.map((op) => op.id);
+    const { error } = await supabase
+      .from("operaciones")
+      .update({ enviado_transporte: true })
+      .in("id", ids);
+    setActionLoading(false);
+    if (error) {
+      setErrorMsg(error.message);
+      setTimeout(() => setErrorMsg(null), 4000);
+      return;
+    }
+    setSelectedIds(new Set());
+    const count = selected.length;
+    setSuccessMsg(`${count} operación${count > 1 ? "es" : ""} enviada${count > 1 ? "s" : ""} a Reserva ASLI`);
+    setTimeout(() => setSuccessMsg(null), 4000);
+  }, [supabase, getSelectedOps]);
+
+  const handleSendToExterna = useCallback(async () => {
+    const selected = getSelectedOps();
+    if (!selected.length || !supabase) return;
+    setShowTransportModal(false);
+    setActionLoading(true);
+    const rows = selected.map((op) => ({
+      cliente: op.cliente || null,
+      booking: op.booking || null,
+      naviera: op.naviera || null,
+      nave: op.nave || null,
+      pod: op.pod || null,
+      etd: op.etd || null,
+    }));
+    const { error } = await supabase
+      .from("transportes_reservas_ext")
+      .insert(rows);
+    setActionLoading(false);
+    if (error) {
+      setErrorMsg(error.message);
+      setTimeout(() => setErrorMsg(null), 4000);
+      return;
+    }
+    setSelectedIds(new Set());
+    const count = selected.length;
+    setSuccessMsg(`${count} operación${count > 1 ? "es" : ""} enviada${count > 1 ? "s" : ""} a Reserva Externa`);
+    setTimeout(() => setSuccessMsg(null), 4000);
+  }, [supabase, getSelectedOps]);
+
   const filterSelectClass =
     "w-full px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
 
@@ -321,14 +378,24 @@ export function MisReservasContent() {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {!isCliente && selectedIds.size > 0 && (
-                <button
-                  onClick={() => handleMoveToTrash(Array.from(selectedIds))}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                >
-                  <Icon icon="typcn:trash" width={15} height={15} />
-                  {tr.delete} ({selectedIds.size})
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowTransportModal(true)}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                  >
+                    <Icon icon="lucide:truck" width={15} height={15} />
+                    Enviar a Transportes ({selectedIds.size})
+                  </button>
+                  <button
+                    onClick={() => handleMoveToTrash(Array.from(selectedIds))}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    <Icon icon="typcn:trash" width={15} height={15} />
+                    {tr.delete} ({selectedIds.size})
+                  </button>
+                </>
               )}
               <button
                 onClick={fetchOperaciones}
@@ -574,6 +641,77 @@ export function MisReservasContent() {
         </div>
 
       </div>
+
+      {/* Toast de éxito */}
+      {successMsg && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg animate-fade-in">
+          <Icon icon="lucide:check-circle" className="w-5 h-5 shrink-0" />
+          {successMsg}
+        </div>
+      )}
+
+      {/* Toast de error */}
+      {errorMsg && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-lg animate-fade-in">
+          <Icon icon="lucide:alert-circle" className="w-5 h-5 shrink-0" />
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Modal selección tipo de transporte */}
+      {showTransportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+          <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900">Enviar a Transportes</h3>
+                <p className="text-xs text-neutral-500">
+                  {selectedIds.size} operación{selectedIds.size > 1 ? "es" : ""} seleccionada{selectedIds.size > 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-neutral-500 mb-4">Selecciona el tipo de reserva de transporte:</p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => void handleSendToAsli()}
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0 group-hover:bg-brand-blue/20 transition-colors">
+                  <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-800">Reserva ASLI</p>
+                  <p className="text-[11px] text-neutral-400">Transporte gestionado por ASLI</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSendToExterna()}
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition-colors">
+                  <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-800">Reserva Externa</p>
+                  <p className="text-[11px] text-neutral-400">Transporte de carga externa</p>
+                </div>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTransportModal(false)}
+              className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
