@@ -86,7 +86,7 @@ export const translations = {
       stat2Value: "24/7",
       stat2Label: "Disponibilidad",
       stat3Value: "99.9%",
-      stat3Label: "Uptime garantizado",
+      stat3Label: "Disponibilidad garantizada",
       stat4Value: "5 días",
       stat4Label: "Full documental post zarpe",
 
