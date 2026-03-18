@@ -124,7 +124,6 @@ export function CrearReservaContent() {
     new Set(["general", "comercial", "carga"])
   );
   const [submitting, setSubmitting] = useState(false);
-  const [enviarTransporte, setEnviarTransporte] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -522,7 +521,6 @@ export function CrearReservaContent() {
         : null,
       observaciones: formData.observaciones || null,
       origen_registro: "reserva_web",
-      enviado_transporte: enviarTransporte,
     };
 
     const { error: insertError } = await supabase.from("operaciones").insert(payload);
@@ -1366,52 +1364,7 @@ export function CrearReservaContent() {
 
       {/* Barra de acciones — fixed en móvil, inline en desktop */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:relative md:z-auto border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] md:shadow-sm md:mx-4 md:mb-4 md:rounded-2xl safe-bottom">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 border-b border-neutral-100 md:pb-0 md:mb-0 md:border-b-0 md:justify-end">
-          <button
-            type="button"
-            onClick={() => {
-              const testData: FormData = {
-                tipo_operacion: "EXPORTACIÓN",
-                estado_operacion: "PENDIENTE",
-                ejecutivo: ejecutivos[0]?.id || "",
-                cliente: clientes[0]?.id || "",
-                consignatario: consignatarios[0]?.id || "",
-                incoterm: "FOB",
-                forma_pago: "PREPAID",
-                especie: especies[0]?.id || "",
-                pais: "",
-                temperatura: "-0.5°C",
-                ventilacion: "CERRADO",
-                tratamiento_frio: "",
-                tratamiento_frio_o2: "",
-                tratamiento_frio_co2: "",
-                tipo_atmosfera: "",
-                pallets: "20",
-                peso_bruto: "25000",
-                peso_neto: "22000",
-                tipo_unidad: "40RF",
-                naviera: navieras[0]?.id || "",
-                nave: navesFiltered[0]?.id || "",
-                pol: puertosOrigen[0]?.id || "",
-                pod: destinos[0]?.id || "",
-                etd: format(new Date(), "yyyy-MM-dd"),
-                eta: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
-                booking: "BK-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-                planta_presentacion: plantas[0]?.id || "",
-                citacion: "",
-                deposito: depositos[0]?.id || "",
-                inicio_stacking: "",
-                fin_stacking: "",
-                corte_documental: "",
-                observaciones: "Datos de prueba generados automáticamente",
-              };
-              setFormData(testData);
-              setClienteInput(clientes[0]?.nombre || "");
-            }}
-            className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors"
-          >
-            Cargar prueba
-          </button>
+        <div className="flex items-center gap-2 justify-end mb-2 md:mb-0">
           <button
             type="button"
             onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
@@ -1419,28 +1372,6 @@ export function CrearReservaContent() {
           >
             {tr.limpiar}
           </button>
-          <label className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border cursor-pointer transition-all select-none ${
-            enviarTransporte
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-              : 'bg-neutral-50 text-neutral-500 border-neutral-200 hover:bg-neutral-100'
-          }`}>
-            <input
-              type="checkbox"
-              checked={enviarTransporte}
-              onChange={(e) => setEnviarTransporte(e.target.checked)}
-              className="sr-only"
-            />
-            <Icon
-              icon="lucide:truck"
-              width={14}
-              height={14}
-              className={enviarTransporte ? "text-emerald-600" : "text-neutral-400"}
-            />
-            Transportes
-            {enviarTransporte && (
-              <Icon icon="lucide:check" width={12} height={12} className="text-emerald-600" />
-            )}
-          </label>
         </div>
         <button
           type="submit"
