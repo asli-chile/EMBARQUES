@@ -214,14 +214,14 @@ export function ClientesContent() {
 
   if (loading && rowData.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100 relative z-10" role="main">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
         <div className="flex-1 flex items-center justify-center text-neutral-500">Cargando clientes…</div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100 relative z-10" role="main">
+    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
 
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-neutral-200 overflow-hidden">

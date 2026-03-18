@@ -981,7 +981,7 @@ export function RegistrosContent() {
 
   if (loading && rowData.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100 relative z-10" role="main">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
         <div className="flex-1 flex items-center justify-center text-neutral-500">
           <div className="flex items-center gap-2">
             <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin" />
@@ -993,7 +993,7 @@ export function RegistrosContent() {
   }
 
   return (
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100 relative z-10" role="main">
+    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
       {error && (
         <div className="flex-shrink-0 px-3 sm:px-4 py-2 bg-red-100 text-red-700 text-xs sm:text-sm border-b border-red-200" role="alert">
           {error}
