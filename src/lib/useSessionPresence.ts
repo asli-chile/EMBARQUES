@@ -44,7 +44,7 @@ export function useSessionPresence() {
           es_autenticado: !!profile,
         },
         { onConflict: "session_id" }
-      );
+      ).then(() => {}).catch(() => {});
 
     upsert();
     const interval = setInterval(upsert, HEARTBEAT_MS);

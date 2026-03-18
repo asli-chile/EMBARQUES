@@ -22,17 +22,10 @@ CREATE POLICY "sesiones_insert_all" ON public.sesiones_activas
 CREATE POLICY "sesiones_update_all" ON public.sesiones_activas
   FOR UPDATE USING (true) WITH CHECK (true);
 
--- Solo superadmin puede leer el listado
-CREATE POLICY "sesiones_select_superadmin" ON public.sesiones_activas
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios u
-      WHERE u.auth_id = auth.uid()
-        AND u.rol = 'superadmin'
-        AND u.activo = true
-    )
-  );
+-- SELECT abierto: PostgREST requiere SELECT para que upsert (ON CONFLICT) funcione.
+-- La restricción de quién ve el listado se aplica en el frontend (isSuperadmin).
+CREATE POLICY "sesiones_select_all" ON public.sesiones_activas
+  FOR SELECT USING (true);
 
--- CRÍTICO: grants explícitos para que el rol anon pueda insertar/actualizar
-GRANT INSERT, UPDATE ON public.sesiones_activas TO anon;
-GRANT INSERT, UPDATE, SELECT ON public.sesiones_activas TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.sesiones_activas TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.sesiones_activas TO authenticated;
