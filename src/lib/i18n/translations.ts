@@ -87,8 +87,8 @@ export const translations = {
       stat2Label: "Disponibilidad",
       stat3Value: "99.9%",
       stat3Label: "Uptime garantizado",
-      stat4Value: "<2s",
-      stat4Label: "Tiempo de carga",
+      stat4Value: "5 días",
+      stat4Label: "Full documental post zarpe",
 
       // Comparación
       comparisonTag: "Transformación real",
@@ -1590,8 +1590,8 @@ export const translations = {
       stat2Label: "Availability",
       stat3Value: "99.9%",
       stat3Label: "Guaranteed uptime",
-      stat4Value: "<2s",
-      stat4Label: "Load time",
+      stat4Value: "5 days",
+      stat4Label: "Full docs after sailing",
 
       // Comparison
       comparisonTag: "Real transformation",

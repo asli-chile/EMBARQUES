@@ -47,7 +47,7 @@ const stats = [
   { valueKey: "stat1Value" as const, labelKey: "stat1Label" as const, icon: "lucide:package-check" },
   { valueKey: "stat2Value" as const, labelKey: "stat2Label" as const, icon: "lucide:clock" },
   { valueKey: "stat3Value" as const, labelKey: "stat3Label" as const, icon: "lucide:shield-check" },
-  { valueKey: "stat4Value" as const, labelKey: "stat4Label" as const, icon: "lucide:zap" },
+  { valueKey: "stat4Value" as const, labelKey: "stat4Label" as const, icon: "lucide:file-check" },
 ] as const;
 
 const comparisons = [
