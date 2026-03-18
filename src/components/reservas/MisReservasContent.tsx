@@ -24,7 +24,7 @@ type Operacion = {
   created_at: string;
   // campos adicionales para email / tarjeta
   consignatario: string | null;
-  tipo_contenedor: string | null;
+  tipo_unidad: string | null;
   pallets: number | null;
   peso_neto: number | null;
   temperatura: number | null;
@@ -32,8 +32,8 @@ type Operacion = {
   deposito: string | null;
   planta_presentacion: string | null;
   citacion: string | null;
-  stacking_inicio: string | null;
-  stacking_fin: string | null;
+  inicio_stacking: string | null;
+  fin_stacking: string | null;
 };
 
 const estadoConfig: Record<string, { dot: string; bg: string; text: string; border: string }> = {
@@ -68,7 +68,7 @@ function buildReservaBody(op: Operacion): string {
     "",
     "CARGA",
     `Especie:          ${op.especie ?? "-"}`,
-    `Contenedor:       ${op.tipo_contenedor ?? "-"}`,
+    `Contenedor:       ${op.tipo_unidad ?? "-"}`,
     `Pallets:          ${op.pallets ?? "-"}`,
     `Peso Neto:        ${op.peso_neto ? `${op.peso_neto.toLocaleString("es-CL")} kg` : "-"}`,
     `Temperatura:      ${op.temperatura !== null && op.temperatura !== undefined ? `${op.temperatura}°C` : "-"}`,
@@ -101,15 +101,15 @@ function buildTransporteBody(op: Operacion): string {
     `POL:              ${op.pol ?? "-"}`,
     `POD:              ${op.pod ?? "-"}`,
     `ETD:              ${fmtDate(op.etd)}`,
-    `Contenedor:       ${op.tipo_contenedor ?? "-"}`,
+    `Contenedor:       ${op.tipo_unidad ?? "-"}`,
     `Especie:          ${op.especie ?? "-"}`,
     "",
     "DEPÓSITO / PLANTA",
     `Planta:           ${op.planta_presentacion ?? "-"}`,
     `Depósito:         ${op.deposito ?? "-"}`,
     `Citación:         ${fmtDate(op.citacion)}`,
-    `Stacking Inicio:  ${fmtDate(op.stacking_inicio)}`,
-    `Stacking Fin:     ${fmtDate(op.stacking_fin)}`,
+    `Stacking Inicio:  ${fmtDate(op.inicio_stacking)}`,
+    `Stacking Fin:     ${fmtDate(op.fin_stacking)}`,
   ].join("\n");
 }
 
@@ -408,8 +408,8 @@ export function MisReservasContent() {
       .from("operaciones")
       .select(
         `id, correlativo, ref_asli, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
-         estado_operacion, created_at, consignatario, tipo_contenedor, pallets, peso_neto, temperatura,
-         ventilacion, deposito, planta_presentacion, citacion, stacking_inicio, stacking_fin`
+         estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto, temperatura,
+         ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
       .is("deleted_at", null);
 
