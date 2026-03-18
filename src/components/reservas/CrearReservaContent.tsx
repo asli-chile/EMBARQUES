@@ -1088,27 +1088,57 @@ export function CrearReservaContent() {
           </div>
         </div>
 
+        {/* Modal de error */}
         {error && (
-          <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-red-700 text-sm font-medium" role="alert">
-            <Icon icon="typcn:warning" width={18} height={18} className="text-red-500 flex-shrink-0" />
-            {error}
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="h-[3px] bg-red-500" />
+              <div className="p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
+                  <Icon icon="typcn:warning" width={24} height={24} className="text-red-500" />
+                </div>
+                <h3 className="font-bold text-neutral-900 mb-2">Error al guardar</h3>
+                <p className="text-sm text-neutral-600 mb-5">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-semibold text-sm"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
+        {/* Modal de éxito */}
         {success && (
-          <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200" role="status">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 text-emerald-800 min-w-0">
-                <Icon icon="typcn:tick" width={18} height={18} className="text-emerald-600 flex-shrink-0" />
-                <span className="font-medium text-sm">{success}</span>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="h-[3px] bg-emerald-500" />
+              <div className="p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <Icon icon="typcn:tick" width={24} height={24} className="text-emerald-500" />
+                </div>
+                <h3 className="font-bold text-neutral-900 mb-2">Reserva guardada</h3>
+                <p className="text-sm text-neutral-600 mb-5">{success}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSuccess(null)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
+                  >
+                    Cerrar
+                  </button>
+                  <a
+                    href="/reservas/mis-reservas"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm"
+                  >
+                    Ver reservas
+                    <Icon icon="typcn:arrow-right" width={14} height={14} />
+                  </a>
+                </div>
               </div>
-              <a
-                href="/reservas/mis-reservas"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-xs font-semibold flex-shrink-0"
-              >
-                Ver reservas
-                <Icon icon="typcn:arrow-right" width={14} height={14} />
-              </a>
             </div>
           </div>
         )}
