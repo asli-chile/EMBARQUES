@@ -1069,8 +1069,8 @@ export function CrearReservaContent() {
   const stepsPanelTitle = (tr as Record<string, string>).stepsPanelTitle ?? "Qué completar en cada paso";
 
   return (
-    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-50" role="main">
-      <div className="w-full max-w-full px-4 sm:px-6 py-4 sm:py-6 pb-28 md:pb-6">
+    <main className="flex-1 min-h-0 flex flex-col bg-neutral-50" role="main">
+      <div ref={mainRef} className="flex-1 overflow-auto px-4 sm:px-6 py-4 sm:py-6">
         <div className="mb-5 rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
           <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
           <div className="px-5 py-4 flex items-center gap-3">
@@ -1393,8 +1393,8 @@ export function CrearReservaContent() {
         </div>
       </div>
 
-      {/* Barra de acciones — fixed en móvil para estar siempre visible */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:relative md:z-auto bg-white border-t border-neutral-200 px-4 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:shadow-none md:border-0 md:px-0 md:py-0 md:mx-4 md:mb-4 safe-bottom">
+      {/* Barra de acciones — siempre visible al fondo, fuera del scroll */}
+      <div className="shrink-0 border-t border-neutral-200 bg-white px-4 py-2.5 safe-bottom">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -1423,8 +1423,7 @@ export function CrearReservaContent() {
           </button>
         </div>
       </div>
-      
-      
+
       {renderAddClienteModal()}
       {renderPreviewModal()}
 
