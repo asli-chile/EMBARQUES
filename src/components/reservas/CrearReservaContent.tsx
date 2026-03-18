@@ -1070,7 +1070,7 @@ export function CrearReservaContent() {
 
   return (
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto bg-neutral-50" role="main">
-      <div className="w-full max-w-full px-4 sm:px-6 py-4 sm:py-6">
+      <div className="w-full max-w-full px-4 sm:px-6 py-4 sm:py-6 pb-28 md:pb-6">
         <div className="mb-5 rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
           <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
           <div className="px-5 py-4 flex items-center gap-3">
@@ -1358,37 +1358,42 @@ export function CrearReservaContent() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
-              className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
-            >
-              {tr.limpiar}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <>
-                  <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
-                  {tr.guardando}
-                </>
-              ) : (
-                <>
-                  <Icon icon="typcn:input-checked" width={16} height={16} />
-                  {tr.guardar}
-                </>
-              )}
-            </button>
-          </div>
 
         </form>
         </div>
       </div>
 
+      {/* Barra de acciones — fixed en móvil para estar siempre visible */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:relative md:z-auto bg-white border-t border-neutral-200 px-4 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:shadow-none md:border-0 md:px-0 md:py-0 md:mx-4 md:mb-4 safe-bottom">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
+            className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+          >
+            {tr.limpiar}
+          </button>
+          <button
+            type="submit"
+            form="reserva-form"
+            disabled={submitting}
+            className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <>
+                <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
+                {tr.guardando}
+              </>
+            ) : (
+              <>
+                <Icon icon="typcn:input-checked" width={16} height={16} />
+                {tr.guardar}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+      
       
       {renderAddClienteModal()}
       {renderPreviewModal()}
