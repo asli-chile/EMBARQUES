@@ -21,6 +21,8 @@ type Operacion = {
   tt: number | null;
   booking: string | null;
   booking_doc_url: string | null;
+  enviado_transporte: boolean | null;
+  tipo_reserva_transporte: string | null;
   estado_operacion: string | null;
   created_at: string;
   // campos adicionales para email / tarjeta
@@ -50,7 +52,6 @@ const estadoConfig: Record<string, { dot: string; bg: string; text: string; bord
 type SortField = "ref_asli" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "estado_operacion";
 type SortDirection = "asc" | "desc";
 type ViewMode = "table" | "cards";
-type EmailType = "reserva" | "transporte";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -69,82 +70,45 @@ function renderHtmlTable(title: string, data: [string, unknown][]) {
   return `<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#2563eb;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">${title}</div><table style="border-collapse:collapse">${rowsHtml}</table></div>`;
 }
 
-function buildEmailContent(op: Operacion, type: EmailType) {
-  const subject =
-    type === "reserva"
-      ? [
-          "SOLICITUD DE RESERVA",
-          op.cliente ?? "",
-          op.naviera ?? "",
-          [op.nave, op.tt ? `${op.tt}D` : ""].filter(Boolean).join(" - ") || "",
-          op.especie ?? "",
-          op.temperatura != null ? `${op.temperatura}°C` : "",
-          op.ventilacion ?? "",
-          op.pol ?? "",
-          op.pod ?? "",
-        ].filter(Boolean).join(" // ")
-      : [
-          "SOLICITUD DE TRANSPORTE",
-          op.cliente ?? "",
-          op.naviera ?? "",
-          op.nave ?? "",
-          op.especie ?? "",
-          op.pol ?? "",
-          op.pod ?? "",
-        ].filter(Boolean).join(" // ");
+function buildEmailContent(op: Operacion) {
+  const subject = [
+    "SOLICITUD DE RESERVA",
+    op.cliente ?? "",
+    op.naviera ?? "",
+    [op.nave, op.tt ? `${op.tt}D` : ""].filter(Boolean).join(" - ") || "",
+    op.especie ?? "",
+    op.temperatura != null ? `${op.temperatura}°C` : "",
+    op.ventilacion ?? "",
+    op.pol ?? "",
+    op.pod ?? "",
+  ].filter(Boolean).join(" // ");
 
   let htmlBody = `<div style="font-family:Arial,sans-serif;color:#374151">`;
-
-  if (type === "reserva") {
-    htmlBody += `<p>Estimado equipo,</p><p>Se solicita la siguiente reserva:</p>`;
-    htmlBody += renderHtmlTable("General", [
-      ["Ref. ASLI", op.ref_asli],
-      ["Cliente", op.cliente],
-      ["Estado", op.estado_operacion],
-    ]);
-    htmlBody += renderHtmlTable("Carga", [
-      ["Especie", op.especie],
-      ["Tipo unidad", op.tipo_unidad],
-      ["Pallets", op.pallets],
-      ["Peso Neto", op.peso_neto ? `${op.peso_neto.toLocaleString("es-CL")} kg` : null],
-      ["Temperatura", op.temperatura != null ? `${op.temperatura}°C` : null],
-      ["Ventilación", op.ventilacion],
-      ["Consignatario", op.consignatario],
-    ]);
-    htmlBody += renderHtmlTable("Embarque", [
-      ["Naviera", op.naviera],
-      ["Nave", op.nave],
-      ["Booking", op.booking],
-      ["POL", op.pol],
-      ["POD", op.pod],
-      ["ETD", fmtDate(op.etd)],
-      ["ETA", fmtDate(op.eta)],
-      ["Tránsito", op.tt ? `${op.tt} días` : null],
-    ]);
-  } else {
-    htmlBody += `<p>Estimado equipo,</p><p>Se solicita el siguiente transporte:</p>`;
-    htmlBody += renderHtmlTable("Reserva", [
-      ["Ref. ASLI", op.ref_asli],
-      ["Cliente", op.cliente],
-      ["Naviera", op.naviera],
-      ["Nave", op.nave],
-      ["Booking", op.booking],
-      ["POL", op.pol],
-      ["POD", op.pod],
-      ["ETD", fmtDate(op.etd)],
-      ["Tipo unidad", op.tipo_unidad],
-      ["Especie", op.especie],
-    ]);
-    htmlBody += renderHtmlTable("Depósito / Planta", [
-      ["Planta", op.planta_presentacion],
-      ["Depósito", op.deposito],
-      ["Citación", fmtDate(op.citacion)],
-      ["Stacking Inicio", fmtDate(op.inicio_stacking)],
-      ["Stacking Fin", fmtDate(op.fin_stacking)],
-    ]);
-  }
-
+  htmlBody += `<p>Estimado equipo,</p><p>Se solicita la siguiente reserva:</p>`;
+  htmlBody += renderHtmlTable("General", [
+    ["Ref. ASLI", op.ref_asli],
+    ["Cliente", op.cliente],
+    ["Estado", op.estado_operacion],
+  ]);
+  htmlBody += renderHtmlTable("Carga", [
+    ["Especie", op.especie],
+    ["Tipo unidad", op.tipo_unidad],
+    ["Temperatura", op.temperatura != null ? `${op.temperatura}°C` : null],
+    ["Ventilación", op.ventilacion],
+    ["Consignatario", op.consignatario],
+  ]);
+  htmlBody += renderHtmlTable("Embarque", [
+    ["Naviera", op.naviera],
+    ["Nave", op.nave],
+    ["Booking", op.booking],
+    ["POL", op.pol],
+    ["POD", op.pod],
+    ["ETD", fmtDate(op.etd)],
+    ["ETA", fmtDate(op.eta)],
+    ["Tránsito", op.tt ? `${op.tt} días` : null],
+  ]);
   htmlBody += `<p>Quedo atento.</p></div>`;
+
   return { subject, htmlBody };
 }
 
@@ -338,19 +302,19 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
 // ─── EmailModal ───────────────────────────────────────────────────────────────
 
 function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
-  const [sending, setSending] = useState<EmailType | null>(null);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSend = async (type: EmailType) => {
+  const handleSend = async () => {
     const scriptUrl = import.meta.env.PUBLIC_GMAIL_DRAFT_SCRIPT_URL;
     if (!scriptUrl) {
       setError("No se ha configurado la URL del script de Gmail.");
       return;
     }
 
-    setSending(type);
+    setSending(true);
     setError(null);
-    const { subject, htmlBody } = buildEmailContent(op, type);
+    const { subject, htmlBody } = buildEmailContent(op);
 
     try {
       const res = await fetch(scriptUrl, {
@@ -365,20 +329,20 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
         window.open("https://mail.google.com/mail/#drafts", "_blank");
       } else {
         setError(data.error || "Error al crear el borrador en Gmail.");
-        setSending(null);
+        setSending(false);
         return;
       }
     } catch {
       setError("No se pudo conectar con el servicio de correo.");
-      setSending(null);
+      setSending(false);
       return;
     }
 
-    setSending(null);
+    setSending(false);
     onClose();
   };
 
-  const disabled = sending !== null;
+  const disabled = sending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
@@ -397,58 +361,36 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
           <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>
         )}
 
-        <p className="text-xs text-neutral-500 mb-4">¿Qué tipo de solicitud deseas enviar?</p>
+        <p className="text-xs text-neutral-500 mb-4">Se creará un borrador en Gmail con los datos del embarque y carga.</p>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
           <button
             type="button"
+            onClick={onClose}
             disabled={disabled}
-            onClick={() => void handleSend("reserva")}
-            className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
           >
-            <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/20 transition-colors">
-              {sending === "reserva" ? (
-                <Icon icon="typcn:refresh" width={18} height={18} className="text-brand-blue animate-spin" />
-              ) : (
-                <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-brand-blue" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-neutral-800">Solicitud de Reserva</p>
-              <p className="text-[11px] text-neutral-400">Todos los datos del embarque y carga</p>
-            </div>
-            <Icon icon="lucide:chevron-right" width={14} height={14} className="text-neutral-300 ml-auto shrink-0" />
+            Cancelar
           </button>
-
           <button
             type="button"
             disabled={disabled}
-            onClick={() => void handleSend("transporte")}
-            className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={() => void handleSend()}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-              {sending === "transporte" ? (
-                <Icon icon="typcn:refresh" width={18} height={18} className="text-emerald-600 animate-spin" />
-              ) : (
-                <Icon icon="lucide:truck" width={18} height={18} className="text-emerald-600" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-neutral-800">Solicitud de Transporte</p>
-              <p className="text-[11px] text-neutral-400">Datos de reserva, planta y depósito</p>
-            </div>
-            <Icon icon="lucide:chevron-right" width={14} height={14} className="text-neutral-300 ml-auto shrink-0" />
+            {sending ? (
+              <>
+                <Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />
+                Creando...
+              </>
+            ) : (
+              <>
+                <Icon icon="lucide:mail" width={15} height={15} />
+                Enviar
+              </>
+            )}
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={disabled}
-          className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
-        >
-          Cancelar
-        </button>
       </div>
     </div>
   );
@@ -638,6 +580,7 @@ export function MisReservasContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [successTransport, setSuccessTransport] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -658,7 +601,7 @@ export function MisReservasContent() {
       .from("operaciones")
       .select(
         `id, correlativo, ref_asli, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
-         booking_doc_url, estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto,
+         booking_doc_url, enviado_transporte, tipo_reserva_transporte, estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto,
          temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
       .is("deleted_at", null);
@@ -766,13 +709,31 @@ export function MisReservasContent() {
     if (!selected.length || !supabase) return;
     setShowTransportModal(false);
     setActionLoading(true);
-    const { error } = await supabase.from("operaciones").update({ enviado_transporte: true }).in("id", selected.map((op) => op.id));
+
+    const alreadySent = selected.filter((op) => op.tipo_reserva_transporte);
+    const toSend = selected.filter((op) => !op.tipo_reserva_transporte);
+
+    if (toSend.length > 0) {
+      const { error } = await supabase.from("operaciones").update({ enviado_transporte: true, tipo_reserva_transporte: "asli" }).in("id", toSend.map((op) => op.id));
+      if (error) { setActionLoading(false); setErrorMsg(error.message); setTimeout(() => setErrorMsg(null), 4000); return; }
+    }
+
     setActionLoading(false);
-    if (error) { setErrorMsg(error.message); setTimeout(() => setErrorMsg(null), 4000); return; }
     setSelectedIds(new Set());
-    const count = selected.length;
-    setSuccessMsg(`${count} operación${count > 1 ? "es" : ""} enviada${count > 1 ? "s" : ""} a Reserva ASLI`);
-    setTimeout(() => setSuccessMsg(null), 4000);
+
+    const msgs: string[] = [];
+    if (toSend.length > 0) msgs.push(`${toSend.length} enviada${toSend.length > 1 ? "s" : ""} a Reserva ASLI`);
+    if (alreadySent.length > 0) {
+      const asli = alreadySent.filter((op) => op.tipo_reserva_transporte === "asli").length;
+      const ext = alreadySent.filter((op) => op.tipo_reserva_transporte === "externa").length;
+      if (asli > 0) msgs.push(`${asli} ya estaba${asli > 1 ? "n" : ""} en ASLI`);
+      if (ext > 0) msgs.push(`${ext} ya estaba${ext > 1 ? "n" : ""} en Externa`);
+    }
+    setSuccessTransport(msgs.join(". "));
+
+    setOperaciones((prev) => prev.map((op) =>
+      toSend.some((s) => s.id === op.id) ? { ...op, enviado_transporte: true, tipo_reserva_transporte: "asli" } : op
+    ));
   }, [supabase, getSelectedOps]);
 
   const handleSendToExterna = useCallback(async () => {
@@ -780,14 +741,35 @@ export function MisReservasContent() {
     if (!selected.length || !supabase) return;
     setShowTransportModal(false);
     setActionLoading(true);
-    const rows = selected.map((op) => ({ cliente: op.cliente || null, booking: op.booking || null, naviera: op.naviera || null, nave: op.nave || null, pod: op.pod || null, etd: op.etd || null }));
-    const { error } = await supabase.from("transportes_reservas_ext").insert(rows);
+
+    const alreadySent = selected.filter((op) => op.tipo_reserva_transporte);
+    const toSend = selected.filter((op) => !op.tipo_reserva_transporte);
+
+    if (toSend.length > 0) {
+      const { error: updateError } = await supabase.from("operaciones").update({ enviado_transporte: true, tipo_reserva_transporte: "externa" }).in("id", toSend.map((op) => op.id));
+      if (updateError) { setActionLoading(false); setErrorMsg(updateError.message); setTimeout(() => setErrorMsg(null), 4000); return; }
+
+      const rows = toSend.map((op) => ({ cliente: op.cliente || null, booking: op.booking || null, naviera: op.naviera || null, nave: op.nave || null, pod: op.pod || null, etd: op.etd || null }));
+      const { error: insertError } = await supabase.from("transportes_reservas_ext").insert(rows);
+      if (insertError) { setActionLoading(false); setErrorMsg(insertError.message); setTimeout(() => setErrorMsg(null), 4000); return; }
+    }
+
     setActionLoading(false);
-    if (error) { setErrorMsg(error.message); setTimeout(() => setErrorMsg(null), 4000); return; }
     setSelectedIds(new Set());
-    const count = selected.length;
-    setSuccessMsg(`${count} operación${count > 1 ? "es" : ""} enviada${count > 1 ? "s" : ""} a Reserva Externa`);
-    setTimeout(() => setSuccessMsg(null), 4000);
+
+    const msgs: string[] = [];
+    if (toSend.length > 0) msgs.push(`${toSend.length} enviada${toSend.length > 1 ? "s" : ""} a Reserva Externa`);
+    if (alreadySent.length > 0) {
+      const asli = alreadySent.filter((op) => op.tipo_reserva_transporte === "asli").length;
+      const ext = alreadySent.filter((op) => op.tipo_reserva_transporte === "externa").length;
+      if (asli > 0) msgs.push(`${asli} ya estaba${asli > 1 ? "n" : ""} en ASLI`);
+      if (ext > 0) msgs.push(`${ext} ya estaba${ext > 1 ? "n" : ""} en Externa`);
+    }
+    setSuccessTransport(msgs.join(". "));
+
+    setOperaciones((prev) => prev.map((op) =>
+      toSend.some((s) => s.id === op.id) ? { ...op, enviado_transporte: true, tipo_reserva_transporte: "externa" } : op
+    ));
   }, [supabase, getSelectedOps]);
 
   const handleCopy = async (op: Operacion) => {
@@ -839,7 +821,11 @@ export function MisReservasContent() {
             <div className="flex items-center gap-2 flex-wrap">
               {!isCliente && selectedIds.size > 0 && (
                 <>
-                  <button onClick={() => setShowTransportModal(true)} disabled={actionLoading} className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50">
+                  <button
+                    onClick={() => setShowTransportModal(true)}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                  >
                     <Icon icon="lucide:truck" width={15} height={15} />
                     Enviar a Transportes ({selectedIds.size})
                   </button>
@@ -986,6 +972,7 @@ export function MisReservasContent() {
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Transporte</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
@@ -1081,6 +1068,24 @@ export function MisReservasContent() {
                               </span>
                             ) : <span className="text-neutral-400 text-xs">-</span>}
                           </td>
+                          {/* Transporte */}
+                          <td className="px-4 py-3 text-center">
+                            {op.tipo_reserva_transporte === "asli" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+                                <Icon icon="lucide:building-2" width={11} height={11} />
+                                ASLI
+                              </span>
+                            ) : op.tipo_reserva_transporte === "externa" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Icon icon="lucide:globe" width={11} height={11} />
+                                Externa
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-400 border border-neutral-200">
+                                Pendiente
+                              </span>
+                            )}
+                          </td>
                           {/* Acciones tabla */}
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-0.5">
@@ -1160,6 +1165,38 @@ export function MisReservasContent() {
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg animate-fade-in">
           <Icon icon="lucide:check-circle" className="w-5 h-5 shrink-0" />
           {successMsg}
+        </div>
+      )}
+
+      {/* Modal éxito transporte */}
+      {successTransport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="h-[3px] bg-emerald-500" />
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+                <Icon icon="lucide:truck" width={24} height={24} className="text-emerald-500" />
+              </div>
+              <h3 className="font-bold text-neutral-900 mb-2">Enviado con éxito</h3>
+              <p className="text-sm text-neutral-600 mb-5">{successTransport}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSuccessTransport(null)}
+                  className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
+                >
+                  Cerrar
+                </button>
+                <a
+                  href="/transportes/reserva-asli"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm"
+                >
+                  Ir a Transportes
+                  <Icon icon="typcn:arrow-right" width={14} height={14} />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

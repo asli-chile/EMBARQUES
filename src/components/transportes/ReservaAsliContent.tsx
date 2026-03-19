@@ -171,7 +171,8 @@ export function ReservaAsliContent() {
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, planta_presentacion, estado_operacion, deposito, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara, tramo, valor_tramo, moneda, observaciones, citacion, llegada_planta, salida_planta, agendamiento_retiro, inicio_stacking, fin_stacking, ingreso_stacking")
       .is("deleted_at", null)
-      .eq("enviado_transporte", true);
+      .eq("enviado_transporte", true)
+      .or("tipo_reserva_transporte.eq.asli,tipo_reserva_transporte.is.null");
     if (empresaNombres.length > 0) {
       qOp = qOp.in("cliente", empresaNombres);
     }
