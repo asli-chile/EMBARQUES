@@ -1019,6 +1019,7 @@ export function CrearReservaContent() {
         icon: "typcn:archive", title: tr.sectionCarga,
         cols: 3,
         items: [
+          { label: tr.especie, value: especieNombre },
           { label: tr.tipoUnidad, value: formData.tipo_unidad },
           { label: tr.temperatura, value: formData.temperatura },
           { label: tr.ventilacion, value: formData.ventilacion },
