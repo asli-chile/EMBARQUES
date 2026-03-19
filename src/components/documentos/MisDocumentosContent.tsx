@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -77,6 +77,45 @@ export function MisDocumentosContent() {
     try { return createClient(); } catch { return null; }
   }, []);
 
+  // ── Refs siempre frescos (el canal Realtime los lee sin recrearse) ──────────
+  const selectedOperacionRef = useRef<string>("");
+  useEffect(() => { selectedOperacionRef.current = selectedOperacion; }, [selectedOperacion]);
+
+  // Ref que apunta a la función más reciente de recargar conteos
+  const reloadCountsRef = useRef<((ops: Operacion[]) => Promise<void>) | null>(null);
+  // Ref que apunta a la función más reciente de recargar documentos
+  const reloadDocsRef = useRef<(() => Promise<void>) | null>(null);
+
+  // ── Recalcula docCounts a partir de una lista de operaciones ────────────────
+  const reloadCounts = useCallback(async (ops: Operacion[]) => {
+    if (!supabase || ops.length === 0) return;
+    const ids = ops.map((o) => o.id);
+    const { data: docsData } = await supabase
+      .from("documentos")
+      .select("operacion_id, tipo")
+      .in("operacion_id", ids);
+
+    const docsByOperacion = new Map<string, { count: number; hasBookingDoc: boolean }>();
+    (docsData ?? []).forEach((d: { operacion_id: string; tipo: string }) => {
+      const current = docsByOperacion.get(d.operacion_id) ?? { count: 0, hasBookingDoc: false };
+      current.count += 1;
+      if (d.tipo === "BOOKING") current.hasBookingDoc = true;
+      docsByOperacion.set(d.operacion_id, current);
+    });
+
+    const counts = new Map<string, number>();
+    ops.forEach((op) => {
+      const current = docsByOperacion.get(op.id) ?? { count: 0, hasBookingDoc: false };
+      const syntheticBookingExtra = op.booking_doc_url && !current.hasBookingDoc ? 1 : 0;
+      counts.set(op.id, current.count + syntheticBookingExtra);
+    });
+    setDocCounts(counts);
+  }, [supabase]);
+
+  // Mantener ref siempre actualizada
+  useEffect(() => { reloadCountsRef.current = reloadCounts; }, [reloadCounts]);
+
+  // ── Fetch principal de operaciones ─────────────────────────────────────────
   const fetchOperaciones = useCallback(async () => {
     if (!supabase || authLoading) return;
     setLoading(true);
@@ -88,36 +127,12 @@ export function MisDocumentosContent() {
     const { data } = await q.order("created_at", { ascending: false });
     const ops: Operacion[] = data ?? [];
     setOperaciones(ops);
-
-    // Conteo de documentos por operación (batch)
-    if (ops.length > 0) {
-      const ids = ops.map((o) => o.id);
-      const { data: docsData } = await supabase
-        .from("documentos")
-        .select("operacion_id")
-        .in("operacion_id", ids);
-      const counts = new Map<string, number>();
-      (docsData ?? []).forEach((d: { operacion_id: string }) => {
-        counts.set(d.operacion_id, (counts.get(d.operacion_id) ?? 0) + 1);
-      });
-      // Sumar 1 por booking_doc_url si no hay doc BOOKING en tabla
-      ops.forEach((op) => {
-        if (op.booking_doc_url) {
-          // Solo sumar si no hay ya un doc de tipo BOOKING contado
-          // (simplificación: sumamos siempre, fetchDocumentos lo corrige al seleccionar)
-          if ((counts.get(op.id) ?? 0) === 0) {
-            counts.set(op.id, 1);
-          }
-        }
-      });
-      setDocCounts(counts);
-    } else {
-      setDocCounts(new Map());
-    }
-
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+    // Cargar conteos con la lista fresca (no espera al re-render)
+    await reloadCounts(ops);
+  }, [supabase, authLoading, isCliente, empresaNombres, reloadCounts]);
 
+  // ── Fetch documentos de la operación seleccionada ──────────────────────────
   const fetchDocumentos = useCallback(async () => {
     if (!supabase || !selectedOperacion) return;
     const { data, error: fetchError } = await supabase
@@ -128,7 +143,7 @@ export function MisDocumentosContent() {
     if (fetchError) { setDocumentos([]); return; }
     const docs = data ?? [];
     setDocumentos(docs);
-    // Actualizar el conteo para la operación seleccionada
+    // Actualizar el conteo puntual de esta operación
     setDocCounts((prev) => {
       const next = new Map(prev);
       const op = operaciones.find((o) => o.id === selectedOperacion);
@@ -140,6 +155,8 @@ export function MisDocumentosContent() {
     });
   }, [supabase, selectedOperacion, operaciones]);
 
+  useEffect(() => { reloadDocsRef.current = fetchDocumentos; }, [fetchDocumentos]);
+
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();
     else setOperaciones([]);
@@ -149,6 +166,46 @@ export function MisDocumentosContent() {
     if (selectedOperacion) void fetchDocumentos();
     else setDocumentos([]);
   }, [selectedOperacion, fetchDocumentos]);
+
+  // Ref de operaciones para el canal (no cambia la identidad del canal al cambiar ops)
+  const operacionesRef = useRef<Operacion[]>([]);
+  useEffect(() => { operacionesRef.current = operaciones; }, [operaciones]);
+
+  // ── Canal Realtime: se crea una vez, usa refs para datos siempre frescos ───
+  useEffect(() => {
+    if (!supabase) return;
+    const channel = supabase
+      .channel("documentos-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "documentos" },
+        (payload) => {
+          const changedOpId =
+            (payload.new as { operacion_id?: string })?.operacion_id ??
+            (payload.old as { operacion_id?: string })?.operacion_id;
+          if (changedOpId && changedOpId === selectedOperacionRef.current) {
+            void reloadDocsRef.current?.();
+          }
+          void reloadCountsRef.current?.(operacionesRef.current);
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
+
+  // ── Visibilitychange: al volver a la pestaña, refrescar conteos ────────────
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void reloadCountsRef.current?.(operacionesRef.current);
+        if (selectedOperacionRef.current) void reloadDocsRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const operacionActual = useMemo(
     () => operaciones.find((op) => op.id === selectedOperacion),
@@ -293,9 +350,14 @@ export function MisDocumentosContent() {
           <Icon icon="lucide:folder-open" className="text-brand-blue flex-shrink-0" width={16} height={16} />
           <span className="font-bold text-sm text-neutral-800">{tr.title}</span>
           {selectedOperacion && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              progressPct === 100 ? "bg-emerald-100 text-emerald-700" : "bg-brand-blue/10 text-brand-blue"
-            }`}>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg border ${
+                progressPct === 100
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-brand-blue/10 text-brand-blue border-brand-blue/20"
+              }`}
+            >
+              <Icon icon={progressPct === 100 ? "lucide:check-circle-2" : "lucide:gauge"} className="w-3.5 h-3.5" />
               {docsCompletados}/{TIPOS_DOCUMENTO.length}
             </span>
           )}
@@ -354,6 +416,7 @@ export function MisDocumentosContent() {
                       const count = docCounts.get(op.id) ?? 0;
                       const total = TIPOS_DOCUMENTO.length;
                       const completo = count >= total;
+                      const opProgressPct = Math.min(100, Math.round((count / total) * 100));
                       return (
                         <button key={op.id} type="button" onClick={() => handleSelectOperacion(op.id)}
                           className={`w-full text-left px-2.5 py-2 rounded-lg border transition-all ${
@@ -362,11 +425,18 @@ export function MisDocumentosContent() {
                           }`}>
                           <div className="flex items-center justify-between gap-1 mb-0.5">
                             <p className={`font-bold text-[11px] ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>{ref}</p>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                              completo ? "text-emerald-700 bg-emerald-100"
-                                : count > 0 ? "text-brand-blue bg-brand-blue/10"
-                                : "text-neutral-400 bg-neutral-100"
-                            }`}>{count}/{total}</span>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md shrink-0 border ${
+                                completo
+                                  ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                                  : count > 0
+                                    ? "text-brand-blue bg-brand-blue/10 border-brand-blue/20"
+                                    : "text-neutral-500 bg-neutral-100 border-neutral-200"
+                              }`}
+                            >
+                              <span>{count}/{total}</span>
+                              <span className="opacity-80">({opProgressPct}%)</span>
+                            </span>
                           </div>
                           <p className="text-[10px] text-neutral-500 truncate">{op.cliente}</p>
                           <p className="text-[10px] text-neutral-400 truncate">{op.naviera}{op.booking ? ` · ${op.booking}` : ""}</p>
@@ -405,8 +475,12 @@ export function MisDocumentosContent() {
                             <div className="h-full rounded-full transition-all duration-500"
                               style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#3b82f6,#06b6d4)" }} />
                           </div>
-                          <span className={`text-[10px] font-bold shrink-0 ${progressPct === 100 ? "text-emerald-600" : "text-brand-blue"}`}>
-                            {docsCompletados}/{TIPOS_DOCUMENTO.length}
+                          <span className={`text-xs font-extrabold shrink-0 px-2 py-0.5 rounded-md border ${
+                            progressPct === 100
+                              ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                              : "text-brand-blue bg-brand-blue/10 border-brand-blue/20"
+                          }`}>
+                            {docsCompletados}/{TIPOS_DOCUMENTO.length} ({progressPct}%)
                             {progressPct === 100 && " ✓"}
                           </span>
                         </div>
