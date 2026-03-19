@@ -1517,11 +1517,11 @@ export function CrearReservaContent() {
                           type="button"
                           onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
                           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all font-bold text-xs border-2 ${
-                            isComplete
-                              ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-200"
-                              : isActive
+                            isActive
                               ? "bg-brand-blue border-brand-blue text-white shadow-md shadow-brand-blue/30"
-                              : "bg-white border-neutral-200 text-neutral-400"
+                              : isComplete
+                                ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-200"
+                                : "bg-white border-neutral-200 text-neutral-400"
                           }`}
                         >
                           {isComplete
