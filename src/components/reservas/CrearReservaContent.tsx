@@ -1348,14 +1348,17 @@ export function CrearReservaContent() {
             <div className="flex gap-2">
               <input
                 id="viaje"
-                name="viaje"
+                name="voyage_code_field"
                 type="text"
                 value={formData.viaje}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, viaje: e.target.value }))
+                }
                 placeholder="Ej: 241N"
                 className={`${inputClass} flex-1`}
-                autoComplete="off"
+                autoComplete="one-time-code"
                 inputMode="text"
+                aria-autocomplete="none"
               />
               {viajesSugeridos.length > 0 && (
                 <button
