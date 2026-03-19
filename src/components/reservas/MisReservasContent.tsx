@@ -183,10 +183,9 @@ type CardProps = {
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
-  onTrash: (id: string) => void;
 };
 
-function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy, onEmail, onBooking, onTrash }: CardProps) {
+function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy, onEmail, onBooking }: CardProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
     <div
@@ -310,17 +309,6 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
               title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
             >
               <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={14} height={14} />
-            </button>
-          )}
-          {!isCliente && (
-            <button
-              type="button"
-              onClick={() => onTrash(op.id)}
-              disabled={actionLoading}
-              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-              title="Mover a papelera"
-            >
-              <Icon icon="typcn:trash" width={14} height={14} />
             </button>
           )}
         </div>
@@ -1084,11 +1072,6 @@ export function MisReservasContent() {
                               <button onClick={() => setEmailModal(op)} className="p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title="Enviar por correo">
                                 <Icon icon="lucide:mail" width={14} height={14} />
                               </button>
-                              {!isCliente && (
-                                <button onClick={() => handleMoveToTrash([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title={tr.moveToTrash}>
-                                  <Icon icon="typcn:trash" width={16} height={16} />
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -1138,7 +1121,6 @@ export function MisReservasContent() {
                     onCopy={handleCopy}
                     onEmail={(o) => setEmailModal(o)}
                     onBooking={(o) => setBookingModal(o)}
-                    onTrash={(id) => handleMoveToTrash([id])}
                   />
                 ))}
               </div>
