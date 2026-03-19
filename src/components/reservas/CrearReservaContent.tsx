@@ -1353,6 +1353,8 @@ export function CrearReservaContent() {
                 onChange={handleChange}
                 placeholder="Ej: 241N"
                 className={`${inputClass} flex-1`}
+                autoComplete="off"
+                inputMode="text"
               />
               {viajesSugeridos.length > 0 && (
                 <button
