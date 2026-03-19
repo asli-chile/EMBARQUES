@@ -1325,6 +1325,7 @@ export function CrearReservaContent() {
               placeholderText="dd-mm-aaaa"
               className={inputClass}
               isClearable
+              autoComplete="off"
             />
           </div>
           <div>
@@ -1338,6 +1339,7 @@ export function CrearReservaContent() {
               placeholderText="dd-mm-aaaa"
               className={inputClass}
               isClearable
+              autoComplete="off"
             />
           </div>
           <div>
