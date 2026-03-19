@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import * as XLSX from "xlsx-js-style";
 
 type Operacion = {
   id: string;
@@ -321,9 +320,10 @@ export function FacturacionContent() {
     setItemsProforma((prev) => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
 
   // ─── Exportar Excel con formato profesional (xlsx-js-style) ────────────
-  const exportarExcel = () => {
+  const exportarExcel = async () => {
     const op = selectedOperacion;
     if (!op) return;
+    const XLSX = await import("xlsx-js-style");
     const ref = op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
     const fecha = format(new Date(), "dd/MM/yyyy");
     const monedaDoc = formData.moneda || itemsProforma[0]?.moneda || "USD";
@@ -531,7 +531,7 @@ export function FacturacionContent() {
     ws["!rows"] = [{ hpt: 28 }, { hpt: 18 }]; // primera fila más alta
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws as XLSX.WorkSheet, "Proforma Invoice");
+    XLSX.utils.book_append_sheet(wb, ws as never, "Proforma Invoice");
     const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
