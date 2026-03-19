@@ -72,8 +72,26 @@ function renderHtmlTable(title: string, data: [string, unknown][]) {
 function buildEmailContent(op: Operacion, type: EmailType) {
   const subject =
     type === "reserva"
-      ? `Solicitud de Reserva — ${op.ref_asli ?? op.correlativo ?? ""} — ${op.cliente ?? ""}`
-      : `Solicitud de Transporte — ${op.ref_asli ?? op.correlativo ?? ""} — ${op.cliente ?? ""}`;
+      ? [
+          "SOLICITUD DE RESERVA",
+          op.cliente ?? "",
+          op.naviera ?? "",
+          [op.nave, op.tt ? `${op.tt}D` : ""].filter(Boolean).join(" - ") || "",
+          op.especie ?? "",
+          op.temperatura != null ? `${op.temperatura}°C` : "",
+          op.ventilacion ?? "",
+          op.pol ?? "",
+          op.pod ?? "",
+        ].filter(Boolean).join(" // ")
+      : [
+          "SOLICITUD DE TRANSPORTE",
+          op.cliente ?? "",
+          op.naviera ?? "",
+          op.nave ?? "",
+          op.especie ?? "",
+          op.pol ?? "",
+          op.pod ?? "",
+        ].filter(Boolean).join(" // ");
 
   let htmlBody = `<div style="font-family:Arial,sans-serif;color:#374151">`;
 

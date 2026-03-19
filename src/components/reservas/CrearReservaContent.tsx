@@ -604,7 +604,18 @@ export function CrearReservaContent() {
   const [sendingEmail, setSendingEmail] = useState(false);
 
   const buildEmailContent = (p: Record<string, unknown>) => {
-    const subject = `Solicitud de Reserva — ${p.cliente ?? "Sin cliente"} — ${p.naviera ?? "Sin naviera"} — BK: ${p.booking ?? "Sin booking"}`;
+    const parts = [
+      "SOLICITUD DE RESERVA",
+      p.cliente ?? "",
+      p.naviera ?? "",
+      [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
+      p.especie ?? "",
+      p.temperatura ?? "",
+      p.ventilacion ?? "",
+      p.pol ?? "",
+      p.pod ?? "",
+    ].filter(Boolean);
+    const subject = parts.join(" // ").toUpperCase();
 
     const rows = [
       ["Tipo de operación", p.tipo_operacion],
