@@ -30,9 +30,6 @@ type FormData = {
   tratamiento_frio_o2: string;
   tratamiento_frio_co2: string;
   tipo_atmosfera: string;
-  pallets: string;
-  peso_bruto: string;
-  peso_neto: string;
   tipo_unidad: string;
   naviera: string;
   nave: string;
@@ -67,9 +64,6 @@ const initialFormData: FormData = {
   tratamiento_frio_o2: "",
   tratamiento_frio_co2: "",
   tipo_atmosfera: "",
-  pallets: "",
-  peso_bruto: "",
-  peso_neto: "",
   tipo_unidad: "40RF",
   naviera: "",
   nave: "",
@@ -256,7 +250,15 @@ export function CrearReservaContent() {
       if (ejecutivosRes.error) {
         console.error("Error loading ejecutivos:", ejecutivosRes.error);
       } else if (ejecutivosRes.data) {
-        setEjecutivos(ejecutivosRes.data);
+        const sorted = [...ejecutivosRes.data];
+        if (profile?.id) {
+          const idx = sorted.findIndex((e) => e.id === profile.id);
+          if (idx > 0) {
+            const [me] = sorted.splice(idx, 1);
+            sorted.unshift(me);
+          }
+        }
+        setEjecutivos(sorted);
       }
 
       if (especiesRes.error) {
@@ -281,6 +283,14 @@ export function CrearReservaContent() {
   useEffect(() => {
     void fetchCatalogos();
   }, [fetchCatalogos]);
+
+  // Auto-seleccionar ejecutivo logueado
+  useEffect(() => {
+    if (profile?.id && ejecutivos.length > 0 && !formData.ejecutivo) {
+      const me = ejecutivos.find((e) => e.id === profile.id);
+      if (me) setFormData((prev) => ({ ...prev, ejecutivo: me.id }));
+    }
+  }, [ejecutivos, profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cerrar dropdown al hacer scroll (evita desincronía con el portal)
   useEffect(() => {
@@ -367,10 +377,17 @@ export function CrearReservaContent() {
       setFormData((prev) => ({ ...prev, [name]: checked }));
     } else {
       if (name === "nave") {
-        // Al cambiar nave, resetear viaje para que el efecto lo auto-rellene
         setViajesSugeridos([]);
         setViajeInputManual(false);
         setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
+      } else if (name === "tipo_atmosfera") {
+        setFormData((prev) => ({
+          ...prev,
+          tipo_atmosfera: value,
+          ventilacion: value ? "CERRADO" : prev.ventilacion,
+          tratamiento_frio_o2: value ? prev.tratamiento_frio_o2 : "",
+          tratamiento_frio_co2: value ? prev.tratamiento_frio_co2 : "",
+        }));
       } else {
         setFormData((prev) => ({ ...prev, [name]: value }));
       }
@@ -445,8 +462,7 @@ export function CrearReservaContent() {
         formData.viaje &&
         formData.pol &&
         formData.pod &&
-        formData.etd &&
-        formData.booking
+        formData.etd
       ),
       planta: Boolean(formData.planta_presentacion),
       deposito: Boolean(formData.deposito),
@@ -540,9 +556,6 @@ export function CrearReservaContent() {
       tratamiento_frio_o2: formData.tratamiento_frio_o2 ? parseInt(formData.tratamiento_frio_o2, 10) : null,
       tratamiento_frio_co2: formData.tratamiento_frio_co2 ? parseInt(formData.tratamiento_frio_co2, 10) : null,
       tipo_atmosfera: formData.tipo_atmosfera || null,
-      pallets: formData.pallets ? parseInt(formData.pallets, 10) : null,
-      peso_bruto: formData.peso_bruto ? parseFloat(formData.peso_bruto) : null,
-      peso_neto: formData.peso_neto ? parseFloat(formData.peso_neto) : null,
       tipo_unidad: formData.tipo_unidad || null,
       naviera: formData.naviera
         ? navieras.find((n) => n.id === formData.naviera)?.nombre
@@ -609,9 +622,6 @@ export function CrearReservaContent() {
       ["O₂", p.tratamiento_frio_o2 != null ? `${p.tratamiento_frio_o2}%` : null],
       ["CO₂", p.tratamiento_frio_co2 != null ? `${p.tratamiento_frio_co2}%` : null],
       ["Tipo atmósfera", p.tipo_atmosfera],
-      ["Pallets", p.pallets],
-      ["Peso bruto", p.peso_bruto ? `${p.peso_bruto} kg` : null],
-      ["Peso neto", p.peso_neto ? `${p.peso_neto} kg` : null],
       ["Tipo unidad", p.tipo_unidad],
     ];
     const navRows = [
@@ -945,9 +955,6 @@ export function CrearReservaContent() {
         { label: tr.o2, value: formData.tratamiento_frio_o2 ? `${formData.tratamiento_frio_o2}%` : "-" },
         { label: tr.co2, value: formData.tratamiento_frio_co2 ? `${formData.tratamiento_frio_co2}%` : "-" },
         { label: tr.tipoAtmosfera, value: formData.tipo_atmosfera || "-" },
-        { label: tr.pallets, value: formData.pallets || "-" },
-        { label: tr.pesoBruto, value: formData.peso_bruto ? `${formData.peso_bruto} kg` : "-" },
-        { label: tr.pesoNeto, value: formData.peso_neto ? `${formData.peso_neto} kg` : "-" },
         { label: tr.tipoUnidad, value: formData.tipo_unidad || "-" },
       ]},
       { section: tr.sectionNaviera, items: [
@@ -1274,16 +1281,62 @@ export function CrearReservaContent() {
             tr.sectionCarga,
             <>
               {renderSelect("especie", especies, tr.especie)}
-              {renderSelect("pod", destinos, tr.paisDestino)}
               {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
-              {renderCatalogoSelect("ventilacion", "ventilacion", tr.ventilacion)}
+              <div>
+                <label htmlFor="ventilacion" className={labelClass}>
+                  {tr.ventilacion}
+                  {formData.tipo_atmosfera && (
+                    <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· forzado por atmósfera</span>
+                  )}
+                </label>
+                <select
+                  id="ventilacion"
+                  name="ventilacion"
+                  value={formData.ventilacion}
+                  onChange={handleChange}
+                  className={selectClass}
+                  disabled={loadingCatalogos || !!formData.tipo_atmosfera}
+                >
+                  <option value="">{tr.selectPlaceholder}</option>
+                  {(catalogos["ventilacion"] ?? []).map((item) => (
+                    <option key={item.id} value={item.valor}>
+                      {item.valor}{item.descripcion ? ` - ${item.descripcion}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {renderCatalogoSelect("tratamiento_frio", "tratamiento_frio", tr.tratamientoFrio)}
-              {renderInput("tratamiento_frio_o2", tr.o2, "number", "Ej: 21")}
-              {renderInput("tratamiento_frio_co2", tr.co2, "number", "Ej: 5")}
               {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera)}
-              {renderInput("pallets", tr.pallets, "number", tr.placeholderCantidad)}
-              {renderInput("peso_bruto", tr.pesoBruto, "number", "Kg")}
-              {renderInput("peso_neto", tr.pesoNeto, "number", "Kg")}
+              <div>
+                <label htmlFor="tratamiento_frio_o2" className={labelClass}>
+                  {tr.o2}
+                </label>
+                <input
+                  id="tratamiento_frio_o2"
+                  name="tratamiento_frio_o2"
+                  type="number"
+                  value={formData.tratamiento_frio_o2}
+                  onChange={handleChange}
+                  placeholder="Ej: 21"
+                  className={inputClass}
+                  disabled={!formData.tipo_atmosfera}
+                />
+              </div>
+              <div>
+                <label htmlFor="tratamiento_frio_co2" className={labelClass}>
+                  {tr.co2}
+                </label>
+                <input
+                  id="tratamiento_frio_co2"
+                  name="tratamiento_frio_co2"
+                  type="number"
+                  value={formData.tratamiento_frio_co2}
+                  onChange={handleChange}
+                  placeholder="Ej: 5"
+                  className={inputClass}
+                  disabled={!formData.tipo_atmosfera}
+                />
+              </div>
               {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad)}
             </>
           )}
