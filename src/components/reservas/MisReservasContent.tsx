@@ -20,6 +20,7 @@ type Operacion = {
   eta: string | null;
   tt: number | null;
   booking: string | null;
+  booking_doc_url: string | null;
   estado_operacion: string | null;
   created_at: string;
   // campos adicionales para email / tarjeta
@@ -181,10 +182,11 @@ type CardProps = {
   onSelect: () => void;
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
+  onBooking: (op: Operacion) => void;
   onTrash: (id: string) => void;
 };
 
-function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy, onEmail, onTrash }: CardProps) {
+function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy, onEmail, onBooking, onTrash }: CardProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
     <div
@@ -294,6 +296,22 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
           >
             <Icon icon="lucide:mail" width={14} height={14} />
           </button>
+          {!isCliente && (
+            <button
+              type="button"
+              onClick={() => onBooking(op)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                op.booking_doc_url
+                  ? "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
+                  : op.booking
+                  ? "text-amber-400 hover:text-amber-600 hover:bg-amber-50"
+                  : "text-neutral-400 hover:text-amber-500 hover:bg-amber-50"
+              }`}
+              title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
+            >
+              <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={14} height={14} />
+            </button>
+          )}
           {!isCliente && (
             <button
               type="button"
@@ -430,6 +448,172 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
   );
 }
 
+// ─── BookingModal ─────────────────────────────────────────────────────────────
+
+type BookingModalProps = {
+  op: Operacion;
+  supabase: ReturnType<typeof createClient> | null;
+  onClose: () => void;
+  onSaved: (updated: { booking: string | null; booking_doc_url: string | null }) => void;
+};
+
+function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
+  const [bookingInput, setBookingInput] = useState(op.booking ?? "");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!supabase) return;
+    setUploading(true);
+    setError(null);
+
+    let docUrl = op.booking_doc_url ?? null;
+
+    if (file) {
+      const ext = file.name.split(".").pop() ?? "pdf";
+      const path = `${op.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("booking-docs")
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) {
+        setError(`Error al subir el archivo: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from("booking-docs").getPublicUrl(path);
+      docUrl = urlData.publicUrl;
+    }
+
+    const { error: updateError } = await supabase
+      .from("operaciones")
+      .update({ booking: bookingInput.trim() || null, booking_doc_url: docUrl })
+      .eq("id", op.id);
+
+    if (updateError) {
+      setError(updateError.message);
+      setUploading(false);
+      return;
+    }
+
+    onSaved({ booking: bookingInput.trim() || null, booking_doc_url: docUrl });
+    setUploading(false);
+    onClose();
+  };
+
+  const hasDoc = !!op.booking_doc_url;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
+      <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 w-full max-w-sm animate-fade-in overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-amber-400 to-amber-500" />
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:bookmark-check" width={20} height={20} className="text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-neutral-900">Confirmar Booking</h3>
+              <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>
+          )}
+
+          {/* Número de booking */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
+              Número de Booking
+            </label>
+            <input
+              type="text"
+              value={bookingInput}
+              onChange={(e) => setBookingInput(e.target.value)}
+              placeholder="Ej: ABC123456"
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 bg-neutral-50 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 focus:bg-white transition-all"
+            />
+          </div>
+
+          {/* Documento */}
+          <div className="mb-5">
+            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
+              Documento de confirmación (PDF o imagen)
+            </label>
+
+            {hasDoc && !file && (
+              <div className="flex items-center gap-2 mb-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                <Icon icon="lucide:paperclip" width={14} height={14} className="text-emerald-600 shrink-0" />
+                <span className="text-xs text-emerald-700 font-medium flex-1 truncate">Documento adjunto</span>
+                <a
+                  href={op.booking_doc_url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-emerald-600 hover:underline font-semibold shrink-0"
+                >
+                  Ver
+                </a>
+              </div>
+            )}
+
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+                file
+                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                  : "border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 hover:bg-neutral-100"
+              }`}>
+                <Icon icon={file ? "lucide:file-check" : "lucide:upload"} width={14} height={14} />
+                {file ? file.name : (hasDoc ? "Reemplazar documento" : "Subir PDF o imagen")}
+              </div>
+              <input
+                type="file"
+                accept="application/pdf,image/*"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {file && (
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                className="mt-1.5 text-xs text-neutral-400 hover:text-red-500 transition-colors"
+              >
+                Quitar archivo
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={uploading}
+              className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={uploading || (!bookingInput.trim() && !file)}
+              className="flex-1 px-4 py-2.5 text-xs font-semibold bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+            >
+              {uploading ? (
+                <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />Guardando...</>
+              ) : (
+                <><Icon icon="lucide:save" width={14} height={14} />Guardar</>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MisReservasContent ───────────────────────────────────────────────────────
 
 export function MisReservasContent() {
@@ -454,6 +638,7 @@ export function MisReservasContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [emailModal, setEmailModal] = useState<Operacion | null>(null);
+  const [bookingModal, setBookingModal] = useState<Operacion | null>(null);
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
@@ -467,8 +652,8 @@ export function MisReservasContent() {
       .from("operaciones")
       .select(
         `id, correlativo, ref_asli, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
-         estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto, temperatura,
-         ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
+         booking_doc_url, estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto,
+         temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
       .is("deleted_at", null);
 
@@ -602,6 +787,13 @@ export function MisReservasContent() {
   const handleCopy = async (op: Operacion) => {
     const ok = await copyToClipboard(op);
     if (ok) { setSuccessMsg("Datos copiados al portapapeles"); setTimeout(() => setSuccessMsg(null), 2500); }
+  };
+
+  const handleBookingSaved = (opId: string, updated: { booking: string | null; booking_doc_url: string | null }) => {
+    setOperaciones((prev) => prev.map((op) => op.id === opId ? { ...op, ...updated } : op));
+    setBookingModal(null);
+    setSuccessMsg("Booking guardado correctamente");
+    setTimeout(() => setSuccessMsg(null), 3000);
   };
 
   const filterSelectClass = "w-full px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
@@ -835,7 +1027,16 @@ export function MisReservasContent() {
                               <span className="text-xs font-semibold text-brand-blue bg-brand-blue/8 px-2 py-0.5 rounded-full">{op.tt}d</span>
                             ) : <span className="text-neutral-400 text-xs">-</span>}
                           </td>
-                          <td className="px-4 py-3 text-center text-xs font-mono text-neutral-600">{op.booking || "-"}</td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="inline-flex items-center gap-1">
+                              <span className="text-xs font-mono text-neutral-600">{op.booking || "-"}</span>
+                              {op.booking_doc_url && (
+                                <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento de booking" className="text-emerald-500 hover:text-emerald-700">
+                                  <Icon icon="lucide:paperclip" width={11} height={11} />
+                                </a>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-center">
                             {cfg ? (
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
@@ -853,6 +1054,21 @@ export function MisReservasContent() {
                               <button onClick={() => setEmailModal(op)} className="p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title="Enviar por correo">
                                 <Icon icon="lucide:mail" width={14} height={14} />
                               </button>
+                              {!isCliente && (
+                                <button
+                                  onClick={() => setBookingModal(op)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    op.booking_doc_url
+                                      ? "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
+                                      : op.booking
+                                      ? "text-amber-400 hover:text-amber-600 hover:bg-amber-50"
+                                      : "text-neutral-400 hover:text-amber-500 hover:bg-amber-50"
+                                  }`}
+                                  title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
+                                >
+                                  <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={14} height={14} />
+                                </button>
+                              )}
                               {!isCliente && (
                                 <button onClick={() => handleMoveToTrash([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title={tr.moveToTrash}>
                                   <Icon icon="typcn:trash" width={16} height={16} />
@@ -906,6 +1122,7 @@ export function MisReservasContent() {
                     onSelect={() => handleSelect(op.id)}
                     onCopy={handleCopy}
                     onEmail={(o) => setEmailModal(o)}
+                    onBooking={(o) => setBookingModal(o)}
                     onTrash={(id) => handleMoveToTrash([id])}
                   />
                 ))}
@@ -982,6 +1199,16 @@ export function MisReservasContent() {
 
       {/* Modal correo */}
       {emailModal && <EmailModal op={emailModal} onClose={() => setEmailModal(null)} />}
+
+      {/* Modal booking */}
+      {bookingModal && (
+        <BookingModal
+          op={bookingModal}
+          supabase={supabase}
+          onClose={() => setBookingModal(null)}
+          onSaved={(updated) => handleBookingSaved(bookingModal.id, updated)}
+        />
+      )}
     </main>
   );
 }
