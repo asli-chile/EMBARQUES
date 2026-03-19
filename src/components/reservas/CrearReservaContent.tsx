@@ -116,9 +116,7 @@ export function CrearReservaContent() {
   const tr = t.crearReserva;
   const { profile, empresaNombres } = useAuth();
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
-    new Set(["general", "comercial", "carga"])
-  );
+  const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -355,18 +353,6 @@ export function CrearReservaContent() {
     void fetchViajes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.nave, supabase]);
-
-  const toggleSection = (section: SectionKey) => {
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
-      }
-      return next;
-    });
-  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -1168,47 +1154,7 @@ export function CrearReservaContent() {
     );
   };
 
-  const renderSection = (
-    key: SectionKey,
-    title: string,
-    children: React.ReactNode
-  ) => {
-    const isExpanded = expandedSections.has(key);
-    const isComplete = sectionValidation[key];
-    return (
-      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
-        <button
-          type="button"
-          onClick={() => toggleSection(key)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-50 transition-colors focus:outline-none"
-          aria-expanded={isExpanded}
-        >
-          <span className="flex items-center gap-3">
-            <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isComplete ? "bg-emerald-500" : "bg-brand-blue"}`}>
-              <Icon icon={isComplete ? "typcn:tick" : sectionIcons[key]} width={16} height={16} className="text-white" />
-            </span>
-            <span className="font-semibold text-neutral-800 text-sm">{title}</span>
-            {isComplete && (
-              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5 border border-emerald-200">
-                Listo
-              </span>
-            )}
-          </span>
-          <Icon
-            icon={isExpanded ? "typcn:minus" : "typcn:plus"}
-            width={16}
-            height={16}
-            className="text-neutral-400 flex-shrink-0"
-          />
-        </button>
-        {isExpanded && (
-          <div className="px-4 pb-4 pt-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 border-t border-neutral-100">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
+  // No renderSection needed — wizard shows one step at a time
 
   if (loadingCatalogos) {
     return (
@@ -1232,38 +1178,301 @@ export function CrearReservaContent() {
     deposito: tr.sectionDeposito,
     observaciones: tr.sectionObservaciones,
   };
-  const sectionDescs: Record<SectionKey, string> = {
-    general: (tr as Record<string, string>).sectionGeneralDesc ?? "",
-    comercial: (tr as Record<string, string>).sectionComercialDesc ?? "",
-    carga: (tr as Record<string, string>).sectionCargaDesc ?? "",
-    naviera: (tr as Record<string, string>).sectionNavieraDesc ?? "",
-    planta: (tr as Record<string, string>).sectionPlantaDesc ?? "",
-    deposito: (tr as Record<string, string>).sectionDepositoDesc ?? "",
-    observaciones: (tr as Record<string, string>).sectionObservacionesDesc ?? "",
+
+  const sectionFieldsMap: Record<SectionKey, React.ReactNode> = {
+    general: (
+      <>
+        {renderCatalogoSelect("tipo_operacion", "tipo_operacion", tr.tipoOperacion)}
+        {renderCatalogoSelect("estado_operacion", "estado_operacion", tr.estadoOperacion)}
+        {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo)}
+        {renderClienteCombobox()}
+      </>
+    ),
+    comercial: (
+      <>
+        {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm)}
+        {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago)}
+        {renderSelect("consignatario", consignatarios, tr.consignatario)}
+      </>
+    ),
+    carga: (
+      <>
+        {renderSelect("especie", especies, tr.especie)}
+        {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
+        <div>
+          <label htmlFor="ventilacion" className={labelClass}>
+            {tr.ventilacion}
+            {formData.tipo_atmosfera && (
+              <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· forzado por atmósfera</span>
+            )}
+          </label>
+          <select
+            id="ventilacion"
+            name="ventilacion"
+            value={formData.ventilacion}
+            onChange={handleChange}
+            className={selectClass}
+            disabled={loadingCatalogos || !!formData.tipo_atmosfera}
+          >
+            <option value="">{tr.selectPlaceholder}</option>
+            {(catalogos["ventilacion"] ?? []).map((item) => (
+              <option key={item.id} value={item.valor}>
+                {item.valor}{item.descripcion ? ` - ${item.descripcion}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        {renderCatalogoSelect("tratamiento_frio", "tratamiento_frio", tr.tratamientoFrio)}
+        {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera)}
+        <div>
+          <label htmlFor="tratamiento_frio_o2" className={labelClass}>{tr.o2}</label>
+          <input
+            id="tratamiento_frio_o2"
+            name="tratamiento_frio_o2"
+            type="number"
+            value={formData.tratamiento_frio_o2}
+            onChange={handleChange}
+            placeholder="Ej: 21"
+            className={inputClass}
+            disabled={!formData.tipo_atmosfera}
+          />
+        </div>
+        <div>
+          <label htmlFor="tratamiento_frio_co2" className={labelClass}>{tr.co2}</label>
+          <input
+            id="tratamiento_frio_co2"
+            name="tratamiento_frio_co2"
+            type="number"
+            value={formData.tratamiento_frio_co2}
+            onChange={handleChange}
+            placeholder="Ej: 5"
+            className={inputClass}
+            disabled={!formData.tipo_atmosfera}
+          />
+        </div>
+        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad)}
+      </>
+    ),
+    naviera: (
+      <>
+        {renderSelect("naviera", navieras, tr.naviera)}
+        {renderSelect("nave", navesFiltered, tr.nave)}
+        <div>
+          <label htmlFor="viaje" className={labelClass}>
+            {tr.viaje}
+            {viajesSugeridos.length > 0 && !viajeInputManual && (
+              <span className="ml-2 text-brand-blue font-normal normal-case">desde itinerario</span>
+            )}
+          </label>
+          {viajesSugeridos.length > 0 && !viajeInputManual ? (
+            <div className="flex gap-2">
+              <select
+                id="viaje"
+                name="viaje"
+                value={formData.viaje}
+                onChange={handleChange}
+                className={`${selectClass} flex-1`}
+              >
+                <option value="">{tr.selectPlaceholder}</option>
+                {viajesSugeridos.map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => { setViajeInputManual(true); setFormData((prev) => ({ ...prev, viaje: "" })); }}
+                className="text-xs text-neutral-500 hover:text-neutral-700 px-2 shrink-0"
+                title={tr.viajeManual}
+              >
+                <Icon icon="lucide:pencil" width={14} height={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                id="viaje"
+                name="viaje"
+                type="text"
+                value={formData.viaje}
+                onChange={handleChange}
+                placeholder="Ej: 241N"
+                className={`${inputClass} flex-1`}
+              />
+              {viajesSugeridos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setViajeInputManual(false)}
+                  className="text-xs text-brand-blue hover:underline px-2 shrink-0"
+                  title={tr.viajeDesdeItinerario}
+                >
+                  <Icon icon="lucide:list" width={14} height={14} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {renderSelect("pol", puertosOrigen, tr.pol)}
+        {renderSelect("pod", destinos, tr.pod)}
+        <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-3 gap-3">
+          <div>
+            <label htmlFor="etd" className={labelClass}>{tr.etd}</label>
+            <DatePicker
+              id="etd"
+              selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
+              onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
+              dateFormat="dd-MM-yyyy"
+              locale="es"
+              placeholderText="dd-mm-aaaa"
+              className={inputClass}
+              isClearable
+            />
+          </div>
+          <div>
+            <label htmlFor="eta" className={labelClass}>{tr.eta}</label>
+            <DatePicker
+              id="eta"
+              selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
+              onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
+              dateFormat="dd-MM-yyyy"
+              locale="es"
+              placeholderText="dd-mm-aaaa"
+              className={inputClass}
+              isClearable
+            />
+          </div>
+          <div>
+            <label className={labelClass}>TT (días)</label>
+            <div className="rounded-lg border border-neutral-300 bg-brand-blue/5 px-4 py-2.5 flex items-center justify-center font-bold text-brand-blue text-lg">
+              {transitTime !== null ? transitTime : "-"}
+            </div>
+          </div>
+        </div>
+        {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
+      </>
+    ),
+    planta: (
+      <>
+        {renderSelect("planta_presentacion", plantas, tr.planta)}
+        <div>
+          <label htmlFor="citacion" className={labelClass}>{tr.citacion}</label>
+          <input id="citacion" name="citacion" type="datetime-local" value={formData.citacion} onChange={handleChange} className={inputClass} />
+        </div>
+      </>
+    ),
+    deposito: (
+      <>
+        {renderSelect("deposito", depositos, tr.deposito)}
+        <div>
+          <label htmlFor="inicio_stacking" className={labelClass}>{tr.inicioStacking}</label>
+          <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} />
+        </div>
+        <div>
+          <label htmlFor="fin_stacking" className={labelClass}>{tr.finStacking}</label>
+          <input id="fin_stacking" name="fin_stacking" type="datetime-local" value={formData.fin_stacking} onChange={handleChange} className={inputClass} />
+        </div>
+        <div>
+          <label htmlFor="corte_documental" className={labelClass}>{tr.corteDocumental}</label>
+          <input id="corte_documental" name="corte_documental" type="datetime-local" value={formData.corte_documental} onChange={handleChange} className={inputClass} />
+        </div>
+      </>
+    ),
+    observaciones: (
+      <div className="sm:col-span-2 lg:col-span-3">
+        <label htmlFor="observaciones" className={labelClass}>{tr.observaciones}</label>
+        <textarea
+          id="observaciones"
+          name="observaciones"
+          value={formData.observaciones}
+          onChange={handleChange}
+          rows={4}
+          placeholder={tr.placeholderObservaciones}
+          className={`${inputClass} resize-none`}
+        />
+      </div>
+    ),
   };
-  const stepsPanelTitle = (tr as Record<string, string>).stepsPanelTitle ?? "Qué completar en cada paso";
+
+  const activeKey = SECTION_ORDER[currentStep];
+  const isLastStep = currentStep === SECTION_ORDER.length - 1;
+  const completedCount = Object.values(sectionValidation).filter(Boolean).length;
 
   return (
     <main className="flex-1 min-h-0 flex flex-col bg-neutral-50" role="main">
-      <div ref={mainRef} className="flex-1 overflow-auto px-4 sm:px-6 py-4 sm:py-6">
-        <div className="mb-5 rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          <div className="px-5 py-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-              <Icon icon="typcn:plus" width={22} height={22} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-bold text-neutral-900 leading-tight">
-                {tr.title}
-              </h1>
-              <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
-                {tr.subtitle}
-              </p>
+      <div ref={mainRef} className="flex-1 overflow-auto">
+
+        {/* Header */}
+        <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-0">
+          <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+            <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
+                  <Icon icon="typcn:plus" width={20} height={20} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight">{tr.title}</h1>
+                  <p className="text-xs text-neutral-400 mt-0.5">{tr.subtitle}</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 rounded-full px-2.5 py-1 shrink-0">
+                {completedCount}/{SECTION_ORDER.length}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Modal de error */}
+        {/* Horizontal Stepper */}
+        <div className="px-4 sm:px-6 pt-4 pb-0">
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-4 py-4">
+            <div className="overflow-x-auto">
+              <div className="flex items-start justify-between min-w-[520px]">
+                {SECTION_ORDER.map((key, idx) => {
+                  const isActive = idx === currentStep;
+                  const isComplete = sectionValidation[key];
+                  const isPast = idx < currentStep;
+                  return (
+                    <div key={key} className="flex items-start flex-1">
+                      {/* Step */}
+                      <div className="flex flex-col items-center flex-1">
+                        <button
+                          type="button"
+                          onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all font-bold text-xs border-2 ${
+                            isComplete
+                              ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-200"
+                              : isActive
+                              ? "bg-brand-blue border-brand-blue text-white shadow-md shadow-brand-blue/30"
+                              : "bg-white border-neutral-200 text-neutral-400"
+                          }`}
+                        >
+                          {isComplete
+                            ? <Icon icon="typcn:tick" width={14} height={14} />
+                            : <span>{idx + 1}</span>
+                          }
+                        </button>
+                        <span className={`text-[9px] font-semibold mt-1.5 text-center leading-tight max-w-[52px] uppercase tracking-wide ${
+                          isActive ? "text-brand-blue" : isComplete ? "text-emerald-600" : "text-neutral-400"
+                        }`}>
+                          {sectionTitles[key]}
+                        </span>
+                      </div>
+                      {/* Connector */}
+                      {idx < SECTION_ORDER.length - 1 && (
+                        <div className={`h-0.5 w-full max-w-[40px] mt-4 mx-0 rounded-full transition-all ${
+                          idx < currentStep ? "bg-emerald-400" : "bg-neutral-150"
+                        }`}
+                        style={{ backgroundColor: idx < currentStep ? undefined : "#e5e7eb" }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modals de error/éxito */}
         {error && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -1274,11 +1483,7 @@ export function CrearReservaContent() {
                 </div>
                 <h3 className="font-bold text-neutral-900 mb-2">Error al guardar</h3>
                 <p className="text-sm text-neutral-600 mb-5">{error}</p>
-                <button
-                  type="button"
-                  onClick={() => setError(null)}
-                  className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-semibold text-sm"
-                >
+                <button type="button" onClick={() => setError(null)} className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-semibold text-sm">
                   Entendido
                 </button>
               </div>
@@ -1286,7 +1491,6 @@ export function CrearReservaContent() {
           </div>
         )}
 
-        {/* Modal de éxito */}
         {success && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -1298,19 +1502,9 @@ export function CrearReservaContent() {
                 <h3 className="font-bold text-neutral-900 mb-2">Reserva guardada</h3>
                 <p className="text-sm text-neutral-600 mb-5">{success}</p>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSuccess(null)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
-                  >
-                    Cerrar
-                  </button>
-                  <a
-                    href="/reservas/mis-reservas"
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm"
-                  >
-                    Ver reservas
-                    <Icon icon="typcn:arrow-right" width={14} height={14} />
+                  <button type="button" onClick={() => setSuccess(null)} className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm">Cerrar</button>
+                  <a href="/reservas/mis-reservas" className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm">
+                    Ver reservas <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>
                 </div>
               </div>
@@ -1318,360 +1512,37 @@ export function CrearReservaContent() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
-          <aside className="rounded-2xl border border-neutral-200 bg-white shadow-sm h-fit lg:sticky lg:top-4 overflow-hidden" aria-label={stepsPanelTitle}>
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-neutral-800">
-                {stepsPanelTitle}
-              </h2>
-              <span className="text-xs font-semibold text-brand-blue bg-brand-blue/10 rounded-full px-2 py-0.5">
-                {Object.values(sectionValidation).filter(Boolean).length}/{SECTION_ORDER.length}
-              </span>
+        {/* Step content card */}
+        <div className="px-4 sm:px-6 pt-4 pb-4">
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+            {/* Section header */}
+            <div className="px-5 py-3 border-b border-neutral-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${sectionValidation[activeKey] ? "bg-emerald-500" : "bg-brand-blue"}`}>
+                  <Icon icon={sectionValidation[activeKey] ? "typcn:tick" : sectionIcons[activeKey]} width={16} height={16} className="text-white" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-bold text-neutral-900 leading-tight">{sectionTitles[activeKey]}</h2>
+                  <p className="text-xs text-neutral-400 mt-0.5">Paso {currentStep + 1} de {SECTION_ORDER.length}</p>
+                </div>
+              </div>
+              {sectionValidation[activeKey] && (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5 shrink-0">
+                  Listo
+                </span>
+              )}
             </div>
-            <ol className="p-3 space-y-1.5">
-              {SECTION_ORDER.map((key, idx) => {
-                const isActive = expandedSections.has(key);
-                const isComplete = sectionValidation[key];
-                return (
-                  <li key={key}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(key)}
-                      className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
-                        isActive
-                          ? "border-brand-blue/30 bg-brand-blue/5"
-                          : "border-transparent hover:bg-neutral-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                          isComplete
-                            ? "bg-emerald-500 text-white"
-                            : isActive
-                            ? "bg-brand-blue text-white"
-                            : "bg-neutral-100 text-neutral-500"
-                        }`}>
-                          {isComplete
-                            ? <Icon icon="typcn:tick" width={14} height={14} />
-                            : <span>{idx + 1}</span>}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className={`font-semibold text-xs leading-tight ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>
-                            {sectionTitles[key]}
-                          </p>
-                          {sectionDescs[key] && (
-                            <p className="text-neutral-400 text-xs mt-0.5 leading-tight line-clamp-2">
-                              {sectionDescs[key]}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </aside>
 
-          <form id="reserva-form" onSubmit={handleSubmit} className="space-y-5 min-w-0">
-          {renderSection(
-            "general",
-            tr.sectionGeneral,
-            <>
-              {renderCatalogoSelect("tipo_operacion", "tipo_operacion", tr.tipoOperacion)}
-              {renderCatalogoSelect("estado_operacion", "estado_operacion", tr.estadoOperacion)}
-              {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo)}
-              {renderClienteCombobox()}
-            </>
-          )}
+            {/* Fields */}
+            <form id="reserva-form" onSubmit={handleSubmit} className="px-5 py-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {sectionFieldsMap[activeKey]}
+            </form>
+          </div>
+        </div>
 
-          {renderSection(
-            "comercial",
-            tr.sectionComercial,
-            <>
-              {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm)}
-              {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago)}
-              {renderSelect("consignatario", consignatarios, tr.consignatario)}
-            </>
-          )}
-
-          {renderSection(
-            "carga",
-            tr.sectionCarga,
-            <>
-              {renderSelect("especie", especies, tr.especie)}
-              {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
-              <div>
-                <label htmlFor="ventilacion" className={labelClass}>
-                  {tr.ventilacion}
-                  {formData.tipo_atmosfera && (
-                    <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· forzado por atmósfera</span>
-                  )}
-                </label>
-                <select
-                  id="ventilacion"
-                  name="ventilacion"
-                  value={formData.ventilacion}
-                  onChange={handleChange}
-                  className={selectClass}
-                  disabled={loadingCatalogos || !!formData.tipo_atmosfera}
-                >
-                  <option value="">{tr.selectPlaceholder}</option>
-                  {(catalogos["ventilacion"] ?? []).map((item) => (
-                    <option key={item.id} value={item.valor}>
-                      {item.valor}{item.descripcion ? ` - ${item.descripcion}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {renderCatalogoSelect("tratamiento_frio", "tratamiento_frio", tr.tratamientoFrio)}
-              {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera)}
-              <div>
-                <label htmlFor="tratamiento_frio_o2" className={labelClass}>
-                  {tr.o2}
-                </label>
-                <input
-                  id="tratamiento_frio_o2"
-                  name="tratamiento_frio_o2"
-                  type="number"
-                  value={formData.tratamiento_frio_o2}
-                  onChange={handleChange}
-                  placeholder="Ej: 21"
-                  className={inputClass}
-                  disabled={!formData.tipo_atmosfera}
-                />
-              </div>
-              <div>
-                <label htmlFor="tratamiento_frio_co2" className={labelClass}>
-                  {tr.co2}
-                </label>
-                <input
-                  id="tratamiento_frio_co2"
-                  name="tratamiento_frio_co2"
-                  type="number"
-                  value={formData.tratamiento_frio_co2}
-                  onChange={handleChange}
-                  placeholder="Ej: 5"
-                  className={inputClass}
-                  disabled={!formData.tipo_atmosfera}
-                />
-              </div>
-              {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad)}
-            </>
-          )}
-
-          {renderSection(
-            "naviera",
-            tr.sectionNaviera,
-            <>
-              {renderSelect("naviera", navieras, tr.naviera)}
-              {renderSelect("nave", navesFiltered, tr.nave)}
-              {/* Campo Viaje: select con sugerencias de itinerario o input manual */}
-              <div>
-                <label htmlFor="viaje" className={labelClass}>
-                  {tr.viaje}
-                  {viajesSugeridos.length > 0 && !viajeInputManual && (
-                    <span className="ml-2 text-brand-blue font-normal normal-case">
-                      desde itinerario
-                    </span>
-                  )}
-                </label>
-                {viajesSugeridos.length > 0 && !viajeInputManual ? (
-                  <div className="flex gap-2">
-                    <select
-                      id="viaje"
-                      name="viaje"
-                      value={formData.viaje}
-                      onChange={handleChange}
-                      className={`${selectClass} flex-1`}
-                    >
-                      <option value="">{tr.selectPlaceholder}</option>
-                      {viajesSugeridos.map((v) => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => { setViajeInputManual(true); setFormData((prev) => ({ ...prev, viaje: "" })); }}
-                      className="text-xs text-neutral-500 hover:text-neutral-700 px-2 shrink-0"
-                      title={tr.viajeManual}
-                    >
-                      <Icon icon="lucide:pencil" width={14} height={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      id="viaje"
-                      name="viaje"
-                      type="text"
-                      value={formData.viaje}
-                      onChange={handleChange}
-                      placeholder="Ej: 241N"
-                      className={`${inputClass} flex-1`}
-                    />
-                    {viajesSugeridos.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setViajeInputManual(false)}
-                        className="text-xs text-brand-blue hover:underline px-2 shrink-0"
-                        title={tr.viajeDesdeItinerario}
-                      >
-                        <Icon icon="lucide:list" width={14} height={14} />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              {renderSelect("pol", puertosOrigen, tr.pol)}
-              {renderSelect("pod", destinos, tr.pod)}
-              <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-3 gap-3">
-                <div>
-                  <label htmlFor="etd" className={labelClass}>
-                    {tr.etd}
-                  </label>
-                  <DatePicker
-                    id="etd"
-                    selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
-                    onChange={(date: Date | null) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        etd: date ? format(date, "yyyy-MM-dd") : "",
-                      }));
-                    }}
-                    dateFormat="dd-MM-yyyy"
-                    locale="es"
-                    placeholderText="dd-mm-aaaa"
-                    className={inputClass}
-                    isClearable
-                  />
-                </div>
-                <div>
-                  <label htmlFor="eta" className={labelClass}>
-                    {tr.eta}
-                  </label>
-                  <DatePicker
-                    id="eta"
-                    selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
-                    onChange={(date: Date | null) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        eta: date ? format(date, "yyyy-MM-dd") : "",
-                      }));
-                    }}
-                    dateFormat="dd-MM-yyyy"
-                    locale="es"
-                    placeholderText="dd-mm-aaaa"
-                    className={inputClass}
-                    isClearable
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>
-                    TT (días)
-                  </label>
-                  <div className="rounded-lg border border-neutral-300 bg-brand-blue/5 px-4 py-2.5 flex items-center justify-center font-bold text-brand-blue text-lg">
-                    {transitTime !== null ? transitTime : "-"}
-                  </div>
-                </div>
-              </div>
-              {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
-            </>
-          )}
-
-          {renderSection(
-            "planta",
-            tr.sectionPlanta,
-            <>
-              {renderSelect("planta_presentacion", plantas, tr.planta)}
-              <div>
-                <label htmlFor="citacion" className={labelClass}>
-                  {tr.citacion}
-                </label>
-                <input
-                  id="citacion"
-                  name="citacion"
-                  type="datetime-local"
-                  value={formData.citacion}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-              </div>
-            </>
-          )}
-
-          {renderSection(
-            "deposito",
-            tr.sectionDeposito,
-            <>
-              {renderSelect("deposito", depositos, tr.deposito)}
-              <div>
-                <label htmlFor="inicio_stacking" className={labelClass}>
-                  {tr.inicioStacking}
-                </label>
-                <input
-                  id="inicio_stacking"
-                  name="inicio_stacking"
-                  type="datetime-local"
-                  value={formData.inicio_stacking}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="fin_stacking" className={labelClass}>
-                  {tr.finStacking}
-                </label>
-                <input
-                  id="fin_stacking"
-                  name="fin_stacking"
-                  type="datetime-local"
-                  value={formData.fin_stacking}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="corte_documental" className={labelClass}>
-                  {tr.corteDocumental}
-                </label>
-                <input
-                  id="corte_documental"
-                  name="corte_documental"
-                  type="datetime-local"
-                  value={formData.corte_documental}
-                  onChange={handleChange}
-                  className={inputClass}
-                />
-              </div>
-            </>
-          )}
-
-          {renderSection(
-            "observaciones",
-            tr.sectionObservaciones,
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label htmlFor="observaciones" className={labelClass}>
-                {tr.observaciones}
-              </label>
-              <textarea
-                id="observaciones"
-                name="observaciones"
-                value={formData.observaciones}
-                onChange={handleChange}
-                rows={3}
-                placeholder={tr.placeholderObservaciones}
-                className={`${inputClass} resize-none`}
-              />
-            </div>
-          )}
-
-
-        </form>
-        </div>{/* ← cierra grid */}
       </div>{/* ← cierra flex-1 overflow-auto */}
 
-      {/* Barra de acciones — fuera del scroll, siempre visible en todos los navegadores */}
+      {/* Barra de acciones */}
       <div
         className="shrink-0 border-t border-neutral-200 bg-white px-4 sm:px-6 py-3"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
@@ -1679,29 +1550,44 @@ export function CrearReservaContent() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => { setFormData(initialFormData); setClienteInput(""); }}
-            className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+            onClick={() => { setFormData(initialFormData); setClienteInput(""); setCurrentStep(0); }}
+            className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-500 bg-neutral-100 hover:bg-neutral-200 transition-colors"
           >
             {tr.limpiar}
           </button>
-          <button
-            type="submit"
-            form="reserva-form"
-            disabled={submitting}
-            className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {submitting ? (
-              <>
-                <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
-                {tr.guardando}
-              </>
-            ) : (
-              <>
-                <Icon icon="typcn:input-checked" width={16} height={16} />
-                {tr.guardar}
-              </>
-            )}
-          </button>
+          {currentStep > 0 && (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((s) => s - 1)}
+              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+            >
+              <Icon icon="lucide:arrow-left" width={15} height={15} />
+              Anterior
+            </button>
+          )}
+          {!isLastStep ? (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((s) => s + 1)}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all"
+            >
+              Siguiente
+              <Icon icon="lucide:arrow-right" width={15} height={15} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              form="reserva-form"
+              disabled={submitting}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <><Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />{tr.guardando}</>
+              ) : (
+                <><Icon icon="typcn:eye" width={16} height={16} />Revisar reserva</>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
