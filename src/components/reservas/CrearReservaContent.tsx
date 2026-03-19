@@ -1318,6 +1318,7 @@ export function CrearReservaContent() {
             <label htmlFor="etd" className={labelClass}>{tr.etd}</label>
             <DatePicker
               id="etd"
+              name="etd_date_field"
               selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
               onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
               dateFormat="dd-MM-yyyy"
@@ -1325,13 +1326,14 @@ export function CrearReservaContent() {
               placeholderText="dd-mm-aaaa"
               className={inputClass}
               isClearable
-              autoComplete="off"
+              autoComplete="one-time-code"
             />
           </div>
           <div>
             <label htmlFor="eta" className={labelClass}>{tr.eta}</label>
             <DatePicker
               id="eta"
+              name="eta_date_field"
               selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
               onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
               dateFormat="dd-MM-yyyy"
@@ -1339,7 +1341,7 @@ export function CrearReservaContent() {
               placeholderText="dd-mm-aaaa"
               className={inputClass}
               isClearable
-              autoComplete="off"
+              autoComplete="one-time-code"
             />
           </div>
           <div>
