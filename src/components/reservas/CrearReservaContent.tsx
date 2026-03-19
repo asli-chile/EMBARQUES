@@ -946,114 +946,222 @@ export function CrearReservaContent() {
   const renderPreviewModal = () => {
     if (!showPreview) return null;
 
-    const previewData = [
-      { section: tr.sectionGeneral, items: [
-        { label: tr.tipoOperacion, value: formData.tipo_operacion || "-" },
-        { label: tr.estadoOperacion, value: formData.estado_operacion || "-" },
-        { label: tr.ejecutivo, value: getDisplayValue(formData.ejecutivo, ejecutivos) },
-        { label: tr.cliente, value: getDisplayValue(formData.cliente, clientes) },
-      ]},
-      { section: tr.sectionComercial, items: [
-        { label: tr.incoterm, value: formData.incoterm || "-" },
-        { label: tr.formaPago, value: formData.forma_pago || "-" },
-        { label: tr.consignatario, value: getDisplayValue(formData.consignatario, consignatarios) },
-      ]},
-      { section: tr.sectionCarga, items: [
-        { label: tr.especie, value: getDisplayValue(formData.especie, especies) },
-        { label: tr.temperatura, value: formData.temperatura || "-" },
-        { label: tr.ventilacion, value: formData.ventilacion || "-" },
-        { label: tr.tratamientoFrio, value: formData.tratamiento_frio || "-" },
-        { label: tr.o2, value: formData.tratamiento_frio_o2 ? `${formData.tratamiento_frio_o2}%` : "-" },
-        { label: tr.co2, value: formData.tratamiento_frio_co2 ? `${formData.tratamiento_frio_co2}%` : "-" },
-        { label: tr.tipoAtmosfera, value: formData.tipo_atmosfera || "-" },
-        { label: tr.tipoUnidad, value: formData.tipo_unidad || "-" },
-      ]},
-      { section: tr.sectionNaviera, items: [
-        { label: tr.naviera, value: getDisplayValue(formData.naviera, navieras) },
-        { label: tr.nave, value: getDisplayValue(formData.nave, navesFiltered) },
-        { label: tr.pol, value: getDisplayValue(formData.pol, puertosOrigen) },
-        { label: tr.pod, value: getDisplayValue(formData.pod, destinos) },
-        { label: tr.etd, value: formatDateDisplay(formData.etd) },
-        { label: tr.eta, value: formatDateDisplay(formData.eta) },
-        { label: "TT", value: transitTime !== null ? `${transitTime} días` : "-" },
-        { label: tr.booking, value: formData.booking || "-" },
-      ]},
-      { section: tr.sectionPlanta, items: [
-        { label: tr.planta, value: getDisplayValue(formData.planta_presentacion, plantas) },
-      ]},
-      { section: tr.sectionDeposito, items: [
-        { label: tr.deposito, value: getDisplayValue(formData.deposito, depositos) },
-      ]},
+    const clienteNombre = getDisplayValue(formData.cliente, clientes);
+    const navieraNombre = getDisplayValue(formData.naviera, navieras);
+    const naveNombre = getDisplayValue(formData.nave, navesFiltered);
+    const polNombre = getDisplayValue(formData.pol, puertosOrigen);
+    const podNombre = getDisplayValue(formData.pod, destinos);
+    const especieNombre = getDisplayValue(formData.especie, especies);
+
+    const estadoColors: Record<string, { bg: string; text: string; dot: string }> = {
+      PENDIENTE:   { bg: "bg-amber-50",    text: "text-amber-700",   dot: "bg-amber-400" },
+      ABIERTA:     { bg: "bg-brand-blue/10", text: "text-brand-blue", dot: "bg-brand-blue" },
+      CERRADA:     { bg: "bg-neutral-100", text: "text-neutral-600",  dot: "bg-neutral-400" },
+      CANCELADA:   { bg: "bg-red-50",      text: "text-red-600",     dot: "bg-red-400" },
+    };
+    const esCfg = estadoColors[formData.estado_operacion ?? ""] ?? { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400" };
+
+    const sections = [
+      {
+        icon: "typcn:clipboard", title: tr.sectionGeneral,
+        cols: 3,
+        items: [
+          { label: tr.tipoOperacion, value: formData.tipo_operacion },
+          { label: tr.ejecutivo, value: getDisplayValue(formData.ejecutivo, ejecutivos) },
+          { label: tr.incoterm, value: formData.incoterm },
+          { label: tr.formaPago, value: formData.forma_pago },
+          { label: tr.consignatario, value: getDisplayValue(formData.consignatario, consignatarios) },
+        ],
+      },
+      {
+        icon: "typcn:archive", title: tr.sectionCarga,
+        cols: 3,
+        items: [
+          { label: tr.tipoUnidad, value: formData.tipo_unidad },
+          { label: tr.temperatura, value: formData.temperatura },
+          { label: tr.ventilacion, value: formData.ventilacion },
+          { label: tr.tratamientoFrio, value: formData.tratamiento_frio },
+          ...(formData.tratamiento_frio_o2 ? [{ label: tr.o2, value: `${formData.tratamiento_frio_o2}%` }] : []),
+          ...(formData.tratamiento_frio_co2 ? [{ label: tr.co2, value: `${formData.tratamiento_frio_co2}%` }] : []),
+          ...(formData.tipo_atmosfera ? [{ label: tr.tipoAtmosfera, value: formData.tipo_atmosfera }] : []),
+        ],
+      },
+      {
+        icon: "typcn:plane", title: tr.sectionNaviera,
+        cols: 3,
+        items: [
+          { label: tr.booking, value: formData.booking },
+          { label: tr.viaje, value: formData.viaje },
+          ...(transitTime !== null ? [{ label: "TT", value: `${transitTime} días` }] : []),
+        ],
+      },
+      {
+        icon: "typcn:home", title: tr.sectionPlanta,
+        cols: 2,
+        items: [
+          { label: tr.planta, value: getDisplayValue(formData.planta_presentacion, plantas) },
+          ...(formData.citacion ? [{ label: tr.citacion, value: formData.citacion }] : []),
+        ],
+      },
+      {
+        icon: "typcn:location", title: tr.sectionDeposito,
+        cols: 2,
+        items: [
+          { label: tr.deposito, value: getDisplayValue(formData.deposito, depositos) },
+        ],
+      },
+      ...(formData.observaciones ? [{
+        icon: "typcn:document-text", title: tr.sectionObservaciones,
+        cols: 1,
+        items: [{ label: tr.observaciones, value: formData.observaciones, wide: true }],
+      }] : []),
     ];
 
-    if (formData.observaciones) {
-      previewData.push({
-        section: tr.sectionObservaciones,
-        items: [{ label: tr.observaciones, value: formData.observaciones }],
-      });
-    }
-
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
-          <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3 flex-shrink-0">
-            <span className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center">
-              <Icon icon="typcn:eye" width={20} height={20} className="text-brand-blue" />
-            </span>
-            <div>
-              <h3 className="font-bold text-neutral-900 text-base">Vista previa de la reserva</h3>
-              <p className="text-neutral-500 text-xs mt-0.5">Revisa los datos antes de guardar</p>
-            </div>
-          </div>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+        <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[94dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal shrink-0" />
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-3">
-            {previewData.map((section, idx) => (
-              <div key={idx} className="border border-neutral-200 rounded-xl overflow-hidden">
-                <div className="bg-neutral-50 px-4 py-2 text-xs font-bold text-brand-blue uppercase tracking-wider border-b border-neutral-100">
-                  {section.section}
-                </div>
-                <div className="p-4 grid gap-3 sm:grid-cols-2">
-                  {section.items.map((item, itemIdx) => (
-                    <div key={itemIdx}>
-                      <span className="text-xs text-neutral-400 uppercase tracking-wider">{item.label}</span>
-                      <p className="text-neutral-800 font-medium text-sm mt-0.5">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
+          {/* Header */}
+          <div className="px-5 pt-4 pb-3 shrink-0 flex items-center justify-between gap-3 border-b border-neutral-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center shrink-0">
+                <Icon icon="typcn:eye" width={17} height={17} className="text-white" />
               </div>
-            ))}
-          </div>
-
-          <div className="px-6 py-4 border-t border-neutral-100 flex gap-3 justify-end flex-shrink-0">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900 leading-tight">Vista previa</h3>
+                <p className="text-[11px] text-neutral-400 mt-0.5">Confirma los datos antes de crear</p>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => setShowPreview(false)}
-              className="px-4 py-2.5 text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors font-medium text-sm"
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
             >
-              Seguir editando
+              <Icon icon="lucide:x" width={17} height={17} />
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowPreview(false);
-                void handleConfirmSubmit();
-              }}
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm disabled:opacity-60 shadow-md shadow-brand-blue/20"
-            >
-              {submitting ? (
-                <>
-                  <Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />
-                  {tr.guardando}
-                </>
-              ) : (
-                <>
-                  <Icon icon="typcn:input-checked" width={15} height={15} />
-                  Confirmar y guardar
-                </>
-              )}
-            </button>
+          </div>
+
+          {/* Scroll area */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* Hero card */}
+            <div className="px-5 pt-4 pb-3">
+              <div className="rounded-2xl bg-gradient-to-br from-brand-blue/6 to-brand-teal/6 border border-brand-blue/15 p-4">
+                {/* Nombre cliente + estado */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0">
+                    <p className="text-base font-bold text-neutral-900 leading-tight truncate">
+                      {clienteNombre !== "-" ? clienteNombre : "Sin cliente"}
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {[especieNombre !== "-" ? especieNombre : null, formData.tipo_unidad || null]
+                        .filter(Boolean).join(" · ") || "Sin datos de carga"}
+                    </p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${esCfg.bg} ${esCfg.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${esCfg.dot} shrink-0`} />
+                    {formData.estado_operacion || "PENDIENTE"}
+                  </span>
+                </div>
+
+                <div className="h-px bg-brand-blue/10 mb-3" />
+
+                {/* Naviera · Nave + Ruta */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none mb-0.5">Naviera · Nave</p>
+                    <p className="text-sm font-semibold text-neutral-800 truncate">
+                      {[navieraNombre !== "-" ? navieraNombre : null, naveNombre !== "-" ? naveNombre : null].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="font-mono text-xs font-bold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-lg shadow-sm">
+                      {polNombre !== "-" ? polNombre : "—"}
+                    </span>
+                    <Icon icon="lucide:arrow-right" width={11} height={11} className="text-neutral-300 shrink-0" />
+                    <span className="font-mono text-xs font-bold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-lg shadow-sm">
+                      {podNombre !== "-" ? podNombre : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fechas + TT */}
+                {(formData.etd || formData.eta || transitTime !== null) && (
+                  <div className="flex items-center gap-4 mt-2.5 pt-2.5 border-t border-brand-blue/10">
+                    {formData.etd && (
+                      <div>
+                        <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none">ETD</p>
+                        <p className="text-xs font-bold text-neutral-800 mt-0.5">{formatDateDisplay(formData.etd)}</p>
+                      </div>
+                    )}
+                    {formData.eta && (
+                      <div>
+                        <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none">ETA</p>
+                        <p className="text-xs font-bold text-neutral-800 mt-0.5">{formatDateDisplay(formData.eta)}</p>
+                      </div>
+                    )}
+                    {transitTime !== null && (
+                      <span className="ml-auto px-2.5 py-0.5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0">
+                        {transitTime}d tránsito
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Secciones de detalle */}
+            <div className="px-5 pb-4 space-y-2">
+              {sections.map((section, sIdx) => {
+                const visibles = section.items.filter((i) => i.value && i.value !== "-");
+                if (visibles.length === 0) return null;
+                return (
+                  <div key={sIdx} className="rounded-xl border border-neutral-100 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-neutral-50/80">
+                      <Icon icon={section.icon} width={13} height={13} className="text-brand-blue/70 shrink-0" />
+                      <span className="text-[10px] font-bold text-brand-blue/80 uppercase tracking-wider">{section.title}</span>
+                    </div>
+                    <div className={`px-4 pt-2.5 pb-3 grid gap-x-5 gap-y-2.5 ${
+                      section.cols === 1 ? "grid-cols-1" : section.cols === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+                    }`}>
+                      {visibles.map((item, iIdx) => (
+                        <div key={iIdx} className={"wide" in item && item.wide ? "col-span-full" : ""}>
+                          <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none">{item.label}</p>
+                          <p className="text-sm font-semibold text-neutral-800 mt-0.5 leading-snug">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 px-5 py-4 border-t border-neutral-100 bg-white"
+               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors shrink-0"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowPreview(false); void handleConfirmSubmit(); }}
+                disabled={submitting}
+                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/25 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <><Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />{tr.guardando}</>
+                ) : (
+                  <><Icon icon="typcn:input-checked" width={16} height={16} />{tr.guardar}</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
