@@ -31,6 +31,7 @@ export const siteConfig = {
         { labelKey: "reservaExt", id: "reserva-ext", href: "/transportes/reserva-ext" },
         { labelKey: "facturacion", id: "facturacion", href: "/transportes/facturacion" },
         { labelKey: "facturasTransporte", id: "facturas-transporte", href: "/transportes/facturas" },
+        { labelKey: "papeleraTransportes", id: "papelera-transportes", href: "/transportes/papelera" },
       ],
     },
     {

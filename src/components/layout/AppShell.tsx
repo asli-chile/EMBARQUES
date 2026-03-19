@@ -21,7 +21,7 @@ import { RegistrosContent } from "@/components/registros";
 import { ReportesContent } from "@/components/reportes";
 import { FinanzasContent } from "@/components/finanzas";
 import { CrearReservaContent, MisReservasContent, PapeleraContent } from "@/components/reservas";
-import { ReservaAsliContent, ReservaExtContent, FacturacionContent } from "@/components/transportes";
+import { ReservaAsliContent, ReservaExtContent, FacturacionContent, PapeleraTransportesContent } from "@/components/transportes";
 import { MisDocumentosContent, CrearInstructivoContent, CrearProformaContent } from "@/components/documentos";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -105,6 +105,8 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ModuleWithVisitorInfo moduleKey="reservaExt"><ReservaExtContent /></ModuleWithVisitorInfo>
     ) : pathname === "/transportes/facturacion" ? (
       <ModuleWithVisitorInfo moduleKey="facturacion"><FacturacionContent /></ModuleWithVisitorInfo>
+    ) : pathname === "/transportes/papelera" ? (
+      <PapeleraTransportesContent />
     ) : pathname === "/documentos/mis-documentos" ? (
       <ModuleWithVisitorInfo moduleKey="misDocumentos"><MisDocumentosContent /></ModuleWithVisitorInfo>
     ) : pathname === "/documentos/crear-instructivo" ? (

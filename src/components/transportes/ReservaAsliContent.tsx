@@ -172,6 +172,7 @@ export function ReservaAsliContent() {
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, planta_presentacion, estado_operacion, deposito, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara, tramo, valor_tramo, moneda, observaciones, citacion, llegada_planta, salida_planta, agendamiento_retiro, inicio_stacking, fin_stacking, ingreso_stacking")
       .is("deleted_at", null)
+      .is("transporte_deleted_at", null)
       .eq("enviado_transporte", true)
       .or("tipo_reserva_transporte.eq.asli,tipo_reserva_transporte.is.null");
     if (empresaNombres.length > 0) {
@@ -646,35 +647,9 @@ export function ReservaAsliContent() {
     setSaving(true);
     setError(null);
 
-    const cleared: Record<string, unknown> = {
-      enviado_transporte: false,
-      tipo_reserva_transporte: null,
-      transporte: null,
-      chofer: null,
-      rut_chofer: null,
-      telefono_chofer: null,
-      patente_camion: null,
-      patente_remolque: null,
-      contenedor: null,
-      sello: null,
-      tara: null,
-      citacion: null,
-      llegada_planta: null,
-      salida_planta: null,
-      deposito: null,
-      agendamiento_retiro: null,
-      inicio_stacking: null,
-      fin_stacking: null,
-      ingreso_stacking: null,
-      tramo: null,
-      valor_tramo: null,
-      moneda: null,
-      observaciones: null,
-    };
-
     const { error: err } = await supabase
       .from("operaciones")
-      .update(cleared)
+      .update({ transporte_deleted_at: new Date().toISOString() })
       .eq("id", targetId);
 
     setSaving(false);
@@ -685,7 +660,7 @@ export function ReservaAsliContent() {
     } else {
       if (formData.operacion_id === targetId) setFormData(initialFormData);
       setOperaciones((prev) => prev.filter((o) => o.id !== targetId));
-      setSuccessMsg("Operación eliminada de transportes");
+      setSuccessMsg("Operación enviada a la papelera de transportes");
       setTimeout(() => setSuccessMsg(null), 4000);
     }
   };

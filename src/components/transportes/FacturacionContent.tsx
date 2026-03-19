@@ -123,6 +123,7 @@ export function FacturacionContent() {
       .from("operaciones")
       .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, estado_operacion, factura_transporte, monto_facturado, numero_factura_asli, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, tramo, valor_tramo, contenedor, sello, tara, deposito, moneda, concepto_facturado, tipo_cambio, margen_estimado, margen_real, fecha_entrega_factura, fecha_pago_cliente, fecha_pago_transporte")
       .is("deleted_at", null)
+      .is("transporte_deleted_at", null)
       .eq("enviado_transporte", true)
       .or("tipo_reserva_transporte.eq.asli,tipo_reserva_transporte.is.null");
     if (empresaNombres.length > 0) qOp = qOp.in("cliente", empresaNombres);
