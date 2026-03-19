@@ -127,7 +127,8 @@ const initialFormData: FormData = {
 
 export function ReservaAsliContent() {
   const { t } = useLocale();
-  const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isSuperadmin, isAdmin, empresaNombres, isLoading: authLoading } = useAuth();
+  const canManageTransport = isSuperadmin || isAdmin;
   const tr = t.transporteAsli;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -151,7 +152,7 @@ export function ReservaAsliContent() {
     value: string;
     callback: () => Promise<void>;
   } | null>(null);
-  const [confirmDeleteReserva, setConfirmDeleteReserva] = useState(false);
+  const [confirmDeleteReserva, setConfirmDeleteReserva] = useState<string | null>(null);
   // Panel activo en mobile: "select" = lista de operaciones, "form" = formulario
   const [mobilePanel, setMobilePanel] = useState<"select" | "form">("select");
 
@@ -677,7 +678,7 @@ export function ReservaAsliContent() {
       .eq("id", targetId);
 
     setSaving(false);
-    setConfirmDeleteReserva(false);
+    setConfirmDeleteReserva(null);
 
     if (err) {
       setError(err.message);
@@ -903,12 +904,12 @@ export function ReservaAsliContent() {
                             }`}
                             onClick={() => handleChange("operacion_id", op.id)}
                           >
-                            {isSuperadmin && (
+                            {canManageTransport && (
                               <button
                                 type="button"
                                 onClick={(ev) => {
                                   ev.stopPropagation();
-                                  void handleDeleteReserva(op.id);
+                                  setConfirmDeleteReserva(op.id);
                                 }}
                                 className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                                 title="Quitar de transportes"
@@ -1167,10 +1168,10 @@ export function ReservaAsliContent() {
                   )}
 
                   <div className="flex gap-3 justify-between">
-                    {isSuperadmin && formData.operacion_id && (
+                    {canManageTransport && formData.operacion_id && (
                       <button
                         type="button"
-                        onClick={() => setConfirmDeleteReserva(true)}
+                        onClick={() => setConfirmDeleteReserva(formData.operacion_id)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
                       >
                         <Icon icon="typcn:trash" className="w-4 h-4" />
@@ -1299,14 +1300,14 @@ export function ReservaAsliContent() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setConfirmDeleteReserva(false)}
+                onClick={() => setConfirmDeleteReserva(null)}
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={() => void handleDeleteReserva()}
+                onClick={() => void handleDeleteReserva(confirmDeleteReserva ?? undefined)}
                 disabled={saving}
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
