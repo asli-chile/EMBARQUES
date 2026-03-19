@@ -5,6 +5,15 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
+import {
+  type FormatoInstructivo,
+  type InstructivoOpData,
+  buildInstructivoTagValues,
+  generateInstructivoHtml,
+  buildInstructivoSubject,
+  buildInstructivoEmailBody,
+  sendInstructivoDraft,
+} from "@/lib/documentos/instructivo";
 
 type ReservaExt = {
   id: string;
@@ -213,6 +222,14 @@ export function ReservaExtContent() {
   const [choferInput, setChoferInput] = useState<string>("");
   const [equipoInput, setEquipoInput] = useState<string>("");
 
+  const [bookingDocUrl, setBookingDocUrl] = useState<string | null>(null);
+  // Instructivo
+  const [formatos, setFormatos] = useState<FormatoInstructivo[]>([]);
+  const [selectedFormatoId, setSelectedFormatoId] = useState<string>("");
+  type InstructivoPhase = "idle" | "loading" | "success" | "error";
+  const [instrPhase, setInstrPhase] = useState<InstructivoPhase>("idle");
+  const [instrDraftUrl, setInstrDraftUrl] = useState<string | undefined>(undefined);
+  const [instrError, setInstrError] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -239,7 +256,7 @@ export function ReservaExtContent() {
     if (!supabase || authLoading) return;
     setLoading(true);
 
-    const [reservasRes, empresasRes, tramosRes, navierasRes, navesRes, destinosRes, plantasRes, depositosRes] = await Promise.all([
+    const [reservasRes, empresasRes, tramosRes, navierasRes, navesRes, destinosRes, plantasRes, depositosRes, formatosRes] = await Promise.all([
       supabase.from("transportes_reservas_ext").select("*").order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
       supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
@@ -248,6 +265,7 @@ export function ReservaExtContent() {
       supabase.from("destinos").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("plantas").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
+      supabase.from("formatos_documentos").select("id, nombre, tipo, template_type, descripcion, contenido_html").eq("tipo", "instructivo").eq("activo", true).order("nombre"),
     ]);
 
     setReservas((reservasRes.data ?? []) as ReservaExt[]);
@@ -258,6 +276,9 @@ export function ReservaExtContent() {
     setDestinos((destinosRes.data ?? []) as SelectOption[]);
     setPlantas((plantasRes.data ?? []) as SelectOption[]);
     setDepositos((depositosRes.data ?? []) as SelectOption[]);
+    const fmts = (formatosRes.data ?? []) as FormatoInstructivo[];
+    setFormatos(fmts);
+    if (fmts.length === 1) setSelectedFormatoId(fmts[0].id);
     setLoading(false);
   }, [supabase, authLoading]);
 
@@ -299,6 +320,20 @@ export function ReservaExtContent() {
     setEquipoInput(r.patente_camion ?? "");
     setSuccess(false);
     setError(null);
+    setBookingDocUrl(null);
+    // Buscar el PDF de booking en operaciones por número de booking
+    if (r.booking && supabase) {
+      void supabase
+        .from("operaciones")
+        .select("booking_doc_url")
+        .eq("booking", r.booking)
+        .not("booking_doc_url", "is", null)
+        .limit(1)
+        .single()
+        .then(({ data }) => {
+          setBookingDocUrl((data as { booking_doc_url: string | null } | null)?.booking_doc_url ?? null);
+        });
+    }
 
     const emp = empresasTransporte.find(
       (e) => e.nombre.toLowerCase() === (r.transporte ?? "").toLowerCase()
@@ -337,6 +372,7 @@ export function ReservaExtContent() {
     setSelectedId(null);
     setIsNew(true);
     setFormData(initialFormData);
+    setBookingDocUrl(null);
     setEmpresaTransporteId("");
     setEmpresaTransporteInput("");
     setChoferInput("");
@@ -705,6 +741,90 @@ export function ReservaExtContent() {
     setConfirmDelete(null);
   };
 
+  const handleSendInstructivo = async () => {
+    if (!selectedFormatoId || !supabase) return;
+    const formato = formatos.find((f) => f.id === selectedFormatoId);
+    if (!formato) return;
+    setInstrPhase("loading");
+    setInstrError("");
+    setInstrDraftUrl(undefined);
+    try {
+      // Buscar operacion completa por booking para obtener campos de instructivo
+      let opData: InstructivoOpData = {
+        id: selectedId ?? "",
+        correlativo: 0,
+        cliente: formData.cliente || null,
+        naviera: formData.naviera || null,
+        nave: formData.nave || null,
+        booking: formData.booking || null,
+        booking_doc_url: bookingDocUrl,
+        pod: formData.pod || null,
+        etd: formData.etd || null,
+        contenedor: formData.contenedor || null,
+        sello: formData.sello || null,
+        tara: formData.tara ? parseFloat(formData.tara) : null,
+        deposito: formData.deposito || null,
+        transporte: formData.transporte || null,
+        tramo: formData.tramo || null,
+        moneda: null,
+        observaciones: formData.observaciones || null,
+        inicio_stacking: formData.inicio_stacking || null,
+        fin_stacking: formData.fin_stacking || null,
+        ingreso_stacking: formData.ingreso_stacking || null,
+        citacion: formData.citacion || null,
+      };
+      // Enriquecer con datos de operaciones si existe booking
+      if (formData.booking) {
+        const { data: opRow } = await supabase
+          .from("operaciones")
+          .select("id, ref_asli, correlativo, consignatario, pol, eta, especie, pais, pallets, peso_bruto, peso_neto, tipo_unidad, temperatura, ventilacion, incoterm, forma_pago, moneda, booking_doc_url")
+          .eq("booking", formData.booking)
+          .is("deleted_at", null)
+          .limit(1)
+          .single();
+        if (opRow) {
+          const row = opRow as Record<string, unknown>;
+          opData = {
+            ...opData,
+            id: (row.id as string) ?? opData.id,
+            ref_asli: (row.ref_asli as string | null) ?? null,
+            correlativo: (row.correlativo as number) ?? 0,
+            consignatario: row.consignatario as string | null,
+            pol: row.pol as string | null,
+            eta: row.eta as string | null,
+            especie: row.especie as string | null,
+            pais: row.pais as string | null,
+            pallets: row.pallets as number | null,
+            peso_bruto: row.peso_bruto as number | null,
+            peso_neto: row.peso_neto as number | null,
+            tipo_unidad: row.tipo_unidad as string | null,
+            temperatura: row.temperatura as string | null,
+            ventilacion: row.ventilacion as string | null,
+            incoterm: row.incoterm as string | null,
+            forma_pago: row.forma_pago as string | null,
+            moneda: row.moneda as string | null,
+            booking_doc_url: (row.booking_doc_url as string | null) ?? bookingDocUrl,
+          };
+        }
+      }
+      const tagValues = buildInstructivoTagValues(opData);
+      const instructivoHtml = generateInstructivoHtml(formato, tagValues);
+      const subject = buildInstructivoSubject(opData);
+      const htmlBody = buildInstructivoEmailBody(opData, instructivoHtml);
+      const result = await sendInstructivoDraft({ to: "alex.cardenas@asli.cl", subject, htmlBody });
+      if (result.success) {
+        setInstrPhase("success");
+        setInstrDraftUrl(result.draftUrl);
+      } else {
+        setInstrPhase("error");
+        setInstrError(result.error ?? "Error desconocido.");
+      }
+    } catch (e) {
+      setInstrPhase("error");
+      setInstrError(e instanceof Error ? e.message : "Error inesperado.");
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     try {
@@ -945,7 +1065,21 @@ export function ReservaExtContent() {
                                 {completo ? "Completa" : enCurso ? "En curso" : "Pendiente"}
                               </span>
                             </div>
-                            <p className="text-xs text-neutral-600 truncate">{r.booking || "Sin booking"} · {r.contenedor || "Sin contenedor"}</p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <p className="text-xs text-neutral-600 truncate">{r.booking || "Sin booking"} · {r.contenedor || "Sin contenedor"}</p>
+                              {isActive && bookingDocUrl && (
+                                <a
+                                  href={bookingDocUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(ev) => ev.stopPropagation()}
+                                  title="Ver PDF de Booking"
+                                  className="flex-shrink-0 p-0.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                >
+                                  <Icon icon="lucide:paperclip" width={12} height={12} />
+                                </a>
+                              )}
+                            </div>
                             <p className="text-xs text-neutral-400 mt-0.5">{r.naviera || r.transporte || "—"} · ETD: {formatDate(r.etd)}</p>
                           </div>
                         );
@@ -982,6 +1116,18 @@ export function ReservaExtContent() {
                             {formData.naviera} · {formData.nave} · {formData.pod}
                           </p>
                         )}
+                        {!isNew && bookingDocUrl && (
+                          <a
+                            href={bookingDocUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                          >
+                            <Icon icon="lucide:file-text" width={13} height={13} />
+                            Ver PDF de Booking
+                            <Icon icon="lucide:external-link" width={11} height={11} className="opacity-70" />
+                          </a>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -993,6 +1139,69 @@ export function ReservaExtContent() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Instructivo de Embarque */}
+                  {!isNew && (
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[3px] bg-gradient-to-r from-violet-500 to-purple-600" />
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="lucide:mail" className="w-4 h-4 text-violet-600" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Instructivo de Embarque</p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">Genera el instructivo y crea un borrador Gmail a alex.cardenas@asli.cl</p>
+                        </div>
+                        {formatos.length > 1 && (
+                          <select
+                            value={selectedFormatoId}
+                            onChange={(e) => setSelectedFormatoId(e.target.value)}
+                            className="text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 max-w-[180px]"
+                          >
+                            <option value="">Seleccionar formato...</option>
+                            {formatos.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+                          </select>
+                        )}
+                        {formatos.length === 0 && (
+                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">Sin formatos activos</span>
+                        )}
+                        <button
+                          type="button"
+                          disabled={!selectedFormatoId || instrPhase === "loading"}
+                          onClick={() => void handleSendInstructivo()}
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {instrPhase === "loading"
+                            ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Generando...</>
+                            : <><Icon icon="lucide:send" className="w-3.5 h-3.5" />Generar y Enviar</>}
+                        </button>
+                      </div>
+                      {instrPhase === "success" && (
+                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-center gap-2">
+                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-emerald-700 flex-1">Borrador creado exitosamente.</span>
+                          {instrDraftUrl && (
+                            <a href={instrDraftUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900">
+                              Abrir borrador →
+                            </a>
+                          )}
+                          <button type="button" onClick={() => setInstrPhase("idle")} className="ml-1 text-emerald-500 hover:text-emerald-700">
+                            <Icon icon="lucide:x" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      {instrPhase === "error" && (
+                        <div className="px-4 py-2.5 border-t border-red-100 bg-red-50 flex items-center gap-2">
+                          <Icon icon="lucide:alert-circle" className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-red-700 flex-1">{instrError}</span>
+                          <button type="button" onClick={() => setInstrPhase("idle")} className="ml-1 text-red-400 hover:text-red-600">
+                            <Icon icon="lucide:x" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Estado de la reserva */}
                   <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
@@ -1073,19 +1282,6 @@ export function ReservaExtContent() {
                           </select>
                         </div>
                         {renderInput("ETD", "etd", "date")}
-                        <div>
-                          <label className={labelClass}>Planta Presentación</label>
-                          <select
-                            value={formData.planta_presentacion}
-                            onChange={(e) => handleChange("planta_presentacion", e.target.value)}
-                            className={inputClass}
-                          >
-                            <option value="">Seleccionar planta...</option>
-                            {plantas.map((p) => (
-                              <option key={p.id} value={p.nombre}>{p.nombre}</option>
-                            ))}
-                          </select>
-                        </div>
                         <div>
                           <label className={labelClass}>{tr.warehouse}</label>
                           <select
@@ -1184,20 +1380,32 @@ export function ReservaExtContent() {
                       </div>
                     </div>
 
-                    {/* Horarios */}
+                    {/* Citación a Planta */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                       <div className="h-[3px] bg-gradient-to-r from-amber-400 to-orange-400" />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.schedules}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Citación a Planta</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
+                        <div className="col-span-2">
+                          <label className={labelClass}>Planta de Citación</label>
+                          <select
+                            value={formData.planta_presentacion}
+                            onChange={(e) => handleChange("planta_presentacion", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar planta...</option>
+                            {plantas.map((p) => (
+                              <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
                         {renderInput(tr.citation, "citacion", "datetime-local")}
                         {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
                         {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
-                        {renderInput(tr.pickupSchedule, "agendamiento_retiro", "datetime-local")}
                       </div>
                     </div>
 

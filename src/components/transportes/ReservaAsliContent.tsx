@@ -5,17 +5,39 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
+import {
+  type FormatoInstructivo,
+  buildInstructivoTagValues,
+  generateInstructivoHtml,
+  buildInstructivoSubject,
+  buildInstructivoEmailBody,
+  sendInstructivoDraft,
+} from "@/lib/documentos/instructivo";
 
 type Operacion = {
   id: string;
   ref_asli: string;
   correlativo: number;
   cliente: string;
+  consignatario: string | null;
   naviera: string;
   nave: string;
   booking: string;
+  booking_doc_url: string | null;
+  pol: string | null;
   pod: string;
   etd: string | null;
+  eta: string | null;
+  especie: string | null;
+  pais: string | null;
+  pallets: number | null;
+  peso_bruto: number | null;
+  peso_neto: number | null;
+  tipo_unidad: string | null;
+  temperatura: string | null;
+  ventilacion: string | null;
+  incoterm: string | null;
+  forma_pago: string | null;
   planta_presentacion: string;
   estado_operacion: string;
   deposito: string | null;
@@ -86,6 +108,7 @@ type FormData = {
   contenedor: string;
   sello: string;
   tara: string;
+  planta_presentacion: string;
   citacion: string;
   llegada_planta: string;
   salida_planta: string;
@@ -111,6 +134,7 @@ const initialFormData: FormData = {
   contenedor: "",
   sello: "",
   tara: "",
+  planta_presentacion: "",
   citacion: "",
   llegada_planta: "",
   salida_planta: "",
@@ -155,6 +179,13 @@ export function ReservaAsliContent() {
   const [confirmDeleteReserva, setConfirmDeleteReserva] = useState<string | null>(null);
   // Panel activo en mobile: "select" = lista de operaciones, "form" = formulario
   const [mobilePanel, setMobilePanel] = useState<"select" | "form">("select");
+  // Instructivo
+  const [formatos, setFormatos] = useState<FormatoInstructivo[]>([]);
+  const [selectedFormatoId, setSelectedFormatoId] = useState<string>("");
+  type InstructivoPhase = "idle" | "loading" | "success" | "error";
+  const [instrPhase, setInstrPhase] = useState<InstructivoPhase>("idle");
+  const [instrDraftUrl, setInstrDraftUrl] = useState<string | undefined>(undefined);
+  const [instrError, setInstrError] = useState<string>("");
 
   const supabase = useMemo(() => {
     try {
@@ -170,7 +201,7 @@ export function ReservaAsliContent() {
 
     let qOp = supabase
       .from("operaciones")
-      .select("id, ref_asli, correlativo, cliente, naviera, nave, booking, pod, etd, planta_presentacion, estado_operacion, deposito, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara, tramo, valor_tramo, moneda, observaciones, citacion, llegada_planta, salida_planta, agendamiento_retiro, inicio_stacking, fin_stacking, ingreso_stacking")
+      .select("id, ref_asli, correlativo, cliente, consignatario, naviera, nave, booking, booking_doc_url, pol, pod, etd, eta, especie, pais, pallets, peso_bruto, peso_neto, tipo_unidad, temperatura, ventilacion, incoterm, forma_pago, planta_presentacion, estado_operacion, deposito, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara, tramo, valor_tramo, moneda, observaciones, citacion, llegada_planta, salida_planta, agendamiento_retiro, inicio_stacking, fin_stacking, ingreso_stacking")
       .is("deleted_at", null)
       .is("transporte_deleted_at", null)
       .eq("enviado_transporte", true)
@@ -178,15 +209,19 @@ export function ReservaAsliContent() {
     if (empresaNombres.length > 0) {
       qOp = qOp.in("cliente", empresaNombres);
     }
-    const [operacionesRes, empresasRes, tramosRes] = await Promise.all([
+    const [operacionesRes, empresasRes, tramosRes, formatosRes] = await Promise.all([
       qOp.order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
       supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
+      supabase.from("formatos_documentos").select("id, nombre, tipo, template_type, descripcion, contenido_html").eq("tipo", "instructivo").eq("activo", true).order("nombre"),
     ]);
 
     setOperaciones(operacionesRes.data ?? []);
     setEmpresasTransporte((empresasRes.data ?? []) as TransporteEmpresa[]);
     setTramos((tramosRes.data ?? []) as Tramo[]);
+    const fmts = (formatosRes.data ?? []) as FormatoInstructivo[];
+    setFormatos(fmts);
+    if (fmts.length === 1) setSelectedFormatoId(fmts[0].id);
     setLoading(false);
   }, [supabase, authLoading, isCliente, empresaNombres]);
 
@@ -253,6 +288,7 @@ export function ReservaAsliContent() {
           contenedor: op.contenedor ?? "",
           sello: op.sello ?? "",
           tara: op.tara != null ? String(op.tara) : "",
+          planta_presentacion: op.planta_presentacion ?? "",
           citacion: op.citacion ?? "",
           llegada_planta: op.llegada_planta ?? "",
           salida_planta: op.salida_planta ?? "",
@@ -614,6 +650,7 @@ export function ReservaAsliContent() {
       llegada_planta: formData.llegada_planta || null,
       salida_planta: formData.salida_planta || null,
       deposito: formData.deposito || null,
+      planta_presentacion: formData.planta_presentacion || null,
       agendamiento_retiro: formData.agendamiento_retiro || null,
       inicio_stacking: formData.inicio_stacking || null,
       fin_stacking: formData.fin_stacking || null,
@@ -662,6 +699,32 @@ export function ReservaAsliContent() {
       setOperaciones((prev) => prev.filter((o) => o.id !== targetId));
       setSuccessMsg("Operación enviada a la papelera de transportes");
       setTimeout(() => setSuccessMsg(null), 4000);
+    }
+  };
+
+  const handleSendInstructivo = async () => {
+    if (!selectedOperacion || !selectedFormatoId) return;
+    const formato = formatos.find((f) => f.id === selectedFormatoId);
+    if (!formato) return;
+    setInstrPhase("loading");
+    setInstrError("");
+    setInstrDraftUrl(undefined);
+    try {
+      const tagValues = buildInstructivoTagValues(selectedOperacion);
+      const instructivoHtml = generateInstructivoHtml(formato, tagValues);
+      const subject = buildInstructivoSubject(selectedOperacion);
+      const htmlBody = buildInstructivoEmailBody(selectedOperacion, instructivoHtml);
+      const result = await sendInstructivoDraft({ to: "alex.cardenas@asli.cl", subject, htmlBody });
+      if (result.success) {
+        setInstrPhase("success");
+        setInstrDraftUrl(result.draftUrl);
+      } else {
+        setInstrPhase("error");
+        setInstrError(result.error ?? "Error desconocido.");
+      }
+    } catch (e) {
+      setInstrPhase("error");
+      setInstrError(e instanceof Error ? e.message : "Error inesperado.");
     }
   };
 
@@ -905,7 +968,21 @@ export function ReservaAsliContent() {
                                 {completo ? "Completo" : "Pendiente"}
                               </span>
                             </div>
-                            <p className="text-xs text-neutral-600 truncate">{op.cliente} · {op.booking}</p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <p className="text-xs text-neutral-600 truncate">{op.cliente} · {op.booking}</p>
+                              {op.booking_doc_url && (
+                                <a
+                                  href={op.booking_doc_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(ev) => ev.stopPropagation()}
+                                  title="Ver PDF de Booking"
+                                  className="flex-shrink-0 p-0.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                >
+                                  <Icon icon="lucide:paperclip" width={12} height={12} />
+                                </a>
+                              )}
+                            </div>
                             <p className="text-xs text-neutral-400 mt-0.5">{op.naviera} · ETD: {formatDate(op.etd)}</p>
                             {!completo && (
                               <div className="flex flex-wrap gap-1 mt-1.5">
@@ -941,6 +1018,18 @@ export function ReservaAsliContent() {
                           <p className="text-sm text-neutral-600 mt-0.5">
                             {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
                           </p>
+                          {selectedOperacion.booking_doc_url && (
+                            <a
+                              href={selectedOperacion.booking_doc_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                            >
+                              <Icon icon="lucide:file-text" width={13} height={13} />
+                              Ver PDF de Booking
+                              <Icon icon="lucide:external-link" width={11} height={11} className="opacity-70" />
+                            </a>
+                          )}
                         </div>
                         {/* Botón "Cambiar" solo en mobile */}
                         <button
@@ -955,7 +1044,131 @@ export function ReservaAsliContent() {
                     </div>
                   )}
 
+                  {/* Estado de la Operación */}
+                  {selectedOperacion && (
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                      <div className="px-4 py-3 flex items-center justify-between gap-3">
+                        <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Estado de la Operación</span>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                          selectedOperacion.estado_operacion === "abierta"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : selectedOperacion.estado_operacion === "cerrada"
+                              ? "bg-neutral-100 text-neutral-600 border-neutral-200"
+                              : selectedOperacion.estado_operacion === "cancelada"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          <Icon
+                            icon={
+                              selectedOperacion.estado_operacion === "abierta" ? "lucide:check-circle" :
+                              selectedOperacion.estado_operacion === "cerrada" ? "lucide:lock" :
+                              selectedOperacion.estado_operacion === "cancelada" ? "lucide:x-circle" :
+                              "lucide:clock"
+                            }
+                            width={13} height={13}
+                          />
+                          {selectedOperacion.estado_operacion.charAt(0).toUpperCase() + selectedOperacion.estado_operacion.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Instructivo de Embarque */}
+                  {selectedOperacion && (
+                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                      <div className="h-[3px] bg-gradient-to-r from-violet-500 to-purple-600" />
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="lucide:mail" className="w-4 h-4 text-violet-600" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Instructivo de Embarque</p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">Genera el instructivo y crea un borrador Gmail a alex.cardenas@asli.cl</p>
+                        </div>
+                        {/* Select de formato */}
+                        {formatos.length > 1 && (
+                          <select
+                            value={selectedFormatoId}
+                            onChange={(e) => setSelectedFormatoId(e.target.value)}
+                            className="text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 max-w-[180px]"
+                          >
+                            <option value="">Seleccionar formato...</option>
+                            {formatos.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+                          </select>
+                        )}
+                        {formatos.length === 0 && (
+                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">Sin formatos activos</span>
+                        )}
+                        <button
+                          type="button"
+                          disabled={!selectedFormatoId || instrPhase === "loading"}
+                          onClick={() => void handleSendInstructivo()}
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {instrPhase === "loading"
+                            ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Generando...</>
+                            : <><Icon icon="lucide:send" className="w-3.5 h-3.5" />Generar y Enviar</>}
+                        </button>
+                      </div>
+                      {/* Feedback inline */}
+                      {instrPhase === "success" && (
+                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-center gap-2">
+                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-emerald-700 flex-1">Borrador creado exitosamente.</span>
+                          {instrDraftUrl && (
+                            <a href={instrDraftUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900">
+                              Abrir borrador →
+                            </a>
+                          )}
+                          <button type="button" onClick={() => setInstrPhase("idle")} className="ml-1 text-emerald-500 hover:text-emerald-700">
+                            <Icon icon="lucide:x" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      {instrPhase === "error" && (
+                        <div className="px-4 py-2.5 border-t border-red-100 bg-red-50 flex items-center gap-2">
+                          <Icon icon="lucide:alert-circle" className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-red-700 flex-1">{instrError}</span>
+                          <button type="button" onClick={() => setInstrPhase("idle")} className="ml-1 text-red-400 hover:text-red-600">
+                            <Icon icon="lucide:x" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {/* Datos de la Operación */}
+                    {selectedOperacion && (
+                      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                        <div className="h-[3px] bg-gradient-to-r from-indigo-400 to-brand-blue" />
+                        <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                          <span className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                            <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
+                          </span>
+                          <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Datos de la Operación</h2>
+                        </div>
+                        <div className="p-4 grid grid-cols-2 gap-3">
+                          {[
+                            { label: "POD", value: selectedOperacion.pod },
+                            { label: "ETD", value: formatDate(selectedOperacion.etd) },
+                            { label: "Naviera", value: selectedOperacion.naviera },
+                            { label: "Nave", value: selectedOperacion.nave },
+                            { label: "Booking", value: selectedOperacion.booking },
+                            { label: "Cliente", value: selectedOperacion.cliente },
+                            ...(selectedOperacion.deposito ? [{ label: "Depósito", value: selectedOperacion.deposito }] : []),
+                          ].map(({ label, value }) => (
+                            <div key={label}>
+                              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-0.5">{label}</p>
+                              <p className="text-sm font-semibold text-neutral-800 truncate">{value || "-"}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Transporte */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                       <div className="h-[3px] bg-gradient-to-r from-brand-blue to-blue-400" />
@@ -1045,20 +1258,22 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
-                    {/* Horarios */}
+                    {/* Citación a Planta */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                       <div className="h-[3px] bg-gradient-to-r from-amber-400 to-orange-400" />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.schedules}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Citación a Planta</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
+                        <div className="col-span-2">
+                          {renderInput("Planta de Citación", "planta_presentacion", "text")}
+                        </div>
                         {renderInput(tr.citation, "citacion", "datetime-local")}
                         {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
                         {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
-                        {renderInput(tr.pickupSchedule, "agendamiento_retiro", "datetime-local")}
                       </div>
                     </div>
 

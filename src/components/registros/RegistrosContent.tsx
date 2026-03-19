@@ -628,7 +628,7 @@ export function RegistrosContent() {
   const columnDefs = useMemo<ColDef<OperacionRow>[]>(
     () => [
       // ── Fijas ────────────────────────────────────────────────────────────────
-      { checkboxSelection: true, headerCheckboxSelection: true, width: columnWidths.checkbox, pinned: "left", suppressMovable: true },
+      { width: columnWidths.checkbox, pinned: "left", suppressMovable: true },
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left" },
 
       // ── General ──────────────────────────────────────────────────────────────
@@ -1118,8 +1118,8 @@ export function RegistrosContent() {
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             localeText={t.agGrid}
-            rowSelection="multiple"
-            suppressRowClickSelection
+            theme="legacy"
+            rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true, enableClickSelection: false }}
             singleClickEdit
             stopEditingWhenCellsLoseFocus
             animateRows

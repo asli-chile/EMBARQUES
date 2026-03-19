@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand, icons } from "@/lib/brand";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -84,6 +85,8 @@ const kpiConfig = [
 
 export function InicioContent() {
   const { t } = useLocale();
+  const { profile, isExternalUser, isLoading: authLoading } = useAuth();
+  const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
   const mainRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -187,6 +190,12 @@ export function InicioContent() {
       <header className="relative text-white min-h-[calc(100vh-90px)] flex items-center justify-center py-12 sm:py-16 snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4 sm:-translate-y-[50px]">
           <div className="flex flex-col items-center text-center">
+            {isLoggedIn && profile && (
+              <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-full backdrop-blur-sm">
+                <Icon icon="lucide:user-check" className="text-emerald-400 flex-shrink-0" width={16} height={16} />
+                <span className="text-white/90 text-sm font-medium">Bienvenido, <span className="text-white font-semibold">{profile.nombre}</span></span>
+              </div>
+            )}
             <img src={brand.logo} alt={brand.companyTitle} width={800} height={400} className="h-28 sm:h-36 lg:h-48 w-auto object-contain mb-4 sm:mb-6 brightness-0 invert" loading="eager" />
             <div className="relative inline-block mb-3">
               <div className="absolute bg-gradient-to-r from-brand-red/90 via-brand-red to-brand-red/90 shadow-[0_8px_32px_rgba(185,28,28,0.5),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.2)]" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
@@ -206,14 +215,28 @@ export function InicioContent() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
-              <AuthFormTrigger mode="login" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
-                <Icon icon={icons.auth} width={18} height={18} />
-                {t.inicio.ctaLogin}
-              </AuthFormTrigger>
-              <a href="#pilares" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
-                <Icon icon="lucide:layers" width={18} height={18} />
-                {t.inicio.ctaModules}
-              </a>
+              {isLoggedIn ? (
+                <a href="/dashboard" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
+                  <Icon icon="lucide:layout-dashboard" width={18} height={18} />
+                  Ir al Dashboard
+                </a>
+              ) : (
+                <AuthFormTrigger mode="login" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
+                  <Icon icon={icons.auth} width={18} height={18} />
+                  {t.inicio.ctaLogin}
+                </AuthFormTrigger>
+              )}
+              {isLoggedIn ? (
+                <a href="/registros" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
+                  <Icon icon="lucide:table-2" width={18} height={18} />
+                  Ir a Registros
+                </a>
+              ) : (
+                <a href="#pilares" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
+                  <Icon icon="lucide:layers" width={18} height={18} />
+                  {t.inicio.ctaModules}
+                </a>
+              )}
             </div>
           </div>
         </div>

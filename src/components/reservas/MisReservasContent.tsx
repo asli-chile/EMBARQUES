@@ -136,18 +136,18 @@ type SortableHeaderProps = {
 function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className={`px-4 py-3 text-center whitespace-nowrap ${className ?? ""}`}>
+    <th className={`px-3 py-2.5 text-center whitespace-nowrap ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
-        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
           isActive ? "text-brand-blue" : "text-neutral-400 hover:text-neutral-600"
         }`}
       >
         {label}
         <span className="flex flex-col gap-[1px]">
-          <Icon icon="typcn:arrow-sorted-up" width={9} height={9} className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-neutral-300"} />
-          <Icon icon="typcn:arrow-sorted-down" width={9} height={9} className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-neutral-300"} />
+          <Icon icon="typcn:arrow-sorted-up" width={8} height={8} className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-neutral-300"} />
+          <Icon icon="typcn:arrow-sorted-down" width={8} height={8} className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-neutral-300"} />
         </span>
       </button>
     </th>
@@ -784,205 +784,225 @@ export function MisReservasContent() {
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const filterSelectClass = "w-full px-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
-
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-          <span>{tr.loading}</span>
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 bg-white rounded-xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+            <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin text-brand-blue" />
+            <span>{tr.loading}</span>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
-      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
 
-        {/* Header */}
-        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center shrink-0">
-                <Icon icon="typcn:clipboard" width={20} height={20} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold text-neutral-900 leading-tight">{t.sidebar.misReservas}</h1>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  {filteredOperaciones.length === operaciones.length
-                    ? `${operaciones.length} ${tr.records}`
-                    : `${filteredOperaciones.length} de ${operaciones.length} ${tr.records}`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {!isCliente && selectedIds.size > 0 && (
-                <>
-                  <button
-                    onClick={() => setShowTransportModal(true)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                  >
-                    <Icon icon="lucide:truck" width={15} height={15} />
-                    Enviar a Transportes ({selectedIds.size})
-                  </button>
-                  <button onClick={() => handleMoveToTrash(Array.from(selectedIds))} disabled={actionLoading} className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50">
-                    <Icon icon="typcn:trash" width={15} height={15} />
-                    {tr.delete} ({selectedIds.size})
-                  </button>
-                </>
-              )}
+      {/* ── Barra de herramientas ── */}
+      <div className="flex-shrink-0 bg-white border-b border-neutral-200">
 
-              <button onClick={fetchOperaciones} className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500" title={tr.refresh}>
-                <Icon icon="typcn:refresh" width={18} height={18} />
-              </button>
-              <a href="/reservas/crear" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20">
-                <Icon icon="typcn:plus" width={15} height={15} />
-                {tr.newBooking}
-              </a>
+        {/* Fila 1: Título + acciones */}
+        <div className="px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0 mr-auto">
+            <div className="w-7 h-7 rounded-lg bg-brand-blue flex items-center justify-center shrink-0">
+              <Icon icon="typcn:clipboard" width={15} height={15} className="text-white" />
             </div>
+            <h1 className="text-sm font-bold text-neutral-900 leading-tight">{t.sidebar.misReservas}</h1>
+            <span className="hidden sm:inline text-xs text-neutral-500 whitespace-nowrap">
+              <span className="font-semibold text-neutral-700">{filteredOperaciones.length}</span>
+              {filteredOperaciones.length !== operaciones.length && <span className="text-neutral-400"> de {operaciones.length}</span>}
+              {" "}{tr.records}
+            </span>
           </div>
+
+          {!isCliente && selectedIds.size > 0 && (
+            <>
+              <button
+                onClick={() => setShowTransportModal(true)}
+                disabled={actionLoading}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              >
+                <Icon icon="lucide:truck" width={13} height={13} />
+                <span className="hidden sm:inline">Enviar a Transportes ({selectedIds.size})</span>
+                <span className="sm:hidden">Transporte ({selectedIds.size})</span>
+              </button>
+              <button
+                onClick={() => handleMoveToTrash(Array.from(selectedIds))}
+                disabled={actionLoading}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+              >
+                <Icon icon="typcn:trash" width={13} height={13} />
+                <span className="hidden sm:inline">{tr.delete} ({selectedIds.size})</span>
+                <span className="sm:hidden">Eliminar ({selectedIds.size})</span>
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={fetchOperaciones}
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+            title={tr.refresh}
+          >
+            <Icon icon="typcn:refresh" width={13} height={13} />
+            <span className="hidden sm:inline">{tr.refresh}</span>
+          </button>
+
+          <a
+            href="/reservas/crear"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+          >
+            <Icon icon="typcn:plus" width={13} height={13} />
+            <span className="hidden sm:inline">{tr.newBooking}</span>
+            <span className="sm:hidden">Nuevo</span>
+          </a>
         </div>
 
-        {/* Buscador + filtros */}
-        <div className="flex flex-wrap gap-2 items-center">
+        {/* Fila 2: Vista + búsqueda + filtros */}
+        <div className="px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2 flex-wrap border-t border-neutral-100">
           {/* Toggle tabla / tarjetas */}
-          <div className="flex items-center rounded-xl border border-neutral-200 bg-white overflow-hidden shrink-0">
+          <div className="flex items-center rounded-lg border border-neutral-200 overflow-hidden shrink-0">
             <button
               type="button"
               onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${
-                viewMode === "table"
-                  ? "bg-brand-blue text-white"
-                  : "text-neutral-500 hover:bg-neutral-50"
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                viewMode === "table" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-50"
               }`}
             >
-              <Icon icon="lucide:list" width={14} height={14} />
-              Tabla
+              <Icon icon="lucide:list" width={12} height={12} />
+              <span className="hidden sm:inline">Tabla</span>
             </button>
-            <div className="w-px h-5 bg-neutral-200" />
+            <div className="w-px h-4 bg-neutral-200" />
             <button
               type="button"
               onClick={() => setViewMode("cards")}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${
-                viewMode === "cards"
-                  ? "bg-brand-blue text-white"
-                  : "text-neutral-500 hover:bg-neutral-50"
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                viewMode === "cards" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-50"
               }`}
             >
-              <Icon icon="lucide:grid" width={14} height={14} />
-              Tarjetas
+              <Icon icon="lucide:grid" width={12} height={12} />
+              <span className="hidden sm:inline">Tarjetas</span>
             </button>
           </div>
 
-          <div className="flex-1 min-w-[220px] relative">
-            <Icon icon="typcn:zoom" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none" />
+          {/* Búsqueda */}
+          <div className="flex-1 min-w-[160px] relative">
+            <Icon icon="typcn:zoom" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
             <input
               type="text"
               placeholder={tr.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+              className="w-full pl-8 pr-3 py-1.5 border border-neutral-200 bg-neutral-50 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
             />
           </div>
+
+          {/* Filtros */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-2 px-3.5 py-2 border rounded-xl text-sm font-medium transition-colors ${showFilters || activeFiltersCount > 0 ? "border-brand-blue bg-brand-blue/5 text-brand-blue" : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600"}`}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/20 ${
+              showFilters || activeFiltersCount > 0
+                ? "border-brand-blue bg-brand-blue/5 text-brand-blue"
+                : "border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600"
+            }`}
           >
-            <Icon icon="typcn:filter" width={16} height={16} />
-            {tr.filters}
+            <Icon icon="typcn:filter" width={13} height={13} />
+            <span className="hidden sm:inline">{tr.filters}</span>
             {activeFiltersCount > 0 && (
-              <span className="px-1.5 py-0.5 text-xs bg-brand-blue text-white rounded-full leading-none">{activeFiltersCount}</span>
+              <span className="px-1 py-0.5 text-[10px] bg-brand-blue text-white rounded-full leading-none">{activeFiltersCount}</span>
             )}
           </button>
+
           {(activeFiltersCount > 0 || searchTerm) && (
-            <button onClick={clearAllFilters} className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-500 hover:text-neutral-700 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
-              <Icon icon="typcn:times" width={14} height={14} />
-              Limpiar
+            <button
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 rounded-lg hover:bg-neutral-100 transition-colors"
+            >
+              <Icon icon="typcn:times" width={13} height={13} />
+              <span className="hidden sm:inline">Limpiar</span>
             </button>
           )}
+
+          <span className="sm:hidden ml-auto text-xs text-neutral-500">
+            <span className="font-semibold text-neutral-700">{filteredOperaciones.length}</span>
+            {filteredOperaciones.length !== operaciones.length && <span className="text-neutral-400"> de {operaciones.length}</span>}
+          </span>
         </div>
 
-        {/* Panel de filtros */}
+        {/* Panel de filtros integrado */}
         {showFilters && (
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.advancedFilters}</span>
-              {activeFiltersCount > 0 && (
-                <button onClick={clearAllFilters} className="text-xs text-red-500 hover:text-red-700 font-medium">{tr.clearFilters}</button>
-              )}
+          <div className="px-3 sm:px-4 py-2.5 border-t border-neutral-100 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-50/70">
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colStatus}</label>
+              <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                <option value="">{tr.allStates}</option>
+                {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
+              </select>
             </div>
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colStatus}</label>
-                <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className={filterSelectClass}>
-                  <option value="">{tr.allStates}</option>
-                  {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colClient}</label>
-                <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className={filterSelectClass}>
-                  <option value="">{tr.allClients}</option>
-                  {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colCarrier}</label>
-                <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className={filterSelectClass}>
-                  <option value="">{tr.allCarriers}</option>
-                  {navieras.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">{tr.colSpecies}</label>
-                <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className={filterSelectClass}>
-                  <option value="">{tr.allSpecies}</option>
-                  {especies.map((e) => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colClient}</label>
+              <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                <option value="">{tr.allClients}</option>
+                {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colCarrier}</label>
+              <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                <option value="">{tr.allCarriers}</option>
+                {navieras.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colSpecies}</label>
+              <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                <option value="">{tr.allSpecies}</option>
+                {especies.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
             </div>
           </div>
         )}
+      </div>
 
-        {/* ── Vista Tabla ── */}
+      {/* ── Área de contenido ── */}
+      <div className="flex-1 min-h-0 overflow-auto p-2 sm:p-3">
+
+        {/* Vista Tabla */}
         {viewMode === "table" && (
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col" style={{ minHeight: 300 }}>
+            <div className="overflow-x-auto flex-1">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-neutral-100">
+                  <tr className="bg-neutral-50 border-b border-neutral-200 sticky top-0 z-10">
                     {!isCliente && (
-                      <th className="px-4 py-3 w-10">
-                        <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
+                      <th className="px-3 py-2.5 w-9 border-r border-neutral-100">
+                        <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-3.5 h-3.5 rounded border-neutral-300 accent-brand-blue" />
                       </th>
                     )}
                     <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[10rem]" />
+                    <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[9rem]" />
                     <SortableHeader field="cliente" label={tr.colClient} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="especie" label={tr.colSpecies} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="naviera" label={tr.colCarrier} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="nave" label={tr.colVessel} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="pol" label={tr.colPOL} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="pod" label={tr.colPOD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
-                    <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
+                    <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
+                    <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Transporte</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Acciones</th>
+                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Transporte</th>
+                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredOperaciones.length === 0 ? (
                     <tr>
-                      <td colSpan={isCliente ? 13 : 14} className="px-4 py-16 text-center">
+                      <td colSpan={isCliente ? 13 : 14} className="px-4 py-14 text-center">
                         <div className="flex flex-col items-center gap-2">
-                          <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                            <Icon icon="typcn:clipboard" width={24} height={24} className="text-neutral-400" />
+                          <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                            <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
                           </span>
                           <p className="text-neutral-500 font-medium text-sm">{tr.noResults}</p>
                           {(activeFiltersCount > 0 || searchTerm) && (
@@ -997,23 +1017,24 @@ export function MisReservasContent() {
                       return (
                         <tr
                           key={op.id}
-                          className={`border-b border-neutral-50 transition-colors ${
-                            selectedIds.has(op.id) ? "bg-brand-blue/5" : idx % 2 === 0 ? "bg-white hover:bg-neutral-50/80" : "bg-neutral-50/40 hover:bg-neutral-50/80"
+                          className={`border-b border-neutral-100 transition-colors ${
+                            selectedIds.has(op.id) ? "bg-brand-blue/5" : idx % 2 === 0 ? "bg-white hover:bg-neutral-50" : "bg-neutral-50/50 hover:bg-neutral-50"
                           }`}
                         >
                           {!isCliente && (
-                            <td className="px-4 py-3 text-center">
-                              <input type="checkbox" checked={selectedIds.has(op.id)} onChange={() => handleSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
+                            <td className="px-3 py-2 text-center border-r border-neutral-100">
+                              <input type="checkbox" checked={selectedIds.has(op.id)} onChange={() => handleSelect(op.id)} className="w-3.5 h-3.5 rounded border-neutral-300 accent-brand-blue" />
                             </td>
                           )}
-                          <td className="px-4 py-3 text-center"><span className="font-bold text-brand-blue text-xs">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span></td>
-                          {/* Columna Booking — botón grande accionable */}
-                          <td className="px-3 py-2 text-center min-w-[10rem]">
+                          <td className="px-3 py-2 text-center">
+                            <span className="font-bold text-brand-blue text-[11px]">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span>
+                          </td>
+                          <td className="px-2 py-1.5 text-center min-w-[9rem]">
                             {!isCliente ? (
                               <div className="inline-flex items-center gap-1">
                                 <button
                                   onClick={() => setBookingModal(op)}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all max-w-[150px] ${
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border transition-all max-w-[140px] ${
                                     op.booking_doc_url
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                                       : op.booking
@@ -1022,78 +1043,71 @@ export function MisReservasContent() {
                                   }`}
                                   title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
                                 >
-                                  <Icon
-                                    icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"}
-                                    width={13} height={13} className="shrink-0"
-                                  />
-                                  <span className="font-mono truncate">
-                                    {op.booking ?? "Confirmar"}
-                                  </span>
+                                  <Icon icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"} width={11} height={11} className="shrink-0" />
+                                  <span className="font-mono truncate">{op.booking ?? "Confirmar"}</span>
                                 </button>
                                 {op.booking_doc_url && (
-                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors">
-                                    <Icon icon="lucide:external-link" width={11} height={11} />
+                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors">
+                                    <Icon icon="lucide:external-link" width={10} height={10} />
                                   </a>
                                 )}
                               </div>
                             ) : (
                               <div className="inline-flex items-center gap-1">
-                                <span className="text-xs font-mono text-neutral-600">{op.booking || "-"}</span>
+                                <span className="text-[11px] font-mono text-neutral-600">{op.booking || "-"}</span>
                                 {op.booking_doc_url && (
                                   <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
-                                    <Icon icon="lucide:paperclip" width={11} height={11} />
+                                    <Icon icon="lucide:paperclip" width={10} height={10} />
                                   </a>
                                 )}
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-700 font-medium">{op.cliente || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.especie || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.naviera || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.nave || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-500">{op.pol || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-500">{op.pod || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600 font-medium min-w-[7.5rem]">{fmtDate(op.etd)}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600 font-medium min-w-[7.5rem]">{fmtDate(op.eta)}</td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-700 font-medium whitespace-nowrap">{op.cliente || "-"}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-600">{op.especie || "-"}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-600 whitespace-nowrap">{op.naviera || "-"}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-600">{op.nave || "-"}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-500 font-mono">{op.pol || "-"}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-500 font-mono">{op.pod || "-"}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-600 font-medium whitespace-nowrap">{fmtDate(op.etd)}</td>
+                          <td className="px-3 py-2 text-center text-[11px] text-neutral-600 font-medium whitespace-nowrap">{fmtDate(op.eta)}</td>
+                          <td className="px-3 py-2 text-center">
                             {op.tt !== null ? (
-                              <span className="text-xs font-semibold text-brand-blue bg-brand-blue/8 px-2 py-0.5 rounded-full">{op.tt}d</span>
-                            ) : <span className="text-neutral-400 text-xs">-</span>}
+                              <span className="text-[11px] font-semibold text-brand-blue bg-brand-blue/8 px-1.5 py-0.5 rounded-full">{op.tt}d</span>
+                            ) : <span className="text-neutral-400 text-[11px]">-</span>}
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-3 py-2 text-center">
                             {cfg ? (
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
                                 {op.estado_operacion}
                               </span>
-                            ) : <span className="text-neutral-400 text-xs">-</span>}
+                            ) : <span className="text-neutral-400 text-[11px]">-</span>}
                           </td>
-                          {/* Transporte */}
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-3 py-2 text-center">
                             {op.tipo_reserva_transporte === "asli" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
-                                <Icon icon="lucide:building-2" width={11} height={11} />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+                                <Icon icon="lucide:building-2" width={10} height={10} />
                                 ASLI
                               </span>
                             ) : op.tipo_reserva_transporte === "externa" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Icon icon="lucide:globe" width={11} height={11} />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Icon icon="lucide:globe" width={10} height={10} />
                                 Externa
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-400 border border-neutral-200">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-400 border border-neutral-200">
                                 Pendiente
                               </span>
                             )}
                           </td>
-                          {/* Acciones tabla */}
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-3 py-2 text-center">
                             <div className="flex items-center justify-center gap-0.5">
-                              <button onClick={() => handleCopy(op)} className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors" title="Copiar">
-                                <Icon icon="lucide:copy" width={14} height={14} />
+                              <button onClick={() => handleCopy(op)} className="p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded transition-colors" title="Copiar">
+                                <Icon icon="lucide:copy" width={13} height={13} />
                               </button>
-                              <button onClick={() => setEmailModal(op)} className="p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title="Enviar por correo">
-                                <Icon icon="lucide:mail" width={14} height={14} />
+                              <button onClick={() => setEmailModal(op)} className="p-1 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded transition-colors" title="Enviar por correo">
+                                <Icon icon="lucide:mail" width={13} height={13} />
                               </button>
                             </div>
                           </td>
@@ -1105,7 +1119,7 @@ export function MisReservasContent() {
               </table>
             </div>
             {filteredOperaciones.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+              <div className="px-3 py-2 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/60 flex-shrink-0">
                 <span className="text-xs text-neutral-400">
                   {filteredOperaciones.length} {filteredOperaciones.length === 1 ? "registro" : "registros"}
                   {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
@@ -1118,13 +1132,13 @@ export function MisReservasContent() {
           </div>
         )}
 
-        {/* ── Vista Tarjetas ── */}
+        {/* Vista Tarjetas */}
         {viewMode === "cards" && (
           <>
             {filteredOperaciones.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-4 py-16 flex flex-col items-center gap-2">
-                <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                  <Icon icon="typcn:clipboard" width={24} height={24} className="text-neutral-400" />
+              <div className="bg-white rounded-xl border border-neutral-200 shadow-sm px-4 py-14 flex flex-col items-center gap-2">
+                <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                  <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
                 </span>
                 <p className="text-neutral-500 font-medium text-sm">{tr.noResults}</p>
                 {(activeFiltersCount > 0 || searchTerm) && (
@@ -1149,7 +1163,7 @@ export function MisReservasContent() {
               </div>
             )}
             {filteredOperaciones.length > 0 && (
-              <p className="text-xs text-neutral-400 text-center">
+              <p className="text-xs text-neutral-400 text-center mt-3">
                 {filteredOperaciones.length} {filteredOperaciones.length === 1 ? "reserva" : "reservas"}
                 {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 {selectedIds.size > 0 && ` · ${selectedIds.size} seleccionada${selectedIds.size !== 1 ? "s" : ""}`}

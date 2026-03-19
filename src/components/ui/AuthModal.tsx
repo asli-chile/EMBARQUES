@@ -77,6 +77,11 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
       >
         {/* Panel izquierdo: marca y bienvenida (mismo que login/registro) */}
         <div className="hidden md:flex flex-1 flex-col px-10 py-12 bg-gradient-to-br from-brand-blue via-[#0d1a3a] to-[#0a1530] text-white min-h-[380px]">
+          <div className="mb-4">
+            <p className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/20 bg-white/10 text-xs font-semibold tracking-wide uppercase text-white">
+              BIENVENIDO "{name}"
+            </p>
+          </div>
           <div className="flex-1 flex items-center justify-center min-h-[180px] w-full">
             <img
               src={brand.logo}
