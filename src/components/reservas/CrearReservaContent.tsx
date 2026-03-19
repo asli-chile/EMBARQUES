@@ -114,7 +114,7 @@ const SECTION_ORDER: SectionKey[] = [
 export function CrearReservaContent() {
   const { t } = useLocale();
   const tr = t.crearReserva;
-  const { profile, empresaNombres } = useAuth();
+  const { profile, empresaNombres, isSuperadmin } = useAuth();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -149,6 +149,62 @@ export function CrearReservaContent() {
   const [showPreview, setShowPreview] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const clienteInputRef = useRef<HTMLInputElement>(null);
+
+  const loadDatosDePrueba = useCallback(() => {
+    const firstId = (opts: SelectOption[]) => opts[0]?.id ?? "";
+    const today = new Date();
+    const etd = format(today, "yyyy-MM-dd");
+    const eta = format(new Date(today.getTime() + 10 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+
+    const ejecutivoId =
+      profile?.id && ejecutivos.some((e) => e.id === profile.id) ? profile.id : firstId(ejecutivos);
+
+    const clienteId = firstId(clientes);
+
+    setFormData((prev) => ({
+      ...prev,
+      tipo_operacion: prev.tipo_operacion || "EXPORTACIÓN",
+      ejecutivo: prev.ejecutivo || ejecutivoId,
+      incoterm: prev.incoterm || "FOB",
+      forma_pago: prev.forma_pago || "CRÉDITO",
+      consignatario: prev.consignatario || firstId(consignatarios),
+      cliente: prev.cliente || clienteId,
+      especie: prev.especie || firstId(especies),
+      temperatura: prev.temperatura || "0",
+      ventilacion: prev.ventilacion || "ABIERTO",
+      tratamiento_frio: prev.tratamiento_frio || "",
+      tipo_atmosfera: prev.tipo_atmosfera || "",
+      tratamiento_frio_o2: prev.tratamiento_frio_o2 || "",
+      tratamiento_frio_co2: prev.tratamiento_frio_co2 || "",
+      naviera: prev.naviera || firstId(navieras),
+      nave: prev.nave || firstId(navesFiltered.length ? navesFiltered : naves),
+      viaje: prev.viaje || "001A",
+      pol: prev.pol || firstId(puertosOrigen),
+      pod: prev.pod || firstId(destinos),
+      etd: prev.etd || etd,
+      eta: prev.eta || eta,
+      booking: "", // explícitamente vacío
+      planta_presentacion: prev.planta_presentacion || firstId(plantas),
+      deposito: prev.deposito || firstId(depositos),
+      citacion: prev.citacion || "",
+      observaciones: prev.observaciones || "",
+    }));
+
+    setClienteInput((prev) => prev || (clientes.find((c) => c.id === clienteId)?.nombre ?? ""));
+  }, [
+    profile?.id,
+    ejecutivos,
+    clientes,
+    consignatarios,
+    especies,
+    navieras,
+    naves,
+    navesFiltered,
+    puertosOrigen,
+    destinos,
+    plantas,
+    depositos,
+  ]);
 
   const supabase = useMemo(() => {
     try {
@@ -1418,9 +1474,22 @@ export function CrearReservaContent() {
                   <p className="text-xs text-neutral-400 mt-0.5">{tr.subtitle}</p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 rounded-full px-2.5 py-1 shrink-0">
-                {completedCount}/{SECTION_ORDER.length}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                {isSuperadmin && (
+                  <button
+                    type="button"
+                    onClick={loadDatosDePrueba}
+                    className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    title="Cargar datos de prueba (sin booking)"
+                  >
+                    <Icon icon="typcn:flash" width={14} height={14} />
+                    Datos de prueba
+                  </button>
+                )}
+                <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 rounded-full px-2.5 py-1">
+                  {completedCount}/{SECTION_ORDER.length}
+                </span>
+              </div>
             </div>
           </div>
         </div>
