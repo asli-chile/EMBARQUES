@@ -1209,7 +1209,13 @@ export function MisReservasContent() {
       )}
 
       {/* Modal tipo de transporte */}
-      {showTransportModal && (
+      {showTransportModal && (() => {
+        const selOps = operaciones.filter((op) => selectedIds.has(op.id));
+        const alreadyInAsli = selOps.filter((op) => op.tipo_reserva_transporte === "asli");
+        const alreadyInExt = selOps.filter((op) => op.tipo_reserva_transporte === "externa");
+        const pendientes = selOps.filter((op) => !op.tipo_reserva_transporte);
+        const allAssigned = pendientes.length === 0;
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
           <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
             <div className="flex items-center gap-3 mb-4">
@@ -1221,33 +1227,64 @@ export function MisReservasContent() {
                 <p className="text-xs text-neutral-500">{selectedIds.size} operación{selectedIds.size > 1 ? "es" : ""} seleccionada{selectedIds.size > 1 ? "s" : ""}</p>
               </div>
             </div>
-            <p className="text-xs text-neutral-500 mb-4">Selecciona el tipo de reserva de transporte:</p>
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => void handleSendToAsli()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group">
-                <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/20 transition-colors">
-                  <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
+
+            {(alreadyInAsli.length > 0 || alreadyInExt.length > 0) && (
+              <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 space-y-0.5">
+                {alreadyInAsli.length > 0 && (
+                  <p>{alreadyInAsli.length} ya está{alreadyInAsli.length > 1 ? "n" : ""} en <strong>ASLI</strong> ({alreadyInAsli.map((o) => o.ref_asli ?? `#${o.correlativo}`).join(", ")})</p>
+                )}
+                {alreadyInExt.length > 0 && (
+                  <p>{alreadyInExt.length} ya está{alreadyInExt.length > 1 ? "n" : ""} en <strong>Externa</strong> ({alreadyInExt.map((o) => o.ref_asli ?? `#${o.correlativo}`).join(", ")})</p>
+                )}
+                {!allAssigned && <p className="text-amber-600 font-medium">Solo se enviarán las {pendientes.length} pendiente{pendientes.length > 1 ? "s" : ""}.</p>}
+              </div>
+            )}
+
+            {allAssigned ? (
+              <>
+                <p className="text-xs text-neutral-500 mb-4">Todas las operaciones seleccionadas ya están asignadas a transporte.</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowTransportModal(false)} className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
+                    Cerrar
+                  </button>
+                  <a href="/transportes/reserva-asli" className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-xs">
+                    Ir a Transportes
+                    <Icon icon="typcn:arrow-right" width={14} height={14} />
+                  </a>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-neutral-800">Reserva ASLI</p>
-                  <p className="text-[11px] text-neutral-400">Transporte gestionado por ASLI</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-neutral-500 mb-4">Selecciona el tipo de reserva de transporte:</p>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => void handleSendToAsli()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group">
+                    <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/20 transition-colors">
+                      <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-800">Reserva ASLI</p>
+                      <p className="text-[11px] text-neutral-400">Transporte gestionado por ASLI</p>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => void handleSendToExterna()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
+                      <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-800">Reserva Externa</p>
+                      <p className="text-[11px] text-neutral-400">Transporte de carga externa</p>
+                    </div>
+                  </button>
                 </div>
-              </button>
-              <button type="button" onClick={() => void handleSendToExterna()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-                  <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-neutral-800">Reserva Externa</p>
-                  <p className="text-[11px] text-neutral-400">Transporte de carga externa</p>
-                </div>
-              </button>
-            </div>
-            <button type="button" onClick={() => setShowTransportModal(false)} className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
-              Cancelar
-            </button>
+                <button type="button" onClick={() => setShowTransportModal(false)} className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
+                  Cancelar
+                </button>
+              </>
+            )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Modal correo */}
       {emailModal && <EmailModal op={emailModal} onClose={() => setEmailModal(null)} />}
