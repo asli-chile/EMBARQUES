@@ -647,6 +647,7 @@ export function ReservaAsliContent() {
 
     const cleared: Record<string, unknown> = {
       enviado_transporte: false,
+      tipo_reserva_transporte: null,
       transporte: null,
       chofer: null,
       rut_chofer: null,
