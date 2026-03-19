@@ -969,6 +969,7 @@ export function MisReservasContent() {
                       </th>
                     )}
                     <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[10rem]" />
                     <SortableHeader field="cliente" label={tr.colClient} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="especie" label={tr.colSpecies} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="naviera" label={tr.colCarrier} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -978,7 +979,6 @@ export function MisReservasContent() {
                     <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7.5rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Acciones</th>
                   </tr>
@@ -1014,6 +1014,46 @@ export function MisReservasContent() {
                             </td>
                           )}
                           <td className="px-4 py-3 text-center"><span className="font-bold text-brand-blue text-xs">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span></td>
+                          {/* Columna Booking — botón grande accionable */}
+                          <td className="px-3 py-2 text-center min-w-[10rem]">
+                            {!isCliente ? (
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => setBookingModal(op)}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all max-w-[150px] ${
+                                    op.booking_doc_url
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                      : op.booking
+                                      ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                      : "bg-neutral-50 text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
+                                  }`}
+                                  title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
+                                >
+                                  <Icon
+                                    icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"}
+                                    width={13} height={13} className="shrink-0"
+                                  />
+                                  <span className="font-mono truncate">
+                                    {op.booking ?? "Confirmar"}
+                                  </span>
+                                </button>
+                                {op.booking_doc_url && (
+                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors">
+                                    <Icon icon="lucide:external-link" width={11} height={11} />
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-1">
+                                <span className="text-xs font-mono text-neutral-600">{op.booking || "-"}</span>
+                                {op.booking_doc_url && (
+                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
+                                    <Icon icon="lucide:paperclip" width={11} height={11} />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-center text-xs text-neutral-700 font-medium">{op.cliente || "-"}</td>
                           <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.especie || "-"}</td>
                           <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.naviera || "-"}</td>
@@ -1026,16 +1066,6 @@ export function MisReservasContent() {
                             {op.tt !== null ? (
                               <span className="text-xs font-semibold text-brand-blue bg-brand-blue/8 px-2 py-0.5 rounded-full">{op.tt}d</span>
                             ) : <span className="text-neutral-400 text-xs">-</span>}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="inline-flex items-center gap-1">
-                              <span className="text-xs font-mono text-neutral-600">{op.booking || "-"}</span>
-                              {op.booking_doc_url && (
-                                <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento de booking" className="text-emerald-500 hover:text-emerald-700">
-                                  <Icon icon="lucide:paperclip" width={11} height={11} />
-                                </a>
-                              )}
-                            </div>
                           </td>
                           <td className="px-4 py-3 text-center">
                             {cfg ? (
@@ -1054,21 +1084,6 @@ export function MisReservasContent() {
                               <button onClick={() => setEmailModal(op)} className="p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title="Enviar por correo">
                                 <Icon icon="lucide:mail" width={14} height={14} />
                               </button>
-                              {!isCliente && (
-                                <button
-                                  onClick={() => setBookingModal(op)}
-                                  className={`p-1.5 rounded-lg transition-colors ${
-                                    op.booking_doc_url
-                                      ? "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
-                                      : op.booking
-                                      ? "text-amber-400 hover:text-amber-600 hover:bg-amber-50"
-                                      : "text-neutral-400 hover:text-amber-500 hover:bg-amber-50"
-                                  }`}
-                                  title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
-                                >
-                                  <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={14} height={14} />
-                                </button>
-                              )}
                               {!isCliente && (
                                 <button onClick={() => handleMoveToTrash([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title={tr.moveToTrash}>
                                   <Icon icon="typcn:trash" width={16} height={16} />
