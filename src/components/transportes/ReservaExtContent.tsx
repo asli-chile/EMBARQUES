@@ -77,6 +77,8 @@ type Tramo = {
   activo: boolean;
 };
 
+type SelectOption = { id: string; nombre: string };
+
 type FormData = {
   cliente: string;
   booking: string;
@@ -85,6 +87,7 @@ type FormData = {
   pod: string;
   etd: string;
   planta_presentacion: string;
+  estado: string;
   transporte: string;
   chofer: string;
   rut_chofer: string;
@@ -120,6 +123,7 @@ const initialFormData: FormData = {
   pod: "",
   etd: "",
   planta_presentacion: "",
+  estado: "pendiente",
   transporte: "",
   chofer: "",
   rut_chofer: "",
@@ -156,6 +160,7 @@ function reservaToForm(r: ReservaExt): FormData {
     pod: r.pod ?? "",
     etd: r.etd ?? "",
     planta_presentacion: r.planta_presentacion ?? "",
+    estado: r.estado ?? "pendiente",
     transporte: r.transporte ?? "",
     chofer: r.chofer ?? "",
     rut_chofer: r.rut_chofer ?? "",
@@ -198,6 +203,11 @@ export function ReservaExtContent() {
   const [choferes, setChoferes] = useState<Chofer[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [tramos, setTramos] = useState<Tramo[]>([]);
+  const [navieras, setNavieras] = useState<SelectOption[]>([]);
+  const [naves, setNaves] = useState<SelectOption[]>([]);
+  const [destinos, setDestinos] = useState<SelectOption[]>([]);
+  const [plantas, setPlantas] = useState<SelectOption[]>([]);
+  const [depositos, setDepositos] = useState<SelectOption[]>([]);
   const [empresaTransporteId, setEmpresaTransporteId] = useState<string>("");
   const [empresaTransporteInput, setEmpresaTransporteInput] = useState<string>("");
   const [choferInput, setChoferInput] = useState<string>("");
@@ -229,22 +239,25 @@ export function ReservaExtContent() {
     if (!supabase || authLoading) return;
     setLoading(true);
 
-    const [reservasRes, empresasRes, tramosRes] = await Promise.all([
-      supabase
-        .from("transportes_reservas_ext")
-        .select("*")
-        .order("created_at", { ascending: false }),
+    const [reservasRes, empresasRes, tramosRes, navierasRes, navesRes, destinosRes, plantasRes, depositosRes] = await Promise.all([
+      supabase.from("transportes_reservas_ext").select("*").order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
-      supabase
-        .from("transportes_tramos")
-        .select("id, origen, destino, valor, moneda, activo")
-        .eq("activo", true)
-        .order("origen"),
+      supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
+      supabase.from("navieras").select("id, nombre").order("nombre"),
+      supabase.from("naves").select("id, nombre").order("nombre"),
+      supabase.from("destinos").select("id, nombre").eq("activo", true).order("nombre"),
+      supabase.from("plantas").select("id, nombre").eq("activo", true).order("nombre"),
+      supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
     ]);
 
     setReservas((reservasRes.data ?? []) as ReservaExt[]);
     setEmpresasTransporte((empresasRes.data ?? []) as TransporteEmpresa[]);
     setTramos((tramosRes.data ?? []) as Tramo[]);
+    setNavieras((navierasRes.data ?? []) as SelectOption[]);
+    setNaves((navesRes.data ?? []) as SelectOption[]);
+    setDestinos((destinosRes.data ?? []) as SelectOption[]);
+    setPlantas((plantasRes.data ?? []) as SelectOption[]);
+    setDepositos((depositosRes.data ?? []) as SelectOption[]);
     setLoading(false);
   }, [supabase, authLoading]);
 
@@ -603,6 +616,7 @@ export function ReservaExtContent() {
       pod: formData.pod || null,
       etd: formData.etd || null,
       planta_presentacion: formData.planta_presentacion || null,
+      estado: formData.estado || "pendiente",
       transporte: formData.transporte || null,
       chofer: formData.chofer || null,
       rut_chofer: formData.rut_chofer || null,
@@ -806,28 +820,33 @@ export function ReservaExtContent() {
         </div>
 
         {/* Mobile tabs */}
-        <div className="flex gap-2 lg:hidden">
+        <div className="lg:hidden flex rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
           <button
             type="button"
             onClick={() => setMobilePanel("list")}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${
               mobilePanel === "list"
                 ? "bg-brand-blue text-white"
-                : "bg-white text-neutral-600 border border-neutral-200"
+                : "text-neutral-500 hover:bg-neutral-50"
             }`}
           >
+            <Icon icon="typcn:document" width={15} height={15} />
             Reservas
           </button>
           <button
             type="button"
             onClick={() => setMobilePanel("form")}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${
               mobilePanel === "form"
                 ? "bg-brand-blue text-white"
-                : "bg-white text-neutral-600 border border-neutral-200"
+                : "text-neutral-500 hover:bg-neutral-50"
             }`}
           >
+            <Icon icon="lucide:truck" width={15} height={15} />
             Formulario
+            {showForm && (
+              <span className="w-2 h-2 rounded-full bg-brand-teal inline-block" />
+            )}
           </button>
         </div>
 
@@ -840,14 +859,22 @@ export function ReservaExtContent() {
               }`}
             >
               <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-                <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                    <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
-                  </span>
-                  <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                    Reservas ({reservas.length})
-                  </h2>
+                <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                      <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
+                    </span>
+                    <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                      Reservas externas
+                    </h2>
+                  </div>
+                  {reservas.filter((r) => r.estado !== "completada").length > 0 && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold flex-shrink-0">
+                      <Icon icon="lucide:alert-circle" width={10} height={10} />
+                      {reservas.filter((r) => r.estado !== "completada").length} activa{reservas.filter((r) => r.estado !== "completada").length !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="mb-3">
@@ -869,70 +896,60 @@ export function ReservaExtContent() {
                   {filteredReservas.length === 0 ? (
                     <div className="py-8 text-center">
                       <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2 inline-flex">
-                        <Icon
-                          icon="lucide:inbox"
-                          width={20}
-                          height={20}
-                          className="text-neutral-400"
-                        />
+                        <Icon icon="lucide:inbox" width={20} height={20} className="text-neutral-400" />
                       </span>
                       <p className="text-neutral-500 text-sm font-medium">
-                        {reservas.length === 0
-                          ? 'No hay reservas aún. Haz clic en "Nueva Reserva" para crear una.'
-                          : "Sin resultados"}
+                        {reservas.length === 0 ? 'No hay reservas. Crea una nueva.' : "Sin resultados"}
                       </p>
                     </div>
                   ) : (
-                    <div className="max-h-[calc(100vh-360px)] overflow-y-auto space-y-2">
-                      {filteredReservas.map((r) => (
-                        <div
-                          key={r.id}
-                          className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
-                            selectedId === r.id
-                              ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
-                              : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
-                          }`}
-                          onClick={() => handleSelectReserva(r)}
-                        >
-                          <button
-                            type="button"
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              setConfirmDelete(r.id);
-                            }}
-                            className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                            title="Eliminar"
-                          >
-                            <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
-                          </button>
-                          <p className="font-semibold text-brand-blue text-sm truncate pr-6">
-                            {r.cliente || "Sin cliente"}
-                          </p>
-                          <p className="text-xs text-neutral-600 truncate mt-0.5">
-                            {r.booking || "Sin booking"} •{" "}
-                            {r.contenedor || "Sin contenedor"}
-                          </p>
-                          <p className="text-xs text-neutral-400 mt-1">
-                            {r.transporte || "Sin transporte"} • ETD:{" "}
-                            {formatDate(r.etd)}
-                          </p>
-                          <span
-                            className={`inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                              r.estado === "completada"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : r.estado === "en_curso"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-neutral-100 text-neutral-600"
+                    <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
+                      {filteredReservas.map((r) => {
+                        const isActive = selectedId === r.id;
+                        const completo = r.estado === "completada";
+                        const enCurso = r.estado === "en_curso";
+                        return (
+                          <div
+                            key={r.id}
+                            className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                              isActive
+                                ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
+                                : completo
+                                  ? "border-emerald-200 bg-emerald-50/40 hover:border-emerald-300 hover:bg-emerald-50"
+                                  : enCurso
+                                    ? "border-amber-300 bg-amber-50/60 hover:border-amber-400 hover:bg-amber-50"
+                                    : "border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50"
                             }`}
+                            onClick={() => handleSelectReserva(r)}
                           >
-                            {r.estado === "completada"
-                              ? "Completada"
-                              : r.estado === "en_curso"
-                              ? "En curso"
-                              : "Pendiente"}
-                          </span>
-                        </div>
-                      ))}
+                            <button
+                              type="button"
+                              onClick={(ev) => { ev.stopPropagation(); setConfirmDelete(r.id); }}
+                              className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Eliminar"
+                            >
+                              <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="flex items-start justify-between gap-2 mb-0.5">
+                              <p className={`font-bold text-sm truncate pr-6 ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                                {r.cliente || "Sin cliente"}
+                              </p>
+                              <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                completo
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : enCurso
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-neutral-100 text-neutral-600"
+                              }`}>
+                                <Icon icon={completo ? "lucide:check-circle" : enCurso ? "lucide:loader" : "lucide:clock"} width={10} height={10} />
+                                {completo ? "Completa" : enCurso ? "En curso" : "Pendiente"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-neutral-600 truncate">{r.booking || "Sin booking"} · {r.contenedor || "Sin contenedor"}</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{r.naviera || r.transporte || "—"} · ETD: {formatDate(r.etd)}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -947,81 +964,152 @@ export function ReservaExtContent() {
             >
               {showForm ? (
                 <div className="space-y-4">
-                  {isNew && (
-                    <div className="rounded-2xl bg-white border border-brand-blue/30 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                      <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-center gap-3">
-                        <Icon
-                          icon="lucide:plus-circle"
-                          className="w-5 h-5 text-brand-blue flex-shrink-0"
-                        />
-                        <p className="text-sm font-semibold text-brand-blue">
-                          Nueva reserva de transporte externo
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isNew && selectedId && (
-                    <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                      <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue">
+                  <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                    <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-start justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">
-                          Editando reserva
+                          {isNew ? "Nueva reserva externa" : "Editando reserva"}
                         </p>
                         <p className="text-neutral-800 font-bold mt-1 text-sm">
-                          {formData.cliente || "Sin cliente"} —{" "}
-                          {formData.booking || "Sin booking"}
+                          {isNew
+                            ? "Completa los datos del transporte externo"
+                            : `${formData.cliente || "Sin cliente"} — ${formData.booking || "Sin booking"}`
+                          }
                         </p>
+                        {!isNew && formData.naviera && (
+                          <p className="text-sm text-neutral-500 mt-0.5">
+                            {formData.naviera} · {formData.nave} · {formData.pod}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setMobilePanel("list")}
+                        className="lg:hidden flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
+                      >
+                        <Icon icon="lucide:list" width={12} height={12} />
+                        Cambiar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Estado de la reserva */}
+                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                    <div className="px-4 py-3 flex items-center justify-between gap-3">
+                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Estado</span>
+                      <div className="flex gap-1.5">
+                        {[
+                          { value: "pendiente", label: "Pendiente", color: "bg-neutral-100 text-neutral-600 border-neutral-200", active: "bg-neutral-700 text-white border-neutral-700" },
+                          { value: "en_curso", label: "En curso", color: "bg-amber-50 text-amber-700 border-amber-200", active: "bg-amber-500 text-white border-amber-500" },
+                          { value: "completada", label: "Completada", color: "bg-emerald-50 text-emerald-700 border-emerald-200", active: "bg-emerald-600 text-white border-emerald-600" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => handleChange("estado", opt.value)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                              formData.estado === opt.value ? opt.active : opt.color + " hover:opacity-80"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     {/* Datos de la operación */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon
-                            icon="lucide:file-text"
-                            className="w-4 h-4 text-brand-blue"
-                          />
+                      <div className="h-[3px] bg-gradient-to-r from-indigo-400 to-brand-blue" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                          Datos de la Operación
-                        </h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Datos de la Operación</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput("Cliente", "cliente", "text", "Nombre del cliente")}
                         {renderInput("Booking", "booking", "text", "N° Booking")}
-                        {renderInput("Naviera", "naviera", "text", "Naviera")}
-                        {renderInput("Nave", "nave", "text", "Nombre de la nave")}
-                        {renderInput("POD", "pod", "text", "Puerto de destino")}
+                        <div>
+                          <label className={labelClass}>Naviera</label>
+                          <select
+                            value={formData.naviera}
+                            onChange={(e) => handleChange("naviera", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar naviera...</option>
+                            {navieras.map((n) => (
+                              <option key={n.id} value={n.nombre}>{n.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelClass}>Nave</label>
+                          <select
+                            value={formData.nave}
+                            onChange={(e) => handleChange("nave", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar nave...</option>
+                            {naves.map((n) => (
+                              <option key={n.id} value={n.nombre}>{n.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelClass}>POD</label>
+                          <select
+                            value={formData.pod}
+                            onChange={(e) => handleChange("pod", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar destino...</option>
+                            {destinos.map((d) => (
+                              <option key={d.id} value={d.nombre}>{d.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
                         {renderInput("ETD", "etd", "date")}
-                        {renderInput(
-                          "Planta Presentación",
-                          "planta_presentacion",
-                          "text",
-                          "Planta"
-                        )}
-                        {renderInput(tr.warehouse, "deposito", "text", "Depósito")}
+                        <div>
+                          <label className={labelClass}>Planta Presentación</label>
+                          <select
+                            value={formData.planta_presentacion}
+                            onChange={(e) => handleChange("planta_presentacion", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar planta...</option>
+                            {plantas.map((p) => (
+                              <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelClass}>{tr.warehouse}</label>
+                          <select
+                            value={formData.deposito}
+                            onChange={(e) => handleChange("deposito", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar depósito...</option>
+                            {depositos.map((d) => (
+                              <option key={d.id} value={d.nombre}>{d.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
 
                     {/* Transporte */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon
-                            icon="typcn:location-arrow"
-                            className="w-4 h-4 text-brand-blue"
-                          />
+                      <div className="h-[3px] bg-gradient-to-r from-brand-blue to-blue-400" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="lucide:truck" className="w-4 h-4 text-blue-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                          {tr.transportInfo}
-                        </h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.transportInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         <div>
@@ -1040,7 +1128,6 @@ export function ReservaExtContent() {
                             icon="lucide:building-2"
                           />
                         </div>
-
                         <div>
                           <label className={labelClass}>{tr.driverName}</label>
                           <Combobox
@@ -1069,9 +1156,7 @@ export function ReservaExtContent() {
                             options={equipos.map((x) => ({
                               value: x.patente_camion,
                               label: x.patente_camion,
-                              sublabel: x.patente_remolque
-                                ? `Remolque: ${x.patente_remolque}`
-                                : undefined,
+                              sublabel: x.patente_remolque ? `Remolque: ${x.patente_remolque}` : undefined,
                             }))}
                             placeholder="Escriba o seleccione patente..."
                             disabled={!empresaTransporteId}
@@ -1085,14 +1170,12 @@ export function ReservaExtContent() {
 
                     {/* Contenedor */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:box" className="w-4 h-4 text-brand-blue" />
+                      <div className="h-[3px] bg-gradient-to-r from-teal-400 to-cyan-500" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:box" className="w-4 h-4 text-teal-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                          {tr.containerInfo}
-                        </h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.containerInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.container, "contenedor")}
@@ -1103,109 +1186,105 @@ export function ReservaExtContent() {
 
                     {/* Horarios */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon
-                            icon="typcn:calendar"
-                            className="w-4 h-4 text-brand-blue"
-                          />
+                      <div className="h-[3px] bg-gradient-to-r from-amber-400 to-orange-400" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                          {tr.schedules}
-                        </h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.schedules}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.citation, "citacion", "datetime-local")}
                         {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
-                        {renderInput(
-                          tr.plantDeparture,
-                          "salida_planta",
-                          "datetime-local"
-                        )}
-                        {renderInput(
-                          tr.pickupSchedule,
-                          "agendamiento_retiro",
-                          "datetime-local"
-                        )}
+                        {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
+                        {renderInput(tr.pickupSchedule, "agendamiento_retiro", "datetime-local")}
                       </div>
                     </div>
 
                     {/* Stacking */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon
-                            icon="typcn:th-large"
-                            className="w-4 h-4 text-brand-blue"
-                          />
+                      <div className="h-[3px] bg-gradient-to-r from-violet-400 to-purple-500" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                          {tr.stacking}
-                        </h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.stacking}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
-                        {renderInput(
-                          tr.stackingStart,
-                          "inicio_stacking",
-                          "datetime-local"
-                        )}
+                        {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
                         {renderInput(tr.stackingEnd, "fin_stacking", "datetime-local")}
                         <div className="col-span-2">
-                          {renderInput(
-                            tr.stackingEntry,
-                            "ingreso_stacking",
-                            "datetime-local"
-                          )}
+                          {renderInput(tr.stackingEntry, "ingreso_stacking", "datetime-local")}
                         </div>
                       </div>
                     </div>
 
                     {/* Costos */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon
-                            icon="typcn:calculator"
-                            className="w-4 h-4 text-brand-blue"
-                          />
+                      <div className="h-[3px] bg-gradient-to-r from-emerald-400 to-teal-500" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                          {tr.costs}
-                        </h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.costs}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
-                        <div>
+                        <div className="col-span-2">
                           <label className={labelClass}>{tr.section}</label>
                           <select
-                            value={
-                              tramos.find(
-                                (x) =>
-                                  `${x.origen} - ${x.destino}` === formData.tramo
-                              )?.id ?? ""
-                            }
+                            value={tramos.find((x) => `${x.origen} - ${x.destino}` === formData.tramo)?.id ?? ""}
                             onChange={(e) => handleTramoChange(e.target.value)}
                             className={inputClass}
                           >
                             <option value="">{tr.select}</option>
                             {tramos.map((x) => (
                               <option key={x.id} value={x.id}>
-                                {x.origen} - {x.destino} ({x.moneda})
+                                {x.origen} — {x.destino} · {x.moneda ?? ""}
                               </option>
                             ))}
                           </select>
                         </div>
                         {renderInput(tr.sectionValue, "valor_tramo", "number")}
-                        {renderSelect(tr.portage, "porteo", ["SÍ", "NO"])}
-                        {renderInput(tr.portageValue, "valor_porteo", "number")}
-                        {renderSelect(tr.deadFreight, "falso_flete", ["SÍ", "NO"])}
-                        {renderInput(
-                          tr.deadFreightValue,
-                          "valor_falso_flete",
-                          "number"
-                        )}
+                        <div>
+                          <label className={labelClass}>{tr.portage}</label>
+                          <div className="flex gap-2">
+                            {["SÍ", "NO"].map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => handleChange("porteo", v)}
+                                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                  formData.porteo === v
+                                    ? "bg-brand-blue text-white border-brand-blue"
+                                    : "bg-neutral-50 text-neutral-500 border-neutral-200 hover:border-neutral-300"
+                                }`}
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {formData.porteo === "SÍ" && renderInput(tr.portageValue, "valor_porteo", "number")}
+                        <div>
+                          <label className={labelClass}>{tr.deadFreight}</label>
+                          <div className="flex gap-2">
+                            {["SÍ", "NO"].map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => handleChange("falso_flete", v)}
+                                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                  formData.falso_flete === v
+                                    ? "bg-brand-blue text-white border-brand-blue"
+                                    : "bg-neutral-50 text-neutral-500 border-neutral-200 hover:border-neutral-300"
+                                }`}
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {formData.falso_flete === "SÍ" && renderInput(tr.deadFreightValue, "valor_falso_flete", "number")}
                         <div className="col-span-2">
                           {renderInput(tr.transportInvoice, "factura_transporte")}
                         </div>
@@ -1215,24 +1294,17 @@ export function ReservaExtContent() {
 
                   {/* Observaciones */}
                   <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                        <Icon
-                          icon="typcn:notes"
-                          className="w-4 h-4 text-brand-blue"
-                        />
+                    <div className="h-[3px] bg-gradient-to-r from-neutral-300 to-neutral-400" />
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                      <span className="w-8 h-8 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
+                        <Icon icon="typcn:notes" className="w-4 h-4 text-neutral-500" />
                       </span>
-                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                        {tr.observations}
-                      </h2>
+                      <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.observations}</h2>
                     </div>
                     <div className="p-4">
                       <textarea
                         value={formData.observaciones}
-                        onChange={(e) =>
-                          handleChange("observaciones", e.target.value)
-                        }
+                        onChange={(e) => handleChange("observaciones", e.target.value)}
                         rows={2}
                         placeholder={tr.observationsPlaceholder}
                         className={`${inputClass} resize-none`}
@@ -1253,57 +1325,61 @@ export function ReservaExtContent() {
                     </div>
                   )}
 
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(initialFormData);
-                        setSelectedId(null);
-                        setIsNew(false);
-                        setSuccess(false);
-                        setError(null);
-                        setMobilePanel("list");
-                      }}
-                      className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
-                    >
-                      {tr.cancel}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <>
-                          <Icon
-                            icon="typcn:refresh"
-                            className="w-4 h-4 animate-spin"
-                          />
-                          {tr.saving}
-                        </>
-                      ) : (
-                        <>
-                          <Icon icon="typcn:tick" className="w-4 h-4" />
-                          {isNew ? "Crear Reserva" : tr.save}
-                        </>
-                      )}
-                    </button>
+                  <div className="flex gap-3 justify-between">
+                    {!isNew && selectedId && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(selectedId)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+                      >
+                        <Icon icon="typcn:trash" className="w-4 h-4" />
+                        Eliminar
+                      </button>
+                    )}
+                    <div className="flex gap-3 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(initialFormData);
+                          setSelectedId(null);
+                          setIsNew(false);
+                          setSuccess(false);
+                          setError(null);
+                          setMobilePanel("list");
+                        }}
+                        className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                      >
+                        {tr.cancel}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
+                      >
+                        {saving ? (
+                          <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.saving}</>
+                        ) : (
+                          <><Icon icon="typcn:tick" className="w-4 h-4" />{isNew ? "Crear Reserva" : tr.save}</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
                   <div className="text-center py-8 px-4">
                     <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
-                      <Icon
-                        icon="lucide:plus-circle"
-                        width={24}
-                        height={24}
-                        className="text-neutral-400"
-                      />
+                      <Icon icon="lucide:truck" width={24} height={24} className="text-neutral-400" />
                     </span>
-                    <p className="text-neutral-500 text-sm font-medium">
-                      Selecciona una reserva de la lista o crea una nueva
-                    </p>
+                    <p className="text-neutral-500 text-sm font-medium">Selecciona una reserva o crea una nueva</p>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePanel("list")}
+                      className="lg:hidden mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
+                    >
+                      <Icon icon="typcn:document" width={14} height={14} />
+                      Ver reservas
+                    </button>
                   </div>
                 </div>
               )}

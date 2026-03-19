@@ -806,7 +806,7 @@ export function ReservaAsliContent() {
             {/* Panel selección operación */}
             <div className={`w-full lg:w-80 lg:flex-shrink-0 ${mobilePanel !== "select" ? "hidden lg:block" : ""}`}>
               <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-                <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
+                <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
                 <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
@@ -931,7 +931,7 @@ export function ReservaAsliContent() {
                 <div className="space-y-4">
                   {selectedOperacion && (
                     <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                      <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
                       <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">{tr.selectedOperation}</p>
@@ -956,13 +956,14 @@ export function ReservaAsliContent() {
                   )}
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {/* Transporte */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:location-arrow" className="w-4 h-4 text-brand-blue" />
+                      <div className="h-[3px] bg-gradient-to-r from-brand-blue to-blue-400" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="lucide:truck" className="w-4 h-4 text-blue-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.transportInfo}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.transportInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         <div>
@@ -981,7 +982,6 @@ export function ReservaAsliContent() {
                             icon="lucide:building-2"
                           />
                         </div>
-
                         <div>
                           <label className={labelClass}>{tr.driverName}</label>
                           <Combobox
@@ -1018,18 +1018,18 @@ export function ReservaAsliContent() {
                             icon="lucide:truck"
                           />
                         </div>
-
                         {renderInput(tr.trailerPlate, "patente_remolque")}
                       </div>
                     </div>
 
+                    {/* Contenedor */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:box" className="w-4 h-4 text-brand-blue" />
+                      <div className="h-[3px] bg-gradient-to-r from-teal-400 to-cyan-500" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:box" className="w-4 h-4 text-teal-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.containerInfo}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.containerInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.container, "contenedor")}
@@ -1037,24 +1037,22 @@ export function ReservaAsliContent() {
                         {renderInput(tr.tare, "tara", "number")}
                         <div>
                           <label className={labelClass}>{tr.warehouse}</label>
-                          <input
-                            type="text"
-                            value={formData.deposito}
-                            readOnly
-                            className={`${inputClass} bg-neutral-100 cursor-not-allowed`}
-                            placeholder="Se carga desde la operación"
-                          />
+                          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500 text-sm">
+                            <Icon icon="typcn:location" className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                            <span className="truncate">{formData.deposito || "Desde la operación"}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* Horarios */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:calendar" className="w-4 h-4 text-brand-blue" />
+                      <div className="h-[3px] bg-gradient-to-r from-amber-400 to-orange-400" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.schedules}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.schedules}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.citation, "citacion", "datetime-local")}
@@ -1064,13 +1062,14 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
+                    {/* Stacking */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:th-large" className="w-4 h-4 text-brand-blue" />
+                      <div className="h-[3px] bg-gradient-to-r from-violet-400 to-purple-500" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.stacking}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.stacking}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
@@ -1081,16 +1080,17 @@ export function ReservaAsliContent() {
                       </div>
                     </div>
 
+                    {/* Costos */}
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:calculator" className="w-4 h-4 text-brand-blue" />
+                      <div className="h-[3px] bg-gradient-to-r from-emerald-400 to-teal-500" />
+                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.costs}</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.costs}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
-                        <div>
+                        <div className="col-span-2">
                           <label className={labelClass}>{tr.section}</label>
                           <select
                             value={tramos.find((x) => `${x.origen} - ${x.destino}` === formData.tramo)?.id ?? ""}
@@ -1100,23 +1100,46 @@ export function ReservaAsliContent() {
                             <option value="">{tr.select}</option>
                             {tramos.map((x) => (
                               <option key={x.id} value={x.id}>
-                                {x.origen} - {x.destino} ({x.moneda})
+                                {x.origen} — {x.destino} · {x.moneda}
                               </option>
                             ))}
                           </select>
                         </div>
-                        {renderInput(tr.sectionValue, "valor_tramo", "number")}
+                        <div>
+                          <label className={labelClass}>{tr.sectionValue}</label>
+                          <input
+                            type="number"
+                            lang="es-CL"
+                            value={formData.valor_tramo}
+                            onChange={(e) => handleChange("valor_tramo", e.target.value)}
+                            className={inputClass}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Moneda</label>
+                          <select
+                            value={formData.moneda}
+                            onChange={(e) => handleChange("moneda", e.target.value)}
+                            className={inputClass}
+                          >
+                            <option value="">Seleccionar</option>
+                            <option value="CLP">CLP — Peso chileno</option>
+                            <option value="USD">USD — Dólar</option>
+                            <option value="EUR">EUR — Euro</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Observaciones */}
                   <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                        <Icon icon="typcn:notes" className="w-4 h-4 text-brand-blue" />
+                    <div className="h-[3px] bg-gradient-to-r from-neutral-300 to-neutral-400" />
+                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
+                      <span className="w-8 h-8 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
+                        <Icon icon="typcn:notes" className="w-4 h-4 text-neutral-500" />
                       </span>
-                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.observations}</h2>
+                      <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.observations}</h2>
                     </div>
                     <div className="p-4">
                       <textarea
