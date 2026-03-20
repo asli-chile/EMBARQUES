@@ -716,44 +716,63 @@ export function CrearReservaContent() {
     return { subject, htmlBody };
   };
 
-  const handleSendEmail = async () => {
+  const handleSendEmail = () => {
     if (!lastSavedPayload) return;
-    const scriptUrl = import.meta.env.PUBLIC_GMAIL_DRAFT_SCRIPT_URL;
-    if (!scriptUrl) {
-      setError("No se ha configurado la URL del script de Gmail. Contacta al administrador.");
-      setShowEmailModal(false);
-      return;
-    }
+    const p = lastSavedPayload;
 
-    setSendingEmail(true);
-    const { subject, htmlBody } = buildEmailContent(lastSavedPayload);
+    const subject = [
+      "SOLICITUD DE RESERVA",
+      p.cliente ?? "",
+      p.naviera ?? "",
+      [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
+      p.especie ?? "",
+      p.temperatura ?? "",
+      p.pol ?? "",
+      p.pod ?? "",
+    ].filter(Boolean).join(" // ").toUpperCase();
 
-    try {
-      const res = await fetch(scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          to: "informaciones@asli.cl",
-          subject,
-          htmlBody,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.draftUrl) {
-        window.open(data.draftUrl, "_blank");
-        setSuccess("Borrador creado en Gmail. Revísalo y presiona Enviar.");
-      } else if (data.success) {
-        window.open("https://mail.google.com/mail/#drafts", "_blank");
-        setSuccess("Borrador creado en Gmail. Ábrelo desde Borradores y presiona Enviar.");
-      } else {
-        setError(data.error || "Error al crear el borrador en Gmail.");
-      }
-    } catch {
-      setError("No se pudo conectar con el servicio de correo.");
-    }
+    const body = [
+      "Estimado equipo,",
+      "",
+      "Se ha creado una nueva solicitud de reserva con los siguientes datos:",
+      "",
+      "GENERAL",
+      `  Tipo operación: ${p.tipo_operacion ?? "-"}`,
+      `  Cliente:        ${p.cliente ?? "-"}`,
+      `  Ejecutivo:      ${p.ejecutivo ?? "-"}`,
+      `  Consignatario:  ${p.consignatario ?? "-"}`,
+      `  Incoterm:       ${p.incoterm ?? "-"}`,
+      `  Forma de pago:  ${p.forma_pago ?? "-"}`,
+      "",
+      "CARGA",
+      `  Especie:        ${p.especie ?? "-"}`,
+      `  Temperatura:    ${p.temperatura ?? "-"}`,
+      `  Ventilación:    ${p.ventilacion ?? "-"}`,
+      `  Tipo unidad:    ${p.tipo_unidad ?? "-"}`,
+      "",
+      "NAVIERA / VIAJE",
+      `  Naviera:  ${p.naviera ?? "-"}`,
+      `  Nave:     ${p.nave ?? "-"}`,
+      `  Viaje:    ${p.viaje ?? "-"}`,
+      `  POL:      ${p.pol ?? "-"}`,
+      `  POD:      ${p.pod ?? "-"}`,
+      `  ETD:      ${p.etd ?? "-"}`,
+      `  Booking:  ${p.booking ?? "-"}`,
+      "",
+      p.observaciones ? `Observaciones: ${p.observaciones}` : "",
+      "",
+      "Quedo atento.",
+    ].filter((l) => l !== undefined).join("\n");
 
-    setSendingEmail(false);
+    const gmailUrl =
+      "https://mail.google.com/mail/?view=cm&fs=1" +
+      `&to=${encodeURIComponent("informaciones@asli.cl")}` +
+      `&su=${encodeURIComponent(String(subject))}` +
+      `&body=${encodeURIComponent(body)}`;
+
+    window.open(gmailUrl, "_blank", "noopener,noreferrer");
     setShowEmailModal(false);
+    setSuccess("Gmail abierto con la solicitud lista. Solo haz clic en Enviar.");
   };
 
   const inputClass =
@@ -1687,38 +1706,30 @@ export function CrearReservaContent() {
                   <p className="text-xs text-neutral-500 mt-0.5">La reserva ya fue guardada exitosamente</p>
                 </div>
               </div>
-              <p className="text-sm text-neutral-600 mb-5">
-                ¿Deseas enviar los datos de esta reserva por correo a <span className="font-semibold text-neutral-800">informaciones@asli.cl</span>?
+              <p className="text-sm text-neutral-600 mb-3">
+                ¿Deseas enviar los datos de esta reserva a <span className="font-semibold text-neutral-800">informaciones@asli.cl</span>?
               </p>
-              <p className="text-xs text-neutral-400 mb-5">
-                Se creará un borrador en Gmail con todos los datos y tu firma. Solo tendrás que abrirlo y presionar Enviar.
-              </p>
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-brand-blue/5 border border-brand-blue/15 mb-5">
+                <Icon icon="lucide:info" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />
+                <p className="text-xs text-neutral-600">
+                  Se abrirá <strong>tu Gmail</strong> con el correo listo. Solo haz clic en <strong>Enviar</strong>.
+                </p>
+              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => void handleSendEmail()}
-                  disabled={sendingEmail}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm shadow-md shadow-brand-blue/20 disabled:opacity-60"
+                  onClick={handleSendEmail}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm shadow-md shadow-brand-blue/20"
                 >
-                  {sendingEmail ? (
-                    <>
-                      <Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />
-                      Creando borrador...
-                    </>
-                  ) : (
-                    <>
-                      <Icon icon="lucide:send" width={15} height={15} />
-                      Sí, crear borrador
-                    </>
-                  )}
+                  <Icon icon="lucide:external-link" width={15} height={15} />
+                  Abrir en mi Gmail
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowEmailModal(false)}
-                  disabled={sendingEmail}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
                 >
-                  No, omitir
+                  Omitir
                 </button>
               </div>
             </div>
