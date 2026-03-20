@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
+import { sileo } from "sileo";
 
 const AREAS = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE"] as const;
 
@@ -136,7 +137,6 @@ export function ServiciosUnicosContent() {
   const [navieras, setNavieras] = useState<Naviera[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -301,8 +301,7 @@ export function ServiciosUnicosContent() {
         });
         const data = (await res.json()) as { error?: string };
         if (!res.ok) throw new Error(data.error ?? tr.errorDelete);
-        setSuccessMessage(tr.successDeleted);
-        setTimeout(() => setSuccessMessage(null), 4000);
+        sileo.success({ title: tr.successDeleted });
         load();
       } catch (e) {
         setError(e instanceof Error ? e.message : tr.errorDelete);
@@ -687,8 +686,7 @@ export function ServiciosUnicosContent() {
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? tr.errorSave);
       handleCloseModal();
-      setSuccessMessage(editingId ? tr.successUpdated : tr.successCreated);
-      setTimeout(() => setSuccessMessage(null), 4000);
+      sileo.success({ title: editingId ? tr.successUpdated : tr.successCreated });
       load();
     } catch (e) {
       setModalError(e instanceof Error ? e.message : tr.errorSave);
@@ -736,12 +734,6 @@ export function ServiciosUnicosContent() {
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2" role="alert">
             <Icon icon="lucide:alert-triangle" width={18} height={18} className="mt-0.5" aria-hidden />
             <span>{error}</span>
-          </div>
-        )}
-        {successMessage && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2" role="status">
-            <Icon icon="lucide:check-circle" width={18} height={18} aria-hidden />
-            <span>{successMessage}</span>
           </div>
         )}
 

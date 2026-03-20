@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import JSZip from "jszip";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,6 +10,15 @@ export type FormatoInstructivo = {
   template_type: "html" | "excel" | null;
   descripcion: string | null;
   contenido_html: string | null;
+  excel_path: string | null;
+  excel_nombre: string | null;
+  cliente: string | null;
+};
+
+export type EmailAttachment = {
+  filename: string;
+  mimeType: string;
+  base64Data: string;
 };
 
 /** Datos mínimos necesarios para generar el instructivo + correo */
@@ -45,10 +55,19 @@ export type InstructivoOpData = {
   deposito?: string | null;
   moneda?: string | null;
   // Transporte-específicos
+  chofer?: string | null;
+  rut_chofer?: string | null;
+  telefono_chofer?: string | null;
+  patente_camion?: string | null;
+  patente_remolque?: string | null;
+  planta_presentacion?: string | null;
   inicio_stacking?: string | null;
   fin_stacking?: string | null;
   ingreso_stacking?: string | null;
   citacion?: string | null;
+  llegada_planta?: string | null;
+  salida_planta?: string | null;
+  agendamiento_retiro?: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,56 +89,162 @@ function fmtDatetime(s: string | null | undefined): string {
 // ─── Tag replacement ──────────────────────────────────────────────────────────
 
 export function buildInstructivoTagValues(op: InstructivoOpData): Record<string, string> {
+  const pesoNeto  = op.peso_neto   != null ? `${op.peso_neto.toLocaleString("es-CL")} kg`  : "";
+  const pesoBruto = op.peso_bruto  != null ? `${op.peso_bruto.toLocaleString("es-CL")} kg` : "";
+  const today     = format(new Date(), "dd/MM/yyyy");
+
   return {
-    "{{ref_asli}}":            fmtRef(op),
-    "{{cliente_nombre}}":      op.cliente          ?? "",
-    "{{consignatario}}":       op.consignatario    ?? "",
-    "{{booking}}":             op.booking          ?? "",
-    "{{contenedor}}":          op.contenedor       ?? "",
-    "{{naviera}}":             op.naviera          ?? "",
-    "{{nave}}":                op.nave             ?? "",
-    "{{sello}}":               op.sello            ?? "",
-    "{{incoterm}}":            op.incoterm         ?? "",
-    "{{forma_pago}}":          op.forma_pago       ?? "",
-    "{{puerto_origen}}":       op.pol              ?? "",
-    "{{puerto_destino}}":      op.pod              ?? "",
-    "{{pais_destino}}":        op.pais             ?? "",
-    "{{etd}}":                 fmtDate(op.etd),
-    "{{eta}}":                 fmtDate(op.eta),
-    "{{fecha_emision}}":       format(new Date(), "dd/MM/yyyy"),
-    "{{descripcion_carga}}":   op.especie          ?? "",
-    "{{temperatura}}":         op.temperatura      ?? "",
-    "{{ventilacion}}":         op.ventilacion      ?? "",
-    "{{peso_bruto}}":          op.peso_bruto  != null ? `${op.peso_bruto.toLocaleString("es-CL")} kg` : "",
-    "{{peso_neto}}":           op.peso_neto   != null ? `${op.peso_neto.toLocaleString("es-CL")} kg` : "",
-    "{{tara}}":                op.tara        != null ? `${op.tara} kg` : "",
-    "{{cantidad_bultos}}":     op.pallets     != null ? String(op.pallets) : "",
-    "{{unidad_medida}}":       op.tipo_unidad      ?? "",
-    "{{observaciones}}":       op.observaciones    ?? "",
-    "{{moneda}}":              op.moneda           ?? "USD",
-    "{{empresa_transporte}}":  op.transporte       ?? "",
-    "{{tramo}}":               op.tramo            ?? "",
-    "{{deposito}}":            op.deposito         ?? "",
-    "{{citacion}}":            fmtDatetime(op.citacion),
-    "{{inicio_stacking}}":     fmtDatetime(op.inicio_stacking),
-    "{{fin_stacking}}":        fmtDatetime(op.fin_stacking),
-    "{{ingreso_stacking}}":    fmtDatetime(op.ingreso_stacking),
-    // ASLI datos estáticos
-    "{{asli_nombre}}":         "Asesorías y Servicios Logísticos Integrales Ltda.",
-    "{{asli_rut}}":            "76.XXX.XXX-X",
-    "{{asli_direccion}}":      "Valparaíso, Chile",
-    "{{asli_telefono}}":       "+56 X XXXX XXXX",
-    "{{asli_email}}":          "contacto@asli.cl",
-    // Campos vacíos fillable
-    "{{cliente_rut}}":         "",
-    "{{cliente_direccion}}":   "",
-    "{{tipo_contenedor}}":     "",
-    "{{viaje}}":               "",
-    "{{hs_code}}":             "",
-    "{{numero_documento}}":    "",
-    "{{monto_total}}":         "",
-    "{{precio_unitario}}":     "",
-    "{{concepto}}":            "",
+    // ── Referencia / documento ────────────────────────────────────────────────
+    "{{ref_asli}}":                  fmtRef(op),
+    "{{fecha}}":                     today,
+    "{{fecha_emision}}":             today,
+    "{{numero_documento}}":          "",
+    "{{numero_embarque}}":           op.booking          ?? "",
+    "{{csp}}":                       "",
+    "{{csg}}":                       "",
+    "{{reserva}}":                   "",
+    "{{tipo_documento}}":            "",
+    "{{tipo_bl}}":                   "",
+    "{{leyenda_bl}}":                "",
+
+    // ── Empresa exportadora ───────────────────────────────────────────────────
+    "{{empresa_nombre}}":            "Asesorías y Servicios Logísticos Integrales Ltda.",
+    "{{empresa_rut}}":               "76.XXX.XXX-X",
+    "{{empresa_giro}}":              "Agencia de Aduana y Servicios Logísticos",
+    "{{empresa_direccion}}":         "Valparaíso, Chile",
+    "{{exportador}}":                op.cliente          ?? "",
+
+    // ── Cliente ───────────────────────────────────────────────────────────────
+    "{{cliente_nombre}}":            op.cliente          ?? "",
+    "{{cliente_rut}}":               "",
+    "{{cliente_direccion}}":         "",
+
+    // ── Operación / naviera ───────────────────────────────────────────────────
+    "{{booking}}":                   op.booking          ?? "",
+    "{{naviera}}":                   op.naviera          ?? "",
+    "{{nave}}":                      op.nave             ?? "",
+    "{{viaje}}":                     "",
+    "{{numero_viaje}}":              "",
+    "{{contenedor}}":                op.contenedor       ?? "",
+    "{{contenedor_awb}}":            op.contenedor       ?? "",
+    "{{sello}}":                     op.sello            ?? "",
+    "{{tara}}":                      op.tara        != null ? `${op.tara} kg` : "",
+    "{{tipo_contenedor}}":           "",
+    "{{incoterm}}":                  op.incoterm         ?? "",
+    "{{modalidad_venta}}":           op.incoterm         ?? "",
+    "{{clausula_venta}}":            "",
+    "{{tipo_flete}}":                "",
+    "{{forma_pago}}":                op.forma_pago       ?? "",
+    "{{plazo_pago}}":                "",
+    "{{consignatario}}":             op.consignatario    ?? "",
+    "{{agente_aduana}}":             "",
+    "{{agente_embarcador}}":         "",
+    "{{contacto_operador}}":         "",
+    "{{rut_operador}}":              "",
+    "{{observaciones}}":             op.observaciones    ?? "",
+    "{{instrucciones_especiales}}":  "",
+
+    // ── Puertos y fechas ──────────────────────────────────────────────────────
+    "{{pais_origen}}":               "Chile",
+    "{{puerto_origen}}":             op.pol              ?? "",
+    "{{puerto_embarque}}":           op.pol              ?? "",
+    "{{puerto_destino}}":            op.pod              ?? "",
+    "{{puerto_descarga}}":           op.pod              ?? "",
+    "{{puerto_entrega}}":            op.pod              ?? "",
+    "{{destino_final}}":             op.pod              ?? "",
+    "{{pais_destino}}":              op.pais             ?? "",
+    "{{puerto_descarga_bl}}":        op.pod              ?? "",
+    "{{puerto_descarga_certificado}}": op.pod            ?? "",
+    "{{puerto_ingreso_fito}}":       "",
+    "{{fecha_embarque}}":            fmtDate(op.etd),
+    "{{fecha_presentacion}}":        "",
+    "{{fecha_en_planta}}":           fmtDatetime(op.citacion),
+    "{{fecha_en_puerto}}":           fmtDatetime(op.ingreso_stacking),
+    "{{etd}}":                       fmtDate(op.etd),
+    "{{eta}}":                       fmtDate(op.eta),
+    "{{corte_documental}}":          "",
+
+    // ── Carga ─────────────────────────────────────────────────────────────────
+    "{{especie}}":                   op.especie          ?? "",
+    "{{descripcion_carga}}":         op.especie          ?? "",
+    "{{temperatura}}":               op.temperatura      ?? "",
+    "{{ventilacion}}":               op.ventilacion      ?? "",
+    "{{peso_neto}}":                 pesoNeto,
+    "{{peso_bruto}}":                pesoBruto,
+    "{{peso_neto_total}}":           pesoNeto,
+    "{{peso_bruto_total}}":          pesoBruto,
+    "{{total_peso_neto}}":           pesoNeto,
+    "{{total_peso_bruto}}":          pesoBruto,
+    "{{cantidad_bultos}}":           op.pallets     != null ? String(op.pallets) : "",
+    "{{total_cantidad}}":            op.pallets     != null ? String(op.pallets) : "",
+    "{{total_pallets}}":             op.pallets     != null ? String(op.pallets) : "",
+    "{{unidad_medida}}":             op.tipo_unidad      ?? "",
+    "{{hs_code}}":                   "",
+    "{{planta_despacho}}":           op.tramo            ?? "",
+    "{{planta_consolidacion}}":      "",
+    "{{inspeccion_sag}}":            "",
+    "{{transporte_terrestre}}":      op.transporte       ?? "",
+
+    // ── Consignee ─────────────────────────────────────────────────────────────
+    "{{consignee}}":                 op.consignatario    ?? "",
+    "{{consignee_company}}":         op.consignatario    ?? "",
+    "{{consignee_direccion}}":       "",
+    "{{consignee_address}}":         "",
+    "{{consignee_contacto}}":        "",
+    "{{consignee_attn}}":            "",
+    "{{consignee_email}}":           "",
+    "{{consignee_telefono}}":        "",
+    "{{consignee_mobile}}":          "",
+    "{{consignee_usci}}":            "",
+    "{{consignee_uscc}}":            "",
+    "{{consignee_zip}}":             "",
+    "{{consignee_postal_code}}":     "",
+    "{{consignee_pais}}":            op.pais             ?? "",
+    "{{notify}}":                    "",
+    "{{notify_company}}":            "",
+    "{{notify_address}}":            "",
+    "{{notify_attn}}":               "",
+    "{{notify_uscc}}":               "",
+    "{{notify_mobile}}":             "",
+    "{{notify_email}}":              "",
+    "{{notify_zip}}":                "",
+
+    // ── Transporte ────────────────────────────────────────────────────────────
+    "{{empresa_transporte}}":        op.transporte       ?? "",
+    "{{chofer}}":                    op.chofer           ?? "",
+    "{{rut_chofer}}":                op.rut_chofer       ?? "",
+    "{{telefono_chofer}}":           op.telefono_chofer  ?? "",
+    "{{patente_camion}}":            op.patente_camion   ?? "",
+    "{{patente_remolque}}":          op.patente_remolque ?? "",
+    "{{tramo}}":                     op.tramo            ?? "",
+    "{{deposito}}":                  op.deposito         ?? "",
+    "{{moneda_tramo}}":              op.moneda           ?? "",
+
+    // ── Planta y stacking ─────────────────────────────────────────────────────
+    "{{planta_presentacion}}":       op.planta_presentacion ?? "",
+    "{{citacion}}":                  fmtDatetime(op.citacion),
+    "{{llegada_planta}}":            fmtDatetime(op.llegada_planta),
+    "{{salida_planta}}":             fmtDatetime(op.salida_planta),
+    "{{agendamiento_retiro}}":       fmtDatetime(op.agendamiento_retiro),
+    "{{inicio_stacking}}":           fmtDatetime(op.inicio_stacking),
+    "{{fin_stacking}}":              fmtDatetime(op.fin_stacking),
+    "{{ingreso_stacking}}":          fmtDatetime(op.ingreso_stacking),
+
+    // ── Totales / facturación ─────────────────────────────────────────────────
+    "{{moneda}}":                    op.moneda           ?? "USD",
+    "{{monto_total}}":               "",
+    "{{total_valor}}":               "",
+    "{{valor_total}}":               "",
+    "{{precio_unitario}}":           "",
+    "{{tipo_cambio}}":               "",
+    "{{concepto}}":                  "",
+
+    // ── ASLI ──────────────────────────────────────────────────────────────────
+    "{{asli_nombre}}":               "Asesorías y Servicios Logísticos Integrales Ltda.",
+    "{{asli_rut}}":                  "76.XXX.XXX-X",
+    "{{asli_direccion}}":            "Valparaíso, Chile",
+    "{{asli_telefono}}":             "+56 X XXXX XXXX",
+    "{{asli_email}}":                "contacto@asli.cl",
   };
 }
 
@@ -129,17 +254,58 @@ export function generateInstructivoHtml(
   formato: FormatoInstructivo,
   tagValues: Record<string, string>,
 ): string {
-  if (formato.template_type === "excel") {
-    throw new Error("Formato Excel no soportado para envío automático. Configure un formato HTML en Formatos de Documentos.");
-  }
-  if (!formato.contenido_html) {
-    throw new Error("El formato seleccionado no tiene contenido HTML.");
+  if (formato.template_type === "excel" || !formato.contenido_html) {
+    return ""; // Se maneja como adjunto; el body del correo solo lleva el resumen
   }
   let html = formato.contenido_html;
   for (const [tag, val] of Object.entries(tagValues)) {
     html = html.replaceAll(tag, val);
   }
   return html;
+}
+
+// ─── Excel generation (preserva estilos via ZIP/XML) ─────────────────────────
+
+export async function applyTagsToExcelBuffer(
+  buffer: ArrayBuffer,
+  values: Record<string, string>,
+): Promise<Blob> {
+  const zip = await JSZip.loadAsync(buffer);
+  const targets = [
+    "xl/sharedStrings.xml",
+    ...Object.keys(zip.files).filter((f) => f.startsWith("xl/worksheets/") && f.endsWith(".xml")),
+  ];
+  for (const path of targets) {
+    const file = zip.file(path);
+    if (!file) continue;
+    let content = await file.async("string");
+    let changed = false;
+    for (const [tag, replacement] of Object.entries(values)) {
+      const safe = replacement
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const xmlTag = tag.replace(/&/g, "&amp;");
+      if (content.includes(xmlTag)) { content = content.replaceAll(xmlTag, safe); changed = true; }
+    }
+    if (changed) zip.file(path, content);
+  }
+  return zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}
+
+// ─── Helpers base64 ──────────────────────────────────────────────────────────
+
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+export async function blobToBase64(blob: Blob): Promise<string> {
+  return arrayBufferToBase64(await blob.arrayBuffer());
 }
 
 // ─── Subject builder ──────────────────────────────────────────────────────────
@@ -206,6 +372,7 @@ export async function sendInstructivoDraft(params: {
   to: string;
   subject: string;
   htmlBody: string;
+  attachments?: EmailAttachment[];
 }): Promise<{ success: boolean; draftUrl?: string; error?: string }> {
   const scriptUrl = (import.meta.env.PUBLIC_GMAIL_DRAFT_SCRIPT_URL ?? "") as string;
   if (!scriptUrl) {

@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { sileo } from "sileo";
 import {
   fetchPublicItinerarios,
   createItinerario,
@@ -280,7 +281,6 @@ export function ItinerarioContent() {
   const [addRowModalError, setAddRowModalError] = useState<string | null>(null);
   const [addRowSaving, setAddRowSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [serviciosConDetalle, setServiciosConDetalle] = useState<ServicioConDetalle[]>([]);
   const [consorciosConDetalle, setConsorciosConDetalle] = useState<ConsorcioConDetalle[]>([]);
@@ -796,8 +796,7 @@ export function ItinerarioContent() {
       setDeletingId(it.id);
       try {
         await deleteItinerario(it.id);
-        setSuccessMessage(tr.successDeleted);
-        setTimeout(() => setSuccessMessage(null), 4000);
+        sileo.success({ title: tr.successDeleted });
         loadItinerarios();
       } catch (e) {
         setError(e instanceof Error ? e.message : tr.errorCreate);
@@ -887,8 +886,7 @@ export function ItinerarioContent() {
         escalas,
       });
       handleCloseAddRowModal();
-      setSuccessMessage(tr.addRowSuccess);
-      setTimeout(() => setSuccessMessage(null), 4000);
+      sileo.success({ title: tr.addRowSuccess });
       loadItinerarios();
     } catch (e) {
       setAddRowModalError(e instanceof Error ? e.message : tr.errorCreate);
@@ -947,13 +945,12 @@ export function ItinerarioContent() {
       };
       if (editingItinerarioId) {
         await updateItinerario(editingItinerarioId, payload);
-        setSuccessMessage(tr.successUpdated);
+        sileo.success({ title: tr.successUpdated });
       } else {
         await createItinerario(payload);
-        setSuccessMessage(tr.successCreated);
+        sileo.success({ title: tr.successCreated });
       }
       handleCloseModal();
-      setTimeout(() => setSuccessMessage(null), 4000);
       loadItinerarios();
     } catch (e) {
       setModalError(e instanceof Error ? e.message : tr.errorCreate);
@@ -1336,12 +1333,6 @@ export function ItinerarioContent() {
           </div>
         )}
 
-        {successMessage && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/20 text-white text-sm border border-emerald-400/50 flex items-center gap-2" role="status">
-            <Icon icon="lucide:check-circle" width={20} height={20} />
-            {successMessage}
-          </div>
-        )}
 
         {error && (
           <div

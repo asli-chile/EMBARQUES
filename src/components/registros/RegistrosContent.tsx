@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { columnWidths } from "@/lib/registros-table-config";
+import { sileo } from "sileo";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -496,7 +497,6 @@ export function RegistrosContent() {
   const [rowData, setRowData] = useState<OperacionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [catalogos, setCatalogos] = useState<CatalogosState>(emptyCatalogos);
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [addNewModal, setAddNewModal] = useState<{
@@ -919,8 +919,7 @@ export function RegistrosContent() {
     });
     gridRef.current?.api?.deselectAll();
     const count = selected.length;
-    setSuccessMsg(`${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva ASLI`);
-    setTimeout(() => setSuccessMsg(null), 4000);
+    sileo.success({ title: `${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva ASLI` });
   }, [supabase, getSelectedRows]);
 
   const handleSendToExterna = useCallback(async () => {
@@ -945,8 +944,7 @@ export function RegistrosContent() {
     }
     gridRef.current?.api?.deselectAll();
     const count = selected.length;
-    setSuccessMsg(`${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva Externa`);
-    setTimeout(() => setSuccessMsg(null), 4000);
+    sileo.success({ title: `${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva Externa` });
   }, [supabase, getSelectedRows]);
 
   const handleCellValueChanged = useCallback(
@@ -1011,8 +1009,7 @@ export function RegistrosContent() {
       setError(`Error al agregar a ${label}: ${err.message}`);
     } else {
       await fetchCatalogos();
-      setSuccessMsg(`"${newValue}" agregado correctamente a ${label}`);
-      setTimeout(() => setSuccessMsg(null), 3500);
+      sileo.success({ title: `"${newValue}" agregado correctamente a ${label}` });
     }
     setAddNewModal(null);
   }, [addNewModal, supabase, fetchCatalogos]);
@@ -1035,13 +1032,6 @@ export function RegistrosContent() {
       {error && (
         <div className="flex-shrink-0 px-3 sm:px-4 py-2 bg-red-100 text-red-700 text-xs sm:text-sm border-b border-red-200" role="alert">
           {error}
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg animate-fade-in">
-          <Icon icon="lucide:check-circle" className="w-5 h-5 shrink-0" />
-          {successMsg}
         </div>
       )}
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { format } from "date-fns";
@@ -26,6 +27,7 @@ type FormatoDocumento = {
   contenido_html: string;
   excel_path: string | null;
   excel_nombre: string | null;
+  cliente: string | null;
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -49,72 +51,213 @@ type TagGroup = { group: string; icon: string; tags: { tag: string; label: strin
 
 const TAG_GROUPS: TagGroup[] = [
   {
-    group: "Cliente", icon: "lucide:building-2",
+    group: "Empresa / Exportador", icon: "lucide:building-2",
     tags: [
-      { tag: "{{cliente_nombre}}",   label: "Nombre cliente",    sample: "EMPRESA EJEMPLO LTDA." },
-      { tag: "{{cliente_rut}}",      label: "RUT cliente",       sample: "12.345.678-9" },
-      { tag: "{{cliente_direccion}}",label: "Dirección",         sample: "Av. Providencia 1234, Santiago" },
+      { tag: "{{empresa_nombre}}",     label: "Nombre empresa",       sample: "EMPRESA EXPORTADORA S.A." },
+      { tag: "{{empresa_rut}}",        label: "RUT empresa",          sample: "76.123.456-7" },
+      { tag: "{{empresa_giro}}",       label: "Giro comercial",       sample: "Exportación de fruta fresca" },
+      { tag: "{{empresa_direccion}}", label: "Dirección empresa",     sample: "Av. Principal 1234, Santiago" },
+    ],
+  },
+  {
+    group: "Cliente", icon: "lucide:user",
+    tags: [
+      { tag: "{{cliente_nombre}}",     label: "Nombre cliente",       sample: "EMPRESA EJEMPLO LTDA." },
+      { tag: "{{cliente_rut}}",        label: "RUT cliente",          sample: "12.345.678-9" },
+      { tag: "{{cliente_direccion}}", label: "Dirección cliente",     sample: "Av. Providencia 1234, Santiago" },
+    ],
+  },
+  {
+    group: "Documento", icon: "lucide:file-text",
+    tags: [
+      { tag: "{{tipo_documento}}",     label: "Tipo de documento",    sample: "FACTURA COMERCIAL" },
+      { tag: "{{numero_documento}}",   label: "N° documento",         sample: "FAC-2025-001" },
+      { tag: "{{fecha}}",              label: "Fecha documento",      sample: "15/03/2025" },
+      { tag: "{{fecha_emision}}",      label: "Fecha emisión",        sample: "15/03/2025" },
+      { tag: "{{numero_embarque}}",    label: "N° embarque",          sample: "EMB-2025-042" },
+      { tag: "{{ref_asli}}",           label: "Referencia ASLI",      sample: "ASLI-00123" },
+      { tag: "{{csp}}",                label: "CSP",                  sample: "CSP-12345" },
+      { tag: "{{csg}}",                label: "CSG",                  sample: "CSG-67890" },
+      { tag: "{{reserva}}",            label: "N° reserva",           sample: "RSV-2025-001" },
+      { tag: "{{tipo_bl}}",            label: "Tipo de BL",           sample: "ORIGINAL" },
+      { tag: "{{leyenda_bl}}",         label: "Leyenda BL",           sample: "FREIGHT PREPAID" },
     ],
   },
   {
     group: "Operación", icon: "lucide:container",
     tags: [
-      { tag: "{{ref_asli}}",         label: "Referencia ASLI",   sample: "ASLI-00123" },
-      { tag: "{{booking}}",          label: "Booking",           sample: "BK-20250001" },
-      { tag: "{{contenedor}}",       label: "Contenedor",        sample: "MSCU1234567" },
-      { tag: "{{tipo_contenedor}}",  label: "Tipo contenedor",   sample: "40' HC" },
-      { tag: "{{naviera}}",          label: "Naviera",           sample: "MSC" },
-      { tag: "{{nave}}",             label: "Nave",              sample: "MSC BETTINA" },
-      { tag: "{{viaje}}",            label: "Viaje / Voyage",    sample: "VY-2025-01" },
+      { tag: "{{booking}}",            label: "Booking",              sample: "BK-20250001" },
+      { tag: "{{contenedor}}",         label: "Contenedor",           sample: "MSCU1234567" },
+      { tag: "{{contenedor_awb}}",     label: "Contenedor / AWB",     sample: "MSCU1234567" },
+      { tag: "{{sello}}",              label: "Sello",                sample: "ML-123456" },
+      { tag: "{{tara}}",               label: "Tara (kg)",            sample: "3.900" },
+      { tag: "{{tipo_contenedor}}",    label: "Tipo contenedor",      sample: "40' HC" },
+      { tag: "{{naviera}}",            label: "Naviera",              sample: "MSC" },
+      { tag: "{{nave}}",               label: "Nave",                 sample: "MSC BETTINA" },
+      { tag: "{{viaje}}",              label: "Viaje / Voyage",       sample: "VY-2025-01" },
+      { tag: "{{numero_viaje}}",       label: "Número de viaje",      sample: "VY-2025-01" },
+      { tag: "{{incoterm}}",           label: "Incoterm",             sample: "FOB" },
+      { tag: "{{modalidad_venta}}",    label: "Modalidad de venta",   sample: "FOB" },
+      { tag: "{{clausula_venta}}",     label: "Cláusula de venta",    sample: "CIF" },
+      { tag: "{{tipo_flete}}",         label: "Tipo de flete",        sample: "PREPAID" },
+      { tag: "{{forma_pago}}",         label: "Forma de pago",        sample: "Prepaid" },
+      { tag: "{{plazo_pago}}",         label: "Plazo de pago",        sample: "30 días" },
+      { tag: "{{exportador}}",         label: "Exportador",           sample: "EMPRESA EXPORTADORA S.A." },
+      { tag: "{{consignatario}}",      label: "Consignatario",        sample: "CONSIGNATARIO BEIJING" },
+      { tag: "{{agente_aduana}}",      label: "Agente de aduana",     sample: "ADUANAS EXPRESS LTDA." },
+      { tag: "{{agente_embarcador}}",  label: "Agente embarcador",    sample: "FREIGHT FORWARDER S.A." },
+      { tag: "{{contacto_operador}}",  label: "Contacto operador",    sample: "operaciones@asli.cl" },
+      { tag: "{{rut_operador}}",       label: "RUT operador",         sample: "76.XXX.XXX-X" },
+      { tag: "{{observaciones}}",      label: "Observaciones",        sample: "Frío continuo requerido" },
+      { tag: "{{instrucciones_especiales}}", label: "Instrucciones especiales", sample: "Mantener a temperatura constante" },
     ],
   },
   {
     group: "Puertos y Fechas", icon: "lucide:map-pin",
     tags: [
-      { tag: "{{puerto_origen}}",    label: "Puerto origen",     sample: "San Antonio, Chile" },
-      { tag: "{{puerto_destino}}",   label: "Puerto destino",    sample: "Shanghai, China" },
-      { tag: "{{etd}}",              label: "ETD",               sample: "15/03/2025" },
-      { tag: "{{eta}}",              label: "ETA",               sample: "12/04/2025" },
-      { tag: "{{fecha_emision}}",    label: "Fecha emisión",     sample: "10/03/2025" },
+      { tag: "{{pais_origen}}",        label: "País de origen",       sample: "Chile" },
+      { tag: "{{puerto_origen}}",      label: "Puerto origen (POL)",  sample: "San Antonio, Chile" },
+      { tag: "{{puerto_embarque}}",    label: "Puerto de embarque",   sample: "San Antonio, Chile" },
+      { tag: "{{puerto_descarga}}",    label: "Puerto de descarga",   sample: "Shanghai, China" },
+      { tag: "{{puerto_destino}}",     label: "Puerto de destino (POD)", sample: "Shanghai, China" },
+      { tag: "{{puerto_entrega}}",     label: "Puerto de entrega",    sample: "Guangzhou, China" },
+      { tag: "{{destino_final}}",      label: "Destino final",        sample: "Beijing, China" },
+      { tag: "{{pais_destino}}",       label: "País de destino",      sample: "China" },
+      { tag: "{{puerto_descarga_bl}}",       label: "Puerto descarga (BL)",         sample: "Shanghai, China" },
+      { tag: "{{puerto_descarga_certificado}}",label: "Puerto descarga (certificado)",sample: "Shanghai, China" },
+      { tag: "{{puerto_ingreso_fito}}",      label: "Puerto ingreso fito",           sample: "Shanghai" },
+      { tag: "{{fecha_embarque}}",     label: "Fecha de embarque",    sample: "15/03/2025" },
+      { tag: "{{fecha_presentacion}}", label: "Fecha de presentación",sample: "10/03/2025" },
+      { tag: "{{fecha_en_planta}}",    label: "Fecha en planta",      sample: "12/03/2025 08:00" },
+      { tag: "{{fecha_en_puerto}}",    label: "Fecha en puerto",      sample: "14/03/2025 10:00" },
+      { tag: "{{etd}}",                label: "ETD",                  sample: "15/03/2025" },
+      { tag: "{{eta}}",                label: "ETA",                  sample: "12/04/2025" },
+      { tag: "{{corte_documental}}",   label: "Corte documental",     sample: "10/03/2025 17:00" },
     ],
   },
   {
     group: "Carga", icon: "lucide:package",
     tags: [
-      { tag: "{{descripcion_carga}}",label: "Descripción carga", sample: "Fruta fresca refrigerada" },
-      { tag: "{{temperatura}}",      label: "Temperatura",       sample: "-18°C" },
-      { tag: "{{peso_bruto}}",       label: "Peso bruto",        sample: "22.500 kg" },
-      { tag: "{{cantidad_bultos}}",  label: "Cantidad bultos",   sample: "1.200" },
-      { tag: "{{hs_code}}",          label: "HS Code",           sample: "0811.90" },
+      { tag: "{{especie}}",            label: "Especie / producto",   sample: "Uva de mesa" },
+      { tag: "{{descripcion_carga}}", label: "Descripción carga",     sample: "Fruta fresca refrigerada" },
+      { tag: "{{temperatura}}",        label: "Temperatura",          sample: "-0.5°C" },
+      { tag: "{{ventilacion}}",        label: "Ventilación",          sample: "10 CBM/H" },
+      { tag: "{{peso_neto}}",          label: "Peso neto total",      sample: "20.000 kg" },
+      { tag: "{{peso_bruto}}",         label: "Peso bruto total",     sample: "22.500 kg" },
+      { tag: "{{peso_neto_total}}",    label: "Peso neto total",      sample: "20.000 kg" },
+      { tag: "{{peso_bruto_total}}",   label: "Peso bruto total",     sample: "22.500 kg" },
+      { tag: "{{cantidad_bultos}}",    label: "Cantidad bultos",      sample: "1.200" },
+      { tag: "{{unidad_medida}}",      label: "Unidad de medida",     sample: "PALLETS" },
+      { tag: "{{hs_code}}",            label: "HS Code",              sample: "0806.10" },
+      { tag: "{{planta_despacho}}",    label: "Planta de despacho",   sample: "Frigorífico Del Monte" },
+      { tag: "{{planta_consolidacion}}",label: "Planta consolidación",sample: "Consolidadora Sur" },
+      { tag: "{{inspeccion_sag}}",     label: "Inspección SAG",       sample: "SAG-2025-1234" },
+      { tag: "{{transporte_terrestre}}",label: "Transporte terrestre",sample: "Transportes ABC" },
     ],
   },
   {
     group: "Transporte", icon: "lucide:truck",
     tags: [
-      { tag: "{{empresa_transporte}}",label: "Empresa transporte",sample: "Transportes ABC" },
-      { tag: "{{tramo}}",             label: "Tramo",             sample: "San Antonio → Santiago" },
-      { tag: "{{valor_tramo}}",       label: "Valor tramo",       sample: "USD 850" },
-      { tag: "{{deposito}}",          label: "Depósito",          sample: "Depot Norte" },
+      { tag: "{{empresa_transporte}}",label: "Empresa transporte",    sample: "Transportes ABC" },
+      { tag: "{{chofer}}",             label: "Chofer",               sample: "Juan Pérez" },
+      { tag: "{{rut_chofer}}",         label: "RUT chofer",           sample: "12.345.678-9" },
+      { tag: "{{telefono_chofer}}",    label: "Teléfono chofer",      sample: "+56 9 1234 5678" },
+      { tag: "{{patente_camion}}",     label: "Patente camión",       sample: "ABCD12" },
+      { tag: "{{patente_remolque}}",   label: "Patente remolque",     sample: "REMO34" },
+      { tag: "{{tramo}}",              label: "Tramo",                sample: "San Antonio - Santiago" },
+      { tag: "{{valor_tramo}}",        label: "Valor tramo",          sample: "USD 850" },
+      { tag: "{{moneda_tramo}}",       label: "Moneda tramo",         sample: "USD" },
+      { tag: "{{deposito}}",           label: "Depósito",             sample: "Depot Norte" },
     ],
   },
   {
-    group: "Facturación", icon: "lucide:dollar-sign",
+    group: "Planta y Stacking", icon: "lucide:warehouse",
     tags: [
-      { tag: "{{numero_documento}}", label: "N° documento",      sample: "FAC-2025-001" },
-      { tag: "{{monto_total}}",      label: "Monto total",       sample: "USD 1.250,00" },
-      { tag: "{{moneda}}",           label: "Moneda",            sample: "USD" },
-      { tag: "{{tipo_cambio}}",      label: "Tipo de cambio",    sample: "950" },
-      { tag: "{{concepto}}",         label: "Concepto",          sample: "Flete + Handling" },
+      { tag: "{{planta_presentacion}}",label: "Planta de citación",   sample: "Frigorífico El Monte" },
+      { tag: "{{citacion}}",           label: "Fecha en planta / Citación", sample: "12/03/2025 08:00" },
+      { tag: "{{llegada_planta}}",     label: "Llegada planta",       sample: "12/03/2025 09:15" },
+      { tag: "{{salida_planta}}",      label: "Salida planta",        sample: "12/03/2025 12:30" },
+      { tag: "{{agendamiento_retiro}}",label: "Agendamiento retiro",  sample: "10/03/2025 10:00" },
+      { tag: "{{inicio_stacking}}",    label: "Inicio stacking",      sample: "13/03/2025 06:00" },
+      { tag: "{{fin_stacking}}",       label: "Fin stacking",         sample: "14/03/2025 18:00" },
+      { tag: "{{ingreso_stacking}}",   label: "Ingreso stacking",     sample: "13/03/2025 14:00" },
+    ],
+  },
+  {
+    group: "Consignee", icon: "lucide:user-check",
+    tags: [
+      { tag: "{{consignee}}",               label: "Consignee (nombre)",    sample: "BEIJING IMPORT CO., LTD." },
+      { tag: "{{consignee_company}}",       label: "Empresa consignee",     sample: "BEIJING IMPORT CO., LTD." },
+      { tag: "{{consignee_direccion}}",     label: "Dirección consignee",   sample: "No. 1 Wangfujing St., Beijing" },
+      { tag: "{{consignee_address}}",       label: "Address consignee",     sample: "No. 1 Wangfujing St., Beijing 100006" },
+      { tag: "{{consignee_contacto}}",      label: "Contacto consignee",    sample: "Mr. Li Wei" },
+      { tag: "{{consignee_attn}}",          label: "Attn. consignee",       sample: "Mr. Li Wei" },
+      { tag: "{{consignee_email}}",         label: "Email consignee",       sample: "import@beijing.cn" },
+      { tag: "{{consignee_telefono}}",      label: "Teléfono consignee",    sample: "+86 10 1234 5678" },
+      { tag: "{{consignee_mobile}}",        label: "Móvil consignee",       sample: "+86 10 1234 5678" },
+      { tag: "{{consignee_usci}}",          label: "USCI consignee",        sample: "91110000100006795A" },
+      { tag: "{{consignee_uscc}}",          label: "USCC consignee",        sample: "91110000100006795A" },
+      { tag: "{{consignee_zip}}",           label: "ZIP consignee",         sample: "100006" },
+      { tag: "{{consignee_postal_code}}",   label: "Postal code consignee", sample: "100006" },
+      { tag: "{{consignee_pais}}",          label: "País consignee",        sample: "China" },
+      { tag: "{{notify}}",                  label: "Notify (nombre)",       sample: "SAME AS CONSIGNEE" },
+    ],
+  },
+  {
+    group: "Notify Party", icon: "lucide:bell",
+    tags: [
+      { tag: "{{notify_company}}",     label: "Empresa notify",       sample: "SAME AS CONSIGNEE" },
+      { tag: "{{notify_address}}",     label: "Dirección notify",     sample: "No. 1 Wangfujing St., Beijing 100006" },
+      { tag: "{{notify_attn}}",        label: "Attn. notify",         sample: "Ms. Zhang Fang" },
+      { tag: "{{notify_uscc}}",        label: "USCC notify",          sample: "91110000100006795B" },
+      { tag: "{{notify_mobile}}",      label: "Móvil notify",         sample: "+86 10 9876 5432" },
+      { tag: "{{notify_email}}",       label: "Email notify",         sample: "notify@beijing.cn" },
+      { tag: "{{notify_zip}}",         label: "ZIP notify",           sample: "100006" },
+    ],
+  },
+  {
+    group: "Items (tabla)", icon: "lucide:list",
+    tags: [
+      { tag: "{{#items}}",             label: "Inicio bloque items",  sample: "(inicio de fila)" },
+      { tag: "{{/items}}",             label: "Fin bloque items",     sample: "(fin de fila)" },
+      { tag: "{{cantidad}}",           label: "Cantidad",             sample: "960" },
+      { tag: "{{tipo_envase}}",        label: "Tipo envase",          sample: "CAJA" },
+      { tag: "{{variedad}}",           label: "Variedad",             sample: "RED GLOBE" },
+      { tag: "{{categoria}}",          label: "Categoría",            sample: "PRIMERA" },
+      { tag: "{{etiqueta}}",           label: "Etiqueta",             sample: "PREMIUM" },
+      { tag: "{{calibre}}",            label: "Calibre",              sample: "XL" },
+      { tag: "{{kg_neto_unidad}}",     label: "Kg neto / unidad",     sample: "8,2" },
+      { tag: "{{peso_neto}}",          label: "Peso neto línea",      sample: "7.872,0" },
+      { tag: "{{peso_bruto}}",         label: "Peso bruto línea",     sample: "8.640,0" },
+      { tag: "{{precio_caja}}",        label: "Precio por caja",      sample: "12,50" },
+      { tag: "{{total_linea}}",        label: "Total línea",          sample: "12.000,00" },
+    ],
+  },
+  {
+    group: "Totales", icon: "lucide:sigma",
+    tags: [
+      { tag: "{{total_cantidad}}",     label: "Total cantidad",       sample: "2.400" },
+      { tag: "{{total_pallets}}",      label: "Total pallets",        sample: "20" },
+      { tag: "{{total_peso_neto}}",    label: "Total peso neto",      sample: "20.000 kg" },
+      { tag: "{{total_peso_bruto}}",   label: "Total peso bruto",     sample: "22.500 kg" },
+      { tag: "{{total_valor}}",        label: "Total valor",          sample: "USD 30.000,00" },
+      { tag: "{{valor_total}}",        label: "Valor total",          sample: "USD 30.000,00" },
+      { tag: "{{monto_total}}",        label: "Monto total",          sample: "USD 30.000,00" },
+      { tag: "{{moneda}}",             label: "Moneda",               sample: "USD" },
+      { tag: "{{precio_unitario}}",    label: "Precio unitario",      sample: "12,50" },
+      { tag: "{{tipo_cambio}}",        label: "Tipo de cambio",       sample: "950" },
+      { tag: "{{plazo_pago}}",         label: "Plazo de pago",        sample: "30 días" },
+      { tag: "{{concepto}}",           label: "Concepto",             sample: "Flete + Handling" },
     ],
   },
   {
     group: "ASLI", icon: "lucide:building",
     tags: [
-      { tag: "{{asli_nombre}}",      label: "Nombre empresa",    sample: "Asesorías y Servicios Logísticos Integrales Ltda." },
-      { tag: "{{asli_rut}}",         label: "RUT ASLI",          sample: "76.XXX.XXX-X" },
-      { tag: "{{asli_direccion}}",   label: "Dirección ASLI",    sample: "Valparaíso, Chile" },
-      { tag: "{{asli_telefono}}",    label: "Teléfono ASLI",     sample: "+56 X XXXX XXXX" },
-      { tag: "{{asli_email}}",       label: "Email ASLI",        sample: "contacto@asli.cl" },
+      { tag: "{{asli_nombre}}",        label: "Nombre empresa",       sample: "Asesorías y Servicios Logísticos Integrales Ltda." },
+      { tag: "{{asli_rut}}",           label: "RUT ASLI",             sample: "76.XXX.XXX-X" },
+      { tag: "{{asli_direccion}}",     label: "Dirección ASLI",       sample: "Valparaíso, Chile" },
+      { tag: "{{asli_telefono}}",      label: "Teléfono ASLI",        sample: "+56 X XXXX XXXX" },
+      { tag: "{{asli_email}}",         label: "Email ASLI",           sample: "contacto@asli.cl" },
     ],
   },
 ];
@@ -304,7 +447,6 @@ export function FormatosDocumentosContent() {
   const [formatos, setFormatos] = useState<FormatoDocumento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const [view, setView] = useState<"list" | "editor">("list");
 
@@ -328,6 +470,10 @@ export function FormatosDocumentosContent() {
   const [xlsxActiveSheet, setXlsxActiveSheet] = useState<string>("");
   const [xlsxWb, setXlsxWb] = useState<XLSX.WorkBook | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // ── Cliente asignado al formato ───────────────────────────────────────────
+  const [clienteFormato, setClienteFormato] = useState<string>("");
+  const [empresas, setEmpresas] = useState<string[]>([]);
 
   const [tagSearch, setTagSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(TAG_GROUPS.map((g) => g.group)));
@@ -359,13 +505,14 @@ export function FormatosDocumentosContent() {
     setFormatos((data ?? []) as FormatoDocumento[]);
   }, []);
 
-  useEffect(() => { void fetchFormatos(); }, [fetchFormatos]);
-
   useEffect(() => {
-    if (!success) return;
-    const t = setTimeout(() => setSuccess(null), 3500);
-    return () => clearTimeout(t);
-  }, [success]);
+    void fetchFormatos();
+    // Cargar empresas disponibles
+    supabase.from("empresas").select("nombre").order("nombre").then(({ data }) => {
+      setEmpresas((data ?? []).map((e: { nombre: string }) => e.nombre));
+    });
+  }, [fetchFormatos]);
+
 
   // ── Procesar Excel al seleccionar ─────────────────────────────────────────
   const processExcelFile = (file: File) => {
@@ -414,7 +561,7 @@ export function FormatosDocumentosContent() {
   // ── Abrir editor ──────────────────────────────────────────────────────────
   const handleNuevo = () => {
     setEditingId(null);
-    setNombre(""); setTipo("proforma"); setDescripcion("");
+    setNombre(""); setTipo("proforma"); setDescripcion(""); setClienteFormato("");
     setTemplateType("html"); setContenidoHtml(TEMPLATE_BASE);
     setExcelFile(null); setExcelPath(null); setExcelNombre(null);
     setXlsxTags([]); setXlsxPreviewHtml(null); setXlsxSheetNames([]); setXlsxActiveSheet(""); setXlsxWb(null); setXlsxPanel("upload");
@@ -424,7 +571,7 @@ export function FormatosDocumentosContent() {
 
   const handleEditar = (f: FormatoDocumento) => {
     setEditingId(f.id);
-    setNombre(f.nombre); setTipo(f.tipo); setDescripcion(f.descripcion ?? "");
+    setNombre(f.nombre); setTipo(f.tipo); setDescripcion(f.descripcion ?? ""); setClienteFormato(f.cliente ?? "");
     setTemplateType(f.template_type ?? "html");
     setContenidoHtml(f.contenido_html ?? TEMPLATE_BASE);
     setExcelFile(null);
@@ -472,6 +619,7 @@ export function FormatosDocumentosContent() {
       contenido_html: templateType === "html" ? contenidoHtml : "",
       excel_path: templateType === "excel" ? finalExcelPath : null,
       excel_nombre: templateType === "excel" ? finalExcelNombre : null,
+      cliente: clienteFormato.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -483,7 +631,7 @@ export function FormatosDocumentosContent() {
     }
     setSaving(false);
     if (err) { setError(err.message); return; }
-    setSuccess(editingId ? "Formato actualizado." : "Formato creado.");
+    sileo.success({ title: editingId ? "Formato actualizado." : "Formato creado." });
     setView("list");
     void fetchFormatos();
   };
@@ -498,7 +646,7 @@ export function FormatosDocumentosContent() {
     const { error: err } = await supabase.from("formatos_documentos").delete().eq("id", confirmDelete.id);
     setDeleting(false); setConfirmDelete(null);
     if (err) { setError(err.message); return; }
-    setSuccess("Formato eliminado.");
+    sileo.success({ title: "Formato eliminado." });
     void fetchFormatos();
   };
 
@@ -635,12 +783,6 @@ export function FormatosDocumentosContent() {
             <button onClick={() => setError(null)}><Icon icon="lucide:x" width={14} height={14} /></button>
           </div>
         )}
-        {success && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm">
-            <Icon icon="lucide:check-circle" width={16} height={16} className="shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -689,6 +831,17 @@ export function FormatosDocumentosContent() {
                               <Icon icon={isExcel ? "lucide:table" : "lucide:code"} width={9} height={9} />
                               {isExcel ? "Excel" : "HTML"}
                             </span>
+                            {f.cliente ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-violet-100 text-violet-700 border-violet-200 max-w-[120px]">
+                                <Icon icon="lucide:building-2" width={9} height={9} />
+                                <span className="truncate">{f.cliente}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-neutral-100 text-neutral-500 border-neutral-200">
+                                <Icon icon="lucide:globe" width={9} height={9} />
+                                Global
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -930,6 +1083,16 @@ export function FormatosDocumentosContent() {
             <div className="min-w-[260px] flex-1">
               <label className={labelCls}>Descripción (opcional)</label>
               <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Uso o cliente de este formato" className={inputCls} />
+            </div>
+            <div className="min-w-[200px]">
+              <label className={labelCls}>
+                <Icon icon="lucide:building-2" className="inline w-3 h-3 mr-1" />
+                Cliente asignado
+              </label>
+              <select value={clienteFormato} onChange={(e) => setClienteFormato(e.target.value)} className={inputCls}>
+                <option value="">— Global (todos los clientes) —</option>
+                {empresas.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
             </div>
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -61,7 +62,6 @@ export function ConsignatariosContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const [selectedCliente, setSelectedCliente] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -162,17 +162,16 @@ export function ConsignatariosContent() {
     }
 
     if (err) { setError(err.message); setSaving(false); return; }
-    setSuccess(modal === "edit" ? "Consignatario actualizado." : "Consignatario creado.");
+    sileo.success({ title: modal === "edit" ? "Consignatario actualizado." : "Consignatario creado." });
     setSaving(false);
     closeModal();
     fetchData();
-    setTimeout(() => setSuccess(null), 3000);
   };
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
     const { error: err } = await supabase.from("consignatarios").delete().eq("id", confirmDelete.id);
-    if (err) { setError(err.message); } else { setSuccess("Consignatario eliminado."); fetchData(); setTimeout(() => setSuccess(null), 3000); }
+    if (err) { setError(err.message); } else { sileo.success({ title: "Consignatario eliminado." }); fetchData(); }
     setConfirmDelete(null);
   };
 
@@ -223,11 +222,6 @@ export function ConsignatariosContent() {
           )}
         </div>
 
-        {success && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium flex items-center gap-2">
-            <Icon icon="lucide:check-circle" className="w-4 h-4" />{success}
-          </div>
-        )}
         {error && (
           <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium flex items-center gap-2">
             <Icon icon="lucide:alert-circle" className="w-4 h-4" />{error}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -54,7 +55,6 @@ export function TransportesConfigContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'empresa' | 'chofer' | 'equipo' | 'tramo'; id: string; name: string } | null>(null);
 
@@ -172,8 +172,7 @@ export function TransportesConfigContent() {
     setNewEmpresaNombre("");
     setNewEmpresaRut("");
     setSelectedEmpresaId(data.id);
-    setSuccess("Empresa creada.");
-    setTimeout(() => setSuccess(null), 2500);
+    sileo.success({ title: "Empresa creada." });
   };
 
   const handleAddChofer = async () => {
@@ -317,8 +316,7 @@ export function TransportesConfigContent() {
     if (selectedEmpresaId === id) {
       setSelectedEmpresaId("");
     }
-    setSuccess("Empresa eliminada.");
-    setTimeout(() => setSuccess(null), 2500);
+    sileo.success({ title: "Empresa eliminada." });
   };
 
   const handleDeleteChofer = async (id: string) => {
@@ -335,8 +333,7 @@ export function TransportesConfigContent() {
       return;
     }
     setChoferes((prev) => prev.filter((c) => c.id !== id));
-    setSuccess("Chofer eliminado.");
-    setTimeout(() => setSuccess(null), 2500);
+    sileo.success({ title: "Chofer eliminado." });
   };
 
   const handleDeleteEquipo = async (id: string) => {
@@ -353,8 +350,7 @@ export function TransportesConfigContent() {
       return;
     }
     setEquipos((prev) => prev.filter((e) => e.id !== id));
-    setSuccess("Equipo eliminado.");
-    setTimeout(() => setSuccess(null), 2500);
+    sileo.success({ title: "Equipo eliminado." });
   };
 
   const handleDeleteTramo = async (id: string) => {
@@ -371,8 +367,7 @@ export function TransportesConfigContent() {
       return;
     }
     setTramos((prev) => prev.filter((t) => t.id !== id));
-    setSuccess("Tramo eliminado.");
-    setTimeout(() => setSuccess(null), 2500);
+    sileo.success({ title: "Tramo eliminado." });
   };
 
   const handleConfirmDelete = async () => {
@@ -587,17 +582,6 @@ export function TransportesConfigContent() {
                     >
                       <Icon icon="lucide:alert-circle" width={13} height={13} className="shrink-0" />
                       {error}
-                    </div>
-                  </div>
-                )}
-                {success && (
-                  <div className="px-4 pt-2">
-                    <div
-                      className="px-3 py-2 bg-green-50 text-green-700 text-xs rounded-xl border border-green-200 flex items-center gap-2"
-                      role="status"
-                    >
-                      <Icon icon="lucide:check-circle-2" width={13} height={13} className="shrink-0" />
-                      {success}
                     </div>
                   </div>
                 )}

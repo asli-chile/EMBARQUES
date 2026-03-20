@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -110,6 +111,22 @@ function buildEmailContent(op: Operacion) {
   htmlBody += `<p>Quedo atento.</p></div>`;
 
   return { subject, htmlBody };
+}
+
+function buildReservaBody(op: Operacion): string {
+  const lines: string[] = [
+    `SOLICITUD DE RESERVA`,
+    `Ref: ${op.ref_asli ?? `#${op.correlativo}`}`,
+    `Cliente: ${op.cliente ?? "-"}`,
+    `Naviera: ${op.naviera ?? "-"}  |  Nave: ${op.nave ?? "-"}`,
+    `POL: ${op.pol ?? "-"}  |  POD: ${op.pod ?? "-"}`,
+    `ETD: ${op.etd ? format(new Date(op.etd), "dd/MM/yyyy") : "-"}`,
+    `Especie: ${op.especie ?? "-"}`,
+    op.temperatura != null ? `Temperatura: ${op.temperatura}°C` : "",
+    op.ventilacion ? `Ventilación: ${op.ventilacion}` : "",
+    op.booking ? `Booking: ${op.booking}` : "",
+  ].filter(Boolean);
+  return lines.join("\n");
 }
 
 async function copyToClipboard(op: Operacion): Promise<boolean> {
@@ -302,47 +319,21 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
 // ─── EmailModal ───────────────────────────────────────────────────────────────
 
 function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { subject } = buildEmailContent(op);
+  const plainBody = buildReservaBody(op);
 
-  const handleSend = async () => {
-    const scriptUrl = import.meta.env.PUBLIC_GMAIL_DRAFT_SCRIPT_URL;
-    if (!scriptUrl) {
-      setError("No se ha configurado la URL del script de Gmail.");
-      return;
-    }
+  // Abre Gmail del usuario con el compositor pre-llenado (To, Subject, Body)
+  // El correo sale desde la cuenta del ejecutivo que está logueado en Gmail
+  const gmailComposeUrl =
+    "https://mail.google.com/mail/?view=cm&fs=1" +
+    `&to=${encodeURIComponent("informaciones@asli.cl")}` +
+    `&su=${encodeURIComponent(subject)}` +
+    `&body=${encodeURIComponent(plainBody)}`;
 
-    setSending(true);
-    setError(null);
-    const { subject, htmlBody } = buildEmailContent(op);
-
-    try {
-      const res = await fetch(scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ to: "informaciones@asli.cl", subject, htmlBody }),
-      });
-      const data = await res.json();
-      if (data.success && data.draftUrl) {
-        window.open(data.draftUrl, "_blank");
-      } else if (data.success) {
-        window.open("https://mail.google.com/mail/#drafts", "_blank");
-      } else {
-        setError(data.error || "Error al crear el borrador en Gmail.");
-        setSending(false);
-        return;
-      }
-    } catch {
-      setError("No se pudo conectar con el servicio de correo.");
-      setSending(false);
-      return;
-    }
-
-    setSending(false);
+  const handleAbrir = () => {
+    window.open(gmailComposeUrl, "_blank", "noopener,noreferrer");
     onClose();
   };
-
-  const disabled = sending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
@@ -352,43 +343,40 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
             <Icon icon="lucide:mail" width={20} height={20} className="text-brand-blue" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">Enviar por correo</h3>
+            <h3 className="text-sm font-bold text-neutral-900">Enviar solicitud de reserva</h3>
             <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
           </div>
         </div>
 
-        {error && (
-          <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>
-        )}
-
-        <p className="text-xs text-neutral-500 mb-4">Se creará un borrador en Gmail con los datos del embarque y carga.</p>
+        <div className="mb-4 space-y-2">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-brand-blue/5 border border-brand-blue/15">
+            <Icon icon="lucide:info" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />
+            <p className="text-xs text-neutral-600">
+              Se abrirá <strong>tu Gmail</strong> con el correo listo para enviar a{" "}
+              <strong>informaciones@asli.cl</strong>. Solo haz clic en Enviar.
+            </p>
+          </div>
+          <div className="px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
+            <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">Asunto</p>
+            <p className="text-xs text-neutral-700 font-medium leading-snug line-clamp-2">{subject}</p>
+          </div>
+        </div>
 
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            disabled={disabled}
-            className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
+            className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
           >
             Cancelar
           </button>
           <button
             type="button"
-            disabled={disabled}
-            onClick={() => void handleSend()}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20 disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={handleAbrir}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20"
           >
-            {sending ? (
-              <>
-                <Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />
-                Creando...
-              </>
-            ) : (
-              <>
-                <Icon icon="lucide:mail" width={15} height={15} />
-                Enviar
-              </>
-            )}
+            <Icon icon="lucide:external-link" width={14} height={14} />
+            Abrir en mi Gmail
           </button>
         </div>
       </div>
@@ -579,9 +567,7 @@ export function MisReservasContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [successTransport, setSuccessTransport] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showFilters, setShowFilters] = useState(false);
@@ -715,7 +701,7 @@ export function MisReservasContent() {
 
     if (toSend.length > 0) {
       const { error } = await supabase.from("operaciones").update({ enviado_transporte: true, tipo_reserva_transporte: "asli" }).in("id", toSend.map((op) => op.id));
-      if (error) { setActionLoading(false); setErrorMsg(error.message); setTimeout(() => setErrorMsg(null), 4000); return; }
+      if (error) { setActionLoading(false); sileo.error({ title: error.message }); return; }
     }
 
     setActionLoading(false);
@@ -747,11 +733,11 @@ export function MisReservasContent() {
 
     if (toSend.length > 0) {
       const { error: updateError } = await supabase.from("operaciones").update({ enviado_transporte: true, tipo_reserva_transporte: "externa" }).in("id", toSend.map((op) => op.id));
-      if (updateError) { setActionLoading(false); setErrorMsg(updateError.message); setTimeout(() => setErrorMsg(null), 4000); return; }
+      if (updateError) { setActionLoading(false); sileo.error({ title: updateError.message }); return; }
 
       const rows = toSend.map((op) => ({ cliente: op.cliente || null, booking: op.booking || null, naviera: op.naviera || null, nave: op.nave || null, pod: op.pod || null, etd: op.etd || null }));
       const { error: insertError } = await supabase.from("transportes_reservas_ext").insert(rows);
-      if (insertError) { setActionLoading(false); setErrorMsg(insertError.message); setTimeout(() => setErrorMsg(null), 4000); return; }
+      if (insertError) { setActionLoading(false); sileo.error({ title: insertError.message }); return; }
     }
 
     setActionLoading(false);
@@ -774,14 +760,13 @@ export function MisReservasContent() {
 
   const handleCopy = async (op: Operacion) => {
     const ok = await copyToClipboard(op);
-    if (ok) { setSuccessMsg("Datos copiados al portapapeles"); setTimeout(() => setSuccessMsg(null), 2500); }
+    if (ok) { sileo.success({ title: "Datos copiados al portapapeles" }); }
   };
 
   const handleBookingSaved = (opId: string, updated: { booking: string | null; booking_doc_url: string | null }) => {
     setOperaciones((prev) => prev.map((op) => op.id === opId ? { ...op, ...updated } : op));
     setBookingModal(null);
-    setSuccessMsg("Booking guardado correctamente");
-    setTimeout(() => setSuccessMsg(null), 3000);
+    sileo.success({ title: "Booking guardado correctamente" });
   };
 
   if (loading) {
@@ -1174,14 +1159,6 @@ export function MisReservasContent() {
 
       </div>
 
-      {/* Toast éxito */}
-      {successMsg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg animate-fade-in">
-          <Icon icon="lucide:check-circle" className="w-5 h-5 shrink-0" />
-          {successMsg}
-        </div>
-      )}
-
       {/* Modal éxito transporte */}
       {successTransport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -1211,14 +1188,6 @@ export function MisReservasContent() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Toast error */}
-      {errorMsg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-red-600 text-white text-sm font-medium shadow-lg animate-fade-in">
-          <Icon icon="lucide:alert-circle" className="w-5 h-5 shrink-0" />
-          {errorMsg}
         </div>
       )}
 

@@ -1,0 +1,118 @@
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+
+    // ── Firma ──────────────────────────────────────────────────────────────
+    var signature = "";
+    var aliases = Gmail.Users.Settings.SendAs.list("me");
+    if (aliases.sendAs) {
+      for (var i = 0; i < aliases.sendAs.length; i++) {
+        if (aliases.sendAs[i].isDefault) {
+          signature = aliases.sendAs[i].signature || "";
+          break;
+        }
+      }
+    }
+
+    var fullHtml = data.htmlBody || "";
+    if (signature) {
+      fullHtml += "<br><br>--<br>" + signature;
+    }
+
+    var options = { htmlBody: fullHtml };
+    var blobs = [];
+
+    // ── Adjuntos base64 (instructivo Excel + booking PDF) ──────────────────
+    if (data.attachments && data.attachments.length > 0) {
+      for (var j = 0; j < data.attachments.length; j++) {
+        var att = data.attachments[j];
+        try {
+          blobs.push(Utilities.newBlob(
+            Utilities.base64Decode(att.base64Data),
+            att.mimeType,
+            att.filename
+          ));
+        } catch (blobErr) {
+          Logger.log("Error adjunto " + att.filename + ": " + blobErr.message);
+        }
+      }
+    }
+
+    // ── Adjunto por URL (legacy) ───────────────────────────────────────────
+    if (data.attachmentUrl) {
+      try {
+        var response = UrlFetchApp.fetch(data.attachmentUrl, { muteHttpExceptions: true });
+        if (response.getResponseCode() === 200) {
+          var urlBlob = response.getBlob();
+          urlBlob.setName(data.attachmentUrl.split('/').pop().split('?')[0] || 'booking.pdf');
+          blobs.push(urlBlob);
+        }
+      } catch (fetchErr) {
+        Logger.log("Error URL adjunto: " + fetchErr.message);
+      }
+    }
+
+    if (blobs.length > 0) {
+      options.attachments = blobs;
+    }
+
+    // ── Crear borrador ─────────────────────────────────────────────────────
+    var draft = GmailApp.createDraft(data.to, data.subject, "", options);
+    var draftUrl = "https://mail.google.com/mail/#drafts/" + draft.getMessage().getId();
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true, draftUrl: draftUrl }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function testSignature() {
+  var aliases = Gmail.Users.Settings.SendAs.list("me");
+  Logger.log("Total aliases: " + aliases.sendAs.length);
+  for (var i = 0; i < aliases.sendAs.length; i++) {
+    var a = aliases.sendAs[i];
+    Logger.log("---");
+    Logger.log("Email: " + a.sendAsEmail);
+    Logger.log("isDefault: " + a.isDefault);
+    Logger.log("isPrimary: " + a.isPrimary);
+    Logger.log("Signature length: " + (a.signature ? a.signature.length : 0));
+    if (a.signature) {
+      Logger.log("Signature: " + a.signature.substring(0, 500));
+    }
+  }
+}
+
+function testDraft() {
+  var signature = "";
+  var aliases = Gmail.Users.Settings.SendAs.list("me");
+  if (aliases.sendAs) {
+    for (var i = 0; i < aliases.sendAs.length; i++) {
+      if (aliases.sendAs[i].isDefault) {
+        signature = aliases.sendAs[i].signature || "";
+        break;
+      }
+    }
+  }
+
+  Logger.log("Firma encontrada: " + (signature.length > 0 ? "SI (" + signature.length + " chars)" : "NO"));
+
+  var body = "<p>Este es un correo de prueba.</p>";
+  if (signature) {
+    body += "<br><br>--<br>" + signature;
+  }
+
+  var draft = GmailApp.createDraft(
+    "rodrigo.caceres@asli.cl",
+    "PRUEBA - Borrador con firma",
+    "",
+    { htmlBody: body }
+  );
+
+  Logger.log("Borrador creado con ID: " + draft.getMessage().getId());
+  Logger.log("Revisa tu carpeta de Borradores en Gmail");
+}

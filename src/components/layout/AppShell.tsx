@@ -27,6 +27,7 @@ import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
+import { Toaster } from "sileo";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -132,6 +133,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
             </div>
           </div>
           <AuthFormModalOverlay />
+          <Toaster position="bottom-right" />
         </AuthFormModalProvider>
       </AuthProvider>
     </LocaleProvider>

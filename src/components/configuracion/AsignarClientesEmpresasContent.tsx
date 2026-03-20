@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -36,7 +37,6 @@ export function AsignarClientesEmpresasContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   // track original asignados to know if there are unsaved changes
   const [savedAsignados, setSavedAsignados] = useState<Set<string>>(new Set());
   // count per empresa: empresaId -> count
@@ -128,7 +128,6 @@ export function AsignarClientesEmpresasContent() {
   const handleGuardar = useCallback(async () => {
     if (!supabase || !selectedEmpresaId) return;
     setError(null);
-    setSuccess(null);
     setSaving(true);
     try {
       const { error: delErr } = await supabase
@@ -141,8 +140,7 @@ export function AsignarClientesEmpresasContent() {
       }
       setSavedAsignados(new Set(asignados));
       setCountPerEmpresa((prev) => ({ ...prev, [selectedEmpresaId]: asignados.size }));
-      setSuccess("Asignación guardada.");
-      setTimeout(() => setSuccess(null), 3000);
+      sileo.success({ title: "Asignación guardada." });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar");
     } finally {
@@ -392,12 +390,6 @@ export function AsignarClientesEmpresasContent() {
                     <div className="px-3 py-2 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2" role="alert">
                       <Icon icon="lucide:alert-circle" width={13} height={13} className="shrink-0" />
                       {error}
-                    </div>
-                  )}
-                  {success && (
-                    <div className="px-3 py-2 bg-green-50 text-green-700 text-xs rounded-xl border border-green-200 flex items-center gap-2" role="status">
-                      <Icon icon="lucide:check-circle-2" width={13} height={13} className="shrink-0" />
-                      {success}
                     </div>
                   )}
                 </div>

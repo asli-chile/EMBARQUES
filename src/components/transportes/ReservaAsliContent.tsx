@@ -5,13 +5,18 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
+import { sileo } from "sileo";
 import {
   type FormatoInstructivo,
+  type EmailAttachment,
   buildInstructivoTagValues,
   generateInstructivoHtml,
   buildInstructivoSubject,
   buildInstructivoEmailBody,
   sendInstructivoDraft,
+  applyTagsToExcelBuffer,
+  blobToBase64,
+  arrayBufferToBase64,
 } from "@/lib/documentos/instructivo";
 
 type Operacion = {
@@ -166,8 +171,6 @@ export function ReservaAsliContent() {
   const [equipoInput, setEquipoInput] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPending, setFilterPending] = useState(false);
@@ -182,10 +185,14 @@ export function ReservaAsliContent() {
   // Instructivo
   const [formatos, setFormatos] = useState<FormatoInstructivo[]>([]);
   const [selectedFormatoId, setSelectedFormatoId] = useState<string>("");
-  type InstructivoPhase = "idle" | "loading" | "success" | "error";
+  type InstructivoPhase = "idle" | "generating" | "ready" | "sending" | "sent" | "error";
   const [instrPhase, setInstrPhase] = useState<InstructivoPhase>("idle");
   const [instrDraftUrl, setInstrDraftUrl] = useState<string | undefined>(undefined);
   const [instrError, setInstrError] = useState<string>("");
+  const [instrBlob, setInstrBlob] = useState<Blob | null>(null);
+  const [instrFilename, setInstrFilename] = useState<string>("");
+  const [instrSavedUrl, setInstrSavedUrl] = useState<string | null>(null);
+  const [instrSaveError, setInstrSaveError] = useState<string | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -213,7 +220,7 @@ export function ReservaAsliContent() {
       qOp.order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
       supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
-      supabase.from("formatos_documentos").select("id, nombre, tipo, template_type, descripcion, contenido_html").eq("tipo", "instructivo").eq("activo", true).order("nombre"),
+      supabase.from("formatos_documentos").select("id, nombre, tipo, template_type, descripcion, contenido_html, excel_path, excel_nombre, cliente").eq("tipo", "instructivo").eq("activo", true).order("nombre"),
     ]);
 
     setOperaciones(operacionesRes.data ?? []);
@@ -247,6 +254,45 @@ export function ReservaAsliContent() {
     return operaciones.find((op) => op.id === formData.operacion_id);
   }, [operaciones, formData.operacion_id]);
 
+  // Formatos filtrados por cliente de la operación (global o exclusivo del cliente)
+  const filteredFormatos = useMemo(() => {
+    if (!selectedOperacion?.cliente) return formatos.filter((f) => !f.cliente);
+    return formatos.filter((f) => !f.cliente || f.cliente === selectedOperacion.cliente);
+  }, [formatos, selectedOperacion]);
+
+  // Auto-seleccionar formato si hay exactamente uno disponible para la operación
+  useEffect(() => {
+    if (filteredFormatos.length === 1) setSelectedFormatoId(filteredFormatos[0].id);
+    else if (filteredFormatos.length === 0) setSelectedFormatoId("");
+  }, [filteredFormatos]);
+
+  // Al cambiar de operación, cargar instructivo existente y resetear estado
+  useEffect(() => {
+    setInstrPhase("idle");
+    setInstrBlob(null);
+    setInstrFilename("");
+    setInstrDraftUrl(undefined);
+    setInstrError("");
+    setInstrSavedUrl(null);
+    setInstrSaveError(null);
+
+    if (!formData.operacion_id || !supabase) return;
+    supabase
+      .from("documentos")
+      .select("nombre_archivo, url")
+      .eq("operacion_id", formData.operacion_id)
+      .eq("tipo", "INSTRUCTIVO_EMBARQUE")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setInstrSavedUrl(data.url);
+          setInstrFilename(data.nombre_archivo);
+        }
+      });
+  }, [formData.operacion_id, supabase]);
+
   const isPendiente = (op: Operacion) =>
     !op.transporte || !op.chofer || !op.patente_camion || !op.contenedor || !op.tramo;
 
@@ -271,7 +317,6 @@ export function ReservaAsliContent() {
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setSuccess(false);
     setError(null);
     // Al seleccionar una operación, cargar todos los campos de transporte ya guardados
     if (field === "operacion_id" && value) {
@@ -334,7 +379,6 @@ export function ReservaAsliContent() {
 
   const handleEmpresaTransporteChange = async (id: string) => {
     setEmpresaTransporteId(id);
-    setSuccess(false);
     setError(null);
 
     const empresa = empresasTransporte.find((e) => e.id === id);
@@ -384,7 +428,6 @@ export function ReservaAsliContent() {
       rut_chofer: ch?.rut ?? "",
       telefono_chofer: ch?.telefono ?? "",
     }));
-    setSuccess(false);
     setError(null);
   };
 
@@ -395,7 +438,6 @@ export function ReservaAsliContent() {
       patente_camion: eq?.patente_camion ?? "",
       patente_remolque: eq?.patente_remolque ?? "",
     }));
-    setSuccess(false);
     setError(null);
   };
 
@@ -408,7 +450,6 @@ export function ReservaAsliContent() {
       valor_tramo: trm ? String(trm.valor ?? "") : "",
       moneda: trm?.moneda ?? prev.moneda,
     }));
-    setSuccess(false);
     setError(null);
   };
 
@@ -432,8 +473,7 @@ export function ReservaAsliContent() {
     setEmpresaTransporteId(newEmpresa.id);
     setEmpresaTransporteInput(newEmpresa.nombre);
     setFormData(prev => ({ ...prev, transporte: newEmpresa.nombre }));
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    sileo.success({ title: "Empresa creada exitosamente." });
   };
 
   const createNewChofer = async (nombre: string) => {
@@ -459,8 +499,7 @@ export function ReservaAsliContent() {
     setChoferes(prev => [...prev, newChofer].sort((a, b) => a.nombre.localeCompare(b.nombre)));
     setFormData(prev => ({ ...prev, chofer: newChofer.nombre, rut_chofer: "", telefono_chofer: "" }));
     setChoferInput(newChofer.nombre);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    sileo.success({ title: "Chofer creado exitosamente." });
   };
 
   const createNewEquipo = async (patente: string) => {
@@ -486,8 +525,7 @@ export function ReservaAsliContent() {
     setEquipos(prev => [...prev, newEquipo].sort((a, b) => a.patente_camion.localeCompare(b.patente_camion)));
     setFormData(prev => ({ ...prev, patente_camion: newEquipo.patente_camion }));
     setEquipoInput(newEquipo.patente_camion);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    sileo.success({ title: "Equipo creado exitosamente." });
   };
 
   const handleEmpresaInputChange = (value: string) => {
@@ -671,9 +709,7 @@ export function ReservaAsliContent() {
     if (err) {
       setError(err.message);
     } else {
-      setSuccess(true);
-      setSuccessMsg("Reserva de transporte guardada exitosamente");
-      setTimeout(() => setSuccessMsg(null), 4000);
+      sileo.success({ title: "Reserva de transporte guardada exitosamente" });
       void fetchData();
     }
   };
@@ -697,34 +733,158 @@ export function ReservaAsliContent() {
     } else {
       if (formData.operacion_id === targetId) setFormData(initialFormData);
       setOperaciones((prev) => prev.filter((o) => o.id !== targetId));
-      setSuccessMsg("Operación enviada a la papelera de transportes");
-      setTimeout(() => setSuccessMsg(null), 4000);
+      sileo.success({ title: "Operación enviada a la papelera de transportes" });
     }
   };
 
-  const handleSendInstructivo = async () => {
-    if (!selectedOperacion || !selectedFormatoId) return;
+  // ── Paso 1: Generar el Excel instructivo ─────────────────────────────────
+  const handleGenerarInstructivo = async () => {
+    if (!selectedOperacion || !selectedFormatoId || !supabase) return;
     const formato = formatos.find((f) => f.id === selectedFormatoId);
     if (!formato) return;
-    setInstrPhase("loading");
+
+    setInstrPhase("generating");
     setInstrError("");
+    setInstrBlob(null);
+    setInstrFilename("");
     setInstrDraftUrl(undefined);
+
     try {
+      const ref = selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`;
       const tagValues = buildInstructivoTagValues(selectedOperacion);
-      const instructivoHtml = generateInstructivoHtml(formato, tagValues);
-      const subject = buildInstructivoSubject(selectedOperacion);
-      const htmlBody = buildInstructivoEmailBody(selectedOperacion, instructivoHtml);
-      const result = await sendInstructivoDraft({ to: "alex.cardenas@asli.cl", subject, htmlBody });
-      if (result.success) {
-        setInstrPhase("success");
-        setInstrDraftUrl(result.draftUrl);
+
+      if (formato.template_type === "excel" && formato.excel_path) {
+        // Descargar plantilla Excel de Supabase y aplicar etiquetas
+        const { data: tmplData, error: tmplErr } = await supabase.storage
+          .from("formatos-templates")
+          .download(formato.excel_path);
+        if (tmplErr || !tmplData) throw new Error(`No se pudo descargar la plantilla Excel: ${tmplErr?.message ?? "sin datos"}`);
+        const buf = await tmplData.arrayBuffer();
+        const blob = await applyTagsToExcelBuffer(buf, tagValues);
+        const filename = formato.excel_nombre
+          ? formato.excel_nombre.replace(/\.xlsx$/i, "") + `_${ref}.xlsx`
+          : `instructivo_${ref}.xlsx`;
+        setInstrBlob(blob);
+        setInstrFilename(filename);
+        setInstrPhase("ready");
+
+        // ── Guardar en bucket documentos y registrar en tabla ─────────────
+        setInstrSaveError(null);
+        const storagePath = `${selectedOperacion.id}/INSTRUCTIVO_EMBARQUE/${filename}`;
+        const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, blob, {
+          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          upsert: true,
+        });
+        if (upErr) {
+          setInstrSaveError(`Error al subir al bucket: ${upErr.message}`);
+        } else {
+          const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
+          await supabase.from("documentos")
+            .delete()
+            .eq("operacion_id", selectedOperacion.id)
+            .eq("tipo", "INSTRUCTIVO_EMBARQUE");
+          const { error: insErr } = await supabase.from("documentos").insert({
+            operacion_id: selectedOperacion.id,
+            tipo: "INSTRUCTIVO_EMBARQUE",
+            nombre_archivo: filename,
+            url: urlData.publicUrl,
+            tamano: blob.size,
+            mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          if (insErr) {
+            setInstrSaveError(`Error al registrar en documentos: ${insErr.message}`);
+          } else {
+            setInstrSavedUrl(urlData.publicUrl);
+          }
+        }
+      } else if (formato.contenido_html) {
+        // Formato HTML: generar como HTML/PDF (no como adjunto Excel)
+        const html = generateInstructivoHtml(formato, tagValues);
+        const win = window.open("", "_blank", "width=960,height=720");
+        if (win) {
+          win.document.write(html + `<style>@media print{@page{margin:16mm 14mm;size:A4}}</style><script>window.onload=()=>{window.print()}<\/script>`);
+          win.document.close();
+        }
+        setInstrPhase("idle"); // para HTML no hay "ready" state, se abre directo
       } else {
-        setInstrPhase("error");
-        setInstrError(result.error ?? "Error desconocido.");
+        throw new Error("El formato no tiene plantilla Excel ni contenido HTML. Edítalo en Configuración → Formatos de Documentos.");
       }
     } catch (e) {
       setInstrPhase("error");
-      setInstrError(e instanceof Error ? e.message : "Error inesperado.");
+      setInstrError(e instanceof Error ? e.message : "Error inesperado al generar el instructivo.");
+    }
+  };
+
+  // ── Descarga local del instructivo generado ───────────────────────────────
+  const handleDownloadInstructivo = () => {
+    if (!instrBlob || !instrFilename) return;
+    const url = URL.createObjectURL(instrBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = instrFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Paso 2: Enviar por correo con adjuntos ────────────────────────────────
+  const handleSendInstructivo = async () => {
+    if (!selectedOperacion || !instrBlob || !supabase) return;
+    setInstrPhase("sending");
+    setInstrError("");
+
+    try {
+      const tagValues = buildInstructivoTagValues(selectedOperacion);
+      const attachments: EmailAttachment[] = [];
+
+      // Adjunto 1: instructivo Excel (ya generado en paso anterior)
+      const base64Instructivo = await blobToBase64(instrBlob);
+      attachments.push({
+        filename: instrFilename,
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        base64Data: base64Instructivo,
+      });
+
+      // Adjunto 2: documento de booking
+      if (selectedOperacion.booking_doc_url) {
+        try {
+          const resp = await fetch(selectedOperacion.booking_doc_url);
+          if (resp.ok) {
+            const buf = await resp.arrayBuffer();
+            const urlPath = selectedOperacion.booking_doc_url.split("?")[0];
+            const ext = urlPath.split(".").pop()?.toLowerCase() || "pdf";
+            const mimeType =
+              ext === "pdf"  ? "application/pdf" :
+              ext === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :
+              ext === "xls"  ? "application/vnd.ms-excel" :
+              "application/octet-stream";
+            attachments.push({
+              filename: `booking_${selectedOperacion.booking || "doc"}.${ext}`,
+              mimeType,
+              base64Data: arrayBufferToBase64(buf),
+            });
+          }
+        } catch {
+          // Booking sin doc adjunto — igualmente va como link en el body
+        }
+      }
+
+      const formato = formatos.find((f) => f.id === selectedFormatoId);
+      const instructivoHtml = formato ? generateInstructivoHtml(formato, tagValues) : "";
+      const subject = buildInstructivoSubject(selectedOperacion);
+      const htmlBody = buildInstructivoEmailBody(selectedOperacion, instructivoHtml);
+
+      const result = await sendInstructivoDraft({ to: "alex.cardenas@asli.cl", subject, htmlBody, attachments });
+
+      if (result.success) {
+        setInstrPhase("sent");
+        setInstrDraftUrl(result.draftUrl);
+      } else {
+        setInstrPhase("error");
+        setInstrError(result.error ?? "Error desconocido al crear el borrador.");
+      }
+    } catch (e) {
+      setInstrPhase("error");
+      setInstrError(e instanceof Error ? e.message : "Error inesperado al enviar.");
     }
   };
 
@@ -796,12 +956,6 @@ export function ReservaAsliContent() {
 
   return (
     <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
-      {successMsg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg animate-fade-in">
-          <Icon icon="lucide:check-circle" className="w-5 h-5 shrink-0" />
-          {successMsg}
-        </div>
-      )}
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
 
         {/* Header — mismo estilo que Mis Reservas / Papelera */}
@@ -1078,60 +1232,173 @@ export function ReservaAsliContent() {
                   {selectedOperacion && (
                     <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                       <div className="h-[3px] bg-gradient-to-r from-violet-500 to-purple-600" />
-                      <div className="px-4 py-3 flex items-center gap-3">
+
+                      {/* Header */}
+                      <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
                         <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="lucide:mail" className="w-4 h-4 text-violet-600" />
+                          <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Instructivo de Embarque</p>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">Genera el instructivo y crea un borrador Gmail a alex.cardenas@asli.cl</p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">
+                            {instrPhase === "ready" || instrPhase === "sent"
+                              ? `${instrFilename} · listo para enviar`
+                              : "Genera el Excel con los datos de la operación y envíalo a alex.cardenas@asli.cl"}
+                          </p>
                         </div>
-                        {/* Select de formato */}
-                        {formatos.length > 1 && (
+                        {/* Select de formato — solo cuando no hay instructivo generado */}
+                        {(instrPhase === "idle" || instrPhase === "error") && filteredFormatos.length > 1 && (
                           <select
                             value={selectedFormatoId}
-                            onChange={(e) => setSelectedFormatoId(e.target.value)}
-                            className="text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 max-w-[180px]"
+                            onChange={(e) => { setSelectedFormatoId(e.target.value); setInstrPhase("idle"); }}
+                            className="text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 max-w-[160px]"
                           >
                             <option value="">Seleccionar formato...</option>
-                            {formatos.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+                            {filteredFormatos.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
                           </select>
                         )}
                         {formatos.length === 0 && (
-                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">Sin formatos activos</span>
+                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">Sin formatos</span>
                         )}
-                        <button
-                          type="button"
-                          disabled={!selectedFormatoId || instrPhase === "loading"}
-                          onClick={() => void handleSendInstructivo()}
-                          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {instrPhase === "loading"
-                            ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Generando...</>
-                            : <><Icon icon="lucide:send" className="w-3.5 h-3.5" />Generar y Enviar</>}
-                        </button>
                       </div>
-                      {/* Feedback inline */}
-                      {instrPhase === "success" && (
-                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-center gap-2">
-                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                          <span className="text-xs font-semibold text-emerald-700 flex-1">Borrador creado exitosamente.</span>
-                          {instrDraftUrl && (
-                            <a href={instrDraftUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900">
-                              Abrir borrador →
-                            </a>
-                          )}
-                          <button type="button" onClick={() => setInstrPhase("idle")} className="ml-1 text-emerald-500 hover:text-emerald-700">
-                            <Icon icon="lucide:x" className="w-3.5 h-3.5" />
+
+                      {/* Documento previo guardado (persiste entre navegaciones) */}
+                      {instrSavedUrl && instrPhase === "idle" && (
+                        <div className="px-4 py-2.5 border-b border-violet-100 bg-violet-50 flex items-center gap-2 flex-wrap">
+                          <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-violet-700 flex-1 truncate">{instrFilename}</span>
+                          <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 underline hover:text-violet-900 whitespace-nowrap">
+                            <Icon icon="lucide:download" className="w-3 h-3" />
+                            Descargar
+                          </a>
+                          <span className="text-[10px] text-violet-500">· Guardado anteriormente</span>
+                        </div>
+                      )}
+
+                      {/* Error de guardado */}
+                      {instrSaveError && (
+                        <div className="px-4 py-2 border-b border-red-100 bg-red-50 flex items-center gap-2">
+                          <Icon icon="lucide:cloud-off" className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                          <span className="text-[10px] text-red-700 flex-1">{instrSaveError}</span>
+                          <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-600">
+                            <Icon icon="lucide:x" className="w-3 h-3" />
                           </button>
                         </div>
                       )}
+
+                      {/* Acciones según fase */}
+                      <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
+
+                        {/* Fase idle/error: botón Generar */}
+                        {(instrPhase === "idle" || instrPhase === "error") && (
+                          <button
+                            type="button"
+                            disabled={!selectedFormatoId}
+                            onClick={() => void handleGenerarInstructivo()}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
+                            {instrSavedUrl ? "Regenerar instructivo" : "Generar instructivo"}
+                          </button>
+                        )}
+
+                        {/* Fase generating: spinner */}
+                        {instrPhase === "generating" && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-100 text-violet-700">
+                            <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
+                            Generando instructivo...
+                          </span>
+                        )}
+
+                        {/* Fase ready/sent: Descargar + Enviar */}
+                        {(instrPhase === "ready" || instrPhase === "sent") && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handleDownloadInstructivo}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                            >
+                              <Icon icon="lucide:download" className="w-3.5 h-3.5" />
+                              Descargar Excel
+                            </button>
+
+                            {instrPhase !== "sent" && (
+                              <button
+                                type="button"
+                                onClick={() => void handleSendInstructivo()}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                              >
+                                <Icon icon="lucide:send" className="w-3.5 h-3.5" />
+                                Enviar a Alex
+                                {!selectedOperacion.booking_doc_url && (
+                                  <span className="text-[9px] bg-amber-400 text-amber-900 px-1 py-0.5 rounded font-bold">sin booking</span>
+                                )}
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => { setInstrPhase("idle"); setInstrBlob(null); setInstrFilename(""); }}
+                              className="inline-flex items-center gap-1 px-2 py-2 rounded-xl text-xs font-semibold text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                              title="Volver a generar"
+                            >
+                              <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Fase sending: spinner */}
+                        {instrPhase === "sending" && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-100 text-violet-700">
+                            <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
+                            Enviando...
+                          </span>
+                        )}
+
+                        {/* Indicadores de estado */}
+                        {(instrPhase === "ready" || instrPhase === "sent") && (
+                          <>
+                            {instrSavedUrl && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border bg-violet-50 text-violet-700 border-violet-200">
+                                <Icon icon="lucide:cloud-upload" className="w-3 h-3" />
+                                Guardado en Documentos
+                              </span>
+                            )}
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border ${
+                              selectedOperacion.booking_doc_url
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                              <Icon icon={selectedOperacion.booking_doc_url ? "lucide:paperclip" : "lucide:alert-triangle"} className="w-3 h-3" />
+                              {selectedOperacion.booking_doc_url ? "Booking PDF listo" : "Sin doc. booking"}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Feedback éxito envío */}
+                      {instrPhase === "sent" && (
+                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-center gap-2 flex-wrap">
+                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-emerald-700 flex-1">
+                            Borrador creado con instructivo + booking adjuntos.
+                          </span>
+                          {instrDraftUrl && (
+                            <a href={instrDraftUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900 whitespace-nowrap">
+                              Abrir en Gmail →
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Feedback error */}
                       {instrPhase === "error" && (
                         <div className="px-4 py-2.5 border-t border-red-100 bg-red-50 flex items-center gap-2">
                           <Icon icon="lucide:alert-circle" className="w-4 h-4 text-red-500 flex-shrink-0" />
-                          <span className="text-xs font-semibold text-red-700 flex-1">{instrError}</span>
-                          <button type="button" onClick={() => setInstrPhase("idle")} className="ml-1 text-red-400 hover:text-red-600">
+                          <span className="text-xs text-red-700 flex-1">{instrError}</span>
+                          <button type="button" onClick={() => setInstrPhase("idle")} className="text-red-400 hover:text-red-600">
                             <Icon icon="lucide:x" className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -1373,12 +1640,6 @@ export function ReservaAsliContent() {
                     </div>
                   )}
 
-                  {success && (
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium flex items-center gap-2">
-                      <Icon icon="typcn:tick" className="w-5 h-5 flex-shrink-0" />
-                      {tr.saveSuccess}
-                    </div>
-                  )}
 
                   <div className="flex gap-3 justify-between">
                     {canManageTransport && formData.operacion_id && (
@@ -1396,7 +1657,6 @@ export function ReservaAsliContent() {
                         type="button"
                         onClick={() => {
                           setFormData(initialFormData);
-                          setSuccess(false);
                           setError(null);
                         }}
                         className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"

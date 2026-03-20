@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -102,7 +103,6 @@ export function FacturacionContent() {
   const [monedas, setMonedas] = useState<string[]>(MONEDAS_DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPending, setFilterPending] = useState(false);
@@ -170,7 +170,6 @@ export function FacturacionContent() {
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setSuccess(false);
     setError(null);
   };
 
@@ -204,7 +203,7 @@ export function FacturacionContent() {
 
   const handleSelectOperation = (id: string) => {
     const op = operaciones.find((o) => o.id === id);
-    if (!op) { setSuccess(false); setError(null); return; }
+    if (!op) { setError(null); return; }
 
     const loadForm = (invoiceNum: string) => {
       setFormData({
@@ -242,7 +241,6 @@ export function FacturacionContent() {
     } else {
       loadForm("");
     }
-    setSuccess(false);
     setError(null);
   };
 
@@ -273,7 +271,7 @@ export function FacturacionContent() {
 
     const { error: err } = await supabase.from("operaciones").update(updates).eq("id", formData.operacion_id);
     setSaving(false);
-    if (err) { setError(err.message); } else { setSuccess(true); void fetchData(); }
+    if (err) { setError(err.message); } else { sileo.success({ title: tr.saveSuccess }); void fetchData(); }
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -1293,12 +1291,6 @@ export function FacturacionContent() {
                   </div>
                 )}
 
-                {success && (
-                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium flex items-center gap-2">
-                    <Icon icon="lucide:check-circle" className="w-4 h-4 flex-shrink-0" />
-                    {tr.saveSuccess}
-                  </div>
-                )}
 
                 {/* Acciones */}
                 {isCliente ? (
@@ -1311,7 +1303,7 @@ export function FacturacionContent() {
                     <div className="flex gap-3 ml-auto">
                       <button
                         type="button"
-                        onClick={() => { setFormData(initialFormData); setItemsProforma([]); setSuccess(false); setError(null); }}
+                        onClick={() => { setFormData(initialFormData); setItemsProforma([]); setError(null); }}
                         className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
                       >
                         {tr.cancel}
