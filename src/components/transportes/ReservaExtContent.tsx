@@ -959,7 +959,7 @@ export function ReservaExtContent() {
 
       // 2) Abrir Gmail del ejecutivo con el correo pre-llenado
       const composeUrl = buildInstructivoGmailComposeUrl(opData, "alex.cardenas@asli.cl");
-      window.open(composeUrl, "_blank", "noopener,noreferrer");
+      window.location.href = composeUrl;
 
       setInstrPhase("sent");
     } catch (e) {

@@ -308,7 +308,7 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   return arrayBufferToBase64(await blob.arrayBuffer());
 }
 
-// ─── Gmail compose URL builder ────────────────────────────────────────────────
+// ─── mailto link builder ──────────────────────────────────────────────────────
 
 export function buildInstructivoGmailComposeUrl(op: InstructivoOpData, to: string): string {
   const subject = buildInstructivoSubjectInner(op);
@@ -337,10 +337,11 @@ export function buildInstructivoGmailComposeUrl(op: InstructivoOpData, to: strin
     `Quedo atento.`,
   ].filter((l) => l !== undefined).join("\n");
 
+  // mailto: abre el cliente de correo predeterminado del usuario (Gmail para @asli.cl)
+  // No depende de sesión, no es bloqueado como popup
   return (
-    "https://mail.google.com/mail/?view=cm&fs=1" +
-    `&to=${encodeURIComponent(to)}` +
-    `&su=${encodeURIComponent(subject)}` +
+    `mailto:${to}` +
+    `?subject=${encodeURIComponent(subject)}` +
     `&body=${encodeURIComponent(lines)}`
   );
 }

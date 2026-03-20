@@ -324,14 +324,13 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
 
   // Abre Gmail del usuario con el compositor pre-llenado (To, Subject, Body)
   // El correo sale desde la cuenta del ejecutivo que está logueado en Gmail
-  const gmailComposeUrl =
-    "https://mail.google.com/mail/?view=cm&fs=1" +
-    `&to=${encodeURIComponent("informaciones@asli.cl")}` +
-    `&su=${encodeURIComponent(subject)}` +
+  const mailtoUrl =
+    `mailto:informaciones@asli.cl` +
+    `?subject=${encodeURIComponent(subject)}` +
     `&body=${encodeURIComponent(plainBody)}`;
 
   const handleAbrir = () => {
-    window.open(gmailComposeUrl, "_blank", "noopener,noreferrer");
+    window.location.href = mailtoUrl;
     onClose();
   };
 

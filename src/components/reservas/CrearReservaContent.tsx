@@ -765,12 +765,11 @@ export function CrearReservaContent() {
     ].filter((l) => l !== undefined).join("\n");
 
     const gmailUrl =
-      "https://mail.google.com/mail/?view=cm&fs=1" +
-      `&to=${encodeURIComponent("informaciones@asli.cl")}` +
-      `&su=${encodeURIComponent(String(subject))}` +
+      `mailto:informaciones@asli.cl` +
+      `?subject=${encodeURIComponent(String(subject))}` +
       `&body=${encodeURIComponent(body)}`;
 
-    window.open(gmailUrl, "_blank", "noopener,noreferrer");
+    window.location.href = gmailUrl;
     setShowEmailModal(false);
     setSuccess("Gmail abierto con la solicitud lista. Solo haz clic en Enviar.");
   };
