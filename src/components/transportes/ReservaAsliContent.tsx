@@ -8,15 +8,10 @@ import { format } from "date-fns";
 import { sileo } from "sileo";
 import {
   type FormatoInstructivo,
-  type EmailAttachment,
   buildInstructivoTagValues,
   generateInstructivoHtml,
-  buildInstructivoSubject,
-  buildInstructivoEmailBody,
-  sendInstructivoDraft,
+  buildInstructivoGmailComposeUrl,
   applyTagsToExcelBuffer,
-  blobToBase64,
-  arrayBufferToBase64,
 } from "@/lib/documentos/instructivo";
 
 type Operacion = {
@@ -826,66 +821,23 @@ export function ReservaAsliContent() {
     URL.revokeObjectURL(url);
   };
 
-  // ── Paso 2: Enviar por correo con adjuntos ────────────────────────────────
-  const handleSendInstructivo = async () => {
-    if (!selectedOperacion || !instrBlob || !supabase) return;
-    setInstrPhase("sending");
-    setInstrError("");
+  // ── Paso 2: Descargar instructivo y abrir Gmail del ejecutivo ────────────
+  const handleSendInstructivo = () => {
+    if (!selectedOperacion || !instrBlob) return;
 
-    try {
-      const tagValues = buildInstructivoTagValues(selectedOperacion);
-      const attachments: EmailAttachment[] = [];
+    // 1) Descargar el archivo Excel automáticamente
+    const url = URL.createObjectURL(instrBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = instrFilename;
+    a.click();
+    URL.revokeObjectURL(url);
 
-      // Adjunto 1: instructivo Excel (ya generado en paso anterior)
-      const base64Instructivo = await blobToBase64(instrBlob);
-      attachments.push({
-        filename: instrFilename,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        base64Data: base64Instructivo,
-      });
+    // 2) Abrir Gmail del ejecutivo con el correo pre-llenado
+    const composeUrl = buildInstructivoGmailComposeUrl(selectedOperacion, "alex.cardenas@asli.cl");
+    window.open(composeUrl, "_blank", "noopener,noreferrer");
 
-      // Adjunto 2: documento de booking
-      if (selectedOperacion.booking_doc_url) {
-        try {
-          const resp = await fetch(selectedOperacion.booking_doc_url);
-          if (resp.ok) {
-            const buf = await resp.arrayBuffer();
-            const urlPath = selectedOperacion.booking_doc_url.split("?")[0];
-            const ext = urlPath.split(".").pop()?.toLowerCase() || "pdf";
-            const mimeType =
-              ext === "pdf"  ? "application/pdf" :
-              ext === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :
-              ext === "xls"  ? "application/vnd.ms-excel" :
-              "application/octet-stream";
-            attachments.push({
-              filename: `booking_${selectedOperacion.booking || "doc"}.${ext}`,
-              mimeType,
-              base64Data: arrayBufferToBase64(buf),
-            });
-          }
-        } catch {
-          // Booking sin doc adjunto — igualmente va como link en el body
-        }
-      }
-
-      const formato = formatos.find((f) => f.id === selectedFormatoId);
-      const instructivoHtml = formato ? generateInstructivoHtml(formato, tagValues) : "";
-      const subject = buildInstructivoSubject(selectedOperacion);
-      const htmlBody = buildInstructivoEmailBody(selectedOperacion, instructivoHtml);
-
-      const result = await sendInstructivoDraft({ to: "alex.cardenas@asli.cl", subject, htmlBody, attachments });
-
-      if (result.success) {
-        setInstrPhase("sent");
-        setInstrDraftUrl(result.draftUrl);
-      } else {
-        setInstrPhase("error");
-        setInstrError(result.error ?? "Error desconocido al crear el borrador.");
-      }
-    } catch (e) {
-      setInstrPhase("error");
-      setInstrError(e instanceof Error ? e.message : "Error inesperado al enviar.");
-    }
+    setInstrPhase("sent");
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -1379,17 +1331,11 @@ export function ReservaAsliContent() {
 
                       {/* Feedback éxito envío */}
                       {instrPhase === "sent" && (
-                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-center gap-2 flex-wrap">
-                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-start gap-2 flex-wrap">
+                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                           <span className="text-xs font-semibold text-emerald-700 flex-1">
-                            Borrador creado con instructivo + booking adjuntos.
+                            Instructivo descargado. Gmail abierto — adjunta el archivo y haz clic en Enviar.
                           </span>
-                          {instrDraftUrl && (
-                            <a href={instrDraftUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900 whitespace-nowrap">
-                              Abrir en Gmail →
-                            </a>
-                          )}
                         </div>
                       )}
 
