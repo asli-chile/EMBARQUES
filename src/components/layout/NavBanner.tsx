@@ -1,214 +1,364 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 
-type NavBannerProps = {
-  pathname: string;
+// Ítems fijos que siempre se muestran en la barra cuando está logueado
+const PINNED_NAV = [
+  { labelKey: "inicio"     as const, href: "/inicio" },
+  { labelKey: "itinerario" as const, href: "/itinerario" },
+  { labelKey: "stacking"   as const, href: "/stacking" },
+];
+
+// Ítems del menú público con descripción e ícono para el drawer moderno
+const PUBLIC_NAV_CARDS = [
+  { labelKey: "inicio"       as const, href: "/inicio",         icon: "lucide:home",        desc: "Página principal y bienvenida" },
+  { labelKey: "servicios"    as const, href: "/servicios",      icon: "lucide:briefcase",   desc: "Conoce nuestros servicios logísticos" },
+  { labelKey: "sobreNosotros"as const, href: "/sobre-nosotros", icon: "lucide:users",        desc: "Quiénes somos y nuestra misión" },
+  { labelKey: "tracking"     as const, href: "/tracking",       icon: "lucide:map-pin",     desc: "Seguimiento de tus embarques" },
+  { labelKey: "itinerario"   as const, href: "/itinerario",     icon: "lucide:ship",         desc: "Itinerarios de navieras disponibles" },
+  { labelKey: "stacking"     as const, href: "/stacking",       icon: "lucide:layers",      desc: "Fechas de stacking por servicio" },
+];
+
+type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean };
+
+// Metadatos visuales de cada módulo (ícono + descripción)
+const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
+  dashboard:             { icon: "lucide:layout-dashboard", desc: "Resumen y estadísticas generales" },
+  registros:             { icon: "lucide:clipboard-list",   desc: "Operaciones y registros de carga" },
+  reservas:              { icon: "lucide:package",           desc: "Gestión de reservas de exportación" },
+  "crear-reserva":       { icon: "lucide:plus-circle",       desc: "Nueva solicitud de reserva" },
+  "mis-reservas":        { icon: "lucide:list",              desc: "Ver y gestionar mis reservas" },
+  papelera:              { icon: "lucide:trash-2",           desc: "Reservas eliminadas" },
+  transportes:           { icon: "lucide:truck",             desc: "Módulo de transportes terrestres" },
+  "reserva-asli":        { icon: "lucide:clipboard-check",   desc: "Asignar unidad y chofer ASLI" },
+  "reserva-ext":         { icon: "lucide:external-link",     desc: "Reservas con transporte externo" },
+  facturacion:           { icon: "lucide:receipt",           desc: "Proformas y facturación de tramos" },
+  "facturas-transporte": { icon: "lucide:file-text",         desc: "Registro de facturas emitidas" },
+  "papelera-transportes":{ icon: "lucide:trash-2",           desc: "Transportes eliminados" },
+  documentos:            { icon: "lucide:file-text",         desc: "Documentos de exportación" },
+  "mis-documentos":      { icon: "lucide:folder-open",       desc: "Ver documentos generados" },
+  "crear-instructivo":   { icon: "lucide:file-plus",         desc: "Crear instructivo de embarque" },
+  "crear-proforma":      { icon: "lucide:file-plus",         desc: "Crear proforma de costos" },
+  reportes:              { icon: "lucide:bar-chart-2",       desc: "Reportes e indicadores" },
+  finanzas:              { icon: "lucide:dollar-sign",       desc: "Gestión financiera y pagos" },
+  itinerarios:           { icon: "lucide:ship",              desc: "Itinerarios navieros" },
+  "servicios-por-naviera":{ icon: "lucide:anchor",           desc: "Servicios por naviera" },
+  consorcios:            { icon: "lucide:network",           desc: "Gestión de consorcios" },
+  configuracion:         { icon: "lucide:settings",          desc: "Configuración del sistema" },
+  usuarios:              { icon: "lucide:users",             desc: "Gestión de usuarios y roles" },
+  clientes:              { icon: "lucide:building-2",        desc: "Empresas clientes" },
+  "asignar-clientes-empresas": { icon: "lucide:link",        desc: "Asignar clientes a empresas" },
+  "configuracion-transportes": { icon: "lucide:truck",       desc: "Empresas y tarifas de transporte" },
+  consignatarios:        { icon: "lucide:contact",           desc: "Consignatarios y notify parties" },
+  "formatos-documentos": { icon: "lucide:layout-template",  desc: "Plantillas de documentos" },
 };
+
+type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
-  const { user, profile, isExternalUser, empresaNombres } = useAuth();
+  const { user, profile, isExternalUser, empresaNombres, isSuperadmin } = useAuth();
   const displayName = profile?.nombre || user?.name || user?.email || null;
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const [drawerOpen, setDrawerOpen]     = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  // Sección expandida en el drawer
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const handleLocaleToggle = () => {
-    setLocale(locale === "es" ? "en" : "es");
-  };
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const isLoggedIn = !!user;
 
-  const handleToggleMenu = () => {
-    setIsMenuOpen((prev) => !prev);
-  };
+  // Filtrar sidebarItems según rol
+  const visibleSidebarItems = useMemo(() =>
+    (siteConfig.sidebarItems as SidebarItem[]).filter(
+      (item) => !(("superadminOnly" in item && item.superadminOnly) || false) || isSuperadmin
+    ), [isSuperadmin]);
 
-  const handleCloseMenu = () => {
-    setIsMenuOpen(false);
-  };
-
+  // Auto-expandir sección activa al abrir drawer
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
+    if (!drawerOpen) return;
+    for (const item of visibleSidebarItems) {
+      if ("children" in item && item.children) {
+        if (item.children.some((c) => c.href === pathname)) {
+          setExpandedId(item.id);
+          return;
+        }
       }
-    };
-
-    if (isMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMenuOpen]);
+  }, [drawerOpen, pathname, visibleSidebarItems]);
 
+  // Cerrar drawer al hacer clic fuera
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsMenuOpen(false);
+    if (!drawerOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+        setDrawerOpen(false);
       }
     };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [drawerOpen]);
+
+
+  const handleLocaleToggle = () => setLocale(locale === "es" ? "en" : "es");
+
+  // ── Drawer con sidebarItems (estilo cards modernas) ──────────────────────
+  const sidebarDrawerContent = (
+    <nav className="flex flex-col gap-2">
+      {visibleSidebarItems.map((item) => {
+        const hasChildren  = "children" in item && !!item.children?.length;
+        const hasHref      = "href" in item && item.href;
+        const isExpanded   = expandedId === item.id;
+        const isActive     = hasHref && pathname === item.href;
+        const isParentActive = hasChildren && item.children!.some((c) => c.href === pathname);
+        const meta = SIDEBAR_META[item.id] ?? { icon: "lucide:circle", desc: "" };
+
+        const cardBase = "flex items-center gap-3 w-full text-left px-3 py-3 rounded-xl border transition-all duration-200";
+        const cardActive = `${cardBase} bg-white/15 border-white/25 text-white`;
+        const cardNormal = `${cardBase} bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10 hover:border-white/20 hover:text-white`;
+
+        const cardContent = (active: boolean) => (
+          <>
+            <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${active ? "bg-brand-blue/30" : "bg-white/8"}`}>
+              <Icon icon={meta.icon} width={17} height={17} className={active ? "text-white" : "text-neutral-400"} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight">{t.sidebar[item.labelKey]}</p>
+              {meta.desc && <p className="text-[11px] text-neutral-400 mt-0.5 leading-snug">{meta.desc}</p>}
+            </div>
+          </>
+        );
+
+        return (
+          <div key={item.id} className="flex flex-col gap-1">
+            {hasHref ? (
+              <a href={item.href!} onClick={() => setDrawerOpen(false)}
+                className={isActive ? cardActive : cardNormal}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {cardContent(!!isActive)}
+                {isActive && <Icon icon="lucide:check-circle" width={15} height={15} className="text-brand-olive ml-auto shrink-0" />}
+              </a>
+            ) : (
+              <button type="button"
+                onClick={() => setExpandedId((p) => p === item.id ? null : item.id)}
+                className={isParentActive ? cardActive : cardNormal}
+                aria-expanded={isExpanded}
+              >
+                {cardContent(!!isParentActive)}
+                <Icon icon={isExpanded ? "lucide:chevron-up" : "lucide:chevron-down"}
+                  width={14} height={14} className="ml-auto shrink-0 opacity-60" />
+              </button>
+            )}
+
+            {/* Hijos expandidos */}
+            {hasChildren && isExpanded && (
+              <div className="flex flex-col gap-1 pl-3 ml-3 border-l border-white/15">
+                {item.children!.map((child) => {
+                  const isChildActive = pathname === child.href;
+                  const childMeta = SIDEBAR_META[child.id] ?? { icon: "lucide:minus", desc: "" };
+                  return (
+                    <a key={child.id} href={child.href ?? "#"} onClick={() => setDrawerOpen(false)}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 ${
+                        isChildActive
+                          ? "bg-brand-olive/20 border-brand-olive/40 text-white"
+                          : "bg-white/5 border-white/8 text-neutral-400 hover:bg-white/10 hover:text-white hover:border-white/15"
+                      }`}
+                      aria-current={isChildActive ? "page" : undefined}
+                    >
+                      <Icon icon={childMeta.icon} width={14} height={14} className="shrink-0 opacity-70" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold leading-tight">{t.sidebar[child.labelKey]}</p>
+                        {childMeta.desc && <p className="text-[10px] text-neutral-500 mt-0.5">{childMeta.desc}</p>}
+                      </div>
+                      {isChildActive && <Icon icon="lucide:check" width={12} height={12} className="text-brand-olive ml-auto shrink-0" />}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
 
   return (
     <>
+    {/* ── Barra de navegación ──────────────────────────────────────────────── */}
     <nav
       className="h-[44px] min-h-[44px] bg-neutral-700/95 backdrop-blur-md flex-shrink-0 flex items-center justify-between px-4 md:px-6 border-b border-white/10 relative z-40"
       role="navigation"
       aria-label="Navegación principal"
-      ref={menuRef}
     >
-      {/* Desktop: menú horizontal con pills */}
-      <div className="hidden md:flex items-center gap-1">
-        {siteConfig.navItems.map(({ labelKey, href }) => {
-          const isActive = pathname === href;
-          return (
-            <a
-              key={href}
-              href={href}
-              className={`px-3 py-1.5 text-sm font-medium uppercase tracking-wide rounded-lg transition-all duration-200 ${
-                isActive
-                  ? "text-white bg-white/15 border border-white/20 shadow-sm"
-                  : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent"
+      {isLoggedIn ? (
+        /* ── LOGUEADO: ítems fijos + hamburguesa ── */
+        <>
+          <div className="flex items-center gap-1">
+            {/* Hamburguesa */}
+            <button
+              type="button"
+              onClick={() => setDrawerOpen((p) => !p)}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-200 mr-1 ${
+                drawerOpen
+                  ? "text-white bg-white/15 border-white/25"
+                  : "text-neutral-300 hover:text-white hover:bg-white/10 border-transparent"
               }`}
+              aria-label={drawerOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={drawerOpen}
             >
-              {t.nav[labelKey]}
-            </a>
-          );
-        })}
-      </div>
+              <Icon icon={drawerOpen ? "lucide:x" : "lucide:menu"} width={18} height={18} />
+            </button>
 
-      {/* Desktop: nombre de usuario + idioma */}
-      <div className="hidden md:flex items-center gap-2">
-        {!isExternalUser && user && displayName && (
-          <button
-            type="button"
-            onClick={() => setShowUserModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/25 transition-all duration-200 cursor-pointer"
-            aria-label="Ver detalles de mi cuenta"
-          >
-            <span className="w-5 h-5 rounded-full bg-brand-blue flex items-center justify-center text-white text-[10px] font-black uppercase shrink-0">
-              {displayName[0]}
-            </span>
-            <span className="text-xs font-semibold text-white/90 max-w-[140px] truncate">
-              {displayName}
-            </span>
-            <Icon icon="lucide:chevron-down" width={11} height={11} className="text-white/50 shrink-0" />
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={handleLocaleToggle}
-          className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
-          aria-label="Cambiar idioma"
-          title={locale === "es" ? "Cambiar a inglés" : "Switch to Spanish"}
-        >
-          <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
-          <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
-        </button>
-      </div>
-
-      {/* Mobile: botón hamburguesa */}
-      <button
-        type="button"
-        onClick={handleToggleMenu}
-        className="md:hidden flex items-center justify-center w-9 h-9 text-white hover:bg-white/10 rounded-lg transition-all duration-200"
-        aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
-        aria-expanded={isMenuOpen}
-      >
-        <Icon icon={isMenuOpen ? "lucide:x" : "lucide:menu"} width={22} height={22} />
-      </button>
-
-      {/* Mobile: indicador de página actual */}
-      <div className="md:hidden flex-1 text-center">
-        <span className="text-sm font-semibold text-white uppercase tracking-wide">
-          {siteConfig.navItems.find((item) => item.href === pathname)?.labelKey
-            ? t.nav[siteConfig.navItems.find((item) => item.href === pathname)!.labelKey]
-            : "Menú"}
-        </span>
-      </div>
-
-      {/* Mobile: selector de idioma (pill compacto) */}
-      <button
-        type="button"
-        onClick={handleLocaleToggle}
-        className="md:hidden flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-neutral-300 hover:text-white hover:bg-white/10 border border-white/10 text-xs font-bold tracking-wider transition-all duration-200"
-        aria-label="Cambiar idioma"
-      >
-        {locale.toUpperCase()}
-      </button>
-
-      {/* Mobile: menú desplegable (estilo card) */}
-      {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-2 right-2 mt-1 bg-neutral-800/95 backdrop-blur-xl rounded-xl shadow-xl shadow-black/40 border border-white/10 overflow-hidden z-50">
-          <div className="py-2">
-            {!isExternalUser && user && displayName && (
-              <button
-                type="button"
-                onClick={() => { setShowUserModal(true); handleCloseMenu(); }}
-                className="flex items-center gap-3 px-4 py-3 mx-2 mb-1 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 w-[calc(100%-1rem)] text-left"
-              >
-                <span className="w-8 h-8 rounded-full bg-brand-blue flex items-center justify-center text-white text-sm font-black uppercase shrink-0">
-                  {displayName[0]}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-                  <p className="text-[11px] text-neutral-400 truncate">{user.email}</p>
-                </div>
-                <Icon icon="lucide:info" width={14} height={14} className="text-white/40 shrink-0" />
-              </button>
-            )}
-            {siteConfig.navItems.map(({ labelKey, href }) => {
+            {/* Ítems fijos */}
+            {PINNED_NAV.map(({ labelKey, href }) => {
               const isActive = pathname === href;
               return (
-                <a
-                  key={href}
-                  href={href}
-                  onClick={handleCloseMenu}
-                  className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg text-sm font-medium uppercase tracking-wide transition-all duration-200 ${
+                <a key={href} href={href}
+                  className={`px-3 py-1.5 text-sm font-medium uppercase tracking-wide rounded-lg transition-all duration-200 ${
                     isActive
-                      ? "text-white bg-brand-olive/20 border border-brand-olive/40"
+                      ? "text-white bg-white/15 border border-white/20 shadow-sm"
                       : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent"
                   }`}
                 >
-                  {isActive ? (
-                    <Icon icon="lucide:check" width={16} height={16} className="text-brand-olive shrink-0" />
-                  ) : (
-                    <span className="w-4 shrink-0" />
-                  )}
                   {t.nav[labelKey]}
                 </a>
               );
             })}
+          </div>
 
-            <div className="my-2 mx-4 border-t border-white/10" />
-
-            <button
-              type="button"
-              onClick={() => {
-                handleLocaleToggle();
-                handleCloseMenu();
-              }}
-              className="flex items-center gap-3 w-[calc(100%-1rem)] mx-2 px-4 py-3 rounded-lg text-sm font-medium text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent transition-all duration-200"
+          {/* Derecha: usuario + idioma */}
+          <div className="flex items-center gap-2">
+            {!isExternalUser && displayName && (
+              <button type="button" onClick={() => setShowUserModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/25 transition-all duration-200"
+              >
+                <span className="w-5 h-5 rounded-full bg-brand-blue flex items-center justify-center text-white text-[10px] font-black uppercase shrink-0">
+                  {displayName[0]}
+                </span>
+                <span className="hidden sm:block text-xs font-semibold text-white/90 max-w-[140px] truncate">
+                  {displayName}
+                </span>
+                <Icon icon="lucide:chevron-down" width={11} height={11} className="text-white/50 shrink-0" />
+              </button>
+            )}
+            <button type="button" onClick={handleLocaleToggle}
+              className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
             >
-              <Icon icon="lucide:globe" width={16} height={16} className="shrink-0 opacity-80" />
-              <span className="text-left">{locale === "es" ? "Cambiar a Inglés" : "Switch to Spanish"}</span>
-              <span className="ml-auto text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/10 border border-white/10">
-                {locale === "es" ? "EN" : "ES"}
-              </span>
+              <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
+              <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
             </button>
           </div>
-        </div>
+        </>
+      ) : (
+        /* ── NO LOGUEADO: horizontal en desktop, hamburguesa en mobile ── */
+        <>
+          {/* Desktop + Mobile izquierda: hamburguesa + ítems horizontales */}
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => setDrawerOpen((p) => !p)}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-200 mr-1 ${
+                drawerOpen ? "text-white bg-white/15 border-white/25" : "text-neutral-300 hover:text-white hover:bg-white/10 border-transparent"
+              }`}
+              aria-label={drawerOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={drawerOpen}
+            >
+              <Icon icon={drawerOpen ? "lucide:x" : "lucide:menu"} width={18} height={18} />
+            </button>
+
+            {/* Ítems horizontales solo en desktop */}
+            <div className="hidden md:flex items-center gap-1">
+              {siteConfig.navItems.map(({ labelKey, href }) => {
+                const isActive = pathname === href;
+                return (
+                  <a key={href} href={href}
+                    className={`px-3 py-1.5 text-sm font-medium uppercase tracking-wide rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? "text-white bg-white/15 border border-white/20 shadow-sm"
+                        : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent"
+                    }`}
+                  >
+                    {t.nav[labelKey]}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Derecha: idioma */}
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={handleLocaleToggle}
+              className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
+            >
+              <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
+              <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
+            </button>
+          </div>
+        </>
       )}
     </nav>
 
+    {/* ── Drawer hamburguesa (logueado y no logueado) ─────────────────────── */}
+    <>
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-40"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <div
+        ref={drawerRef}
+        className={`fixed left-0 top-[88px] bottom-0 z-50 w-64 bg-neutral-800/97 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out ${
+          drawerOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Header: info de usuario si está logueado */}
+        {isLoggedIn && !isExternalUser && displayName && (
+          <button type="button"
+            onClick={() => { setShowUserModal(true); setDrawerOpen(false); }}
+            className="flex items-center gap-3 mx-3 mt-3 mb-2 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left flex-shrink-0"
+          >
+            <span className="w-8 h-8 rounded-full bg-brand-blue flex items-center justify-center text-white text-sm font-black uppercase shrink-0">
+              {displayName[0]}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+              <p className="text-[11px] text-neutral-400 truncate">{user!.email}</p>
+            </div>
+            <Icon icon="lucide:info" width={14} height={14} className="text-white/40 shrink-0" />
+          </button>
+        )}
+
+        {isLoggedIn && <div className="mx-3 mb-2 border-t border-white/10 flex-shrink-0" />}
+
+        {/* Items de navegación */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 pt-3 pb-4">
+          {sidebarDrawerContent}
+        </div>
+
+        {/* Footer: idioma */}
+        <div className="flex-shrink-0 border-t border-white/10 px-3 py-3">
+          <button type="button" onClick={() => { handleLocaleToggle(); setDrawerOpen(false); }}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-white hover:bg-white/10 transition-all duration-200"
+          >
+            <Icon icon="lucide:globe" width={15} height={15} className="shrink-0 opacity-80" />
+            <span>{locale === "es" ? "Cambiar a Inglés" : "Switch to Spanish"}</span>
+            <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-white/10 border border-white/10">
+              {locale === "es" ? "EN" : "ES"}
+            </span>
+          </button>
+        </div>
+      </div>
+    </>
+
+    {/* ── Modal de usuario ────────────────────────────────────────────────── */}
     {showUserModal && profile && (
       <div
         className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="user-profile-modal-title"
+        role="dialog" aria-modal="true" aria-labelledby="user-profile-modal-title"
         onClick={() => setShowUserModal(false)}
       >
         <div
@@ -219,31 +369,23 @@ export function NavBanner({ pathname }: NavBannerProps) {
           <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
             <div className="w-10 h-1 rounded-full bg-neutral-200" />
           </div>
-          {/* Header */}
           <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-100 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-brand-blue flex items-center justify-center text-white text-sm font-black uppercase flex-shrink-0">
                 {displayName![0]}
               </div>
               <div>
-                <h2 id="user-profile-modal-title" className="text-sm font-bold text-neutral-900">
-                  {displayName}
-                </h2>
+                <h2 id="user-profile-modal-title" className="text-sm font-bold text-neutral-900">{displayName}</h2>
                 <p className="text-xs text-neutral-500 mt-0.5">{user!.email}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowUserModal(false)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0"
-              aria-label="Cerrar"
+            <button type="button" onClick={() => setShowUserModal(false)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
             >
               <Icon icon="lucide:x" width={16} height={16} />
             </button>
           </div>
-          {/* Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-3">
-            {/* Rol */}
             <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
               <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                 <Icon icon="lucide:shield" width={15} height={15} className="text-brand-blue" />
@@ -255,15 +397,9 @@ export function NavBanner({ pathname }: NavBannerProps) {
                 </span>
               </div>
             </div>
-            {/* Estado */}
             <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${profile.activo ? "bg-green-100" : "bg-red-100"}`}>
-                <Icon
-                  icon={profile.activo ? "lucide:check-circle" : "lucide:circle-off"}
-                  width={15}
-                  height={15}
-                  className={profile.activo ? "text-green-600" : "text-red-500"}
-                />
+                <Icon icon={profile.activo ? "lucide:check-circle" : "lucide:circle-off"} width={15} height={15} className={profile.activo ? "text-green-600" : "text-red-500"} />
               </div>
               <div>
                 <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide mb-0.5">Estado</p>
@@ -273,7 +409,6 @@ export function NavBanner({ pathname }: NavBannerProps) {
                 </span>
               </div>
             </div>
-            {/* Empresas */}
             {empresaNombres.length > 0 && (
               <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
                 <div className="flex items-center gap-2 mb-2">
@@ -281,8 +416,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                     <Icon icon="lucide:building-2" width={15} height={15} className="text-brand-blue" />
                   </div>
                   <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">
-                    Empresas asignadas
-                    <span className="ml-1 text-neutral-300">({empresaNombres.length})</span>
+                    Empresas asignadas <span className="text-neutral-300">({empresaNombres.length})</span>
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 ml-10">
@@ -295,12 +429,9 @@ export function NavBanner({ pathname }: NavBannerProps) {
               </div>
             )}
           </div>
-          {/* Footer */}
           <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-neutral-100">
-            <button
-              type="button"
-              onClick={() => setShowUserModal(false)}
-              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+            <button type="button" onClick={() => setShowUserModal(false)}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
             >
               Cerrar
             </button>

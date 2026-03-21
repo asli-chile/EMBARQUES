@@ -125,11 +125,8 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <div className="h-dvh flex flex-col overflow-hidden">
             <Header />
             <NavBanner pathname={pathname} />
-            <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
-              <Sidebar pathname={pathname} />
-              <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
-                {mainContent}
-              </div>
+            <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+              {mainContent}
             </div>
           </div>
           <AuthFormModalOverlay />
