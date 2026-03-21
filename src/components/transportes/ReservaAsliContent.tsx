@@ -14,7 +14,7 @@ import {
   buildInstructivoPlainBody,
   applyTagsToExcelBuffer,
 } from "@/lib/documentos/instructivo";
-import { sendEmail } from "@/lib/email/sendEmail";
+import { sendEmail, type EmailAttachment } from "@/lib/email/sendEmail";
 
 type Operacion = {
   id: string;
@@ -831,7 +831,19 @@ export function ReservaAsliContent() {
 
     const subject = buildInstructivoSubject(selectedOperacion);
     const body    = buildInstructivoPlainBody(selectedOperacion);
-    const result  = await sendEmail({ to: "alex.cardenas@asli.cl", subject, body });
+
+    // Convertir PDF a base64 para adjuntar
+    const arrayBuffer = await instrBlob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    const attachments: EmailAttachment[] = [{
+      name: instrFilename || "Instructivo.pdf",
+      content: btoa(binary),
+      mimeType: "application/pdf",
+    }];
+
+    const result = await sendEmail({ to: "alex.cardenas@asli.cl", subject, body, attachments });
 
     if (result.success) {
       setInstrPhase("sent");

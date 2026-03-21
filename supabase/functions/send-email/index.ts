@@ -47,8 +47,9 @@ Deno.serve(async (req) => {
     if (!senderEmail) return json({ success: false, error: "No se encontró el email del usuario" }, 400);
 
     // ── 3. Leer cuerpo de la solicitud ────────────────────────────────────
-    const { to, subject, body } = await req.json() as {
+    const { to, subject, body, attachments } = await req.json() as {
       to: string; subject: string; body: string;
+      attachments?: { name: string; content: string; mimeType: string }[];
     };
     if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" }, 400);
 
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
     const accessToken = await getServiceAccountToken(sa, senderEmail);
 
     // ── 5. Enviar vía Gmail API como el ejecutivo ──────────────────────────
-    const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body);
+    const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments);
     const gmailRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/messages/send`,
       {
@@ -149,15 +150,56 @@ function b64url(input: string | Uint8Array): string {
   return str.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function buildRawEmail(fromEmail: string, fromName: string, to: string, subject: string, body: string): string {
-  const lines = [
-    `From: ${fromName} <${fromEmail}>`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    `MIME-Version: 1.0`,
-    `Content-Type: text/plain; charset=UTF-8`,
-    ``,
-    body,
-  ].join("\r\n");
-  return b64url(lines);
+function buildRawEmail(
+  fromEmail: string, fromName: string,
+  to: string, subject: string, body: string,
+  attachments?: { name: string; content: string; mimeType: string }[],
+): string {
+  const boundary = "----=_Part_" + Math.random().toString(36).slice(2);
+  const hasAttachments = attachments && attachments.length > 0;
+
+  let raw: string;
+
+  if (!hasAttachments) {
+    raw = [
+      `From: ${fromName} <${fromEmail}>`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/plain; charset=UTF-8`,
+      ``,
+      body,
+    ].join("\r\n");
+  } else {
+    const parts: string[] = [
+      `From: ${fromName} <${fromEmail}>`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      ``,
+      `--${boundary}`,
+      `Content-Type: text/plain; charset=UTF-8`,
+      `Content-Transfer-Encoding: 7bit`,
+      ``,
+      body,
+    ];
+
+    for (const att of attachments) {
+      parts.push(
+        `--${boundary}`,
+        `Content-Type: ${att.mimeType}; name="${att.name}"`,
+        `Content-Disposition: attachment; filename="${att.name}"`,
+        `Content-Transfer-Encoding: base64`,
+        ``,
+        // Partir el base64 en líneas de 76 chars (estándar MIME)
+        att.content.match(/.{1,76}/g)?.join("\r\n") ?? att.content,
+      );
+    }
+
+    parts.push(`--${boundary}--`);
+    raw = parts.join("\r\n");
+  }
+
+  return b64url(raw);
 }

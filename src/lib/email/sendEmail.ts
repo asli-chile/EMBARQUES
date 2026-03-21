@@ -1,9 +1,16 @@
 import { createClient } from "@/lib/supabase/client";
 
+export interface EmailAttachment {
+  name: string;       // filename, ej: "Instructivo_ASLI-2026-001.pdf"
+  content: string;    // base64 del archivo
+  mimeType: string;   // "application/pdf"
+}
+
 export async function sendEmail(params: {
   to: string;
   subject: string;
   body: string;
+  attachments?: EmailAttachment[];
 }): Promise<{ success: boolean; sender?: string; error?: string }> {
   try {
     const supabase = createClient();
