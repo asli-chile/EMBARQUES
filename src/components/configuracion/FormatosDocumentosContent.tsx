@@ -141,7 +141,7 @@ const TAG_GROUPS: TagGroup[] = [
       { tag: "{{especie}}",            label: "Especie / producto",   sample: "Uva de mesa" },
       { tag: "{{descripcion_carga}}", label: "Descripción carga",     sample: "Fruta fresca refrigerada" },
       { tag: "{{temperatura}}",        label: "Temperatura",          sample: "-0.5°C" },
-      { tag: "{{ventilacion}}",        label: "Ventilación",          sample: "10 CBM/H" },
+      { tag: "{{ventilacion}}",        label: "Ventilación (CBM/h)",   sample: "25" },
       { tag: "{{peso_neto}}",          label: "Peso neto total",      sample: "20.000 kg" },
       { tag: "{{peso_bruto}}",         label: "Peso bruto total",     sample: "22.500 kg" },
       { tag: "{{peso_neto_total}}",    label: "Peso neto total",      sample: "20.000 kg" },

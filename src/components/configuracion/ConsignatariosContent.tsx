@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 type Cliente = { id: string; nombre_cliente: string };
 
@@ -55,6 +56,8 @@ const emptyForm = (): Omit<Consignatario, "id"> => ({
 
 export function ConsignatariosContent() {
   const { isSuperadmin, isAdmin } = useAuth();
+  const { t } = useLocale();
+  const tr = t.consignatarios;
   const canEdit = isSuperadmin || isAdmin;
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -126,8 +129,8 @@ export function ConsignatariosContent() {
   }
 
   const handleSave = async () => {
-    if (!form.nombre.trim()) { setError("El nombre es obligatorio."); return; }
-    if (!form.cliente) { setError("Debes seleccionar un cliente."); return; }
+    if (!form.nombre.trim()) { setError(tr.errorNombre); return; }
+    if (!form.cliente) { setError(tr.errorCliente); return; }
     setSaving(true);
     setError(null);
 
@@ -162,7 +165,7 @@ export function ConsignatariosContent() {
     }
 
     if (err) { setError(err.message); setSaving(false); return; }
-    sileo.success({ title: modal === "edit" ? "Consignatario actualizado." : "Consignatario creado." });
+    sileo.success({ title: modal === "edit" ? tr.savedUpdate : tr.savedCreate });
     setSaving(false);
     closeModal();
     fetchData();
@@ -171,7 +174,7 @@ export function ConsignatariosContent() {
   const handleDelete = async () => {
     if (!confirmDelete) return;
     const { error: err } = await supabase.from("consignatarios").delete().eq("id", confirmDelete.id);
-    if (err) { setError(err.message); } else { sileo.success({ title: "Consignatario eliminado." }); fetchData(); }
+    if (err) { setError(err.message); } else { sileo.success({ title: tr.deleted }); fetchData(); }
     setConfirmDelete(null);
   };
 
@@ -212,17 +215,17 @@ export function ConsignatariosContent() {
               <Icon icon="lucide:contact" width={22} height={22} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-white leading-tight">Consignatarios & Notify</h1>
-              <p className="text-xs text-white/60 mt-0.5 hidden sm:block">Gestión de consignatarios por cliente</p>
+              <h1 className="text-base sm:text-lg font-bold text-white leading-tight">{tr.title}</h1>
+              <p className="text-xs text-white/60 mt-0.5 hidden sm:block">{tr.subtitle}</p>
               {!loading && (
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white/90 border border-white/20">
                     <Icon icon="lucide:users" width={9} height={9} />
-                    {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+                    {filtered.length} {filtered.length !== 1 ? tr.resultados : tr.resultado}
                   </span>
                   {!showInactive && consignatarios.filter(c => !c.activo).length > 0 && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-white/60 border border-white/15">
-                      {consignatarios.filter(c => !c.activo).length} inactivos
+                      {consignatarios.filter(c => !c.activo).length} {tr.inactivosLabel}
                     </span>
                   )}
                 </div>
@@ -235,8 +238,8 @@ export function ConsignatariosContent() {
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white text-brand-blue text-xs sm:text-sm font-bold hover:bg-white/90 transition-colors shadow-sm shrink-0"
             >
               <Icon icon="lucide:plus" width={15} height={15} />
-              <span className="hidden sm:inline">Nuevo consignatario</span>
-              <span className="sm:hidden">Nuevo</span>
+              <span className="hidden sm:inline">{tr.nuevo}</span>
+              <span className="sm:hidden">{tr.nuevoShort}</span>
             </button>
           )}
         </div>
@@ -258,7 +261,7 @@ export function ConsignatariosContent() {
             <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Buscar por nombre, destino, empresa..."
+              placeholder={tr.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-8 pr-3 py-2.5 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
@@ -270,15 +273,15 @@ export function ConsignatariosContent() {
               onChange={(e) => setSelectedCliente(e.target.value)}
               className="flex-1 sm:flex-none px-3 py-2.5 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue min-w-0"
             >
-              <option value="all">Todos los clientes</option>
+              <option value="all">{tr.allClients}</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.nombre_cliente}>{c.nombre_cliente}</option>
               ))}
             </select>
             <label className="flex items-center gap-1.5 text-xs text-neutral-600 cursor-pointer px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 transition-colors shrink-0">
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="w-3.5 h-3.5 accent-brand-blue" />
-              <span className="hidden sm:inline">Inactivos</span>
-              <span className="sm:hidden">Inact.</span>
+              <span className="hidden sm:inline">{tr.showInactive}</span>
+              <span className="sm:hidden">{tr.showInactiveShort}</span>
             </label>
           </div>
         </div>
@@ -288,7 +291,7 @@ export function ConsignatariosContent() {
           <div className="flex items-center justify-center py-20">
             <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm">
               <Icon icon="typcn:refresh" className="w-5 h-5 text-brand-blue animate-spin" />
-              Cargando consignatarios...
+              {tr.loading}
             </div>
           </div>
         ) : filtered.length === 0 ? (
@@ -296,14 +299,14 @@ export function ConsignatariosContent() {
             <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
               <Icon icon="lucide:contact" width={28} height={28} className="text-neutral-300" />
             </div>
-            <p className="text-neutral-700 font-semibold text-sm">No hay consignatarios</p>
+            <p className="text-neutral-700 font-semibold text-sm">{tr.noConsignatarios}</p>
             <p className="text-neutral-400 text-xs mt-1 mb-5">
-              {canEdit ? "Crea uno con el botón de arriba." : "Contacta al administrador."}
+              {canEdit ? tr.createHint : tr.adminHint}
             </p>
             {canEdit && (
               <button onClick={openCreate} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-bold hover:bg-brand-blue/90 transition-colors shadow-sm">
                 <Icon icon="lucide:plus" width={15} />
-                Nuevo consignatario
+                {tr.nuevo}
               </button>
             )}
           </div>
@@ -334,11 +337,11 @@ export function ConsignatariosContent() {
                           {canEdit ? (
                             <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
                               <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={9} />
-                              {c.activo ? "Activo" : "Inactivo"}
+                              {c.activo ? tr.activo : tr.inactivo}
                             </button>
                           ) : (
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
-                              {c.activo ? "Activo" : "Inactivo"}
+                              {c.activo ? tr.activo : tr.inactivo}
                             </span>
                           )}
                         </div>
@@ -378,12 +381,12 @@ export function ConsignatariosContent() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50">
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Nombre</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Cliente</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Destino</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colNombre}</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colCliente}</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colDestino}</th>
                       <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Consignee</th>
                       <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Notify</th>
-                      <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Estado</th>
+                      <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colEstado}</th>
                       {canEdit && <th className="px-4 py-3 w-20" />}
                     </tr>
                   </thead>
@@ -409,10 +412,10 @@ export function ConsignatariosContent() {
                         <td className="px-4 py-3 text-center">
                           {canEdit ? (
                             <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"}`}>
-                              <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />{c.activo ? "Activo" : "Inactivo"}
+                              <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />{c.activo ? tr.activo : tr.inactivo}
                             </button>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>{c.activo ? "Activo" : "Inactivo"}</span>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>{c.activo ? tr.activo : tr.inactivo}</span>
                           )}
                         </td>
                         {canEdit && (
@@ -429,7 +432,7 @@ export function ConsignatariosContent() {
                 </table>
               </div>
               <div className="px-4 py-2.5 border-t border-neutral-100 bg-neutral-50/50">
-                <span className="text-[10px] text-neutral-400 font-medium">{filtered.length} consignatario{filtered.length !== 1 ? "s" : ""}</span>
+                <span className="text-[10px] text-neutral-400 font-medium">{filtered.length} {filtered.length !== 1 ? tr.consignatarios_plural : tr.consignatario}</span>
               </div>
             </div>
           </>
@@ -450,7 +453,7 @@ export function ConsignatariosContent() {
                   <Icon icon={modal === "create" ? "lucide:user-plus" : "lucide:user-cog"} className="w-4 h-4 text-brand-blue" />
                 </span>
                 <div>
-                  <h2 className="font-bold text-neutral-900 text-sm">{modal === "create" ? "Nuevo consignatario" : "Editar consignatario"}</h2>
+                  <h2 className="font-bold text-neutral-900 text-sm">{modal === "create" ? tr.createTitle : tr.editTitle}</h2>
                   {editId && <p className="text-[11px] text-neutral-400 mt-0.5 truncate max-w-[220px]">{form.nombre}</p>}
                 </div>
               </div>
@@ -464,24 +467,24 @@ export function ConsignatariosContent() {
               <div>
                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
                   <Icon icon="lucide:info" width={10} height={10} />
-                  Datos generales
+                  {tr.generalSection}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="sm:col-span-2">{inp("Nombre del consignatario *", "nombre")}</div>
+                  <div className="sm:col-span-2">{inp(tr.nombre, "nombre")}</div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Cliente *</label>
+                    <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{tr.clienteLabel}</label>
                     <select
                       value={form.cliente ?? ""}
                       onChange={(e) => setForm((f) => ({ ...f, cliente: e.target.value }))}
                       className="px-3 py-2.5 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
                     >
-                      <option value="">— Seleccionar cliente —</option>
+                      <option value="">{tr.selectCliente}</option>
                       {clientes.map((c) => (
                         <option key={c.id} value={c.nombre_cliente}>{c.nombre_cliente}</option>
                       ))}
                     </select>
                   </div>
-                  {inp("Destino / Puerto", "destino")}
+                  {inp(tr.destino, "destino")}
                 </div>
               </div>
 
@@ -500,7 +503,7 @@ export function ConsignatariosContent() {
                       }`}
                     >
                       <Icon icon={tab === "consignee" ? "lucide:user-check" : "lucide:bell"} width={12} height={12} />
-                      {tab === "consignee" ? "Consignee" : "Notify Party"}
+                      {tab === "consignee" ? tr.consigneeTab : tr.notifyTab}
                     </button>
                   ))}
                 </div>
@@ -508,23 +511,23 @@ export function ConsignatariosContent() {
                 {/* Copy banner */}
                 {activeTab === "notify" && (
                   <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-3">
-                    <p className="text-xs text-amber-700 leading-snug">¿Notify Party igual al Consignee?</p>
+                    <p className="text-xs text-amber-700 leading-snug">{tr.notifyEquals}</p>
                     <button type="button"
                       onClick={() => setForm((f) => ({ ...f, notify_company: f.consignee_company, notify_address: f.consignee_address, notify_attn: f.consignee_attn, notify_uscc: f.consignee_uscc, notify_mobile: f.consignee_mobile, notify_email: f.consignee_email, notify_zip: f.consignee_zip }))}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded-xl hover:bg-amber-200 transition-colors shrink-0"
                     >
-                      <Icon icon="lucide:copy" width={11} /> Copiar
+                      <Icon icon="lucide:copy" width={11} /> {tr.copyBtn}
                     </button>
                   </div>
                 )}
                 {activeTab === "consignee" && (
                   <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center justify-between gap-3">
-                    <p className="text-xs text-sky-700 leading-snug">¿Consignee igual al Notify Party?</p>
+                    <p className="text-xs text-sky-700 leading-snug">{tr.consigneeEquals}</p>
                     <button type="button"
                       onClick={() => setForm((f) => ({ ...f, consignee_company: f.notify_company, consignee_address: f.notify_address, consignee_attn: f.notify_attn, consignee_uscc: f.notify_uscc, consignee_mobile: f.notify_mobile, consignee_email: f.notify_email, consignee_zip: f.notify_zip }))}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-sky-700 bg-sky-100 border border-sky-200 rounded-xl hover:bg-sky-200 transition-colors shrink-0"
                     >
-                      <Icon icon="lucide:copy" width={11} /> Copiar
+                      <Icon icon="lucide:copy" width={11} /> {tr.copyBtn}
                     </button>
                   </div>
                 )}
@@ -532,23 +535,23 @@ export function ConsignatariosContent() {
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {activeTab === "consignee" ? (
                     <>
-                      <div className="sm:col-span-2">{inp("Empresa (Consignee)", "consignee_company")}</div>
-                      <div className="sm:col-span-2">{inp("Dirección completa", "consignee_address", "text", true)}</div>
-                      {inp("Attn / Contacto", "consignee_attn")}
-                      {inp("USCC / Tax ID", "consignee_uscc")}
-                      {inp("Móvil / Teléfono", "consignee_mobile")}
-                      {inp("Email", "consignee_email", "email")}
-                      {inp("Código Postal (ZIP)", "consignee_zip")}
+                      <div className="sm:col-span-2">{inp(tr.consigneeCompany, "consignee_company")}</div>
+                      <div className="sm:col-span-2">{inp(tr.address, "consignee_address", "text", true)}</div>
+                      {inp(tr.attn, "consignee_attn")}
+                      {inp(tr.uscc, "consignee_uscc")}
+                      {inp(tr.mobile, "consignee_mobile")}
+                      {inp(tr.email, "consignee_email", "email")}
+                      {inp(tr.zip, "consignee_zip")}
                     </>
                   ) : (
                     <>
-                      <div className="sm:col-span-2">{inp("Empresa (Notify Party)", "notify_company")}</div>
-                      <div className="sm:col-span-2">{inp("Dirección completa", "notify_address", "text", true)}</div>
-                      {inp("Attn / Contacto", "notify_attn")}
-                      {inp("USCC / Tax ID", "notify_uscc")}
-                      {inp("Móvil / Teléfono", "notify_mobile")}
-                      {inp("Email", "notify_email", "email")}
-                      {inp("Código Postal (ZIP)", "notify_zip")}
+                      <div className="sm:col-span-2">{inp(tr.notifyCompany, "notify_company")}</div>
+                      <div className="sm:col-span-2">{inp(tr.address, "notify_address", "text", true)}</div>
+                      {inp(tr.attn, "notify_attn")}
+                      {inp(tr.uscc, "notify_uscc")}
+                      {inp(tr.mobile, "notify_mobile")}
+                      {inp(tr.email, "notify_email", "email")}
+                      {inp(tr.zip, "notify_zip")}
                     </>
                   )}
                 </div>
@@ -556,7 +559,7 @@ export function ConsignatariosContent() {
 
               {/* Notas + activo */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                <div>{inp("Notas", "notas", "text", true)}</div>
+                <div>{inp(tr.notas, "notas", "text", true)}</div>
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200 sm:mt-5">
                   <label className="flex items-center gap-2.5 cursor-pointer flex-1">
                     <div className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${form.activo ? "bg-emerald-500" : "bg-neutral-300"}`}
@@ -564,8 +567,8 @@ export function ConsignatariosContent() {
                       <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.activo ? "left-4" : "left-0.5"}`} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-neutral-700">Consignatario activo</p>
-                      <p className="text-[10px] text-neutral-400">{form.activo ? "Visible en documentos" : "Oculto en documentos"}</p>
+                      <p className="text-xs font-semibold text-neutral-700">{tr.consignatarioActivo}</p>
+                      <p className="text-[10px] text-neutral-400">{form.activo ? tr.visibleDocs : tr.hiddenDocs}</p>
                     </div>
                   </label>
                 </div>
@@ -580,14 +583,14 @@ export function ConsignatariosContent() {
 
             <div className="px-4 sm:px-6 py-4 border-t border-neutral-100 flex gap-2.5 shrink-0">
               <button onClick={closeModal} className="flex-1 sm:flex-none py-3 px-5 text-sm font-semibold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">
-                Cancelar
+                {tr.cancel}
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
                 className="flex-1 flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
               >
-                {saving ? <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />Guardando…</> : <><Icon icon="lucide:save" className="w-4 h-4" />Guardar</>}
+                {saving ? <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.guardando}</> : <><Icon icon="lucide:save" className="w-4 h-4" />{tr.guardar}</>}
               </button>
             </div>
           </div>
@@ -606,16 +609,16 @@ export function ConsignatariosContent() {
                   <Icon icon="lucide:trash-2" className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-neutral-900 text-sm">Eliminar consignatario</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">Esta acción no se puede deshacer.</p>
+                  <h3 className="font-bold text-neutral-900 text-sm">{tr.deleteTitle}</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">{tr.deleteWarning}</p>
                 </div>
               </div>
               <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
                 ¿Confirmas eliminar <span className="font-semibold text-neutral-900">"{confirmDelete.nombre}"</span>?
               </p>
               <div className="flex gap-2.5">
-                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">Cancelar</button>
-                <button onClick={handleDelete} className="flex-1 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors">Eliminar</button>
+                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">{tr.cancel}</button>
+                <button onClick={handleDelete} className="flex-1 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors">{tr.delete}</button>
               </div>
             </div>
           </div>

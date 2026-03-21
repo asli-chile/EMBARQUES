@@ -30,12 +30,12 @@ export function RegistroForm() {
       }
       setError(
         (typeof data?.error === "string" && data.error) ||
-          (res.status === 400 && "Revisa los datos e intenta de nuevo.") ||
-          "Error al solicitar acceso. Intenta de nuevo."
+          (res.status === 400 && t.auth.errorDatos) ||
+          t.auth.errorAcceso
       );
     } catch {
       setIsPending(false);
-      setError("Error de conexión");
+      setError(t.auth.errorConexion);
     }
   };
 
@@ -69,7 +69,7 @@ export function RegistroForm() {
             type="text"
             autoComplete="name"
             disabled={isPending}
-            placeholder="Tu nombre completo"
+            placeholder={t.auth.placeholderNombre}
             className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
           />
         </div>
@@ -103,14 +103,14 @@ export function RegistroForm() {
               required
               minLength={6}
               disabled={isPending}
-              placeholder="Mínimo 6 caracteres"
+              placeholder={t.auth.placeholderPassword}
               className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
             />
             <button
               type="button"
               onClick={() => setShowPassword((p) => !p)}
               tabIndex={-1}
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
               disabled={isPending}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50"
             >

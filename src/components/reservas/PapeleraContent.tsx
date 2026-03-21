@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { sileo } from "sileo";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Operacion = {
   id: string;
@@ -38,6 +40,7 @@ export function PapeleraContent() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -113,7 +116,7 @@ export function PapeleraContent() {
 
     if (error) {
       console.error("Error restoring:", error);
-      alert(tr.errorRestoring);
+      sileo.error({ title: tr.errorRestoring });
     } else {
       setSelectedIds(new Set());
       await fetchOperaciones();
@@ -121,53 +124,57 @@ export function PapeleraContent() {
     setActionLoading(false);
   };
 
-  const handleDeletePermanently = async (ids: string[]) => {
+  const handleDeletePermanently = (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
 
-    const confirmed = window.confirm(
-      tr.confirmDelete.replace("{count}", String(ids.length))
-    );
+    setConfirmDialog({
+      title: "Eliminar definitivamente",
+      message: tr.confirmDelete.replace("{count}", String(ids.length)),
+      confirmLabel: tr.delete,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setActionLoading(true);
 
-    if (!confirmed) return;
+        const { error } = await supabase.from("operaciones").delete().in("id", ids);
 
-    setActionLoading(true);
-
-    const { error } = await supabase.from("operaciones").delete().in("id", ids);
-
-    if (error) {
-      console.error("Error deleting:", error);
-      alert(tr.errorDeleting);
-    } else {
-      setSelectedIds(new Set());
-      await fetchOperaciones();
-    }
-    setActionLoading(false);
+        if (error) {
+          console.error("Error deleting:", error);
+          sileo.error({ title: tr.errorDeleting });
+        } else {
+          setSelectedIds(new Set());
+          await fetchOperaciones();
+        }
+        setActionLoading(false);
+      },
+    });
   };
 
-  const handleEmptyTrash = async () => {
+  const handleEmptyTrash = () => {
     if (!supabase || operaciones.length === 0) return;
 
-    const confirmed = window.confirm(
-      tr.confirmEmptyTrash.replace("{count}", String(operaciones.length))
-    );
+    setConfirmDialog({
+      title: "Vaciar papelera",
+      message: tr.confirmEmptyTrash.replace("{count}", String(operaciones.length)),
+      confirmLabel: tr.emptyTrash,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setActionLoading(true);
 
-    if (!confirmed) return;
+        const { error } = await supabase
+          .from("operaciones")
+          .delete()
+          .not("deleted_at", "is", null);
 
-    setActionLoading(true);
-
-    const { error } = await supabase
-      .from("operaciones")
-      .delete()
-      .not("deleted_at", "is", null);
-
-    if (error) {
-      console.error("Error emptying trash:", error);
-      alert(tr.errorEmptyingTrash);
-    } else {
-      setSelectedIds(new Set());
-      await fetchOperaciones();
-    }
-    setActionLoading(false);
+        if (error) {
+          console.error("Error emptying trash:", error);
+          sileo.error({ title: tr.errorEmptyingTrash });
+        } else {
+          setSelectedIds(new Set());
+          await fetchOperaciones();
+        }
+        setActionLoading(false);
+      },
+    });
   };
 
   if (loading) {
@@ -184,6 +191,7 @@ export function PapeleraContent() {
   const allSelected = selectedIds.size === operaciones.length && operaciones.length > 0;
 
   return (
+    <>
     <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
       {/* Hero header */}
       <div className="bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-600 px-4 sm:px-6 py-5 sm:py-6">
@@ -489,5 +497,16 @@ export function PapeleraContent() {
         </div>
       </div>
     </main>
+    {confirmDialog && (
+      <ConfirmDialog
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

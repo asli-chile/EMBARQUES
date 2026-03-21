@@ -1,4 +1,5 @@
 import { Icon } from "@iconify/react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -260,6 +261,7 @@ export function ItinerarioContent() {
   };
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [operadorUpdatingId, setOperadorUpdatingId] = useState<string | null>(null);
   const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
   const [selectedAreaFromMap, setSelectedAreaFromMap] = useState<string | null>(null);
@@ -788,21 +790,22 @@ export function ItinerarioContent() {
   );
 
   const handleDelete = useCallback(
-    async (it: ItinerarioWithEscalas) => {
+    (it: ItinerarioWithEscalas) => {
       const msg = tr.confirmDeleteItinerary
         .replace("{{nave}}", it.nave ?? "")
         .replace("{{viaje}}", it.viaje ?? "");
-      if (!window.confirm(msg)) return;
-      setDeletingId(it.id);
-      try {
-        await deleteItinerario(it.id);
-        sileo.success({ title: tr.successDeleted });
-        loadItinerarios();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : tr.errorCreate);
-      } finally {
-        setDeletingId(null);
-      }
+      setConfirmDialog({
+        title: "Eliminar itinerario",
+        message: msg,
+        onConfirm: () => {
+          setConfirmDialog(null);
+          setDeletingId(it.id);
+          deleteItinerario(it.id)
+            .then(() => { sileo.success({ title: tr.successDeleted }); loadItinerarios(); })
+            .catch((e: unknown) => setError(e instanceof Error ? e.message : tr.errorCreate))
+            .finally(() => setDeletingId(null));
+        },
+      });
     },
     [loadItinerarios, tr]
   );
@@ -1055,6 +1058,7 @@ export function ItinerarioContent() {
 
   // Layout: usar siempre toda la pantalla sin bordes (mínimo padding solo donde haga falta).
   return (
+    <>
     <main
       className="flex-1 min-h-0 min-w-0 w-full bg-brand-blue flex flex-col overflow-hidden"
       role="main"
@@ -2805,5 +2809,17 @@ export function ItinerarioContent() {
         </div>
       )}
     </main>
+    {confirmDialog && (
+      <ConfirmDialog
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

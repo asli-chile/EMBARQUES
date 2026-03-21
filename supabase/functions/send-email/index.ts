@@ -60,18 +60,21 @@ Deno.serve(async (req) => {
     const sa = JSON.parse(saJson);
     const accessToken = await getServiceAccountToken(sa, senderEmail);
 
-    // ── 5. Obtener firma del usuario desde Gmail settings ──────────────────
+    // ── 5. Obtener firma del usuario desde Gmail settings (timeout 3s) ────
     let signatureHtml = "";
     try {
+      const sigController = new AbortController();
+      const sigTimeout = setTimeout(() => sigController.abort(), 3000);
       const sigRes = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/settings/sendAs/${encodeURIComponent(senderEmail)}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` }, signal: sigController.signal }
       );
+      clearTimeout(sigTimeout);
       if (sigRes.ok) {
         const sigData = await sigRes.json() as { signature?: string };
         signatureHtml = sigData.signature ?? "";
       }
-    } catch { /* si falla, se envía sin firma */ }
+    } catch { /* si falla o timeout, se envía sin firma */ }
 
     // ── 6. Enviar vía Gmail API como el ejecutivo ──────────────────────────
     const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments, signatureHtml);
@@ -157,9 +160,19 @@ async function getServiceAccountToken(sa: Record<string, string>, impersonateEma
 }
 
 function b64url(input: string | Uint8Array): string {
-  const str = typeof input === "string"
-    ? btoa(unescape(encodeURIComponent(input)))
-    : btoa(String.fromCharCode(...input));
+  let str: string;
+  if (typeof input === "string") {
+    // El contenido es ASCII/latin1 (JWT payload, MIME email) — btoa directo, sin encodeURIComponent
+    str = btoa(input);
+  } else {
+    // Uint8Array en chunks para evitar stack overflow con arrays grandes
+    const chunkSize = 8192;
+    let binary = "";
+    for (let i = 0; i < input.length; i += chunkSize) {
+      binary += String.fromCharCode(...input.subarray(i, Math.min(i + chunkSize, input.length)));
+    }
+    str = btoa(binary);
+  }
   return str.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
@@ -174,12 +187,15 @@ function buildRawEmail(
   const hasAtt = attachments && attachments.length > 0;
   const hasSig = !!signatureHtml;
 
-  // Cuerpo HTML: texto plano convertido a HTML + firma
-  const bodyHtml = body.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/\n/g, "<br>\r\n");
+  // Si body empieza con "<" es HTML; si no, convertir texto plano a HTML
+  const isHtml = body.trimStart().startsWith("<");
+  const plainText = isHtml ? "Abre este correo en un cliente que soporte HTML para ver el contenido." : body;
+  const bodyHtmlContent = isHtml
+    ? body
+    : body.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g, "<br>\r\n");
   const htmlPart = hasSig
-    ? `<div style="font-family:Arial,sans-serif;font-size:14px">${bodyHtml}</div><br>${signatureHtml}`
-    : `<div style="font-family:Arial,sans-serif;font-size:14px">${bodyHtml}</div>`;
+    ? `${bodyHtmlContent}<br><br>${signatureHtml}`
+    : bodyHtmlContent;
 
   const headers = [
     `From: ${fromName} <${fromEmail}>`,
@@ -199,7 +215,7 @@ function buildRawEmail(
       `--${altBoundary}`,
       `Content-Type: text/plain; charset=UTF-8`,
       ``,
-      body,
+      plainText,
       `--${altBoundary}`,
       `Content-Type: text/html; charset=UTF-8`,
       ``,
@@ -218,7 +234,7 @@ function buildRawEmail(
       `--${altBoundary}`,
       `Content-Type: text/plain; charset=UTF-8`,
       ``,
-      body,
+      plainText,
       `--${altBoundary}`,
       `Content-Type: text/html; charset=UTF-8`,
       ``,

@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 const NEW_EMPRESA_VALUE = "__new__";
 
@@ -25,6 +26,8 @@ function Avatar({ name, assigned }: { name: string; assigned: boolean }) {
 
 export function AsignarClientesEmpresasContent() {
   const { isSuperadmin, profile, isLoading: authLoading } = useAuth();
+  const { t } = useLocale();
+  const tr = t.asignarClientes;
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [usuariosCliente, setUsuariosCliente] = useState<UsuarioCliente[]>([]);
   const [asignados, setAsignados] = useState<Set<string>>(new Set());
@@ -140,7 +143,7 @@ export function AsignarClientesEmpresasContent() {
       }
       setSavedAsignados(new Set(asignados));
       setCountPerEmpresa((prev) => ({ ...prev, [selectedEmpresaId]: asignados.size }));
-      sileo.success({ title: "Asignación guardada." });
+      sileo.success({ title: tr.savedSuccess });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar");
     } finally {
@@ -188,21 +191,21 @@ export function AsignarClientesEmpresasContent() {
   if (authLoading) {
     return (
       <main className="flex-1 min-h-0 bg-neutral-100 flex items-center justify-center" role="main">
-        <p className="text-neutral-500">Cargando…</p>
+        <p className="text-neutral-500">{tr.loading}</p>
       </main>
     );
   }
   if (!profile) {
     return (
       <main className="flex-1 min-h-0 bg-neutral-100 p-6" role="main">
-        <p className="text-neutral-600">Inicia sesión para continuar.</p>
+        <p className="text-neutral-600">{tr.loginRequired}</p>
       </main>
     );
   }
   if (!isSuperadmin) {
     return (
       <main className="flex-1 min-h-0 bg-neutral-100 p-6" role="main">
-        <p className="text-neutral-600">Solo el superadmin puede gestionar esta configuración.</p>
+        <p className="text-neutral-600">{tr.superadminOnly}</p>
       </main>
     );
   }
@@ -218,18 +221,18 @@ export function AsignarClientesEmpresasContent() {
               <Icon icon="lucide:link" width={22} height={22} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight">Asignar clientes a empresas</h1>
-              <p className="text-xs text-white/70 mt-0.5">Gestiona el acceso de usuarios cliente por empresa</p>
+              <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
+              <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
             </div>
           </div>
           <div className="flex gap-2 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{empresas.length} empresa{empresas.length !== 1 ? "s" : ""}</span>
+              <span className="text-xs font-semibold">{empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{usuariosCliente.length} cliente{usuariosCliente.length !== 1 ? "s" : ""}</span>
+              <span className="text-xs font-semibold">{usuariosCliente.length} {usuariosCliente.length !== 1 ? tr.clientes : tr.cliente}</span>
             </div>
           </div>
         </div>
@@ -242,15 +245,15 @@ export function AsignarClientesEmpresasContent() {
         <div className="flex-shrink-0 h-48 sm:h-56 lg:h-auto lg:w-64 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-neutral-100 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Empresas</span>
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{tr.empresasSection}</span>
               <button
                 type="button"
                 onClick={() => { setShowNewEmpresa((v) => !v); setNewEmpresaNombre(""); }}
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-brand-blue hover:bg-brand-blue/10 transition-colors"
-                title="Nueva empresa"
+                title={tr.newEmpresa}
               >
                 <Icon icon="lucide:plus" width={13} height={13} />
-                Nueva
+                {tr.newEmpresaShort}
               </button>
             </div>
 
@@ -261,7 +264,7 @@ export function AsignarClientesEmpresasContent() {
                   type="text"
                   value={newEmpresaNombre}
                   onChange={(e) => setNewEmpresaNombre(e.target.value)}
-                  placeholder="Nombre de la empresa"
+                  placeholder={tr.nombreEmpresaPlaceholder}
                   className="flex-1 min-w-0 rounded-xl border border-neutral-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
                   onKeyDown={(e) => e.key === "Enter" && void handleCreateEmpresa()}
                   autoFocus
@@ -284,7 +287,7 @@ export function AsignarClientesEmpresasContent() {
                 type="text"
                 value={searchEmpresa}
                 onChange={(e) => setSearchEmpresa(e.target.value)}
-                placeholder="Buscar empresa…"
+                placeholder={tr.buscarEmpresa}
                 className="w-full rounded-xl border border-neutral-200 pl-7 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
               />
             </div>
@@ -294,7 +297,7 @@ export function AsignarClientesEmpresasContent() {
           <div className="flex-1 min-h-0 overflow-y-auto py-1.5 px-1.5">
             {filteredEmpresas.length === 0 ? (
               <p className="text-xs text-neutral-400 text-center py-6">
-                {searchEmpresa ? "Sin resultados." : "No hay empresas aún."}
+                {searchEmpresa ? tr.sinResultados : tr.noEmpresas}
               </p>
             ) : (
               filteredEmpresas.map((emp) => {
@@ -345,9 +348,9 @@ export function AsignarClientesEmpresasContent() {
                 <Icon icon="lucide:building-2" width={26} height={26} className="text-neutral-300" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-neutral-500">Selecciona una empresa</p>
+                <p className="text-sm font-semibold text-neutral-500">{tr.selectEmpresa}</p>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Elige una empresa de la lista para ver y gestionar sus clientes asignados.
+                  {tr.selectEmpresaHint}
                 </p>
               </div>
             </div>
@@ -362,8 +365,8 @@ export function AsignarClientesEmpresasContent() {
                   <div>
                     <h2 className="text-sm font-bold text-neutral-900">{selectedEmpresa?.nombre}</h2>
                     <p className="text-[11px] text-neutral-400">
-                      {asignados.size} cliente{asignados.size !== 1 ? "s" : ""} asignado{asignados.size !== 1 ? "s" : ""}
-                      {hasChanges && <span className="ml-1.5 text-amber-500 font-medium">· cambios sin guardar</span>}
+                      {asignados.size} {asignados.size !== 1 ? tr.clientes : tr.cliente} {tr.asignados}
+                      {hasChanges && <span className="ml-1.5 text-amber-500 font-medium">{tr.cambiosSinGuardar}</span>}
                     </p>
                   </div>
                 </div>
@@ -374,7 +377,7 @@ export function AsignarClientesEmpresasContent() {
                       onClick={() => { setAsignados(new Set(savedAsignados)); }}
                       className="px-3 py-1.5 rounded-xl text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors"
                     >
-                      Descartar
+                      {tr.descartar}
                     </button>
                   )}
                   <button
@@ -384,9 +387,9 @@ export function AsignarClientesEmpresasContent() {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
                     {saving ? (
-                      <><Icon icon="eos-icons:loading" width={13} height={13} className="animate-spin" />Guardando…</>
+                      <><Icon icon="eos-icons:loading" width={13} height={13} className="animate-spin" />{tr.guardando}</>
                     ) : (
-                      <><Icon icon="lucide:save" width={13} height={13} />Guardar</>
+                      <><Icon icon="lucide:save" width={13} height={13} />{tr.guardar}</>
                     )}
                   </button>
                 </div>
@@ -412,7 +415,7 @@ export function AsignarClientesEmpresasContent() {
                     type="text"
                     value={searchUsuario}
                     onChange={(e) => setSearchUsuario(e.target.value)}
-                    placeholder="Buscar usuario…"
+                    placeholder={tr.buscarUsuario}
                     className="w-full rounded-xl border border-neutral-200 pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
                   />
                   {searchUsuario && (
@@ -431,7 +434,7 @@ export function AsignarClientesEmpresasContent() {
                     onClick={() => setAsignados(new Set(filteredUsuarios.map((u) => u.id)))}
                     className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium text-brand-blue hover:bg-brand-blue/8 bg-brand-blue/5 transition-colors"
                   >
-                    Todos
+                    {tr.todos}
                   </button>
                   <button
                     type="button"
@@ -442,11 +445,11 @@ export function AsignarClientesEmpresasContent() {
                     })}
                     className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium text-neutral-500 hover:bg-neutral-100 transition-colors"
                   >
-                    Ninguno
+                    {tr.ninguno}
                   </button>
                 </div>
                 <span className="text-[11px] text-neutral-400 ml-auto">
-                  {asignadosCount} / {filteredUsuarios.length} asignados
+                  {asignadosCount} / {filteredUsuarios.length} {tr.asignados}
                 </span>
               </div>
 
@@ -454,7 +457,7 @@ export function AsignarClientesEmpresasContent() {
               <div className="flex-1 min-h-0 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-sm text-neutral-400">Cargando usuarios…</p>
+                    <p className="text-sm text-neutral-400">{tr.cargandoUsuarios}</p>
                   </div>
                 ) : usuariosCliente.length === 0 ? (
                   <div className="flex flex-col items-center gap-3 py-12 text-center px-6">
@@ -462,12 +465,12 @@ export function AsignarClientesEmpresasContent() {
                       <Icon icon="lucide:users" width={22} height={22} className="text-neutral-300" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-neutral-500">Sin usuarios cliente</p>
-                      <p className="text-xs text-neutral-400 mt-1">Crea usuarios con rol &quot;cliente&quot; en Configuración → Usuarios.</p>
+                      <p className="text-sm font-semibold text-neutral-500">{tr.sinUsuariosCliente}</p>
+                      <p className="text-xs text-neutral-400 mt-1">{tr.sinUsuariosClienteHint}</p>
                     </div>
                   </div>
                 ) : sortedUsuarios.length === 0 ? (
-                  <p className="text-xs text-neutral-400 text-center py-8">Sin resultados para &ldquo;{searchUsuario}&rdquo;.</p>
+                  <p className="text-xs text-neutral-400 text-center py-8">{tr.sinResultadosBusqueda}</p>
                 ) : (
                   <div className="divide-y divide-neutral-100">
                     {/* Assigned section header */}
@@ -475,7 +478,7 @@ export function AsignarClientesEmpresasContent() {
                       <div className="px-4 py-1.5 bg-green-50/60 sticky top-0 z-10">
                         <span className="text-[10px] font-semibold text-green-700 uppercase tracking-wide flex items-center gap-1">
                           <Icon icon="lucide:user-check" width={10} height={10} />
-                          Asignados ({asignadosCount})
+                          {tr.asignadosSection} ({asignadosCount})
                         </span>
                       </div>
                     )}
@@ -495,7 +498,7 @@ export function AsignarClientesEmpresasContent() {
                           <p className="text-[10px] text-neutral-400 truncate">{u.email}</p>
                         </div>
                         <span className="shrink-0 text-[10px] text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                          Quitar
+                          {tr.quitar}
                         </span>
                       </button>
                     ))}
@@ -505,7 +508,7 @@ export function AsignarClientesEmpresasContent() {
                       <div className="px-4 py-1.5 bg-neutral-50 sticky top-0 z-10">
                         <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide flex items-center gap-1">
                           <Icon icon="lucide:user-plus" width={10} height={10} />
-                          Disponibles ({sortedUsuarios.filter((u) => !asignados.has(u.id)).length})
+                          {tr.disponiblesSection} ({sortedUsuarios.filter((u) => !asignados.has(u.id)).length})
                         </span>
                       </div>
                     )}
@@ -523,7 +526,7 @@ export function AsignarClientesEmpresasContent() {
                           <p className="text-[10px] text-neutral-400 truncate">{u.email}</p>
                         </div>
                         <span className="shrink-0 text-[10px] text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                          Asignar
+                          {tr.asignar}
                         </span>
                       </button>
                     ))}

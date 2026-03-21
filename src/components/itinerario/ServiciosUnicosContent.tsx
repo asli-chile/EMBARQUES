@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { sileo } from "sileo";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const AREAS = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE"] as const;
 
@@ -287,27 +288,35 @@ export function ServiciosUnicosContent() {
   }, []);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const handleDelete = useCallback(
-    async (servicio: ServicioUnico) => {
-      if (!window.confirm(tr.confirmDelete.replace("{{name}}", servicio.nombre))) return;
-      setDeletingId(servicio.id);
-      setError(null);
-      const base = getApiUrl() || "";
-      try {
-        const res = await fetch(`${base}/api/admin/servicios-unicos/${servicio.id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-        const data = (await res.json()) as { error?: string };
-        if (!res.ok) throw new Error(data.error ?? tr.errorDelete);
-        sileo.success({ title: tr.successDeleted });
-        load();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : tr.errorDelete);
-      } finally {
-        setDeletingId(null);
-      }
+    (servicio: ServicioUnico) => {
+      setConfirmDialog({
+        title: "Eliminar servicio",
+        message: tr.confirmDelete.replace("{{name}}", servicio.nombre),
+        confirmLabel: tr.delete,
+        onConfirm: async () => {
+          setConfirmDialog(null);
+          setDeletingId(servicio.id);
+          setError(null);
+          const base = getApiUrl() || "";
+          try {
+            const res = await fetch(`${base}/api/admin/servicios-unicos/${servicio.id}`, {
+              method: "DELETE",
+              credentials: "include",
+            });
+            const data = (await res.json()) as { error?: string };
+            if (!res.ok) throw new Error(data.error ?? tr.errorDelete);
+            sileo.success({ title: tr.successDeleted });
+            load();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : tr.errorDelete);
+          } finally {
+            setDeletingId(null);
+          }
+        },
+      });
     },
     [load, tr]
   );
@@ -696,6 +705,7 @@ export function ServiciosUnicosContent() {
   }, [form, editingId, navieras, load, handleCloseModal, tr]);
 
   return (
+    <>
     <main className="flex-1 min-h-0 min-w-0 overflow-auto bg-neutral-50" role="main">
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-5 py-4 sm:py-6 space-y-4">
 
@@ -1644,5 +1654,16 @@ export function ServiciosUnicosContent() {
         </div>
       )}
     </main>
+    {confirmDialog && (
+      <ConfirmDialog
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

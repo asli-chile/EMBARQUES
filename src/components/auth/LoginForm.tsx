@@ -33,7 +33,7 @@ export function LoginForm() {
       }
     } catch {
       setIsPending(false);
-      setError("Error de conexión");
+      setError(t.auth.errorConexion);
     }
   };
 
@@ -91,7 +91,7 @@ export function LoginForm() {
               type="button"
               onClick={() => setShowPassword((p) => !p)}
               tabIndex={-1}
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
               disabled={isPending}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50"
             >

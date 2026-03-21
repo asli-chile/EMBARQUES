@@ -8,6 +8,9 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import * as XLSX from "xlsx-js-style";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type Operacion = {
   id: string;
@@ -34,7 +37,7 @@ type Operacion = {
   pallets: number | null;
   peso_neto: number | null;
   temperatura: number | null;
-  ventilacion: string | null;
+  ventilacion: number | null;
   deposito: string | null;
   planta_presentacion: string | null;
   citacion: string | null;
@@ -81,7 +84,7 @@ function buildEmailContent(op: Operacion) {
     [op.nave, op.tt ? `${op.tt}D` : ""].filter(Boolean).join(" - ") || "",
     op.especie ?? "",
     op.temperatura != null ? `${op.temperatura}°C` : "",
-    op.ventilacion ?? "",
+    op.ventilacion != null ? String(op.ventilacion) : "",
     op.pol ?? "",
     op.pod ?? "",
   ].filter(Boolean).join(" // ");
@@ -97,7 +100,7 @@ function buildEmailContent(op: Operacion) {
     ["Especie", op.especie],
     ["Tipo unidad", op.tipo_unidad],
     ["Temperatura", op.temperatura != null ? `${op.temperatura}°C` : null],
-    ["Ventilación", op.ventilacion],
+    ["Ventilación (CBM/h)", op.ventilacion != null ? op.ventilacion : null],
     ["Consignatario", op.consignatario],
   ]);
   htmlBody += renderHtmlTable("Embarque", [
@@ -125,7 +128,7 @@ function buildReservaBody(op: Operacion): string {
     `ETD: ${op.etd ? format(new Date(op.etd), "dd/MM/yyyy") : "-"}`,
     `Especie: ${op.especie ?? "-"}`,
     op.temperatura != null ? `Temperatura: ${op.temperatura}°C` : "",
-    op.ventilacion ? `Ventilación: ${op.ventilacion}` : "",
+    op.ventilacion != null ? `Ventilación: ${op.ventilacion} CBM/h` : "",
     op.booking ? `Booking: ${op.booking}` : "",
   ].filter(Boolean);
   return lines.join("\n");
@@ -180,13 +183,14 @@ type CardProps = {
   isCliente: boolean;
   selected: boolean;
   actionLoading: boolean;
+  tr: ReturnType<typeof useLocale>["t"]["misReservas"];
   onSelect: () => void;
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
 };
 
-function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, onSelect, onCopy, onEmail, onBooking }: CardProps) {
+function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking }: CardProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
     <div
@@ -230,7 +234,7 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
       {/* Ruta destacada */}
       <div className="mx-4 mb-3 bg-neutral-50 rounded-2xl px-3 py-2.5 flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-wide">Origen</p>
+          <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-wide">{tr.cardOrigin}</p>
           <p className="text-sm font-bold text-neutral-800 font-mono truncate">{op.pol ?? "-"}</p>
         </div>
         <div className="flex flex-col items-center gap-0.5 shrink-0 px-1">
@@ -240,7 +244,7 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
           )}
         </div>
         <div className="flex-1 min-w-0 text-right">
-          <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-wide">Destino</p>
+          <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-wide">{tr.cardDestino}</p>
           <p className="text-sm font-bold text-neutral-800 font-mono truncate">{op.pod ?? "-"}</p>
         </div>
       </div>
@@ -250,7 +254,7 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
         {/* Naviera · Nave */}
         {(op.naviera || op.nave) && (
           <div className="flex items-center justify-between gap-2">
-            <span className="text-neutral-400 shrink-0">Naviera</span>
+            <span className="text-neutral-400 shrink-0">{tr.colCarrier}</span>
             <span className="text-neutral-700 font-medium text-right truncate">
               {op.naviera ?? "-"}{op.nave ? ` · ${op.nave}` : ""}
             </span>
@@ -272,13 +276,13 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
         {/* Booking + Especie */}
         {op.booking && (
           <div className="flex items-center justify-between gap-2">
-            <span className="text-neutral-400 shrink-0">Booking</span>
+            <span className="text-neutral-400 shrink-0">{tr.colBooking}</span>
             <span className="font-mono text-neutral-600 text-right truncate">{op.booking}</span>
           </div>
         )}
         {op.especie && (
           <div className="flex items-center justify-between gap-2">
-            <span className="text-neutral-400 shrink-0">Especie</span>
+            <span className="text-neutral-400 shrink-0">{tr.colSpecies}</span>
             <span className="text-neutral-700 font-medium text-right truncate">{op.especie}</span>
           </div>
         )}
@@ -290,10 +294,10 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
           {format(new Date(op.created_at), "dd MMM yyyy", { locale: es })}
         </span>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors" title="Copiar datos">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors" title={tr.copyTitle}>
             <Icon icon="lucide:copy" width={20} height={20} />
           </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-xl transition-colors" title="Enviar por correo">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-xl transition-colors" title={tr.emailTitle}>
             <Icon icon="lucide:mail" width={20} height={20} />
           </button>
           {!isCliente && (
@@ -307,7 +311,7 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
                   ? "text-amber-400 hover:text-amber-600 hover:bg-amber-50"
                   : "text-neutral-400 hover:text-amber-500 hover:bg-amber-50"
               }`}
-              title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
+              title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
             >
               <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={20} height={20} />
             </button>
@@ -321,6 +325,8 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, o
 // ─── EmailModal ───────────────────────────────────────────────────────────────
 
 function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
+  const { t } = useLocale();
+  const tr = t.misReservas;
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -348,7 +354,7 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
             <Icon icon={sent ? "lucide:check-circle" : "lucide:mail"} width={20} height={20} className={sent ? "text-emerald-600" : "text-brand-blue"} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">{sent ? "Correo enviado" : "Enviar solicitud de reserva"}</h3>
+            <h3 className="text-sm font-bold text-neutral-900">{sent ? tr.emailSentTitle : tr.emailSendTitle}</h3>
             <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
           </div>
         </div>
@@ -364,7 +370,7 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
           <div className="mb-4 space-y-2">
             <p className="text-xs text-neutral-600">El correo se enviará desde tu cuenta <strong>@asli.cl</strong> a <strong>informaciones@asli.cl</strong>.</p>
             <div className="px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
-              <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">Asunto</p>
+              <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">{tr.emailSubject}</p>
               <p className="text-xs text-neutral-700 font-medium leading-snug line-clamp-2">{subject}</p>
             </div>
           </div>
@@ -373,14 +379,14 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
         <div className="flex gap-2">
           <button type="button" onClick={onClose} disabled={sending}
             className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60">
-            {sent ? "Cerrar" : "Cancelar"}
+            {sent ? tr.close : tr.cancel}
           </button>
           {!sent && (
           <button type="button" onClick={() => void handleEnviar()} disabled={sending}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20 disabled:opacity-60">
             {sending
-              ? <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />Enviando...</>
-              : <><Icon icon="lucide:send" width={14} height={14} />Enviar desde mi cuenta</>
+              ? <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />{tr.sending}</>
+              : <><Icon icon="lucide:send" width={14} height={14} />{tr.sendFromAccount}</>
             }
           </button>
           )}
@@ -400,6 +406,8 @@ type BookingModalProps = {
 };
 
 function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
+  const { t } = useLocale();
+  const tr = t.misReservas;
   const [bookingInput, setBookingInput] = useState(op.booking ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -457,7 +465,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               <Icon icon="lucide:bookmark-check" width={20} height={20} className="text-amber-600" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-neutral-900">Confirmar Booking</h3>
+              <h3 className="text-sm font-bold text-neutral-900">{tr.confirmBookingModal}</h3>
               <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
             </div>
           </div>
@@ -469,7 +477,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
           {/* Número de booking */}
           <div className="mb-4">
             <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
-              Número de Booking
+              {tr.bookingNumberLabel}
             </label>
             <input
               type="text"
@@ -483,20 +491,20 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
           {/* Documento */}
           <div className="mb-5">
             <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
-              Documento de confirmación (PDF o imagen)
+              {tr.bookingDocFieldLabel}
             </label>
 
             {hasDoc && !file && (
               <div className="flex items-center gap-2 mb-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
                 <Icon icon="lucide:paperclip" width={14} height={14} className="text-emerald-600 shrink-0" />
-                <span className="text-xs text-emerald-700 font-medium flex-1 truncate">Documento adjunto</span>
+                <span className="text-xs text-emerald-700 font-medium flex-1 truncate">{tr.docAttached}</span>
                 <a
                   href={op.booking_doc_url!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-emerald-600 hover:underline font-semibold shrink-0"
                 >
-                  Ver
+                  {tr.view}
                 </a>
               </div>
             )}
@@ -508,7 +516,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
                   : "border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 hover:bg-neutral-100"
               }`}>
                 <Icon icon={file ? "lucide:file-check" : "lucide:upload"} width={14} height={14} />
-                {file ? file.name : (hasDoc ? "Reemplazar documento" : "Subir PDF o imagen")}
+                {file ? file.name : (hasDoc ? tr.replaceDoc : tr.uploadDoc)}
               </div>
               <input
                 type="file"
@@ -523,7 +531,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
                 onClick={() => setFile(null)}
                 className="mt-1.5 text-xs text-neutral-400 hover:text-red-500 transition-colors"
               >
-                Quitar archivo
+                {tr.removeFile}
               </button>
             )}
           </div>
@@ -535,7 +543,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               disabled={uploading}
               className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
             >
-              Cancelar
+              {tr.cancel}
             </button>
             <button
               type="button"
@@ -544,9 +552,9 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               className="flex-1 px-4 py-2.5 text-xs font-semibold bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
             >
               {uploading ? (
-                <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />Guardando...</>
+                <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />{tr.saving}</>
               ) : (
-                <><Icon icon="lucide:save" width={14} height={14} />Guardar</>
+                <><Icon icon="lucide:save" width={14} height={14} />{tr.save}</>
               )}
             </button>
           </div>
@@ -570,6 +578,11 @@ export function MisReservasContent() {
   const [clienteFilter, setClienteFilter] = useState<string>("");
   const [navieraFilter, setNavieraFilter] = useState<string>("");
   const [especieFilter, setEspecieFilter] = useState<string>("");
+  const [podFilter, setPodFilter] = useState<string>("");
+  const [naveFilter, setNaveFilter] = useState<string>("");
+  const [etdDesde, setEtdDesde] = useState<string>("");
+  const [etdHasta, setEtdHasta] = useState<string>("");
+  const [transporteFilter, setTransporteFilter] = useState<string>(""); // "" | "enviado" | "sin_enviar"
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
@@ -628,7 +641,7 @@ export function MisReservasContent() {
   };
 
   const getFilteredData = useCallback(
-    (excludeFilter?: "estado" | "cliente" | "naviera" | "especie") => {
+    (excludeFilter?: "estado" | "cliente" | "naviera" | "especie" | "pod" | "nave") => {
       let result = operaciones;
       if (searchTerm.trim()) {
         const search = searchTerm.toLowerCase();
@@ -639,16 +652,24 @@ export function MisReservasContent() {
             op.naviera?.toLowerCase().includes(search) ||
             op.nave?.toLowerCase().includes(search) ||
             op.ref_asli?.toLowerCase().includes(search) ||
-            op.especie?.toLowerCase().includes(search)
+            op.especie?.toLowerCase().includes(search) ||
+            op.pod?.toLowerCase().includes(search) ||
+            op.pol?.toLowerCase().includes(search)
         );
       }
       if (estadoFilter && excludeFilter !== "estado") result = result.filter((op) => op.estado_operacion === estadoFilter);
       if (clienteFilter && excludeFilter !== "cliente") result = result.filter((op) => op.cliente === clienteFilter);
       if (navieraFilter && excludeFilter !== "naviera") result = result.filter((op) => op.naviera === navieraFilter);
       if (especieFilter && excludeFilter !== "especie") result = result.filter((op) => op.especie === especieFilter);
+      if (podFilter && excludeFilter !== "pod") result = result.filter((op) => op.pod === podFilter);
+      if (naveFilter && excludeFilter !== "nave") result = result.filter((op) => op.nave === naveFilter);
+      if (etdDesde) result = result.filter((op) => op.etd && op.etd >= etdDesde);
+      if (etdHasta) result = result.filter((op) => op.etd && op.etd <= etdHasta);
+      if (transporteFilter === "enviado") result = result.filter((op) => op.enviado_transporte);
+      if (transporteFilter === "sin_enviar") result = result.filter((op) => !op.enviado_transporte);
       return result;
     },
-    [operaciones, searchTerm, estadoFilter, clienteFilter, navieraFilter, especieFilter]
+    [operaciones, searchTerm, estadoFilter, clienteFilter, navieraFilter, especieFilter, podFilter, naveFilter, etdDesde, etdHasta, transporteFilter]
   );
 
   const filteredOperaciones = useMemo(() => {
@@ -680,10 +701,18 @@ export function MisReservasContent() {
   const clientes = useMemo(() => Array.from(new Set(getFilteredData("cliente").map((op) => op.cliente).filter(Boolean))).sort() as string[], [getFilteredData]);
   const navieras = useMemo(() => Array.from(new Set(getFilteredData("naviera").map((op) => op.naviera).filter(Boolean))).sort() as string[], [getFilteredData]);
   const especies = useMemo(() => Array.from(new Set(getFilteredData("especie").map((op) => op.especie).filter(Boolean))).sort() as string[], [getFilteredData]);
+  const pods     = useMemo(() => Array.from(new Set(getFilteredData("pod").map((op) => op.pod).filter(Boolean))).sort() as string[], [getFilteredData]);
+  const naves    = useMemo(() => Array.from(new Set(getFilteredData("nave").map((op) => op.nave).filter(Boolean))).sort() as string[], [getFilteredData]);
 
-  const activeFiltersCount = useMemo(() => [estadoFilter, clienteFilter, navieraFilter, especieFilter].filter(Boolean).length, [estadoFilter, clienteFilter, navieraFilter, especieFilter]);
+  const activeFiltersCount = useMemo(() =>
+    [estadoFilter, clienteFilter, navieraFilter, especieFilter, podFilter, naveFilter, etdDesde, etdHasta, transporteFilter].filter(Boolean).length,
+    [estadoFilter, clienteFilter, navieraFilter, especieFilter, podFilter, naveFilter, etdDesde, etdHasta, transporteFilter]
+  );
 
-  const clearAllFilters = () => { setSearchTerm(""); setEstadoFilter(""); setClienteFilter(""); setNavieraFilter(""); setEspecieFilter(""); };
+  const clearAllFilters = () => {
+    setSearchTerm(""); setEstadoFilter(""); setClienteFilter(""); setNavieraFilter(""); setEspecieFilter("");
+    setPodFilter(""); setNaveFilter(""); setEtdDesde(""); setEtdHasta(""); setTransporteFilter("");
+  };
   const handleSelectAll = () => { setSelectedIds(selectedIds.size === filteredOperaciones.length ? new Set() : new Set(filteredOperaciones.map((op) => op.id))); };
   const handleSelect = (id: string) => { const s = new Set(selectedIds); s.has(id) ? s.delete(id) : s.add(id); setSelectedIds(s); };
 
@@ -691,7 +720,7 @@ export function MisReservasContent() {
     if (!supabase || ids.length === 0) return;
     setActionLoading(true);
     const { error } = await supabase.from("operaciones").update({ deleted_at: new Date().toISOString() }).in("id", ids);
-    if (error) alert(tr.errorMovingToTrash);
+    if (error) sileo.error({ title: tr.errorMovingToTrash });
     else { setSelectedIds(new Set()); await fetchOperaciones(); }
     setActionLoading(false);
   };
@@ -768,13 +797,13 @@ export function MisReservasContent() {
 
   const handleCopy = async (op: Operacion) => {
     const ok = await copyToClipboard(op);
-    if (ok) { sileo.success({ title: "Datos copiados al portapapeles" }); }
+    if (ok) { sileo.success({ title: tr.copiedSuccess }); }
   };
 
   const handleBookingSaved = (opId: string, updated: { booking: string | null; booking_doc_url: string | null }) => {
     setOperaciones((prev) => prev.map((op) => op.id === opId ? { ...op, ...updated } : op));
     setBookingModal(null);
-    sileo.success({ title: "Booking guardado correctamente" });
+    sileo.success({ title: tr.bookingSavedMsg });
   };
 
   if (loading) {
@@ -789,6 +818,94 @@ export function MisReservasContent() {
       </main>
     );
   }
+
+  const exportCols: { key: keyof Operacion; label: string }[] = [
+    { key: "ref_asli",        label: "Ref. ASLI" },
+    { key: "booking",         label: "Booking" },
+    { key: "cliente",         label: "Cliente" },
+    { key: "especie",         label: "Especie" },
+    { key: "naviera",         label: "Naviera" },
+    { key: "nave",            label: "Nave" },
+    { key: "pol",             label: "POL" },
+    { key: "pod",             label: "POD" },
+    { key: "etd",             label: "ETD" },
+    { key: "eta",             label: "ETA" },
+    { key: "tt",              label: "TT (días)" },
+    { key: "estado_operacion",label: "Estado" },
+  ];
+
+  const exportRows = filteredOperaciones.map((op) =>
+    exportCols.map(({ key }) => {
+      const v = op[key];
+      if (key === "etd" || key === "eta") return fmtDate(v as string | null);
+      return v ?? "";
+    })
+  );
+
+  const handleExportExcel = () => {
+    const blue = "1D4ED8";
+    const ws: XLSX.WorkSheet = {};
+    const headers = exportCols.map((c) => c.label);
+
+    ws["A1"] = { v: "MIS RESERVAS", t: "s", s: { font: { bold: true, sz: 13, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: blue } }, alignment: { horizontal: "left" } } };
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    ws["A2"] = { v: `Exportado: ${new Date().toLocaleDateString("es-CL")}   |   ${filteredOperaciones.length} registros`, t: "s", s: { font: { sz: 8, color: { rgb: "888888" } } } };
+    ws["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } });
+
+    headers.forEach((h, c) => {
+      const ref = XLSX.utils.encode_cell({ r: 2, c });
+      ws[ref] = { v: h, t: "s", s: { font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: blue } }, alignment: { horizontal: "center" } } };
+    });
+    exportRows.forEach((row, r) => {
+      row.forEach((val, c) => {
+        const ref = XLSX.utils.encode_cell({ r: r + 3, c });
+        ws[ref] = { v: val ?? "", t: "s", s: { font: { sz: 9 }, fill: { fgColor: { rgb: r % 2 === 0 ? "FFFFFF" : "F5F5F5" } } } };
+      });
+    });
+
+    ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: exportRows.length + 2, c: headers.length - 1 } });
+    ws["!cols"] = headers.map((_, i) => ({ wch: i === 2 ? 22 : i === 4 || i === 5 ? 18 : 12 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reservas");
+    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `MisReservas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+    const blue: [number, number, number] = [29, 78, 216];
+
+    doc.setFillColor(...blue);
+    doc.rect(0, 0, 297, 18, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("MIS RESERVAS", 14, 12);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${filteredOperaciones.length} registros  ·  ${new Date().toLocaleDateString("es-CL")}`, 283, 12, { align: "right" });
+
+    autoTable(doc, {
+      startY: 22,
+      head: [exportCols.map((c) => c.label)],
+      body: exportRows,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: blue, textColor: [255, 255, 255] as [number,number,number], fontStyle: "bold", fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] as [number,number,number] },
+      margin: { left: 14, right: 14 },
+      theme: "grid",
+    });
+
+    const pageH = doc.internal.pageSize.getHeight();
+    doc.setFontSize(6);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Asesorías y Servicios Logísticos Integrales Ltda.", 14, pageH - 5);
+    doc.save(`MisReservas_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   return (
     <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
@@ -819,7 +936,7 @@ export function MisReservasContent() {
               <button
                 type="button"
                 onClick={() => setViewMode("cards")}
-                title="Vista tarjetas"
+                title={tr.viewCards}
                 className={`px-2.5 py-1.5 rounded-lg text-xs transition-all ${viewMode === "cards" ? "bg-white text-brand-blue shadow-sm font-bold" : "text-white/80 hover:text-white"}`}
               >
                 <Icon icon="lucide:layout-grid" width={14} height={14} />
@@ -827,7 +944,7 @@ export function MisReservasContent() {
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
-                title="Vista tabla"
+                title={tr.viewTable}
                 className={`px-2.5 py-1.5 rounded-lg text-xs transition-all ${viewMode === "table" ? "bg-white text-brand-blue shadow-sm font-bold" : "text-white/80 hover:text-white"}`}
               >
                 <Icon icon="lucide:list" width={14} height={14} />
@@ -839,7 +956,7 @@ export function MisReservasContent() {
             >
               <Icon icon="lucide:plus" width={13} height={13} />
               <span className="hidden sm:inline">{tr.newBooking}</span>
-              <span className="sm:hidden">Nueva</span>
+              <span className="sm:hidden">{tr.newMobile}</span>
             </a>
           </div>
         </div>
@@ -879,6 +996,26 @@ export function MisReservasContent() {
               <span className="w-4 h-4 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
             )}
           </button>
+          {/* Exportar Excel */}
+          <button
+            onClick={handleExportExcel}
+            disabled={filteredOperaciones.length === 0}
+            className="inline-flex items-center gap-1.5 px-2.5 py-2 border border-neutral-200 bg-neutral-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-xl text-xs font-medium text-neutral-600 transition-colors shrink-0 disabled:opacity-40"
+            title="Exportar a Excel"
+          >
+            <Icon icon="lucide:table-2" width={13} height={13} />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+          {/* Exportar PDF */}
+          <button
+            onClick={handleExportPDF}
+            disabled={filteredOperaciones.length === 0}
+            className="inline-flex items-center gap-1.5 px-2.5 py-2 border border-neutral-200 bg-neutral-50 hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-xl text-xs font-medium text-neutral-600 transition-colors shrink-0 disabled:opacity-40"
+            title="Exportar a PDF"
+          >
+            <Icon icon="lucide:file-text" width={13} height={13} />
+            <span className="hidden sm:inline">PDF</span>
+          </button>
           {/* Recargar */}
           <button
             onClick={fetchOperaciones}
@@ -899,8 +1036,8 @@ export function MisReservasContent() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
             >
               <Icon icon="lucide:truck" width={12} height={12} />
-              <span className="hidden sm:inline">Enviar a Transportes</span>
-              <span className="sm:hidden">Transporte</span>
+              <span className="hidden sm:inline">{tr.sendToTransports}</span>
+              <span className="sm:hidden">{tr.transportShort}</span>
             </button>
             <button
               onClick={() => handleMoveToTrash(Array.from(selectedIds))}
@@ -918,38 +1055,74 @@ export function MisReservasContent() {
 
         {/* Panel de filtros */}
         {showFilters && (
-          <div className="px-3 sm:px-4 py-2.5 border-t border-neutral-100 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-50/70">
-            <div>
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colStatus}</label>
-              <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
-                <option value="">{tr.allStates}</option>
-                {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
-              </select>
+          <div className="px-3 sm:px-4 py-3 border-t border-neutral-100 bg-neutral-50/70 space-y-2">
+            {/* Fila 1: Estado, Cliente, Naviera, Especie, Nave */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colStatus}</label>
+                <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">{tr.allStates}</option>
+                  {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colClient}</label>
+                <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">{tr.allClients}</option>
+                  {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colCarrier}</label>
+                <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">{tr.allCarriers}</option>
+                  {navieras.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colSpecies}</label>
+                <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">{tr.allSpecies}</option>
+                  {especies.map((e) => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colVessel}</label>
+                <select value={naveFilter} onChange={(e) => setNaveFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">Todas</option>
+                  {naves.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colClient}</label>
-              <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
-                <option value="">{tr.allClients}</option>
-                {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colCarrier}</label>
-              <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
-                <option value="">{tr.allCarriers}</option>
-                {navieras.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colSpecies}</label>
-              <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
-                <option value="">{tr.allSpecies}</option>
-                {especies.map((e) => <option key={e} value={e}>{e}</option>)}
-              </select>
+            {/* Fila 2: POD, ETD desde, ETD hasta, Transporte */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{tr.colPOD}</label>
+                <select value={podFilter} onChange={(e) => setPodFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">Todos</option>
+                  {pods.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">ETD Desde</label>
+                <input type="date" value={etdDesde} onChange={(e) => setEtdDesde(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">ETD Hasta</label>
+                <input type="date" value={etdHasta} onChange={(e) => setEtdHasta(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Transporte</label>
+                <select value={transporteFilter} onChange={(e) => setTransporteFilter(e.target.value)} className="w-full px-2.5 py-1.5 border border-neutral-200 bg-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all">
+                  <option value="">Todos</option>
+                  <option value="enviado">Enviado a transporte</option>
+                  <option value="sin_enviar">Sin enviar</option>
+                </select>
+              </div>
             </div>
             {activeFiltersCount > 0 && (
-              <button onClick={clearAllFilters} className="sm:col-span-4 text-xs text-brand-blue hover:underline font-medium text-left">
-                Limpiar todos los filtros
+              <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium">
+                {tr.clearAllFilters}
               </button>
             )}
           </div>
@@ -983,8 +1156,8 @@ export function MisReservasContent() {
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Transporte</th>
-                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Acciones</th>
+                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{tr.colTransport}</th>
+                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{tr.colActions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -997,7 +1170,7 @@ export function MisReservasContent() {
                           </span>
                           <p className="text-neutral-500 font-medium text-sm">{tr.noResults}</p>
                           {(activeFiltersCount > 0 || searchTerm) && (
-                            <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">Limpiar filtros</button>
+                            <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">{tr.clearFilters}</button>
                           )}
                         </div>
                       </td>
@@ -1032,10 +1205,10 @@ export function MisReservasContent() {
                                       ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
                                       : "bg-neutral-50 text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
                                   }`}
-                                  title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
+                                  title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
                                 >
                                   <Icon icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"} width={16} height={16} className="shrink-0" />
-                                  <span className="font-mono truncate">{op.booking ?? "Confirmar"}</span>
+                                  <span className="font-mono truncate">{op.booking ?? tr.confirmShort}</span>
                                 </button>
                                 {op.booking_doc_url && (
                                   <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
@@ -1084,20 +1257,20 @@ export function MisReservasContent() {
                             ) : op.tipo_reserva_transporte === "externa" ? (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 <Icon icon="lucide:globe" width={10} height={10} />
-                                Externa
+                                {tr.typeExternal}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-400 border border-neutral-200">
-                                Pendiente
+                                {tr.typePendiente}
                               </span>
                             )}
                           </td>
                           <td className="px-3 py-2 text-center">
                             <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => handleCopy(op)} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors" title="Copiar">
+                              <button onClick={() => handleCopy(op)} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors" title={tr.copyShort}>
                                 <Icon icon="lucide:copy" width={18} height={18} />
                               </button>
-                              <button onClick={() => setEmailModal(op)} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title="Enviar por correo">
+                              <button onClick={() => setEmailModal(op)} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.emailTitle}>
                                 <Icon icon="lucide:mail" width={18} height={18} />
                               </button>
                             </div>
@@ -1112,7 +1285,7 @@ export function MisReservasContent() {
             {filteredOperaciones.length > 0 && (
               <div className="px-3 py-2 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/60 flex-shrink-0">
                 <span className="text-xs text-neutral-400">
-                  {filteredOperaciones.length} {filteredOperaciones.length === 1 ? "registro" : "registros"}
+                  {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tr.registro : tr.records}
                   {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 </span>
                 {selectedIds.size > 0 && (
@@ -1145,6 +1318,7 @@ export function MisReservasContent() {
                     isCliente={isCliente}
                     selected={selectedIds.has(op.id)}
                     actionLoading={actionLoading}
+                    tr={tr}
                     onSelect={() => handleSelect(op.id)}
                     onCopy={handleCopy}
                     onEmail={(o) => setEmailModal(o)}
@@ -1155,7 +1329,7 @@ export function MisReservasContent() {
             )}
             {filteredOperaciones.length > 0 && (
               <p className="text-xs text-neutral-400 text-center mt-3">
-                {filteredOperaciones.length} {filteredOperaciones.length === 1 ? "reserva" : "reservas"}
+                {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tr.reservaSingular : tr.reservasPlural}
                 {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 {selectedIds.size > 0 && ` · ${selectedIds.size} seleccionada${selectedIds.size !== 1 ? "s" : ""}`}
               </p>
@@ -1174,7 +1348,7 @@ export function MisReservasContent() {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
                 <Icon icon="lucide:truck" width={24} height={24} className="text-emerald-500" />
               </div>
-              <h3 className="font-bold text-neutral-900 mb-2">Enviado con éxito</h3>
+              <h3 className="font-bold text-neutral-900 mb-2">{tr.sentSuccessTitle}</h3>
               <p className="text-sm text-neutral-600 mb-5">{successTransport}</p>
               <div className="flex gap-2">
                 <button
@@ -1182,13 +1356,13 @@ export function MisReservasContent() {
                   onClick={() => setSuccessTransport(null)}
                   className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
                 >
-                  Cerrar
+                  {tr.close}
                 </button>
                 <a
                   href="/transportes/reserva-asli"
                   className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm"
                 >
-                  Ir a Transportes
+                  {tr.goToTransports}
                   <Icon icon="typcn:arrow-right" width={14} height={14} />
                 </a>
               </div>
@@ -1212,7 +1386,7 @@ export function MisReservasContent() {
                 <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">Enviar a Transportes</h3>
+                <h3 className="text-sm font-bold text-neutral-900">{tr.sendToTransports}</h3>
                 <p className="text-xs text-neutral-500">{selectedIds.size} operación{selectedIds.size > 1 ? "es" : ""} seleccionada{selectedIds.size > 1 ? "s" : ""}</p>
               </div>
             </div>
@@ -1231,28 +1405,28 @@ export function MisReservasContent() {
 
             {allAssigned ? (
               <>
-                <p className="text-xs text-neutral-500 mb-4">Todas las operaciones seleccionadas ya están asignadas a transporte.</p>
+                <p className="text-xs text-neutral-500 mb-4">{tr.allAssignedMsg}</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setShowTransportModal(false)} className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
-                    Cerrar
+                    {tr.close}
                   </button>
                   <a href="/transportes/reserva-asli" className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-xs">
-                    Ir a Transportes
+                    {tr.goToTransports}
                     <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>
                 </div>
               </>
             ) : (
               <>
-                <p className="text-xs text-neutral-500 mb-4">Selecciona el tipo de reserva de transporte:</p>
+                <p className="text-xs text-neutral-500 mb-4">{tr.selectTransportType}</p>
                 <div className="flex flex-col gap-2">
                   <button type="button" onClick={() => void handleSendToAsli()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group">
                     <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/20 transition-colors">
                       <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-neutral-800">Reserva ASLI</p>
-                      <p className="text-[11px] text-neutral-400">Transporte gestionado por ASLI</p>
+                      <p className="text-sm font-semibold text-neutral-800">{tr.reservaAsliName}</p>
+                      <p className="text-[11px] text-neutral-400">{tr.reservaAsliDesc}</p>
                     </div>
                   </button>
                   <button type="button" onClick={() => void handleSendToExterna()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group">
@@ -1260,13 +1434,13 @@ export function MisReservasContent() {
                       <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-neutral-800">Reserva Externa</p>
-                      <p className="text-[11px] text-neutral-400">Transporte de carga externa</p>
+                      <p className="text-sm font-semibold text-neutral-800">{tr.reservaExtName}</p>
+                      <p className="text-[11px] text-neutral-400">{tr.reservaExtDesc}</p>
                     </div>
                   </button>
                 </div>
                 <button type="button" onClick={() => setShowTransportModal(false)} className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
-                  Cancelar
+                  {tr.cancel}
                 </button>
               </>
             )}

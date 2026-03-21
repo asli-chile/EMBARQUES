@@ -1,7 +1,7 @@
 import { type Ref, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -27,7 +27,7 @@ export type OperacionRow = {
   especie: string;
   pais: string;
   temperatura: string;
-  ventilacion: string;
+  ventilacion: number | null;
   tratamiento_frio: string;
   tratamiento_frio_o2: number | null;
   tratamiento_frio_co2: number | null;
@@ -118,7 +118,7 @@ type DbOperacion = {
   especie: string | null;
   pais: string | null;
   temperatura: string | null;
-  ventilacion: string | null;
+  ventilacion: number | null;
   tratamiento_frio: string | null;
   tratamiento_frio_o2: number | null;
   tratamiento_frio_co2: number | null;
@@ -372,7 +372,7 @@ function createToRow(locale: string) {
       especie: db.especie ?? "",
       pais: db.pais ?? "",
       temperatura: db.temperatura ?? "",
-      ventilacion: db.ventilacion ?? "",
+      ventilacion: db.ventilacion ?? null,
       tratamiento_frio: db.tratamiento_frio ?? "",
       tratamiento_frio_o2: db.tratamiento_frio_o2,
       tratamiento_frio_co2: db.tratamiento_frio_co2,
@@ -458,7 +458,6 @@ type CatalogosState = {
   tipo_unidad: string[];
   moneda: string[];
   prioridad: string[];
-  ventilacion: string[];
   tratamiento_frio: string[];
   tipo_atmosfera: string[];
   navieras: string[];
@@ -482,7 +481,6 @@ const emptyCatalogos: CatalogosState = {
   tipo_unidad: [],
   moneda: [],
   prioridad: [],
-  ventilacion: [],
   tratamiento_frio: [],
   tipo_atmosfera: [],
   navieras: [],
@@ -500,20 +498,23 @@ const emptyCatalogos: CatalogosState = {
 
 // ─── Grupos de columnas para el panel de visibilidad ──────────────────────────
 const COLUMN_GROUPS = [
-  { label: "Identificación", fields: ["correlativo", "ref_asli", "ingreso", "semana", "ejecutivo"] },
-  { label: "Operación", fields: ["estado_operacion", "tipo_operacion", "cliente", "consignatario"] },
-  { label: "Comercial", fields: ["incoterm", "forma_pago"] },
-  { label: "Carga", fields: ["especie", "pais", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto", "tipo_unidad"] },
-  { label: "Naviera / Embarque", fields: ["naviera", "nave", "viaje", "pol", "etd", "pod", "eta", "tt", "booking"] },
-  { label: "Documentación", fields: ["aga", "dus", "sps", "numero_guia_despacho"] },
-  { label: "Planta / Stacking", fields: ["planta_presentacion", "citacion", "llegada_planta", "salida_planta", "inicio_stacking", "fin_stacking", "ingreso_stacking", "corte_documental"] },
-  { label: "Late / xLate", fields: ["inf_late", "late_inicio", "late_fin", "xlate_inicio", "xlate_fin"] },
-  { label: "Depósito / Retiro", fields: ["deposito", "agendamiento_retiro", "devolucion_unidad"] },
-  { label: "Transporte", fields: ["transporte", "chofer", "rut_chofer", "telefono_chofer", "patente_camion", "patente_remolque", "contenedor", "sello", "tara"] },
-  { label: "Costos Transporte", fields: ["almacenamiento", "tramo", "valor_tramo", "porteo", "valor_porteo", "falso_flete", "valor_falso_flete", "factura_transporte"] },
-  { label: "Facturación", fields: ["monto_facturado", "numero_factura_asli", "concepto_facturado", "moneda", "tipo_cambio", "margen_estimado", "margen_real"] },
-  { label: "Fechas", fields: ["fecha_confirmacion_booking", "fecha_envio_documentacion", "fecha_entrega_bl", "fecha_entrega_factura", "fecha_pago_cliente", "fecha_pago_transporte", "fecha_cierre"] },
-  { label: "Otros", fields: ["prioridad", "operacion_critica", "origen_registro", "enviado_transporte", "observaciones"] },
+  { label: "Identificación y Control",     fields: ["origen_registro", "prioridad", "operacion_critica", "estado_operacion", "tipo_operacion", "semana", "ingreso"] },
+  { label: "Cliente y Condiciones",        fields: ["ejecutivo", "cliente", "consignatario", "incoterm", "forma_pago", "pais"] },
+  { label: "Carga / Mercadería",           fields: ["especie", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto"] },
+  { label: "Unidad y Contenedor",          fields: ["tipo_unidad", "contenedor", "sello", "tara"] },
+  { label: "Naviera y Viaje",              fields: ["naviera", "nave", "viaje", "pol", "etd", "pod", "eta", "tt", "booking"] },
+  { label: "Documentación",               fields: ["aga", "dus", "sps", "numero_guia_despacho"] },
+  { label: "Planta y Proceso",             fields: ["planta_presentacion", "citacion", "llegada_planta", "salida_planta"] },
+  { label: "Stacking y Puerto",            fields: ["inicio_stacking", "fin_stacking", "ingreso_stacking", "corte_documental"] },
+  { label: "Eventos Late / xLate",         fields: ["inf_late", "late_inicio", "late_fin", "xlate_inicio", "xlate_fin"] },
+  { label: "Depósito y Movimientos",       fields: ["deposito", "agendamiento_retiro", "devolucion_unidad"] },
+  { label: "Transporte",                   fields: ["transporte", "chofer", "rut_chofer", "telefono_chofer", "patente_camion", "patente_remolque"] },
+  { label: "Costos y Logística",           fields: ["almacenamiento", "tramo", "valor_tramo", "porteo", "valor_porteo", "falso_flete", "valor_falso_flete"] },
+  { label: "Facturación",                  fields: ["factura_transporte", "monto_facturado", "numero_factura_asli", "concepto_facturado", "moneda", "tipo_cambio"] },
+  { label: "Márgenes",                     fields: ["margen_estimado", "margen_real"] },
+  { label: "Hitos Administrativos",        fields: ["fecha_confirmacion_booking", "fecha_envio_documentacion", "fecha_entrega_bl", "fecha_entrega_factura", "fecha_pago_cliente", "fecha_pago_transporte", "fecha_cierre"] },
+  { label: "Control y Auditoría",          fields: ["observaciones"] },
+  { label: "Integraciones / Flujo",        fields: ["enviado_transporte"] },
 ];
 
 export function RegistrosContent() {
@@ -607,6 +608,27 @@ export function RegistrosContent() {
     });
   }, [user?.id]);
 
+  const toggleSection = useCallback((fields: string[]) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      const allHidden = fields.every((f) => next.has(f));
+      if (allHidden) {
+        fields.forEach((f) => next.delete(f));
+      } else {
+        fields.forEach((f) => next.add(f));
+      }
+      hiddenColumnsRef.current = next;
+      if (user?.id) {
+        try {
+          localStorage.setItem(`registros_hidden_cols_${user.id}`, JSON.stringify([...next]));
+        } catch { /* ignore */ }
+      }
+      const api = gridRef.current?.api;
+      if (api) fields.forEach((f) => api.setColumnsVisible([f], !next.has(f)));
+      return next;
+    });
+  }, [user?.id]);
+
   const showAllColumns = useCallback(() => {
     setHiddenColumns(new Set());
     hiddenColumnsRef.current = new Set();
@@ -683,7 +705,6 @@ export function RegistrosContent() {
       tipo_unidad: getByCategoria("tipo_unidad"),
       moneda: getByCategoria("moneda"),
       prioridad: getByCategoria("prioridad"),
-      ventilacion: getByCategoria("ventilacion"),
       tratamiento_frio: getByCategoria("tratamiento_frio"),
       tipo_atmosfera: getByCategoria("tipo_atmosfera"),
       navieras: (navierasRes.data ?? []).map((n) => n.nombre),
@@ -749,17 +770,18 @@ export function RegistrosContent() {
     [t.registros.yes, t.registros.no]
   );
 
-  const columnDefs = useMemo<ColDef<OperacionRow>[]>(
+  const leafCols = useMemo<ColDef<OperacionRow>[]>(
     () => [
-      // ── Fijas ────────────────────────────────────────────────────────────────
-      { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left" },
-
-      // ── General ──────────────────────────────────────────────────────────────
-      { field: "ingreso", headerName: t.registros.colEntryDate, sortable: true, width: columnWidths.ingreso },
-      { field: "semana", headerName: t.registros.colWeek, sortable: true, editable: false, width: columnWidths.semana },
+      // ── 1. Identificación y Control ───────────────────────────────────────────
+      { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left", lockPinned: true, suppressMovable: true },
+      { field: "origen_registro", headerName: t.registros.colRecordOrigin, sortable: true, width: columnWidths.origenRegistro },
       {
-        field: "ejecutivo", headerName: t.registros.colExecutive, sortable: true, editable: canEdit, width: columnWidths.ejecutivo,
-        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ejecutivos] },
+        field: "prioridad", headerName: t.registros.colPriority, sortable: true, editable: canEdit, width: columnWidths.prioridad,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.prioridad] },
+      },
+      {
+        field: "operacion_critica", headerName: t.registros.colCriticalOp, sortable: true, editable: canEdit, width: columnWidths.operacionCritica,
+        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
       {
         field: "estado_operacion", headerName: t.registros.colOperationStatus, sortable: true, editable: canEdit, width: columnWidths.estadoOperacion,
@@ -769,6 +791,14 @@ export function RegistrosContent() {
         field: "tipo_operacion", headerName: t.registros.colOperationType, sortable: true, editable: canEdit, width: columnWidths.tipoOperacion,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.tipo_operacion },
       },
+      { field: "semana", headerName: t.registros.colWeek, sortable: true, editable: false, width: columnWidths.semana },
+      { field: "ingreso", headerName: t.registros.colEntryDate, sortable: true, width: columnWidths.ingreso },
+
+      // ── 2. Cliente y Condiciones Comerciales ──────────────────────────────────
+      {
+        field: "ejecutivo", headerName: t.registros.colExecutive, sortable: true, editable: canEdit, width: columnWidths.ejecutivo,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ejecutivos] },
+      },
       {
         field: "cliente", headerName: t.registros.colClient, sortable: true, editable: canEdit, width: columnWidths.cliente,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.empresas },
@@ -777,8 +807,6 @@ export function RegistrosContent() {
         field: "consignatario", headerName: t.registros.colConsignee, sortable: true, editable: canEdit, width: columnWidths.consignatario,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.consignatarios },
       },
-
-      // ── Comercial ─────────────────────────────────────────────────────────────
       {
         field: "incoterm", headerName: t.registros.colIncoterm, sortable: true, editable: canEdit, width: columnWidths.incoterm,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.incoterm] },
@@ -787,20 +815,26 @@ export function RegistrosContent() {
         field: "forma_pago", headerName: t.registros.colPaymentMethod, sortable: true, editable: canEdit, width: columnWidths.formaPago,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.forma_pago] },
       },
-
-      // ── Carga ─────────────────────────────────────────────────────────────────
-      {
-        field: "especie", headerName: t.registros.colSpecies, sortable: true, editable: canEdit, width: columnWidths.especie,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.especies },
-      },
       {
         field: "pais", headerName: t.registros.colDestCountry, sortable: true, editable: canEdit, width: columnWidths.pais,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.paises] },
       },
+
+      // ── 3. Carga / Mercadería ─────────────────────────────────────────────────
+      {
+        field: "especie", headerName: t.registros.colSpecies, sortable: true, editable: canEdit, width: columnWidths.especie,
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.especies },
+      },
       { field: "temperatura", headerName: t.registros.colTemperature, sortable: true, editable: canEdit, width: columnWidths.temperatura },
       {
-        field: "ventilacion", headerName: t.registros.colVentilation, sortable: true, editable: canEdit, width: columnWidths.ventilacion,
-        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ventilacion] },
+        field: "ventilacion",
+        headerName: t.registros.colVentilation,
+        sortable: true,
+        editable: canEdit,
+        width: columnWidths.ventilacion,
+        cellEditor: "agNumberCellEditor",
+        cellEditorParams: { min: 0, precision: 0 },
+        valueFormatter: (p) => (p.value != null && p.value !== "" ? String(p.value) : ""),
       },
       {
         field: "tratamiento_frio", headerName: t.registros.colColdTreatment, sortable: true, editable: canEdit, width: columnWidths.tratamientoFrio,
@@ -821,12 +855,17 @@ export function RegistrosContent() {
       { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: canEdit, width: columnWidths.pallets },
       { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: canEdit, width: columnWidths.pesoBruto },
       { field: "peso_neto", headerName: t.registros.colNetWeight, sortable: true, editable: canEdit, width: columnWidths.pesoNeto },
+
+      // ── 4. Unidad y Contenedor ────────────────────────────────────────────────
       {
         field: "tipo_unidad", headerName: t.registros.colUnitType, sortable: true, editable: canEdit, width: columnWidths.tipoUnidad,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.tipo_unidad] },
       },
+      { field: "contenedor", headerName: t.registros.colContainer, sortable: true, editable: canEdit, width: columnWidths.contenedor },
+      { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
+      { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
 
-      // ── Naviera / Embarque ─────────────────────────────────────────────────────
+      // ── 5. Naviera y Viaje ────────────────────────────────────────────────────
       {
         field: "naviera", headerName: t.registros.colCarrier, sortable: true, editable: canEdit, width: columnWidths.naviera,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.navieras },
@@ -857,13 +896,13 @@ export function RegistrosContent() {
       { field: "tt", headerName: t.registros.colTransitDays, sortable: true, editable: canEdit, width: columnWidths.tt },
       { field: "booking", headerName: t.registros.colBooking, sortable: true, editable: canEdit, width: columnWidths.booking },
 
-      // ── Documentación ─────────────────────────────────────────────────────────
+      // ── 6. Documentación ──────────────────────────────────────────────────────
       { field: "aga", headerName: t.registros.colAGA, sortable: true, editable: canEdit, width: columnWidths.aga },
       { field: "dus", headerName: t.registros.colDUS, sortable: true, editable: canEdit, width: columnWidths.dus },
       { field: "sps", headerName: t.registros.colSPS, sortable: true, editable: canEdit, width: columnWidths.sps },
       { field: "numero_guia_despacho", headerName: t.registros.colDispatchGuide, sortable: true, editable: canEdit, width: columnWidths.numeroGuiaDespacho },
 
-      // ── Planta / Stacking ──────────────────────────────────────────────────────
+      // ── 7. Planta y Proceso ───────────────────────────────────────────────────
       {
         field: "planta_presentacion", headerName: t.registros.colPresentationPlant, sortable: true, editable: canEdit, width: columnWidths.plantaPresentacion,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.plantas },
@@ -871,19 +910,21 @@ export function RegistrosContent() {
       { field: "citacion", headerName: t.registros.colCitation, sortable: true, editable: canEdit, width: columnWidths.citacion },
       { field: "llegada_planta", headerName: t.registros.colPlantArrival, sortable: true, editable: canEdit, width: columnWidths.llegadaPlanta },
       { field: "salida_planta", headerName: t.registros.colPlantDeparture, sortable: true, editable: canEdit, width: columnWidths.salidaPlanta },
+
+      // ── 8. Stacking y Puerto ──────────────────────────────────────────────────
       { field: "inicio_stacking", headerName: t.registros.colStackingStart, sortable: true, editable: canEdit, width: columnWidths.inicioStacking },
       { field: "fin_stacking", headerName: t.registros.colStackingEnd, sortable: true, editable: canEdit, width: columnWidths.finStacking },
       { field: "ingreso_stacking", headerName: t.registros.colStackingEntry, sortable: true, editable: canEdit, width: columnWidths.ingresoStacking },
       { field: "corte_documental", headerName: t.registros.colDocCutoff, sortable: true, editable: canEdit, width: columnWidths.corteDocumental },
 
-      // ── Late / xLate ───────────────────────────────────────────────────────────
+      // ── 9. Eventos Late / xLate ───────────────────────────────────────────────
       { field: "inf_late", headerName: t.registros.colLateInfo, sortable: true, editable: canEdit, width: columnWidths.infLate },
       { field: "late_inicio", headerName: t.registros.colLateStart, sortable: true, editable: canEdit, width: columnWidths.lateInicio },
       { field: "late_fin", headerName: t.registros.colLateEnd, sortable: true, editable: canEdit, width: columnWidths.lateFin },
       { field: "xlate_inicio", headerName: t.registros.colXLateStart, sortable: true, editable: canEdit, width: columnWidths.xlateInicio },
       { field: "xlate_fin", headerName: t.registros.colXLateEnd, sortable: true, editable: canEdit, width: columnWidths.xlateFin },
 
-      // ── Depósito / Retiro ──────────────────────────────────────────────────────
+      // ── 10. Depósito y Movimientos ────────────────────────────────────────────
       {
         field: "deposito", headerName: t.registros.colWarehouse, sortable: true, editable: canEdit, width: columnWidths.deposito,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.depositos },
@@ -891,18 +932,15 @@ export function RegistrosContent() {
       { field: "agendamiento_retiro", headerName: t.registros.colPickupSchedule, sortable: true, editable: canEdit, width: columnWidths.agendamientoRetiro },
       { field: "devolucion_unidad", headerName: t.registros.colUnitReturn, sortable: true, editable: canEdit, width: columnWidths.devolucionUnidad },
 
-      // ── Transporte ─────────────────────────────────────────────────────────────
+      // ── 11. Transporte ────────────────────────────────────────────────────────
       { field: "transporte", headerName: t.registros.colTransportCompany, sortable: true, editable: canEdit, width: columnWidths.transporte },
       { field: "chofer", headerName: t.registros.colDriverName, sortable: true, editable: canEdit, width: columnWidths.chofer },
       { field: "rut_chofer", headerName: t.registros.colDriverRUT, sortable: true, editable: canEdit, width: columnWidths.rutChofer },
       { field: "telefono_chofer", headerName: t.registros.colDriverPhone, sortable: true, editable: canEdit, width: columnWidths.telefonoChofer },
       { field: "patente_camion", headerName: t.registros.colTruckPlate, sortable: true, editable: canEdit, width: columnWidths.patenteCamion },
       { field: "patente_remolque", headerName: t.registros.colTrailerPlate, sortable: true, editable: canEdit, width: columnWidths.patenteRemolque },
-      { field: "contenedor", headerName: t.registros.colContainer, sortable: true, editable: canEdit, width: columnWidths.contenedor },
-      { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
-      { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
 
-      // ── Costos Transporte ──────────────────────────────────────────────────────
+      // ── 12. Costos y Logística ────────────────────────────────────────────────
       { field: "almacenamiento", headerName: t.registros.colStorageDays, sortable: true, editable: canEdit, width: columnWidths.almacenamiento },
       { field: "tramo", headerName: t.registros.colSection, sortable: true, editable: canEdit, width: columnWidths.tramo },
       { field: "valor_tramo", headerName: t.registros.colSectionValue, sortable: true, editable: canEdit, width: columnWidths.valorTramo },
@@ -916,9 +954,9 @@ export function RegistrosContent() {
         cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
       { field: "valor_falso_flete", headerName: t.registros.colDeadFreightValue, sortable: true, editable: canEdit, width: columnWidths.valorFalsoFlete },
-      { field: "factura_transporte", headerName: t.registros.colTransportInvoice, sortable: true, editable: canEdit, width: columnWidths.facturaTransporte },
 
-      // ── Facturación ────────────────────────────────────────────────────────────
+      // ── 13. Facturación ───────────────────────────────────────────────────────
+      { field: "factura_transporte", headerName: t.registros.colTransportInvoice, sortable: true, editable: canEdit, width: columnWidths.facturaTransporte },
       { field: "monto_facturado", headerName: t.registros.colInvoicedAmount, sortable: true, editable: canEdit, width: columnWidths.montoFacturado },
       { field: "numero_factura_asli", headerName: t.registros.colASLIInvoice, sortable: true, editable: canEdit, width: columnWidths.numeroFacturaAsli },
       { field: "concepto_facturado", headerName: t.registros.colInvoicedConcept, sortable: true, editable: canEdit, width: columnWidths.conceptoFacturado },
@@ -927,10 +965,12 @@ export function RegistrosContent() {
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.moneda },
       },
       { field: "tipo_cambio", headerName: t.registros.colExchangeRate, sortable: true, editable: canEdit, width: columnWidths.tipoCambio },
+
+      // ── 14. Márgenes ──────────────────────────────────────────────────────────
       { field: "margen_estimado", headerName: t.registros.colEstimatedMargin, sortable: true, editable: canEdit, width: columnWidths.margenEstimado },
       { field: "margen_real", headerName: t.registros.colRealMargin, sortable: true, editable: canEdit, width: columnWidths.margenReal },
 
-      // ── Fechas administrativas ─────────────────────────────────────────────────
+      // ── 15. Hitos Administrativos ─────────────────────────────────────────────
       { field: "fecha_confirmacion_booking", headerName: t.registros.colBookingConfirmation, sortable: true, editable: canEdit, width: columnWidths.fechaConfirmacionBooking },
       { field: "fecha_envio_documentacion", headerName: t.registros.colDocSent, sortable: true, editable: canEdit, width: columnWidths.fechaEnvioDocumentacion },
       { field: "fecha_entrega_bl", headerName: t.registros.colBLDelivery, sortable: true, editable: canEdit, width: columnWidths.fechaEntregaBl },
@@ -939,32 +979,48 @@ export function RegistrosContent() {
       { field: "fecha_pago_transporte", headerName: t.registros.colTransportPayment, sortable: true, editable: canEdit, width: columnWidths.fechaPagoTransporte },
       { field: "fecha_cierre", headerName: t.registros.colCloseDate, sortable: true, editable: canEdit, width: columnWidths.fechaCierre },
 
-      // ── Otros ──────────────────────────────────────────────────────────────────
-      {
-        field: "prioridad", headerName: t.registros.colPriority, sortable: true, editable: canEdit, width: columnWidths.prioridad,
-        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.prioridad] },
-      },
-      {
-        field: "operacion_critica", headerName: t.registros.colCriticalOp, sortable: true, editable: canEdit, width: columnWidths.operacionCritica,
-        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
-      },
-      { field: "origen_registro", headerName: t.registros.colRecordOrigin, sortable: true, width: columnWidths.origenRegistro },
+      // ── 16. Control y Auditoría ───────────────────────────────────────────────
+      { field: "observaciones", headerName: t.registros.colObservations, sortable: true, editable: canEdit, width: columnWidths.observaciones },
+
+      // ── 17. Integraciones / Flujo ─────────────────────────────────────────────
       {
         field: "enviado_transporte", headerName: "Enviado Transp.", sortable: true, width: 130,
         cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
-      { field: "observaciones", headerName: t.registros.colObservations, sortable: true, editable: canEdit, width: columnWidths.observaciones },
     ],
     [t.registros, booleanCellRenderer, catalogos, canEdit]
   );
 
+  const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {
+    const c = leafCols;
+    return [
+      { headerName: "Identificación y Control",       children: c.slice(0,  8)  },
+      { headerName: "Cliente y Condiciones",           children: c.slice(8,  14) },
+      { headerName: "Carga / Mercadería",              children: c.slice(14, 24) },
+      { headerName: "Unidad y Contenedor",             children: c.slice(24, 28) },
+      { headerName: "Naviera y Viaje",                 children: c.slice(28, 37) },
+      { headerName: "Documentación",                   children: c.slice(37, 41) },
+      { headerName: "Planta y Proceso",                children: c.slice(41, 45) },
+      { headerName: "Stacking y Puerto",               children: c.slice(45, 49) },
+      { headerName: "Eventos Late / xLate",            children: c.slice(49, 54) },
+      { headerName: "Depósito y Movimientos",          children: c.slice(54, 57) },
+      { headerName: "Transporte",                      children: c.slice(57, 63) },
+      { headerName: "Costos y Logística",              children: c.slice(63, 70) },
+      { headerName: "Facturación",                     children: c.slice(70, 76) },
+      { headerName: "Márgenes",                        children: c.slice(76, 78) },
+      { headerName: "Hitos Administrativos",           children: c.slice(78, 85) },
+      { headerName: "Control y Auditoría",             children: c.slice(85, 86) },
+      { headerName: "Integraciones / Flujo",           children: c.slice(86)     },
+    ];
+  }, [leafCols]);
+
   const fieldToHeader = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const cd of columnDefs) {
+    for (const cd of leafCols) {
       if (cd.field && cd.headerName) map[cd.field] = String(cd.headerName);
     }
     return map;
-  }, [columnDefs]);
+  }, [leafCols]);
 
   const resetColumnOrder = useCallback(() => {
     if (user?.id) {
@@ -972,11 +1028,11 @@ export function RegistrosContent() {
     }
     const api = gridRef.current?.api;
     if (!api) return;
-    const state = columnDefs
+    const state = leafCols
       .filter((cd) => cd.field)
       .map((cd) => ({ colId: cd.field as string }));
     api.applyColumnState({ state, applyOrder: true });
-  }, [user?.id, columnDefs]);
+  }, [user?.id, leafCols]);
 
   // Re-aplicar orden cuando columnDefs cambia (catalogos carga async y AG Grid resetea el orden)
   useEffect(() => {
@@ -1110,6 +1166,17 @@ export function RegistrosContent() {
         dbValue = parseDateInput(String(e.newValue ?? "")) ?? null;
       } else if (DATETIME_FIELDS.has(field)) {
         dbValue = parseDateTimeInput(String(e.newValue ?? "")) ?? null;
+      } else if (field === "ventilacion") {
+        const v = e.newValue;
+        if (v === "" || v === null || v === undefined) {
+          dbValue = null;
+        } else {
+          const n = typeof v === "number" ? Math.trunc(v) : parseInt(String(v).trim(), 10);
+          dbValue = Number.isFinite(n) ? n : null;
+        }
+        if (dbValue !== e.newValue) {
+          e.node.setDataValue("ventilacion", dbValue as number | null);
+        }
       }
 
       const updates: Record<string, unknown> = { [field]: dbValue };
@@ -1351,38 +1418,63 @@ export function RegistrosContent() {
 
             {/* Lista de grupos */}
             <div className="overflow-y-auto flex-1 px-3 py-2">
-              {COLUMN_GROUPS.map((group) => (
-                <div key={group.label} className="mb-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 px-1 mb-1">{group.label}</p>
-                  <div className="space-y-0.5">
-                    {group.fields.map((field) => {
-                      const hidden = hiddenColumns.has(field);
-                      const label = fieldToHeader[field] ?? field;
-                      return (
-                        <button
-                          key={field}
-                          type="button"
-                          onClick={() => toggleColumn(field)}
-                          className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs transition-colors text-left ${
-                            hidden
-                              ? "text-neutral-400 hover:bg-neutral-50"
-                              : "text-neutral-700 hover:bg-neutral-50"
-                          }`}
-                        >
-                          <span className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                            hidden
-                              ? "border-neutral-300 bg-white"
-                              : "border-brand-blue bg-brand-blue"
-                          }`}>
-                            {!hidden && <Icon icon="lucide:check" width={10} height={10} className="text-white" />}
-                          </span>
-                          <span className={hidden ? "line-through opacity-50" : ""}>{label}</span>
-                        </button>
-                      );
-                    })}
+              {COLUMN_GROUPS.map((group) => {
+                const allHidden = group.fields.every((f) => hiddenColumns.has(f));
+                const someHidden = group.fields.some((f) => hiddenColumns.has(f));
+                return (
+                  <div key={group.label} className="mb-3">
+                    {/* Título de sección con toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(group.fields)}
+                      className="w-full flex items-center gap-2 px-1 mb-1 group/sec"
+                      title={allHidden ? "Mostrar sección" : "Ocultar sección"}
+                    >
+                      <span className={`flex-shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                        allHidden
+                          ? "border-neutral-300 bg-white"
+                          : someHidden
+                            ? "border-amber-400 bg-amber-400"
+                            : "border-brand-blue bg-brand-blue"
+                      }`}>
+                        {!allHidden && <Icon icon={someHidden ? "lucide:minus" : "lucide:check"} width={8} height={8} className="text-white" />}
+                      </span>
+                      <p className={`text-[10px] font-semibold uppercase tracking-wider flex-1 text-left transition-colors ${
+                        allHidden ? "text-neutral-300" : "text-neutral-400 group-hover/sec:text-neutral-600"
+                      }`}>
+                        {group.label}
+                      </p>
+                    </button>
+                    <div className="space-y-0.5">
+                      {group.fields.map((field) => {
+                        const hidden = hiddenColumns.has(field);
+                        const label = fieldToHeader[field] ?? field;
+                        return (
+                          <button
+                            key={field}
+                            type="button"
+                            onClick={() => toggleColumn(field)}
+                            className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs transition-colors text-left ${
+                              hidden
+                                ? "text-neutral-400 hover:bg-neutral-50"
+                                : "text-neutral-700 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <span className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                              hidden
+                                ? "border-neutral-300 bg-white"
+                                : "border-brand-blue bg-brand-blue"
+                            }`}>
+                              {!hidden && <Icon icon="lucide:check" width={10} height={10} className="text-white" />}
+                            </span>
+                            <span className={hidden ? "line-through opacity-50" : ""}>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

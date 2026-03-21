@@ -88,6 +88,12 @@ const LazyFacturacionContent = lazy(() =>
 const LazyPapeleraTransportesContent = lazy(() =>
   import("@/components/transportes").then((m) => ({ default: m.PapeleraTransportesContent })),
 );
+const LazyFacturasTransporteContent = lazy(() =>
+  import("@/components/transportes/FacturasTransporteContent").then((m) => ({ default: m.FacturasTransporteContent })),
+);
+const LazyFormatosDocumentosContent = lazy(() =>
+  import("@/components/configuracion/FormatosDocumentosContent").then((m) => ({ default: m.FormatosDocumentosContent })),
+);
 const LazyMisDocumentosContent = lazy(() =>
   import("@/components/documentos").then((m) => ({ default: m.MisDocumentosContent })),
 );
@@ -234,6 +240,12 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyConsignatariosContent />
         </Sus>
       </ConfigGuard>
+    ) : pathname === "/configuracion/formatos-documentos" ? (
+      <ConfigGuard>
+        <Sus>
+          <LazyFormatosDocumentosContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/reservas/crear" ? (
       <ModuleWithVisitorInfo moduleKey="crearReserva">
         <Sus>
@@ -273,6 +285,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/transportes/papelera" ? (
       <Sus>
         <LazyPapeleraTransportesContent />
+      </Sus>
+    ) : pathname === "/transportes/facturas" ? (
+      <Sus>
+        <LazyFacturasTransporteContent />
       </Sus>
     ) : pathname === "/documentos/mis-documentos" ? (
       <ModuleWithVisitorInfo moduleKey="misDocumentos">

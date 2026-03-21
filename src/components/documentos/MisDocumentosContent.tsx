@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { sileo } from "sileo";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Operacion = {
   id: string;
@@ -30,6 +32,7 @@ type Documento = {
 };
 
 const TIPOS_DOCUMENTO = [
+  "SOLICITUD_RESERVA",
   "BOOKING",
   "INSTRUCTIVO_EMBARQUE",
   "FACTURA_GATE_OUT",
@@ -45,6 +48,7 @@ const TIPOS_DOCUMENTO = [
 type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 
 const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: string }> = {
+  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-emerald-600 bg-emerald-50" },
   BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-blue-600 bg-blue-50" },
   INSTRUCTIVO_EMBARQUE:    { label: "Instructivo de Embarque (IE)",   icon: "lucide:file-text",      color: "text-violet-600 bg-violet-50" },
   FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt",        color: "text-orange-600 bg-orange-50" },
@@ -72,6 +76,7 @@ export function MisDocumentosContent() {
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
   // Panel activo en mobile
   const [mobilePanel, setMobilePanel] = useState<"select" | "docs">("select");
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
@@ -309,13 +314,20 @@ export function MisDocumentosContent() {
     void fetchDocumentos();
   };
 
-  const handleDelete = async (doc: Documento) => {
+  const handleDelete = (doc: Documento) => {
     if (!supabase) return;
-    if (!confirm(tr.confirmDelete)) return;
-    const filePath = doc.url.split("/documentos/")[1];
-    if (filePath) await supabase.storage.from("documentos").remove([`documentos/${filePath}`]);
-    await supabase.from("documentos").delete().eq("id", doc.id);
-    void fetchDocumentos();
+    setConfirmDialog({
+      title: "Eliminar documento",
+      message: tr.confirmDelete,
+      confirmLabel: "Eliminar",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const filePath = doc.url.split("/documentos/")[1];
+        if (filePath) await supabase.storage.from("documentos").remove([`documentos/${filePath}`]);
+        await supabase.from("documentos").delete().eq("id", doc.id);
+        void fetchDocumentos();
+      },
+    });
   };
 
   const handleDownload = (doc: Documento) => window.open(doc.url, "_blank");
@@ -342,41 +354,46 @@ export function MisDocumentosContent() {
   const progressPct = Math.round((docsCompletados / TIPOS_DOCUMENTO.length) * 100);
 
   return (
+    <>
     <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100">
 
-      {/* Toolbar */}
-      <div className="bg-white border-b border-neutral-200 flex-shrink-0">
-        <div className="flex items-center gap-2 px-3 py-2">
-          <Icon icon="lucide:folder-open" className="text-brand-blue flex-shrink-0" width={16} height={16} />
-          <span className="font-bold text-sm text-neutral-800">{tr.title}</span>
-          {selectedOperacion && (
-            <span
-              className={`inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg border ${
-                progressPct === 100
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-brand-blue/10 text-brand-blue border-brand-blue/20"
-              }`}
-            >
-              <Icon icon={progressPct === 100 ? "lucide:check-circle-2" : "lucide:gauge"} className="w-3.5 h-3.5" />
-              {docsCompletados}/{TIPOS_DOCUMENTO.length}
-            </span>
-          )}
-          <div className="flex-1" />
-          {/* Tabs mobile inline */}
-          <div className="lg:hidden flex gap-1">
-            <button type="button" onClick={() => setMobilePanel("select")}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${mobilePanel === "select" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-100"}`}>
-              Operaciones
-            </button>
-            <button type="button" onClick={() => setMobilePanel("docs")} disabled={!selectedOperacion}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-40 ${mobilePanel === "docs" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-100"}`}>
-              Documentos
+      {/* Hero */}
+      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-indigo-700 text-white px-4 sm:px-6 pt-5 pb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:folder-open" width={22} height={22} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
+              <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {selectedOperacion && (
+              <div className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 ${progressPct === 100 ? "bg-emerald-400/30" : "bg-white/15"}`}>
+                <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:gauge"} width={13} height={13} className={progressPct === 100 ? "text-emerald-200" : "text-white/80"} />
+                <span className="text-xs font-bold">{docsCompletados}/{TIPOS_DOCUMENTO.length}</span>
+              </div>
+            )}
+            <button type="button" onClick={() => void fetchOperaciones()}
+              className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white" title={tr.updateTooltip}>
+              <Icon icon="lucide:refresh-cw" width={16} height={16} />
             </button>
           </div>
-          <button type="button" onClick={() => void fetchOperaciones()}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-            title="Actualizar">
-            <Icon icon="typcn:refresh" width={15} height={15} />
+        </div>
+        {/* Tabs mobile */}
+        <div className="lg:hidden flex bg-white/15 rounded-xl p-0.5 gap-0.5 mt-3">
+          <button type="button" onClick={() => setMobilePanel("select")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${mobilePanel === "select" ? "bg-white text-brand-blue shadow-sm" : "text-white/80 hover:text-white"}`}>
+            <Icon icon="lucide:list" width={13} height={13} />
+            {tr.tabOperations}
+          </button>
+          <button type="button" onClick={() => setMobilePanel("docs")} disabled={!selectedOperacion}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 ${mobilePanel === "docs" ? "bg-white text-brand-blue shadow-sm" : "text-white/80 hover:text-white"}`}>
+            <Icon icon="lucide:files" width={13} height={13} />
+            {tr.tabDocuments}
+            {selectedOperacion && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />}
           </button>
         </div>
       </div>
@@ -456,39 +473,31 @@ export function MisDocumentosContent() {
 
                 {/* Banner operación seleccionada + progreso */}
                 {operacionActual && (
-                  <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                    <div className="px-3 py-2.5 flex items-center gap-3">
+                  <div className={`rounded-2xl overflow-hidden shadow-sm border-2 ${progressPct === 100 ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50" : "border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 to-sky-50"}`}>
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${progressPct === 100 ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
+                        <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={20} height={20} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-neutral-800">
-                            {operacionActual.ref_asli || `A${String(operacionActual.correlativo).padStart(5, "0")}`}
-                            {" "}—{" "}{operacionActual.cliente}
-                          </p>
-                          <p className="text-[11px] text-neutral-500">
-                            {operacionActual.naviera}{operacionActual.booking ? ` · ${operacionActual.booking}` : ""}{operacionActual.pod ? ` · ${operacionActual.pod}` : ""}
-                          </p>
-                        </div>
-                        {/* Barra de progreso */}
+                        <p className="text-sm font-bold text-neutral-800 truncate">
+                          {operacionActual.ref_asli || `A${String(operacionActual.correlativo).padStart(5, "0")}`} — {operacionActual.cliente}
+                        </p>
+                        <p className="text-[11px] text-neutral-500 truncate">
+                          {operacionActual.naviera}{operacionActual.booking ? ` · ${operacionActual.booking}` : ""}{operacionActual.pod ? ` · ${operacionActual.pod}` : ""}
+                        </p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                          <div className="flex-1 h-2 bg-white/70 rounded-full overflow-hidden border border-neutral-200">
                             <div className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#3b82f6,#06b6d4)" }} />
+                              style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#1d4ed8,#0ea5e9)" }} />
                           </div>
-                          <span className={`text-xs font-extrabold shrink-0 px-2 py-0.5 rounded-md border ${
-                            progressPct === 100
-                              ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                              : "text-brand-blue bg-brand-blue/10 border-brand-blue/20"
-                          }`}>
-                            {docsCompletados}/{TIPOS_DOCUMENTO.length} ({progressPct}%)
-                            {progressPct === 100 && " ✓"}
+                          <span className={`text-[11px] font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
+                            {docsCompletados}/{TIPOS_DOCUMENTO.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
                           </span>
                         </div>
                       </div>
                       <button type="button" onClick={() => setMobilePanel("select")}
-                        className="lg:hidden shrink-0 flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors">
-                        <Icon icon="lucide:list" width={11} height={11} />
-                        Cambiar
+                        className="lg:hidden shrink-0 p-2 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors">
+                        <Icon icon="lucide:list" width={15} height={15} />
                       </button>
                     </div>
                   </div>
@@ -510,70 +519,70 @@ export function MisDocumentosContent() {
                     const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
 
                     return (
-                      <div key={tipo} className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${
-                        doc ? "border-emerald-200" : "border-neutral-200"
+                      <div key={tipo} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-all ${
+                        doc ? "border-emerald-300" : "border-neutral-200"
                       }`}>
-                        <div className={`h-[2px] ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-neutral-200 to-neutral-100"}`} />
+                        <div className={`h-1.5 ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-neutral-200 to-neutral-100"}`} />
                         {/* Card header */}
-                        <div className="px-3 py-2 flex items-center gap-2 border-b border-neutral-50">
-                          <span className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : meta.color.split(" ")[1]}`}>
-                            <Icon icon={doc ? "lucide:check" : meta.icon} className={`w-3 h-3 ${doc ? "text-emerald-600" : meta.color.split(" ")[0]}`} />
+                        <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
+                          <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : meta.color.split(" ")[1]}`}>
+                            <Icon icon={doc ? "lucide:check" : meta.icon} className={`w-4.5 h-4.5 ${doc ? "text-emerald-600" : meta.color.split(" ")[0]}`} width={18} height={18} />
                           </span>
-                          <h3 className="text-[11px] font-bold text-neutral-700 leading-tight flex-1 min-w-0 truncate">{meta.label}</h3>
+                          <h3 className="text-sm font-bold text-neutral-700 leading-tight flex-1 min-w-0">{tr.tipoLabels[tipo]}</h3>
                         </div>
                         {/* Card body */}
-                        <div className="p-2">
+                        <div className="p-3">
                           {doc ? (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-neutral-50 border border-neutral-100">
+                            <div className="space-y-2.5">
+                              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100">
                                 <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}
-                                  className={`w-3.5 h-3.5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-500" : "text-green-600"}`} />
+                                  className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-500" : "text-green-600"}`} />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
-                                  <p className="text-[10px] text-neutral-400">{isSyntheticBooking ? "Desde la operación" : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
+                                  <p className="text-sm font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
+                                  <p className="text-xs text-neutral-400 mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5">
                                 <button type="button" onClick={() => handlePreview(doc)}
-                                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold text-brand-blue bg-brand-blue/8 rounded-md hover:bg-brand-blue/15 transition-colors">
-                                  <Icon icon="lucide:eye" className="w-3 h-3" />{tr.preview}
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-brand-blue bg-brand-blue/8 rounded-xl hover:bg-brand-blue/15 transition-colors">
+                                  <Icon icon="lucide:eye" className="w-4 h-4" />{tr.preview}
                                 </button>
                                 <button type="button" onClick={() => handleDownload(doc)}
-                                  className="inline-flex items-center justify-center w-6 h-6 text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
-                                  <Icon icon="lucide:download" className="w-3 h-3" />
+                                  className="inline-flex items-center justify-center w-9 h-9 text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
+                                  <Icon icon="lucide:download" className="w-4 h-4" />
                                 </button>
                                 {!isCliente && !isSyntheticBooking && (
-                                  <label className="inline-flex items-center justify-center w-6 h-6 text-neutral-500 bg-neutral-100 rounded-md hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200" title={tr.replace}>
-                                    <Icon icon="lucide:refresh-cw" className="w-3 h-3" />
+                                  <label className="inline-flex items-center justify-center w-9 h-9 text-neutral-500 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200" title={tr.replace}>
+                                    <Icon icon="lucide:refresh-cw" className="w-4 h-4" />
                                     <input type="file" accept=".pdf,.xls,.xlsx" className="hidden"
                                       onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
                                   </label>
                                 )}
                                 {!isCliente && !isSyntheticBooking && (
                                   <button type="button" onClick={() => handleDelete(doc)}
-                                    className="inline-flex items-center justify-center w-6 h-6 text-red-500 bg-red-50 rounded-md hover:bg-red-100 transition-colors border border-red-200" title="Eliminar">
-                                    <Icon icon="lucide:trash-2" className="w-3 h-3" />
+                                    className="inline-flex items-center justify-center w-9 h-9 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors border border-red-200" title={tr.deleteDocument}>
+                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
                                   </button>
                                 )}
                               </div>
                             </div>
                           ) : isCliente ? (
-                            <div className="flex items-center gap-2 px-2 py-2 rounded-lg border border-dashed border-neutral-200">
-                              <Icon icon="lucide:file-x" className="w-3.5 h-3.5 text-neutral-300" />
-                              <p className="text-[10px] text-neutral-400">Sin documento</p>
+                            <div className="flex items-center gap-3 px-3 py-3 rounded-xl border border-dashed border-neutral-200">
+                              <Icon icon="lucide:file-x" className="w-5 h-5 text-neutral-300" />
+                              <p className="text-sm text-neutral-400">{tr.noDocument}</p>
                             </div>
                           ) : (
-                            <label className={`flex items-center gap-2 px-2 py-2 rounded-lg border border-dashed cursor-pointer transition-all ${
+                            <label className={`flex items-center gap-3 px-3 py-3 rounded-xl border border-dashed cursor-pointer transition-all ${
                               isUploading ? "border-brand-blue bg-brand-blue/5" : "border-neutral-200 hover:border-brand-blue/50 hover:bg-brand-blue/3"
                             }`}>
                               {isUploading ? (
-                                <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 text-brand-blue animate-spin flex-shrink-0" />
-                                <span className="text-[10px] font-semibold text-brand-blue">{tr.uploading}</span></>
+                                <><Icon icon="lucide:loader-2" className="w-5 h-5 text-brand-blue animate-spin flex-shrink-0" />
+                                <span className="text-sm font-semibold text-brand-blue">{tr.uploading}</span></>
                               ) : (
-                                <><Icon icon="lucide:upload" className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                                <><Icon icon="lucide:upload" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
                                 <div>
-                                  <p className="text-[10px] font-semibold text-neutral-500">{tr.uploadFile}</p>
-                                  <p className="text-[9px] text-neutral-400">PDF · Excel · máx 10 MB</p>
+                                  <p className="text-sm font-semibold text-neutral-600">{tr.uploadFile}</p>
+                                  <p className="text-xs text-neutral-400">{tr.fileTypesHint}</p>
                                 </div></>
                               )}
                               <input type="file" accept=".pdf,.xls,.xlsx" className="hidden" disabled={isUploading}
@@ -591,10 +600,10 @@ export function MisDocumentosContent() {
                 <div className="py-12 px-6 text-center">
                   <Icon icon="lucide:folder-open" width={32} height={32} className="text-neutral-300 mx-auto mb-3" />
                   <p className="text-neutral-700 font-semibold text-sm mb-1">{tr.selectOperation}</p>
-                  <p className="text-neutral-400 text-xs">Selecciona una operación para ver sus documentos</p>
+                  <p className="text-neutral-400 text-xs">{tr.selectOperationPrompt}</p>
                   <button type="button" onClick={() => setMobilePanel("select")}
                     className="lg:hidden mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors">
-                    <Icon icon="lucide:list" width={12} height={12} />Ver operaciones
+                    <Icon icon="lucide:list" width={12} height={12} />{tr.viewOperations}
                   </button>
                 </div>
               </div>
@@ -676,5 +685,16 @@ export function MisDocumentosContent() {
         </div>
       )}
     </main>
+    {confirmDialog && (
+      <ConfirmDialog
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

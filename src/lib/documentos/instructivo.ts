@@ -46,7 +46,7 @@ export type InstructivoOpData = {
   sello?: string | null;
   tara?: number | null;
   temperatura?: string | null;
-  ventilacion?: string | null;
+  ventilacion?: number | null;
   incoterm?: string | null;
   forma_pago?: string | null;
   observaciones?: string | null;
@@ -168,7 +168,7 @@ export function buildInstructivoTagValues(op: InstructivoOpData): Record<string,
     "{{especie}}":                   op.especie          ?? "",
     "{{descripcion_carga}}":         op.especie          ?? "",
     "{{temperatura}}":               op.temperatura      ?? "",
-    "{{ventilacion}}":               op.ventilacion      ?? "",
+    "{{ventilacion}}":               op.ventilacion != null ? String(op.ventilacion) : "",
     "{{peso_neto}}":                 pesoNeto,
     "{{peso_bruto}}":                pesoBruto,
     "{{peso_neto_total}}":           pesoNeto,

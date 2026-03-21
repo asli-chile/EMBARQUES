@@ -54,6 +54,11 @@
   letter-spacing: 0.2px;
 }
 
+/* Títulos de grupos de columnas — centrados */
+.ag-theme-balham .ag-header-group-cell-label {
+  justify-content: center;
+}
+
 /* Icono de sort en cabecera — blanco */
 .ag-theme-balham .ag-sort-indicator-icon,
 .ag-theme-balham .ag-header-icon {

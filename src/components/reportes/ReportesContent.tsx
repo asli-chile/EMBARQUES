@@ -70,37 +70,7 @@ export function ReportesContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
 
-  const tr = (t as any).reportesPage ?? {
-    title: "Reportes",
-    subtitle: "Analiza operaciones por cliente, naviera, período y estado.",
-    filters: "Filtros",
-    dateFrom: "Desde",
-    dateTo: "Hasta",
-    state: "Estado",
-    client: "Cliente",
-    carrier: "Naviera",
-    allStates: "Todos",
-    allClients: "Todos",
-    allCarriers: "Todas",
-    applyFilters: "Aplicar",
-    clearFilters: "Limpiar filtros",
-    totalOperations: "Operaciones",
-    totalPallets: "Pallets",
-    totalNetWeight: "Peso neto (kg)",
-    totalInvoiced: "Facturado",
-    totalMargin: "Margen real",
-    byClient: "Por cliente",
-    byCarrier: "Por naviera",
-    byStatus: "Por estado",
-    byMonth: "Tendencia mensual",
-    noData: "No hay datos para los filtros seleccionados.",
-    export: "Exportar CSV",
-    exportFilename: "reportes_operaciones.csv",
-    tableOperations: "Ops",
-    tableInvoiced: "Facturado",
-    tableMargin: "Margen",
-    loading: "Cargando reportes…",
-  };
+  const tr = t.reportesPage;
 
   const [filters, setFilters] = useState<ReportesFilters>({
     fechaDesde: "",
@@ -430,7 +400,7 @@ export function ReportesContent() {
                   <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
                   <Icon icon="lucide:pie-chart" width={15} height={15} className="text-brand-blue" />
                   <h2 className="font-semibold text-neutral-800 text-sm">{tr.byStatus}</h2>
-                  <span className="ml-auto text-xs text-neutral-400">{filteredRows.length} ops</span>
+                  <span className="ml-auto text-xs text-neutral-400">{filteredRows.length} {tr.opsUnit}</span>
                 </div>
                 <div className="p-4 space-y-2.5">
                   {byStatus.map(([estado, count]) => {
@@ -474,7 +444,7 @@ export function ReportesContent() {
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-sm text-neutral-700 font-medium capitalize w-24 flex-shrink-0">{mes}</span>
                             <div className="flex items-center gap-3 flex-shrink-0">
-                              <span className="text-xs text-neutral-400">{val.ops} ops</span>
+                              <span className="text-xs text-neutral-400">{val.ops} {tr.opsUnit}</span>
                               <span className="text-sm font-semibold text-neutral-800">{fmtCur(val.facturado)}</span>
                             </div>
                           </div>
@@ -508,7 +478,7 @@ export function ReportesContent() {
                       label={item.key}
                       value={item.totalMontoFacturado}
                       displayValue={fmtCur(item.totalMontoFacturado)}
-                      subValue={`${item.totalOperaciones} ops · ${fmt(item.totalPallets)} pallets · Margen ${fmtCur(item.totalMargenReal)}`}
+                      subValue={`${item.totalOperaciones} ${tr.opsUnit} · ${fmt(item.totalPallets)} ${tr.palletsUnit} · ${tr.marginLabel} ${fmtCur(item.totalMargenReal)}`}
                       maxValue={byClient[0]?.totalMontoFacturado ?? 1}
                       barColor="bg-brand-blue/50"
                     />
@@ -530,7 +500,7 @@ export function ReportesContent() {
                       label={item.key}
                       value={item.totalMontoFacturado}
                       displayValue={fmtCur(item.totalMontoFacturado)}
-                      subValue={`${item.totalOperaciones} ops · ${fmt(item.totalPallets)} pallets · Margen ${fmtCur(item.totalMargenReal)}`}
+                      subValue={`${item.totalOperaciones} ${tr.opsUnit} · ${fmt(item.totalPallets)} ${tr.palletsUnit} · ${tr.marginLabel} ${fmtCur(item.totalMargenReal)}`}
                       maxValue={byCarrier[0]?.totalMontoFacturado ?? 1}
                       barColor="bg-brand-olive/60"
                     />

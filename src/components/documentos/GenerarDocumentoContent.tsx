@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
@@ -42,7 +43,7 @@ type Operacion = {
   sello: string | null;
   tara: number | null;
   temperatura: string | null;
-  ventilacion: string | null;
+  ventilacion: number | null;
   incoterm: string | null;
   forma_pago: string | null;
   observaciones: string | null;
@@ -67,91 +68,6 @@ type FormatoDocumento = {
 // ─── Grupos de etiquetas ──────────────────────────────────────────────────────
 
 type TagGroup = { group: string; icon: string; tags: { tag: string; label: string }[] };
-
-const TAG_GROUPS: TagGroup[] = [
-  {
-    group: "Cliente / Exportador", icon: "lucide:building-2",
-    tags: [
-      { tag: "{{cliente_nombre}}",    label: "Nombre cliente" },
-      { tag: "{{cliente_rut}}",       label: "RUT cliente" },
-      { tag: "{{cliente_direccion}}", label: "Dirección cliente" },
-      { tag: "{{consignatario}}",     label: "Consignatario" },
-    ],
-  },
-  {
-    group: "Operación", icon: "lucide:container",
-    tags: [
-      { tag: "{{ref_asli}}",          label: "Referencia ASLI" },
-      { tag: "{{booking}}",           label: "Booking" },
-      { tag: "{{contenedor}}",        label: "Contenedor" },
-      { tag: "{{tipo_contenedor}}",   label: "Tipo contenedor" },
-      { tag: "{{naviera}}",           label: "Naviera" },
-      { tag: "{{nave}}",              label: "Nave" },
-      { tag: "{{viaje}}",             label: "Viaje / Voyage" },
-      { tag: "{{sello}}",             label: "Sello" },
-      { tag: "{{incoterm}}",          label: "Incoterm" },
-      { tag: "{{forma_pago}}",        label: "Forma de pago" },
-    ],
-  },
-  {
-    group: "Puertos y Fechas", icon: "lucide:map-pin",
-    tags: [
-      { tag: "{{puerto_origen}}",     label: "Puerto origen (POL)" },
-      { tag: "{{puerto_destino}}",    label: "Puerto destino (POD)" },
-      { tag: "{{pais_destino}}",      label: "País destino" },
-      { tag: "{{etd}}",               label: "ETD" },
-      { tag: "{{eta}}",               label: "ETA" },
-      { tag: "{{fecha_emision}}",     label: "Fecha emisión" },
-    ],
-  },
-  {
-    group: "Carga", icon: "lucide:package",
-    tags: [
-      { tag: "{{descripcion_carga}}", label: "Descripción carga" },
-      { tag: "{{temperatura}}",       label: "Temperatura" },
-      { tag: "{{ventilacion}}",       label: "Ventilación" },
-      { tag: "{{peso_bruto}}",        label: "Peso bruto" },
-      { tag: "{{peso_neto}}",         label: "Peso neto" },
-      { tag: "{{tara}}",              label: "Tara" },
-      { tag: "{{cantidad_bultos}}",   label: "Pallets / Bultos" },
-      { tag: "{{unidad_medida}}",     label: "Unidad de medida" },
-      { tag: "{{hs_code}}",           label: "HS Code" },
-      { tag: "{{observaciones}}",     label: "Observaciones" },
-    ],
-  },
-  {
-    group: "Financiero", icon: "lucide:dollar-sign",
-    tags: [
-      { tag: "{{numero_documento}}",  label: "N° documento" },
-      { tag: "{{monto_total}}",       label: "Monto total" },
-      { tag: "{{moneda}}",            label: "Moneda" },
-      { tag: "{{precio_unitario}}",   label: "Precio unitario" },
-      { tag: "{{concepto}}",          label: "Concepto" },
-    ],
-  },
-  {
-    group: "Transporte", icon: "lucide:truck",
-    tags: [
-      { tag: "{{empresa_transporte}}",label: "Empresa transporte" },
-      { tag: "{{tramo}}",             label: "Tramo" },
-      { tag: "{{valor_tramo}}",       label: "Valor tramo" },
-      { tag: "{{deposito}}",          label: "Depósito" },
-    ],
-  },
-  {
-    group: "ASLI", icon: "lucide:building",
-    tags: [
-      { tag: "{{asli_nombre}}",       label: "Nombre ASLI" },
-      { tag: "{{asli_rut}}",          label: "RUT ASLI" },
-      { tag: "{{asli_direccion}}",    label: "Dirección ASLI" },
-      { tag: "{{asli_telefono}}",     label: "Teléfono ASLI" },
-      { tag: "{{asli_email}}",        label: "Email ASLI" },
-    ],
-  },
-];
-
-// Todos los tags conocidos en orden
-const ALL_TAGS = TAG_GROUPS.flatMap((g) => g.tags);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -186,7 +102,7 @@ function buildTagValues(op: Operacion): Record<string, string> {
     "{{fecha_emision}}":     format(new Date(), "dd/MM/yyyy"),
     "{{descripcion_carga}}": op.especie         ?? "",
     "{{temperatura}}":       op.temperatura     ?? "",
-    "{{ventilacion}}":       op.ventilacion     ?? "",
+    "{{ventilacion}}":       op.ventilacion != null ? String(op.ventilacion) : "",
     "{{peso_bruto}}":        op.peso_bruto      != null ? `${op.peso_bruto.toLocaleString("es-CL")} kg` : "",
     "{{peso_neto}}":         op.peso_neto       != null ? `${op.peso_neto.toLocaleString("es-CL")} kg` : "",
     "{{tara}}":              op.tara            != null ? `${op.tara} kg` : "",
@@ -261,35 +177,110 @@ async function applyTagsToBuffer(buffer: ArrayBuffer, values: Record<string, str
   return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-// ─── Config por tipo de documento ─────────────────────────────────────────────
+// ─── Estilos por tipo (sin texto) ─────────────────────────────────────────────
 
-const TIPO_CONFIG = {
-  proforma: {
-    titulo: "Crear Proforma Invoice",
-    subtitulo: "Selecciona una operación y un formato de proforma para generar el documento.",
-    icon: "lucide:file-check",
-    color: "text-indigo-600",
-    colorBg: "bg-indigo-100",
-    colorBtn: "bg-indigo-600 hover:bg-indigo-700",
-    colorBar: "from-indigo-500 to-purple-500",
-    emptyMsg: "No hay formatos de proforma creados aún.",
-  },
-  instructivo: {
-    titulo: "Crear Instructivo",
-    subtitulo: "Selecciona una operación y un formato de instructivo para generar el documento.",
-    icon: "lucide:file-list",
-    color: "text-amber-600",
-    colorBg: "bg-amber-100",
-    colorBtn: "bg-amber-600 hover:bg-amber-700",
-    colorBar: "from-amber-500 to-orange-400",
-    emptyMsg: "No hay formatos de instructivo creados aún.",
-  },
+const TIPO_STYLES = {
+  proforma:    { icon: "lucide:file-check",  color: "text-indigo-600", colorBg: "bg-indigo-100", colorBtn: "bg-indigo-600 hover:bg-indigo-700" },
+  instructivo: { icon: "lucide:file-list",   color: "text-amber-600",  colorBg: "bg-amber-100",  colorBtn: "bg-amber-600 hover:bg-amber-700"   },
 };
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export function GenerarDocumentoContent({ tipoDoc }: Props) {
-  const cfg = TIPO_CONFIG[tipoDoc];
+  const { t } = useLocale();
+  const tr = t.generarDocumento;
+
+  const cfg = useMemo(() => ({
+    ...TIPO_STYLES[tipoDoc],
+    titulo:    tipoDoc === "proforma" ? tr.proformaTitulo    : tr.instructivoTitulo,
+    subtitulo: tipoDoc === "proforma" ? tr.proformaSubtitulo : tr.instructivoSubtitulo,
+    emptyMsg:  tipoDoc === "proforma" ? tr.proformaEmptyMsg  : tr.instructivoEmptyMsg,
+  }), [tipoDoc, tr]);
+
+  const tagGroups = useMemo((): TagGroup[] => [
+    {
+      group: tr.groupCliente, icon: "lucide:building-2",
+      tags: [
+        { tag: "{{cliente_nombre}}",    label: tr.tagClienteNombre },
+        { tag: "{{cliente_rut}}",       label: tr.tagClienteRut },
+        { tag: "{{cliente_direccion}}", label: tr.tagClienteDireccion },
+        { tag: "{{consignatario}}",     label: tr.tagConsignatario },
+      ],
+    },
+    {
+      group: tr.groupOperacion, icon: "lucide:container",
+      tags: [
+        { tag: "{{ref_asli}}",          label: tr.tagRefAsli },
+        { tag: "{{booking}}",           label: tr.tagBooking },
+        { tag: "{{contenedor}}",        label: tr.tagContenedor },
+        { tag: "{{tipo_contenedor}}",   label: tr.tagTipoContenedor },
+        { tag: "{{naviera}}",           label: tr.tagNaviera },
+        { tag: "{{nave}}",              label: tr.tagNave },
+        { tag: "{{viaje}}",             label: tr.tagViaje },
+        { tag: "{{sello}}",             label: tr.tagSello },
+        { tag: "{{incoterm}}",          label: tr.tagIncoterm },
+        { tag: "{{forma_pago}}",        label: tr.tagFormaPago },
+      ],
+    },
+    {
+      group: tr.groupPuertosYFechas, icon: "lucide:map-pin",
+      tags: [
+        { tag: "{{puerto_origen}}",     label: tr.tagPuertoOrigen },
+        { tag: "{{puerto_destino}}",    label: tr.tagPuertoDestino },
+        { tag: "{{pais_destino}}",      label: tr.tagPaisDestino },
+        { tag: "{{etd}}",               label: tr.tagEtd },
+        { tag: "{{eta}}",               label: tr.tagEta },
+        { tag: "{{fecha_emision}}",     label: tr.tagFechaEmision },
+      ],
+    },
+    {
+      group: tr.groupCarga, icon: "lucide:package",
+      tags: [
+        { tag: "{{descripcion_carga}}", label: tr.tagDescripcionCarga },
+        { tag: "{{temperatura}}",       label: tr.tagTemperatura },
+        { tag: "{{ventilacion}}",       label: tr.tagVentilacion },
+        { tag: "{{peso_bruto}}",        label: tr.tagPesoBruto },
+        { tag: "{{peso_neto}}",         label: tr.tagPesoNeto },
+        { tag: "{{tara}}",              label: tr.tagTara },
+        { tag: "{{cantidad_bultos}}",   label: tr.tagCantidadBultos },
+        { tag: "{{unidad_medida}}",     label: tr.tagUnidadMedida },
+        { tag: "{{hs_code}}",           label: tr.tagHsCode },
+        { tag: "{{observaciones}}",     label: tr.tagObservaciones },
+      ],
+    },
+    {
+      group: tr.groupFinanciero, icon: "lucide:dollar-sign",
+      tags: [
+        { tag: "{{numero_documento}}",  label: tr.tagNumeroDocumento },
+        { tag: "{{monto_total}}",       label: tr.tagMontoTotal },
+        { tag: "{{moneda}}",            label: tr.tagMoneda },
+        { tag: "{{precio_unitario}}",   label: tr.tagPrecioUnitario },
+        { tag: "{{concepto}}",          label: tr.tagConcepto },
+      ],
+    },
+    {
+      group: tr.groupTransporte, icon: "lucide:truck",
+      tags: [
+        { tag: "{{empresa_transporte}}", label: tr.tagEmpresaTransporte },
+        { tag: "{{tramo}}",              label: tr.tagTramo },
+        { tag: "{{valor_tramo}}",        label: tr.tagValorTramo },
+        { tag: "{{deposito}}",           label: tr.tagDeposito },
+      ],
+    },
+    {
+      group: tr.groupAsli, icon: "lucide:building",
+      tags: [
+        { tag: "{{asli_nombre}}",        label: tr.tagAsliNombre },
+        { tag: "{{asli_rut}}",           label: tr.tagAsliRut },
+        { tag: "{{asli_direccion}}",     label: tr.tagAsliDireccion },
+        { tag: "{{asli_telefono}}",      label: tr.tagAsliTelefono },
+        { tag: "{{asli_email}}",         label: tr.tagAsliEmail },
+      ],
+    },
+  ], [tr]);
+
+  const allTags = useMemo(() => tagGroups.flatMap((g) => g.tags), [tagGroups]);
+
   const { empresaNombres, isCliente, isLoading: authLoading } = useAuth();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -352,7 +343,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
   };
 
   // ── Seleccionar formato → detectar qué tags usa ───────────────────────────
-  const handleSelectFormato = async (fmt: FormatoDocumento) => {
+  const handleSelectFormato = useCallback(async (fmt: FormatoDocumento) => {
     setSelectedFormato(fmt);
     setLoadingTags(true);
     setMobileTab("datos");
@@ -372,11 +363,11 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
     }
 
     // Si no hay tags en el template, mostrar todos los disponibles
-    if (tags.length === 0) tags = ALL_TAGS.map((t) => t.tag);
+    if (tags.length === 0) tags = allTags.map((t) => t.tag);
 
     setTagsDePlantilla(tags);
     setLoadingTags(false);
-  };
+  }, [supabase, allTags]);
 
   // ── Generar documento ─────────────────────────────────────────────────────
   const handleGenerar = async () => {
@@ -388,7 +379,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
     if (ttype === "excel" && selectedFormato.excel_path) {
       const { data, error: dlErr } = await supabase.storage.from("formatos-templates").download(selectedFormato.excel_path);
-      if (dlErr || !data) { setError("Error al descargar plantilla Excel."); setGenerating(false); return; }
+      if (dlErr || !data) { setError(tr.errorDescarga); setGenerating(false); return; }
       const buf = await data.arrayBuffer();
       const blob = await applyTagsToBuffer(buf, tagValues);
       const url = URL.createObjectURL(blob);
@@ -420,12 +411,12 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
   // ── Tags agrupados según plantilla seleccionada ────────────────────────────
   const tagGroupsActivos = useMemo(() => {
-    if (tagsDeDePlantilla.length === 0) return TAG_GROUPS;
-    return TAG_GROUPS.map((g) => ({
+    if (tagsDeDePlantilla.length === 0) return tagGroups;
+    return tagGroups.map((g) => ({
       ...g,
       tags: g.tags.filter((t) => tagsDeDePlantilla.includes(t.tag)),
     })).filter((g) => g.tags.length > 0);
-  }, [tagsDeDePlantilla]);
+  }, [tagsDeDePlantilla, tagGroups]);
 
   // ─── CSS ──────────────────────────────────────────────────────────────────
   const inputCls = "w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all text-sm";
@@ -457,7 +448,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
             className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors disabled:opacity-50 ${cfg.colorBtn}`}
           >
             <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={15} height={15} className={generating ? "animate-spin" : ""} />
-            {generating ? "Generando..." : isExcel ? "Descargar Excel" : "Generar PDF"}
+            {generating ? tr.generando : isExcel ? tr.descargarExcel : tr.generarPdf}
           </button>
         )}
       </div>
@@ -465,9 +456,9 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
       {/* ── Mobile tabs ── */}
       <div className="sm:hidden flex border-b border-neutral-200 bg-white shrink-0">
         {([
-          { id: "operacion", label: "Operación",  icon: "lucide:list" },
-          { id: "formato",   label: "Formato",    icon: "lucide:file" },
-          { id: "datos",     label: "Datos",      icon: "lucide:edit-3" },
+          { id: "operacion", label: tr.tabOperacion, icon: "lucide:list" },
+          { id: "formato",   label: tr.tabFormato,   icon: "lucide:file" },
+          { id: "datos",     label: tr.tabDatos,     icon: "lucide:edit-3" },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -511,7 +502,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
               <input
                 value={searchOp}
                 onChange={(e) => setSearchOp(e.target.value)}
-                placeholder="Buscar por ref, cliente, booking..."
+                placeholder={tr.buscarPlaceholder}
                 className="w-full pl-8 pr-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-xs text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-brand-blue/30 focus:border-brand-blue transition-all"
               />
             </div>
@@ -521,12 +512,12 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
             {loading ? (
               <div className="flex items-center justify-center py-12 gap-2 text-neutral-400 text-sm">
                 <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
-                Cargando...
+                {tr.cargando}
               </div>
             ) : opsFiltradas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <Icon icon="lucide:inbox" width={28} height={28} className="text-neutral-300 mb-2" />
-                <p className="text-xs text-neutral-500">{searchOp ? "Sin resultados para tu búsqueda" : "No hay operaciones disponibles"}</p>
+                <p className="text-xs text-neutral-500">{searchOp ? tr.sinResultados : tr.noOperaciones}</p>
               </div>
             ) : (
               opsFiltradas.map((op) => {
@@ -549,7 +540,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                         </span>
                         {isActive && <Icon icon="lucide:check" width={12} height={12} className="text-brand-blue shrink-0" />}
                       </div>
-                      <p className="text-[11px] text-neutral-500 truncate mt-0.5">{op.cliente || "Sin cliente"}</p>
+                      <p className="text-[11px] text-neutral-500 truncate mt-0.5">{op.cliente || tr.sinCliente}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {op.booking && (
                           <span className="text-[10px] text-neutral-400 font-mono truncate">{op.booking}</span>
@@ -577,8 +568,8 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
               <div className={`w-16 h-16 rounded-2xl ${cfg.colorBg} flex items-center justify-center`}>
                 <Icon icon="lucide:arrow-left" width={24} height={24} className={cfg.color} />
               </div>
-              <h3 className="text-sm font-bold text-neutral-700">Selecciona una operación</h3>
-              <p className="text-xs text-neutral-500 max-w-xs">Elige una operación de la lista para comenzar a generar el documento.</p>
+              <h3 className="text-sm font-bold text-neutral-700">{tr.seleccionaOperacion}</h3>
+              <p className="text-xs text-neutral-500 max-w-xs">{tr.seleccionaOperacionHint}</p>
             </div>
           ) : (
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
@@ -588,7 +579,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                 <div className="px-4 py-3 border-b border-neutral-200 bg-white shrink-0">
                   <h3 className="text-xs font-bold text-neutral-700 flex items-center gap-2">
                     <Icon icon={cfg.icon} width={13} height={13} className={cfg.color} />
-                    Formatos de {tipoDoc}
+                    {tr.formatosDe} {tipoDoc}
                     <span className="ml-auto text-neutral-400 font-normal">{formatos.length}</span>
                   </h3>
                 </div>
@@ -598,7 +589,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                       <Icon icon="lucide:file-x" width={24} height={24} className="text-neutral-300" />
                       <p className="text-xs text-neutral-500">{cfg.emptyMsg}</p>
                       <a href="/configuracion/formatos-documentos" className="text-xs text-brand-blue hover:underline font-medium mt-1">
-                        Crear formato →
+                        {tr.crearFormato}
                       </a>
                     </div>
                   ) : formatos.map((fmt) => {
@@ -642,7 +633,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                     <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
                       <Icon icon="lucide:file" width={20} height={20} className="text-neutral-400" />
                     </div>
-                    <p className="text-xs text-neutral-500">Selecciona un formato para rellenar los datos</p>
+                    <p className="text-xs text-neutral-500">{tr.seleccionaFormato}</p>
                   </div>
                 ) : (
                   <>
@@ -658,7 +649,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                             <span className="text-xs font-semibold text-brand-blue truncate">{selectedFormato.nombre}</span>
                           </div>
                           <p className="text-[10px] text-neutral-400 mt-0.5">
-                            Los datos de la operación se cargaron automáticamente. Edita lo que necesites.
+                            {tr.datosAutoHint}
                           </p>
                         </div>
                         {/* Botón generar mobile */}
@@ -669,7 +660,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-50 shrink-0 ${cfg.colorBtn}`}
                           >
                             <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={13} height={13} className={generating ? "animate-spin" : ""} />
-                            {generating ? "..." : isExcel ? "Excel" : "PDF"}
+                            {generating ? "..." : isExcel ? tr.descargarExcel : tr.generarPdf}
                           </button>
                         )}
                       </div>
@@ -680,7 +671,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                       {loadingTags ? (
                         <div className="flex items-center justify-center py-16 gap-3 flex-col">
                           <Icon icon="typcn:refresh" className="w-7 h-7 animate-spin text-brand-blue" />
-                          <p className="text-sm text-neutral-500">Cargando campos del formato...</p>
+                          <p className="text-sm text-neutral-500">{tr.cargandoCampos}</p>
                         </div>
                       ) : (
                         <div className="space-y-6 max-w-3xl">
@@ -706,7 +697,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                                         {autoFilled && (
                                           <span className="flex items-center gap-0.5 text-[10px] font-medium text-green-600 normal-case tracking-normal">
                                             <Icon icon="lucide:check" width={9} height={9} />
-                                            auto
+                                            {tr.auto}
                                           </span>
                                         )}
                                       </label>
@@ -728,7 +719,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                             {isCliente ? (
                               <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
                                 <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
-                                <span>No tienes permisos para generar documentos. Contacta a tu ejecutivo.</span>
+                                <span>{tr.sinPermisos}</span>
                               </div>
                             ) : (
                               <>
@@ -738,12 +729,10 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white shadow-sm transition-colors disabled:opacity-50 ${cfg.colorBtn}`}
                                 >
                                   <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={16} height={16} className={generating ? "animate-spin" : ""} />
-                                  {generating ? "Generando documento..." : isExcel ? "Descargar Excel con datos" : "Generar e imprimir PDF"}
+                                  {generating ? tr.generandoDoc : isExcel ? tr.descargarExcelDatos : tr.generarImprimirPdf}
                                 </button>
                                 <p className="text-[10px] text-neutral-400 text-center mt-2">
-                                  {isExcel
-                                    ? "Se descarga el archivo Excel con todos los datos reemplazados."
-                                    : "Se abre el documento en una nueva ventana lista para imprimir o guardar como PDF."}
+                                  {isExcel ? tr.excelHint : tr.pdfHint}
                                 </p>
                               </>
                             )}

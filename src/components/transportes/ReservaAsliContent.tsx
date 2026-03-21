@@ -37,7 +37,7 @@ type Operacion = {
   peso_neto: number | null;
   tipo_unidad: string | null;
   temperatura: string | null;
-  ventilacion: string | null;
+  ventilacion: number | null;
   incoterm: string | null;
   forma_pago: string | null;
   planta_presentacion: string;
@@ -923,62 +923,71 @@ export function ReservaAsliContent() {
     <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
 
-        {/* Header — mismo estilo que Mis Reservas / Papelera */}
-        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-teal flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:truck" width={20} height={20} className="text-white" />
+        {/* Hero */}
+        <div className="rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue/90 to-sky-700 text-white overflow-hidden shadow-sm">
+          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:truck" width={22} height={22} className="text-white" />
               </div>
-              <div>
-                <h1 className="text-base font-bold text-neutral-900 leading-tight">
-                  {tr.title}
-                </h1>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  {tr.subtitle}
-                </p>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
+                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => void fetchData()}
-              className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
-              title={t.misReservas?.refresh ?? "Actualizar"}
-            >
-              <Icon icon="typcn:refresh" width={18} height={18} />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {operaciones.filter(isPendiente).length > 0 && (
+                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+                  <Icon icon="lucide:alert-circle" width={13} height={13} className="text-amber-300" />
+                  <span className="text-xs font-bold">{operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}</span>
+                </div>
+              )}
+              {formData.operacion_id && (
+                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+                  <Icon icon="lucide:check-circle" width={13} height={13} className="text-emerald-300" />
+                  <span className="text-xs font-semibold">Op. seleccionada</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => void fetchData()}
+                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
+                title={t.misReservas?.refresh ?? "Actualizar"}
+              >
+                <Icon icon="lucide:refresh-cw" width={16} height={16} />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Tabs mobile — solo visibles en pantallas < lg */}
-        <div className="lg:hidden flex rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden mb-0">
+        <div className="lg:hidden flex bg-neutral-100 rounded-2xl p-1 gap-1">
           <button
             type="button"
             onClick={() => setMobilePanel("select")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
               mobilePanel === "select"
-                ? "bg-brand-blue text-white"
-                : "text-neutral-500 hover:bg-neutral-50"
+                ? "bg-white text-brand-blue shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
-            <Icon icon="typcn:document" width={15} height={15} />
+            <Icon icon="lucide:list" width={14} height={14} />
             {tr.selectOperation}
           </button>
           <button
             type="button"
             onClick={() => setMobilePanel("form")}
             disabled={!formData.operacion_id}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
               mobilePanel === "form"
-                ? "bg-brand-blue text-white"
-                : "text-neutral-500 hover:bg-neutral-50"
+                ? "bg-white text-brand-blue shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
-            <Icon icon="lucide:truck" width={15} height={15} />
+            <Icon icon="lucide:truck" width={14} height={14} />
             {tr.transportInfo}
             {formData.operacion_id && (
-              <span className="w-2 h-2 rounded-full bg-brand-teal inline-block" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
             )}
           </button>
         </div>

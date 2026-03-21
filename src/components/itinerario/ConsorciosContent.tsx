@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
 import { sileo } from "sileo";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 function getApiUrl(): string {
   if (typeof import.meta !== "undefined" && import.meta.env?.PUBLIC_API_URL) {
@@ -95,6 +96,7 @@ export function ConsorciosContent() {
   const [form, setForm] = useState({ nombre: "", servicios_ids: [] as string[] });
   const modalRef = useRef<HTMLDivElement>(null);
   const [detailsConsorcio, setDetailsConsorcio] = useState<Consorcio | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -217,25 +219,32 @@ export function ConsorciosContent() {
   }, [form, editingId, load, handleCloseModal, tr]);
 
   const handleDelete = useCallback(
-    async (c: Consorcio) => {
-      if (!window.confirm(tr.confirmDelete.replace("{{name}}", c.nombre))) return;
-      setDeletingId(c.id);
-      setError(null);
-      const base = getApiUrl() || "";
-      try {
-        const res = await fetch(`${base}/api/admin/consorcios/${c.id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-        const data = (await res.json()) as { error?: string };
-        if (!res.ok) throw new Error(data.error ?? tr.errorDelete);
-        sileo.success({ title: tr.successDeleted });
-        load();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : tr.errorDeleteMsg);
-      } finally {
-        setDeletingId(null);
-      }
+    (c: Consorcio) => {
+      setConfirmDialog({
+        title: "Eliminar consorcio",
+        message: tr.confirmDelete.replace("{{name}}", c.nombre),
+        confirmLabel: tr.delete,
+        onConfirm: async () => {
+          setConfirmDialog(null);
+          setDeletingId(c.id);
+          setError(null);
+          const base = getApiUrl() || "";
+          try {
+            const res = await fetch(`${base}/api/admin/consorcios/${c.id}`, {
+              method: "DELETE",
+              credentials: "include",
+            });
+            const data = (await res.json()) as { error?: string };
+            if (!res.ok) throw new Error(data.error ?? tr.errorDelete);
+            sileo.success({ title: tr.successDeleted });
+            load();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : tr.errorDeleteMsg);
+          } finally {
+            setDeletingId(null);
+          }
+        },
+      });
     },
     [load, tr]
   );
@@ -382,6 +391,7 @@ export function ConsorciosContent() {
   }
 
   return (
+    <>
     <main className="flex-1 min-h-0 min-w-0 overflow-auto bg-neutral-50" role="main">
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-5 py-4 sm:py-6 space-y-4">
 
@@ -664,5 +674,16 @@ export function ConsorciosContent() {
         </div>
       )}
     </main>
+    {confirmDialog && (
+      <ConfirmDialog
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   );
 }

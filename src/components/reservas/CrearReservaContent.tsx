@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
+import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
@@ -9,6 +9,8 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
 import { format, parse, differenceInDays } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 registerLocale("es", es);
 
@@ -60,7 +62,7 @@ const initialFormData: FormData = {
   especie: "",
   pais: "",
   temperatura: "",
-  ventilacion: "CERRADO",
+  ventilacion: "",
   tratamiento_frio: "",
   tratamiento_frio_o2: "",
   tratamiento_frio_co2: "",
@@ -123,6 +125,9 @@ export function CrearReservaContent() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [lastSavedPayload, setLastSavedPayload] = useState<Record<string, unknown> | null>(null);
+  const [lastSavedIds, setLastSavedIds] = useState<{ id: string; ref_asli: string | null }[]>([]);
+  const logoCache = useRef<{ dataUrl: string; w: number; h: number } | null>(null);
+  const pdfCache = useRef<{ base64: string; name: string } | null>(null);
 
   const [catalogos, setCatalogos] = useState<Record<string, CatalogoItem[]>>({});
   const [navieras, setNavieras] = useState<SelectOption[]>([]);
@@ -144,12 +149,20 @@ export function CrearReservaContent() {
 
   // Estados para el combobox de clientes
   const [clienteInput, setClienteInput] = useState("");
-  const [showClienteSuggestions, setShowClienteSuggestions] = useState(false);
   const [showAddClienteModal, setShowAddClienteModal] = useState(false);
   const [addingCliente, setAddingCliente] = useState(false);
+
+  // Estados para el combobox de planta de presentación
+  const [plantaInput, setPlantaInput] = useState("");
+  const [addingPlanta, setAddingPlanta] = useState(false);
+
+  // Estados para el combobox de especie
+  const [especieInput, setEspecieInput] = useState("");
+  const [addingEspecie, setAddingEspecie] = useState(false);
+
   const [showPreview, setShowPreview] = useState(false);
+  const [copias, setCopias] = useState(1);
   const mainRef = useRef<HTMLElement>(null);
-  const clienteInputRef = useRef<HTMLInputElement>(null);
 
   const loadDatosDePrueba = useCallback(() => {
     const firstId = (opts: SelectOption[]) => opts[0]?.id ?? "";
@@ -172,7 +185,7 @@ export function CrearReservaContent() {
       cliente: prev.cliente || clienteId,
       especie: prev.especie || firstId(especies),
       temperatura: prev.temperatura || "0",
-      ventilacion: prev.ventilacion || "ABIERTO",
+      ventilacion: prev.ventilacion || "25",
       tratamiento_frio: prev.tratamiento_frio || "",
       tipo_atmosfera: prev.tipo_atmosfera || "",
       tratamiento_frio_o2: prev.tratamiento_frio_o2 || "",
@@ -347,14 +360,6 @@ export function CrearReservaContent() {
     }
   }, [ejecutivos, profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cerrar dropdown al hacer scroll (evita desincronía con el portal)
-  useEffect(() => {
-    if (!showClienteSuggestions) return;
-    const close = () => setShowClienteSuggestions(false);
-    window.addEventListener("scroll", close, true);
-    return () => window.removeEventListener("scroll", close, true);
-  }, [showClienteSuggestions]);
-
   useEffect(() => {
     if (!formData.naviera || !supabase) {
       setNavesFiltered(naves);
@@ -414,25 +419,33 @@ export function CrearReservaContent() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
+    const fieldName = (e.target as HTMLInputElement).dataset.field || e.target.name;
+    const { type } = e.target;
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
+      setFormData((prev) => ({ ...prev, [fieldName]: checked }));
     } else {
-      if (name === "nave") {
+      const rawValue = e.target.value;
+      const noUpper =
+        fieldName === "ventilacion" ||
+        fieldName === "temperatura" ||
+        type === "number";
+      const value =
+        e.target.tagName === "SELECT" ? rawValue : noUpper ? rawValue : rawValue.toUpperCase();
+      if (fieldName === "nave") {
         setViajesSugeridos([]);
         setViajeInputManual(false);
         setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
-      } else if (name === "tipo_atmosfera") {
+      } else if (fieldName === "tipo_atmosfera") {
         setFormData((prev) => ({
           ...prev,
           tipo_atmosfera: value,
-          ventilacion: value ? "CERRADO" : prev.ventilacion,
+          ventilacion: value ? "0" : prev.ventilacion,
           tratamiento_frio_o2: value ? prev.tratamiento_frio_o2 : "",
           tratamiento_frio_co2: value ? prev.tratamiento_frio_co2 : "",
         }));
       } else {
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [fieldName]: value }));
       }
     }
   };
@@ -460,12 +473,6 @@ export function CrearReservaContent() {
       setFormData((prev) => ({ ...prev, cliente: empresa.id }));
     }
   }, [profile?.rol, clientesFiltradosPorRol]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const clientesFiltrados = useMemo(() => {
-    if (!clienteInput.trim()) return clientesFiltradosPorRol;
-    const search = clienteInput.toLowerCase();
-    return clientesFiltradosPorRol.filter((c) => c.nombre.toLowerCase().includes(search));
-  }, [clienteInput, clientesFiltradosPorRol]);
 
   const clienteExisteExacto = useMemo(() => {
     const search = clienteInput.trim().toLowerCase();
@@ -508,33 +515,14 @@ export function CrearReservaContent() {
         formData.etd
       ),
       planta: Boolean(formData.planta_presentacion),
-      deposito: Boolean(formData.deposito),
+      deposito: true,
       observaciones: Boolean(formData.observaciones.trim()),
     };
   }, [formData]);
 
-  const handleClienteInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setClienteInput(value);
-    setShowClienteSuggestions(true);
-    if (!value.trim()) {
-      setFormData((prev) => ({ ...prev, cliente: "" }));
-    }
-  };
-
   const handleSelectCliente = (cliente: SelectOption) => {
     setClienteInput(cliente.nombre);
     setFormData((prev) => ({ ...prev, cliente: cliente.id }));
-    setShowClienteSuggestions(false);
-  };
-
-  const handleClienteBlur = () => {
-    setTimeout(() => {
-      setShowClienteSuggestions(false);
-      if (clienteInput.trim() && !clienteExisteExacto && !formData.cliente) {
-        setShowAddClienteModal(true);
-      }
-    }, 200);
   };
 
   const handleAddCliente = async () => {
@@ -559,6 +547,56 @@ export function CrearReservaContent() {
       console.error("Error adding empresa:", err);
     }
     setAddingCliente(false);
+  };
+
+  // Sincronizar plantaInput cuando cambia el valor del form (ej. carga de datos de prueba)
+  useEffect(() => {
+    const nombre = plantas.find((p) => p.id === formData.planta_presentacion)?.nombre ?? "";
+    setPlantaInput(nombre);
+  }, [formData.planta_presentacion, plantas]);
+
+  // Sincronizar especieInput cuando cambia el valor del form
+  useEffect(() => {
+    const nombre = especies.find((e) => e.id === formData.especie)?.nombre ?? "";
+    setEspecieInput(nombre);
+  }, [formData.especie, especies]);
+
+  const handleAddPlanta = async (text: string) => {
+    if (!supabase || !text.trim()) return;
+    setAddingPlanta(true);
+    const nombre = text.trim().toUpperCase();
+    const { data, error: insertError } = await supabase
+      .from("plantas")
+      .insert({ nombre, activo: true })
+      .select("id, nombre")
+      .single();
+    if (!insertError && data) {
+      setPlantas((prev) => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setFormData((prev) => ({ ...prev, planta_presentacion: data.id }));
+      setPlantaInput(data.nombre);
+    } else if (insertError) {
+      console.error("Error adding planta:", insertError);
+    }
+    setAddingPlanta(false);
+  };
+
+  const handleAddEspecie = async (text: string) => {
+    if (!supabase || !text.trim()) return;
+    setAddingEspecie(true);
+    const nombre = text.trim().toUpperCase();
+    const { data, error: insertError } = await supabase
+      .from("especies")
+      .insert({ nombre })
+      .select("id, nombre")
+      .single();
+    if (!insertError && data) {
+      setEspecies((prev) => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setFormData((prev) => ({ ...prev, especie: data.id }));
+      setEspecieInput(data.nombre);
+    } else if (insertError) {
+      console.error("Error adding especie:", insertError);
+    }
+    setAddingEspecie(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -594,7 +632,12 @@ export function CrearReservaContent() {
         ? especies.find((e) => e.id === formData.especie)?.nombre
         : null,
       temperatura: formData.temperatura || null,
-      ventilacion: formData.ventilacion || null,
+      ventilacion: (() => {
+        const v = formData.ventilacion.trim();
+        if (!v) return null;
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) ? n : null;
+      })(),
       tratamiento_frio: formData.tratamiento_frio || null,
       tratamiento_frio_o2: formData.tratamiento_frio_o2 ? parseInt(formData.tratamiento_frio_o2, 10) : null,
       tratamiento_frio_co2: formData.tratamiento_frio_co2 ? parseInt(formData.tratamiento_frio_co2, 10) : null,
@@ -627,7 +670,11 @@ export function CrearReservaContent() {
       origen_registro: "reserva_web",
     };
 
-    const { error: insertError } = await supabase.from("operaciones").insert(payload);
+    const rows = Array(copias).fill(payload);
+    const { data: insertedRows, error: insertError } = await supabase
+      .from("operaciones")
+      .insert(rows)
+      .select("id, ref_asli");
 
     setSubmitting(false);
 
@@ -637,91 +684,27 @@ export function CrearReservaContent() {
     }
 
     setLastSavedPayload(payload);
-    setSuccess(tr.successMessage);
-    setFormData(initialFormData);
-    setClienteInput("");
+    setLastSavedIds(insertedRows ?? []);
+    setLastSavedCopias(copias);
+    setSuccess(copias > 1 ? `${copias} operaciones guardadas correctamente.` : tr.successMessage);
+    setCopias(1);
     setShowEmailModal(true);
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Pre-generar PDF en background mientras el usuario decide si enviar correo
+    pdfCache.current = null;
+    const clienteSlugPre = String(payload.cliente ?? "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+    const cantidadLabelPre = copias > 1 ? `${copias}_RESERVAS` : "1_RESERVA";
+    const pdfNamePre = `SOLICITUD_DE_${cantidadLabelPre}_-_${clienteSlugPre}.pdf`;
+    void generateReservaPDF(payload, copias).then((base64) => {
+      pdfCache.current = { base64, name: pdfNamePre };
+    });
   };
 
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [lastSavedCopias, setLastSavedCopias] = useState(1);
 
   const buildEmailContent = (p: Record<string, unknown>) => {
-    const parts = [
-      "SOLICITUD DE RESERVA",
-      p.cliente ?? "",
-      p.naviera ?? "",
-      [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
-      p.especie ?? "",
-      p.temperatura ?? "",
-      p.ventilacion ?? "",
-      p.pol ?? "",
-      p.pod ?? "",
-    ].filter(Boolean);
-    const subject = parts.join(" // ").toUpperCase();
-
-    const rows = [
-      ["Tipo de operación", p.tipo_operacion],
-      ["Cliente", p.cliente],
-      ["Ejecutivo", p.ejecutivo],
-      ["Consignatario", p.consignatario],
-      ["Incoterm", p.incoterm],
-      ["Forma de pago", p.forma_pago],
-    ];
-    const cargaRows = [
-      ["Especie", p.especie],
-      ["Temperatura", p.temperatura],
-      ["Ventilación", p.ventilacion],
-      ["Trat. de frío", p.tratamiento_frio],
-      ["O₂", p.tratamiento_frio_o2 != null ? `${p.tratamiento_frio_o2}%` : null],
-      ["CO₂", p.tratamiento_frio_co2 != null ? `${p.tratamiento_frio_co2}%` : null],
-      ["Tipo atmósfera", p.tipo_atmosfera],
-      ["Tipo unidad", p.tipo_unidad],
-    ];
-    const navRows = [
-      ["Naviera", p.naviera],
-      ["Nave", p.nave],
-      ["Viaje", p.viaje],
-      ["POL", p.pol],
-      ["POD", p.pod],
-      ["ETD", p.etd],
-      ["ETA", p.eta],
-      ["TT", p.tt != null ? `${p.tt} días` : null],
-      ["Booking", p.booking],
-    ];
-    const plantaRows = [
-      ["Planta", p.planta_presentacion],
-      ["Depósito", p.deposito],
-    ];
-
-    const renderTable = (title: string, data: (string | unknown)[][]) => {
-      const rowsHtml = data
-        .map(([label, val]) => {
-          const v = val ?? "-";
-          return `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;white-space:nowrap">${label}</td><td style="padding:4px 0;font-size:13px;font-weight:600;color:#1f2937">${v}</td></tr>`;
-        })
-        .join("");
-      return `<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#2563eb;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">${title}</div><table style="border-collapse:collapse">${rowsHtml}</table></div>`;
-    };
-
-    let htmlBody = `<div style="font-family:Arial,sans-serif;color:#374151"><p>Estimado equipo,</p><p>Se ha creado una nueva solicitud de reserva con los siguientes datos:</p>`;
-    htmlBody += renderTable("General", rows);
-    htmlBody += renderTable("Carga", cargaRows);
-    htmlBody += renderTable("Naviera / Viaje", navRows);
-    htmlBody += renderTable("Planta / Depósito", plantaRows);
-    if (p.observaciones) {
-      htmlBody += renderTable("Observaciones", [["Nota", p.observaciones]]);
-    }
-    htmlBody += `<p>Quedo atento.</p></div>`;
-
-    return { subject, htmlBody };
-  };
-
-  const handleSendEmail = async () => {
-    if (!lastSavedPayload) return;
-    const p = lastSavedPayload;
-    setSendingEmail(true);
-
     const subject = [
       "SOLICITUD DE RESERVA",
       p.cliente ?? "",
@@ -733,40 +716,300 @@ export function CrearReservaContent() {
       p.pod ?? "",
     ].filter(Boolean).join(" // ").toUpperCase();
 
-    const body = [
-      "Estimado equipo,",
-      "",
-      "Se ha creado una nueva solicitud de reserva con los siguientes datos:",
-      "",
-      "GENERAL",
-      `  Tipo operación: ${p.tipo_operacion ?? "-"}`,
-      `  Cliente:        ${p.cliente ?? "-"}`,
-      `  Ejecutivo:      ${p.ejecutivo ?? "-"}`,
-      `  Consignatario:  ${p.consignatario ?? "-"}`,
-      `  Incoterm:       ${p.incoterm ?? "-"}`,
-      `  Forma de pago:  ${p.forma_pago ?? "-"}`,
-      "",
-      "CARGA",
-      `  Especie:        ${p.especie ?? "-"}`,
-      `  Temperatura:    ${p.temperatura ?? "-"}`,
-      `  Ventilación:    ${p.ventilacion ?? "-"}`,
-      `  Tipo unidad:    ${p.tipo_unidad ?? "-"}`,
-      "",
-      "NAVIERA / VIAJE",
-      `  Naviera:  ${p.naviera ?? "-"}`,
-      `  Nave:     ${p.nave ?? "-"}`,
-      `  Viaje:    ${p.viaje ?? "-"}`,
-      `  POL:      ${p.pol ?? "-"}`,
-      `  POD:      ${p.pod ?? "-"}`,
-      `  ETD:      ${p.etd ?? "-"}`,
-      `  Booking:  ${p.booking ?? "-"}`,
-      "",
-      p.observaciones ? `Observaciones: ${String(p.observaciones)}` : "",
-      "",
-      "Quedo atento.",
-    ].filter(Boolean).join("\n");
+    const val = (v: unknown) => (v != null && v !== "" ? String(v) : null);
+    const pct = (v: unknown) => (v != null && v !== "" ? String(v) + "%" : null);
+    const dias = (v: unknown) => (v != null && v !== "" ? String(v) + " dias" : null);
 
-    const result = await sendEmail({ to: "informaciones@asli.cl", subject: String(subject), body });
+    const makeRow = (label: string, value: string | null, even: boolean) => {
+      if (!value) return "";
+      const bg = even ? "#f5f5f5" : "#ffffff";
+      return "<tr>"
+        + "<td style=\"padding:7px 12px;background:" + bg + ";color:#555555;font-size:13px;font-family:Arial,sans-serif;width:150px;border-bottom:1px solid #dddddd\">" + label + "</td>"
+        + "<td style=\"padding:7px 12px;background:" + bg + ";color:#111111;font-size:13px;font-weight:bold;font-family:Arial,sans-serif;border-bottom:1px solid #dddddd\">" + value + "</td>"
+        + "</tr>";
+    };
+
+    const makeSection = (title: string, pairs: Array<[string, string | null]>) => {
+      let rows = "";
+      let idx = 0;
+      for (const [label, value] of pairs) {
+        if (value) { rows += makeRow(label, value, idx % 2 === 0); idx++; }
+      }
+      if (!rows) return "";
+      return "<table width=\"560\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:560px;margin-bottom:16px;border-collapse:collapse;border:1px solid #cccccc\">"
+        + "<tr><td colspan=\"2\" style=\"background:#1d4ed8;color:#ffffff;font-size:11px;font-weight:bold;text-transform:uppercase;padding:8px 12px;font-family:Arial,sans-serif\">" + title + "</td></tr>"
+        + rows
+        + "</table>";
+    };
+
+    const general = makeSection("General", [
+      ["Tipo de operacion", val(p.tipo_operacion)],
+      ["Cliente",           val(p.cliente)],
+      ["Ejecutivo",         val(p.ejecutivo)],
+      ["Consignatario",     val(p.consignatario)],
+      ["Incoterm",          val(p.incoterm)],
+      ["Forma de pago",     val(p.forma_pago)],
+    ]);
+    const carga = makeSection("Carga", [
+      ["Especie",        val(p.especie)],
+      ["Tipo de unidad", val(p.tipo_unidad)],
+      ["Temperatura",    val(p.temperatura)],
+      ["Ventilacion",    val(p.ventilacion)],
+      ["Trat. de frio",  val(p.tratamiento_frio)],
+      ["O2",             pct(p.tratamiento_frio_o2)],
+      ["CO2",            pct(p.tratamiento_frio_co2)],
+      ["Atmosfera",      val(p.tipo_atmosfera)],
+    ]);
+    const naviera = makeSection("Naviera / Viaje", [
+      ["Naviera",   val(p.naviera)],
+      ["Nave",      val(p.nave)],
+      ["Viaje",     val(p.viaje)],
+      ["POL",       val(p.pol)],
+      ["POD",       val(p.pod)],
+      ["ETD",       val(p.etd)],
+      ["ETA",       val(p.eta)],
+      ["Transito",  dias(p.tt)],
+      ["Booking",   val(p.booking)],
+    ]);
+    const planta = makeSection("Planta / Deposito", [
+      ["Planta",   val(p.planta_presentacion)],
+      ["Deposito", val(p.deposito)],
+    ]);
+    const obs = p.observaciones ? makeSection("Observaciones", [["Nota", val(p.observaciones)]]) : "";
+
+    const htmlBody =
+      "<html><body style=\"margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif\">"
+      + "<div style=\"max-width:600px;margin:24px 0;background:#ffffff;padding:24px;border-radius:8px\">"
+      + "<p style=\"font-size:14px;color:#222;margin-top:0\">Estimado equipo,</p>"
+      + "<p style=\"font-size:14px;color:#222\">Se ha creado una nueva solicitud de reserva con los siguientes datos:</p>"
+      + general + carga + naviera + planta + obs
+      + "<p style=\"font-size:14px;color:#222\">Quedo atento.</p>"
+      + "<p style=\"color:#aaa;font-size:11px;margin-bottom:0\">ASLI Logistics &middot; Sistema de Reservas</p>"
+      + "</div>"
+      + "</body></html>";
+
+    return { subject, htmlBody };
+  };
+
+  const generateReservaPDF = async (p: Record<string, unknown>, copias: number): Promise<string> => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+    const blue: [number, number, number] = [29, 78, 216];
+    const labelColor: [number, number, number] = [90, 90, 90];
+
+    // Header
+    doc.setFillColor(...blue);
+    doc.rect(0, 0, 210, 22, "F");
+
+    // Logo blanco (con caché y aspecto ratio correcto)
+    try {
+      if (!logoCache.current) {
+        const res = await fetch("/LOGO ASLI SIN FONDO BLANCO.png");
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+        logoCache.current = { dataUrl, w: img.naturalWidth, h: img.naturalHeight };
+      }
+      const { dataUrl, w, h } = logoCache.current;
+      const logoH = 14;
+      const logoW = (w / h) * logoH;
+      doc.addImage(dataUrl, "PNG", 10, (22 - logoH) / 2, logoW, logoH);
+    } catch {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text("ASLI LOGISTICS", 14, 14);
+    }
+
+    // Título cantidad reservas (derecha del header)
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text("SOLICITUD DE", 196, 10, { align: "right" });
+    doc.setFontSize(copias > 1 ? 13 : 11);
+    doc.setFont("helvetica", "bold");
+    doc.text(copias > 1 ? `${copias} RESERVAS` : "1 RESERVA", 196, 17, { align: "right" });
+
+    // Subtítulo + cliente
+    doc.setTextColor(...blue);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(copias > 1 ? `SOLICITUD DE ${copias} RESERVAS` : "SOLICITUD DE RESERVA", 14, 30);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...labelColor);
+    doc.text(`Cliente: ${String(p.cliente ?? "-")}   ·   ${new Date().toLocaleDateString("es-CL")}`, 14, 36);
+
+    doc.setDrawColor(...blue);
+    doc.setLineWidth(0.4);
+    doc.line(14, 39, 196, 39);
+
+    // ── Layout 2 columnas ────────────────────────────────────────────────────
+    // Izquierda: x=14, ancho=88  |  Derecha: x=108, ancho=88
+    const CL = 14;   // left col x
+    const CR = 108;  // right col x
+    const CW = 88;   // col width
+    const MRL = 210 - CL - CW;  // margin right for left col  = 108
+    const MRR = 14;              // margin right for right col = 14
+
+    let yL = 43;
+    let yR = 43;
+
+    const mkTable = (
+      startY: number,
+      marginLeft: number,
+      marginRight: number,
+      title: string,
+      valid: [string, string][],
+    ) => {
+      autoTable(doc, {
+        startY,
+        head: [[{ content: title, colSpan: 2, styles: { fillColor: blue, textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 8, cellPadding: { top: 4, bottom: 4, left: 5, right: 5 } } }]],
+        body: valid,
+        styles: { fontSize: 8, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 } },
+        columnStyles: {
+          0: { cellWidth: 32, fontStyle: "bold", textColor: labelColor },
+          1: { textColor: [15,15,15] as [number,number,number], fontStyle: "bold" },
+        },
+        margin: { left: marginLeft, right: marginRight },
+        theme: "grid",
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (doc as any).lastAutoTable.finalY + 4;
+    };
+
+    const sectionL = (title: string, rows: [string, string | null][]) => {
+      const valid = rows.filter(([, v]) => v != null && v !== "") as [string, string][];
+      if (!valid.length) return;
+      yL = mkTable(yL, CL, MRL, title, valid);
+    };
+
+    const sectionR = (title: string, rows: [string, string | null][]) => {
+      const valid = rows.filter(([, v]) => v != null && v !== "") as [string, string][];
+      if (!valid.length) return;
+      yR = mkTable(yR, CR, MRR, title, valid);
+    };
+
+    const val = (v: unknown) => (v != null && v !== "" ? String(v) : null);
+    const pct = (v: unknown) => (v != null && v !== "" ? `${v}%` : null);
+    const dias = (v: unknown) => (v != null && v !== "" ? `${v} días` : null);
+
+    // Columna izquierda: General + Planta/Depósito
+    sectionL("General", [
+      ["Tipo op.",   val(p.tipo_operacion)],
+      ["Cliente",    val(p.cliente)],
+      ["Ejecutivo",  val(p.ejecutivo)],
+      ["Incoterm",   val(p.incoterm)],
+      ["Forma pago", val(p.forma_pago)],
+    ]);
+    sectionL("Planta / Depósito", [
+      ["Planta",   val(p.planta_presentacion)],
+      ["Depósito", val(p.deposito)],
+    ]);
+    sectionL("Carga", [
+      ["Especie",    val(p.especie)],
+      ["Unidad",     val(p.tipo_unidad)],
+      ["Temp.",      val(p.temperatura)],
+      ["Ventil.",    val(p.ventilacion)],
+      ["Trat. frío", val(p.tratamiento_frio)],
+      ["O2",         pct(p.tratamiento_frio_o2)],
+      ["CO2",        pct(p.tratamiento_frio_co2)],
+      ["Atmósfera",  val(p.tipo_atmosfera)],
+    ]);
+
+    // Columna derecha: Naviera + Obs
+    sectionR("Naviera / Viaje", [
+      ["Naviera",  val(p.naviera)],
+      ["Nave",     val(p.nave)],
+      ["Viaje",    val(p.viaje)],
+      ["POL",      val(p.pol)],
+      ["POD",      val(p.pod)],
+      ["ETD",      val(p.etd)],
+      ["ETA",      val(p.eta)],
+      ["Tránsito", dias(p.tt)],
+      ["Booking",  val(p.booking)],
+    ]);
+    if (p.observaciones) {
+      sectionR("Observaciones", [["Nota", val(p.observaciones)]]);
+    }
+
+    // Pie de página
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(...blue);
+    doc.setLineWidth(0.3);
+    doc.line(14, pageHeight - 12, 196, pageHeight - 12);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...labelColor);
+    doc.text("Asesorías y Servicios Logísticos Integrales Ltda.", 14, pageHeight - 7);
+    doc.text(new Date().toLocaleDateString("es-CL"), 196, pageHeight - 7, { align: "right" });
+
+    return doc.output("datauristring").split(",")[1]; // base64
+  };
+
+  const handleSendEmail = async () => {
+    if (!lastSavedPayload || !supabase) return;
+    const p = lastSavedPayload;
+    setSendingEmail(true);
+
+    const subject = [
+      lastSavedCopias > 1 ? `SOLICITUD DE ${lastSavedCopias} RESERVAS` : "SOLICITUD DE RESERVA",
+      p.cliente ?? "",
+      p.naviera ?? "",
+      [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
+      p.especie ?? "",
+      p.temperatura ?? "",
+      p.pol ?? "",
+      p.pod ?? "",
+    ].filter(Boolean).join(" // ").toUpperCase();
+
+    const { htmlBody } = buildEmailContent(p);
+
+    // Usar PDF pre-generado si está listo, sino generar ahora
+    const clienteSlug = String(p.cliente ?? "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+    const cantidadLabel = lastSavedCopias > 1 ? `${lastSavedCopias}_RESERVAS` : "1_RESERVA";
+    const pdfName = `SOLICITUD_DE_${cantidadLabel}_-_${clienteSlug}.pdf`;
+
+    const pdfBase64 = pdfCache.current?.base64 ?? await generateReservaPDF(p, lastSavedCopias);
+
+    // Subir PDF a storage y guardar en documentos (fire & forget — no bloquea el envío)
+    if (lastSavedIds.length > 0) {
+      const firstId = lastSavedIds[0].id;
+      const filePath = `documentos/${firstId}/${pdfName}`;
+      const pdfBytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+      const savedIds = lastSavedIds;
+      void (async () => {
+        const { data: uploadData } = await supabase!.storage
+          .from("documentos")
+          .upload(filePath, pdfBytes, { contentType: "application/pdf", upsert: true });
+        if (uploadData) {
+          const { data: urlData } = supabase!.storage.from("documentos").getPublicUrl(filePath);
+          const docRows = savedIds.map(({ id }) => ({
+            operacion_id: id,
+            tipo: "SOLICITUD_RESERVA",
+            nombre_archivo: pdfName,
+            url: urlData.publicUrl,
+            mime_type: "application/pdf",
+            tamano: pdfBytes.length,
+          }));
+          await supabase!.from("documentos").insert(docRows);
+        }
+      })();
+    }
+
+    const result = await sendEmail({
+      to: "roodericus7@gmail.com",
+      subject: String(subject),
+      body: htmlBody,
+      attachments: [{ name: pdfName, content: pdfBase64, mimeType: "application/pdf" }],
+    });
+
     setSendingEmail(false);
     setShowEmailModal(false);
     if (result.success) {
@@ -777,17 +1020,18 @@ export function CrearReservaContent() {
   };
 
   const inputClass =
-    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed";
+    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-white text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-50";
 
   const selectClass = inputClass;
 
-  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
+  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5";
 
   const renderCatalogoSelect = (
     name: keyof FormData,
     categoria: string,
     label: string
   ) => {
+    const htmlName = name === "forma_pago" ? "form_payment_method" : name;
     const items = catalogos[categoria] ?? [];
     return (
       <div>
@@ -796,11 +1040,13 @@ export function CrearReservaContent() {
         </label>
         <select
           id={name}
-          name={name}
+          name={htmlName}
+          data-field={name}
           value={formData[name] as string}
           onChange={handleChange}
           className={selectClass}
           disabled={loadingCatalogos}
+          autoComplete="off"
         >
           <option value="">{tr.selectPlaceholder}</option>
           {items.map((item) => (
@@ -829,10 +1075,12 @@ export function CrearReservaContent() {
       <select
         id={name}
         name={name}
+        data-field={name}
         value={formData[name] as string}
         onChange={handleChange}
         className={selectClass}
         disabled={loadingCatalogos}
+        autoComplete="off"
       >
         <option value="">{tr.selectPlaceholder}</option>
         {options.map((opt) => (
@@ -857,99 +1105,17 @@ export function CrearReservaContent() {
       <input
         id={name}
         name={name}
+        data-field={name}
         type={type}
         value={formData[name] as string}
         onChange={handleChange}
         placeholder={placeholder}
         className={inputClass}
+        autoComplete="off"
       />
     </div>
   );
 
-  const renderClienteCombobox = () => {
-    const isClienteRole = profile?.rol === "cliente";
-    const isReadOnly = isClienteRole && clientesFiltradosPorRol.length >= 1;
-    const canAddNew = !isReadOnly;
-
-    // Posición del dropdown via portal (fixed, coordenadas del input en viewport)
-    const rect = clienteInputRef.current?.getBoundingClientRect();
-    const dropdownPortal =
-      showClienteSuggestions &&
-      clienteInput.trim() &&
-      rect &&
-      typeof document !== "undefined"
-        ? createPortal(
-            <div
-              className="bg-white border border-neutral-200 rounded-xl shadow-xl max-h-60 overflow-y-auto"
-              style={{
-                position: "fixed",
-                top: rect.bottom + 4,
-                left: rect.left,
-                width: rect.width,
-                zIndex: 9999,
-              }}
-            >
-              {clientesFiltrados.length > 0 ? (
-                clientesFiltrados.map((cliente) => (
-                  <button
-                    key={cliente.id}
-                    type="button"
-                    onMouseDown={() => handleSelectCliente(cliente)}
-                    className="w-full px-4 py-2.5 text-left hover:bg-brand-blue/5 text-neutral-800 font-medium transition-colors text-sm border-b border-neutral-50 last:border-b-0"
-                  >
-                    {cliente.nombre}
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-neutral-500">
-                  No se encontró "<span className="text-neutral-700 font-medium">{clienteInput}</span>"
-                  {canAddNew && (
-                    <button
-                      type="button"
-                      onMouseDown={() => setShowAddClienteModal(true)}
-                      className="flex items-center gap-1.5 mt-2 text-brand-blue hover:text-brand-blue/80 font-semibold text-xs transition-colors"
-                    >
-                      <Icon icon="typcn:plus" width={14} height={14} />
-                      Agregar como nueva empresa
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>,
-            document.body
-          )
-        : null;
-
-    return (
-      <div className="relative">
-        <label htmlFor="cliente" className={labelClass}>
-          {tr.cliente}
-          {clientesFiltradosPorRol.length > 0 && (
-            <span className="ml-2 text-neutral-400 font-normal">({clientesFiltradosPorRol.length})</span>
-          )}
-          {isReadOnly && (
-            <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>
-          )}
-        </label>
-        <input
-          ref={clienteInputRef}
-          id="cliente"
-          name="cliente"
-          type="text"
-          value={clienteInput}
-          onChange={handleClienteInputChange}
-          onFocus={() => { if (!isReadOnly) setShowClienteSuggestions(true); }}
-          onBlur={handleClienteBlur}
-          placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
-          className={`${inputClass} ${isReadOnly ? "opacity-70 cursor-default" : ""}`}
-          autoComplete="off"
-          readOnly={isReadOnly}
-          disabled={isReadOnly}
-        />
-        {dropdownPortal}
-      </div>
-    );
-  };
 
   const renderAddClienteModal = () => {
     if (!showAddClienteModal) return null;
@@ -1042,7 +1208,7 @@ export function CrearReservaContent() {
           { label: tr.especie, value: especieNombre },
           { label: tr.tipoUnidad, value: formData.tipo_unidad },
           { label: tr.temperatura, value: formData.temperatura },
-          { label: tr.ventilacion, value: formData.ventilacion },
+          { label: tr.ventilacion, value: formData.ventilacion !== "" ? formData.ventilacion : "—" },
           { label: tr.tratamientoFrio, value: formData.tratamiento_frio },
           ...(formData.tratamiento_frio_o2 ? [{ label: tr.o2, value: `${formData.tratamiento_frio_o2}%` }] : []),
           ...(formData.tratamiento_frio_co2 ? [{ label: tr.co2, value: `${formData.tratamiento_frio_co2}%` }] : []),
@@ -1204,6 +1370,30 @@ export function CrearReservaContent() {
           {/* Footer */}
           <div className="shrink-0 px-5 py-4 border-t border-neutral-100 bg-white"
                style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
+            {/* Selector de copias */}
+            <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
+              <Icon icon="typcn:document-add" width={16} height={16} className="text-neutral-400 shrink-0" />
+              <span className="text-sm text-neutral-600 flex-1">Copias a guardar</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCopias((c) => Math.max(1, c - 1))}
+                  className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 transition-colors font-bold text-lg leading-none"
+                >−</button>
+                <input
+                  type="number"
+                  min={1}
+                  value={copias}
+                  onChange={(e) => setCopias(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-14 text-center font-bold text-neutral-800 text-sm border border-neutral-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCopias((c) => c + 1)}
+                  className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 transition-colors font-bold text-lg leading-none"
+                >+</button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1221,7 +1411,8 @@ export function CrearReservaContent() {
                 {submitting ? (
                   <><Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />{tr.guardando}</>
                 ) : (
-                  <><Icon icon="typcn:input-checked" width={16} height={16} />{tr.guardar}</>
+                  <><Icon icon="typcn:input-checked" width={16} height={16} />
+                  {copias > 1 ? `Guardar ${copias} reservas` : tr.guardar}</>
                 )}
               </button>
             </div>
@@ -1262,7 +1453,35 @@ export function CrearReservaContent() {
         {renderCatalogoSelect("tipo_operacion", "tipo_operacion", tr.tipoOperacion)}
         {renderCatalogoSelect("estado_operacion", "estado_operacion", tr.estadoOperacion)}
         {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo)}
-        {renderClienteCombobox()}
+        {(() => {
+          const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
+          return (
+            <ComboboxInput
+              id="cliente"
+              label={tr.cliente}
+              labelClass={labelClass}
+              inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
+              labelExtra={isReadOnly ? <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span> : undefined}
+              value={clienteInput}
+              options={clientesFiltradosPorRol}
+              onSelect={handleSelectCliente}
+              onChange={(val) => {
+                setClienteInput(val);
+                if (!val.trim()) setFormData((prev) => ({ ...prev, cliente: "" }));
+              }}
+              onBlurExtra={() => {
+                if (clienteInput.trim() && !clienteExisteExacto && !formData.cliente && profile?.rol !== "cliente") {
+                  setShowAddClienteModal(true);
+                }
+              }}
+              onAddNew={profile?.rol !== "cliente" ? () => { setShowAddClienteModal(true); } : undefined}
+              addNewLabel={() => "Agregar como nueva empresa"}
+              placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
+              disabled={isReadOnly}
+              readOnly={isReadOnly}
+            />
+          );
+        })()}
       </>
     ),
     comercial: (
@@ -1274,30 +1493,50 @@ export function CrearReservaContent() {
     ),
     carga: (
       <>
-        {renderSelect("especie", especies, tr.especie)}
+        <ComboboxInput
+          id="especie"
+          label={tr.especie}
+          labelClass={labelClass}
+          inputClass={inputClass}
+          value={especieInput}
+          options={especies}
+          onSelect={(opt) => {
+            setEspecieInput(opt.nombre);
+            setFormData((prev) => ({ ...prev, especie: opt.id }));
+          }}
+          onChange={(val) => {
+            setEspecieInput(val);
+            setFormData((prev) => ({ ...prev, especie: "" }));
+          }}
+          onAddNew={handleAddEspecie}
+          addNewLabel={(text) => `Agregar "${text}" como nueva especie`}
+          addingNew={addingEspecie}
+          placeholder="Buscar o escribir especie..."
+          disabled={loadingCatalogos}
+        />
         {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
         <div>
           <label htmlFor="ventilacion" className={labelClass}>
             {tr.ventilacion}
             {formData.tipo_atmosfera && (
-              <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· forzado por atmósfera</span>
+              <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· forzado por atmósfera (0 CBM/h)</span>
             )}
           </label>
-          <select
+          <input
             id="ventilacion"
             name="ventilacion"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            data-field="ventilacion"
+            autoComplete="off"
             value={formData.ventilacion}
             onChange={handleChange}
-            className={selectClass}
+            placeholder={tr.placeholderVentilacion}
+            className={inputClass}
             disabled={loadingCatalogos || !!formData.tipo_atmosfera}
-          >
-            <option value="">{tr.selectPlaceholder}</option>
-            {(catalogos["ventilacion"] ?? []).map((item) => (
-              <option key={item.id} value={item.valor}>
-                {item.valor}{item.descripcion ? ` - ${item.descripcion}` : ""}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         {renderCatalogoSelect("tratamiento_frio", "tratamiento_frio", tr.tratamientoFrio)}
         {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera)}
@@ -1438,7 +1677,27 @@ export function CrearReservaContent() {
     ),
     planta: (
       <>
-        {renderSelect("planta_presentacion", plantas, tr.planta)}
+        <ComboboxInput
+          id="planta_presentacion"
+          label={tr.planta}
+          labelClass={labelClass}
+          inputClass={inputClass}
+          value={plantaInput}
+          options={plantas}
+          onSelect={(opt) => {
+            setPlantaInput(opt.nombre);
+            setFormData((prev) => ({ ...prev, planta_presentacion: opt.id }));
+          }}
+          onChange={(val) => {
+            setPlantaInput(val);
+            setFormData((prev) => ({ ...prev, planta_presentacion: "" }));
+          }}
+          onAddNew={handleAddPlanta}
+          addNewLabel={(text) => `Agregar "${text}" como nueva planta`}
+          addingNew={addingPlanta}
+          placeholder="Buscar o escribir planta..."
+          disabled={loadingCatalogos}
+        />
         <div>
           <label htmlFor="citacion" className={labelClass}>{tr.citacion}</label>
           <input id="citacion" name="citacion" type="datetime-local" value={formData.citacion} onChange={handleChange} className={inputClass} />
@@ -1484,37 +1743,45 @@ export function CrearReservaContent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col bg-neutral-50" role="main">
+
+      {/* Marco verde cuando el paso está completo */}
+      <div
+        className={`fixed inset-0 z-40 pointer-events-none rounded-none transition-all duration-500 ${
+          sectionValidation[activeKey]
+            ? "ring-8 ring-inset ring-emerald-500 opacity-100"
+            : "ring-0 opacity-0"
+        }`}
+      />
+
       <div ref={mainRef} className="flex-1 overflow-auto">
 
-        {/* Header */}
-        <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-0">
-          <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-            <div className="px-5 py-3.5 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-                  <Icon icon="typcn:plus" width={20} height={20} className="text-white" />
-                </div>
-                <div>
-                  <h1 className="text-sm sm:text-base font-bold text-neutral-900 leading-tight">{tr.title}</h1>
-                  <p className="text-xs text-neutral-400 mt-0.5">{tr.subtitle}</p>
-                </div>
+        {/* Hero gradient header */}
+        <div className="bg-gradient-to-br from-brand-blue via-brand-blue/90 to-cyan-700 text-white px-4 sm:px-6 pt-5 pb-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="typcn:plus" width={22} height={22} className="text-white" />
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {isSuperadmin && (
-                  <button
-                    type="button"
-                    onClick={loadDatosDePrueba}
-                    className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
-                    title="Cargar datos de prueba (sin booking)"
-                  >
-                    <Icon icon="typcn:flash" width={14} height={14} />
-                    Datos de prueba
-                  </button>
-                )}
-                <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 rounded-full px-2.5 py-1">
-                  {completedCount}/{SECTION_ORDER.length}
-                </span>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold leading-tight truncate">{tr.title}</h1>
+                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isSuperadmin && (
+                <button
+                  type="button"
+                  onClick={loadDatosDePrueba}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
+                  title="Cargar datos de prueba"
+                >
+                  <Icon icon="typcn:flash" width={13} height={13} />
+                  Datos de prueba
+                </button>
+              )}
+              <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
+                <Icon icon="lucide:check-circle" width={13} height={13} className="text-white/80" />
+                <span className="text-xs font-bold">{completedCount}/{SECTION_ORDER.length}</span>
               </div>
             </div>
           </div>
@@ -1538,14 +1805,14 @@ export function CrearReservaContent() {
                           onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
                           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all font-bold text-xs border-2 ${
                             isActive
-                              ? "bg-brand-blue border-brand-blue text-white shadow-md shadow-brand-blue/30"
+                              ? "bg-brand-blue border-brand-blue text-white shadow-md shadow-brand-blue/30 scale-110"
                               : isComplete
                                 ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-200"
                                 : "bg-white border-neutral-200 text-neutral-400"
                           }`}
                         >
                           {isComplete
-                            ? <Icon icon="typcn:tick" width={14} height={14} />
+                            ? <Icon icon="lucide:check" width={14} height={14} />
                             : <span>{idx + 1}</span>
                           }
                         </button>
@@ -1613,12 +1880,16 @@ export function CrearReservaContent() {
 
         {/* Step content card */}
         <div className="px-4 sm:px-6 pt-4 pb-4">
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-colors ${
+            sectionValidation[activeKey] ? "border-emerald-400 shadow-emerald-100" : "border-neutral-200"
+          }`}>
             {/* Section header */}
-            <div className="px-5 py-3 border-b border-neutral-100 flex items-center justify-between gap-3">
+            <div className={`px-5 py-3.5 border-b flex items-center justify-between gap-3 transition-colors ${
+              sectionValidation[activeKey] ? "border-emerald-100 bg-emerald-50/40" : "border-neutral-100 bg-neutral-50/50"
+            }`}>
               <div className="flex items-center gap-3">
-                <span className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${sectionValidation[activeKey] ? "bg-emerald-500" : "bg-brand-blue"}`}>
-                  <Icon icon={sectionValidation[activeKey] ? "typcn:tick" : sectionIcons[activeKey]} width={16} height={16} className="text-white" />
+                <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${sectionValidation[activeKey] ? "bg-emerald-500" : "bg-brand-blue"}`}>
+                  <Icon icon={sectionValidation[activeKey] ? "lucide:check" : sectionIcons[activeKey]} width={16} height={16} className="text-white" />
                 </span>
                 <div>
                   <h2 className="text-sm font-bold text-neutral-900 leading-tight">{sectionTitles[activeKey]}</h2>
@@ -1626,14 +1897,14 @@ export function CrearReservaContent() {
                 </div>
               </div>
               {sectionValidation[activeKey] && (
-                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5 shrink-0">
-                  Listo
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5 shrink-0">
+                  <Icon icon="lucide:check" width={11} height={11} />Completo
                 </span>
               )}
             </div>
 
             {/* Fields */}
-            <form id="reserva-form" onSubmit={handleSubmit} className="px-5 py-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <form id="reserva-form" onSubmit={handleSubmit} autoComplete="off" className="px-5 py-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {sectionFieldsMap[activeKey]}
             </form>
           </div>
@@ -1643,7 +1914,7 @@ export function CrearReservaContent() {
 
       {/* Barra de acciones */}
       <div
-        className="shrink-0 border-t border-neutral-200 bg-white px-4 sm:px-6 py-3"
+        className="shrink-0 border-t border-neutral-100 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-3"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
       >
         <div className="flex items-center gap-2">
@@ -1681,9 +1952,9 @@ export function CrearReservaContent() {
               className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (
-                <><Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />{tr.guardando}</>
+                <><Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" />{tr.guardando}</>
               ) : (
-                <><Icon icon="typcn:eye" width={16} height={16} />Revisar reserva</>
+                <><Icon icon="lucide:eye" width={16} height={16} />Revisar reserva</>
               )}
             </button>
           )}
@@ -1708,12 +1979,12 @@ export function CrearReservaContent() {
                 </div>
               </div>
               <p className="text-sm text-neutral-600 mb-3">
-                ¿Deseas enviar los datos de esta reserva a <span className="font-semibold text-neutral-800">informaciones@asli.cl</span>?
+                ¿Deseas enviar los datos de esta reserva a <span className="font-semibold text-neutral-800">roodericus7@gmail.com</span>?
               </p>
               <div className="flex items-start gap-2 p-3 rounded-xl bg-brand-blue/5 border border-brand-blue/15 mb-5">
                 <Icon icon="lucide:info" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />
                 <p className="text-xs text-neutral-600">
-                  El correo se enviará directamente desde <strong>tu cuenta @asli.cl</strong> a informaciones@asli.cl.
+                  El correo se enviará directamente desde <strong>tu cuenta @asli.cl</strong> a roodericus7@gmail.com.
                 </p>
               </div>
               <div className="flex gap-2">

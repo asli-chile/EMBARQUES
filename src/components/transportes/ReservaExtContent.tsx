@@ -312,27 +312,44 @@ export function ReservaExtContent() {
     setInstrSavedUrl(null);
     setInstrSaveError(null);
 
-    if (!selectedId || !supabase || !formData.booking) return;
-    const booking = formData.booking;
+    if (!selectedId || !supabase) return;
     void (async () => {
-      const { data: opRow } = await supabase
-        .from("operaciones")
-        .select("id")
-        .eq("booking", booking)
-        .limit(1)
-        .maybeSingle();
-      if (!opRow?.id) return;
-      const { data } = await supabase
+      // Intento 1: buscar en tabla documentos vía operaciones (cuando existe booking coincidente)
+      if (formData.booking) {
+        const { data: opRow } = await supabase
+          .from("operaciones")
+          .select("id")
+          .eq("booking", formData.booking)
+          .limit(1)
+          .maybeSingle();
+        if (opRow?.id) {
+          const { data } = await supabase
+            .from("documentos")
+            .select("nombre_archivo, url")
+            .eq("operacion_id", opRow.id)
+            .eq("tipo", "INSTRUCTIVO_EMBARQUE")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) {
+            setInstrSavedUrl(data.url);
+            setInstrFilename(data.nombre_archivo);
+            return;
+          }
+        }
+      }
+      // Intento 2: buscar directamente en storage bajo el id de la reserva ext
+      // (reservas sin operaciones coincidente guardan el archivo aquí)
+      const { data: storageFiles } = await supabase.storage
         .from("documentos")
-        .select("nombre_archivo, url")
-        .eq("operacion_id", opRow.id)
-        .eq("tipo", "INSTRUCTIVO_EMBARQUE")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setInstrSavedUrl(data.url);
-        setInstrFilename(data.nombre_archivo);
+        .list(`${selectedId}/INSTRUCTIVO_EMBARQUE`);
+      if (storageFiles && storageFiles.length > 0) {
+        const latest = storageFiles[storageFiles.length - 1];
+        const { data: urlData } = supabase.storage
+          .from("documentos")
+          .getPublicUrl(`${selectedId}/INSTRUCTIVO_EMBARQUE/${latest.name}`);
+        setInstrSavedUrl(urlData.publicUrl);
+        setInstrFilename(latest.name);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -534,7 +551,7 @@ export function ReservaExtContent() {
       .single();
     setSaving(false);
     if (error) {
-      setError("Error al crear la empresa: " + error.message);
+      setError(tr.errorCreateEmpresa + error.message);
       return;
     }
     const ne = data as TransporteEmpresa;
@@ -556,7 +573,7 @@ export function ReservaExtContent() {
       .single();
     setSaving(false);
     if (error) {
-      setError("Error al crear el chofer: " + error.message);
+      setError(tr.errorCreateChofer + error.message);
       return;
     }
     const nc = data as Chofer;
@@ -579,7 +596,7 @@ export function ReservaExtContent() {
       .single();
     setSaving(false);
     if (error) {
-      setError("Error al crear el equipo: " + error.message);
+      setError(tr.errorCreateEquipo + error.message);
       return;
     }
     const ne = data as Equipo;
@@ -751,7 +768,7 @@ export function ReservaExtContent() {
       setReservas((prev) => [created, ...prev]);
       setSelectedId(created.id);
       setIsNew(false);
-      sileo.success({ title: "Reserva creada exitosamente" });
+      sileo.success({ title: tr.createdSuccess });
     } else if (selectedId) {
       const { error: err } = await supabase
         .from("transportes_reservas_ext")
@@ -767,7 +784,7 @@ export function ReservaExtContent() {
           r.id === selectedId ? { ...r, ...(payload as Partial<ReservaExt>) } : r
         )
       );
-      sileo.success({ title: "Reserva actualizada exitosamente" });
+      sileo.success({ title: tr.updatedSuccess });
     }
   };
 
@@ -823,7 +840,7 @@ export function ReservaExtContent() {
         .eq("booking", formData.booking)
         .is("deleted_at", null)
         .limit(1)
-        .single();
+        .maybeSingle();
       if (opRow) {
         const row = opRow as Record<string, unknown>;
         opData = {
@@ -841,7 +858,7 @@ export function ReservaExtContent() {
           peso_neto: row.peso_neto as number | null,
           tipo_unidad: row.tipo_unidad as string | null,
           temperatura: row.temperatura as string | null,
-          ventilacion: row.ventilacion as string | null,
+          ventilacion: row.ventilacion as number | null,
           incoterm: row.incoterm as string | null,
           forma_pago: row.forma_pago as string | null,
           moneda: row.moneda as string | null,
@@ -883,18 +900,26 @@ export function ReservaExtContent() {
         setInstrFilename(filename);
         setInstrPhase("ready");
 
-        // ── Guardar en bucket documentos si hay operacion_id válido ──────
+        // ── Guardar en bucket + registrar en documentos si hay operaciones.id real ──
+        // buildOpData() parte con id = selectedId (reservas_ext.id); lo reemplaza con
+        // operaciones.id solo si encuentra un registro via el booking.
         setInstrSaveError(null);
-        if (opData.id) {
-          const storagePath = `${opData.id}/INSTRUCTIVO_EMBARQUE/${filename}`;
-          const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, blob, {
-            contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            upsert: true,
-          });
-          if (upErr) {
-            setInstrSaveError(`Error al subir al bucket: ${upErr.message}`);
-          } else {
-            const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
+        const hasRealOperacionId = opData.id && opData.id !== selectedId;
+        // La ruta de storage usa el operaciones.id real cuando existe, o el
+        // reservas_ext.id como fallback (para no perder el archivo generado).
+        const storageBaseId = hasRealOperacionId ? opData.id : (selectedId ?? opData.id);
+        const storagePath = `${storageBaseId}/INSTRUCTIVO_EMBARQUE/${filename}`;
+        const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, blob, {
+          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          upsert: true,
+        });
+        if (upErr) {
+          setInstrSaveError(`Error al subir al bucket: ${upErr.message}`);
+        } else {
+          const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
+          if (hasRealOperacionId) {
+            // Solo registrar en la tabla documentos cuando hay un operaciones.id válido
+            // (la FK documentos.operacion_id → operaciones.id lo exige).
             await supabase.from("documentos")
               .delete()
               .eq("operacion_id", opData.id)
@@ -912,6 +937,9 @@ export function ReservaExtContent() {
             } else {
               setInstrSavedUrl(urlData.publicUrl);
             }
+          } else {
+            // Sin operaciones coincidente: el archivo queda en storage de todas formas.
+            setInstrSavedUrl(urlData.publicUrl);
           }
         }
       } else if (formato.contenido_html) {
@@ -1049,69 +1077,73 @@ export function ReservaExtContent() {
   return (
     <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
-        {/* Header */}
-        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:truck" width={20} height={20} className="text-white" />
+        {/* Hero */}
+        <div className="rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue/90 to-violet-700 text-white overflow-hidden shadow-sm">
+          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:truck" width={22} height={22} className="text-white" />
               </div>
-              <div>
-                <h1 className="text-base font-bold text-neutral-900 leading-tight">
-                  {tr.title}
-                </h1>
-                <p className="text-xs text-neutral-500 mt-0.5">{tr.subtitle}</p>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
+                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              {reservas.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+                  <Icon icon="lucide:clipboard-list" width={13} height={13} className="text-white/80" />
+                  <span className="text-xs font-bold">{reservas.length} {tr.tabReservas.toLowerCase()}</span>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleNewReserva}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
               >
-                <Icon icon="lucide:plus" className="w-4 h-4" />
-                Nueva Reserva
+                <Icon icon="lucide:plus" width={14} height={14} />
+                <span className="hidden sm:inline">{tr.newReserva}</span>
+                <span className="sm:hidden">{tr.newReservaMobile}</span>
               </button>
               <button
                 type="button"
                 onClick={() => void fetchData()}
-                className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
-                title="Actualizar"
+                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
+                title={tr.refresh}
               >
-                <Icon icon="typcn:refresh" width={18} height={18} />
+                <Icon icon="lucide:refresh-cw" width={16} height={16} />
               </button>
             </div>
           </div>
         </div>
 
         {/* Mobile tabs */}
-        <div className="lg:hidden flex rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="lg:hidden flex bg-neutral-100 rounded-2xl p-1 gap-1">
           <button
             type="button"
             onClick={() => setMobilePanel("list")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
               mobilePanel === "list"
-                ? "bg-brand-blue text-white"
-                : "text-neutral-500 hover:bg-neutral-50"
+                ? "bg-white text-brand-blue shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
-            <Icon icon="typcn:document" width={15} height={15} />
-            Reservas
+            <Icon icon="lucide:list" width={14} height={14} />
+            {tr.tabReservas}
           </button>
           <button
             type="button"
             onClick={() => setMobilePanel("form")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
               mobilePanel === "form"
-                ? "bg-brand-blue text-white"
-                : "text-neutral-500 hover:bg-neutral-50"
+                ? "bg-white text-brand-blue shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
-            <Icon icon="lucide:truck" width={15} height={15} />
-            Formulario
+            <Icon icon="lucide:file-plus" width={14} height={14} />
+            {tr.tabForm}
             {showForm && (
-              <span className="w-2 h-2 rounded-full bg-brand-teal inline-block" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
             )}
           </button>
         </div>
@@ -1132,13 +1164,13 @@ export function ReservaExtContent() {
                       <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
                     </span>
                     <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                      Reservas externas
+                      {tr.listTitle}
                     </h2>
                   </div>
                   {reservas.filter((r) => r.estado !== "completada").length > 0 && (
                     <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold flex-shrink-0">
                       <Icon icon="lucide:alert-circle" width={10} height={10} />
-                      {reservas.filter((r) => r.estado !== "completada").length} activa{reservas.filter((r) => r.estado !== "completada").length !== 1 ? "s" : ""}
+                      {reservas.filter((r) => r.estado !== "completada").length} {reservas.filter((r) => r.estado !== "completada").length !== 1 ? tr.activasPluralSuffix : tr.activasSuffix}
                     </span>
                   )}
                 </div>
@@ -1151,7 +1183,7 @@ export function ReservaExtContent() {
                       />
                       <input
                         type="text"
-                        placeholder="Buscar por cliente, booking, naviera..."
+                        placeholder={tr.searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
@@ -1165,7 +1197,7 @@ export function ReservaExtContent() {
                         <Icon icon="lucide:inbox" width={20} height={20} className="text-neutral-400" />
                       </span>
                       <p className="text-neutral-500 text-sm font-medium">
-                        {reservas.length === 0 ? 'No hay reservas. Crea una nueva.' : "Sin resultados"}
+                        {reservas.length === 0 ? tr.noReservas : tr.noResults}
                       </p>
                     </div>
                   ) : (
@@ -1192,13 +1224,13 @@ export function ReservaExtContent() {
                               type="button"
                               onClick={(ev) => { ev.stopPropagation(); setConfirmDelete(r.id); }}
                               className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                              title="Eliminar"
+                              title={tr.deleteBtn}
                             >
                               <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
                             </button>
                             <div className="flex items-start justify-between gap-2 mb-0.5">
                               <p className={`font-bold text-sm truncate pr-6 ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
-                                {r.cliente || "Sin cliente"}
+                                {r.cliente || tr.noClient}
                               </p>
                               <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                                 completo
@@ -1208,18 +1240,18 @@ export function ReservaExtContent() {
                                     : "bg-neutral-100 text-neutral-600"
                               }`}>
                                 <Icon icon={completo ? "lucide:check-circle" : enCurso ? "lucide:loader" : "lucide:clock"} width={10} height={10} />
-                                {completo ? "Completa" : enCurso ? "En curso" : "Pendiente"}
+                                {completo ? tr.statusComplete : enCurso ? tr.statusInProgress : tr.statusPending}
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <p className="text-xs text-neutral-600 truncate">{r.booking || "Sin booking"} · {r.contenedor || "Sin contenedor"}</p>
+                              <p className="text-xs text-neutral-600 truncate">{r.booking || tr.noBooking} · {r.contenedor || tr.noContainer}</p>
                               {isActive && bookingDocUrl && (
                                 <a
                                   href={bookingDocUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(ev) => ev.stopPropagation()}
-                                  title="Ver PDF de Booking"
+                                  title={tr.viewBookingPdf}
                                   className="flex-shrink-0 p-0.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                                 >
                                   <Icon icon="lucide:paperclip" width={12} height={12} />
@@ -1249,12 +1281,12 @@ export function ReservaExtContent() {
                     <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">
-                          {isNew ? "Nueva reserva externa" : "Editando reserva"}
+                          {isNew ? tr.formHeadingNew : tr.formHeadingEdit}
                         </p>
                         <p className="text-neutral-800 font-bold mt-1 text-sm">
                           {isNew
-                            ? "Completa los datos del transporte externo"
-                            : `${formData.cliente || "Sin cliente"} — ${formData.booking || "Sin booking"}`
+                            ? tr.formDescNew
+                            : `${formData.cliente || tr.noClient} — ${formData.booking || tr.noBooking}`
                           }
                         </p>
                         {!isNew && formData.naviera && (
@@ -1270,7 +1302,7 @@ export function ReservaExtContent() {
                             className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
                           >
                             <Icon icon="lucide:file-text" width={13} height={13} />
-                            Ver PDF de Booking
+                            {tr.viewBookingPdf}
                             <Icon icon="lucide:external-link" width={11} height={11} className="opacity-70" />
                           </a>
                         )}
@@ -1281,7 +1313,7 @@ export function ReservaExtContent() {
                         className="lg:hidden flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
                       >
                         <Icon icon="lucide:list" width={12} height={12} />
-                        Cambiar
+                        {tr.changePanel}
                       </button>
                     </div>
                   </div>
@@ -1297,11 +1329,11 @@ export function ReservaExtContent() {
                           <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Instructivo de Embarque</p>
+                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.instructivoTitle}</p>
                           <p className="text-[10px] text-neutral-400 mt-0.5">
                             {instrPhase === "ready" || instrPhase === "sent"
-                              ? `${instrFilename} · listo para enviar`
-                              : "Genera el Excel con los datos y envíalo a alex.cardenas@asli.cl"}
+                              ? `${instrFilename} · ${tr.instructivoReady}`
+                              : tr.instructivoHint}
                           </p>
                         </div>
                         {(instrPhase === "idle" || instrPhase === "error") && filteredFormatos.length > 1 && (
@@ -1310,12 +1342,12 @@ export function ReservaExtContent() {
                             onChange={(e) => { setSelectedFormatoId(e.target.value); setInstrPhase("idle"); }}
                             className="text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 max-w-[160px]"
                           >
-                            <option value="">Seleccionar formato...</option>
+                            <option value="">{tr.selectFormat}</option>
                             {filteredFormatos.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
                           </select>
                         )}
                         {filteredFormatos.length === 0 && (
-                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">Sin formatos</span>
+                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">{tr.noFormats}</span>
                         )}
                       </div>
 
@@ -1323,10 +1355,10 @@ export function ReservaExtContent() {
                       {instrSavedUrl && instrPhase === "idle" && (
                         <div className="px-4 py-2 border-b border-violet-100 bg-violet-50 flex items-center gap-2 flex-wrap">
                           <Icon icon="lucide:cloud-check" className="w-3.5 h-3.5 text-violet-600 flex-shrink-0" />
-                          <span className="text-[10px] font-semibold text-violet-700 flex-1">Instructivo guardado en Documentos</span>
+                          <span className="text-[10px] font-semibold text-violet-700 flex-1">{tr.instructivoSaved}</span>
                           <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
                             className="text-[10px] font-semibold text-violet-700 underline hover:text-violet-900 whitespace-nowrap">
-                            Ver archivo →
+                            {tr.viewFile}
                           </a>
                         </div>
                       )}
@@ -1347,13 +1379,13 @@ export function ReservaExtContent() {
                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
                             <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
-                            {instrSavedUrl ? "Regenerar instructivo" : "Generar instructivo"}
+                            {instrSavedUrl ? tr.regenerateInstructivo : tr.generateInstructivo}
                           </button>
                         )}
                         {instrPhase === "generating" && (
                           <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-100 text-violet-700">
                             <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
-                            Generando instructivo...
+                            {tr.generating}
                           </span>
                         )}
                         {(instrPhase === "ready" || instrPhase === "sent") && (
@@ -1364,7 +1396,7 @@ export function ReservaExtContent() {
                               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                             >
                               <Icon icon="lucide:download" className="w-3.5 h-3.5" />
-                              Descargar Excel
+                              {tr.downloadExcel}
                             </button>
                             {instrPhase !== "sent" && (
                               <button
@@ -1373,9 +1405,9 @@ export function ReservaExtContent() {
                                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors"
                               >
                                 <Icon icon="lucide:send" className="w-3.5 h-3.5" />
-                                Enviar a Alex
+                                {tr.sendToAlex}
                                 {!bookingDocUrl && (
-                                  <span className="text-[9px] bg-amber-400 text-amber-900 px-1 py-0.5 rounded font-bold">sin booking</span>
+                                  <span className="text-[9px] bg-amber-400 text-amber-900 px-1 py-0.5 rounded font-bold">{tr.noBookingBadge}</span>
                                 )}
                               </button>
                             )}
@@ -1383,14 +1415,14 @@ export function ReservaExtContent() {
                               type="button"
                               onClick={() => { setInstrPhase("idle"); setInstrBlob(null); setInstrFilename(""); }}
                               className="inline-flex items-center gap-1 px-2 py-2 rounded-xl text-xs text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-                              title="Volver a generar"
+                              title={tr.regenerateTooltip}
                             >
                               <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
                             </button>
                             {instrSavedUrl && (
                               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border bg-violet-50 text-violet-700 border-violet-200">
                                 <Icon icon="lucide:cloud-upload" className="w-3 h-3" />
-                                Guardado en Documentos
+                                {tr.savedInDocs}
                               </span>
                             )}
                             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border ${
@@ -1399,14 +1431,14 @@ export function ReservaExtContent() {
                                 : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}>
                               <Icon icon={bookingDocUrl ? "lucide:paperclip" : "lucide:alert-triangle"} className="w-3 h-3" />
-                              {bookingDocUrl ? "Booking PDF listo" : "Sin doc. booking"}
+                              {bookingDocUrl ? tr.bookingReady : tr.noBookingDoc}
                             </span>
                           </>
                         )}
                         {instrPhase === "sending" && (
                           <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-100 text-violet-700">
                             <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
-                            Enviando...
+                            {tr.sending}
                           </span>
                         )}
                       </div>
@@ -1414,7 +1446,7 @@ export function ReservaExtContent() {
                       {instrPhase === "sent" && (
                         <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-start gap-2 flex-wrap">
                           <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-xs font-semibold text-emerald-700 flex-1">Correo enviado a alex.cardenas@asli.cl desde tu cuenta.</span>
+                          <span className="text-xs font-semibold text-emerald-700 flex-1">{tr.sentSuccess}</span>
                         </div>
                       )}
                       {instrPhase === "error" && (
@@ -1433,12 +1465,12 @@ export function ReservaExtContent() {
                   <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                     <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
                     <div className="px-4 py-3 flex items-center justify-between gap-3">
-                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Estado</span>
+                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{tr.statusLabel}</span>
                       <div className="flex gap-1.5">
                         {[
-                          { value: "pendiente", label: "Pendiente", color: "bg-neutral-100 text-neutral-600 border-neutral-200", active: "bg-neutral-700 text-white border-neutral-700" },
-                          { value: "en_curso", label: "En curso", color: "bg-amber-50 text-amber-700 border-amber-200", active: "bg-amber-500 text-white border-amber-500" },
-                          { value: "completada", label: "Completada", color: "bg-emerald-50 text-emerald-700 border-emerald-200", active: "bg-emerald-600 text-white border-emerald-600" },
+                          { value: "pendiente", label: tr.statusPendiente, color: "bg-neutral-100 text-neutral-600 border-neutral-200", active: "bg-neutral-700 text-white border-neutral-700" },
+                          { value: "en_curso", label: tr.statusEnCurso, color: "bg-amber-50 text-amber-700 border-amber-200", active: "bg-amber-500 text-white border-amber-500" },
+                          { value: "completada", label: tr.statusCompletada, color: "bg-emerald-50 text-emerald-700 border-emerald-200", active: "bg-emerald-600 text-white border-emerald-600" },
                         ].map((opt) => (
                           <button
                             key={opt.value}
@@ -1463,51 +1495,51 @@ export function ReservaExtContent() {
                         <span className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Datos de la Operación</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.sectionOp}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
-                        {renderInput("Cliente", "cliente", "text", "Nombre del cliente")}
-                        {renderInput("Booking", "booking", "text", "N° Booking")}
+                        {renderInput(tr.clientLabel, "cliente", "text", tr.clientPlaceholder)}
+                        {renderInput(tr.bookingLabel, "booking", "text", tr.bookingPlaceholder)}
                         <div>
-                          <label className={labelClass}>Naviera</label>
+                          <label className={labelClass}>{tr.navieraLabel}</label>
                           <select
                             value={formData.naviera}
                             onChange={(e) => handleChange("naviera", e.target.value)}
                             className={inputClass}
                           >
-                            <option value="">Seleccionar naviera...</option>
+                            <option value="">{tr.selectNaviera}</option>
                             {navieras.map((n) => (
                               <option key={n.id} value={n.nombre}>{n.nombre}</option>
                             ))}
                           </select>
                         </div>
                         <div>
-                          <label className={labelClass}>Nave</label>
+                          <label className={labelClass}>{tr.naveLabel}</label>
                           <select
                             value={formData.nave}
                             onChange={(e) => handleChange("nave", e.target.value)}
                             className={inputClass}
                           >
-                            <option value="">Seleccionar nave...</option>
+                            <option value="">{tr.selectNave}</option>
                             {naves.map((n) => (
                               <option key={n.id} value={n.nombre}>{n.nombre}</option>
                             ))}
                           </select>
                         </div>
                         <div>
-                          <label className={labelClass}>POD</label>
+                          <label className={labelClass}>{tr.podLabel}</label>
                           <select
                             value={formData.pod}
                             onChange={(e) => handleChange("pod", e.target.value)}
                             className={inputClass}
                           >
-                            <option value="">Seleccionar destino...</option>
+                            <option value="">{tr.selectDestino}</option>
                             {destinos.map((d) => (
                               <option key={d.id} value={d.nombre}>{d.nombre}</option>
                             ))}
                           </select>
                         </div>
-                        {renderInput("ETD", "etd", "date")}
+                        {renderInput(tr.etdLabel, "etd", "date")}
                         <div>
                           <label className={labelClass}>{tr.warehouse}</label>
                           <select
@@ -1515,7 +1547,7 @@ export function ReservaExtContent() {
                             onChange={(e) => handleChange("deposito", e.target.value)}
                             className={inputClass}
                           >
-                            <option value="">Seleccionar depósito...</option>
+                            <option value="">{tr.selectDeposito}</option>
                             {depositos.map((d) => (
                               <option key={d.id} value={d.nombre}>{d.nombre}</option>
                             ))}
@@ -1545,7 +1577,7 @@ export function ReservaExtContent() {
                               label: e.nombre,
                               sublabel: e.rut || undefined,
                             }))}
-                            placeholder="Escriba o seleccione empresa..."
+                            placeholder={tr.placeholderEmpresa}
                             className={inputClass}
                             icon="lucide:building-2"
                           />
@@ -1561,7 +1593,7 @@ export function ReservaExtContent() {
                               label: c.nombre,
                               sublabel: c.rut || undefined,
                             }))}
-                            placeholder="Escriba o seleccione chofer..."
+                            placeholder={tr.placeholderChofer}
                             disabled={!empresaTransporteId}
                             className={inputClass}
                             icon="lucide:user"
@@ -1580,7 +1612,7 @@ export function ReservaExtContent() {
                               label: x.patente_camion,
                               sublabel: x.patente_remolque ? `Remolque: ${x.patente_remolque}` : undefined,
                             }))}
-                            placeholder="Escriba o seleccione patente..."
+                            placeholder={tr.placeholderPatente}
                             disabled={!empresaTransporteId}
                             className={inputClass}
                             icon="lucide:truck"
@@ -1613,17 +1645,17 @@ export function ReservaExtContent() {
                         <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Citación a Planta</h2>
+                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.sectionCitacion}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         <div className="col-span-2">
-                          <label className={labelClass}>Planta de Citación</label>
+                          <label className={labelClass}>{tr.plantaCitacionLabel}</label>
                           <select
                             value={formData.planta_presentacion}
                             onChange={(e) => handleChange("planta_presentacion", e.target.value)}
                             className={inputClass}
                           >
-                            <option value="">Seleccionar planta...</option>
+                            <option value="">{tr.selectPlanta}</option>
                             {plantas.map((p) => (
                               <option key={p.id} value={p.nombre}>{p.nombre}</option>
                             ))}
@@ -1761,7 +1793,7 @@ export function ReservaExtContent() {
                         className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
                       >
                         <Icon icon="typcn:trash" className="w-4 h-4" />
-                        Eliminar
+                        {tr.deleteBtn}
                       </button>
                     )}
                     <div className="flex gap-3 ml-auto">
@@ -1786,7 +1818,7 @@ export function ReservaExtContent() {
                         {saving ? (
                           <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.saving}</>
                         ) : (
-                          <><Icon icon="typcn:tick" className="w-4 h-4" />{isNew ? "Crear Reserva" : tr.save}</>
+                          <><Icon icon="typcn:tick" className="w-4 h-4" />{isNew ? tr.createReserva : tr.save}</>
                         )}
                       </button>
                     </div>
@@ -1798,14 +1830,14 @@ export function ReservaExtContent() {
                     <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
                       <Icon icon="lucide:truck" width={24} height={24} className="text-neutral-400" />
                     </span>
-                    <p className="text-neutral-500 text-sm font-medium">Selecciona una reserva o crea una nueva</p>
+                    <p className="text-neutral-500 text-sm font-medium">{tr.selectOrCreate}</p>
                     <button
                       type="button"
                       onClick={() => setMobilePanel("list")}
                       className="lg:hidden mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
                     >
                       <Icon icon="typcn:document" width={14} height={14} />
-                      Ver reservas
+                      {tr.viewReservas}
                     </button>
                   </div>
                 </div>
@@ -1831,26 +1863,25 @@ export function ReservaExtContent() {
               </div>
               <div>
                 <h3 className="font-semibold text-neutral-900">
-                  Crear{" "}
                   {confirmNewItem.type === "empresa"
-                    ? "empresa"
+                    ? tr.createEntityEmpresa
                     : confirmNewItem.type === "chofer"
-                    ? "chofer"
-                    : "equipo"}
+                    ? tr.createEntityChofer
+                    : tr.createEntityEquipo}
                 </h3>
                 <p className="text-xs text-neutral-500">
-                  ¿Confirmas agregar este nuevo elemento?
+                  {tr.confirmAddNew}
                 </p>
               </div>
             </div>
 
             <p className="text-sm text-neutral-700 mb-6">
-              Se creará{" "}
+              {tr.willCreate}{" "}
               {confirmNewItem.type === "empresa"
-                ? "la empresa"
+                ? tr.entityEmpresa
                 : confirmNewItem.type === "chofer"
-                ? "el chofer"
-                : "el equipo"}
+                ? tr.entityChofer
+                : tr.entityEquipo}
               :{" "}
               <span className="font-medium text-brand-blue">
                 {confirmNewItem.value}
@@ -1863,7 +1894,7 @@ export function ReservaExtContent() {
                 onClick={() => setConfirmNewItem(null)}
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
               >
-                Cancelar
+                {tr.cancel}
               </button>
               <button
                 type="button"
@@ -1874,7 +1905,7 @@ export function ReservaExtContent() {
                 disabled={saving}
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 transition-colors"
               >
-                {saving ? "Creando..." : "Confirmar"}
+                {saving ? tr.creating : tr.confirmBtn}
               </button>
             </div>
           </div>
@@ -1890,14 +1921,14 @@ export function ReservaExtContent() {
                 <Icon icon="typcn:trash" width={18} height={18} />
               </div>
               <div>
-                <h3 className="font-semibold text-neutral-900">Eliminar reserva</h3>
+                <h3 className="font-semibold text-neutral-900">{tr.deleteModalTitle}</h3>
                 <p className="text-xs text-neutral-500">
-                  Esta acción no se puede deshacer
+                  {tr.deleteModalWarning}
                 </p>
               </div>
             </div>
             <p className="text-sm text-neutral-700 mb-6">
-              ¿Estás seguro de eliminar esta reserva de transporte externo?
+              {tr.deleteModalConfirm}
             </p>
             <div className="flex gap-3">
               <button
@@ -1905,14 +1936,14 @@ export function ReservaExtContent() {
                 onClick={() => setConfirmDelete(null)}
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
               >
-                Cancelar
+                {tr.cancel}
               </button>
               <button
                 type="button"
                 onClick={() => void handleDelete(confirmDelete)}
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
               >
-                Eliminar
+                {tr.deleteBtn}
               </button>
             </div>
           </div>

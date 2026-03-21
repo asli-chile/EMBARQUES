@@ -37,6 +37,7 @@ export default defineConfig({
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
+        stream: "stream-browserify",
       },
     },
     // MapLibre 5.x: evita "__publicField is not defined" en el worker (target ES2022 + pre-bundle).

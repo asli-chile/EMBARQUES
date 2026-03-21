@@ -4,9 +4,12 @@ import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegistroForm } from "@/components/auth/RegistroForm";
 import { brand } from "@/lib/brand";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 export function AuthFormModalOverlay() {
   const { open, mode, closeAuthForm, openAuthForm } = useAuthFormModal();
+  const { t } = useLocale();
+  const tr = t.auth;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -32,7 +35,7 @@ export function AuthFormModalOverlay() {
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={mode === "login" ? "Iniciar sesión" : "Solicitar acceso"}
+      aria-label={mode === "login" ? tr.login : tr.signUp}
     >
       {/* Backdrop */}
       <div
@@ -67,7 +70,7 @@ export function AuthFormModalOverlay() {
             type="button"
             onClick={closeAuthForm}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-            aria-label="Cerrar"
+            aria-label={tr.closeModal}
           >
             <Icon icon="lucide:x" width={18} height={18} />
           </button>
@@ -85,7 +88,7 @@ export function AuthFormModalOverlay() {
                   : "text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              Iniciar sesión
+              {tr.login}
             </button>
             <button
               type="button"
@@ -96,7 +99,7 @@ export function AuthFormModalOverlay() {
                   : "text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              Registrarse
+              {tr.tabRegistro}
             </button>
           </div>
         </div>
