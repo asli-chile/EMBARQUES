@@ -276,7 +276,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
             })}
           </div>
 
-          {/* Derecha: usuario + idioma */}
+          {/* Derecha: usuario */}
           <div className="flex items-center gap-2">
             {!isExternalUser && displayName && (
               <button type="button" onClick={() => setShowUserModal(true)}
@@ -291,12 +291,6 @@ export function NavBanner({ pathname }: NavBannerProps) {
                 <Icon icon="lucide:chevron-down" width={11} height={11} className="text-white/50 shrink-0" />
               </button>
             )}
-            <button type="button" onClick={handleLocaleToggle}
-              className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
-            >
-              <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
-              <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
-            </button>
           </div>
         </>
       ) : (
@@ -333,15 +327,8 @@ export function NavBanner({ pathname }: NavBannerProps) {
             </div>
           </div>
 
-          {/* Derecha: idioma */}
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={handleLocaleToggle}
-              className="flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200"
-            >
-              <Icon icon="lucide:globe" width={14} height={14} className="opacity-80" />
-              <span className="text-xs font-semibold tracking-wider">{locale.toUpperCase()}</span>
-            </button>
-          </div>
+          {/* Derecha vacía para mantener distribución */}
+          <div className="flex items-center gap-2" />
         </>
       )}
     </nav>
@@ -388,7 +375,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
         {/* Footer: idioma */}
         <div className="flex-shrink-0 border-t border-white/10 px-3 py-3">
-          <button type="button" onClick={() => { handleLocaleToggle(); setDrawerOpen(false); }}
+          <button type="button" onClick={handleLocaleToggle}
             className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-white hover:bg-white/10 transition-all duration-200"
           >
             <Icon icon="lucide:globe" width={15} height={15} className="shrink-0 opacity-80" />

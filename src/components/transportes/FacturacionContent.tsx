@@ -93,6 +93,25 @@ const initialFormData: FormData = {
 
 const MONEDAS_DEFAULT = ["USD", "CLP", "EUR"];
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const EXTRA_COST_TRANSLATIONS_EN: Record<string, string> = {
+  "cobertura de seguro": "Insurance Coverage",
+  "conexion reefer en deposito": "Reefer Connection at Warehouse",
+  "falso flete en deposito (export) o en puerto (import)": "False Freight at Warehouse (Export) or Port (Import)",
+  "falso flete en transito o cliente": "False Freight in Transit or Client",
+  "multistop (de 0 a 30 kms)": "Multistop (0 to 30 km)",
+  "sobre estadia en planta": "Demurrage at Plant",
+  "sobre estadia en puerto": "Demurrage at Port",
+  "caso a caso": "Case by case",
+  "segun cobro": "As charged",
+};
+
+function normalizeText(input: string) {
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 export function FacturacionContent() {
   const { t, locale } = useLocale();
@@ -300,12 +319,21 @@ export function FacturacionContent() {
     [itemsProforma]
   );
 
+  const translateExtraCostText = useCallback(
+    (text: string) => {
+      if (locale !== "en") return text;
+      const key = normalizeText(text);
+      return EXTRA_COST_TRANSLATIONS_EN[key] ?? text;
+    },
+    [locale]
+  );
+
   const addCostoExtra = (ce: CostoExtra) =>
     setItemsProforma((prev) => [
       ...prev,
       {
         id: genId(),
-        descripcion: ce.concepto + (ce.condicion ? ` (${ce.condicion})` : ""),
+        descripcion: translateExtraCostText(ce.concepto) + (ce.condicion ? ` (${translateExtraCostText(ce.condicion)})` : ""),
         cantidad: "1",
         monto_unitario: ce.tarifa_valor != null ? String(ce.tarifa_valor) : "",
         moneda: ce.moneda || formData.moneda || "CLP",
@@ -849,78 +877,83 @@ export function FacturacionContent() {
     <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
 
-        {/* Header */}
-        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-teal flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:receipt" width={20} height={20} className="text-white" />
+        {/* Hero */}
+        <div className="rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue/90 to-teal-700 text-white overflow-hidden shadow-sm">
+          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:receipt" width={22} height={22} className="text-white" />
               </div>
-              <div>
-                <h1 className="text-base font-bold text-neutral-900 leading-tight">{tr.title}</h1>
-                <p className="text-xs text-neutral-500 mt-0.5">{tr.subtitle}</p>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
+                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              {formData.numero_factura_asli && (
+                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+                  <Icon icon="lucide:hash" width={13} height={13} className="text-white/80" />
+                  <span className="text-xs font-bold">{formData.numero_factura_asli}</span>
+                </div>
+              )}
               {formData.operacion_id && (
                 <>
                   <button
                     type="button"
                     onClick={exportarExcel}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors"
-                    title="Exportar a Excel"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
+                    title={tr.exportExcelTitle}
                   >
                     <Icon icon="lucide:table-2" width={14} height={14} />
-                    Excel
+                    <span className="hidden sm:inline">{tr.excelShort}</span>
                   </button>
                   <button
                     type="button"
                     onClick={exportarPDF}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
-                    title="Exportar Proforma PDF"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+                    title={tr.exportPdfTitle}
                   >
                     <Icon icon="lucide:file-text" width={14} height={14} />
-                    PDF
+                    <span className="hidden sm:inline">{tr.pdfShort}</span>
                   </button>
                 </>
               )}
               <button
                 type="button"
                 onClick={() => void fetchData()}
-                className="p-2 border border-neutral-200 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors text-neutral-500"
-                title={t.misReservas?.refresh ?? "Actualizar"}
+                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
+                title={t.misReservas?.refresh ?? tr.refresh}
               >
-                <Icon icon="typcn:refresh" width={18} height={18} />
+                <Icon icon="lucide:refresh-cw" width={16} height={16} />
               </button>
             </div>
           </div>
         </div>
 
         {/* Tabs mobile */}
-        <div className="lg:hidden flex rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="lg:hidden flex bg-neutral-100 rounded-2xl p-1 gap-1">
           <button
             type="button"
             onClick={() => setMobilePanel("select")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${
-              mobilePanel === "select" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-50"
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              mobilePanel === "select" ? "bg-white text-brand-blue shadow-sm" : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
             <Icon icon="lucide:list" width={14} height={14} />
-            Operaciones
+            {tr.operationsTab}
           </button>
           <button
             type="button"
             onClick={() => setMobilePanel("form")}
             disabled={!formData.operacion_id}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              mobilePanel === "form" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-50"
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              mobilePanel === "form" ? "bg-white text-brand-blue shadow-sm" : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
             <Icon icon="lucide:receipt" width={14} height={14} />
-            Facturación
+            {tr.billingTab}
             {formData.operacion_id && (
-              <span className={`w-2 h-2 rounded-full ${mobilePanel === "form" ? "bg-white" : "bg-brand-teal"}`} />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
             )}
           </button>
         </div>
@@ -1054,7 +1087,7 @@ export function FacturacionContent() {
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                         >
                           <Icon icon="lucide:file-text" width={12} height={12} />
-                          PDF
+                          {tr.pdfShort}
                         </button>
                         <button
                           type="button"
@@ -1062,7 +1095,7 @@ export function FacturacionContent() {
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
                         >
                           <Icon icon="lucide:table-2" width={12} height={12} />
-                          Excel
+                          {tr.excelShort}
                         </button>
                         <button
                           type="button"
@@ -1070,7 +1103,7 @@ export function FacturacionContent() {
                           className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
                         >
                           <Icon icon="lucide:list" width={12} height={12} />
-                          Cambiar
+                          {tr.change}
                         </button>
                       </div>
                     </div>
@@ -1092,7 +1125,7 @@ export function FacturacionContent() {
                       <div>
                         <label className={labelClass}>{tr.invoicedAmount}</label>
                         <div className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-700 text-sm font-bold flex items-center justify-between gap-2 min-h-[42px]">
-                          <span className="text-xs text-neutral-400 font-normal">Calculado de ítems</span>
+                          <span className="text-xs text-neutral-400 font-normal">{tr.calculadoDeItems}</span>
                           <span className={totalProforma > 0 ? "text-brand-blue" : "text-neutral-400"}>
                             {totalProforma > 0
                               ? formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)
@@ -1132,13 +1165,13 @@ export function FacturacionContent() {
                         <Icon icon="lucide:list-checks" className="w-3.5 h-3.5 text-brand-blue" />
                       </span>
                       <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                        Ítems de Proforma Invoice
+                        {tr.proformaItemsTitle}
                       </h2>
                     </div>
                     <div className="flex items-center gap-2">
                       {totalProforma > 0 && (
                         <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 px-2.5 py-1 rounded-full">
-                          Total: {formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)}
+                          {tr.total}: {formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)}
                         </span>
                       )}
                     </div>
@@ -1150,7 +1183,7 @@ export function FacturacionContent() {
                       <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
                         <Icon icon="lucide:zap" width={12} height={12} className="text-sky-500" />
                         <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wide whitespace-nowrap">
-                          Costos extra
+                          {tr.costosExtraLabel}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -1159,18 +1192,22 @@ export function FacturacionContent() {
                             key={ce.id}
                             type="button"
                             onClick={() => addCostoExtra(ce)}
-                            title={ce.tarifa_texto ?? (ce.tarifa_valor != null ? `${ce.moneda} ${ce.tarifa_valor.toLocaleString("es-CL")}` : "")}
+                            title={
+                              ce.tarifa_texto
+                                ? translateExtraCostText(ce.tarifa_texto)
+                                : (ce.tarifa_valor != null ? `${ce.moneda} ${ce.tarifa_valor.toLocaleString("es-CL")}` : "")
+                            }
                             className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-100 hover:border-sky-400 transition-colors shadow-sm"
                           >
                             <Icon icon="lucide:plus" width={10} height={10} />
-                            {ce.concepto}
+                            {translateExtraCostText(ce.concepto)}
                             {ce.tarifa_valor != null && (
                               <span className="text-sky-400 font-normal ml-0.5">
                                 {ce.moneda} {ce.tarifa_valor.toLocaleString("es-CL")}
                               </span>
                             )}
                             {ce.tarifa_texto && !ce.tarifa_valor && (
-                              <span className="text-sky-400 font-normal ml-0.5">{ce.tarifa_texto}</span>
+                              <span className="text-sky-400 font-normal ml-0.5">{translateExtraCostText(ce.tarifa_texto)}</span>
                             )}
                           </button>
                         ))}
@@ -1183,16 +1220,16 @@ export function FacturacionContent() {
                       <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2">
                         <Icon icon="lucide:package-open" width={18} height={18} className="text-neutral-300" />
                       </div>
-                      <p className="text-neutral-400 text-xs font-medium">Sin ítems. Usa los botones de costos extra de arriba para agregar.</p>
+                      <p className="text-neutral-400 text-xs font-medium">{tr.noItems}</p>
                     </div>
                   ) : (
                     <div className="p-4 space-y-2">
                       {/* Header de columnas */}
                       <div className={`hidden sm:grid gap-2 px-1 ${isCliente ? "grid-cols-[1fr_80px_120px_100px]" : "grid-cols-[1fr_80px_120px_100px_36px]"}`}>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Descripción</span>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide text-center">Qty</span>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Monto unit.</span>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Moneda</span>
+                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{tr.itemDescription}</span>
+                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide text-center">{tr.itemQty}</span>
+                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{tr.itemUnitAmount}</span>
+                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{tr.itemCurrency}</span>
                         {!isCliente && <span />}
                       </div>
 
@@ -1204,7 +1241,7 @@ export function FacturacionContent() {
                               type="text"
                               value={item.descripcion}
                               onChange={(e) => updateItem(item.id, "descripcion", e.target.value)}
-                              placeholder="Descripción del ítem..."
+                              placeholder={tr.itemDescriptionPlaceholder}
                               readOnly={isCliente}
                               className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
                             />
@@ -1257,7 +1294,7 @@ export function FacturacionContent() {
                       {itemsProforma.length > 0 && (
                         <div className="flex justify-end pt-2 border-t border-neutral-100">
                           <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-brand-blue/5 border border-brand-blue/20">
-                            <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">Total Proforma</span>
+                            <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">{tr.totalProformaLabel}</span>
                             <span className="text-sm font-bold text-brand-blue">
                               {formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)}
                             </span>
@@ -1296,7 +1333,7 @@ export function FacturacionContent() {
                 {isCliente ? (
                   <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
                     <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
-                    <span>Solo lectura. No tienes permisos para crear o editar facturas.</span>
+                    <span>{tr.readOnlyNotice}</span>
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center gap-3 justify-end">
@@ -1331,14 +1368,14 @@ export function FacturacionContent() {
                     <Icon icon="lucide:receipt" width={28} height={28} className="text-neutral-300" />
                   </div>
                   <p className="text-neutral-700 font-semibold text-sm mb-1">{tr.selectOperation}</p>
-                  <p className="text-neutral-400 text-xs">Selecciona una operación para gestionar su facturación y exportar la proforma</p>
+                  <p className="text-neutral-400 text-xs">{tr.selectOpHint}</p>
                   <button
                     type="button"
                     onClick={() => setMobilePanel("select")}
                     className="lg:hidden mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
                   >
                     <Icon icon="lucide:list" width={13} height={13} />
-                    Ver operaciones
+                    {tr.viewOperations}
                   </button>
                 </div>
               </div>

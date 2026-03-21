@@ -60,9 +60,14 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* Checkbox en cabecera — visible sobre fondo verde */
-.ag-theme-balham .ag-header-select-all .ag-checkbox-input-wrapper::after {
-  color: #FFFFFF;
+/* Checkboxes de selección (cabecera y filas) con tamaño uniforme */
+.ag-theme-balham .ag-checkbox-input-wrapper {
+  width: 16px;
+  height: 16px;
+}
+
+.ag-theme-balham .ag-checkbox-input-wrapper::after {
+  transform: scale(0.95);
 }
 
 /* Celda seleccionada (rango) */

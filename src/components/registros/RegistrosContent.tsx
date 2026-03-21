@@ -194,6 +194,16 @@ type DbOperacion = {
   observaciones: string | null;
 };
 
+function isoWeekFromDate(value: string | null): number | null {
+  if (!value) return null;
+  const d = new Date(Date.UTC(...(value.split("-").map(Number) as [number, number, number])));
+  if (isNaN(d.getTime())) return null;
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
 function formatDate(value: string | null, _locale: string): string {
   if (!value) return "";
   const date = new Date(value);
@@ -351,7 +361,7 @@ function createToRow(locale: string) {
       correlativo: db.correlativo,
       ref_asli: db.ref_asli ?? `A${String(db.correlativo).padStart(5, "0")}`,
       ingreso: formatDateTime(db.ingreso, locale),
-      semana: db.semana,
+      semana: isoWeekFromDate(db.etd),
       ejecutivo: db.ejecutivo,
       estado_operacion: db.estado_operacion,
       tipo_operacion: db.tipo_operacion,
@@ -488,9 +498,27 @@ const emptyCatalogos: CatalogosState = {
   empresas: [],
 };
 
+// ─── Grupos de columnas para el panel de visibilidad ──────────────────────────
+const COLUMN_GROUPS = [
+  { label: "Identificación", fields: ["correlativo", "ref_asli", "ingreso", "semana", "ejecutivo"] },
+  { label: "Operación", fields: ["estado_operacion", "tipo_operacion", "cliente", "consignatario"] },
+  { label: "Comercial", fields: ["incoterm", "forma_pago"] },
+  { label: "Carga", fields: ["especie", "pais", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto", "tipo_unidad"] },
+  { label: "Naviera / Embarque", fields: ["naviera", "nave", "viaje", "pol", "etd", "pod", "eta", "tt", "booking"] },
+  { label: "Documentación", fields: ["aga", "dus", "sps", "numero_guia_despacho"] },
+  { label: "Planta / Stacking", fields: ["planta_presentacion", "citacion", "llegada_planta", "salida_planta", "inicio_stacking", "fin_stacking", "ingreso_stacking", "corte_documental"] },
+  { label: "Late / xLate", fields: ["inf_late", "late_inicio", "late_fin", "xlate_inicio", "xlate_fin"] },
+  { label: "Depósito / Retiro", fields: ["deposito", "agendamiento_retiro", "devolucion_unidad"] },
+  { label: "Transporte", fields: ["transporte", "chofer", "rut_chofer", "telefono_chofer", "patente_camion", "patente_remolque", "contenedor", "sello", "tara"] },
+  { label: "Costos Transporte", fields: ["almacenamiento", "tramo", "valor_tramo", "porteo", "valor_porteo", "falso_flete", "valor_falso_flete", "factura_transporte"] },
+  { label: "Facturación", fields: ["monto_facturado", "numero_factura_asli", "concepto_facturado", "moneda", "tipo_cambio", "margen_estimado", "margen_real"] },
+  { label: "Fechas", fields: ["fecha_confirmacion_booking", "fecha_envio_documentacion", "fecha_entrega_bl", "fecha_entrega_factura", "fecha_pago_cliente", "fecha_pago_transporte", "fecha_cierre"] },
+  { label: "Otros", fields: ["prioridad", "operacion_critica", "origen_registro", "enviado_transporte", "observaciones"] },
+];
+
 export function RegistrosContent() {
   const { locale, t } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, empresaNombres, isLoading: authLoading, user } = useAuth();
   const canEdit = !isCliente;
   const gridRef = useRef<AgGridReact<OperacionRow>>(null);
   const [selectionCount, setSelectionCount] = useState(0);
@@ -505,6 +533,9 @@ export function RegistrosContent() {
     table: string;
     label: string;
   } | null>(null);
+  const [showColumnPanel, setShowColumnPanel] = useState(false);
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const hiddenColumnsRef = useRef<Set<string>>(new Set());
 
   const supabase = useMemo(() => {
     try {
@@ -515,6 +546,99 @@ export function RegistrosContent() {
   }, []);
 
   const toRow = useMemo(() => createToRow(locale), [locale]);
+
+  // ─── Aplicar columnas ocultas a la grilla ──────────────────────────────────
+  const applyHiddenColumns = useCallback((hidden: Set<string>) => {
+    const api = gridRef.current?.api;
+    if (!api) return;
+    const allCols = api.getColumns();
+    if (!allCols) return;
+    allCols.forEach((col) => {
+      const field = col.getColDef().field;
+      if (!field) return;
+      api.setColumnsVisible([col.getColId()], !hidden.has(field));
+    });
+  }, []);
+
+  const saveColumnOrder = useCallback(() => {
+    if (!user?.id) return;
+    const api = gridRef.current?.api;
+    if (!api) return;
+    try {
+      const state = api.getColumnState();
+      const order = state.map((s) => s.colId);
+      localStorage.setItem(`registros_col_order_${user.id}`, JSON.stringify(order));
+    } catch { /* ignore */ }
+  }, [user?.id]);
+
+  const applyColumnOrder = useCallback(() => {
+    const api = gridRef.current?.api;
+    if (!api || !user?.id) return;
+    try {
+      const stored = localStorage.getItem(`registros_col_order_${user.id}`);
+      if (!stored) return;
+      const order = JSON.parse(stored) as string[];
+      api.applyColumnState({
+        state: order.map((colId) => ({ colId })),
+        applyOrder: true,
+      });
+    } catch { /* ignore */ }
+  }, [user?.id]);
+
+  const onGridReady = useCallback(() => {
+    applyHiddenColumns(hiddenColumnsRef.current);
+    applyColumnOrder();
+  }, [applyHiddenColumns, applyColumnOrder]);
+
+  const toggleColumn = useCallback((field: string) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      hiddenColumnsRef.current = next;
+      if (user?.id) {
+        try {
+          localStorage.setItem(`registros_hidden_cols_${user.id}`, JSON.stringify([...next]));
+        } catch { /* ignore */ }
+      }
+      const api = gridRef.current?.api;
+      if (api) api.setColumnsVisible([field], !next.has(field));
+      return next;
+    });
+  }, [user?.id]);
+
+  const showAllColumns = useCallback(() => {
+    setHiddenColumns(new Set());
+    hiddenColumnsRef.current = new Set();
+    if (user?.id) {
+      try { localStorage.removeItem(`registros_hidden_cols_${user.id}`); } catch { /* ignore */ }
+    }
+    applyHiddenColumns(new Set());
+  }, [user?.id, applyHiddenColumns]);
+
+
+  // onDragStopped: solo se dispara en drag manual del usuario, NUNCA en cambios programáticos
+  // (onColumnMoved también se dispara cuando AG Grid procesa cambios de columnDefs, sobreescribiendo el orden guardado)
+  const onDragStopped = useCallback(() => {
+    saveColumnOrder();
+  }, [saveColumnOrder]);
+
+  // Cargar preferencias guardadas cuando el usuario está disponible
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const stored = localStorage.getItem(`registros_hidden_cols_${user.id}`);
+      if (stored) {
+        const fields = JSON.parse(stored) as string[];
+        const newSet = new Set(fields);
+        hiddenColumnsRef.current = newSet;
+        setHiddenColumns(newSet);
+        applyHiddenColumns(newSet);
+      }
+    } catch { /* ignore */ }
+    // Restaurar orden guardado
+    applyColumnOrder();
+  }, [user?.id, applyHiddenColumns, applyColumnOrder]);
 
   const fetchCatalogos = useCallback(async () => {
     if (!supabase) return;
@@ -628,12 +752,11 @@ export function RegistrosContent() {
   const columnDefs = useMemo<ColDef<OperacionRow>[]>(
     () => [
       // ── Fijas ────────────────────────────────────────────────────────────────
-      { width: columnWidths.checkbox, pinned: "left", suppressMovable: true },
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left" },
 
       // ── General ──────────────────────────────────────────────────────────────
       { field: "ingreso", headerName: t.registros.colEntryDate, sortable: true, width: columnWidths.ingreso },
-      { field: "semana", headerName: t.registros.colWeek, sortable: true, editable: canEdit, width: columnWidths.semana },
+      { field: "semana", headerName: t.registros.colWeek, sortable: true, editable: false, width: columnWidths.semana },
       {
         field: "ejecutivo", headerName: t.registros.colExecutive, sortable: true, editable: canEdit, width: columnWidths.ejecutivo,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.ejecutivos] },
@@ -834,6 +957,35 @@ export function RegistrosContent() {
     ],
     [t.registros, booleanCellRenderer, catalogos, canEdit]
   );
+
+  const fieldToHeader = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const cd of columnDefs) {
+      if (cd.field && cd.headerName) map[cd.field] = String(cd.headerName);
+    }
+    return map;
+  }, [columnDefs]);
+
+  const resetColumnOrder = useCallback(() => {
+    if (user?.id) {
+      try { localStorage.removeItem(`registros_col_order_${user.id}`); } catch { /* ignore */ }
+    }
+    const api = gridRef.current?.api;
+    if (!api) return;
+    const state = columnDefs
+      .filter((cd) => cd.field)
+      .map((cd) => ({ colId: cd.field as string }));
+    api.applyColumnState({ state, applyOrder: true });
+  }, [user?.id, columnDefs]);
+
+  // Re-aplicar orden cuando columnDefs cambia (catalogos carga async y AG Grid resetea el orden)
+  useEffect(() => {
+    if (!user?.id) return;
+    const timer = setTimeout(() => {
+      applyColumnOrder();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [columnDefs, user?.id, applyColumnOrder]);
 
   const defaultColDef = useMemo<ColDef>(
     () => ({
@@ -1047,7 +1199,7 @@ export function RegistrosContent() {
               >
                 <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">{t.registros.newBooking}</span>
-                <span className="sm:hidden">Nuevo</span>
+                <span className="sm:hidden">{t.registros.nuevoShort}</span>
               </a>
               {/* Botón Enviar a Transportes — solo visible con selección */}
               {selectionCount > 0 && (
@@ -1057,8 +1209,8 @@ export function RegistrosContent() {
                   className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                 >
                   <Icon icon="lucide:truck" width={14} height={14} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Enviar a Transportes ({selectionCount})</span>
-                  <span className="sm:hidden">Transporte ({selectionCount})</span>
+                  <span className="hidden sm:inline">{t.registros.sendToTransport} ({selectionCount})</span>
+                  <span className="sm:hidden">{t.registros.sendToTransportShort} ({selectionCount})</span>
                 </button>
               )}
               {/* Botón Eliminar — solo visible con selección */}
@@ -1085,7 +1237,22 @@ export function RegistrosContent() {
             <Icon icon="typcn:refresh" width={14} height={14} className="sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">{t.registros.refresh}</span>
           </button>
-          
+
+          {/* Botón Columnas */}
+          <button
+            type="button"
+            onClick={() => setShowColumnPanel(true)}
+            className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 ${
+              hiddenColumns.size > 0
+                ? "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 ring-1 ring-brand-blue/30"
+                : "text-neutral-700 bg-neutral-100 hover:bg-neutral-200"
+            }`}
+          >
+            <Icon icon="lucide:columns" width={14} height={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Columnas{hiddenColumns.size > 0 ? ` (${hiddenColumns.size} oculta${hiddenColumns.size > 1 ? "s" : ""})` : ""}</span>
+            <span className="sm:hidden">Cols{hiddenColumns.size > 0 ? ` (${hiddenColumns.size})` : ""}</span>
+          </button>
+
           {/* Contador de registros */}
           <span className="ml-auto text-xs sm:text-sm text-neutral-500 whitespace-nowrap">
             <span className="font-medium text-neutral-700">{rowData.length}</span> {t.registros.records}
@@ -1095,7 +1262,7 @@ export function RegistrosContent() {
         {/* Indicador de scroll en móvil */}
         <p className="sm:hidden text-[10px] text-neutral-400 mt-1.5 flex items-center gap-1">
           <Icon icon="lucide:move-horizontal" width={12} height={12} />
-          Desliza horizontalmente para ver más columnas
+          {t.registros.scrollHint}
         </p>
       </div>
       
@@ -1109,6 +1276,16 @@ export function RegistrosContent() {
             defaultColDef={defaultColDef}
             localeText={t.agGrid}
             theme="legacy"
+            selectionColumnDef={{
+              width: 40,
+              minWidth: 40,
+              maxWidth: 40,
+              pinned: "left",
+              suppressMovable: true,
+              resizable: false,
+              suppressHeaderMenuButton: true,
+              suppressHeaderFilterButton: true,
+            }}
             rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true, enableClickSelection: false }}
             singleClickEdit
             stopEditingWhenCellsLoseFocus
@@ -1117,11 +1294,99 @@ export function RegistrosContent() {
             getRowId={(params) => params.data.id}
             onCellValueChanged={handleCellValueChanged}
             onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
+            onGridReady={onGridReady}
+            onDragStopped={onDragStopped}
             rowHeight={30}
             headerHeight={34}
           />
         </div>
       </div>
+
+      {/* Panel: visibilidad de columnas */}
+      {showColumnPanel && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end bg-black/40 backdrop-blur-[2px]" onClick={() => setShowColumnPanel(false)}>
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl border border-neutral-200 w-full sm:w-80 sm:mr-4 flex flex-col"
+            style={{ maxHeight: "85vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Icon icon="lucide:columns" width={16} height={16} className="text-brand-blue" />
+                <span className="text-sm font-bold text-neutral-900">Columnas visibles</span>
+                {hiddenColumns.size > 0 && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue font-medium">
+                    {hiddenColumns.size} oculta{hiddenColumns.size > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {hiddenColumns.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={showAllColumns}
+                    className="text-xs text-brand-blue hover:underline font-medium"
+                  >
+                    Mostrar todas
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={resetColumnOrder}
+                  className="text-xs text-neutral-400 hover:text-neutral-600 hover:underline font-medium"
+                  title="Restablecer orden original de columnas"
+                >
+                  Resetear orden
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowColumnPanel(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+                >
+                  <Icon icon="lucide:x" width={16} height={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de grupos */}
+            <div className="overflow-y-auto flex-1 px-3 py-2">
+              {COLUMN_GROUPS.map((group) => (
+                <div key={group.label} className="mb-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 px-1 mb-1">{group.label}</p>
+                  <div className="space-y-0.5">
+                    {group.fields.map((field) => {
+                      const hidden = hiddenColumns.has(field);
+                      const label = fieldToHeader[field] ?? field;
+                      return (
+                        <button
+                          key={field}
+                          type="button"
+                          onClick={() => toggleColumn(field)}
+                          className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs transition-colors text-left ${
+                            hidden
+                              ? "text-neutral-400 hover:bg-neutral-50"
+                              : "text-neutral-700 hover:bg-neutral-50"
+                          }`}
+                        >
+                          <span className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                            hidden
+                              ? "border-neutral-300 bg-white"
+                              : "border-brand-blue bg-brand-blue"
+                          }`}>
+                            {!hidden && <Icon icon="lucide:check" width={10} height={10} className="text-white" />}
+                          </span>
+                          <span className={hidden ? "line-through opacity-50" : ""}>{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: confirmar agregar nuevo valor al catálogo */}
       {addNewModal && (
@@ -1132,11 +1397,11 @@ export function RegistrosContent() {
                 <Icon icon="lucide:plus-circle" width={20} height={20} className="text-amber-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">Nuevo valor detectado</h3>
+                <h3 className="text-sm font-bold text-neutral-900">{t.registros.newValueDetected}</h3>
                 <p className="text-xs text-neutral-500">{addNewModal.label}</p>
               </div>
             </div>
-            <p className="text-sm text-neutral-700 mb-1">¿Deseas agregar este valor a la base de datos?</p>
+            <p className="text-sm text-neutral-700 mb-1">{t.registros.confirmAddValue}</p>
             <div className="mt-2 mb-5 px-3 py-2 rounded-lg bg-neutral-100 border border-neutral-200 text-sm font-semibold text-neutral-800 truncate">
               "{addNewModal.newValue}"
             </div>
@@ -1146,14 +1411,14 @@ export function RegistrosContent() {
                 onClick={() => void handleConfirmAddNew()}
                 className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors"
               >
-                Sí, agregar
+                {t.registros.yesAdd}
               </button>
               <button
                 type="button"
                 onClick={() => setAddNewModal(null)}
                 className="flex-1 px-4 py-2 text-sm font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
               >
-                No, solo esta vez
+                {t.registros.noThisTime}
               </button>
             </div>
           </div>
@@ -1169,13 +1434,13 @@ export function RegistrosContent() {
                 <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">Enviar a Transportes</h3>
+                <h3 className="text-sm font-bold text-neutral-900">{t.registros.transportModalTitle}</h3>
                 <p className="text-xs text-neutral-500">
-                  {getSelectedRows().length} operación{getSelectedRows().length > 1 ? "es" : ""} seleccionada{getSelectedRows().length > 1 ? "s" : ""}
+                  {getSelectedRows().length} {getSelectedRows().length > 1 ? t.registros.transportModalOpsCount_many : t.registros.transportModalOpsCount_one}
                 </p>
               </div>
             </div>
-            <p className="text-xs text-neutral-500 mb-4">Selecciona el tipo de reserva de transporte:</p>
+            <p className="text-xs text-neutral-500 mb-4">{t.registros.transportModalSelectType}</p>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -1186,8 +1451,8 @@ export function RegistrosContent() {
                   <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-800">Reserva ASLI</p>
-                  <p className="text-[11px] text-neutral-400">Transporte gestionado por ASLI</p>
+                  <p className="text-sm font-semibold text-neutral-800">{t.registros.reservaAsli}</p>
+                  <p className="text-[11px] text-neutral-400">{t.registros.reservaAsliDesc}</p>
                 </div>
               </button>
               <button
@@ -1199,8 +1464,8 @@ export function RegistrosContent() {
                   <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-800">Reserva Externa</p>
-                  <p className="text-[11px] text-neutral-400">Transporte de carga externa</p>
+                  <p className="text-sm font-semibold text-neutral-800">{t.registros.reservaExterna}</p>
+                  <p className="text-[11px] text-neutral-400">{t.registros.reservaExternaDesc}</p>
                 </div>
               </button>
             </div>

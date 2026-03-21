@@ -25,6 +25,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
     if (stored && (stored === "es" || stored === "en")) {
       queueMicrotask(() => setLocaleState(stored));
+      return;
+    }
+    const browserLocale = navigator.language?.toLowerCase() ?? "";
+    if (browserLocale.startsWith("en")) {
+      queueMicrotask(() => setLocaleState("en"));
     }
   }, []);
 
