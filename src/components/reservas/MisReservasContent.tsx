@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
@@ -185,121 +186,121 @@ type CardProps = {
   onBooking: (op: Operacion) => void;
 };
 
-function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy, onEmail, onBooking }: CardProps) {
+function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, onSelect, onCopy, onEmail, onBooking }: CardProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
     <div
-      className={`bg-white rounded-2xl border flex flex-col overflow-hidden shadow-sm transition-all duration-150 ${
-        selected ? "border-brand-blue ring-1 ring-brand-blue/30" : "border-neutral-200 hover:border-neutral-300"
+      onClick={!isCliente ? onSelect : undefined}
+      className={`bg-white rounded-2xl flex flex-col overflow-hidden transition-all duration-150 ${
+        !isCliente ? "cursor-pointer" : ""
+      } ${
+        selected
+          ? "border-2 border-brand-blue shadow-lg shadow-brand-blue/15"
+          : "border-2 border-neutral-200 hover:border-neutral-300 hover:shadow-md shadow-sm"
       }`}
     >
       {/* Estado strip */}
-      {cfg && <div className={`h-[3px] ${cfg.dot.replace("bg-", "bg-")}`} />}
+      {cfg && <div className={`h-1.5 ${cfg.dot}`} />}
 
       {/* Header */}
-      <div className="px-4 pt-3.5 pb-2.5 flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 min-w-0">
+      <div className="px-4 pt-3.5 pb-3 flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2.5 min-w-0">
           {!isCliente && (
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={onSelect}
-              className="mt-0.5 w-4 h-4 rounded border-neutral-300 accent-brand-blue shrink-0"
-            />
+            <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+              selected ? "bg-brand-blue border-brand-blue" : "border-neutral-300 bg-white"
+            }`}>
+              {selected && <Icon icon="lucide:check" width={11} height={11} className="text-white" />}
+            </div>
           )}
           <div className="min-w-0">
             <p className="text-sm font-bold text-brand-blue leading-tight">
               {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}
             </p>
-            <p className="text-xs text-neutral-500 truncate mt-0.5">{op.cliente ?? "-"}</p>
+            <p className="text-xs text-neutral-500 truncate mt-0.5 font-medium">{op.cliente ?? "-"}</p>
           </div>
         </div>
         {cfg && (
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
             {op.estado_operacion}
           </span>
         )}
       </div>
 
-      <div className="h-px bg-neutral-100 mx-4" />
-
-      {/* Body */}
-      <div className="px-4 py-3 flex-1 space-y-2.5 text-xs">
-        {/* Naviera · Nave */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-neutral-400 shrink-0">Naviera</span>
-          <span className="text-neutral-700 font-medium text-right truncate">
-            {op.naviera ?? "-"}{op.nave ? ` · ${op.nave}` : ""}
-          </span>
+      {/* Ruta destacada */}
+      <div className="mx-4 mb-3 bg-neutral-50 rounded-2xl px-3 py-2.5 flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-wide">Origen</p>
+          <p className="text-sm font-bold text-neutral-800 font-mono truncate">{op.pol ?? "-"}</p>
         </div>
-
-        {/* Ruta */}
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded text-[11px] truncate max-w-[80px]">{op.pol ?? "-"}</span>
-          <Icon icon="lucide:arrow-right" width={12} height={12} className="text-neutral-300 shrink-0" />
-          <span className="font-mono text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded text-[11px] truncate max-w-[80px]">{op.pod ?? "-"}</span>
+        <div className="flex flex-col items-center gap-0.5 shrink-0 px-1">
+          <Icon icon="lucide:arrow-right" width={16} height={16} className="text-neutral-300" />
           {op.tt !== null && (
-            <span className="ml-auto px-1.5 py-0.5 rounded-full bg-brand-blue/8 text-brand-blue font-semibold text-[10px] shrink-0">
-              {op.tt}d
-            </span>
+            <span className="text-[10px] font-bold text-brand-blue bg-brand-blue/10 px-1.5 rounded-full">{op.tt}d</span>
           )}
         </div>
+        <div className="flex-1 min-w-0 text-right">
+          <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-wide">Destino</p>
+          <p className="text-sm font-bold text-neutral-800 font-mono truncate">{op.pod ?? "-"}</p>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-4 pb-3 flex-1 space-y-2 text-xs">
+        {/* Naviera · Nave */}
+        {(op.naviera || op.nave) && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-neutral-400 shrink-0">Naviera</span>
+            <span className="text-neutral-700 font-medium text-right truncate">
+              {op.naviera ?? "-"}{op.nave ? ` · ${op.nave}` : ""}
+            </span>
+          </div>
+        )}
 
         {/* Fechas */}
-        <div className="flex items-center gap-3">
-          <div>
-            <span className="text-neutral-400 text-[10px] uppercase tracking-wide block">ETD</span>
-            <span className="font-medium text-neutral-700">{fmtDate(op.etd)}</span>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-neutral-50 rounded-xl px-2.5 py-2">
+            <span className="text-neutral-400 text-[10px] uppercase tracking-wide block font-bold">ETD</span>
+            <span className="font-semibold text-neutral-800 text-xs">{fmtDate(op.etd)}</span>
           </div>
-          <div>
-            <span className="text-neutral-400 text-[10px] uppercase tracking-wide block">ETA</span>
-            <span className="font-medium text-neutral-700">{fmtDate(op.eta)}</span>
+          <div className="bg-neutral-50 rounded-xl px-2.5 py-2">
+            <span className="text-neutral-400 text-[10px] uppercase tracking-wide block font-bold">ETA</span>
+            <span className="font-semibold text-neutral-800 text-xs">{fmtDate(op.eta)}</span>
           </div>
         </div>
 
-        {/* Booking */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-neutral-400 shrink-0">Booking</span>
-          <span className="font-mono text-neutral-600 text-right truncate">{op.booking ?? "-"}</span>
-        </div>
-
-        {/* Especie */}
+        {/* Booking + Especie */}
+        {op.booking && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-neutral-400 shrink-0">Booking</span>
+            <span className="font-mono text-neutral-600 text-right truncate">{op.booking}</span>
+          </div>
+        )}
         {op.especie && (
           <div className="flex items-center justify-between gap-2">
             <span className="text-neutral-400 shrink-0">Especie</span>
-            <span className="text-neutral-700 text-right truncate">{op.especie}</span>
+            <span className="text-neutral-700 font-medium text-right truncate">{op.especie}</span>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-2 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/60">
-        <span className="text-[10px] text-neutral-400">
+      <div className="px-3 py-2.5 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/60">
+        <span className="text-[10px] text-neutral-400 font-medium">
           {format(new Date(op.created_at), "dd MMM yyyy", { locale: es })}
         </span>
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => onCopy(op)}
-            className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
-            title="Copiar datos"
-          >
-            <Icon icon="lucide:copy" width={14} height={14} />
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors" title="Copiar datos">
+            <Icon icon="lucide:copy" width={20} height={20} />
           </button>
-          <button
-            type="button"
-            onClick={() => onEmail(op)}
-            className="p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors"
-            title="Enviar por correo"
-          >
-            <Icon icon="lucide:mail" width={14} height={14} />
+          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-xl transition-colors" title="Enviar por correo">
+            <Icon icon="lucide:mail" width={20} height={20} />
           </button>
           {!isCliente && (
             <button
               type="button"
-              onClick={() => onBooking(op)}
-              className={`p-1.5 rounded-lg transition-colors ${
+              onClick={(e) => { e.stopPropagation(); onBooking(op); }}
+              className={`p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl transition-colors ${
                 op.booking_doc_url
                   ? "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
                   : op.booking
@@ -308,7 +309,7 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
               }`}
               title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
             >
-              <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={14} height={14} />
+              <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={20} height={20} />
             </button>
           )}
         </div>
@@ -576,7 +577,9 @@ export function MisReservasContent() {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    typeof window !== "undefined" && window.innerWidth >= 768 ? "table" : "cards"
+  );
   const [emailModal, setEmailModal] = useState<Operacion | null>(null);
   const [bookingModal, setBookingModal] = useState<Operacion | null>(null);
 
@@ -790,137 +793,130 @@ export function MisReservasContent() {
   return (
     <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
 
-      {/* ── Barra de herramientas ── */}
-      <div className="flex-shrink-0 bg-white border-b border-neutral-200">
-
-        {/* Fila 1: Título + acciones */}
-        <div className="px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0 mr-auto">
-            <div className="w-7 h-7 rounded-lg bg-brand-blue flex items-center justify-center shrink-0">
-              <Icon icon="typcn:clipboard" width={15} height={15} className="text-white" />
+      {/* ── Hero ── */}
+      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-cyan-700 text-white px-4 sm:px-6 pt-5 pb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="typcn:clipboard" width={22} height={22} className="text-white" />
             </div>
-            <h1 className="text-sm font-bold text-neutral-900 leading-tight">{t.sidebar.misReservas}</h1>
-            <span className="hidden sm:inline text-xs text-neutral-500 whitespace-nowrap">
-              <span className="font-semibold text-neutral-700">{filteredOperaciones.length}</span>
-              {filteredOperaciones.length !== operaciones.length && <span className="text-neutral-400"> de {operaciones.length}</span>}
-              {" "}{tr.records}
-            </span>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold leading-tight">{t.sidebar.misReservas}</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-white/70">
+                  <span className="font-semibold text-white">{filteredOperaciones.length}</span>
+                  {filteredOperaciones.length !== operaciones.length
+                    ? <span className="text-white/50"> de {operaciones.length}</span>
+                    : null
+                  } {tr.records}
+                </span>
+              </div>
+            </div>
           </div>
-
-          {!isCliente && selectedIds.size > 0 && (
-            <>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Toggle vista */}
+            <div className="flex items-center bg-white/15 rounded-xl p-0.5">
               <button
-                onClick={() => setShowTransportModal(true)}
-                disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                type="button"
+                onClick={() => setViewMode("cards")}
+                title="Vista tarjetas"
+                className={`px-2.5 py-1.5 rounded-lg text-xs transition-all ${viewMode === "cards" ? "bg-white text-brand-blue shadow-sm font-bold" : "text-white/80 hover:text-white"}`}
               >
-                <Icon icon="lucide:truck" width={13} height={13} />
-                <span className="hidden sm:inline">Enviar a Transportes ({selectedIds.size})</span>
-                <span className="sm:hidden">Transporte ({selectedIds.size})</span>
+                <Icon icon="lucide:layout-grid" width={14} height={14} />
               </button>
               <button
-                onClick={() => handleMoveToTrash(Array.from(selectedIds))}
-                disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                type="button"
+                onClick={() => setViewMode("table")}
+                title="Vista tabla"
+                className={`px-2.5 py-1.5 rounded-lg text-xs transition-all ${viewMode === "table" ? "bg-white text-brand-blue shadow-sm font-bold" : "text-white/80 hover:text-white"}`}
               >
-                <Icon icon="typcn:trash" width={13} height={13} />
-                <span className="hidden sm:inline">{tr.delete} ({selectedIds.size})</span>
-                <span className="sm:hidden">Eliminar ({selectedIds.size})</span>
+                <Icon icon="lucide:list" width={14} height={14} />
               </button>
-            </>
-          )}
-
-          <button
-            onClick={fetchOperaciones}
-            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-            title={tr.refresh}
-          >
-            <Icon icon="typcn:refresh" width={13} height={13} />
-            <span className="hidden sm:inline">{tr.refresh}</span>
-          </button>
-
-          <a
-            href="/reservas/crear"
-            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
-          >
-            <Icon icon="typcn:plus" width={13} height={13} />
-            <span className="hidden sm:inline">{tr.newBooking}</span>
-            <span className="sm:hidden">Nuevo</span>
-          </a>
+            </div>
+            <a
+              href="/reservas/crear"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+            >
+              <Icon icon="lucide:plus" width={13} height={13} />
+              <span className="hidden sm:inline">{tr.newBooking}</span>
+              <span className="sm:hidden">Nueva</span>
+            </a>
+          </div>
         </div>
+      </div>
 
-        {/* Fila 2: Vista + búsqueda + filtros */}
-        <div className="px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2 flex-wrap border-t border-neutral-100">
-          {/* Toggle tabla / tarjetas */}
-          <div className="flex items-center rounded-lg border border-neutral-200 overflow-hidden shrink-0">
-            <button
-              type="button"
-              onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
-                viewMode === "table" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-50"
-              }`}
-            >
-              <Icon icon="lucide:list" width={12} height={12} />
-              <span className="hidden sm:inline">Tabla</span>
-            </button>
-            <div className="w-px h-4 bg-neutral-200" />
-            <button
-              type="button"
-              onClick={() => setViewMode("cards")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
-                viewMode === "cards" ? "bg-brand-blue text-white" : "text-neutral-500 hover:bg-neutral-50"
-              }`}
-            >
-              <Icon icon="lucide:grid" width={12} height={12} />
-              <span className="hidden sm:inline">Tarjetas</span>
-            </button>
-          </div>
-
+      {/* ── Barra de búsqueda y filtros ── */}
+      <div className="flex-shrink-0 bg-white border-b border-neutral-200">
+        <div className="px-3 sm:px-4 py-2.5 flex items-center gap-2">
           {/* Búsqueda */}
-          <div className="flex-1 min-w-[160px] relative">
-            <Icon icon="typcn:zoom" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
+          <div className="flex-1 min-w-0 relative">
+            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
             <input
               type="text"
               placeholder={tr.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-neutral-200 bg-neutral-50 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+              className="w-full pl-9 pr-8 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
             />
+            {searchTerm && (
+              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                <Icon icon="lucide:x" width={13} height={13} />
+              </button>
+            )}
           </div>
-
           {/* Filtros */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/20 ${
+            className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-medium transition-colors shrink-0 ${
               showFilters || activeFiltersCount > 0
-                ? "border-brand-blue bg-brand-blue/5 text-brand-blue"
+                ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
                 : "border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600"
             }`}
           >
-            <Icon icon="typcn:filter" width={13} height={13} />
+            <Icon icon="lucide:sliders-horizontal" width={13} height={13} />
             <span className="hidden sm:inline">{tr.filters}</span>
             {activeFiltersCount > 0 && (
-              <span className="px-1 py-0.5 text-[10px] bg-brand-blue text-white rounded-full leading-none">{activeFiltersCount}</span>
+              <span className="w-4 h-4 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
             )}
           </button>
-
-          {(activeFiltersCount > 0 || searchTerm) && (
-            <button
-              onClick={clearAllFilters}
-              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 rounded-lg hover:bg-neutral-100 transition-colors"
-            >
-              <Icon icon="typcn:times" width={13} height={13} />
-              <span className="hidden sm:inline">Limpiar</span>
-            </button>
-          )}
-
-          <span className="sm:hidden ml-auto text-xs text-neutral-500">
-            <span className="font-semibold text-neutral-700">{filteredOperaciones.length}</span>
-            {filteredOperaciones.length !== operaciones.length && <span className="text-neutral-400"> de {operaciones.length}</span>}
-          </span>
+          {/* Recargar */}
+          <button
+            onClick={fetchOperaciones}
+            className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors shrink-0"
+            title={tr.refresh}
+          >
+            <Icon icon="lucide:refresh-cw" width={14} height={14} />
+          </button>
         </div>
 
-        {/* Panel de filtros integrado */}
+        {/* Barra de selección */}
+        {!isCliente && selectedIds.size > 0 && (
+          <div className="px-3 sm:px-4 py-2 border-t border-brand-blue/10 flex items-center gap-2 bg-brand-blue/5">
+            <span className="text-xs font-semibold text-brand-blue flex-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? "s" : ""}</span>
+            <button
+              onClick={() => setShowTransportModal(true)}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              <Icon icon="lucide:truck" width={12} height={12} />
+              <span className="hidden sm:inline">Enviar a Transportes</span>
+              <span className="sm:hidden">Transporte</span>
+            </button>
+            <button
+              onClick={() => handleMoveToTrash(Array.from(selectedIds))}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+            >
+              <Icon icon="lucide:trash-2" width={12} height={12} />
+              <span className="hidden sm:inline">{tr.delete}</span>
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
+              <Icon icon="lucide:x" width={13} height={13} />
+            </button>
+          </div>
+        )}
+
+        {/* Panel de filtros */}
         {showFilters && (
           <div className="px-3 sm:px-4 py-2.5 border-t border-neutral-100 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-50/70">
             <div>
@@ -951,6 +947,11 @@ export function MisReservasContent() {
                 {especies.map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
             </div>
+            {activeFiltersCount > 0 && (
+              <button onClick={clearAllFilters} className="sm:col-span-4 text-xs text-brand-blue hover:underline font-medium text-left">
+                Limpiar todos los filtros
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1024,7 +1025,7 @@ export function MisReservasContent() {
                               <div className="inline-flex items-center gap-1">
                                 <button
                                   onClick={() => setBookingModal(op)}
-                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border transition-all max-w-[140px] ${
+                                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all max-w-[200px] min-h-[40px] ${
                                     op.booking_doc_url
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                                       : op.booking
@@ -1033,12 +1034,12 @@ export function MisReservasContent() {
                                   }`}
                                   title={op.booking ? "Editar booking / documento" : "Confirmar booking"}
                                 >
-                                  <Icon icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"} width={11} height={11} className="shrink-0" />
+                                  <Icon icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"} width={16} height={16} className="shrink-0" />
                                   <span className="font-mono truncate">{op.booking ?? "Confirmar"}</span>
                                 </button>
                                 {op.booking_doc_url && (
-                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors">
-                                    <Icon icon="lucide:external-link" width={10} height={10} />
+                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
+                                    <Icon icon="lucide:external-link" width={16} height={16} />
                                   </a>
                                 )}
                               </div>
@@ -1092,12 +1093,12 @@ export function MisReservasContent() {
                             )}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <div className="flex items-center justify-center gap-0.5">
-                              <button onClick={() => handleCopy(op)} className="p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded transition-colors" title="Copiar">
-                                <Icon icon="lucide:copy" width={13} height={13} />
+                            <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => handleCopy(op)} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors" title="Copiar">
+                                <Icon icon="lucide:copy" width={18} height={18} />
                               </button>
-                              <button onClick={() => setEmailModal(op)} className="p-1 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded transition-colors" title="Enviar por correo">
-                                <Icon icon="lucide:mail" width={13} height={13} />
+                              <button onClick={() => setEmailModal(op)} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title="Enviar por correo">
+                                <Icon icon="lucide:mail" width={18} height={18} />
                               </button>
                             </div>
                           </td>
@@ -1274,17 +1275,20 @@ export function MisReservasContent() {
         );
       })()}
 
-      {/* Modal correo */}
-      {emailModal && <EmailModal op={emailModal} onClose={() => setEmailModal(null)} />}
-
-      {/* Modal booking */}
-      {bookingModal && (
+      {/* Modals — renderizados en document.body via portal para evitar problemas de
+          fixed positioning en iOS Safari cuando los ancestros tienen overflow:hidden */}
+      {emailModal && createPortal(
+        <EmailModal op={emailModal} onClose={() => setEmailModal(null)} />,
+        document.body
+      )}
+      {bookingModal && createPortal(
         <BookingModal
           op={bookingModal}
           supabase={supabase}
           onClose={() => setBookingModal(null)}
           onSaved={(updated) => handleBookingSaved(bookingModal.id, updated)}
-        />
+        />,
+        document.body
       )}
     </main>
   );
