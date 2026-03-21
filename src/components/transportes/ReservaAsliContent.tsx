@@ -10,9 +10,11 @@ import {
   type FormatoInstructivo,
   buildInstructivoTagValues,
   generateInstructivoHtml,
-  buildInstructivoGmailComposeUrl,
+  buildInstructivoSubject,
+  buildInstructivoPlainBody,
   applyTagsToExcelBuffer,
 } from "@/lib/documentos/instructivo";
+import { sendEmail } from "@/lib/email/sendEmail";
 
 type Operacion = {
   id: string;
@@ -821,23 +823,22 @@ export function ReservaAsliContent() {
     URL.revokeObjectURL(url);
   };
 
-  // ── Paso 2: Descargar instructivo y abrir Gmail del ejecutivo ────────────
-  const handleSendInstructivo = () => {
+  // ── Paso 2: Enviar instructivo por correo desde la cuenta del ejecutivo ──
+  const handleSendInstructivo = async () => {
     if (!selectedOperacion || !instrBlob) return;
+    setInstrPhase("sending");
+    setInstrError("");
 
-    // 1) Descargar el archivo Excel automáticamente
-    const url = URL.createObjectURL(instrBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = instrFilename;
-    a.click();
-    URL.revokeObjectURL(url);
+    const subject = buildInstructivoSubject(selectedOperacion);
+    const body    = buildInstructivoPlainBody(selectedOperacion);
+    const result  = await sendEmail({ to: "alex.cardenas@asli.cl", subject, body });
 
-    // 2) Abrir Gmail del ejecutivo con el correo pre-llenado
-    const composeUrl = buildInstructivoGmailComposeUrl(selectedOperacion, "alex.cardenas@asli.cl");
-    window.location.href = composeUrl;
-
-    setInstrPhase("sent");
+    if (result.success) {
+      setInstrPhase("sent");
+    } else {
+      setInstrPhase("error");
+      setInstrError(result.error ?? "Error al enviar el correo.");
+    }
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -1334,7 +1335,7 @@ export function ReservaAsliContent() {
                         <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-start gap-2 flex-wrap">
                           <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                           <span className="text-xs font-semibold text-emerald-700 flex-1">
-                            Instructivo descargado. Gmail abierto — adjunta el archivo y haz clic en Enviar.
+                            Correo enviado a alex.cardenas@asli.cl desde tu cuenta.
                           </span>
                         </div>
                       )}

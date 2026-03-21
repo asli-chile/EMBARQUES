@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { sendEmail } from "@/lib/email/sendEmail";
 import { useAuth } from "@/lib/auth/AuthContext";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
@@ -716,9 +717,10 @@ export function CrearReservaContent() {
     return { subject, htmlBody };
   };
 
-  const handleSendEmail = () => {
+  const handleSendEmail = async () => {
     if (!lastSavedPayload) return;
     const p = lastSavedPayload;
+    setSendingEmail(true);
 
     const subject = [
       "SOLICITUD DE RESERVA",
@@ -759,19 +761,19 @@ export function CrearReservaContent() {
       `  ETD:      ${p.etd ?? "-"}`,
       `  Booking:  ${p.booking ?? "-"}`,
       "",
-      p.observaciones ? `Observaciones: ${p.observaciones}` : "",
+      p.observaciones ? `Observaciones: ${String(p.observaciones)}` : "",
       "",
       "Quedo atento.",
-    ].filter((l) => l !== undefined).join("\n");
+    ].filter(Boolean).join("\n");
 
-    const gmailUrl =
-      `mailto:informaciones@asli.cl` +
-      `?subject=${encodeURIComponent(String(subject))}` +
-      `&body=${encodeURIComponent(body)}`;
-
-    window.location.href = gmailUrl;
+    const result = await sendEmail({ to: "informaciones@asli.cl", subject: String(subject), body });
+    setSendingEmail(false);
     setShowEmailModal(false);
-    setSuccess("Gmail abierto con la solicitud lista. Solo haz clic en Enviar.");
+    if (result.success) {
+      setSuccess(`Correo enviado correctamente desde ${result.sender ?? "tu cuenta @asli.cl"}.`);
+    } else {
+      setError(result.error ?? "Error al enviar el correo.");
+    }
   };
 
   const inputClass =
@@ -1711,17 +1713,20 @@ export function CrearReservaContent() {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-brand-blue/5 border border-brand-blue/15 mb-5">
                 <Icon icon="lucide:info" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />
                 <p className="text-xs text-neutral-600">
-                  Se abrirá <strong>tu Gmail</strong> con el correo listo. Solo haz clic en <strong>Enviar</strong>.
+                  El correo se enviará directamente desde <strong>tu cuenta @asli.cl</strong> a informaciones@asli.cl.
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={handleSendEmail}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm shadow-md shadow-brand-blue/20"
+                  onClick={() => void handleSendEmail()}
+                  disabled={sendingEmail}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm shadow-md shadow-brand-blue/20 disabled:opacity-60"
                 >
-                  <Icon icon="lucide:external-link" width={15} height={15} />
-                  Abrir en mi Gmail
+                  {sendingEmail
+                    ? <><Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />Enviando...</>
+                    : <><Icon icon="lucide:send" width={15} height={15} />Enviar desde mi cuenta</>
+                  }
                 </button>
                 <button
                   type="button"

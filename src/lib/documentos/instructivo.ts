@@ -308,12 +308,11 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   return arrayBufferToBase64(await blob.arrayBuffer());
 }
 
-// ─── mailto link builder ──────────────────────────────────────────────────────
+// ─── Plain text email body ────────────────────────────────────────────────────
 
-export function buildInstructivoGmailComposeUrl(op: InstructivoOpData, to: string): string {
-  const subject = buildInstructivoSubjectInner(op);
+export function buildInstructivoPlainBody(op: InstructivoOpData): string {
   const ref = fmtRef(op);
-  const lines = [
+  return [
     `Estimado equipo,`,
     ``,
     `Se adjunta el instructivo de embarque para la operación ${ref} — ${op.cliente ?? ""}.`,
@@ -330,20 +329,17 @@ export function buildInstructivoGmailComposeUrl(op: InstructivoOpData, to: strin
     op.contenedor ? `  Contenedor:  ${op.contenedor}` : "",
     op.sello      ? `  Sello:       ${op.sello}` : "",
     ``,
-    op.citacion ? `Citación a planta: ${fmtDatetime(op.citacion)}` : "",
+    op.citacion        ? `Citación a planta: ${fmtDatetime(op.citacion)}` : "",
     op.inicio_stacking ? `Inicio stacking:   ${fmtDatetime(op.inicio_stacking)}` : "",
     op.fin_stacking    ? `Fin stacking:      ${fmtDatetime(op.fin_stacking)}` : "",
     ``,
     `Quedo atento.`,
-  ].filter((l) => l !== undefined).join("\n");
+  ].filter(Boolean).join("\n");
+}
 
-  // mailto: abre el cliente de correo predeterminado del usuario (Gmail para @asli.cl)
-  // No depende de sesión, no es bloqueado como popup
-  return (
-    `mailto:${to}` +
-    `?subject=${encodeURIComponent(subject)}` +
-    `&body=${encodeURIComponent(lines)}`
-  );
+// kept for backwards compat — now unused internally
+export function buildInstructivoGmailComposeUrl(_op: InstructivoOpData, _to: string): string {
+  return "";
 }
 
 // helper interno para no duplicar lógica

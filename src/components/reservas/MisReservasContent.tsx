@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { sendEmail } from "@/lib/email/sendEmail";
 import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
@@ -319,64 +320,69 @@ function ReservaCard({ op, isCliente, selected, actionLoading, onSelect, onCopy,
 // ─── EmailModal ───────────────────────────────────────────────────────────────
 
 function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const { subject } = buildEmailContent(op);
-  const plainBody = buildReservaBody(op);
+  const body = buildReservaBody(op);
 
-  // Abre Gmail del usuario con el compositor pre-llenado (To, Subject, Body)
-  // El correo sale desde la cuenta del ejecutivo que está logueado en Gmail
-  const mailtoUrl =
-    `mailto:informaciones@asli.cl` +
-    `?subject=${encodeURIComponent(subject)}` +
-    `&body=${encodeURIComponent(plainBody)}`;
-
-  const handleAbrir = () => {
-    window.location.href = mailtoUrl;
-    onClose();
+  const handleEnviar = async () => {
+    setSending(true);
+    setError(null);
+    const result = await sendEmail({ to: "informaciones@asli.cl", subject, body });
+    setSending(false);
+    if (result.success) {
+      setSent(true);
+    } else {
+      setError(result.error ?? "Error al enviar.");
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
       <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center">
-            <Icon icon="lucide:mail" width={20} height={20} className="text-brand-blue" />
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sent ? "bg-emerald-100 border border-emerald-200" : "bg-brand-blue/10 border border-brand-blue/20"}`}>
+            <Icon icon={sent ? "lucide:check-circle" : "lucide:mail"} width={20} height={20} className={sent ? "text-emerald-600" : "text-brand-blue"} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">Enviar solicitud de reserva</h3>
+            <h3 className="text-sm font-bold text-neutral-900">{sent ? "Correo enviado" : "Enviar solicitud de reserva"}</h3>
             <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
           </div>
         </div>
 
-        <div className="mb-4 space-y-2">
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-brand-blue/5 border border-brand-blue/15">
-            <Icon icon="lucide:info" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />
-            <p className="text-xs text-neutral-600">
-              Se abrirá <strong>tu Gmail</strong> con el correo listo para enviar a{" "}
-              <strong>informaciones@asli.cl</strong>. Solo haz clic en Enviar.
-            </p>
+        {error && <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>}
+
+        {sent ? (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
+            <Icon icon="lucide:send" width={14} height={14} className="shrink-0" />
+            Correo enviado a <strong>informaciones@asli.cl</strong> desde tu cuenta.
           </div>
-          <div className="px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
-            <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">Asunto</p>
-            <p className="text-xs text-neutral-700 font-medium leading-snug line-clamp-2">{subject}</p>
+        ) : (
+          <div className="mb-4 space-y-2">
+            <p className="text-xs text-neutral-600">El correo se enviará desde tu cuenta <strong>@asli.cl</strong> a <strong>informaciones@asli.cl</strong>.</p>
+            <div className="px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
+              <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">Asunto</p>
+              <p className="text-xs text-neutral-700 font-medium leading-snug line-clamp-2">{subject}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
-          >
-            Cancelar
+          <button type="button" onClick={onClose} disabled={sending}
+            className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60">
+            {sent ? "Cerrar" : "Cancelar"}
           </button>
-          <button
-            type="button"
-            onClick={handleAbrir}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20"
-          >
-            <Icon icon="lucide:external-link" width={14} height={14} />
-            Abrir en mi Gmail
+          {!sent && (
+          <button type="button" onClick={() => void handleEnviar()} disabled={sending}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20 disabled:opacity-60">
+            {sending
+              ? <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />Enviando...</>
+              : <><Icon icon="lucide:send" width={14} height={14} />Enviar desde mi cuenta</>
+            }
           </button>
+          )}
         </div>
       </div>
     </div>
