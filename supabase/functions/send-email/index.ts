@@ -60,8 +60,21 @@ Deno.serve(async (req) => {
     const sa = JSON.parse(saJson);
     const accessToken = await getServiceAccountToken(sa, senderEmail);
 
-    // ── 5. Enviar vía Gmail API como el ejecutivo ──────────────────────────
-    const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments);
+    // ── 5. Obtener firma del usuario desde Gmail settings ──────────────────
+    let signatureHtml = "";
+    try {
+      const sigRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/settings/sendAs/${encodeURIComponent(senderEmail)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (sigRes.ok) {
+        const sigData = await sigRes.json() as { signature?: string };
+        signatureHtml = sigData.signature ?? "";
+      }
+    } catch { /* si falla, se envía sin firma */ }
+
+    // ── 6. Enviar vía Gmail API como el ejecutivo ──────────────────────────
+    const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments, signatureHtml);
     const gmailRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/messages/send`,
       {
@@ -154,35 +167,63 @@ function buildRawEmail(
   fromEmail: string, fromName: string,
   to: string, subject: string, body: string,
   attachments?: { name: string; content: string; mimeType: string }[],
+  signatureHtml?: string,
 ): string {
-  const boundary = "----=_Part_" + Math.random().toString(36).slice(2);
-  const hasAttachments = attachments && attachments.length > 0;
+  const boundary    = "----=_Part_" + Math.random().toString(36).slice(2);
+  const altBoundary = "----=_Alt_"  + Math.random().toString(36).slice(2);
+  const hasAtt = attachments && attachments.length > 0;
+  const hasSig = !!signatureHtml;
+
+  // Cuerpo HTML: texto plano convertido a HTML + firma
+  const bodyHtml = body.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/\n/g, "<br>\r\n");
+  const htmlPart = hasSig
+    ? `<div style="font-family:Arial,sans-serif;font-size:14px">${bodyHtml}</div><br>${signatureHtml}`
+    : `<div style="font-family:Arial,sans-serif;font-size:14px">${bodyHtml}</div>`;
+
+  const headers = [
+    `From: ${fromName} <${fromEmail}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+  ];
 
   let raw: string;
 
-  if (!hasAttachments) {
+  if (!hasAtt) {
+    // Sin adjuntos: multipart/alternative (plain + html)
     raw = [
-      `From: ${fromName} <${fromEmail}>`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      `MIME-Version: 1.0`,
+      ...headers,
+      `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+      ``,
+      `--${altBoundary}`,
       `Content-Type: text/plain; charset=UTF-8`,
       ``,
       body,
+      `--${altBoundary}`,
+      `Content-Type: text/html; charset=UTF-8`,
+      ``,
+      htmlPart,
+      `--${altBoundary}--`,
     ].join("\r\n");
   } else {
+    // Con adjuntos: multipart/mixed > multipart/alternative + adjuntos
     const parts: string[] = [
-      `From: ${fromName} <${fromEmail}>`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      `MIME-Version: 1.0`,
+      ...headers,
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       ``,
       `--${boundary}`,
+      `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+      ``,
+      `--${altBoundary}`,
       `Content-Type: text/plain; charset=UTF-8`,
-      `Content-Transfer-Encoding: 7bit`,
       ``,
       body,
+      `--${altBoundary}`,
+      `Content-Type: text/html; charset=UTF-8`,
+      ``,
+      htmlPart,
+      `--${altBoundary}--`,
     ];
 
     for (const att of attachments) {
@@ -192,7 +233,6 @@ function buildRawEmail(
         `Content-Disposition: attachment; filename="${att.name}"`,
         `Content-Transfer-Encoding: base64`,
         ``,
-        // Partir el base64 en líneas de 76 chars (estándar MIME)
         att.content.match(/.{1,76}/g)?.join("\r\n") ?? att.content,
       );
     }
