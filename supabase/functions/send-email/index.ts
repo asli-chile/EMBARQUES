@@ -116,7 +116,7 @@ async function getServiceAccountToken(sa: Record<string, string>, impersonateEma
   const payload = b64url(JSON.stringify({
     iss:   sa.client_email,
     sub:   impersonateEmail,
-    scope: "https://www.googleapis.com/auth/gmail.send",
+    scope: "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.settings.basic",
     aud:   "https://oauth2.googleapis.com/token",
     iat:   now,
     exp:   now + 3600,
