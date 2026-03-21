@@ -62,10 +62,12 @@ export function NavBanner({ pathname }: NavBannerProps) {
   const { user, profile, isExternalUser, empresaNombres, isSuperadmin } = useAuth();
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
-  const [drawerOpen, setDrawerOpen]     = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
-  // Sección expandida en el drawer
+  const [drawerOpen, setDrawerOpen]       = useState(false);
+  const [showUserModal, setShowUserModal]   = useState(false);
+  // Sección expandida en el drawer (grupos de primer nivel)
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Sub-grupo expandido dentro de un grupo (ej: itinerarios dentro de configuracion)
+  const [expandedChildId, setExpandedChildId] = useState<string | null>(null);
 
   const drawerRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!user;
@@ -157,8 +159,53 @@ export function NavBanner({ pathname }: NavBannerProps) {
             {hasChildren && isExpanded && (
               <div className="flex flex-col gap-1 pl-3 ml-3 border-l border-white/15">
                 {item.children!.map((child) => {
-                  const isChildActive = pathname === child.href;
                   const childMeta = SIDEBAR_META[child.id] ?? { icon: "lucide:minus", desc: "" };
+
+                  // Ítem especial sin href → colapsable inline
+                  if (!("href" in child)) {
+                    const isSubExpanded = expandedChildId === child.id;
+                    const itinerarioSubs = [
+                      { id: "servicios-por-naviera", labelKey: "serviciosPorNaviera" as const, href: "/itinerario/servicios", icon: "lucide:anchor", desc: "Servicios por naviera" },
+                      { id: "consorcios",             labelKey: "consorcios"           as const, href: "/itinerario/consorcios",  icon: "lucide:network", desc: "Gestión de consorcios" },
+                    ];
+                    return (
+                      <div key={child.id} className="flex flex-col gap-1">
+                        <button type="button"
+                          onClick={() => setExpandedChildId((p) => p === child.id ? null : child.id)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 bg-white/5 border-white/8 text-neutral-400 hover:bg-white/10 hover:text-white hover:border-white/15 text-left"
+                        >
+                          <Icon icon={childMeta.icon} width={14} height={14} className="shrink-0 opacity-70" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold leading-tight">{t.sidebar[child.labelKey]}</p>
+                            {childMeta.desc && <p className="text-[10px] text-neutral-500 mt-0.5">{childMeta.desc}</p>}
+                          </div>
+                          <Icon icon={isSubExpanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={12} height={12} className="ml-auto shrink-0 opacity-40" />
+                        </button>
+                        {isSubExpanded && (
+                          <div className="flex flex-col gap-1 pl-3 ml-3 border-l border-white/10">
+                            {itinerarioSubs.map((sub) => {
+                              const isSubActive = pathname === sub.href;
+                              return (
+                                <a key={sub.id} href={sub.href} onClick={() => setDrawerOpen(false)}
+                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all duration-200 ${
+                                    isSubActive
+                                      ? "bg-brand-olive/20 border-brand-olive/40 text-white"
+                                      : "bg-white/5 border-white/8 text-neutral-400 hover:bg-white/10 hover:text-white hover:border-white/15"
+                                  }`}
+                                >
+                                  <Icon icon={sub.icon} width={12} height={12} className="shrink-0 opacity-70" />
+                                  <p className="text-[11px] font-semibold leading-tight">{t.sidebar[sub.labelKey]}</p>
+                                  {isSubActive && <Icon icon="lucide:check" width={11} height={11} className="text-brand-olive ml-auto shrink-0" />}
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  const isChildActive = pathname === child.href;
                   return (
                     <a key={child.id} href={child.href ?? "#"} onClick={() => setDrawerOpen(false)}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 ${
@@ -311,7 +358,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
       <div
         ref={drawerRef}
-        className={`fixed left-0 top-[88px] bottom-0 z-50 w-64 bg-neutral-800/97 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out ${
+        className={`fixed left-0 top-[88px] bottom-0 z-50 w-64 bg-brand-blue/95 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

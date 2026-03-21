@@ -12,8 +12,6 @@ export const siteConfig = {
     { labelKey: "stacking", href: "/stacking" },
   ] as const,
   sidebarItems: [
-    { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
-    { labelKey: "registros", id: "registros", href: "/registros" },
     {
       labelKey: "reservas",
       id: "reservas",
@@ -45,15 +43,8 @@ export const siteConfig = {
     },
     { labelKey: "reportes", id: "reportes", href: "/reportes" },
     { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
-    {
-      labelKey: "itinerarios",
-      id: "itinerarios",
-      superadminOnly: true,
-      children: [
-        { labelKey: "serviciosPorNaviera", id: "servicios-por-naviera", href: "/itinerario/servicios" },
-        { labelKey: "consorcios", id: "consorcios", href: "/itinerario/consorcios" },
-      ],
-    },
+    { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
+    { labelKey: "registros", id: "registros", href: "/registros" },
     {
       labelKey: "configuracion",
       id: "configuracion",
@@ -65,6 +56,7 @@ export const siteConfig = {
         { labelKey: "configuracionTransportes", id: "configuracion-transportes", href: "/configuracion/transportes" },
         { labelKey: "consignatarios", id: "consignatarios", href: "/configuracion/consignatarios" },
         { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
+        { labelKey: "itinerarios", id: "itinerarios-sub", superadminOnly: true },
       ],
     },
   ],

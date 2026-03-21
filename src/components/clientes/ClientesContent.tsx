@@ -64,6 +64,7 @@ export function ClientesContent() {
   const [addForm, setAddForm] = useState<ClienteForm>(emptyForm());
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const fetchClientes = useCallback(async () => {
     setLoading(true);
@@ -199,16 +200,22 @@ export function ClientesContent() {
     }
   }, [editingRow, editForm, empresas]);
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rowData;
+    const q = search.toLowerCase();
+    return rowData.filter((r) => r.nombre.toLowerCase().includes(q) || r.condicion_pago?.toLowerCase().includes(q));
+  }, [rowData, search]);
+
   const allSelected = useMemo(
-    () => rowData.length > 0 && rowData.every((r) => selectedIds.has(r.id)),
-    [rowData, selectedIds]
+    () => filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id)),
+    [filtered, selectedIds]
   );
 
   const handleToggleAll = () => {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(rowData.map((r) => r.id)));
+      setSelectedIds(new Set(filtered.map((r) => r.id)));
     }
   };
 
@@ -223,20 +230,78 @@ export function ClientesContent() {
   return (
     <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
 
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-neutral-200 overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-        <div className="px-5 py-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-            <Icon icon="lucide:briefcase" width={18} height={18} className="text-white" />
+      {/* Hero gradient header */}
+      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-teal-700 text-white">
+        <div className="px-4 pt-5 pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:briefcase" width={22} height={22} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold leading-tight">Clientes</h1>
+                <p className="text-xs text-white/70 mt-0.5">Empresas con términos comerciales</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {selectedIds.size > 0 && (
+                <button type="button" onClick={() => void handleRemoveSelected()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-100 bg-red-500/30 hover:bg-red-500/50 transition-colors">
+                  <Icon icon="lucide:trash-2" width={13} height={13} />
+                  <span className="hidden sm:inline">Eliminar ({selectedIds.size})</span>
+                  <span className="sm:hidden">{selectedIds.size}</span>
+                </button>
+              )}
+              <button type="button" onClick={handleOpenAddModal}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-blue bg-white hover:bg-white/90 transition-colors shadow-sm">
+                <Icon icon="lucide:plus" width={14} height={14} />
+                Agregar
+              </button>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-bold text-neutral-900">Clientes</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Empresas cliente con términos comerciales. Asigna usuarios en Configuración → Usuarios.
-            </p>
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
+              <span className="text-xs font-semibold">{rowData.length} cliente{rowData.length !== 1 ? "s" : ""}</span>
+            </div>
+            {rowData.filter((r) => r.activo).length > 0 && (
+              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+                <Icon icon="lucide:check-circle" width={13} height={13} className="text-white/80" />
+                <span className="text-xs font-semibold">{rowData.filter((r) => r.activo).length} activo{rowData.filter((r) => r.activo).length !== 1 ? "s" : ""}</span>
+              </div>
+            )}
+            {selectedIds.size > 0 && (
+              <button type="button" onClick={() => setSelectedIds(new Set())}
+                className="flex items-center gap-1 bg-white/20 rounded-xl px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white transition-colors">
+                <Icon icon="lucide:x" width={11} height={11} />
+                Desmarcar
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="flex-shrink-0 bg-white border-b border-neutral-200 px-4 py-2.5 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Icon icon="lucide:search" width={13} height={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar cliente…"
+            className="w-full rounded-xl border border-neutral-200 pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-neutral-500">
+              <Icon icon="lucide:x" width={12} height={12} />
+            </button>
+          )}
+        </div>
+        <button type="button" onClick={() => void fetchClientes()}
+          className="p-2 rounded-xl text-neutral-500 bg-neutral-100 hover:bg-neutral-200 transition-colors" title="Actualizar">
+          <Icon icon="lucide:refresh-cw" width={14} height={14} />
+        </button>
       </div>
 
       {/* Error */}
@@ -247,130 +312,92 @@ export function ClientesContent() {
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="flex-shrink-0 px-3 sm:px-4 py-2.5 bg-white border-b border-neutral-200 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleOpenAddModal}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50 shadow-sm"
-        >
-          <Icon icon="lucide:plus" width={14} height={14} />
-          <span>Agregar</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleRemoveSelected()}
-          disabled={selectedIds.size === 0}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-          aria-label={selectedIds.size > 0 ? `Eliminar ${selectedIds.size} seleccionados` : "Eliminar seleccionados"}
-        >
-          <Icon icon="lucide:trash-2" width={14} height={14} />
-          <span className="hidden sm:inline">Eliminar{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}</span>
-          {selectedIds.size > 0 && <span className="sm:hidden">{selectedIds.size}</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => void fetchClientes()}
-          className="inline-flex items-center justify-center p-2 rounded-xl text-neutral-600 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-          aria-label="Actualizar"
-          title="Actualizar"
-        >
-          <Icon icon="lucide:refresh-cw" width={15} height={15} />
-        </button>
-        {selectedIds.size > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
-          >
-            Desmarcar
-          </button>
-        )}
-      </div>
-
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-4">
 
-        {rowData.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-white border border-neutral-200 flex items-center justify-center shadow-sm">
-              <Icon icon="lucide:briefcase" width={22} height={22} className="text-neutral-400" />
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <div className="w-16 h-16 rounded-3xl bg-white border border-neutral-200 flex items-center justify-center shadow-sm">
+              <Icon icon="lucide:briefcase" width={28} height={28} className="text-neutral-300" />
             </div>
-            <p className="text-sm text-neutral-400">Sin clientes aún. Agrega uno con el botón de arriba.</p>
+            <div>
+              <p className="text-sm font-semibold text-neutral-500">
+                {search ? `Sin resultados para "${search}"` : "Sin clientes aún"}
+              </p>
+              <p className="text-xs text-neutral-400 mt-1">
+                {search ? "Prueba con otro término." : "Agrega el primero con el botón de arriba."}
+              </p>
+            </div>
           </div>
         ) : (
           <>
             {/* ── Mobile cards (< md) ── */}
-            <div className="md:hidden space-y-2">
-              {rowData.map((row) => (
-                <div
-                  key={row.id}
-                  className={`bg-white rounded-2xl border shadow-sm p-4 transition-colors ${
-                    selectedIds.has(row.id) ? "border-brand-blue/40 bg-brand-blue/5" : "border-neutral-200"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(row.id)}
-                      onChange={() =>
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(row.id)) next.delete(row.id); else next.add(row.id);
-                          return next;
-                        })
-                      }
-                      className="mt-0.5 rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30 shrink-0"
-                      aria-label={`Seleccionar ${row.nombre}`}
-                    />
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <p className="font-semibold text-neutral-900 text-sm truncate">{row.nombre}</p>
+            <div className="md:hidden space-y-2.5">
+              {filtered.map((row) => {
+                const isSelected = selectedIds.has(row.id);
+                const initials = row.nombre.slice(0, 2).toUpperCase();
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next; })}
+                    className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all cursor-pointer active:scale-[0.99] ${
+                      isSelected ? "border-brand-blue ring-1 ring-brand-blue/30" : "border-neutral-200"
+                    }`}
+                  >
+                    <div className={`h-1 transition-colors ${isSelected ? "bg-brand-blue" : "bg-gradient-to-r from-brand-blue/20 to-teal-400/20"}`} />
+                    <div className="p-4">
+                      {/* Header row */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-sm font-bold transition-colors ${
+                          isSelected ? "bg-brand-blue text-white" : "bg-brand-blue/10 text-brand-blue"
+                        }`}>
+                          {isSelected ? <Icon icon="lucide:check" width={16} height={16} /> : initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-neutral-900 text-sm leading-tight truncate">{row.nombre}</p>
+                          <p className="text-[11px] text-neutral-400 mt-0.5">
+                            {row.condicion_pago ? `Pago: ${row.condicion_pago}` : "Sin condición de pago"}
+                          </p>
+                        </div>
                         {row.activo ? (
-                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                            Activo
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Activo
                           </span>
                         ) : (
                           <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-neutral-100 text-neutral-500">
-                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
-                            Inactivo
+                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />Inactivo
                           </span>
                         )}
                       </div>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs text-neutral-500 mb-3">
-                        <div>
-                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">Crédito</p>
-                          <p className="text-neutral-700 font-mono">
-                            {row.limite_credito !== null ? row.limite_credito.toLocaleString() : "—"}
+
+                      {/* Stats row */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="bg-neutral-50 rounded-xl px-3 py-2">
+                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">Límite crédito</p>
+                          <p className="text-xs font-bold text-neutral-800 mt-0.5 font-mono">
+                            {row.limite_credito !== null ? row.limite_credito.toLocaleString("es-CL") : "—"}
                           </p>
                         </div>
-                        <div>
+                        <div className="bg-neutral-50 rounded-xl px-3 py-2">
                           <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">Descuento</p>
-                          <p className="text-neutral-700">
+                          <p className="text-xs font-bold text-neutral-800 mt-0.5">
                             {row.descuento !== null ? `${row.descuento}%` : "—"}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">Pago</p>
-                          <p className="text-neutral-700 truncate">{row.condicion_pago || "—"}</p>
-                        </div>
                       </div>
+
+                      {/* Action */}
                       <button
                         type="button"
-                        onClick={() => handleEditOpen(row)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors"
-                        aria-label={`Editar ${row.nombre}`}
+                        onClick={(e) => { e.stopPropagation(); handleEditOpen(row); }}
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors"
                       >
-                        <Icon icon="lucide:pencil" width={13} height={13} />
-                        Editar
+                        <Icon icon="lucide:pencil" width={13} height={13} />Editar
                       </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* ── Desktop table (md+) ── */}
@@ -378,90 +405,67 @@ export function ClientesContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 bg-neutral-50">
-                    <th className="px-4 py-2.5 w-10">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={handleToggleAll}
+                    <th className="px-4 py-3 w-10">
+                      <input type="checkbox" checked={allSelected} onChange={handleToggleAll}
                         className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                        aria-label="Seleccionar todos"
-                      />
+                        aria-label="Seleccionar todos" />
                     </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Cliente / Empresa</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Límite crédito</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Condición pago</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Descuento</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Estado</th>
-                    <th className="px-4 py-2.5 w-20" />
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Cliente / Empresa</th>
+                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Límite crédito</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Condición pago</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Descuento</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Estado</th>
+                    <th className="px-4 py-3 w-20" />
                   </tr>
                 </thead>
-                <tbody>
-                  {rowData.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={`border-t border-neutral-100 transition-colors ${
-                        selectedIds.has(row.id) ? "bg-brand-blue/5" : "hover:bg-neutral-50"
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(row.id)}
-                          onChange={() =>
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(row.id)) next.delete(row.id); else next.add(row.id);
-                              return next;
-                            })
-                          }
-                          className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                          aria-label={`Seleccionar ${row.nombre}`}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-neutral-900">{row.nombre}</span>
-                      </td>
-                      <td className="px-4 py-3 text-neutral-600">
-                        {row.limite_credito !== null ? (
-                          <span className="font-mono text-xs">{row.limite_credito.toLocaleString()}</span>
-                        ) : (
-                          <span className="text-neutral-400 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-600 text-xs">
-                        {row.condicion_pago || <span className="text-neutral-400">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-600 text-xs">
-                        {row.descuento !== null ? `${row.descuento}%` : <span className="text-neutral-400">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {row.activo ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-neutral-100 text-neutral-500">
-                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
-                            Inactivo
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => handleEditOpen(row)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-brand-blue hover:bg-brand-blue/10 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                          aria-label={`Editar ${row.nombre}`}
-                        >
-                          <Icon icon="lucide:pencil" width={12} height={12} />
-                          Editar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-neutral-100">
+                  {filtered.map((row) => {
+                    const initials = row.nombre.slice(0, 2).toUpperCase();
+                    return (
+                      <tr key={row.id} className={`transition-colors ${selectedIds.has(row.id) ? "bg-brand-blue/5" : "hover:bg-neutral-50"}`}>
+                        <td className="px-4 py-3">
+                          <input type="checkbox" checked={selectedIds.has(row.id)}
+                            onChange={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next; })}
+                            className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
+                            aria-label={`Seleccionar ${row.nombre}`} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center shrink-0">{initials}</div>
+                            <span className="font-semibold text-neutral-900 text-sm">{row.nombre}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {row.limite_credito !== null
+                            ? <span className="font-mono text-xs font-semibold text-neutral-700">{row.limite_credito.toLocaleString("es-CL")}</span>
+                            : <span className="text-neutral-400 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-neutral-600">{row.condicion_pago || <span className="text-neutral-400">—</span>}</td>
+                        <td className="px-4 py-3 text-xs text-neutral-600">
+                          {row.descuento !== null
+                            ? <span className="font-semibold text-neutral-700">{row.descuento}%</span>
+                            : <span className="text-neutral-400">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.activo
+                            ? <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Activo</span>
+                            : <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-neutral-100 text-neutral-500"><span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />Inactivo</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button type="button" onClick={() => handleEditOpen(row)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-brand-blue hover:bg-brand-blue/10 transition-colors">
+                            <Icon icon="lucide:pencil" width={12} height={12} />Editar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <div className="px-4 py-2.5 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between">
+                <span className="text-[11px] text-neutral-400">{filtered.length} cliente{filtered.length !== 1 ? "s" : ""}{search ? ` · filtrado de ${rowData.length}` : ""}</span>
+                {selectedIds.size > 0 && <span className="text-[11px] text-brand-blue font-medium">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>}
+              </div>
             </div>
           </>
         )}
@@ -477,10 +481,12 @@ export function ClientesContent() {
           onClick={() => setShowAddModal(false)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-none"
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+            </div>
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-neutral-200 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center">
@@ -598,10 +604,12 @@ export function ClientesContent() {
           onClick={handleEditClose}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-none"
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+            </div>
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-neutral-200 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center">

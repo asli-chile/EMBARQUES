@@ -3,7 +3,8 @@ import { useLocale } from "@/lib/i18n";
 import { brand, icons } from "@/lib/brand";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 interface KpiData {
@@ -97,6 +98,16 @@ export function InicioContent() {
     documentosPendientes: 0,
   });
   const [loadingKpis, setLoadingKpis] = useState(true);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+
+  useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch {
+      setSupabase(null);
+      setLoadingKpis(false);
+    }
+  }, []);
 
   useEffect(() => {
     const mainElement = mainRef.current;
@@ -117,9 +128,8 @@ export function InicioContent() {
     }
   }, []);
 
-  const supabase = useMemo(() => createClient(), []);
-
   useEffect(() => {
+    if (!supabase) return;
     const fetchKpiData = async () => {
       try {
         const today = new Date();

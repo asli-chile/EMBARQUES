@@ -1,33 +1,123 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
-import { Sidebar } from "./Sidebar";
 import { ConfigGuard } from "./ConfigGuard";
 import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
-import { ClientesContent } from "@/components/clientes";
-import { AsignarClientesEmpresasContent } from "@/components/configuracion/AsignarClientesEmpresasContent";
-import { TransportesConfigContent } from "@/components/configuracion/TransportesConfigContent";
-import { ConsignatariosContent } from "@/components/configuracion/ConsignatariosContent";
-import { UsuariosContent } from "@/components/usuarios/UsuariosContent";
-import { DashboardContent } from "@/components/dashboard";
-import { InicioContent } from "@/components/inicio";
-import { ServiciosContent } from "@/components/servicios";
-import { SobreNosotrosContent } from "@/components/sobre-nosotros";
-import { TrackingContent } from "@/components/tracking/TrackingContent";
-import { ItinerarioContent } from "@/components/itinerario/ItinerarioContent";
-import { ServiciosUnicosContent } from "@/components/itinerario/ServiciosUnicosContent";
-import { StackingContent } from "@/components/stacking/StackingContent";
-import { ConsorciosContent } from "@/components/itinerario/ConsorciosContent";
-import { RegistrosContent } from "@/components/registros";
-import { ReportesContent } from "@/components/reportes";
-import { FinanzasContent } from "@/components/finanzas";
-import { CrearReservaContent, MisReservasContent, PapeleraContent } from "@/components/reservas";
-import { ReservaAsliContent, ReservaExtContent, FacturacionContent, PapeleraTransportesContent } from "@/components/transportes";
-import { MisDocumentosContent, CrearInstructivoContent, CrearProformaContent } from "@/components/documentos";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
 import { Toaster } from "sileo";
+import { lazy, Suspense, type ReactNode } from "react";
+
+/** Cada ruta en su propio chunk: evita cargar MapLibre/xlsx/ag-grid en /inicio (crítico en Android + Vite dev). */
+const LazyDashboardContent = lazy(() =>
+  import("@/components/dashboard").then((m) => ({ default: m.DashboardContent })),
+);
+const LazyInicioContent = lazy(() =>
+  import("@/components/inicio").then((m) => ({ default: m.InicioContent })),
+);
+const LazyServiciosContent = lazy(() =>
+  import("@/components/servicios").then((m) => ({ default: m.ServiciosContent })),
+);
+const LazySobreNosotrosContent = lazy(() =>
+  import("@/components/sobre-nosotros").then((m) => ({ default: m.SobreNosotrosContent })),
+);
+const LazyTrackingContent = lazy(() =>
+  import("@/components/tracking/TrackingContent").then((m) => ({ default: m.TrackingContent })),
+);
+const LazyItinerarioContent = lazy(() =>
+  import("@/components/itinerario/ItinerarioContent").then((m) => ({ default: m.ItinerarioContent })),
+);
+const LazyServiciosUnicosContent = lazy(() =>
+  import("@/components/itinerario/ServiciosUnicosContent").then((m) => ({ default: m.ServiciosUnicosContent })),
+);
+const LazyStackingContent = lazy(() =>
+  import("@/components/stacking/StackingContent").then((m) => ({ default: m.StackingContent })),
+);
+const LazyConsorciosContent = lazy(() =>
+  import("@/components/itinerario/ConsorciosContent").then((m) => ({ default: m.ConsorciosContent })),
+);
+const LazyRegistrosContent = lazy(() =>
+  import("@/components/registros").then((m) => ({ default: m.RegistrosContent })),
+);
+const LazyReportesContent = lazy(() =>
+  import("@/components/reportes").then((m) => ({ default: m.ReportesContent })),
+);
+const LazyFinanzasContent = lazy(() =>
+  import("@/components/finanzas").then((m) => ({ default: m.FinanzasContent })),
+);
+const LazyClientesContent = lazy(() =>
+  import("@/components/clientes").then((m) => ({ default: m.ClientesContent })),
+);
+const LazyAsignarClientesEmpresasContent = lazy(() =>
+  import("@/components/configuracion/AsignarClientesEmpresasContent").then((m) => ({
+    default: m.AsignarClientesEmpresasContent,
+  })),
+);
+const LazyTransportesConfigContent = lazy(() =>
+  import("@/components/configuracion/TransportesConfigContent").then((m) => ({
+    default: m.TransportesConfigContent,
+  })),
+);
+const LazyConsignatariosContent = lazy(() =>
+  import("@/components/configuracion/ConsignatariosContent").then((m) => ({
+    default: m.ConsignatariosContent,
+  })),
+);
+const LazyUsuariosContent = lazy(() =>
+  import("@/components/usuarios/UsuariosContent").then((m) => ({ default: m.UsuariosContent })),
+);
+const LazyCrearReservaContent = lazy(() =>
+  import("@/components/reservas").then((m) => ({ default: m.CrearReservaContent })),
+);
+const LazyMisReservasContent = lazy(() =>
+  import("@/components/reservas").then((m) => ({ default: m.MisReservasContent })),
+);
+const LazyPapeleraContent = lazy(() =>
+  import("@/components/reservas").then((m) => ({ default: m.PapeleraContent })),
+);
+const LazyReservaAsliContent = lazy(() =>
+  import("@/components/transportes").then((m) => ({ default: m.ReservaAsliContent })),
+);
+const LazyReservaExtContent = lazy(() =>
+  import("@/components/transportes").then((m) => ({ default: m.ReservaExtContent })),
+);
+const LazyFacturacionContent = lazy(() =>
+  import("@/components/transportes").then((m) => ({ default: m.FacturacionContent })),
+);
+const LazyPapeleraTransportesContent = lazy(() =>
+  import("@/components/transportes").then((m) => ({ default: m.PapeleraTransportesContent })),
+);
+const LazyMisDocumentosContent = lazy(() =>
+  import("@/components/documentos").then((m) => ({ default: m.MisDocumentosContent })),
+);
+const LazyCrearInstructivoContent = lazy(() =>
+  import("@/components/documentos").then((m) => ({ default: m.CrearInstructivoContent })),
+);
+const LazyCrearProformaContent = lazy(() =>
+  import("@/components/documentos").then((m) => ({ default: m.CrearProformaContent })),
+);
+
+function RouteFallback() {
+  return (
+    <main
+      className="flex-1 min-h-0 min-w-0 overflow-auto bg-neutral-100 flex items-center justify-center"
+      role="main"
+      style={{ minHeight: "120px" }}
+    >
+      <p
+        className="text-neutral-500 text-sm"
+        style={{ margin: 0, fontFamily: "system-ui, sans-serif", color: "#737373" }}
+      >
+        Cargando módulo…
+      </p>
+    </main>
+  );
+}
+
+function Sus({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
+}
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -57,63 +147,151 @@ export function AppShell({ children, pathname }: AppShellProps) {
 
   const mainContent =
     pathname === "/dashboard" ? (
-      <DashboardContent />
+      <Sus>
+        <LazyDashboardContent />
+      </Sus>
     ) : pathname === "/inicio" ? (
-      <InicioContent />
+      <Sus>
+        <LazyInicioContent />
+      </Sus>
     ) : pathname === "/servicios" ? (
-      <ServiciosContent />
+      <Sus>
+        <LazyServiciosContent />
+      </Sus>
     ) : pathname === "/sobre-nosotros" ? (
-      <SobreNosotrosContent />
+      <Sus>
+        <LazySobreNosotrosContent />
+      </Sus>
     ) : pathname === "/tracking" ? (
-      <TrackingContent />
+      <Sus>
+        <LazyTrackingContent />
+      </Sus>
     ) : pathname === "/itinerario" ? (
-      <ItinerarioContent />
+      <Sus>
+        <LazyItinerarioContent />
+      </Sus>
     ) : pathname === "/stacking" ? (
-      <StackingContent />
+      <Sus>
+        <LazyStackingContent />
+      </Sus>
     ) : pathname === "/itinerario/servicios" ? (
       <ConfigGuard forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
-        <ServiciosUnicosContent />
+        <Sus>
+          <LazyServiciosUnicosContent />
+        </Sus>
       </ConfigGuard>
     ) : pathname === "/itinerario/consorcios" ? (
       <ConfigGuard forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
-        <ConsorciosContent />
+        <Sus>
+          <LazyConsorciosContent />
+        </Sus>
       </ConfigGuard>
     ) : pathname === "/registros" ? (
-      <ModuleWithVisitorInfo moduleKey="registros"><RegistrosContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="registros">
+        <Sus>
+          <LazyRegistrosContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/reportes" ? (
-      <ModuleWithVisitorInfo moduleKey="reportes"><ReportesContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="reportes">
+        <Sus>
+          <LazyReportesContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/finanzas" ? (
-      <ModuleWithVisitorInfo moduleKey="finanzas"><FinanzasContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="finanzas">
+        <Sus>
+          <LazyFinanzasContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/configuracion/clientes" ? (
-      <ConfigGuard><ClientesContent /></ConfigGuard>
+      <ConfigGuard>
+        <Sus>
+          <LazyClientesContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/configuracion/asignar-clientes-empresas" ? (
-      <ConfigGuard><AsignarClientesEmpresasContent /></ConfigGuard>
+      <ConfigGuard>
+        <Sus>
+          <LazyAsignarClientesEmpresasContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/configuracion/transportes" ? (
-      <ConfigGuard><TransportesConfigContent /></ConfigGuard>
+      <ConfigGuard>
+        <Sus>
+          <LazyTransportesConfigContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/configuracion/usuarios" ? (
-      <ConfigGuard><UsuariosContent /></ConfigGuard>
+      <ConfigGuard>
+        <Sus>
+          <LazyUsuariosContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/configuracion/consignatarios" ? (
-      <ConfigGuard><ConsignatariosContent /></ConfigGuard>
+      <ConfigGuard>
+        <Sus>
+          <LazyConsignatariosContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/reservas/crear" ? (
-      <ModuleWithVisitorInfo moduleKey="crearReserva"><CrearReservaContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="crearReserva">
+        <Sus>
+          <LazyCrearReservaContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/reservas/mis-reservas" ? (
-      <ModuleWithVisitorInfo moduleKey="misReservas"><MisReservasContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="misReservas">
+        <Sus>
+          <LazyMisReservasContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/reservas/papelera" ? (
-      <ModuleWithVisitorInfo moduleKey="papelera"><PapeleraContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="papelera">
+        <Sus>
+          <LazyPapeleraContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/transportes/reserva-asli" ? (
-      <ModuleWithVisitorInfo moduleKey="reservaAsli"><ReservaAsliContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="reservaAsli">
+        <Sus>
+          <LazyReservaAsliContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/transportes/reserva-ext" ? (
-      <ModuleWithVisitorInfo moduleKey="reservaExt"><ReservaExtContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="reservaExt">
+        <Sus>
+          <LazyReservaExtContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/transportes/facturacion" ? (
-      <ModuleWithVisitorInfo moduleKey="facturacion"><FacturacionContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="facturacion">
+        <Sus>
+          <LazyFacturacionContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/transportes/papelera" ? (
-      <PapeleraTransportesContent />
+      <Sus>
+        <LazyPapeleraTransportesContent />
+      </Sus>
     ) : pathname === "/documentos/mis-documentos" ? (
-      <ModuleWithVisitorInfo moduleKey="misDocumentos"><MisDocumentosContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="misDocumentos">
+        <Sus>
+          <LazyMisDocumentosContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/documentos/crear-instructivo" ? (
-      <ModuleWithVisitorInfo moduleKey="crearInstructivo"><CrearInstructivoContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="crearInstructivo">
+        <Sus>
+          <LazyCrearInstructivoContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/documentos/crear-proforma" ? (
-      <ModuleWithVisitorInfo moduleKey="crearProforma"><CrearProformaContent /></ModuleWithVisitorInfo>
+      <ModuleWithVisitorInfo moduleKey="crearProforma">
+        <Sus>
+          <LazyCrearProformaContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : (
       children
     );
@@ -125,9 +303,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <div className="h-dvh flex flex-col overflow-hidden">
             <Header />
             <NavBanner pathname={pathname} />
-            <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
-              {mainContent}
-            </div>
+            <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">{mainContent}</div>
           </div>
           <AuthFormModalOverlay />
           <Toaster position="bottom-right" />

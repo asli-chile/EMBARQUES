@@ -8,6 +8,7 @@ import tailwind from "@astrojs/tailwind";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  devToolbar: { enabled: false },
   integrations: [
     react(),
     tailwind({
@@ -24,6 +25,15 @@ export default defineConfig({
     checkOrigin: false,
   },
   vite: {
+    // Acceso desde celular/tablet en la misma Wi‑Fi.
+    server: {
+      host: true,
+      strictPort: true,
+      hmr: {
+        clientPort: 4321,
+      },
+      allowedHosts: true,
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),

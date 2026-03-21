@@ -35,8 +35,43 @@ const pathname = Astro.url.pathname;
     </style>
   </head>
   <body class="h-screen overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
-    <AppShell client:only="react" pathname={pathname}>
+    <div
+      id="app-shell-loading"
+      class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-white px-6 text-center text-neutral-600"
+      style="position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#fff;padding:0 24px;text-align:center;font-family:system-ui,sans-serif"
+    >
+      <p style="margin:0;font-size:14px;font-weight:600;color:#11224E">Cargando aplicación…</p>
+      <p id="app-shell-loading-hint" class="hidden max-w-sm text-xs text-neutral-500" style="display:none;max-width:20rem;margin:0;font-size:12px;line-height:1.45;color:#737373">
+        Si esto no desaparece, el JavaScript falló en este dispositivo. En Chrome (Android): USB → Depurar en el PC
+        (chrome://inspect). Revisa la consola y la pestaña Red por URLs en rojo (a veces fallan rutas con espacios en la carpeta del proyecto).
+      </p>
+    </div>
+    <AppShell client:load pathname={pathname}>
       <slot />
     </AppShell>
+    <script is:inline>
+      (function () {
+        var hint = document.getElementById("app-shell-loading-hint");
+        var t = setTimeout(function () {
+          if (hint) {
+            hint.classList.remove("hidden");
+            hint.style.display = "block";
+          }
+        }, 12000);
+        function bind() {
+          var island = document.querySelector("astro-island");
+          if (!island) {
+            requestAnimationFrame(bind);
+            return;
+          }
+          island.addEventListener("astro:hydrate", function () {
+            clearTimeout(t);
+            var el = document.getElementById("app-shell-loading");
+            if (el) el.remove();
+          });
+        }
+        bind();
+      })();
+    </script>
   </body>
 </html>

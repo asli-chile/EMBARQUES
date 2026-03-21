@@ -514,9 +514,34 @@ export function UsuariosContent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col bg-neutral-100 overflow-hidden" role="main">
+
+      {/* Hero gradient header */}
+      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-indigo-700 text-white">
+        <div className="px-4 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:users" width={22} height={22} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold leading-tight">{t.sidebar.usuarios}</h1>
+              <p className="text-xs text-white/70 mt-0.5">Crea cuentas, asigna roles y empresas</p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:user-check" width={13} height={13} className="text-white/80" />
+              <span className="text-xs font-semibold">{usuarios.filter((u) => u.auth_id).length} activo{usuarios.filter((u) => u.auth_id).length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
+              <span className="text-xs font-semibold">{usuarios.length} total</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 sm:gap-4 sm:p-4 overflow-hidden">
         <aside className="flex-shrink-0 lg:w-80 xl:w-96 bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
           {/* Aside header — on mobile also acts as toggle */}
           <button
             type="button"
@@ -525,10 +550,10 @@ export function UsuariosContent() {
             aria-expanded={showCreateForm}
           >
             <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:users" width={18} height={18} className="text-white" />
+              <Icon icon="lucide:user-plus" width={17} height={17} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-bold text-neutral-900">{t.sidebar.usuarios}</h1>
+              <p className="text-sm font-bold text-neutral-900">Nueva cuenta</p>
               <p className="text-xs text-neutral-500 mt-0.5">Crea cuentas y asígnales roles.</p>
             </div>
             <Icon
@@ -652,7 +677,6 @@ export function UsuariosContent() {
         </aside>
 
         <section className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
           <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-200 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-sm font-bold text-neutral-900">

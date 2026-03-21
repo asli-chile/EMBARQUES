@@ -210,18 +210,27 @@ export function AsignarClientesEmpresasContent() {
   return (
     <main className="flex-1 min-h-0 flex flex-col bg-neutral-100 overflow-hidden" role="main">
 
-      {/* Page header */}
-      <div className="flex-shrink-0 bg-white border-b border-neutral-200 overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-        <div className="px-5 py-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-            <Icon icon="lucide:link" width={18} height={18} className="text-white" />
+      {/* Hero gradient header */}
+      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-violet-700 text-white">
+        <div className="px-4 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:link" width={22} height={22} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold leading-tight">Asignar clientes a empresas</h1>
+              <p className="text-xs text-white/70 mt-0.5">Gestiona el acceso de usuarios cliente por empresa</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-bold text-neutral-900">Asignar clientes a empresas</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Selecciona una empresa y marca los usuarios cliente que tendrán acceso a sus datos.
-            </p>
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
+              <span className="text-xs font-semibold">{empresas.length} empresa{empresas.length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
+              <span className="text-xs font-semibold">{usuariosCliente.length} cliente{usuariosCliente.length !== 1 ? "s" : ""}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -230,7 +239,7 @@ export function AsignarClientesEmpresasContent() {
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
 
         {/* ── Left panel: empresa list ── */}
-        <div className="flex-shrink-0 h-52 sm:h-60 lg:h-auto lg:w-64 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="flex-shrink-0 h-48 sm:h-56 lg:h-auto lg:w-64 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-neutral-100 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Empresas</span>
