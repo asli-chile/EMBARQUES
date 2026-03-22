@@ -5,6 +5,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tamaño base global — escala todos los rem de Tailwind ── */
+html {
+  font-size: 112.5%; /* 18px base → text-xs=13.5px  text-sm=15.75px  text-base=18px */
+}
+
 /* ── Ocultar scrollbar manteniendo scroll funcional ── */
 .scrollbar-hide {
   scrollbar-width: none;       /* Firefox */
