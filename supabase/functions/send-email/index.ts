@@ -257,5 +257,6 @@ function buildRawEmail(
     raw = parts.join("\r\n");
   }
 
-  return b64url(raw);
+  // Encode as UTF-8 bytes so btoa doesn't fail on non-Latin1 chars (em dash, smart quotes, etc.)
+  return b64url(new TextEncoder().encode(raw));
 }

@@ -991,7 +991,7 @@ export function ReservaExtContent() {
         mimeType: "application/pdf",
       }];
 
-      const result = await sendEmail({ to: "informaciones@asli.cl", subject, body, attachments });
+      const result = await sendEmail({ to: "roodericus7@gmail.com", subject, body, attachments });
 
       if (result.success) {
         setInstrPhase("sent");

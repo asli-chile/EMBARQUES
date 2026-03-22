@@ -14,25 +14,19 @@ export async function sendEmail(params: {
 }): Promise<{ success: boolean; sender?: string; error?: string }> {
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
 
-    if (!session) return { success: false, error: "No hay sesión activa." };
+    const { data, error } = await supabase.functions.invoke("send-email", {
+      body: params,
+    });
 
-    const res = await fetch(
-      `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify(params),
-      }
-    );
+    if (error) {
+      console.error("[sendEmail] Error:", error);
+      return { success: false, error: error.message ?? "Error al invocar el servicio de correo." };
+    }
 
-    const data = await res.json() as { success: boolean; error?: string; sender?: string };
-    return data;
+    const result = data as { success: boolean; error?: string; sender?: string };
+    if (!result?.success) console.error("[sendEmail] Error del servidor:", result?.error);
+    return result ?? { success: false, error: "Respuesta vacía del servidor." };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Error de red." };
   }

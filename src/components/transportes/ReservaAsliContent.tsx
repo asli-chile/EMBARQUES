@@ -832,18 +832,57 @@ export function ReservaAsliContent() {
     const subject = buildInstructivoSubject(selectedOperacion);
     const body    = buildInstructivoPlainBody(selectedOperacion);
 
-    // Convertir PDF a base64 para adjuntar
-    const arrayBuffer = await instrBlob.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = "";
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    // Helper: blob → base64
+    const blobToBase64 = async (blob: Blob): Promise<string> => {
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    };
+
+    // Adjunto 1: Instructivo (Excel o PDF del formato)
+    const mimeType = instrFilename.endsWith(".xlsx")
+      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      : "application/pdf";
+
     const attachments: EmailAttachment[] = [{
-      name: instrFilename || "Instructivo.pdf",
-      content: btoa(binary),
-      mimeType: "application/pdf",
+      name: instrFilename || "Instructivo.xlsx",
+      content: await blobToBase64(instrBlob),
+      mimeType,
     }];
 
-    const result = await sendEmail({ to: "informaciones@asli.cl", subject, body, attachments });
+    // Adjunto 2: PDF de la reserva — buscar en tabla documentos (sincronizado),
+    // con fallback a booking_doc_url si no hay entrada en la tabla.
+    let reservaUrl: string | null = null;
+    if (supabase) {
+      const { data: docRow } = await supabase
+        .from("documentos")
+        .select("url")
+        .eq("operacion_id", selectedOperacion.id)
+        .eq("tipo", "SOLICITUD_RESERVA")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      reservaUrl = docRow?.url ?? null;
+    }
+    if (!reservaUrl) reservaUrl = selectedOperacion.booking_doc_url;
+    if (reservaUrl) {
+      try {
+        const res = await fetch(reservaUrl);
+        if (res.ok) {
+          const reservaBlob = await res.blob();
+          const ext = reservaUrl.split("?")[0].split(".").pop() ?? "pdf";
+          attachments.push({
+            name: `Reserva_${selectedOperacion.ref_asli}.${ext}`,
+            content: await blobToBase64(reservaBlob),
+            mimeType: ext === "pdf" ? "application/pdf" : "application/octet-stream",
+          });
+        }
+      } catch { /* si no se puede descargar, igual envía con solo el instructivo */ }
+    }
+
+    const result = await sendEmail({ to: "roodericus7@gmail.com", subject, body, attachments });
 
     if (result.success) {
       setInstrPhase("sent");

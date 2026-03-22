@@ -337,7 +337,7 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
   const handleEnviar = async () => {
     setSending(true);
     setError(null);
-    const result = await sendEmail({ to: "informaciones@asli.cl", subject, body });
+    const result = await sendEmail({ to: "roodericus7@gmail.com", subject, body });
     setSending(false);
     if (result.success) {
       setSent(true);
@@ -364,11 +364,11 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
         {sent ? (
           <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
             <Icon icon="lucide:send" width={14} height={14} className="shrink-0" />
-            Correo enviado a <strong>informaciones@asli.cl</strong> desde tu cuenta.
+            Correo enviado a <strong>roodericus7@gmail.com</strong> desde tu cuenta.
           </div>
         ) : (
           <div className="mb-4 space-y-2">
-            <p className="text-xs text-neutral-600">El correo se enviará desde tu cuenta <strong>@asli.cl</strong> a <strong>informaciones@asli.cl</strong>.</p>
+            <p className="text-xs text-neutral-600">El correo se enviará desde tu cuenta <strong>@asli.cl</strong> a <strong>roodericus7@gmail.com</strong>.</p>
             <div className="px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
               <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">{tr.emailSubject}</p>
               <p className="text-xs text-neutral-700 font-medium leading-snug line-clamp-2">{subject}</p>

@@ -345,7 +345,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
       <div
         ref={drawerRef}
-        className={`fixed left-0 top-[88px] bottom-0 z-50 w-64 bg-brand-blue/95 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out ${
+        className={`fixed left-0 top-[50px] bottom-0 z-50 w-64 bg-brand-blue/95 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -369,7 +369,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
         {isLoggedIn && <div className="mx-3 mb-2 border-t border-white/10 flex-shrink-0" />}
 
         {/* Items de navegación */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 pt-3 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 pt-3 pb-4">
           {sidebarDrawerContent}
         </div>
 

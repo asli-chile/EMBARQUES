@@ -1128,10 +1128,10 @@ export function CrearReservaContent() {
               <span className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                 <Icon icon="typcn:business-card" width={18} height={18} className="text-brand-blue" />
               </span>
-              <h3 className="font-bold text-neutral-900">Agregar nueva empresa</h3>
+              <h3 className="font-bold text-neutral-900">{tr.addNewEmpresa}</h3>
             </div>
             <p className="text-sm text-neutral-500 mb-4">
-              ¿Agregar <span className="font-semibold text-neutral-800">"{clienteInput}"</span> a la lista de empresas?
+              {tr.confirmAddEmpresa} <span className="font-semibold text-neutral-800">"{clienteInput}"</span>
             </p>
             <div className="flex gap-2 justify-end">
               <button
@@ -1140,7 +1140,7 @@ export function CrearReservaContent() {
                 className="px-4 py-2 text-sm text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors font-medium"
                 disabled={addingCliente}
               >
-                Cancelar
+                {tr.btnCancel}
               </button>
               <button
                 type="button"
@@ -1148,7 +1148,7 @@ export function CrearReservaContent() {
                 disabled={addingCliente}
                 className="px-4 py-2 text-sm bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold disabled:opacity-50 shadow-md shadow-brand-blue/20"
               >
-                {addingCliente ? "Agregando..." : "Agregar"}
+                {addingCliente ? tr.btnAdding : tr.btnAdd}
               </button>
             </div>
           </div>
@@ -1258,8 +1258,8 @@ export function CrearReservaContent() {
                 <Icon icon="typcn:eye" width={17} height={17} className="text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900 leading-tight">Vista previa</h3>
-                <p className="text-[11px] text-neutral-400 mt-0.5">Confirma los datos antes de crear</p>
+                <h3 className="text-sm font-bold text-neutral-900 leading-tight">{tr.previewTitle}</h3>
+                <p className="text-[11px] text-neutral-400 mt-0.5">{tr.previewHint}</p>
               </div>
             </div>
             <button
@@ -1281,11 +1281,11 @@ export function CrearReservaContent() {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
                     <p className="text-base font-bold text-neutral-900 leading-tight truncate">
-                      {clienteNombre !== "-" ? clienteNombre : "Sin cliente"}
+                      {clienteNombre !== "-" ? clienteNombre : tr.noClient}
                     </p>
                     <p className="text-xs text-neutral-500 mt-0.5">
                       {[especieNombre !== "-" ? especieNombre : null, formData.tipo_unidad || null]
-                        .filter(Boolean).join(" · ") || "Sin datos de carga"}
+                        .filter(Boolean).join(" · ") || tr.noCargoData}
                     </p>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${esCfg.bg} ${esCfg.text}`}>
@@ -1299,7 +1299,7 @@ export function CrearReservaContent() {
                 {/* Naviera · Nave + Ruta */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none mb-0.5">Naviera · Nave</p>
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none mb-0.5">{tr.navieraNaveLabel}</p>
                     <p className="text-sm font-semibold text-neutral-800 truncate">
                       {[navieraNombre !== "-" ? navieraNombre : null, naveNombre !== "-" ? naveNombre : null].filter(Boolean).join(" · ") || "—"}
                     </p>
@@ -1332,7 +1332,7 @@ export function CrearReservaContent() {
                     )}
                     {transitTime !== null && (
                       <span className="ml-auto px-2.5 py-0.5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0">
-                        {transitTime}d tránsito
+                        {transitTime}d {tr.transitDays}
                       </span>
                     )}
                   </div>
@@ -1373,7 +1373,7 @@ export function CrearReservaContent() {
             {/* Selector de copias */}
             <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
               <Icon icon="typcn:document-add" width={16} height={16} className="text-neutral-400 shrink-0" />
-              <span className="text-sm text-neutral-600 flex-1">Copias a guardar</span>
+              <span className="text-sm text-neutral-600 flex-1">{tr.copiesLabel}</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1400,7 +1400,7 @@ export function CrearReservaContent() {
                 onClick={() => setShowPreview(false)}
                 className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors shrink-0"
               >
-                Editar
+                {tr.btnEdit}
               </button>
               <button
                 type="button"
@@ -1412,7 +1412,7 @@ export function CrearReservaContent() {
                   <><Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />{tr.guardando}</>
                 ) : (
                   <><Icon icon="typcn:input-checked" width={16} height={16} />
-                  {copias > 1 ? `Guardar ${copias} reservas` : tr.guardar}</>
+                  {copias > 1 ? `${tr.saveMultiple} (${copias})` : tr.guardar}</>
                 )}
               </button>
             </div>
@@ -1475,7 +1475,7 @@ export function CrearReservaContent() {
                 }
               }}
               onAddNew={profile?.rol !== "cliente" ? () => { setShowAddClienteModal(true); } : undefined}
-              addNewLabel={() => "Agregar como nueva empresa"}
+              addNewLabel={() => tr.addNewLabel}
               placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
               disabled={isReadOnly}
               readOnly={isReadOnly}
@@ -1509,9 +1509,9 @@ export function CrearReservaContent() {
             setFormData((prev) => ({ ...prev, especie: "" }));
           }}
           onAddNew={handleAddEspecie}
-          addNewLabel={(text) => `Agregar "${text}" como nueva especie`}
+          addNewLabel={(text) => `${tr.addNewEspecie} "${text}"`}
           addingNew={addingEspecie}
-          placeholder="Buscar o escribir especie..."
+          placeholder={tr.searchEspecie}
           disabled={loadingCatalogos}
         />
         {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
@@ -1519,7 +1519,7 @@ export function CrearReservaContent() {
           <label htmlFor="ventilacion" className={labelClass}>
             {tr.ventilacion}
             {formData.tipo_atmosfera && (
-              <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· forzado por atmósfera (0 CBM/h)</span>
+              <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· {tr.ventilacionNote}</span>
             )}
           </label>
           <input
@@ -1548,7 +1548,7 @@ export function CrearReservaContent() {
             type="number"
             value={formData.tratamiento_frio_o2}
             onChange={handleChange}
-            placeholder="Ej: 21"
+            placeholder={tr.placeholderO2}
             className={inputClass}
             disabled={!formData.tipo_atmosfera}
           />
@@ -1561,7 +1561,7 @@ export function CrearReservaContent() {
             type="number"
             value={formData.tratamiento_frio_co2}
             onChange={handleChange}
-            placeholder="Ej: 5"
+            placeholder={tr.placeholderCO2}
             className={inputClass}
             disabled={!formData.tipo_atmosfera}
           />
@@ -1577,7 +1577,7 @@ export function CrearReservaContent() {
           <label htmlFor="viaje" className={labelClass}>
             {tr.viaje}
             {viajesSugeridos.length > 0 && !viajeInputManual && (
-              <span className="ml-2 text-brand-blue font-normal normal-case">desde itinerario</span>
+              <span className="ml-2 text-brand-blue font-normal normal-case">{tr.fromItinerary}</span>
             )}
           </label>
           {viajesSugeridos.length > 0 && !viajeInputManual ? (
@@ -1613,7 +1613,7 @@ export function CrearReservaContent() {
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, viaje: e.target.value }))
                 }
-                placeholder="Ej: 241N"
+                placeholder={tr.placeholderViaje}
                 className={`${inputClass} flex-1`}
                 autoComplete="one-time-code"
                 inputMode="text"
@@ -1644,7 +1644,7 @@ export function CrearReservaContent() {
               onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
               dateFormat="dd-MM-yyyy"
               locale="es"
-              placeholderText="dd-mm-aaaa"
+              placeholderText={tr.datePlaceholder}
               className={inputClass}
               isClearable
               autoComplete="one-time-code"
@@ -1659,14 +1659,14 @@ export function CrearReservaContent() {
               onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
               dateFormat="dd-MM-yyyy"
               locale="es"
-              placeholderText="dd-mm-aaaa"
+              placeholderText={tr.datePlaceholder}
               className={inputClass}
               isClearable
               autoComplete="one-time-code"
             />
           </div>
           <div>
-            <label className={labelClass}>TT (días)</label>
+            <label className={labelClass}>{tr.ttDays}</label>
             <div className="rounded-lg border border-neutral-300 bg-brand-blue/5 px-4 py-2.5 flex items-center justify-center font-bold text-brand-blue text-lg">
               {transitTime !== null ? transitTime : "-"}
             </div>
@@ -1693,9 +1693,9 @@ export function CrearReservaContent() {
             setFormData((prev) => ({ ...prev, planta_presentacion: "" }));
           }}
           onAddNew={handleAddPlanta}
-          addNewLabel={(text) => `Agregar "${text}" como nueva planta`}
+          addNewLabel={(text) => `${tr.addNewPlanta} "${text}"`}
           addingNew={addingPlanta}
-          placeholder="Buscar o escribir planta..."
+          placeholder={tr.searchPlanta}
           disabled={loadingCatalogos}
         />
         <div>
@@ -1773,10 +1773,10 @@ export function CrearReservaContent() {
                   type="button"
                   onClick={loadDatosDePrueba}
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
-                  title="Cargar datos de prueba"
+                  title={tr.loadTestData}
                 >
                   <Icon icon="typcn:flash" width={13} height={13} />
-                  Datos de prueba
+                  {tr.testDataBtn}
                 </button>
               )}
               <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
@@ -1847,10 +1847,10 @@ export function CrearReservaContent() {
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
                   <Icon icon="typcn:warning" width={24} height={24} className="text-red-500" />
                 </div>
-                <h3 className="font-bold text-neutral-900 mb-2">Error al guardar</h3>
+                <h3 className="font-bold text-neutral-900 mb-2">{tr.errorSaving}</h3>
                 <p className="text-sm text-neutral-600 mb-5">{error}</p>
                 <button type="button" onClick={() => setError(null)} className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-semibold text-sm">
-                  Entendido
+                  {tr.understood}
                 </button>
               </div>
             </div>
@@ -1865,10 +1865,10 @@ export function CrearReservaContent() {
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
                   <Icon icon="typcn:tick" width={24} height={24} className="text-emerald-500" />
                 </div>
-                <h3 className="font-bold text-neutral-900 mb-2">Reserva guardada</h3>
+                <h3 className="font-bold text-neutral-900 mb-2">{tr.bookingSaved}</h3>
                 <p className="text-sm text-neutral-600 mb-5">{success}</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setSuccess(null)} className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm">Cerrar</button>
+                  <button type="button" onClick={() => setSuccess(null)} className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm">{tr.btnClose}</button>
                   <a href="/reservas/mis-reservas" className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm">
                     Ver reservas <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>
@@ -1893,12 +1893,12 @@ export function CrearReservaContent() {
                 </span>
                 <div>
                   <h2 className="text-sm font-bold text-neutral-900 leading-tight">{sectionTitles[activeKey]}</h2>
-                  <p className="text-xs text-neutral-400 mt-0.5">Paso {currentStep + 1} de {SECTION_ORDER.length}</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">{tr.stepLabel} {currentStep + 1} {tr.stepOf} {SECTION_ORDER.length}</p>
                 </div>
               </div>
               {sectionValidation[activeKey] && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5 shrink-0">
-                  <Icon icon="lucide:check" width={11} height={11} />Completo
+                  <Icon icon="lucide:check" width={11} height={11} />{tr.complete}
                 </span>
               )}
             </div>
@@ -1932,7 +1932,7 @@ export function CrearReservaContent() {
               className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
             >
               <Icon icon="lucide:arrow-left" width={15} height={15} />
-              Anterior
+              {tr.btnPrev}
             </button>
           )}
           {!isLastStep ? (
@@ -1941,7 +1941,7 @@ export function CrearReservaContent() {
               onClick={() => setCurrentStep((s) => s + 1)}
               className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all"
             >
-              Siguiente
+              {tr.btnNext}
               <Icon icon="lucide:arrow-right" width={15} height={15} />
             </button>
           ) : (
@@ -1954,7 +1954,7 @@ export function CrearReservaContent() {
               {submitting ? (
                 <><Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" />{tr.guardando}</>
               ) : (
-                <><Icon icon="lucide:eye" width={16} height={16} />Revisar reserva</>
+                <><Icon icon="lucide:eye" width={16} height={16} />{tr.btnReview}</>
               )}
             </button>
           )}
@@ -1974,8 +1974,8 @@ export function CrearReservaContent() {
                   <Icon icon="lucide:mail" width={20} height={20} className="text-brand-blue" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-neutral-900">Enviar solicitud por correo</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">La reserva ya fue guardada exitosamente</p>
+                  <h3 className="font-bold text-neutral-900">{tr.sendEmailTitle}</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">{tr.bookingSavedMsg}</p>
                 </div>
               </div>
               <p className="text-sm text-neutral-600 mb-3">
@@ -1995,8 +1995,8 @@ export function CrearReservaContent() {
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-sm shadow-md shadow-brand-blue/20 disabled:opacity-60"
                 >
                   {sendingEmail
-                    ? <><Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />Enviando...</>
-                    : <><Icon icon="lucide:send" width={15} height={15} />Enviar desde mi cuenta</>
+                    ? <><Icon icon="typcn:refresh" width={15} height={15} className="animate-spin" />{tr.sending}</>
+                    : <><Icon icon="lucide:send" width={15} height={15} />{tr.sendFromAccount}</>
                   }
                 </button>
                 <button
@@ -2004,7 +2004,7 @@ export function CrearReservaContent() {
                   onClick={() => setShowEmailModal(false)}
                   className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
                 >
-                  Omitir
+                  {tr.skip}
                 </button>
               </div>
             </div>
