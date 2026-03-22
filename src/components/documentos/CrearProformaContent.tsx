@@ -857,7 +857,7 @@ export function CrearProformaContent() {
                   <tr className="bg-emerald-700 text-white">
                     {["#","Especie","Variedad","Calibre","KG Neto/Caja","KG Bruto/Caja","Cajas",
                       "KG Neto Total","KG Bruto Total",`Val/Caja (${header.moneda})`,
-                      `Val/KG (${header.moneda})`,`Valor Total (${header.moneda})",""].map((h,i) => (
+                      `Val/KG (${header.moneda})`, `Valor Total (${header.moneda})`, ""].map((h,i) => (
                       <th key={i} className="px-2 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
