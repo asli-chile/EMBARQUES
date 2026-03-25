@@ -700,21 +700,6 @@ export function ServiciosUnicosContent() {
       return;
     }
 
-    // Validar: mismo nombre sólo está permitido si es una región diferente
-    const newAreas = new Set(destinosOk.map((d) => d.area).filter(Boolean));
-    const conflict = servicios.find(
-      (s) =>
-        s.id !== editingId &&
-        s.nombre.trim().toLowerCase() === nombre.toLowerCase() &&
-        (s.destinos ?? []).some((d) => d.area && newAreas.has(normalizeArea(d.area)))
-    );
-    if (conflict) {
-      setModalError(
-        `Ya existe el servicio «${conflict.nombre}» (${conflict.naviera_nombre ?? "sin naviera"}) en la misma región. Permitido usar el mismo nombre sólo en regiones distintas.`
-      );
-      return;
-    }
-
     setSaving(true);
     const base = getApiUrl() || "";
     const url = editingId

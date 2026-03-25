@@ -194,30 +194,6 @@ export function ConsorciosContent() {
       return;
     }
 
-    // Validar: mismo nombre sólo está permitido si es una región diferente
-    const selectedSrvs = serviciosOpts.filter((s) => form.servicios_ids.includes(s.id));
-    const newAreas = new Set(
-      selectedSrvs
-        .flatMap((s) => (s.destinos ?? []).map((d) => (d.area ? normalizeArea(d.area) : null)))
-        .filter((a): a is string => Boolean(a))
-    );
-    const conflictConsorcio = consorcios.find(
-      (c) =>
-        c.id !== editingId &&
-        c.nombre.trim().toLowerCase() === nombre.toLowerCase() &&
-        (c.servicios ?? []).some((item) =>
-          (item.servicio_unico?.destinos ?? []).some(
-            (d) => d.area && newAreas.has(normalizeArea(d.area))
-          )
-        )
-    );
-    if (conflictConsorcio) {
-      setModalError(
-        `Ya existe el consorcio «${conflictConsorcio.nombre}» en la misma región. Permitido usar el mismo nombre sólo en regiones distintas.`
-      );
-      return;
-    }
-
     setSaving(true);
     const base = getApiUrl() || "";
     const url = editingId
