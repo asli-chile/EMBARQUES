@@ -11,7 +11,25 @@
       "Bash(npx tsc:*)",
       "Bash(grep -r consignatarios '/c/Users/rodri/OneDrive/Desktop/EMBARQUES - ANTIGRAVITY/src' --include=*.tsx --include=*.ts --include=*.astro)",
       "Bash(grep:*)",
-      "Bash(node -e \"require\\(''xlsx-js-style''\\); console.log\\(''ok''\\)\")"
+      "Bash(node -e \"require\\(''xlsx-js-style''\\); console.log\\(''ok''\\)\")",
+      "Bash(supabase functions:*)",
+      "Bash(winget install:*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_98c2c1b40ae2419dfa444fe8f8e673c9e2051649 npx supabase functions deploy send-email --project-ref yerufjewdvzijfzdpaai)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_98c2c1b40ae2419dfa444fe8f8e673c9e2051649 npx supabase functions deploy send-email --project-ref yerufjewdvzijfzdpaai --no-verify-jwt)",
+      "mcp__ide__getDiagnostics",
+      "Bash(ls:*)",
+      "Bash(curl -s -X POST \"https://yerufjewdvzijfzdpaai.supabase.co/rest/v1/rpc/exec_sql\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllcnVmamV3ZHZ6aWpmemRwYWFpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjAyNDE2NywiZXhwIjoyMDg3NjAwMTY3fQ.79xGrNynWbxnEMuI5VZ9SCYwDrM7-qMxqTSG9fvk2-0\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllcnVmamV3ZHZ6aWpmemRwYWFpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjAyNDE2NywiZXhwIjoyMDg3NjAwMTY3fQ.79xGrNynWbxnEMuI5VZ9SCYwDrM7-qMxqTSG9fvk2-0\" -H \"Content-Type: application/json\")",
+      "Bash(curl:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.get\\(''''paths'''',{}\\).keys\\(\\) if ''''espe'''' in k.lower\\(\\) or ''''especi'''' in k.lower\\(\\)]\")",
+      "Bash(npm ls:*)",
+      "Bash(npx astro:*)",
+      "Bash(node -e \":*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(npx vercel:*)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

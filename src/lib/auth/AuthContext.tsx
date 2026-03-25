@@ -29,6 +29,7 @@ type AuthContextValue = {
   isLoading: boolean;
   isSuperadmin: boolean;
   isAdmin: boolean;
+  isEjecutivo: boolean;
   isCliente: boolean;
   /** Nombres de empresas asignadas (cliente o ejecutivo) para filtrar operaciones en app. */
   empresaNombres: string[];
@@ -172,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isSuperadmin: profile?.rol === "superadmin",
     isAdmin: profile?.rol === "admin",
+    isEjecutivo: profile?.rol === "ejecutivo",
     isCliente: profile?.rol === "cliente",
     empresaNombres,
     isExternalUser: !user,
@@ -190,6 +192,7 @@ export function useAuth() {
       isLoading: true,
       isSuperadmin: false,
       isAdmin: false,
+      isEjecutivo: false,
       isCliente: false,
       empresaNombres: [],
       isExternalUser: true,

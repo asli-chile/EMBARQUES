@@ -9,8 +9,6 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
 import { format, parse, differenceInDays } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 registerLocale("es", es);
 
@@ -22,6 +20,7 @@ type FormData = {
   estado_operacion: string;
   ejecutivo: string;
   cliente: string;
+  dueno_reserva: string;
   consignatario: string;
   incoterm: string;
   forma_pago: string;
@@ -56,6 +55,7 @@ const initialFormData: FormData = {
   estado_operacion: "PENDIENTE",
   ejecutivo: "",
   cliente: "",
+  dueno_reserva: "ASLI",
   consignatario: "",
   incoterm: "",
   forma_pago: "",
@@ -126,8 +126,7 @@ export function CrearReservaContent() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [lastSavedPayload, setLastSavedPayload] = useState<Record<string, unknown> | null>(null);
   const [lastSavedIds, setLastSavedIds] = useState<{ id: string; ref_asli: string | null }[]>([]);
-  const logoCache = useRef<{ dataUrl: string; w: number; h: number } | null>(null);
-  const pdfCache = useRef<{ base64: string; name: string } | null>(null);
+  const xlsxCache = useRef<{ base64: string; name: string } | null>(null);
 
   const [catalogos, setCatalogos] = useState<Record<string, CatalogoItem[]>>({});
   const [navieras, setNavieras] = useState<SelectOption[]>([]);
@@ -370,15 +369,16 @@ export function CrearReservaContent() {
         .from("navieras_naves")
         .select("nave_id, naves(id, nombre)")
         .eq("naviera_id", formData.naviera);
-      if (data && data.length > 0) {
-        const filtered = data
-          .map((d) => d.naves as unknown as SelectOption)
-          .filter(Boolean)
-          .sort((a, b) => a.nombre.localeCompare(b.nombre));
-        setNavesFiltered(filtered);
-      } else {
-        setNavesFiltered(naves);
-      }
+      const filtered =
+        data && data.length > 0
+          ? data.map((d) => d.naves as unknown as SelectOption).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre))
+          : naves;
+      setNavesFiltered(filtered);
+      // Si la nave actual no está en la nueva lista filtrada, seleccionar la primera
+      setFormData((prev) => {
+        if (!prev.nave || filtered.some((n) => n.id === prev.nave)) return prev;
+        return { ...prev, nave: filtered[0]?.id ?? "" };
+      });
     };
     void fetchNavesNaviera();
   }, [formData.naviera, supabase, naves]);
@@ -623,6 +623,7 @@ export function CrearReservaContent() {
       cliente: formData.cliente
         ? clientes.find((c) => c.id === formData.cliente)?.nombre
         : null,
+      dueno_reserva: formData.dueno_reserva || "ASLI",
       consignatario: formData.consignatario
         ? consignatarios.find((c) => c.id === formData.consignatario)?.nombre
         : null,
@@ -691,13 +692,13 @@ export function CrearReservaContent() {
     setShowEmailModal(true);
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
-    // Pre-generar PDF en background mientras el usuario decide si enviar correo
-    pdfCache.current = null;
+    // Pre-generar Excel en background mientras el usuario decide si enviar correo
+    xlsxCache.current = null;
     const clienteSlugPre = String(payload.cliente ?? "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const cantidadLabelPre = copias > 1 ? `${copias}_RESERVAS` : "1_RESERVA";
-    const pdfNamePre = `SOLICITUD_DE_${cantidadLabelPre}_-_${clienteSlugPre}.pdf`;
-    void generateReservaPDF(payload, copias).then((base64) => {
-      pdfCache.current = { base64, name: pdfNamePre };
+    const xlsxNamePre = `SOLICITUD_DE_${cantidadLabelPre}_-_${clienteSlugPre}.xlsx`;
+    void generateReservaExcel(payload, copias).then((base64) => {
+      xlsxCache.current = { base64, name: xlsxNamePre };
     });
   };
 
@@ -791,166 +792,191 @@ export function CrearReservaContent() {
     return { subject, htmlBody };
   };
 
-  const generateReservaPDF = async (p: Record<string, unknown>, copias: number): Promise<string> => {
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-    const blue: [number, number, number] = [29, 78, 216];
-    const labelColor: [number, number, number] = [90, 90, 90];
+  const generateReservaExcel = async (p: Record<string, unknown>, copias: number): Promise<string> => {
+    const XLSX = await import("xlsx-js-style");
+    const val = (v: unknown) => (v != null && v !== "" ? String(v) : "");
+    const fecha = new Date().toLocaleDateString("es-CL");
 
-    // Header
-    doc.setFillColor(...blue);
-    doc.rect(0, 0, 210, 22, "F");
+    // ── Paleta de estilos ────────────────────────────────────────────────────
+    const BLUE_DARK  = "0F3478";
+    const BLUE_MID   = "1D4ED8";
+    const BLUE_LIGHT = "EEF2FF";
+    const BLUE_ALT   = "F8FAFF";
+    const GRAY_LABEL = "6B7280";
+    const WHITE      = "FFFFFF";
+    const DARK_TXT   = "0F172A";
+    const BORDER_CLR = "C7D2F0";
 
-    // Logo blanco (con caché y aspecto ratio correcto)
-    try {
-      if (!logoCache.current) {
-        const res = await fetch("/LOGO ASLI SIN FONDO BLANCO.png");
-        const blob = await res.blob();
-        const dataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise<void>((resolve) => { img.onload = () => resolve(); });
-        logoCache.current = { dataUrl, w: img.naturalWidth, h: img.naturalHeight };
-      }
-      const { dataUrl, w, h } = logoCache.current;
-      const logoH = 14;
-      const logoW = (w / h) * logoH;
-      doc.addImage(dataUrl, "PNG", 10, (22 - logoH) / 2, logoW, logoH);
-    } catch {
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(13);
-      doc.setFont("helvetica", "bold");
-      doc.text("ASLI LOGISTICS", 14, 14);
-    }
+    const border = {
+      top:    { style: "thin", color: { rgb: BORDER_CLR } },
+      bottom: { style: "thin", color: { rgb: BORDER_CLR } },
+      left:   { style: "thin", color: { rgb: BORDER_CLR } },
+      right:  { style: "thin", color: { rgb: BORDER_CLR } },
+    };
 
-    // Título cantidad reservas (derecha del header)
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.text("SOLICITUD DE", 196, 10, { align: "right" });
-    doc.setFontSize(copias > 1 ? 13 : 11);
-    doc.setFont("helvetica", "bold");
-    doc.text(copias > 1 ? `${copias} RESERVAS` : "1 RESERVA", 196, 17, { align: "right" });
+    const ws: Record<string, unknown> = {};
 
-    // Subtítulo + cliente
-    doc.setTextColor(...blue);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(copias > 1 ? `SOLICITUD DE ${copias} RESERVAS` : "SOLICITUD DE RESERVA", 14, 30);
+    // ── Fila 1: título principal ─────────────────────────────────────────────
+    const titulo = copias > 1
+      ? `SOLICITUD DE ${copias} RESERVAS — ASLI Ltda.`
+      : "SOLICITUD DE RESERVA — ASLI Ltda.";
+    ws["A1"] = {
+      v: titulo, t: "s",
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: WHITE } },
+        fill: { fgColor: { rgb: BLUE_DARK } },
+        alignment: { horizontal: "center", vertical: "center" },
+      },
+    };
 
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...labelColor);
-    doc.text(`Cliente: ${String(p.cliente ?? "-")}   ·   ${new Date().toLocaleDateString("es-CL")}`, 14, 36);
+    // ── Fila 2: meta-información ─────────────────────────────────────────────
+    ws["A2"] = {
+      v: `Cliente: ${val(p.cliente)}   |   Dueño reserva: ${val(p.dueno_reserva)}   |   Ejecutivo: ${val(p.ejecutivo)}   |   Fecha: ${fecha}`,
+      t: "s",
+      s: {
+        font: { sz: 9, color: { rgb: WHITE } },
+        fill: { fgColor: { rgb: BLUE_MID } },
+        alignment: { horizontal: "center", vertical: "center" },
+      },
+    };
 
-    doc.setDrawColor(...blue);
-    doc.setLineWidth(0.4);
-    doc.line(14, 39, 196, 39);
+    // ── Fila 3: info operación (naviera/viaje/carga) ──────────────────────────
+    const infoLine = [
+      val(p.naviera) && `Naviera: ${val(p.naviera)}`,
+      val(p.nave) && `Nave: ${val(p.nave)}`,
+      val(p.viaje) && `Viaje: ${val(p.viaje)}`,
+      val(p.pol) && `POL: ${val(p.pol)}`,
+      val(p.pod) && `POD: ${val(p.pod)}`,
+      val(p.etd) && `ETD: ${val(p.etd)}`,
+      val(p.especie) && `Especie: ${val(p.especie)}`,
+      val(p.tipo_unidad) && `Unidad: ${val(p.tipo_unidad)}`,
+      val(p.temperatura) && `Temp: ${val(p.temperatura)}`,
+    ].filter(Boolean).join("   |   ");
+    ws["A3"] = {
+      v: infoLine || " ",
+      t: "s",
+      s: {
+        font: { sz: 8, italic: true, color: { rgb: "3B4B7A" } },
+        fill: { fgColor: { rgb: BLUE_LIGHT } },
+        alignment: { horizontal: "center", vertical: "center" },
+      },
+    };
 
-    // ── Layout 2 columnas ────────────────────────────────────────────────────
-    // Izquierda: x=14, ancho=88  |  Derecha: x=108, ancho=88
-    const CL = 14;   // left col x
-    const CR = 108;  // right col x
-    const CW = 88;   // col width
-    const MRL = 210 - CL - CW;  // margin right for left col  = 108
-    const MRR = 14;              // margin right for right col = 14
+    // ── Fila 4: vacía separadora ──────────────────────────────────────────────
+    ws["A4"] = { v: "", t: "s", s: { fill: { fgColor: { rgb: "F1F5FF" } } } };
 
-    let yL = 43;
-    let yR = 43;
+    // ── Definición de columnas de la tabla ───────────────────────────────────
+    const colDefs: { header: string; value: string }[] = [
+      { header: "#",                 value: String(copias) },
+      { header: "Booking",           value: val(p.booking) },
+      { header: "Naviera",           value: val(p.naviera) },
+      { header: "Nave",              value: val(p.nave) },
+      { header: "Viaje",             value: val(p.viaje) },
+      { header: "POL",               value: val(p.pol) },
+      { header: "POD",               value: val(p.pod) },
+      { header: "Depósito",          value: val(p.deposito) },
+      { header: "ETD",               value: val(p.etd) },
+      { header: "ETA",               value: val(p.eta) },
+      { header: "Especie",           value: val(p.especie) },
+      { header: "T°",                value: val(p.temperatura) },
+      { header: "CBM",               value: val(p.ventilacion) },
+      { header: "Planta",            value: val(p.planta_presentacion) },
+      { header: "Incoterm",          value: val(p.incoterm) },
+      { header: "Cláusula de venta", value: val(p.forma_pago) },
+    ];
+    const cols = colDefs.map((c, i) => ({
+      header: c.header,
+      key: (ii: number) => i === 0 ? String(ii + 1) : c.value,
+      // wch = max(header length, content length) + 2 chars de padding
+      wch: Math.max(c.header.length, c.value.length || 7) + 2,
+    }));
 
-    const mkTable = (
-      startY: number,
-      marginLeft: number,
-      marginRight: number,
-      title: string,
-      valid: [string, string][],
-    ) => {
-      autoTable(doc, {
-        startY,
-        head: [[{ content: title, colSpan: 2, styles: { fillColor: blue, textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 8, cellPadding: { top: 4, bottom: 4, left: 5, right: 5 } } }]],
-        body: valid,
-        styles: { fontSize: 8, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 } },
-        columnStyles: {
-          0: { cellWidth: 32, fontStyle: "bold", textColor: labelColor },
-          1: { textColor: [15,15,15] as [number,number,number], fontStyle: "bold" },
+    const HEADER_ROW = 5; // fila Excel donde van los encabezados (1-indexed)
+    const DATA_START  = HEADER_ROW + 1;
+
+    // ── Fila 5: encabezados de columna ───────────────────────────────────────
+    cols.forEach((col, ci) => {
+      const addr = XLSX.utils.encode_cell({ r: HEADER_ROW - 1, c: ci });
+      ws[addr] = {
+        v: col.header, t: "s",
+        s: {
+          font: { bold: true, sz: 8, color: { rgb: WHITE } },
+          fill: { fgColor: { rgb: BLUE_MID } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: false },
+          border,
         },
-        margin: { left: marginLeft, right: marginRight },
-        theme: "grid",
+      };
+    });
+
+    // ── Filas de datos (una por copia) ────────────────────────────────────────
+    // Columna Booking (índice 1) resaltada en amarillo → campo a rellenar
+    const EDITABLE_COLS = new Set([1]); // índices 0-based
+
+    for (let i = 0; i < copias; i++) {
+      const rowIdx = DATA_START - 1 + i; // 0-based para XLSX
+      const isAlt = i % 2 === 1;
+
+      cols.forEach((col, ci) => {
+        const addr = XLSX.utils.encode_cell({ r: rowIdx, c: ci });
+        const isEditable = EDITABLE_COLS.has(ci);
+        const isNum = ci === 0;
+        const bgColor = isEditable
+          ? "FFFBEB"
+          : isAlt ? BLUE_ALT : WHITE;
+
+        ws[addr] = {
+          v: isNum ? i + 1 : col.key(i),
+          t: isNum ? "n" : "s",
+          s: {
+            font: {
+              sz: 8,
+              bold: isNum,
+              color: { rgb: isEditable ? "92400E" : DARK_TXT },
+            },
+            fill: { fgColor: { rgb: bgColor } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: false },
+            border,
+          },
+        };
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (doc as any).lastAutoTable.finalY + 4;
-    };
-
-    const sectionL = (title: string, rows: [string, string | null][]) => {
-      const valid = rows.filter(([, v]) => v != null && v !== "") as [string, string][];
-      if (!valid.length) return;
-      yL = mkTable(yL, CL, MRL, title, valid);
-    };
-
-    const sectionR = (title: string, rows: [string, string | null][]) => {
-      const valid = rows.filter(([, v]) => v != null && v !== "") as [string, string][];
-      if (!valid.length) return;
-      yR = mkTable(yR, CR, MRR, title, valid);
-    };
-
-    const val = (v: unknown) => (v != null && v !== "" ? String(v) : null);
-    const pct = (v: unknown) => (v != null && v !== "" ? `${v}%` : null);
-    const dias = (v: unknown) => (v != null && v !== "" ? `${v} días` : null);
-
-    // Columna izquierda: General + Planta/Depósito
-    sectionL("General", [
-      ["Tipo op.",   val(p.tipo_operacion)],
-      ["Cliente",    val(p.cliente)],
-      ["Ejecutivo",  val(p.ejecutivo)],
-      ["Incoterm",   val(p.incoterm)],
-      ["Forma pago", val(p.forma_pago)],
-    ]);
-    sectionL("Planta / Depósito", [
-      ["Planta",   val(p.planta_presentacion)],
-      ["Depósito", val(p.deposito)],
-    ]);
-    sectionL("Carga", [
-      ["Especie",    val(p.especie)],
-      ["Unidad",     val(p.tipo_unidad)],
-      ["Temp.",      val(p.temperatura)],
-      ["Ventil.",    val(p.ventilacion)],
-      ["Trat. frío", val(p.tratamiento_frio)],
-      ["O2",         pct(p.tratamiento_frio_o2)],
-      ["CO2",        pct(p.tratamiento_frio_co2)],
-      ["Atmósfera",  val(p.tipo_atmosfera)],
-    ]);
-
-    // Columna derecha: Naviera + Obs
-    sectionR("Naviera / Viaje", [
-      ["Naviera",  val(p.naviera)],
-      ["Nave",     val(p.nave)],
-      ["Viaje",    val(p.viaje)],
-      ["POL",      val(p.pol)],
-      ["POD",      val(p.pod)],
-      ["ETD",      val(p.etd)],
-      ["ETA",      val(p.eta)],
-      ["Tránsito", dias(p.tt)],
-      ["Booking",  val(p.booking)],
-    ]);
-    if (p.observaciones) {
-      sectionR("Observaciones", [["Nota", val(p.observaciones)]]);
     }
 
-    // Pie de página
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(...blue);
-    doc.setLineWidth(0.3);
-    doc.line(14, pageHeight - 12, 196, pageHeight - 12);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...labelColor);
-    doc.text("Asesorías y Servicios Logísticos Integrales Ltda.", 14, pageHeight - 7);
-    doc.text(new Date().toLocaleDateString("es-CL"), 196, pageHeight - 7, { align: "right" });
+    // ── Rango de la hoja ─────────────────────────────────────────────────────
+    ws["!ref"] = XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: DATA_START - 1 + copias - 1, c: cols.length - 1 },
+    });
 
-    return doc.output("datauristring").split(",")[1]; // base64
+    // ── Merges: título y meta se extienden todo el ancho ─────────────────────
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }, // fila 1 título
+      { s: { r: 1, c: 0 }, e: { r: 1, c: cols.length - 1 } }, // fila 2 meta
+      { s: { r: 2, c: 0 }, e: { r: 2, c: cols.length - 1 } }, // fila 3 info
+      { s: { r: 3, c: 0 }, e: { r: 3, c: cols.length - 1 } }, // fila 4 sep
+    ];
+
+    // ── Anchos de columna ─────────────────────────────────────────────────────
+    ws["!cols"] = cols.map((c) => ({ wch: c.wch }));
+
+    // ── Altura de filas ───────────────────────────────────────────────────────
+    ws["!rows"] = [
+      { hpt: 22 }, // fila 1 título
+      { hpt: 14 }, // fila 2 meta
+      { hpt: 13 }, // fila 3 info
+      { hpt: 4  }, // fila 4 separadora
+      { hpt: 16 }, // fila 5 encabezados
+      ...Array(copias).fill({ hpt: 14 }),
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws as never, "Solicitud Reserva");
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+
+    // Convertir ArrayBuffer → base64
+    const bytes = new Uint8Array(out as ArrayBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
   };
 
   const handleSendEmail = async () => {
@@ -971,43 +997,47 @@ export function CrearReservaContent() {
 
     const { htmlBody } = buildEmailContent(p);
 
-    // Usar PDF pre-generado si está listo, sino generar ahora
+    // Usar Excel pre-generado si está listo, sino generar ahora
     const clienteSlug = String(p.cliente ?? "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const cantidadLabel = lastSavedCopias > 1 ? `${lastSavedCopias}_RESERVAS` : "1_RESERVA";
-    const pdfName = `SOLICITUD_DE_${cantidadLabel}_-_${clienteSlug}.pdf`;
+    const xlsxName = `SOLICITUD_DE_${cantidadLabel}_-_${clienteSlug}.xlsx`;
+    const xlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    const pdfBase64 = pdfCache.current?.base64 ?? await generateReservaPDF(p, lastSavedCopias);
+    const xlsxBase64 = xlsxCache.current?.base64 ?? await generateReservaExcel(p, lastSavedCopias);
 
-    // Subir PDF a storage y guardar en documentos (fire & forget — no bloquea el envío)
+    // Subir Excel a storage y guardar en documentos (fire & forget)
     if (lastSavedIds.length > 0) {
       const firstId = lastSavedIds[0].id;
-      const filePath = `documentos/${firstId}/${pdfName}`;
-      const pdfBytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+      const filePath = `documentos/${firstId}/${xlsxName}`;
+      const xlsxBytes = Uint8Array.from(atob(xlsxBase64), (c) => c.charCodeAt(0));
       const savedIds = lastSavedIds;
       void (async () => {
         const { data: uploadData } = await supabase!.storage
           .from("documentos")
-          .upload(filePath, pdfBytes, { contentType: "application/pdf", upsert: true });
+          .upload(filePath, xlsxBytes, { contentType: xlsxMime, upsert: true });
         if (uploadData) {
           const { data: urlData } = supabase!.storage.from("documentos").getPublicUrl(filePath);
           const docRows = savedIds.map(({ id }) => ({
             operacion_id: id,
             tipo: "SOLICITUD_RESERVA",
-            nombre_archivo: pdfName,
+            nombre_archivo: xlsxName,
             url: urlData.publicUrl,
-            mime_type: "application/pdf",
-            tamano: pdfBytes.length,
+            mime_type: xlsxMime,
+            tamano: xlsxBytes.length,
           }));
           await supabase!.from("documentos").insert(docRows);
         }
       })();
     }
 
+    const dueno = String((lastSavedPayload as Record<string, unknown>)?.dueno_reserva ?? "ASLI").toUpperCase();
+    const emailTo = dueno === "ASLI" ? "roodericus7@gmail.com" : "ignacio.caceres94@outlook.com";
+
     const result = await sendEmail({
-      to: "roodericus7@gmail.com",
+      to: emailTo,
       subject: String(subject),
       body: htmlBody,
-      attachments: [{ name: pdfName, content: pdfBase64, mimeType: "application/pdf" }],
+      attachments: [{ name: xlsxName, content: xlsxBase64, mimeType: xlsxMime }],
     });
 
     setSendingEmail(false);
@@ -1482,6 +1512,21 @@ export function CrearReservaContent() {
             />
           );
         })()}
+        <div>
+          <label htmlFor="dueno_reserva" className={labelClass}>
+            Dueño de reserva
+          </label>
+          <select
+            id="dueno_reserva"
+            value={formData.dueno_reserva}
+            onChange={(e) => setFormData((prev) => ({ ...prev, dueno_reserva: e.target.value }))}
+            className={selectClass}
+          >
+            <option value="ASLI">ASLI</option>
+            <option value="CHILFRESH">CHILFRESH</option>
+            <option value="SURLOGISTICA">SURLOGISTICA</option>
+          </select>
+        </div>
       </>
     ),
     comercial: (

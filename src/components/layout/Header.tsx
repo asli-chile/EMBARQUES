@@ -11,7 +11,7 @@ export function Header() {
       role="banner"
     >
       {/* Logo — mobile: tamaño reducido, desktop: tamaño completo */}
-      <a href="/inicio" className="h-8 md:h-12 w-auto flex items-center flex-shrink-0">
+      <a href="/inicio" className="h-7 md:h-[46px] w-auto flex items-center flex-shrink-0">
         <img
           src={siteConfig.logo}
           alt={siteConfig.companyTitle}

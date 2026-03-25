@@ -15,6 +15,9 @@ interface ProformaItem {
   id: string;
   especie: string;
   variedad: string;
+  tipo_envase: string;
+  categoria: string;
+  etiqueta: string;
   calibre: string;
   kg_neto_caja: string;
   kg_bruto_caja: string;
@@ -69,6 +72,7 @@ interface ProformaHeader {
   eta: string;
   naviera: string;
   nave: string;
+  viaje: string;
   booking: string;
   // Carga general
   especie_general: string;
@@ -251,10 +255,16 @@ const PROFORMA_ITEM_EXCEL_NOTE =
   "En Excel usa etiquetas numeradas por fila: {{item_1_especie}}, {{item_1_variedad}}, {{item_1_calibre}}, {{item_1_cantidad}}, {{item_1_kg_neto_caja}}, {{item_1_kg_bruto_caja}}, {{item_1_kg_neto_total}}, {{item_1_kg_bruto_total}}, {{item_1_precio_caja}}, {{item_1_precio_kilo}}, {{item_1_total_linea}}. Cambia 1 por 2, 3… hasta 30.";
 type Tab = typeof TABS[number];
 
+// -- Catálogos fijos de ítems -------------------------------------------------
+const CALIBRES_CEREZA   = ["L","XL","J","2J","3J","4J","5J","6J"];
+const VARIEDADES_CEREZA = ["SANTINA","LAPINS","REGINA","KORDIA","SWEETHEART","BING"];
+const CATEGORIAS_CEREZA = ["CAT 1","CAT 2","CAT 3"];
+const TIPOS_ENVASE_CEREZA = ["5 KG","2.5 KG","2 X 2.5 KG"];
+
 function newItem(): ProformaItem {
   return {
     id: crypto.randomUUID(),
-    especie: "", variedad: "", calibre: "",
+    especie: "", variedad: "", tipo_envase: "", categoria: "", etiqueta: "", calibre: "",
     kg_neto_caja: "", kg_bruto_caja: "", cantidad_cajas: "",
     kg_neto_total: 0, kg_bruto_total: 0,
     valor_caja: "", valor_kilo: 0, valor_total: 0,
@@ -333,7 +343,7 @@ const emptyHeader = (): ProformaHeader => ({
   clausula_venta: "FOB", moneda: "USD", forma_pago: "",
   puerto_origen: "", puerto_destino: "", destino: "",
   contenedor: "", sello: "", tara: "", tipo_contenedor: "",
-  etd: "", eta: "", naviera: "", nave: "", booking: "",
+  etd: "", eta: "", naviera: "", nave: "", viaje: "", booking: "",
   especie_general: "", temperatura: "", ventilacion: "", pallets: "",
   dus: "", csg: "", csp: "", numero_guia_despacho: "", corte_documental: "",
   observaciones: "",
@@ -350,6 +360,14 @@ const fmt = (n: number, mon: string) => {
 };
 const fmtKg = (n: number) =>
   n.toLocaleString("es-CL", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
 /** Fecha para plantillas (alineado con instructivos / formatos del sistema) */
 function fmtDateTag(s: string | null | undefined): string {
@@ -816,7 +834,7 @@ async function applyTagsToXlsx(buffer: ArrayBuffer, lookup: Map<string, string>)
 
 export function CrearProformaContent() {
   const supabase = useMemo(() => { try { return createClient(); } catch { return null; } }, []);
-  const { user, isCliente, empresaNombres } = useAuth();
+  const { user, isCliente, isEjecutivo, isAdmin, isSuperadmin, isLoading, empresaNombres } = useAuth();
 
   const [tab, setTab] = useState<Tab>("Mercadería");
   const [header, setHeader] = useState<ProformaHeader>(emptyHeader());
@@ -845,6 +863,9 @@ export function CrearProformaContent() {
   const [proformas, setProformas] = useState<any[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [showList, setShowList] = useState(false);
+
+  // Catálogo de especies desde BD
+  const [especiesCatalog, setEspeciesCatalog] = useState<string[]>([]);
 
   // Import from external Excel
   const [importing, setImporting] = useState(false);
@@ -894,6 +915,13 @@ export function CrearProformaContent() {
   }, [supabase, header.numero]);
 
   useEffect(() => { generateNumero(); }, [generateNumero]);
+
+  // -- Cargar catálogo de especies --------------------------------------------
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("especies").select("nombre").eq("activo", true).order("nombre")
+      .then(({ data }) => { if (data) setEspeciesCatalog(data.map((r: any) => r.nombre)); });
+  }, [supabase]);
 
   // -- Escanear etiquetas usadas en la plantilla seleccionada -----------------
   useEffect(() => {
@@ -1102,6 +1130,15 @@ export function CrearProformaContent() {
 
   const addItem = () => setItems(prev => [...prev, newItem()]);
   const removeItem = (id: string) => setItems(prev => prev.filter(it => it.id !== id));
+  const duplicateItem = (id: string) =>
+    setItems(prev => {
+      const idx = prev.findIndex(it => it.id === id);
+      if (idx < 0) return prev;
+      const copy = { ...prev[idx], id: crypto.randomUUID() };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
 
   // -- Totals -----------------------------------------------------------------
   const totals = useMemo(() => ({
@@ -1124,29 +1161,81 @@ export function CrearProformaContent() {
     }
   }, []);
 
+  // -- Test data --------------------------------------------------------------
+  const loadDatosDePrueba = useCallback(() => {
+    setHeader({
+      numero: "PRF0099",
+      operacion_id: "",
+      ref_asli: "ASLI-2026-099",
+      correlativo: "99",
+      fecha: format(new Date(), "yyyy-MM-dd"),
+      exportador: "Frutas del Sur SpA",
+      exportador_rut: "76.543.210-9",
+      exportador_direccion: "Los Aromos 1234, Rancagua, Chile",
+      importador: "Pacific Fresh Imports LLC",
+      importador_direccion: "800 Ocean Drive, Los Angeles, CA 90001",
+      importador_pais: "United States",
+      consignee_uscc: "US-1234567890",
+      consignee_attn: "John Smith",
+      consignee_email: "jsmith@pacificfresh.com",
+      consignee_mobile: "+1 310 555 0199",
+      consignee_zip: "90001",
+      notify_company: "Bank of America Trade Finance",
+      notify_address: "555 S Flower St, Los Angeles, CA",
+      notify_attn: "Trade Desk",
+      notify_email: "trade@bofa.com",
+      notify_mobile: "+1 213 555 0100",
+      notify_zip: "90071",
+      clausula_venta: "FOB",
+      moneda: "USD",
+      forma_pago: "Crédito 60 días",
+      puerto_origen: "San Antonio, Chile",
+      puerto_destino: "Los Angeles, USA",
+      destino: "Los Angeles",
+      contenedor: "TCKU3456789",
+      sello: "CL1234567",
+      tara: "3.900",
+      tipo_contenedor: "40RF",
+      etd: format(new Date(Date.now() + 14 * 86400000), "yyyy-MM-dd"),
+      eta: format(new Date(Date.now() + 30 * 86400000), "yyyy-MM-dd"),
+      naviera: "Hapag-Lloyd",
+      nave: "Cape Charles",
+      viaje: "023W",
+      booking: "HLCU123456789",
+      especie_general: "Uva de Mesa",
+      temperatura: "-0.5°C",
+      ventilacion: "25",
+      pallets: "20",
+      dus: "DUS-2026-001234",
+      csg: "CSG-001",
+      csp: "CSP-001",
+      numero_guia_despacho: "GD-987654",
+      corte_documental: format(new Date(Date.now() + 10 * 86400000), "yyyy-MM-dd"),
+      observaciones: "Datos de prueba — no usar en producción.",
+    });
+    setItems([
+      { id: crypto.randomUUID(), especie: "Uva de Mesa", variedad: "Red Globe", calibre: "XL",
+        kg_neto_caja: "8.2", kg_bruto_caja: "9.0", cantidad_cajas: "1200",
+        kg_neto_total: 9840, kg_bruto_total: 10800,
+        valor_caja: "12.50", valor_kilo: 1.5244, valor_total: 15000, priceSource: "caja" },
+      { id: crypto.randomUUID(), especie: "Uva de Mesa", variedad: "Crimson Seedless", calibre: "L",
+        kg_neto_caja: "8.0", kg_bruto_caja: "8.8", cantidad_cajas: "800",
+        kg_neto_total: 6400, kg_bruto_total: 7040,
+        valor_caja: "11.00", valor_kilo: 1.375, valor_total: 8800, priceSource: "caja" },
+    ]);
+  }, []);
+
   // -- Export -----------------------------------------------------------------
-  const handleExport = async () => {
+  const handleExportExcel = async () => {
     setExporting(true);
     try {
-      const lookup = toTagLookup(buildTagMap(header, items, totals));
-
-      if (selectedTemplate?.template_type === "html") {
-        // -- HTML → print window --
-        const rendered = renderHtmlTemplate(selectedTemplate.contenido_html, lookup, items, header.moneda);
-        const win = window.open("", "_blank", "width=900,height=700");
-        if (win) {
-          win.document.write(rendered);
-          win.document.close();
-          setTimeout(() => win.print(), 600);
-        }
-
-      } else if (selectedTemplate?.template_type === "excel" && selectedTemplate.excel_path && supabase) {
-        // -- Excel → download .xlsx from storage, replace tags, save --
+      // Excel: usar plantilla Almafruit (o plantilla custom si está seleccionada)
+      if (selectedTemplate?.template_type === "excel" && selectedTemplate.excel_path && supabase) {
+        const lookup = toTagLookup(buildTagMap(header, items, totals));
         const { data: blob, error } = await supabase.storage
           .from("formatos-templates")
           .download(selectedTemplate.excel_path);
         if (error || !blob) throw error ?? new Error("No se pudo descargar la plantilla");
-
         const buffer = await blob.arrayBuffer();
         const resultBlob = await applyTagsToXlsx(buffer, lookup);
         const url = URL.createObjectURL(resultBlob);
@@ -1155,11 +1244,12 @@ export function CrearProformaContent() {
         a.download = `Proforma_${header.numero || "borrador"}.xlsx`;
         a.click();
         URL.revokeObjectURL(url);
-
       } else {
-        // -- Fallback: jsPDF built-in --
-        await exportBuiltinPdf();
+        await exportBuiltinXlsx();
       }
+
+      // PDF: abrir ventana de impresión con el mismo formato
+      await handleExportPdf();
     } catch (e: any) {
       setShowError(e?.message ?? "Error al exportar");
     } finally {
@@ -1167,114 +1257,494 @@ export function CrearProformaContent() {
     }
   };
 
-  const exportBuiltinPdf = async () => {
-    const { default: jsPDF } = await import("jspdf");
-    const { default: autoTable } = await import("jspdf-autotable");
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
-    const W = doc.internal.pageSize.getWidth();
-    const m = 12;
-    const GREEN: [number, number, number] = [29, 111, 66];
-    const GREEN_LIGHT: [number, number, number] = [242, 249, 245];
-
-    doc.setFillColor(...GREEN);
-    doc.rect(0, 0, W, 14, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(13); doc.setFont("helvetica", "bold");
-    doc.text("PROFORMA INVOICE", m, 9.5);
-    doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
-    doc.text(`N°  ${header.numero}`, W - m, 6, { align: "right" });
-    doc.text(`Fecha: ${header.fecha}    ETD: ${header.etd || "-"}`, W - m, 11, { align: "right" });
-
-    const r1Y = 18;
-    const colMid = W / 2 + 2;
-    const drawBox = (x: number, y: number, w: number, title: string, lines: string[]) => {
-      doc.setFillColor(248, 248, 248);
-      doc.roundedRect(x, y, w, 28, 1.5, 1.5, "F");
-      doc.setTextColor(29, 111, 66); doc.setFontSize(6.5); doc.setFont("helvetica", "bold");
-      doc.text(title, x + 2, y + 4);
-      doc.setTextColor(30, 30, 30);
-      lines.forEach((ln, i) => {
-        doc.setFont("helvetica", i === 0 ? "bold" : "normal");
-        doc.setFontSize(i === 0 ? 8 : 7.5);
-        doc.text(ln, x + 2, y + 9 + i * 4.5);
-      });
+  // Rellena el zip de Almafruit con los datos actuales (compartido entre xlsx y PDF)
+  const fillAlmafruitZip = async (zip: typeof JSZip.prototype) => {
+    const ex = (s: string) => String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const mon = header.moneda || "USD";
+    const tagMap: Record<string, string> = {
+      "{{EXPORTADOR_RUT}}":    header.exportador_rut || "",
+      "{{INVOICE_NUMBER}}":    header.numero || "",
+      "{{CONSIGNEE_COMPANY}}": header.importador || "",
+      "{{CONSIGNEE_ADDRESS}}": header.importador_direccion || "",
+      "{{CONSIGNEE_EMAIL}}":   (header.consignee_email || "").replace(/\t/g, ""),
+      "{{CONSIGNEE_MOBILE}}":  header.consignee_mobile || "",
+      "{{FECHA_EMBARQUE}}":    header.fecha || "",
+      "{{CONSIGNEE_ATTN}}":    header.consignee_attn || "",
+      "{{NOTIFY_USCC}}":       header.consignee_uscc || "",
+      "{{CONSIGNEE_PAIS}}":    header.importador_pais || "",
+      "{{REF_CLIENTE}}":       header.numero || "",
+      "{{CSP}}":               header.csp || "",
+      "{{CSG}}":               header.csg || "",
+      "{{MOTONAVE}}":          header.nave || "",
+      "{{VIAJE}}":             header.viaje || "",
+      "{{MODALIDAD_VENTA}}":   header.clausula_venta || "",
+      "{{CLAUSULA_VENTA}}":    header.clausula_venta || "",
+      "{{FORMA_PAGO}}":        header.forma_pago || "",
+      "{{PAIS_DESTINO}}":      header.destino || "",
+      "{{PUERTO_DESTINO}}":    header.puerto_destino || "",
+      "{{PUERTO_EMBARQUE}}":   header.puerto_origen || "",
+      "{{PAIS_ORIGEN}}":       "Chile",
+      "{{PESO_NETO_TOTAL}}":   `${fmtKg(totals.kg_neto)} KG`,
+      "{{PESO_BRUTO_TOTAL}}":  `${fmtKg(totals.kg_bruto)} KG`,
+      "{{CONTENEDOR}}":        header.contenedor || "",
+      "{{PRODUCTO_ESPECIE}}":  header.especie_general || items[0]?.especie || "",
+      "{{PRODUCTO_TOTAL}}":    String(totals.cajas),
+      "{{TOTAL_FOB}}":         `${mon} ${fmt(totals.valor, mon)}`,
+      "{{VALOR_TOTAL}}":       fmt(totals.valor, mon),
     };
-    drawBox(m, r1Y, colMid - m - 3, "EXPORTADOR", [
-      header.exportador, header.exportador_rut ? `RUT: ${header.exportador_rut}` : "", header.exportador_direccion,
-    ].filter(Boolean));
-    drawBox(colMid, r1Y, W - colMid - m, "CONSIGNEE / IMPORTADOR", [
-      header.importador, header.importador_direccion,
-      [header.importador_pais, header.consignee_uscc ? `USCC: ${header.consignee_uscc}` : ""].filter(Boolean).join("   "),
-    ].filter(Boolean));
-
-    const r2Y = r1Y + 31;
-    doc.setFillColor(...GREEN);
-    doc.rect(m, r2Y, W - m * 2, 4.5, "F");
-    doc.setTextColor(255, 255, 255); doc.setFontSize(6); doc.setFont("helvetica", "bold");
-    doc.text("DATOS DE EMBARQUE", m + 1, r2Y + 3);
-
-    const embarqueFields = [
-      ["Cláusula", header.clausula_venta], ["Pto. Embarque", header.puerto_origen],
-      ["Pto. Descarga", header.puerto_destino], ["Destino", header.destino],
-      ["Contenedor", header.contenedor], ["Nave", header.nave],
-      ["Naviera", header.naviera], ["Booking", header.booking],
-      ["DUS", header.dus], ["CSG", header.csg], ["CSP", header.csp],
-    ];
-    const r3Y = r2Y + 7;
-    doc.setFillColor(240, 248, 244);
-    doc.rect(m, r3Y - 1, W - m * 2, 10, "F");
-    const fieldColW = (W - m * 2) / embarqueFields.length;
-    embarqueFields.forEach(([label, val], i) => {
-      const x = m + i * fieldColW + 1;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(5.5);
-      doc.setTextColor(100, 120, 100); doc.text(label, x, r3Y + 2);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(7);
-      doc.setTextColor(20, 20, 20); doc.text(val || "-", x, r3Y + 7);
-    });
-
-    autoTable(doc, {
-      startY: r3Y + 12, margin: { left: m, right: m },
-      head: [["Especie", "Variedad", "Calibre", "KG Neto/Caja", "KG Bruto/Caja", "Cajas",
-        "KG Neto Total", "KG Bruto Total", `Val/Caja (${header.moneda})`,
-        `Val/KG (${header.moneda})`, `Valor Total ${header.clausula_venta} (${header.moneda})`]],
-      body: [
-        ...items.map(it => [
-          it.especie, it.variedad, it.calibre,
-          fmtKg(parseFloat(it.kg_neto_caja) || 0), fmtKg(parseFloat(it.kg_bruto_caja) || 0),
-          it.cantidad_cajas || "0",
-          fmtKg(it.kg_neto_total), fmtKg(it.kg_bruto_total),
-          fmt(parseFloat(it.valor_caja) || 0, header.moneda),
-          fmt(it.valor_kilo, header.moneda), fmt(it.valor_total, header.moneda),
-        ]),
-        [
-          { content: "TOTAL", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const, fillColor: GREEN_LIGHT } },
-          { content: String(totals.cajas), styles: { fontStyle: "bold" as const, halign: "center" as const, fillColor: GREEN_LIGHT } },
-          { content: fmtKg(totals.kg_neto), styles: { fontStyle: "bold" as const, fillColor: GREEN_LIGHT } },
-          { content: fmtKg(totals.kg_bruto), styles: { fontStyle: "bold" as const, fillColor: GREEN_LIGHT } },
-          { content: "", styles: { fillColor: GREEN_LIGHT } },
-          { content: "", styles: { fillColor: GREEN_LIGHT } },
-          { content: `${header.clausula_venta} ${fmt(totals.valor, header.moneda)} ${header.moneda}`, styles: { fontStyle: "bold" as const, fillColor: GREEN_LIGHT, textColor: [29, 111, 66] as [number,number,number] } },
-        ],
-      ],
-      headStyles: { fillColor: GREEN, textColor: [255,255,255], fontStyle: "bold", fontSize: 6.5, cellPadding: 1.5 },
-      bodyStyles: { fontSize: 7, cellPadding: 1.5 },
-      alternateRowStyles: { fillColor: [248, 252, 250] },
-      columnStyles: {
-        0:{cellWidth:22},1:{cellWidth:18},2:{cellWidth:13},
-        3:{cellWidth:20,halign:"right"},4:{cellWidth:20,halign:"right"},
-        5:{cellWidth:13,halign:"center"},
-        6:{cellWidth:21,halign:"right"},7:{cellWidth:21,halign:"right"},
-        8:{cellWidth:21,halign:"right"},9:{cellWidth:21,halign:"right"},
-        10:{cellWidth:30,halign:"right"},
-      },
-    });
-
-    if (header.observaciones) {
-      const finalY = (doc as any).lastAutoTable.finalY + 3;
-      doc.setFontSize(7); doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80);
-      doc.text(`Observaciones: ${header.observaciones}`, m, finalY);
+    let sharedStr = await zip.files["xl/sharedStrings.xml"].async("string");
+    for (const [tag, val] of Object.entries(tagMap)) {
+      sharedStr = sharedStr.replaceAll(tag, ex(val));
     }
-    doc.save(`Proforma_${header.numero || "borrador"}.pdf`);
+    zip.file("xl/sharedStrings.xml", sharedStr);
+
+    let sheet = await zip.files["xl/worksheets/sheet1.xml"].async("string");
+    const buildItemRow = (rowNum: number, it: ProformaItem | null): string => {
+      const s = "41";
+      const str = (col: string, val: string) =>
+        val ? `<c r="${col}${rowNum}" s="${s}" t="inlineStr"><is><t>${ex(val)}</t></is></c>`
+            : `<c r="${col}${rowNum}" s="${s}"/>`;
+      const num = (col: string, val: number) =>
+        val ? `<c r="${col}${rowNum}" s="${s}"><v>${val}</v></c>`
+            : `<c r="${col}${rowNum}" s="${s}"/>`;
+      if (!it) {
+        return `<row r="${rowNum}" spans="1:20" ht="21">`
+          + "ABCDEFGHIJKLMNOPQRST".split("").map(c => `<c r="${c}${rowNum}" s="${s}"/>`).join("")
+          + `</row>`;
+      }
+      return `<row r="${rowNum}" spans="1:20" ht="21">`
+        + str("A", it.cantidad_cajas) + `<c r="B${rowNum}" s="${s}"/>`
+        + str("C", it.tipo_envase)    + `<c r="D${rowNum}" s="${s}"/>`
+        + str("E", it.variedad)       + `<c r="F${rowNum}" s="${s}"/>`
+        + str("G", it.categoria)      + `<c r="H${rowNum}" s="${s}"/>`
+        + str("I", it.etiqueta)       + `<c r="J${rowNum}" s="${s}"/>`
+        + str("K", it.calibre)        + `<c r="L${rowNum}" s="${s}"/>`
+        + num("M", parseFloat(it.kg_neto_caja) || 0) + `<c r="N${rowNum}" s="${s}"/>`
+        + num("O", it.valor_kilo || 0)               + `<c r="P${rowNum}" s="${s}"/>`
+        + num("Q", parseFloat(it.valor_caja) || 0)   + `<c r="R${rowNum}" s="${s}"/>`
+        + num("S", it.valor_total || 0)              + `<c r="T${rowNum}" s="${s}"/>`
+        + `</row>`;
+    };
+    for (let i = 0; i < 20; i++) {
+      const rowNum = 43 + i;
+      sheet = sheet.replace(
+        new RegExp(`<row[^>]*r="${rowNum}"[^>]*>[\\s\\S]*?<\\/row>`),
+        buildItemRow(rowNum, items[i] ?? null)
+      );
+    }
+    const totalVal = `${mon} ${fmt(totals.valor, mon)}`;
+    const pagoVal  = header.forma_pago || "";
+    const fillCell = (col: string, row: number, style: string, val: string) =>
+      sheet.replace(
+        new RegExp(`<c r="${col}${row}"[^/]*/>`),
+        `<c r="${col}${row}" s="${style}" t="inlineStr"><is><t>${ex(val)}</t></is></c>`
+      );
+    sheet = fillCell("S", 66, "45", totalVal);
+    sheet = fillCell("S", 67, "49", totalVal);
+    sheet = fillCell("S", 68, "49", pagoVal);
+    sheet = fillCell("S", 69, "49", pagoVal);
+    zip.file("xl/worksheets/sheet1.xml", sheet);
+  };
+
+  // Genera y abre la ventana PDF — replica FORMATO ALMAFRUIT
+  const openPdfWindow = async () => {
+    const mon = header.moneda || "USD";
+    const escH = (v: any) => String(v ?? "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const totalFob = `${mon} ${fmt(totals.valor, mon)}`;
+
+    const activeItems = items.filter(it => (it.cantidad_cajas || "") !== "" || (it.variedad || "") !== "");
+    const blankCount = Math.max(0, 8 - activeItems.length);
+    const B = "border:1px solid #888";
+    const filledItemRows = activeItems.map(it => `<tr>
+        <td>${escH(it.cantidad_cajas)}</td>
+        <td>${escH(it.tipo_envase)}</td>
+        <td>${escH(it.variedad)}</td>
+        <td>${escH(it.categoria)}</td>
+        <td>${escH(it.etiqueta)}</td>
+        <td>${escH(it.calibre)}</td>
+        <td>${fmtKg(parseFloat(it.kg_neto_caja)||0)}</td>
+        <td>${fmt(parseFloat(it.valor_caja)||0, mon)}</td>
+        <td style="font-weight:bold">${fmt(it.valor_total||0, mon)}</td>
+      </tr>`).join("");
+    const blankRows = Array.from({ length: blankCount },
+      () => `<tr>${`<td style="${B};height:16px"></td>`.repeat(9)}</tr>`).join("");
+
+    const SH = "font-weight:bold;font-size:7px";          // section header text style
+    const SHB = `background:#1e3a5f;color:#fff;${SH}`;    // section header with bg
+    const SUB = "font-size:6px;color:#555;font-style:italic"; // sub-label
+    const LBL = "font-weight:bold";                        // field label
+
+    const htmlDoc = `<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<title>Proforma ${escH(header.numero || "borrador")}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:7.5px;margin:0;padding:6px;color:#000}
+  @page{size:A4 landscape;margin:8mm}
+  table{border-collapse:collapse;width:100%;margin-bottom:2px;table-layout:fixed}
+  td,th{border:1px solid #888;padding:3px 5px;vertical-align:middle;text-align:center;word-break:break-word}
+  .print-btn{position:fixed;top:8px;right:8px;padding:5px 14px;background:#059669;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;z-index:9}
+  @media print{.print-btn{display:none}}
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">⎙ Imprimir / PDF</button>
+
+<!-- ① Logo + exportador + RUT/INVOICE  (3 cols: 14% | 58% | 28%) -->
+<table>
+  <colgroup><col style="width:14%"/><col style="width:58%"/><col style="width:28%"/></colgroup>
+  <tr>
+    <td rowspan="3" style="vertical-align:middle;padding:4px">
+      <img src="/almafruit-logo.png" style="height:54px;width:auto"/>
+    </td>
+    <td style="font-weight:bold;font-size:8.5px">${escH(header.exportador || "EXPORTADORA ALMA FRUIT SPA")}</td>
+    <td style="font-weight:bold">RUT: ${escH(header.exportador_rut)}</td>
+  </tr>
+  <tr>
+    <td style="font-size:7px">GIRO: EXPORTADORA DE FRUTAS Y VERDURAS</td>
+    <td style="font-weight:bold">INVOICE: ${escH(header.numero)}</td>
+  </tr>
+  <tr>
+    <td style="font-size:7px">${escH(header.exportador_direccion || "ARTURO PEREZ CANTO 1011 CURICO")}</td>
+    <td style="border:none"></td>
+  </tr>
+</table>
+
+<!-- ② Consignee (2 mitades: 70% izq | 30% der)  -->
+<table style="text-align:left">
+  <colgroup><col style="width:14%"/><col style="width:56%"/><col style="width:14%"/><col style="width:16%"/></colgroup>
+  <tr>
+    <td style="${LBL}">CONSIGNEE:</td>
+    <td>${escH(header.importador)}</td>
+    <td style="${LBL}">FECHA:</td>
+    <td>${escH(header.fecha)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">ADDRESS:</td>
+    <td colspan="3">${escH(header.importador_direccion)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">EMAIL:</td>
+    <td>${escH(header.consignee_email)}</td>
+    <td style="${LBL}">TEL:</td>
+    <td>${escH(header.consignee_mobile)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">ATTN:</td>
+    <td>${escH(header.consignee_attn)}</td>
+    <td style="${LBL}">EMBARQUE N°:</td>
+    <td style="font-weight:bold">${escH(header.numero)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">USCI:</td>
+    <td colspan="3">${escH(header.consignee_uscc)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">PAIS:</td>
+    <td colspan="3">${escH(header.importador_pais)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">CSP:</td>
+    <td colspan="3">${escH(header.csp)}</td>
+  </tr>
+  <tr>
+    <td style="${LBL}">CSG:</td>
+    <td colspan="3">${escH(header.csg)}</td>
+  </tr>
+</table>
+
+<!-- ③ Embarque — 5 columnas iguales (20% c/u) -->
+<table>
+  <colgroup><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/></colgroup>
+  <tr>
+    <td style="${SHB}">FECHA DE EMBARQUE</td>
+    <td style="${SHB}">MOTONAVE</td>
+    <td style="${SHB}">N° DE VIAJE</td>
+    <td style="${SHB}">MODALIDAD DE VENTA</td>
+    <td style="${SHB}">CLAUSULA DE VENTA</td>
+  </tr>
+  <tr>
+    <td style="${SUB}">Depurate Date</td>
+    <td style="${SUB}">Vassel</td>
+    <td style="${SUB}">Travel Number</td>
+    <td style="${SUB}">Terms of Sale</td>
+    <td style="${SUB}">Clause of Sale</td>
+  </tr>
+  <tr>
+    <td>${escH(header.fecha)}</td>
+    <td>${escH(header.nave)}</td>
+    <td>${escH(header.viaje)}</td>
+    <td>${escH(header.clausula_venta)}</td>
+    <td>${escH(header.clausula_venta)}</td>
+  </tr>
+</table>
+
+<!-- ④ Puertos — 5 columnas iguales -->
+<table>
+  <colgroup><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/></colgroup>
+  <tr>
+    <td style="${SHB}">PAIS ORIGEN</td>
+    <td style="${SHB}">PUERTO EMBARQUE</td>
+    <td style="${SHB}">PUERTO DESTINO</td>
+    <td style="${SHB}">PAIS DESTINO FINAL</td>
+    <td style="${SHB}">FORMA DE PAGO</td>
+  </tr>
+  <tr>
+    <td style="${SUB}">Country of Origin</td>
+    <td style="${SUB}">Loading Port</td>
+    <td style="${SUB}">Destination Port</td>
+    <td style="${SUB}">Country of Destination</td>
+    <td style="${SUB}">Payment Terms</td>
+  </tr>
+  <tr>
+    <td>Chile</td>
+    <td>${escH(header.puerto_origen)}</td>
+    <td>${escH(header.puerto_destino)}</td>
+    <td>${escH(header.destino)}</td>
+    <td>${escH(header.forma_pago)}</td>
+  </tr>
+</table>
+
+<!-- ⑤ Pesos + contenedor — 3 columnas iguales -->
+<table>
+  <colgroup><col style="width:33.3%"/><col style="width:33.3%"/><col style="width:33.4%"/></colgroup>
+  <tr>
+    <td style="${SHB}">PESO NETO TOTAL</td>
+    <td style="${SHB}">PESO BRUTO TOTAL</td>
+    <td style="${SHB}">CONTENEDOR / AWB</td>
+  </tr>
+  <tr>
+    <td style="${SUB}">Net Weight</td>
+    <td style="${SUB}">Gross Weight</td>
+    <td style="${SUB}">Container / awb</td>
+  </tr>
+  <tr>
+    <td>${fmtKg(totals.kg_neto)} KG</td>
+    <td>${fmtKg(totals.kg_bruto)} KG</td>
+    <td>${escH(header.contenedor)}</td>
+  </tr>
+</table>
+
+<!-- ⑥ Especie -->
+<table>
+  <colgroup><col style="width:14%"/><col style="width:12%"/><col style="width:74%"/></colgroup>
+  <tr>
+    <td style="${SHB}">ESPECIE</td>
+    <td style="${SUB}">Specie</td>
+    <td>${escH(header.especie_general || items[0]?.especie || "")}</td>
+  </tr>
+</table>
+
+<!-- ⑦ Tabla de productos — 9 columnas -->
+<table>
+  <colgroup>
+    <col style="width:8%"/><col style="width:12%"/><col style="width:12%"/>
+    <col style="width:9%"/><col style="width:11%"/><col style="width:8%"/>
+    <col style="width:12%"/><col style="width:14%"/><col style="width:14%"/>
+  </colgroup>
+  <thead>
+    <tr>
+      <th style="${SHB}">CANTIDAD<br/><span style="${SUB}">Quantity</span></th>
+      <th style="${SHB}">TIPO DE ENVASE<br/><span style="${SUB}">Type of Package</span></th>
+      <th style="${SHB}">VARIEDAD<br/><span style="${SUB}">Variety</span></th>
+      <th style="${SHB}">CATEGORIA<br/><span style="${SUB}">Category</span></th>
+      <th style="${SHB}">ETIQUETA<br/><span style="${SUB}">Label</span></th>
+      <th style="${SHB}">CALIBRE<br/><span style="${SUB}">Size</span></th>
+      <th style="${SHB}">KG NETO UNIDAD<br/><span style="${SUB}">Net Weight Per Unit</span></th>
+      <th style="${SHB}">PRECIO POR CAJA<br/><span style="${SUB}">Price Per Box</span></th>
+      <th style="${SHB}">TOTAL<br/><span style="${SUB}">Total Value</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    ${filledItemRows}
+    ${blankRows}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td style="font-weight:bold">${totals.cajas}</td>
+      <td colspan="7" style="font-weight:bold">TOTALES</td>
+      <td style="font-weight:bold">${totalFob}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- ⑧ Footer -->
+<table>
+  <colgroup><col style="width:25%"/><col style="width:25%"/><col style="width:50%"/></colgroup>
+  <tr>
+    <td style="font-weight:bold">VALOR TOTAL A PAGAR:</td>
+    <td style="${SUB}">TOTAL VALUE:</td>
+    <td style="font-weight:bold">${totalFob}</td>
+  </tr>
+  <tr>
+    <td style="font-weight:bold">PLAZO DE PAGO:</td>
+    <td style="${SUB}">PAYMENT TERMS:</td>
+    <td>${escH(header.forma_pago)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="font-weight:bold;border-top:2px solid #888">
+      ${escH(header.exportador || "EXPORTADORA ALMA FRUIT SPA")}
+    </td>
+  </tr>
+</table>
+
+</body></html>`;
+
+    const win = window.open("", "_blank", "width=1200,height=900");
+    if (!win) throw new Error("El navegador bloqueó la ventana de impresión.");
+    win.document.open();
+    win.document.write(`${htmlDoc}<script>window.onload=()=>window.print()<\/script>`);
+    win.document.close();
+  };
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      await openPdfWindow();
+    } catch (e: any) {
+      setShowError(e?.message ?? "Error al exportar PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportBuiltinXlsx = async () => {
+    // ── Cargar template Almafruit desde /public ───────────────────────────────
+    // Usamos JSZip para modificar el XML directamente — esto preserva la imagen/logo.
+    // xlsx-js-style strip images al hacer write(), por eso se abandonó ese approach.
+    const resp = await fetch("/FORMATO ALMAFRUIT.xlsx");
+    if (!resp.ok) throw new Error("No se pudo cargar el formato Almafruit");
+    const buffer = await resp.arrayBuffer();
+    const zip = await JSZip.loadAsync(buffer);
+
+    // Helper: escapar caracteres especiales XML
+    const ex = (s: string) => String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    // ── 1. Reemplazar etiquetas de cabecera en sharedStrings.xml ─────────────
+    // La plantilla tiene tags {{XXX}} en celdas individuales.
+    // Reemplazamos el texto del sharedStrings (no tocamos el sheet XML de cabecera).
+    const mon = header.moneda || "USD";
+    const tagMap: Record<string, string> = {
+      "{{EXPORTADOR_RUT}}":    header.exportador_rut || "",
+      "{{INVOICE_NUMBER}}":    header.numero || "",
+      "{{CONSIGNEE_COMPANY}}": header.importador || "",
+      "{{CONSIGNEE_ADDRESS}}": header.importador_direccion || "",
+      "{{CONSIGNEE_EMAIL}}":   (header.consignee_email || "").replace(/\t/g, ""),
+      "{{CONSIGNEE_MOBILE}}":  header.consignee_mobile || "",
+      "{{FECHA_EMBARQUE}}":    header.fecha || "",
+      "{{CONSIGNEE_ATTN}}":    header.consignee_attn || "",
+      "{{NOTIFY_USCC}}":       header.consignee_uscc || "",
+      "{{CONSIGNEE_PAIS}}":    header.importador_pais || "",
+      "{{REF_CLIENTE}}":       header.numero || "",
+      "{{CSP}}":               header.csp || "",
+      "{{CSG}}":               header.csg || "",
+      "{{MOTONAVE}}":          header.nave || "",
+      "{{VIAJE}}":             header.viaje || "",
+      "{{MODALIDAD_VENTA}}":   header.clausula_venta || "",
+      "{{CLAUSULA_VENTA}}":    header.clausula_venta || "",
+      "{{FORMA_PAGO}}":        header.forma_pago || "",
+      "{{PAIS_DESTINO}}":      header.destino || "",
+      "{{PUERTO_DESTINO}}":    header.puerto_destino || "",
+      "{{PUERTO_EMBARQUE}}":   header.puerto_origen || "",
+      "{{PAIS_ORIGEN}}":       "Chile",
+      "{{PESO_NETO_TOTAL}}":   `${fmtKg(totals.kg_neto)} KG`,
+      "{{PESO_BRUTO_TOTAL}}":  `${fmtKg(totals.kg_bruto)} KG`,
+      "{{CONTENEDOR}}":        header.contenedor || "",
+      "{{PRODUCTO_ESPECIE}}":  header.especie_general || items[0]?.especie || "",
+      "{{PRODUCTO_TOTAL}}":    String(totals.cajas),
+      "{{TOTAL_FOB}}":         `${mon} ${fmt(totals.valor, mon)}`,
+      "{{VALOR_TOTAL}}":       fmt(totals.valor, mon),
+    };
+
+    let sharedStr = await zip.files["xl/sharedStrings.xml"].async("string");
+    for (const [tag, val] of Object.entries(tagMap)) {
+      sharedStr = sharedStr.replaceAll(tag, ex(val));
+    }
+    zip.file("xl/sharedStrings.xml", sharedStr);
+
+    // ── 2. Reemplazar filas de productos en sheet1.xml ────────────────────────
+    // Fila 43: fila template con etiquetas {{PRODUCTO_X}} como shared strings.
+    // Filas 44–62: filas vacías con estilos, sin datos.
+    // Reemplazamos el XML de cada fila con valores inline para preservar estilos.
+    let sheet = await zip.files["xl/worksheets/sheet1.xml"].async("string");
+
+    const buildItemRow = (rowNum: number, it: ProformaItem | null): string => {
+      const s = "41"; // mismo estilo que la fila template
+      const str = (col: string, val: string) =>
+        val
+          ? `<c r="${col}${rowNum}" s="${s}" t="inlineStr"><is><t>${ex(val)}</t></is></c>`
+          : `<c r="${col}${rowNum}" s="${s}"/>`;
+      const num = (col: string, val: number) =>
+        val
+          ? `<c r="${col}${rowNum}" s="${s}"><v>${val}</v></c>`
+          : `<c r="${col}${rowNum}" s="${s}"/>`;
+      if (!it) {
+        return `<row r="${rowNum}" spans="1:20" ht="21">`
+          + "ABCDEFGHIJKLMNOPQRST".split("").map(c => `<c r="${c}${rowNum}" s="${s}"/>`).join("")
+          + `</row>`;
+      }
+      return `<row r="${rowNum}" spans="1:20" ht="21">`
+        + str("A", it.cantidad_cajas)
+        + `<c r="B${rowNum}" s="${s}"/>`
+        + str("C", it.tipo_envase)
+        + `<c r="D${rowNum}" s="${s}"/>`
+        + str("E", it.variedad)
+        + `<c r="F${rowNum}" s="${s}"/>`
+        + str("G", it.categoria)
+        + `<c r="H${rowNum}" s="${s}"/>`
+        + str("I", it.etiqueta)
+        + `<c r="J${rowNum}" s="${s}"/>`
+        + str("K", it.calibre)
+        + `<c r="L${rowNum}" s="${s}"/>`
+        + num("M", parseFloat(it.kg_neto_caja) || 0)
+        + `<c r="N${rowNum}" s="${s}"/>`
+        + num("O", it.valor_kilo || 0)
+        + `<c r="P${rowNum}" s="${s}"/>`
+        + num("Q", parseFloat(it.valor_caja) || 0)
+        + `<c r="R${rowNum}" s="${s}"/>`
+        + num("S", it.valor_total || 0)
+        + `<c r="T${rowNum}" s="${s}"/>`
+        + `</row>`;
+    };
+
+    for (let i = 0; i < 20; i++) {
+      const rowNum = 43 + i;
+      sheet = sheet.replace(
+        new RegExp(`<row[^>]*r="${rowNum}"[^>]*>[\\s\\S]*?<\\/row>`),
+        buildItemRow(rowNum, items[i] ?? null)
+      );
+    }
+
+    // ── 3. Añadir valores en celdas S del footer ─────────────────────────────
+    // S66/S67 = total FOB, S68/S69 = forma de pago
+    const totalVal = `${mon} ${fmt(totals.valor, mon)}`;
+    const pagoVal  = header.forma_pago || "";
+    const fillCell = (col: string, row: number, style: string, val: string) =>
+      sheet.replace(
+        new RegExp(`<c r="${col}${row}"[^/]*/>`),
+        `<c r="${col}${row}" s="${style}" t="inlineStr"><is><t>${ex(val)}</t></is></c>`
+      );
+    sheet = fillCell("S", 66, "45", totalVal);
+    sheet = fillCell("S", 67, "49", totalVal);
+    sheet = fillCell("S", 68, "49", pagoVal);
+    sheet = fillCell("S", 69, "49", pagoVal);
+
+    zip.file("xl/worksheets/sheet1.xml", sheet);
+
+    // ── 4. Descargar ──────────────────────────────────────────────────────────
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Proforma_${header.numero || "borrador"}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // -- Save -------------------------------------------------------------------
@@ -1293,7 +1763,7 @@ export function CrearProformaContent() {
         puerto_origen: header.puerto_origen || null, puerto_destino: header.puerto_destino || null,
         destino: header.destino || null, contenedor: header.contenedor || null,
         etd: header.etd || null, naviera: header.naviera || null,
-        nave: header.nave || null, booking: header.booking || null,
+        nave: header.nave || null, viaje: header.viaje || null, booking: header.booking || null,
         dus: header.dus || null, csg: header.csg || null, csp: header.csp || null,
         observaciones: header.observaciones || null,
         total_cajas: totals.cajas, total_kg_neto: totals.kg_neto,
@@ -1308,7 +1778,9 @@ export function CrearProformaContent() {
       const { error: itemErr } = await supabase.from("proforma_items").insert(
         items.map((it, idx) => ({
           proforma_id: saved.id, orden: idx,
-          especie: it.especie || null, variedad: it.variedad || null, calibre: it.calibre || null,
+          especie: it.especie || null, variedad: it.variedad || null,
+          tipo_envase: it.tipo_envase || null, categoria: it.categoria || null, etiqueta: it.etiqueta || null,
+          calibre: it.calibre || null,
           kg_neto_caja: parseFloat(it.kg_neto_caja) || null,
           kg_bruto_caja: parseFloat(it.kg_bruto_caja) || null,
           cantidad_cajas: parseInt(it.cantidad_cajas, 10) || null,
@@ -1380,7 +1852,7 @@ export function CrearProformaContent() {
       destino: pf.destino ?? "", contenedor: pf.contenedor ?? "",
       sello: pf.sello ?? "", tara: pf.tara ?? "", tipo_contenedor: pf.tipo_contenedor ?? "",
       etd: pf.etd ?? "", eta: pf.eta ?? "",
-      naviera: pf.naviera ?? "", nave: pf.nave ?? "", booking: pf.booking ?? "",
+      naviera: pf.naviera ?? "", nave: pf.nave ?? "", viaje: pf.viaje ?? "", booking: pf.booking ?? "",
       especie_general: pf.especie_general ?? "",
       temperatura: pf.temperatura ?? "", ventilacion: pf.ventilacion ?? "",
       pallets: pf.pallets ?? "",
@@ -1391,7 +1863,9 @@ export function CrearProformaContent() {
     });
     if (its?.length) {
       setItems(its.map((it: any) => computeItem({
-        id: it.id, especie: it.especie ?? "", variedad: it.variedad ?? "", calibre: it.calibre ?? "",
+        id: it.id, especie: it.especie ?? "", variedad: it.variedad ?? "",
+        tipo_envase: it.tipo_envase ?? "", categoria: it.categoria ?? "", etiqueta: it.etiqueta ?? "",
+        calibre: it.calibre ?? "",
         kg_neto_caja: String(it.kg_neto_caja ?? ""), kg_bruto_caja: String(it.kg_bruto_caja ?? ""),
         cantidad_cajas: String(it.cantidad_cajas ?? ""),
         kg_neto_total: it.kg_neto_total ?? 0, kg_bruto_total: it.kg_bruto_total ?? 0,
@@ -1480,9 +1954,25 @@ export function CrearProformaContent() {
     </div>
   );
 
+  // -- Access guard -----------------------------------------------------------
+  if (!isLoading && !isSuperadmin && !isAdmin && !isEjecutivo) {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 gap-3 text-neutral-500 p-8">
+        <span className="text-4xl">🔒</span>
+        <p className="text-lg font-medium">Acceso restringido</p>
+        <p className="text-sm">Esta sección está disponible solo para ejecutivos, administradores y superadmin.</p>
+      </div>
+    );
+  }
+
   // -- Render -----------------------------------------------------------------
   return (
     <div className="flex flex-col h-full bg-neutral-50">
+
+      {/* Datalists globales */}
+      <datalist id="variedades-cereza-list">
+        {VARIEDADES_CEREZA.map(v => <option key={v} value={v} />)}
+      </datalist>
 
       {/* -- Top Bar -- */}
       <div className="flex items-center justify-between gap-3 px-4 py-3 bg-white border-b border-neutral-200 flex-shrink-0">
@@ -1519,6 +2009,16 @@ export function CrearProformaContent() {
               : <Icon icon="lucide:upload" width={14} />}
             <span className="hidden sm:inline">Importar</span>
           </button>
+          {isSuperadmin && (
+            <button
+              type="button"
+              onClick={loadDatosDePrueba}
+              title="Rellenar con datos de prueba"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 transition-colors">
+              <Icon icon="typcn:flash" width={14} />
+              <span className="hidden sm:inline">Prueba</span>
+            </button>
+          )}
           <button onClick={handleNew}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">
             <Icon icon="lucide:plus" width={14} /><span className="hidden sm:inline">Nueva</span>
@@ -1614,13 +2114,13 @@ export function CrearProformaContent() {
             </div>
           )}
           <button
-            onClick={handleExport}
+            onClick={handleExportExcel}
             disabled={exporting}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
           >
             {exporting
-              ? <><Icon icon="lucide:loader-2" width={13} className="animate-spin" /><span>Exportando...</span></>
-              : <><Icon icon="lucide:download" width={13} /><span>Exportar</span></>
+              ? <><Icon icon="lucide:loader-2" width={14} className="animate-spin" /><span>Generando...</span></>
+              : <><Icon icon="lucide:file-spreadsheet" width={14} /><span>Generar Proforma</span></>
             }
           </button>
         </div>
@@ -1684,12 +2184,18 @@ export function CrearProformaContent() {
               ))}
             </div>
 
+            {/* Botón agregar fila — prominente, antes de la tabla */}
+            <button onClick={addItem}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-2 border-dashed border-emerald-400 text-emerald-700 rounded-xl hover:bg-emerald-50 hover:border-emerald-500 transition-colors self-start">
+              <Icon icon="lucide:plus-circle" width={18} />Agregar fila
+            </button>
+
             {/* Desktop table */}
             <div className="hidden md:block rounded-xl border border-neutral-200 bg-white overflow-x-auto">
               <table className="w-full text-sm min-w-[960px]">
                 <thead>
                   <tr className="bg-emerald-700 text-white">
-                    {["#","Especie","Variedad","Calibre","KG Neto/Caja","KG Bruto/Caja","Cajas",
+                    {["","#","Especie","Variedad","Tipo Envase","Categoría","Etiqueta","Calibre","KG Neto/Caja","KG Bruto/Caja","Cajas",
                       "KG Neto Total","KG Bruto Total",`Val/Caja (${header.moneda})`,
                       `Val/KG (${header.moneda})`, `Valor Total (${header.moneda})`, ""].map((h,i) => (
                       <th key={i} className="px-2 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
@@ -1699,13 +2205,56 @@ export function CrearProformaContent() {
                 <tbody>
                   {items.map((it, idx) => (
                     <tr key={it.id} className={idx % 2 === 0 ? "bg-white" : "bg-neutral-50"}>
+                      <td className="px-2 py-1 text-center">
+                        <button onClick={() => duplicateItem(it.id)} title="Copiar fila"
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors whitespace-nowrap">
+                          <Icon icon="lucide:copy-plus" width={14} />Copiar
+                        </button>
+                      </td>
                       <td className="px-2 py-1 text-neutral-400 text-center">{idx+1}</td>
-                      {(["especie","variedad","calibre"] as const).map(f => (
-                        <td key={f} className="px-1 py-1">
-                          <input value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
-                            className="w-full min-w-[70px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5" />
-                        </td>
-                      ))}
+                      {/* Especie — select desde tabla especies */}
+                      <td className="px-1 py-1">
+                        <select value={it.especie} onChange={e => updateItem(it.id, "especie", e.target.value)}
+                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          <option value="">—</option>
+                          {especiesCatalog.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      {/* Variedad — datalist cereza + libre en mayúscula */}
+                      <td className="px-1 py-1">
+                        <input list="variedades-cereza-list" value={it.variedad}
+                          onChange={e => updateItem(it.id, "variedad", e.target.value.toUpperCase())}
+                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 uppercase" />
+                      </td>
+                      {/* Tipo Envase — select fijo */}
+                      <td className="px-1 py-1">
+                        <select value={it.tipo_envase} onChange={e => updateItem(it.id, "tipo_envase", e.target.value)}
+                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          <option value="">—</option>
+                          {TIPOS_ENVASE_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      {/* Categoría — select fijo */}
+                      <td className="px-1 py-1">
+                        <select value={it.categoria} onChange={e => updateItem(it.id, "categoria", e.target.value)}
+                          className="w-full min-w-[75px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          <option value="">—</option>
+                          {CATEGORIAS_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      {/* Etiqueta — texto libre */}
+                      <td className="px-1 py-1">
+                        <input value={it.etiqueta} onChange={e => updateItem(it.id, "etiqueta", e.target.value)}
+                          className="w-full min-w-[70px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5" />
+                      </td>
+                      {/* Calibre — select fijo */}
+                      <td className="px-1 py-1">
+                        <select value={it.calibre} onChange={e => updateItem(it.id, "calibre", e.target.value)}
+                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          <option value="">—</option>
+                          {CALIBRES_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
                       {(["kg_neto_caja","kg_bruto_caja","cantidad_cajas"] as const).map(f => (
                         <td key={f} className="px-1 py-1">
                           <input type="number" value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
@@ -1725,20 +2274,29 @@ export function CrearProformaContent() {
                       <td className="px-2 py-1 text-right font-mono tabular-nums font-semibold text-neutral-800">{fmt(it.valor_total, header.moneda)}</td>
                       <td className="px-1 py-1 text-center">
                         {items.length > 1 && (
-                          <button onClick={() => removeItem(it.id)} className="text-neutral-300 hover:text-red-500 transition-colors">
-                            <Icon icon="lucide:trash-2" width={13} />
+                          <button onClick={() => removeItem(it.id)} title="Eliminar fila"
+                            className="text-neutral-300 hover:text-red-500 transition-colors">
+                            <Icon icon="lucide:trash-2" width={14} />
                           </button>
                         )}
                       </td>
                     </tr>
                   ))}
+                  {/* Totals — colSpan debe cuadrar exactamente con las 16 columnas */}
                   <tr className="bg-emerald-50 border-t-2 border-emerald-200">
-                    <td colSpan={6} className="px-2 py-2 text-right text-xs font-bold text-neutral-600">TOTAL</td>
+                    {/* cols 0-9: Copiar, #, Especie, Variedad, Tipo Envase, Categoría, Etiqueta, Calibre, KG Neto/Caja, KG Bruto/Caja */}
+                    <td colSpan={10} className="px-2 py-2 text-right text-xs font-bold text-neutral-600">TOTAL</td>
+                    {/* col 10: Cajas */}
                     <td className="px-2 py-2 text-right text-xs font-bold font-mono text-emerald-900">{totals.cajas.toLocaleString()}</td>
+                    {/* col 11: KG Neto Total */}
                     <td className="px-2 py-2 text-right text-xs font-bold font-mono text-emerald-900">{fmtKg(totals.kg_neto)}</td>
+                    {/* col 12: KG Bruto Total */}
                     <td className="px-2 py-2 text-right text-xs font-bold font-mono text-emerald-900">{fmtKg(totals.kg_bruto)}</td>
+                    {/* cols 13-14: Val/Caja + Val/KG — vacíos */}
                     <td colSpan={2} />
+                    {/* col 15: Valor Total */}
                     <td className="px-2 py-2 text-right text-sm font-bold font-mono text-emerald-900">{fmt(totals.valor, header.moneda)}</td>
+                    {/* col 16: trash — vacío */}
                     <td />
                   </tr>
                 </tbody>
@@ -1753,14 +2311,50 @@ export function CrearProformaContent() {
                     <span className="text-xs font-bold text-neutral-400 uppercase">Ítem {idx+1}</span>
                     {items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-neutral-300 hover:text-red-500"><Icon icon="lucide:trash-2" width={13} /></button>}
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["especie","variedad","calibre"] as const).map(f => (
-                      <div key={f} className="flex flex-col gap-0.5">
-                        <label className="text-[9px] font-semibold text-neutral-400 uppercase">{f}</label>
-                        <input value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
-                          className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400" />
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Especie</label>
+                      <select value={it.especie} onChange={e => updateItem(it.id, "especie", e.target.value)}
+                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        <option value="">—</option>
+                        {especiesCatalog.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Variedad</label>
+                      <input list="variedades-cereza-list" value={it.variedad}
+                        onChange={e => updateItem(it.id, "variedad", e.target.value.toUpperCase())}
+                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400 uppercase" />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Tipo Envase</label>
+                      <select value={it.tipo_envase} onChange={e => updateItem(it.id, "tipo_envase", e.target.value)}
+                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        <option value="">—</option>
+                        {TIPOS_ENVASE_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Categoría</label>
+                      <select value={it.categoria} onChange={e => updateItem(it.id, "categoria", e.target.value)}
+                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        <option value="">—</option>
+                        {CATEGORIAS_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Etiqueta</label>
+                      <input value={it.etiqueta} onChange={e => updateItem(it.id, "etiqueta", e.target.value)}
+                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Calibre</label>
+                      <select value={it.calibre} onChange={e => updateItem(it.id, "calibre", e.target.value)}
+                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        <option value="">—</option>
+                        {CALIBRES_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {([["kg_neto_caja","KG Neto/Caja"],["kg_bruto_caja","KG Bruto/Caja"],["cantidad_cajas","Cajas"],["valor_caja",`Val/Caja (${header.moneda})`]] as const).map(([f,lbl]) => (
@@ -1798,11 +2392,6 @@ export function CrearProformaContent() {
               </div>
             </div>
 
-            <button onClick={addItem}
-              className="flex items-center gap-2 px-4 py-2 text-xs font-medium border-2 border-dashed border-emerald-300 text-emerald-600 rounded-xl hover:bg-emerald-50 transition-colors self-start">
-              <Icon icon="lucide:plus-circle" width={15} />Agregar especie
-            </button>
-
             <div className="flex flex-col gap-0.5">
               <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Observaciones</label>
               <textarea value={header.observaciones} onChange={e => setH("observaciones", e.target.value)}
@@ -1831,6 +2420,9 @@ export function CrearProformaContent() {
               {inp("Consignee Address", "importador_direccion", { placeholder: "123 Commerce St, Los Angeles, CA" })}
               {inp("País", "importador_pais", { placeholder: "USA" })}
               {inp("USCC / USCI", "consignee_uscc", { placeholder: "91110000100006795A" })}
+              {inp("ATTN (Contacto)", "consignee_attn", { placeholder: "John Smith" })}
+              {inp("Email", "consignee_email", { placeholder: "jsmith@company.com" })}
+              {inp("Teléfono / Mobile", "consignee_mobile", { placeholder: "+1 310 555 0199" })}
             </div>
           </div>
         )}
@@ -1842,9 +2434,12 @@ export function CrearProformaContent() {
             {inp("Puerto de Descarga", "puerto_destino", { placeholder: "Los Angeles" })}
             {inp("Destino Final", "destino", { placeholder: "Los Angeles, CA" })}
             {inp("ETD", "etd", { type: "date" })}
+            {inp("ETA", "eta", { type: "date" })}
+            {inp("Forma de Pago", "forma_pago", { placeholder: "Crédito 60 días" })}
             {inp("Contenedor", "contenedor", { placeholder: "TCKU1234567" })}
             {inp("Naviera", "naviera", { placeholder: "Hapag-Lloyd" })}
             {inp("Nave / Buque", "nave", { placeholder: "SANTA ELENA" })}
+            {inp("N° de Viaje", "viaje", { placeholder: "001A" })}
             {inp("Booking", "booking", { placeholder: "HAP1234567" })}
             {inp("Ref. ASLI", "ref_asli", { placeholder: "ASLI-2026-001" })}
             <div className="flex flex-col gap-0.5">
@@ -2027,9 +2622,9 @@ export function CrearProformaContent() {
               <p className="text-sm text-neutral-500 mt-1">{header.numero} registrada correctamente.</p>
             </div>
             <div className="flex gap-2 w-full">
-              <button onClick={handleExport}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">
-                <Icon icon="lucide:download" width={14} />Exportar
+              <button onClick={handleExportExcel}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+                <Icon icon="lucide:file-spreadsheet" width={14} />Generar Proforma
               </button>
               <button onClick={() => setShowSuccess(false)}
                 className="flex-1 px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">

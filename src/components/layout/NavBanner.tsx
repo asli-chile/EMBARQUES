@@ -21,7 +21,7 @@ const PUBLIC_NAV_CARDS = [
   { labelKey: "stacking"     as const, href: "/stacking",       icon: "lucide:layers",      desc: "Fechas de stacking por servicio" },
 ];
 
-type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean };
+type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean; ejecutivoAndAbove?: boolean };
 
 // Metadatos visuales de cada módulo (ícono + descripción)
 const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
@@ -59,7 +59,7 @@ type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
-  const { user, profile, isExternalUser, empresaNombres, isSuperadmin } = useAuth();
+  const { user, profile, isExternalUser, empresaNombres, isSuperadmin, isAdmin, isEjecutivo } = useAuth();
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -72,11 +72,19 @@ export function NavBanner({ pathname }: NavBannerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!user;
 
+  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
+
   // Filtrar sidebarItems según rol
   const visibleSidebarItems = useMemo(() =>
     (siteConfig.sidebarItems as SidebarItem[]).filter(
       (item) => !(("superadminOnly" in item && item.superadminOnly) || false) || isSuperadmin
-    ), [isSuperadmin]);
+    ).map((item) => {
+      if (!("children" in item) || !item.children) return item;
+      const filtered = (item.children as SidebarItem[]).filter(
+        (child) => !child.ejecutivoAndAbove || canAccessEjecutivoAndAbove
+      );
+      return { ...item, children: filtered };
+    }), [isSuperadmin, canAccessEjecutivoAndAbove]);
 
   // Auto-expandir sección activa al abrir drawer
   useEffect(() => {

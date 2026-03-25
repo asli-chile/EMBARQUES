@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -190,6 +190,9 @@ export function ReservaAsliContent() {
   const [instrFilename, setInstrFilename] = useState<string>("");
   const [instrSavedUrl, setInstrSavedUrl] = useState<string | null>(null);
   const [instrSaveError, setInstrSaveError] = useState<string | null>(null);
+  const [instrUploading, setInstrUploading] = useState(false);
+  const [instrIsManual, setInstrIsManual] = useState(false);
+  const instrFileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -272,6 +275,7 @@ export function ReservaAsliContent() {
     setInstrError("");
     setInstrSavedUrl(null);
     setInstrSaveError(null);
+    setInstrIsManual(false);
 
     if (!formData.operacion_id || !supabase) return;
     supabase
@@ -823,6 +827,38 @@ export function ReservaAsliContent() {
     URL.revokeObjectURL(url);
   };
 
+  // ── Subir instructivo manual ──────────────────────────────────────────────
+  const handleSubirInstructivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedOperacion || !supabase) return;
+    setInstrUploading(true);
+    setInstrSaveError(null);
+    try {
+      const storagePath = `${selectedOperacion.id}/INSTRUCTIVO_EMBARQUE/${file.name}`;
+      const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, file, { upsert: true });
+      if (upErr) throw new Error(`Error al subir: ${upErr.message}`);
+      const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
+      await supabase.from("documentos").delete().eq("operacion_id", selectedOperacion.id).eq("tipo", "INSTRUCTIVO_EMBARQUE");
+      const { error: insErr } = await supabase.from("documentos").insert({
+        operacion_id: selectedOperacion.id,
+        tipo: "INSTRUCTIVO_EMBARQUE",
+        nombre_archivo: file.name,
+        url: urlData.publicUrl,
+        tamano: file.size,
+        mime_type: file.type || "application/octet-stream",
+      });
+      if (insErr) throw new Error(`Error al registrar: ${insErr.message}`);
+      setInstrSavedUrl(urlData.publicUrl);
+      setInstrFilename(file.name);
+      setInstrIsManual(true);
+    } catch (err) {
+      setInstrSaveError(err instanceof Error ? err.message : "Error al subir el instructivo.");
+    } finally {
+      setInstrUploading(false);
+      if (instrFileInputRef.current) instrFileInputRef.current.value = "";
+    }
+  };
+
   // ── Paso 2: Enviar instructivo por correo desde la cuenta del ejecutivo ──
   const handleSendInstructivo = async () => {
     if (!selectedOperacion || !instrBlob) return;
@@ -1303,17 +1339,44 @@ export function ReservaAsliContent() {
                       {/* Acciones según fase */}
                       <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
 
-                        {/* Fase idle/error: botón Generar */}
+                        {/* Fase idle/error: botón Generar + Subir */}
                         {(instrPhase === "idle" || instrPhase === "error") && (
-                          <button
-                            type="button"
-                            disabled={!selectedFormatoId}
-                            onClick={() => void handleGenerarInstructivo()}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
-                            {instrSavedUrl ? "Regenerar instructivo" : "Generar instructivo"}
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              disabled={!selectedFormatoId || instrIsManual}
+                              onClick={() => void handleGenerarInstructivo()}
+                              title={instrIsManual ? "Se subió un instructivo manual. Elimínalo primero para poder generarlo automáticamente." : undefined}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
+                              {instrSavedUrl ? "Regenerar instructivo" : "Generar instructivo"}
+                            </button>
+                            {instrIsManual && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
+                                <Icon icon="lucide:lock" className="w-3 h-3" />
+                                Subido manualmente
+                              </span>
+                            )}
+
+                            <input
+                              ref={instrFileInputRef}
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => void handleSubirInstructivo(e)}
+                            />
+                            <button
+                              type="button"
+                              disabled={instrUploading}
+                              onClick={() => instrFileInputRef.current?.click()}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-300 text-violet-700 bg-white hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {instrUploading
+                                ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
+                                : <><Icon icon="lucide:upload" className="w-3.5 h-3.5" />Subir instructivo</>
+                              }
+                            </button>
+                          </>
                         )}
 
                         {/* Fase generating: spinner */}

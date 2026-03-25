@@ -9,6 +9,10 @@ import { ReservaAsliVisitorPreview } from "@/components/transportes/ReservaAsliV
 import { ReservaExtVisitorPreview } from "@/components/transportes/ReservaExtVisitorPreview";
 import { FacturacionVisitorPreview } from "@/components/transportes/FacturacionVisitorPreview";
 import { MisDocumentosVisitorPreview } from "@/components/documentos/MisDocumentosVisitorPreview";
+import { CrearInstructivoVisitorPreview } from "@/components/documentos/CrearInstructivoVisitorPreview";
+import { CrearProformaVisitorPreview } from "@/components/documentos/CrearProformaVisitorPreview";
+import { ReportesVisitorPreview } from "@/components/reportes/ReportesVisitorPreview";
+import { FinanzasVisitorPreview } from "@/components/finanzas/FinanzasVisitorPreview";
 
 export type VisitorModuleKey =
   | "registros"
@@ -69,6 +73,10 @@ export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitor
     if (moduleKey === "reservaExt") return <ReservaExtVisitorPreview />;
     if (moduleKey === "facturacion") return <FacturacionVisitorPreview />;
     if (moduleKey === "misDocumentos") return <MisDocumentosVisitorPreview />;
+    if (moduleKey === "crearInstructivo") return <CrearInstructivoVisitorPreview />;
+    if (moduleKey === "crearProforma") return <CrearProformaVisitorPreview />;
+    if (moduleKey === "reportes") return <ReportesVisitorPreview />;
+    if (moduleKey === "finanzas") return <FinanzasVisitorPreview />;
     const info = t.visitor[moduleKey];
     return <ModuleInfoPlaceholder info={info} currentHref={MODULE_KEY_TO_HREF[moduleKey]} />;
   }

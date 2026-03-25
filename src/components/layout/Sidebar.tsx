@@ -12,18 +12,26 @@ type SidebarProps = {
   pathname: string;
 };
 
-type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean };
+type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean; ejecutivoAndAbove?: boolean };
 
 export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
-  const { isSuperadmin } = useAuth();
+  const { isSuperadmin, isAdmin, isEjecutivo } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
+  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
 
   const visibleItems = useMemo(() => {
     return (siteConfig.sidebarItems as SidebarItem[]).filter(
       (item) => !(("superadminOnly" in item && item.superadminOnly) || false) || isSuperadmin
-    );
-  }, [isSuperadmin]);
+    ).map((item) => {
+      if (!("children" in item) || !item.children) return item;
+      const filtered = (item.children as SidebarItem[]).filter(
+        (child) => !child.ejecutivoAndAbove || canAccessEjecutivoAndAbove
+      );
+      return { ...item, children: filtered };
+    });
+  }, [isSuperadmin, canAccessEjecutivoAndAbove]);
   const [isMouseInside, setIsMouseInside] = useState(false);
 
   useEffect(() => {

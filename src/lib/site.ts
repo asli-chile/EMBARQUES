@@ -28,8 +28,6 @@ export const siteConfig = {
         { labelKey: "reservaAsli", id: "reserva-asli", href: "/transportes/reserva-asli" },
         { labelKey: "reservaExt", id: "reserva-ext", href: "/transportes/reserva-ext" },
         { labelKey: "facturacion", id: "facturacion", href: "/transportes/facturacion" },
-        { labelKey: "facturasTransporte", id: "facturas-transporte", href: "/transportes/facturas" },
-        { labelKey: "papeleraTransportes", id: "papelera-transportes", href: "/transportes/papelera" },
       ],
     },
     {
@@ -37,8 +35,8 @@ export const siteConfig = {
       id: "documentos",
       children: [
         { labelKey: "misDocumentos", id: "mis-documentos", href: "/documentos/mis-documentos" },
-        { labelKey: "crearInstructivo", id: "crear-instructivo", href: "/documentos/crear-instructivo" },
-        { labelKey: "crearProforma", id: "crear-proforma", href: "/documentos/crear-proforma" },
+        { labelKey: "crearInstructivo", id: "crear-instructivo", href: "/documentos/crear-instructivo", ejecutivoAndAbove: true },
+        { labelKey: "crearProforma", id: "crear-proforma", href: "/documentos/crear-proforma", ejecutivoAndAbove: true },
       ],
     },
     { labelKey: "reportes", id: "reportes", href: "/reportes" },

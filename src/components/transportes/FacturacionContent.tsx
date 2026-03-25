@@ -559,7 +559,24 @@ export function FacturacionContent() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws as never, "Proforma Invoice");
     const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+    // xlsx-js-style no soporta !views — inyectamos showGridLines="0" via JSZip
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(out);
+    const sheetFile = zip.file("xl/worksheets/sheet1.xml");
+    if (sheetFile) {
+      let xml = await sheetFile.async("string");
+      // Si ya existe <sheetView …> le agregamos el atributo; si no existe lo creamos
+      if (xml.includes("<sheetView")) {
+        xml = xml.replace(/<sheetView(?![^>]*showGridLines)/g, '<sheetView showGridLines="0"');
+      } else {
+        xml = xml.replace("<sheetData", '<sheetViews><sheetView showGridLines="0" tabSelected="1" workbookViewId="0"/></sheetViews><sheetData');
+      }
+      zip.file("xl/worksheets/sheet1.xml", xml);
+    }
+    const fixedOut = await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+
+    const blob = new Blob([fixedOut], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -685,7 +702,7 @@ export function FacturacionContent() {
       <img src="${window.location.origin}/LOGO ASLI SIN FONDO AZUL.png" alt="ASLI"
            onerror="this.style.display='none';document.getElementById('brand-text').style.display='block'">
       <div id="brand-text" style="display:none">
-        <div class="company-name">ASLI LOGISTICS</div>
+        <div class="company-name">ASLI Ltda.</div>
       </div>
       <div class="company-info">
         <div class="company-name">Asesorías y Servicios Logísticos Integrales Ltda.</div>
