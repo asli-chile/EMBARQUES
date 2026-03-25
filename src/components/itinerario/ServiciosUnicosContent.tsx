@@ -13,8 +13,9 @@ function normalizeArea(area: string | null | undefined): string {
   const t = String(area).trim().toUpperCase().replace(/\s+/g, "-");
   if ((AREAS as readonly string[]).includes(t)) return t;
   const alias: Record<string, string> = {
+    "INDIA-MEDIOORIENTE": "MEDIO-ORIENTE",
     "INDIA-MEDIO-ORIENTE": "MEDIO-ORIENTE",
-    "MEDIO-ORIENTE": "MEDIO-ORIENTE",
+    "INDIA-MEDIO ORIENTE": "MEDIO-ORIENTE",
   };
   return alias[t] ?? t;
 }
