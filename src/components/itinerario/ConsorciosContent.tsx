@@ -193,6 +193,31 @@ export function ConsorciosContent() {
       setModalError(tr.errorNameRequired);
       return;
     }
+
+    // Validar: mismo nombre sólo está permitido si es una región diferente
+    const selectedSrvs = serviciosOpts.filter((s) => form.servicios_ids.includes(s.id));
+    const newAreas = new Set(
+      selectedSrvs
+        .flatMap((s) => (s.destinos ?? []).map((d) => (d.area ? normalizeArea(d.area) : null)))
+        .filter((a): a is string => Boolean(a))
+    );
+    const conflictConsorcio = consorcios.find(
+      (c) =>
+        c.id !== editingId &&
+        c.nombre.trim().toLowerCase() === nombre.toLowerCase() &&
+        (c.servicios ?? []).some((item) =>
+          (item.servicio_unico?.destinos ?? []).some(
+            (d) => d.area && newAreas.has(normalizeArea(d.area))
+          )
+        )
+    );
+    if (conflictConsorcio) {
+      setModalError(
+        `Ya existe el consorcio «${conflictConsorcio.nombre}» en la misma región. Permitido usar el mismo nombre sólo en regiones distintas.`
+      );
+      return;
+    }
+
     setSaving(true);
     const base = getApiUrl() || "";
     const url = editingId
@@ -281,6 +306,19 @@ export function ConsorciosContent() {
     return a.localeCompare(b, undefined, { sensitivity: "base" });
   });
 
+  // Mapa servicioId → nombre(s) del consorcio que ya lo tiene asignado
+  // (excluye el consorcio que se está editando para no marcar sus propios servicios)
+  const usedInConsorcioMap = consorcios.reduce<Record<string, string[]>>((acc, c) => {
+    if (c.id === editingId) return acc;
+    (c.servicios ?? []).forEach((item) => {
+      const sid = item.servicio_unico?.id;
+      if (!sid) return;
+      if (!acc[sid]) acc[sid] = [];
+      if (!acc[sid].includes(c.nombre)) acc[sid].push(c.nombre);
+    });
+    return acc;
+  }, {});
+
   const getConsorcioAreas = useCallback((c: Consorcio): string[] => {
     const areas: string[] = [];
     (c.servicios ?? []).forEach((item) => {
@@ -324,10 +362,11 @@ export function ConsorciosContent() {
 
   function renderConsorcioCard(c: Consorcio) {
     const numServicios = c.servicios?.length ?? 0;
-    const numDestinos = (c.servicios ?? []).reduce(
-      (sum, s) => sum + (s.servicio_unico?.destinos?.length ?? 0),
-      0
-    );
+    const numDestinos = new Set(
+      (c.servicios ?? []).flatMap(
+        (s) => (s.servicio_unico?.destinos ?? []).map((d) => (d.puerto ?? "").trim().toUpperCase()).filter(Boolean)
+      )
+    ).size;
     const servicioNombres = c.servicios?.map((s) => s.servicio_unico?.nombre).filter(Boolean) ?? [];
     const navieras = [
       ...new Set(
@@ -531,19 +570,39 @@ export function ConsorciosContent() {
                               ?.sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", undefined, { sensitivity: "base" }))
                               .map((s) => {
                                 const inputId = `serv-${areaName}-${s.id}`;
+                                const usedIn = usedInConsorcioMap[s.id];
+                                const isUsed = usedIn && usedIn.length > 0;
+                                const isChecked = form.servicios_ids.includes(s.id);
                                 return (
-                                  <li key={inputId} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50/80 transition-colors">
+                                  <li
+                                    key={inputId}
+                                    className={`flex items-start gap-3 px-4 py-2.5 transition-colors ${
+                                      isUsed
+                                        ? "bg-amber-50/70 hover:bg-amber-50"
+                                        : "hover:bg-neutral-50/80"
+                                    }`}
+                                  >
                                     <input
                                       type="checkbox"
                                       id={inputId}
-                                      checked={form.servicios_ids.includes(s.id)}
+                                      checked={isChecked}
                                       onChange={() => handleToggleServicio(s.id)}
-                                      className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30 w-4 h-4"
+                                      className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30 w-4 h-4 mt-0.5 shrink-0"
                                     />
                                     <label htmlFor={inputId} className="text-sm cursor-pointer flex-1 min-w-0">
-                                      <span className="font-medium text-neutral-800">{s.nombre}</span>
+                                      <span className={`font-medium ${isUsed ? "text-amber-800" : "text-neutral-800"}`}>
+                                        {s.nombre}
+                                      </span>
                                       {s.naviera_nombre?.trim() && (
-                                        <span className="text-neutral-500 ml-1">· {s.naviera_nombre}</span>
+                                        <span className={`ml-1 ${isUsed ? "text-amber-600" : "text-neutral-500"}`}>
+                                          · {s.naviera_nombre}
+                                        </span>
+                                      )}
+                                      {isUsed && (
+                                        <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5">
+                                          <Icon icon="lucide:alert-triangle" width={11} height={11} aria-hidden />
+                                          Ya en: {usedIn.join(", ")}
+                                        </span>
                                       )}
                                     </label>
                                   </li>
@@ -554,13 +613,21 @@ export function ConsorciosContent() {
                       ))}
                     </div>
                   )}
-                  {form.servicios_ids.length > 0 && (
-                    <p className="text-sm text-neutral-500 mt-3">
-                      {form.servicios_ids.length === 1
-                        ? tr.selectedCount.replace("{{count}}", String(form.servicios_ids.length))
-                        : tr.selectedCount_other.replace("{{count}}", String(form.servicios_ids.length))}
-                    </p>
-                  )}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    {form.servicios_ids.length > 0 && (
+                      <p className="text-sm text-neutral-500">
+                        {form.servicios_ids.length === 1
+                          ? tr.selectedCount.replace("{{count}}", String(form.servicios_ids.length))
+                          : tr.selectedCount_other.replace("{{count}}", String(form.servicios_ids.length))}
+                      </p>
+                    )}
+                    {Object.keys(usedInConsorcioMap).length > 0 && (
+                      <p className="text-xs text-amber-700 flex items-center gap-1">
+                        <Icon icon="lucide:alert-triangle" width={13} height={13} aria-hidden />
+                        Los servicios en ámbar ya pertenecen a otro consorcio.
+                      </p>
+                    )}
+                  </div>
                 </section>
               </div>
 

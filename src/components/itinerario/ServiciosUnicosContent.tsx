@@ -242,6 +242,33 @@ export function ServiciosUnicosContent() {
     setModalOpen(true);
   }, [navieras]);
 
+  const handleOpenCopy = useCallback((servicio: ServicioUnico) => {
+    setEditingId(null);
+    setModalError(null);
+    setNaveInputValue("");
+    setPasteNavesText("");
+    setNewNaveFlow(null);
+    setDestinoInputValue("");
+    setPasteDestinosText("");
+    setNewDestinoFlow(null);
+    setCopyFromServiceId(servicio.id);
+    setForm({
+      nombre: servicio.nombre,
+      naviera_id: servicio.naviera_id,
+      puerto_origen: servicio.puerto_origen ?? "",
+      naves: servicio.naves?.map((n) => n.nave_nombre) ?? [],
+      destinos:
+        servicio.destinos?.length > 0
+          ? servicio.destinos.map((d) => ({
+              puerto: d.puerto ?? "",
+              puerto_nombre: d.puerto_nombre ?? "",
+              area: normalizeArea(d.area),
+            }))
+          : [{ puerto: "", puerto_nombre: "", area: "ASIA" }],
+    });
+    setModalOpen(true);
+  }, []);
+
   const handleCopyFromService = useCallback((servicio: ServicioUnico) => {
     if (!servicio) return;
     setForm((prev) => ({
@@ -672,6 +699,22 @@ export function ServiciosUnicosContent() {
       setModalError(tr.errorMinDestino);
       return;
     }
+
+    // Validar: mismo nombre sólo está permitido si es una región diferente
+    const newAreas = new Set(destinosOk.map((d) => d.area).filter(Boolean));
+    const conflict = servicios.find(
+      (s) =>
+        s.id !== editingId &&
+        s.nombre.trim().toLowerCase() === nombre.toLowerCase() &&
+        (s.destinos ?? []).some((d) => d.area && newAreas.has(normalizeArea(d.area)))
+    );
+    if (conflict) {
+      setModalError(
+        `Ya existe el servicio «${conflict.nombre}» (${conflict.naviera_nombre ?? "sin naviera"}) en la misma región. Permitido usar el mismo nombre sólo en regiones distintas.`
+      );
+      return;
+    }
+
     setSaving(true);
     const base = getApiUrl() || "";
     const url = editingId
@@ -853,6 +896,17 @@ export function ServiciosUnicosContent() {
                       >
                         <Icon icon="lucide:pencil" width={18} height={18} />
                       </button>
+                      {isSuperadmin && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenCopy(s); }}
+                          className="p-1.5 rounded-lg text-neutral-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                          aria-label={`Copiar servicio ${s.nombre}`}
+                          title="Copiar servicio"
+                        >
+                          <Icon icon="lucide:copy" width={18} height={18} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleDelete(s); }}
@@ -994,10 +1048,14 @@ export function ServiciosUnicosContent() {
             <div className="p-6 sm:p-8 w-full pb-10">
               <header className="mb-8">
                 <h2 id="modal-servicio-title" className="text-xl font-semibold text-brand-blue tracking-tight">
-                  {editingId ? tr.modalTitleEdit : tr.modalTitleNew}
+                  {editingId ? tr.modalTitleEdit : copyFromServiceId ? "Copiar servicio" : tr.modalTitleNew}
                 </h2>
                 <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
-                  {editingId ? tr.modalDescEdit : tr.modalDescNew}
+                  {editingId
+                    ? tr.modalDescEdit
+                    : copyFromServiceId
+                    ? `Copia de «${servicios.find((s) => s.id === copyFromServiceId)?.nombre ?? ""}». Ajuste los datos y elija una naviera antes de guardar.`
+                    : tr.modalDescNew}
                 </p>
               </header>
 
@@ -1010,32 +1068,46 @@ export function ServiciosUnicosContent() {
 
               <div className="space-y-8">
                 {!editingId && servicios.length > 0 && (
-                  <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
+                  <section className={`rounded-xl border p-5 sm:p-6 ${copyFromServiceId ? "border-emerald-300 bg-emerald-50/60" : "border-neutral-200 bg-neutral-50/50"}`}>
                     <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Icon icon="lucide:copy" width={16} height={16} className="text-brand-blue" />
+                      <Icon icon="lucide:copy" width={16} height={16} className={copyFromServiceId ? "text-emerald-600" : "text-brand-blue"} />
                       {tr.copyFromService}
                     </h3>
-                    <p className="text-sm text-neutral-600 mb-4">
-                      {tr.copyFromServiceHint}
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                      <button
-                        type="button"
-                        onClick={() => setCopyModalOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
-                      >
-                        <Icon icon="lucide:rows" width={16} height={16} aria-hidden />
-                        Ver servicios por región
-                      </button>
-                      {copyFromServiceId && (
-                        <p className="text-xs text-neutral-600">
-                          Servicio seleccionado:{" "}
-                          <span className="font-medium text-neutral-800">
+                    {copyFromServiceId ? (
+                      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-emerald-300 text-sm text-neutral-800 flex-1 min-w-0">
+                          <Icon icon="lucide:check-circle-2" width={16} height={16} className="text-emerald-600 shrink-0" />
+                          <span className="font-medium truncate">
                             {servicios.find((s) => s.id === copyFromServiceId)?.nombre ?? ""}
                           </span>
+                          <span className="text-neutral-400 text-xs ml-1 truncate">
+                            ({servicios.find((s) => s.id === copyFromServiceId)?.naviera_nombre ?? ""})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCopyModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-300 text-neutral-600 text-sm font-medium hover:bg-white hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors shrink-0"
+                        >
+                          <Icon icon="lucide:repeat" width={14} height={14} aria-hidden />
+                          Cambiar
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-neutral-600 mb-4">
+                          {tr.copyFromServiceHint}
                         </p>
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => setCopyModalOpen(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+                        >
+                          <Icon icon="lucide:rows" width={16} height={16} aria-hidden />
+                          Ver servicios por región
+                        </button>
+                      </>
+                    )}
                   </section>
                 )}
 
