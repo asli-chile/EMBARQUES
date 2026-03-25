@@ -789,7 +789,7 @@ export function ServiciosUnicosContent() {
         ) : (() => {
           const getServiceAreas = (s: ServicioUnico): string[] => {
             const areas = (s.destinos ?? [])
-              .map((d) => (d.area && d.area.trim() ? d.area.trim() : null))
+              .map((d) => (d.area && d.area.trim() ? normalizeArea(d.area) : null))
               .filter((a): a is string => Boolean(a));
             return [...new Set(areas)];
           };
