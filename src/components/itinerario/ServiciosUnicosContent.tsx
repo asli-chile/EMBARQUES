@@ -5,7 +5,7 @@ import { useLocale } from "@/lib/i18n";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-const AREAS = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE"] as const;
+const AREAS = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", "OCEANIA"] as const;
 
 /** Normaliza el área a un valor canónico para guardar (evita errores por "INDIA MEDIO ORIENTE" vs "INDIA-MEDIOORIENTE"). */
 function normalizeArea(area: string | null | undefined): string {
@@ -1575,12 +1575,13 @@ export function ServiciosUnicosContent() {
             </div>
             <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
               {(() => {
-                const AREAS_ORDER = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE"] as const;
+                const AREAS_ORDER = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", "OCEANIA"] as const;
                 const areaLabels: Record<string, string> = {
                   ASIA: "Asia",
                   EUROPA: "Europa",
                   AMERICA: "América",
                   "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                  OCEANIA: "Oceanía",
                   SIN_AREA: "Sin área",
                 };
                 const grouped: Record<string, ServicioUnico[]> = {};
