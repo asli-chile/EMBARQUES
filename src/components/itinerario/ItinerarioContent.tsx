@@ -1145,7 +1145,7 @@ export function ItinerarioContent() {
                           { area: "ASIA",               bg: "bg-amber-400/15 border-amber-400/35 text-amber-200",  dot: "bg-amber-400" },
                           { area: "EUROPA",             bg: "bg-sky-400/15 border-sky-400/35 text-sky-200",         dot: "bg-sky-400" },
                           { area: "AMERICA",            bg: "bg-emerald-400/15 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
-                          { area: "INDIA-MEDIOORIENTE", bg: "bg-orange-400/15 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
+                          { area: "MEDIO-ORIENTE", bg: "bg-orange-400/15 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
                         ] as const
                       )
                         .filter(({ area }) => areasWithData.includes(area))
@@ -1157,7 +1157,7 @@ export function ItinerarioContent() {
                             className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold uppercase shrink-0 ${bg}`}
                           >
                             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
-                            {area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}
+                            {area === "MEDIO-ORIENTE" ? "M.Oriente" : area}
                           </button>
                         ))}
                     </div>
@@ -1168,7 +1168,7 @@ export function ItinerarioContent() {
                           { area: "ASIA",               bg: "bg-amber-400/15  hover:bg-amber-400/25  border-amber-400/35  text-amber-200",  dot: "bg-amber-400" },
                           { area: "EUROPA",             bg: "bg-sky-400/15    hover:bg-sky-400/25    border-sky-400/35    text-sky-200",    dot: "bg-sky-400" },
                           { area: "AMERICA",            bg: "bg-emerald-400/15 hover:bg-emerald-400/25 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
-                          { area: "INDIA-MEDIOORIENTE", bg: "bg-orange-400/15 hover:bg-orange-400/25 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
+                          { area: "MEDIO-ORIENTE", bg: "bg-orange-400/15 hover:bg-orange-400/25 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
                         ] as const
                       )
                         .filter(({ area }) => areasWithData.includes(area))
@@ -1180,7 +1180,7 @@ export function ItinerarioContent() {
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 w-full justify-center ${bg}`}
                           >
                             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
-                            <span>{area === "INDIA-MEDIOORIENTE" ? "India/ME" : area}</span>
+                            <span>{area === "MEDIO-ORIENTE" ? "M.Oriente" : area}</span>
                           </button>
                         ))}
                     </div>
@@ -1223,9 +1223,9 @@ export function ItinerarioContent() {
                               ASIA: "bg-amber-400/20 text-amber-300",
                               EUROPA: "bg-sky-400/20 text-sky-300",
                               AMERICA: "bg-emerald-400/20 text-emerald-300",
-                              "INDIA-MEDIOORIENTE": "bg-orange-400/20 text-orange-300",
+                              "MEDIO-ORIENTE": "bg-orange-400/20 text-orange-300",
                             };
-                            const areaLabel = p.area === "INDIA-MEDIOORIENTE" ? "India/ME" : (p.area ?? "");
+                            const areaLabel = p.area === "MEDIO-ORIENTE" ? "M.Oriente" : (p.area ?? "");
                             const areaClass = p.area ? (areaColors[p.area] ?? "bg-white/10 text-white/50") : "";
                             return (
                               <li key={i}>
@@ -1386,7 +1386,7 @@ export function ItinerarioContent() {
                 list.push(it);
                 byServicio.set(key, list);
               }
-              const areaOrder = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", ""];
+              const areaOrder = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA", ""];
               const sortArea = (a: string, b: string) => {
                 const iA = areaOrder.indexOf(a);
                 const iB = areaOrder.indexOf(b);
@@ -2523,7 +2523,7 @@ export function ItinerarioContent() {
                     ASIA: "Asia",
                     EUROPA: "Europa",
                     AMERICA: "América",
-                    "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                    "MEDIO-ORIENTE": "Medio Oriente",
                     SIN_AREA: "Sin área",
                   };
                   const grouped: Record<string, ServicioConDetalle[]> = {};
@@ -2553,7 +2553,7 @@ export function ItinerarioContent() {
                     );
                   }
                   return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                       {orderedAreas.map((areaKey) => (
                         <section
                           key={areaKey}
@@ -2602,7 +2602,7 @@ export function ItinerarioContent() {
                     ASIA: "Asia",
                     EUROPA: "Europa",
                     AMERICA: "América",
-                    "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                    "MEDIO-ORIENTE": "Medio Oriente",
                     SIN_AREA: "Sin área",
                   };
                   const grouped: Record<string, ConsorcioConDetalle[]> = {};
@@ -2635,7 +2635,7 @@ export function ItinerarioContent() {
                     );
                   }
                   return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                       {orderedAreas.map((areaKey) => (
                         <section
                           key={areaKey}

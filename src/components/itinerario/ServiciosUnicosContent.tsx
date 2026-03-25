@@ -5,16 +5,16 @@ import { useLocale } from "@/lib/i18n";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-const AREAS = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", "OCEANIA"] as const;
+const AREAS = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA"] as const;
 
-/** Normaliza el área a un valor canónico para guardar (evita errores por "INDIA MEDIO ORIENTE" vs "INDIA-MEDIOORIENTE"). */
+/** Normaliza el área a un valor canónico para guardar (evita errores por "INDIA MEDIO ORIENTE" vs "MEDIO-ORIENTE"). */
 function normalizeArea(area: string | null | undefined): string {
   if (!area || !String(area).trim()) return "ASIA";
   const t = String(area).trim().toUpperCase().replace(/\s+/g, "-");
   if ((AREAS as readonly string[]).includes(t)) return t;
   const alias: Record<string, string> = {
-    "INDIA-MEDIO-ORIENTE": "INDIA-MEDIOORIENTE",
-    "INDIA-MEDIOORIENTE": "INDIA-MEDIOORIENTE",
+    "INDIA-MEDIO-ORIENTE": "MEDIO-ORIENTE",
+    "MEDIO-ORIENTE": "MEDIO-ORIENTE",
   };
   return alias[t] ?? t;
 }
@@ -946,7 +946,7 @@ export function ServiciosUnicosContent() {
           };
 
           return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6" role="list">
               {areasForColumns.map((areaName) => {
                 const byNaviera = byAreaThenNaviera[areaName] ?? {};
                 const navieraNamesInArea = Object.keys(byNaviera).sort((a, b) =>
@@ -1575,12 +1575,12 @@ export function ServiciosUnicosContent() {
             </div>
             <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
               {(() => {
-                const AREAS_ORDER = ["ASIA", "EUROPA", "AMERICA", "INDIA-MEDIOORIENTE", "OCEANIA"] as const;
+                const AREAS_ORDER = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA"] as const;
                 const areaLabels: Record<string, string> = {
                   ASIA: "Asia",
                   EUROPA: "Europa",
                   AMERICA: "América",
-                  "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+                  "MEDIO-ORIENTE": "Medio Oriente",
                   OCEANIA: "Oceanía",
                   SIN_AREA: "Sin área",
                 };
@@ -1611,7 +1611,7 @@ export function ServiciosUnicosContent() {
                   );
                 }
                 return (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                     {orderedAreas.map((areaKey) => (
                       <section
                         key={areaKey}

@@ -460,7 +460,7 @@ export function ConsorciosContent() {
             <p className="text-sm mt-1">{tr.noConsorciosHint}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {areasForColumns.map((areaName) => {
               const list = (consorciosByArea[areaName] ?? []).sort((a, b) =>
                 (a.nombre ?? "").localeCompare(b.nombre ?? "", undefined, { sensitivity: "base" })
