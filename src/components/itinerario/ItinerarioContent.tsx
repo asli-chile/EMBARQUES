@@ -1917,16 +1917,29 @@ export function ItinerarioContent() {
           aria-modal="true"
           aria-labelledby="modal-itinerario-title"
         >
+          {/* Gradient accent */}
+          <div className="flex-shrink-0 h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+          {/* Sticky header bar */}
+          <div className="flex-shrink-0 flex items-center justify-between px-5 sm:px-8 py-4 border-b border-neutral-200 bg-white">
+            <div>
+              <h2 id="modal-itinerario-title" className="text-lg font-semibold text-brand-blue tracking-tight">
+                {editingItinerarioId ? tr.modalTitleEdit : tr.modalTitle}
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed max-w-xl">
+                {tr.modalDescription}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCloseModal}
+              className="ml-4 p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shrink-0"
+              aria-label={tr.cancel}
+            >
+              <Icon icon="lucide:x" width={20} height={20} aria-hidden />
+            </button>
+          </div>
           <div ref={modalRef} className="flex flex-col min-h-0 flex-1 overflow-y-auto">
-            <div className="p-6 sm:p-8 w-full">
-              <header className="mb-8">
-                <h2 id="modal-itinerario-title" className="text-xl font-semibold text-brand-blue tracking-tight">
-                  {editingItinerarioId ? tr.modalTitleEdit : tr.modalTitle}
-                </h2>
-                <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
-                  {tr.modalDescription}
-                </p>
-              </header>
+            <div className="p-6 sm:p-8 w-full pb-28">
 
               {modalError && (
                 <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-3" role="alert">
@@ -2327,25 +2340,31 @@ export function ItinerarioContent() {
                 </section>
               </div>
 
-              <footer className="mt-8 pt-6 border-t border-neutral-200 flex gap-4">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  disabled={saving}
-                  className="flex-1 px-5 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
-                >
-                  {tr.cancel}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={saving}
-                  className="flex-1 px-5 py-3 rounded-xl bg-brand-blue text-white font-medium hover:bg-brand-blue/90 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
-                >
-                  {saving ? tr.saving : editingItinerarioId ? tr.saveChanges : tr.create}
-                </button>
-              </footer>
             </div>
+          </div>
+          {/* Sticky footer */}
+          <div className="flex-shrink-0 flex gap-4 px-5 sm:px-8 py-4 bg-white/95 border-t border-neutral-200 backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={handleCloseModal}
+              disabled={saving}
+              className="flex-1 px-5 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+            >
+              {tr.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving}
+              className="flex-1 px-5 py-3 rounded-xl bg-brand-blue text-white font-medium hover:bg-brand-blue/90 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+            >
+              {saving ? (
+                <>
+                  <Icon icon="lucide:loader-2" width={16} height={16} className="inline-block animate-spin mr-1.5 align-middle" aria-hidden />
+                  {tr.saving}
+                </>
+              ) : editingItinerarioId ? tr.saveChanges : tr.create}
+            </button>
           </div>
         </div>
       )}
@@ -2687,20 +2706,33 @@ export function ItinerarioContent() {
 
       {addRowModalOpen && addRowContext && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-row-modal-title"
           onClick={(e) => e.target === e.currentTarget && handleCloseAddRowModal()}
         >
-          <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-neutral-200 w-full max-w-md overflow-hidden">
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+              <div>
+                <h2 id="add-row-modal-title" className="text-base font-semibold text-brand-blue tracking-tight">
+                  {tr.addRowModalTitle}
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {tr.addRowModalDescription}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseAddRowModal}
+                className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                aria-label={tr.cancel}
+              >
+                <Icon icon="lucide:x" width={18} height={18} aria-hidden />
+              </button>
+            </div>
             <div className="p-6">
-              <h2 id="add-row-modal-title" className="text-lg font-semibold text-brand-blue tracking-tight">
-                {tr.addRowModalTitle}
-              </h2>
-              <p className="text-sm text-neutral-500 mt-1.5 mb-5">
-                {tr.addRowModalDescription}
-              </p>
               {addRowModalError && (
                 <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-2" role="alert">
                   <Icon icon="lucide:alert-circle" width={18} height={18} className="shrink-0" aria-hidden />
