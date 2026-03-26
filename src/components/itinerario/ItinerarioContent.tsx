@@ -1435,10 +1435,10 @@ export function ItinerarioContent() {
               };
 
               return (
-                <div className="space-y-10 mt-8">
+                <div className="space-y-6 mt-5">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm border border-white/20">
-                      <Icon icon="lucide:list" width={16} height={16} aria-hidden />
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-medium backdrop-blur-sm border border-white/20">
+                      <Icon icon="lucide:list" width={13} height={13} aria-hidden />
                       {tr.resultsCount.replace("{{count}}", String(itinerarios.length))}
                     </span>
                   </div>
@@ -1453,22 +1453,20 @@ export function ItinerarioContent() {
                     const label = areaDisplayLabels[area] ?? area;
 
                     return (
-                      <div key={area} className="space-y-4">
+                      <div key={area} className="space-y-2.5">
                         {/* ── Cabecera de región ─────────────────────────────────────────── */}
-                        <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r ${gradient} shadow-lg`}>
-                          <span className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/20">
-                            <Icon icon={icon} width={18} height={18} className="text-white" aria-hidden />
+                        <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gradient-to-r ${gradient} shadow-md`}>
+                          <span className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                            <Icon icon={icon} width={14} height={14} className="text-white" aria-hidden />
                           </span>
-                          <div>
-                            <h2 className="text-base sm:text-lg font-bold text-white tracking-tight drop-shadow-sm">{label}</h2>
-                            <p className="text-xs text-white/70 mt-0.5">
-                              {serviceNames.length} {serviceNames.length === 1 ? "servicio" : "servicios"}
-                            </p>
+                          <div className="flex items-baseline gap-2">
+                            <h2 className="text-sm font-bold text-white tracking-tight">{label}</h2>
+                            <span className="text-[11px] text-white/60">{serviceNames.length} {serviceNames.length === 1 ? "servicio" : "servicios"}</span>
                           </div>
                         </div>
 
                         {/* ── Servicios en esta región ───────────────────────────────────── */}
-                        <div className="space-y-5">
+                        <div className="space-y-3 pl-2">
                           {serviceNames.map((servicioNombre) => {
                             const list = serviceMap.get(servicioNombre)!;
                             const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
@@ -1504,33 +1502,27 @@ export function ItinerarioContent() {
                               <section key={servicioNombre} id={`srv-${area}-${servicioNombre}`}>
                                 <div className="relative bg-white rounded-2xl overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,82,155,0.15),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-brand-blue/10">
                                   {/* ── Service header ── */}
-                                  <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-start justify-between gap-3 flex-wrap">
-                                    <div className="space-y-1">
-                                      <h3 className="text-base sm:text-xl font-bold text-white tracking-tight drop-shadow-sm">
+                                  <div className="px-4 py-2.5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <h3 className="text-sm font-bold text-white tracking-tight truncate">
                                         {servicioNombre}
                                       </h3>
                                       {navieras.length > 0 && (
-                                        <p className="text-sm text-white/80 flex items-center gap-2 flex-wrap">
-                                          <span className="inline-flex items-center gap-1.5">
-                                            <Icon icon="lucide:ship" width={14} height={14} className="shrink-0" aria-hidden />
-                                            {tr.carriersInService}:
-                                          </span>
-                                          <span className="font-semibold text-white">{navieras.join(", ")}</span>
-                                        </p>
+                                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-white/70 shrink-0">
+                                          <Icon icon="lucide:ship" width={11} height={11} className="shrink-0" aria-hidden />
+                                          {navieras.join(" · ")}
+                                        </span>
                                       )}
                                     </div>
-                                  </div>
-
-                                  {/* ── Add Row bar ── */}
-                                  <div className="px-4 py-2.5 bg-gradient-to-r from-brand-blue/5 via-white to-white flex items-center justify-end gap-3 border-b border-neutral-100">
+                                    {/* ── Add Row inline ── */}
                                     {isLoggedIn && isSuperadmin && (
                                       <button
                                         type="button"
                                         onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
-                                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white bg-white/15 border border-white/25 rounded-lg hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 transition-colors shrink-0"
                                         aria-label={tr.addRow}
                                       >
-                                        <Icon icon="lucide:plus" width={16} height={16} aria-hidden />
+                                        <Icon icon="lucide:plus" width={13} height={13} aria-hidden />
                                         {tr.addRow}
                                       </button>
                                     )}
