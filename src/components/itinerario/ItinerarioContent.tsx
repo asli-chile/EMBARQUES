@@ -29,6 +29,29 @@ import { generateItinerarioPDF } from "@/lib/itinerario-pdf";
 
 const DATE_DISPLAY = "dd/MM/yyyy";
 
+// ── Metadatos de área (módulo-level para reusar en filtros e IIFE) ─────────────
+const AREA_ORDER_UI = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA"] as const;
+const AREA_LABELS_UI: Record<string, string> = {
+  AMERICA: "América", ASIA: "Asia", EUROPA: "Europa",
+  "MEDIO-ORIENTE": "Medio Oriente", OCEANIA: "Oceanía",
+};
+const AREA_ICONS_UI: Record<string, string> = {
+  AMERICA: "lucide:trees", ASIA: "lucide:building-2", EUROPA: "lucide:landmark",
+  "MEDIO-ORIENTE": "lucide:sun", OCEANIA: "lucide:waves",
+};
+const AREA_GRADIENTS_UI: Record<string, string> = {
+  AMERICA: "from-emerald-600 to-emerald-700",
+  ASIA: "from-amber-500 to-amber-600",
+  EUROPA: "from-sky-600 to-sky-700",
+  "MEDIO-ORIENTE": "from-orange-500 to-orange-600",
+  OCEANIA: "from-teal-500 to-teal-600",
+};
+// Colores de texto para chips de región activos
+const AREA_TEXT_COLORS_UI: Record<string, string> = {
+  AMERICA: "text-emerald-700", ASIA: "text-amber-700", EUROPA: "text-sky-700",
+  "MEDIO-ORIENTE": "text-orange-700", OCEANIA: "text-teal-700",
+};
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr?.trim()) return "—";
   try {
@@ -268,6 +291,10 @@ export function ItinerarioContent() {
   const [pendingScrollServicio, setPendingScrollServicio] = useState<string | null>(null);
   const [destSearch, setDestSearch] = useState("");
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterNaviera, setFilterNaviera] = useState<string | null>(null);
+  const [filterSemana, setFilterSemana] = useState<number | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1042,6 +1069,68 @@ export function ItinerarioContent() {
     return results;
   }, [destSearch, mapPortPoints]);
 
+  /** Todas las navieras de un itinerario: directa + miembros de servicio/consorcio */
+  const getAllNavierasForIt = useCallback((it: ItinerarioWithEscalas): string[] => {
+    const set = new Set<string>();
+    if (it.naviera?.trim()) set.add(it.naviera.trim());
+    for (const n of getNavierasForItinerario(it, serviciosConDetalle, consorciosConDetalle)) set.add(n);
+    return [...set];
+  }, [serviciosConDetalle, consorciosConDetalle]);
+
+  /** Navieras únicas — incluye miembros de consorcios y servicios */
+  const availableNavieras = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of itinerarios) {
+      for (const n of getAllNavierasForIt(it)) set.add(n);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [itinerarios, getAllNavierasForIt]);
+
+  /** Conteo de itinerarios por naviera (incluyendo consorcios) */
+  const navieraCountMap = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const it of itinerarios) {
+      for (const n of getAllNavierasForIt(it)) {
+        counts.set(n, (counts.get(n) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [itinerarios, getAllNavierasForIt]);
+
+  /** Semanas únicas disponibles */
+  const availableSemanas = useMemo(() => {
+    const set = new Set<number>();
+    for (const it of itinerarios) {
+      if (it.semana != null) set.add(it.semana);
+    }
+    return [...set].sort((a, b) => a - b);
+  }, [itinerarios]);
+
+  /** Itinerarios tras aplicar filtros rápidos (search + naviera + semana) */
+  const filteredItinerarios = useMemo(() => {
+    let result = itinerarios;
+    const q = filterSearch.trim().toLowerCase();
+    if (q) {
+      result = result.filter((it) =>
+        (it.nave || "").toLowerCase().includes(q) ||
+        (it.viaje || "").toLowerCase().includes(q) ||
+        (it.naviera || "").toLowerCase().includes(q) ||
+        (it.servicio || "").toLowerCase().includes(q) ||
+        (it.pol || "").toLowerCase().includes(q)
+      );
+    }
+    if (filterNaviera) {
+      // Incluye itinerarios donde la naviera participa directamente o via consorcio/servicio
+      result = result.filter((it) => getAllNavierasForIt(it).includes(filterNaviera));
+    }
+    if (filterSemana != null) {
+      result = result.filter((it) => it.semana === filterSemana);
+    }
+    return result;
+  }, [itinerarios, filterSearch, filterNaviera, filterSemana, getAllNavierasForIt]);
+
+  const activeFiltersCount = (filterSearch.trim() ? 1 : 0) + (filterNaviera ? 1 : 0) + (filterSemana != null ? 1 : 0);
+
   const portNames = [
     ...new Set(
       itinerarios.flatMap((it) => {
@@ -1292,38 +1381,176 @@ export function ItinerarioContent() {
         </section>
       )}
 
-      {/* Tablas: zona con scroll a pantalla completa cuando hay área seleccionada */}
-      <div
-        className={`overflow-auto w-full px-4 py-4 ${
-          selectedAreaFromMap ? "flex-1 min-h-0" : "hidden"
-        }`}
-      >
-        {selectedAreaFromMap && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/10 border border-white/20 px-3 py-2 text-sm text-white">
-            <span>
-              {selectedAreaFromMap === "ALL" ? (
-                <>
-                  {tr.showingItinerariesFor}{" "}
-                  <span className="font-semibold">{tr.showingItinerariesAllAreas}</span>.
-                </>
-              ) : (
-                <>
-                  {tr.showingItinerariesFor} {tr.showingItinerariesForArea}{" "}
-                  <span className="font-semibold">
-                    {selectedAreaFromMap}
-                  </span>
-                  .
-                </>
-              )}
-            </span>
+      {/* ── Filtros + Tablas ──────────────────────────────────────────────── */}
+      <div className={`w-full px-4 pt-3 pb-4 ${selectedAreaFromMap ? "overflow-auto flex-1 min-h-0" : "hidden"}`}>
+
+        {/* ── Barra de filtros (solo en sección de tablas, no en el mapa) ─── */}
+        {!loading && itinerarios.length > 0 && selectedAreaFromMap && (
+          <div className="mb-3 bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl overflow-hidden">
+            {/* ── Header del panel (siempre visible) ── */}
             <button
               type="button"
-              onClick={() => setSelectedAreaFromMap(null)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 text-brand-blue px-3 py-1.5 text-xs font-medium hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/60"
+              onClick={() => setFiltersOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors"
             >
-              <Icon icon="lucide:globe-2" width={14} height={14} aria-hidden />
-              {tr.viewAllAreas}
+              <div className="flex items-center gap-2">
+                <Icon icon="lucide:sliders-horizontal" width={13} height={13} className="text-white/70" aria-hidden />
+                <span className="text-xs font-semibold text-white/90">Filtros</span>
+                {activeFiltersCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-white text-[#00529b] text-[9px] font-bold tabular-nums">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {activeFiltersCount > 0 && (
+                  <span className="text-[10px] text-white/50 tabular-nums">
+                    {filteredItinerarios.length} / {itinerarios.length} reg.
+                  </span>
+                )}
+                <Icon
+                  icon={filtersOpen ? "lucide:chevron-up" : "lucide:chevron-down"}
+                  width={13} height={13} className="text-white/50 transition-transform"
+                  aria-hidden
+                />
+              </div>
             </button>
+
+            {/* ── Cuerpo colapsable ── */}
+            {filtersOpen && (
+            <div className="px-3 pb-3 space-y-2.5 border-t border-white/10">
+
+            {/* Fila 1: Búsqueda + contador + limpiar */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Icon icon="lucide:search" width={13} height={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none" aria-hidden />
+                <input
+                  type="text"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  placeholder="Buscar nave, viaje, naviera, servicio…"
+                  className="w-full bg-white/15 border border-white/25 text-white placeholder-white/45 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-white/40 focus:bg-white/20 transition-colors"
+                />
+                {filterSearch && (
+                  <button type="button" onClick={() => setFilterSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors">
+                    <Icon icon="lucide:x" width={12} height={12} aria-hidden />
+                  </button>
+                )}
+              </div>
+              <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/10 text-white/70 text-[10px] font-medium tabular-nums whitespace-nowrap">
+                <Icon icon="lucide:layers" width={11} height={11} aria-hidden />
+                {activeFiltersCount > 0 ? `${filteredItinerarios.length} / ${itinerarios.length}` : itinerarios.length} reg.
+              </span>
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setFilterSearch(""); setFilterNaviera(null); setFilterSemana(null); setSelectedAreaFromMap("ALL"); }}
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-400/20 border border-red-400/30 text-red-200 text-[10px] font-semibold hover:bg-red-400/30 transition-colors whitespace-nowrap"
+                >
+                  <Icon icon="lucide:x" width={11} height={11} aria-hidden />
+                  Limpiar ({activeFiltersCount})
+                </button>
+              )}
+            </div>
+
+            {/* Fila 2: Región */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[9.5px] font-bold text-white/45 uppercase tracking-wider shrink-0 w-14">Región</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {/* Chip "Todas" */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedAreaFromMap("ALL")}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all ${
+                    selectedAreaFromMap === "ALL" || selectedAreaFromMap === null
+                      ? "bg-white text-[#00529b] shadow-sm"
+                      : "bg-white/12 border border-white/20 text-white/75 hover:bg-white/22 hover:text-white"
+                  }`}
+                >
+                  <Icon icon="lucide:globe-2" width={10} height={10} aria-hidden />
+                  Todas
+                </button>
+                {AREA_ORDER_UI.map((area) => {
+                  const active = selectedAreaFromMap === area;
+                  const areaLabel = AREA_LABELS_UI[area] ?? area;
+                  const areaIcon = AREA_ICONS_UI[area] ?? "lucide:map-pin";
+                  const areaGrad = AREA_GRADIENTS_UI[area];
+                  const areaTextColor = AREA_TEXT_COLORS_UI[area] ?? "text-neutral-700";
+                  return (
+                    <button
+                      key={area}
+                      type="button"
+                      onClick={() => setSelectedAreaFromMap(active ? "ALL" : area)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all ${
+                        active
+                          ? `bg-gradient-to-r ${areaGrad} text-white shadow-sm`
+                          : "bg-white/12 border border-white/20 text-white/75 hover:bg-white/22 hover:text-white"
+                      }`}
+                    >
+                      <Icon icon={areaIcon} width={10} height={10} aria-hidden />
+                      {areaLabel}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Fila 3: Naviera */}
+            {availableNavieras.length > 0 && (
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="text-[9.5px] font-bold text-white/45 uppercase tracking-wider shrink-0 w-14 pt-1">Naviera</span>
+                <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                  {availableNavieras.map((nav) => {
+                    const count = navieraCountMap.get(nav) ?? 0;
+                    const active = filterNaviera === nav;
+                    return (
+                      <button
+                        key={nav}
+                        type="button"
+                        onClick={() => setFilterNaviera(active ? null : nav)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
+                          active
+                            ? "bg-white text-[#00529b] shadow-sm font-semibold"
+                            : "bg-white/12 border border-white/20 text-white/80 hover:bg-white/22 hover:text-white"
+                        }`}
+                      >
+                        <Icon icon="lucide:ship" width={9} height={9} aria-hidden />
+                        {nav}
+                        <span className={`text-[9px] tabular-nums ${active ? "text-[#00529b]/55" : "text-white/40"}`}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Fila 4: Semana */}
+            {availableSemanas.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[9.5px] font-bold text-white/45 uppercase tracking-wider shrink-0 w-14">Semana</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {availableSemanas.map((sem) => {
+                    const active = filterSemana === sem;
+                    return (
+                      <button
+                        key={sem}
+                        type="button"
+                        onClick={() => setFilterSemana(active ? null : sem)}
+                        className={`inline-flex items-center justify-center w-9 h-7 rounded-full text-[10px] font-bold transition-all tabular-nums ${
+                          active
+                            ? "bg-white text-[#00529b] shadow-sm"
+                            : "bg-white/12 border border-white/20 text-white/80 hover:bg-white/22 hover:text-white"
+                        }`}
+                      >
+                        {sem}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            </div>
+            )}
           </div>
         )}
 
@@ -1384,9 +1611,9 @@ export function ItinerarioContent() {
               type ItinerarioWithEscalasType = typeof itinerarios[0];
               const areaOrder = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA", ""];
 
-              // Group: byArea[area][serviceName] = itinerarios[]
+              // Group: byArea[area][serviceName] = filteredItinerarios[]
               const byArea = new Map<string, Map<string, ItinerarioWithEscalasType[]>>();
-              for (const it of itinerarios) {
+              for (const it of filteredItinerarios) {
                 const escalas = it.escalas ?? [];
                 const areasOfIt = new Set<string>();
                 for (const e of escalas) {
@@ -1412,61 +1639,42 @@ export function ItinerarioContent() {
                 ...[...byArea.keys()].filter((a) => !areaOrder.includes(a)).sort(),
               ];
 
-              const areaDisplayLabels: Record<string, string> = {
-                AMERICA: "América",
-                ASIA: "Asia",
-                EUROPA: "Europa",
-                "MEDIO-ORIENTE": "Medio Oriente",
-                OCEANIA: "Oceanía",
-              };
-              const areaDisplayIcons: Record<string, string> = {
-                AMERICA: "lucide:trees",
-                ASIA: "lucide:building-2",
-                EUROPA: "lucide:landmark",
-                "MEDIO-ORIENTE": "lucide:sun",
-                OCEANIA: "lucide:waves",
-              };
-              const areaGradients: Record<string, string> = {
-                AMERICA: "from-emerald-600 to-emerald-700",
-                ASIA: "from-amber-500 to-amber-600",
-                EUROPA: "from-sky-600 to-sky-700",
-                "MEDIO-ORIENTE": "from-orange-500 to-orange-600",
-                OCEANIA: "from-teal-500 to-teal-600",
-              };
-
               return (
-                <div className="space-y-6 mt-5">
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-medium backdrop-blur-sm border border-white/20">
-                      <Icon icon="lucide:list" width={13} height={13} aria-hidden />
-                      {tr.resultsCount.replace("{{count}}", String(itinerarios.length))}
-                    </span>
-                  </div>
+                <div className="space-y-3">
+
+                  {/* ── Sin resultados tras filtro ──────────────────────────── */}
+                  {filteredItinerarios.length === 0 && (
+                    <div className="bg-white/10 rounded-xl p-8 text-center border border-white/15">
+                      <Icon icon="lucide:search-x" width={32} height={32} className="mx-auto mb-3 text-white/30" aria-hidden />
+                      <p className="text-white/80 text-sm font-medium">Sin resultados para los filtros seleccionados</p>
+                      <p className="text-white/45 text-xs mt-1">Prueba con otros términos o limpia los filtros</p>
+                    </div>
+                  )}
 
                   {sortedAreas.map((area) => {
                     const serviceMap = byArea.get(area)!;
                     const serviceNames = [...serviceMap.keys()].sort((a, b) =>
                       a.localeCompare(b, undefined, { sensitivity: "base" })
                     );
-                    const gradient = areaGradients[area] ?? "from-neutral-600 to-neutral-700";
-                    const icon = areaDisplayIcons[area] ?? "lucide:map-pin";
-                    const label = areaDisplayLabels[area] ?? area;
+                    const gradient = AREA_GRADIENTS_UI[area] ?? "from-neutral-600 to-neutral-700";
+                    const icon = AREA_ICONS_UI[area] ?? "lucide:map-pin";
+                    const label = AREA_LABELS_UI[area] ?? area;
 
                     return (
-                      <div key={area} className="space-y-2.5">
+                      <div key={area} className="space-y-2">
                         {/* ── Cabecera de región ─────────────────────────────────────────── */}
-                        <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gradient-to-r ${gradient} shadow-md`}>
-                          <span className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-                            <Icon icon={icon} width={14} height={14} className="text-white" aria-hidden />
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r ${gradient} shadow-sm`}>
+                          <span className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center shrink-0">
+                            <Icon icon={icon} width={12} height={12} className="text-white" aria-hidden />
                           </span>
                           <div className="flex items-baseline gap-2">
-                            <h2 className="text-sm font-bold text-white tracking-tight">{label}</h2>
-                            <span className="text-[11px] text-white/60">{serviceNames.length} {serviceNames.length === 1 ? "servicio" : "servicios"}</span>
+                            <h2 className="text-xs font-bold text-white tracking-tight">{label}</h2>
+                            <span className="text-[10px] text-white/60">{serviceNames.length} {serviceNames.length === 1 ? "servicio" : "servicios"}</span>
                           </div>
                         </div>
 
                         {/* ── Servicios en esta región ───────────────────────────────────── */}
-                        <div className="space-y-3 pl-2">
+                        <div className="space-y-2 pl-1.5">
                           {serviceNames.map((servicioNombre) => {
                             const list = serviceMap.get(servicioNombre)!;
                             const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
@@ -1498,37 +1706,130 @@ export function ItinerarioContent() {
                             const isExpanded = expandedAreas[areaKey] ?? false;
                             const displayedItinerarios = isExpanded ? itinerariosEnArea : itinerariosEnArea.slice(0, 4);
 
+                            // ── Blank Sailing detection ────────────────────────────────────
+                            type DisplayRow =
+                              | { type: "it"; data: ItinerarioWithEscalasType }
+                              | { type: "blank"; semana: number };
+                            const allSemanas = itinerariosEnArea
+                              .map((it) => it.semana)
+                              .filter((s): s is number => s != null);
+                            const minSem = allSemanas.length ? Math.min(...allSemanas) : null;
+                            const maxSem = allSemanas.length ? Math.max(...allSemanas) : null;
+                            const semanaSet = new Set(allSemanas);
+                            const sortedByWeek = [...itinerariosEnArea].sort(
+                              (a, b) => (a.semana ?? 9999) - (b.semana ?? 9999)
+                            );
+                            const allDisplayRows: DisplayRow[] = [];
+                            if (minSem != null && maxSem != null) {
+                              let itIdx2 = 0;
+                              for (let sem = minSem; sem <= maxSem; sem++) {
+                                if (!semanaSet.has(sem)) {
+                                  allDisplayRows.push({ type: "blank", semana: sem });
+                                } else {
+                                  while (
+                                    itIdx2 < sortedByWeek.length &&
+                                    sortedByWeek[itIdx2].semana === sem
+                                  ) {
+                                    allDisplayRows.push({ type: "it", data: sortedByWeek[itIdx2] });
+                                    itIdx2++;
+                                  }
+                                }
+                              }
+                              // Append any items without semana
+                              while (itIdx2 < sortedByWeek.length) {
+                                allDisplayRows.push({ type: "it", data: sortedByWeek[itIdx2] });
+                                itIdx2++;
+                              }
+                            } else {
+                              for (const it of sortedByWeek) allDisplayRows.push({ type: "it", data: it });
+                            }
+                            // ── Current week always first ──────────────────────────────────
+                            const currentISOWeek = getISOWeek(new Date());
+                            const getSem = (r: DisplayRow) =>
+                              r.type === "blank" ? r.semana : (r.data.semana ?? 9999);
+                            // Split: current+future rows first, then past rows
+                            const futureRows = allDisplayRows.filter(r => getSem(r) >= currentISOWeek);
+                            const pastRows = allDisplayRows.filter(r => getSem(r) < currentISOWeek);
+                            // If current week has no row yet (before minSem), prepend a blank sailing for it
+                            const hasCurrentWeek = futureRows.some(r => getSem(r) === currentISOWeek);
+                            if (!hasCurrentWeek) {
+                              futureRows.unshift({ type: "blank", semana: currentISOWeek });
+                            }
+                            const orderedRows: DisplayRow[] = [...futureRows, ...pastRows];
+
+                            const displayedRows: DisplayRow[] = isExpanded
+                              ? orderedRows
+                              : (() => {
+                                  let count = 0;
+                                  const result: DisplayRow[] = [];
+                                  for (const row of orderedRows) {
+                                    result.push(row);
+                                    if (row.type === "it") {
+                                      count++;
+                                      if (count >= 4) break;
+                                    }
+                                  }
+                                  return result;
+                                })();
+
                             return (
                               <section key={servicioNombre} id={`srv-${area}-${servicioNombre}`}>
-                                <div className="relative bg-white rounded-2xl overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,82,155,0.15),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-brand-blue/10">
+                                <div className="relative bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_-2px_rgba(0,82,155,0.12),0_1px_3px_rgba(0,0,0,0.05)] ring-1 ring-brand-blue/10">
                                   {/* ── Service header ── */}
-                                  <div className="px-4 py-2.5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-center justify-between gap-3 flex-wrap">
+                                  <div className="px-3 py-2 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-center justify-between gap-2 flex-wrap">
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <h3 className="text-sm font-bold text-white tracking-tight truncate">
+                                      <h3 className="text-xs font-bold text-white tracking-tight truncate">
                                         {servicioNombre}
                                       </h3>
                                       {navieras.length > 0 && (
-                                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-white/70 shrink-0">
-                                          <Icon icon="lucide:ship" width={11} height={11} className="shrink-0" aria-hidden />
+                                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-white/65 shrink-0">
+                                          <Icon icon="lucide:ship" width={10} height={10} className="shrink-0" aria-hidden />
                                           {navieras.join(" · ")}
                                         </span>
                                       )}
                                     </div>
-                                    {/* ── Add Row inline ── */}
                                     {isLoggedIn && isSuperadmin && (
                                       <button
                                         type="button"
                                         onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white bg-white/15 border border-white/25 rounded-lg hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 transition-colors shrink-0"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-white bg-white/15 border border-white/25 rounded hover:bg-white/25 focus:outline-none focus:ring-1 focus:ring-white/40 transition-colors shrink-0"
                                         aria-label={tr.addRow}
                                       >
-                                        <Icon icon="lucide:plus" width={13} height={13} aria-hidden />
+                                        <Icon icon="lucide:plus" width={11} height={11} aria-hidden />
                                         {tr.addRow}
                                       </button>
                                     )}
                                   </div>
                           <div className="sm:hidden divide-y divide-neutral-100/80">
-                            {displayedItinerarios.map((it) => {
+                            {displayedRows.map((row) => {
+                              if (row.type === "blank") {
+                                return (
+                                  <div
+                                    key={`blank-${row.semana}`}
+                                    className="flex items-center justify-center gap-3 px-4 py-3 bg-red-100 border-y border-red-300"
+                                  >
+                                    <span className="inline-flex items-center justify-center h-8 w-8 shrink-0 rounded-full bg-red-600 text-white font-black text-xs shadow-sm">
+                                      {row.semana}
+                                    </span>
+                                    <Icon
+                                      icon="lucide:alert-circle"
+                                      width={16}
+                                      height={16}
+                                      className="text-red-600 shrink-0"
+                                      aria-hidden
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-black text-neutral-900 text-sm uppercase tracking-wide leading-tight">
+                                        Semana {row.semana} — BLANK SAILING
+                                      </p>
+                                      <p className="text-[11px] text-red-500 font-medium mt-0.5">
+                                        Sin salida programada esta semana
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              const it = row.data;
                               const escalas = it.escalas ?? [];
                               const naveNorm = normalizeNave(it.nave);
                               const sharedImageUrl =
@@ -1650,136 +1951,160 @@ export function ItinerarioContent() {
                             })}
                           </div>
                           {/* ── Vista de tabla (sm+) ─────────────────────────── */}
-                          <div className="overflow-x-auto hidden sm:block">
-                            <table className="w-full text-sm" role="table">
+                          <div className="w-full hidden sm:block">
+                            <table className="w-full text-xs" role="table">
                               <thead>
-                                <tr className="border-b border-neutral-200 bg-[#f4f7fd]">
-                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
+                                <tr className="border-b-2 border-[#00529b]/20 bg-gradient-to-r from-[#eef4fb] to-[#e6f0f9]">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[42px]">
                                     {tr.colSemana}
                                   </th>
-                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
+                                  <th className="text-left px-2 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[18%]">
                                     {tr.colNave}
                                   </th>
-                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[14%]">
                                     {tr.colOperador}
                                   </th>
-                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[58px]">
                                     {tr.colViaje}
                                   </th>
-                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[76px]">
                                     <span className="block">{tr.colPol}</span>
-                                    <span className="block text-[10px] font-normal text-neutral-400 mt-0.5 normal-case tracking-normal">{tr.colEtd}</span>
+                                    <span className="block text-[9px] font-medium text-[#1e3a6e]/50 normal-case">{tr.colEtd}</span>
                                   </th>
                                   {destinosColumnas.map((portKey) => (
                                     <th
                                       key={portKey}
-                                      className="text-center px-3 py-3 whitespace-nowrap min-w-[100px] bg-brand-blue/[0.07]"
+                                      className="text-center px-1.5 py-2 bg-[#dbeafe]/70 border-x border-[#3b82f6]/10 w-[80px]"
                                     >
-                                      <span className="block text-brand-blue font-bold text-xs">{portKey}</span>
-                                      <span className="block text-[10px] font-normal text-brand-blue/50 mt-0.5">
-                                        {tr.eta} / {tr.daysTransit}
+                                      <span className="block text-[#1d4ed8] font-bold text-[10px] leading-tight">{portKey}</span>
+                                      <span className="block text-[9px] font-medium text-[#1d4ed8]/55 mt-0.5">
+                                        ETA / TT
                                       </span>
                                     </th>
                                   ))}
-                                  <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide min-w-[100px]">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[80px]">
                                     {tr.colStacking}
                                   </th>
                                   {isLoggedIn && (
-                                    <th className="text-center px-3 py-3 font-semibold text-neutral-500 whitespace-nowrap text-[11px] uppercase tracking-wide min-w-[180px]">
+                                    <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[80px]">
                                       {tr.colActions}
                                     </th>
                                   )}
                                 </tr>
                               </thead>
                               <tbody>
-                                {displayedItinerarios.map((it, rowIndex) => {
+                                {displayedRows.map((row, rowIndex) => {
+                                  if (row.type === "blank") {
+                                    const blankColSpan = 6 + destinosColumnas.length + (isLoggedIn ? 1 : 0);
+                                    return (
+                                      <tr key={`blank-${row.semana}`} className="border-y border-red-300">
+                                        <td
+                                          colSpan={blankColSpan}
+                                          className="px-3 py-2.5 bg-red-100"
+                                        >
+                                          <div className="flex items-center justify-center gap-2">
+                                            <span className="inline-flex items-center justify-center w-7 h-5 rounded-full bg-red-600 text-white font-black text-[10px] tabular-nums shadow-sm">
+                                              {row.semana}
+                                            </span>
+                                            <Icon
+                                              icon="lucide:alert-circle"
+                                              width={13}
+                                              height={13}
+                                              className="text-red-600 shrink-0"
+                                              aria-hidden
+                                            />
+                                            <span className="text-neutral-900 font-black text-[11px] uppercase tracking-wide">
+                                              Semana {row.semana} — BLANK SAILING
+                                            </span>
+                                            <span className="text-red-500 text-[10px] font-medium">
+                                              · Sin salida programada
+                                            </span>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  }
+                                  const it = row.data;
                                   const escalas = it.escalas ?? [];
                                   const isEven = rowIndex % 2 === 0;
                                   return (
                                     <tr
                                       key={it.id}
-                                      className={`border-b border-neutral-100/70 last:border-0 transition-colors duration-100 ${
-                                        isEven ? "bg-white" : "bg-[#f8faff]"
-                                      } hover:bg-brand-blue/[0.05] group`}
+                                      className={`border-b border-[#e8f0fb]/80 last:border-0 transition-colors duration-100 ${
+                                        isEven ? "bg-white" : "bg-[#f5f9ff]"
+                                      } hover:bg-[#eef4ff] group`}
                                     >
-                                      <td className="px-3 py-3 text-center align-middle">
+                                      <td className="px-1.5 py-2 text-center align-middle">
                                         {it.semana != null ? (
-                                          <span className="inline-flex items-center justify-center min-w-[2rem] h-7 px-2.5 rounded-full bg-brand-blue text-white font-bold text-xs shadow-sm shadow-brand-blue/30">
+                                          <span className="inline-flex items-center justify-center w-7 h-5 rounded-full bg-[#00529b] text-white font-bold text-[10px] shadow-sm shadow-[#00529b]/20 tabular-nums">
                                             {String(it.semana)}
                                           </span>
                                         ) : (
-                                          <span className="text-neutral-300">—</span>
+                                          <span className="text-neutral-300 text-xs">—</span>
                                         )}
                                       </td>
-                                      <td className="px-3 py-3 text-neutral-700 whitespace-nowrap text-center align-middle">
-                                        <span className="font-medium text-neutral-800">{it.nave || "—"}</span>
+                                      <td className="px-2 py-2 text-left align-middle max-w-[0] w-[18%]">
+                                        <p className="font-semibold text-[#1e3a6e] text-xs truncate leading-tight">{it.nave || "—"}</p>
                                         {it.naviera ? (
-                                          <span className="text-neutral-500 text-xs block mt-0.5">{it.naviera}</span>
+                                          <p className="text-neutral-400 text-[10px] truncate mt-px">{it.naviera}</p>
                                         ) : null}
                                       </td>
-                                      <td className="px-3 py-3 text-center align-middle">
+                                      <td className="px-1.5 py-2 text-center align-middle max-w-[0] w-[14%]">
                                         {isLoggedIn ? (
                                           (() => {
                                             const navierasOp = getNavierasForItinerario(it, serviciosConDetalle, consorciosConDetalle);
                                             const updating = operadorUpdatingId === it.id;
-
-                                            // Asegurar que el valor seleccionado siempre coincida con una opción visible
                                             const trimmedOperador = (it.operador || "").trim();
                                             const trimmedNaviera = (it.naviera || "").trim();
-
                                             const currentValue =
                                               trimmedOperador && navierasOp.includes(trimmedOperador)
                                                 ? trimmedOperador
                                                 : navierasOp.includes(trimmedNaviera)
                                                 ? trimmedNaviera
                                                 : "";
-
                                             return (
                                               <select
                                                 value={currentValue}
                                                 onChange={(e) => handleOperadorChange(it, e.target.value)}
                                                 disabled={updating}
-                                                className="w-full max-w-[140px] mx-auto px-2 py-1.5 text-sm rounded-lg border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue disabled:opacity-60"
+                                                className="w-full px-1.5 py-1 text-xs rounded border border-neutral-200 bg-white focus:outline-none focus:ring-1 focus:ring-brand-blue/30 disabled:opacity-60"
                                                 aria-label={tr.colOperador}
                                               >
                                                 <option value="">—</option>
                                                 {navierasOp.map((n) => (
-                                                  <option key={n} value={n}>
-                                                    {n}
-                                                  </option>
+                                                  <option key={n} value={n}>{n}</option>
                                                 ))}
                                               </select>
                                             );
                                           })()
                                         ) : (
-                                          <span className="text-neutral-700">{it.operador || "—"}</span>
+                                          <span className="text-neutral-600 text-xs truncate block">{it.operador || "—"}</span>
                                         )}
                                       </td>
-                                      <td className="px-3 py-3 text-neutral-700 font-medium whitespace-nowrap text-center align-middle">{it.viaje || "—"}</td>
-                                      <td className="px-3 py-3 text-neutral-700 whitespace-nowrap text-center align-middle">
-                                        <span className="block font-medium">{it.pol || "—"}</span>
-                                        <span className="block text-xs text-neutral-500 mt-0.5">{it.etd ? formatDate(it.etd) : "—"}</span>
+                                      <td className="px-1.5 py-2 text-[#1e3a6e] font-semibold whitespace-nowrap text-center align-middle tabular-nums text-xs">{it.viaje || "—"}</td>
+                                      <td className="px-1.5 py-2 whitespace-nowrap text-center align-middle">
+                                        <span className="block font-semibold text-[#1e3a6e] text-xs">{it.pol || "—"}</span>
+                                        <span className="block text-[10px] text-neutral-400 tabular-nums">{it.etd ? formatDate(it.etd) : "—"}</span>
                                       </td>
                                       {destinosColumnas.map((portKey) => {
                                         const e = getEscalaForPort(escalas, portKey);
                                         return (
-                                          <td key={portKey} className="px-3 py-3 whitespace-nowrap text-center align-middle bg-brand-blue/[0.03] group-hover:bg-brand-blue/[0.07] transition-colors duration-100">
+                                          <td key={portKey} className={`px-1.5 py-2 whitespace-nowrap text-center align-middle border-x border-[#3b82f6]/8 transition-colors duration-100 ${isEven ? "bg-[#eff6ff]/60" : "bg-[#e8f1fe]/50"} group-hover:bg-[#dbeafe]/70`}>
                                             {e ? (
-                                              <span className="block">
-                                                <span className="text-neutral-800 font-semibold tabular-nums">{e.eta ? formatDate(e.eta) : "—"}</span>
+                                              <>
+                                                <span className="block text-[#1e3a6e] font-semibold tabular-nums text-xs">{e.eta ? formatDate(e.eta) : "—"}</span>
                                                 {e.dias_transito != null && (
-                                                  <span className="inline-flex items-center justify-center mt-1 px-1.5 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-bold tabular-nums">{e.dias_transito}d</span>
+                                                  <span className="inline-block mt-px px-1.5 py-px rounded-full bg-[#1d4ed8]/10 text-[#1d4ed8] text-[9px] font-bold tabular-nums">{e.dias_transito}d</span>
                                                 )}
-                                              </span>
+                                              </>
                                             ) : (
-                                              <span className="text-neutral-200">—</span>
+                                              <span className="text-neutral-200 text-xs">—</span>
                                             )}
                                           </td>
                                         );
                                       })}
-                                      <td className="px-3 py-3 text-center align-middle">
+                                      <td className="px-1.5 py-2 text-center align-middle">
                                         {(() => {
-                                          // Imagen compartida por nombre de nave; Ver stacking = solo si hay imagen
                                           const naveNorm = normalizeNave(it.nave);
                                           const sharedImageUrl =
                                             it.stacking_imagen_url ??
@@ -1792,64 +2117,49 @@ export function ItinerarioContent() {
                                                 )?.stacking_imagen_url
                                               : null) ??
                                             null;
-
-                                          const hasStackingImage =
-                                            typeof sharedImageUrl === "string" && sharedImageUrl.trim().length > 0;
-                                          const hasFullStacking = hasStackingImage;
-
+                                          const hasFullStacking = typeof sharedImageUrl === "string" && sharedImageUrl.trim().length > 0;
                                           const tIt = tr as any;
-                                          const label = hasFullStacking ? tIt.openStacking : tIt.uploadStacking;
-                                          const baseAria =
-                                            (hasFullStacking ? tIt.openStackingAria : tIt.uploadStackingAria) ??
-                                            tIt.openStackingAria;
-                                          const ariaLabel = baseAria
+                                          const ariaLabel = ((hasFullStacking ? tIt.openStackingAria : tIt.uploadStackingAria) ?? tIt.openStackingAria)
                                             .replace("{{nave}}", it.nave ?? "")
                                             .replace("{{viaje}}", it.viaje ?? "");
-
-                                          const baseButtonClasses =
-                                            "inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 transition-colors";
-                                          const colorClasses = hasFullStacking
-                                            ? "text-brand-teal bg-brand-teal/10 hover:bg-brand-teal/20 focus:ring-brand-teal/30"
-                                            : "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/30";
-
                                           return (
                                             <button
                                               type="button"
                                               onClick={() => handleOpenStackingModal(it)}
-                                              className={`${baseButtonClasses} ${colorClasses}`}
+                                              className={`inline-flex items-center justify-center w-7 h-7 rounded-lg focus:outline-none focus:ring-2 transition-colors ${hasFullStacking ? "text-brand-teal bg-brand-teal/10 hover:bg-brand-teal/20 focus:ring-brand-teal/30" : "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/30"}`}
                                               aria-label={ariaLabel}
+                                              title={hasFullStacking ? (tIt.openStacking ?? "") : (tIt.uploadStacking ?? "")}
                                             >
-                                              <Icon icon="lucide:calendar-clock" width={16} height={16} aria-hidden />
-                                              {label}
+                                              <Icon icon="lucide:calendar-clock" width={14} height={14} aria-hidden />
                                             </button>
                                           );
                                         })()}
                                       </td>
                                       {isLoggedIn && (
-                                        <td className="px-3 py-3 text-center align-middle">
-                                          <div className="flex items-center justify-center gap-2">
+                                        <td className="px-1.5 py-2 text-center align-middle">
+                                          <div className="flex items-center justify-center gap-1">
                                             <button
                                               type="button"
                                               onClick={() => handleOpenEdit(it)}
-                                              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                                              className="inline-flex items-center justify-center w-7 h-7 text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-1 focus:ring-brand-blue/30 transition-colors"
                                               aria-label={tr.editItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
+                                              title={tr.editItinerary}
                                             >
-                                              <Icon icon="lucide:pencil" width={16} height={16} aria-hidden />
-                                              {tr.editItinerary}
+                                              <Icon icon="lucide:pencil" width={13} height={13} aria-hidden />
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => handleDelete(it)}
                                               disabled={deletingId === it.id}
-                                              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 disabled:opacity-50"
+                                              className="inline-flex items-center justify-center w-7 h-7 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-1 focus:ring-red-300 transition-colors disabled:opacity-50"
                                               aria-label={tr.deleteItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
+                                              title={tr.deleteItinerary}
                                             >
                                               {deletingId === it.id ? (
-                                                <Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" aria-hidden />
+                                                <Icon icon="lucide:loader-2" width={13} height={13} className="animate-spin" aria-hidden />
                                               ) : (
-                                                <Icon icon="lucide:trash-2" width={16} height={16} aria-hidden />
+                                                <Icon icon="lucide:trash-2" width={13} height={13} aria-hidden />
                                               )}
-                                              {tr.deleteItinerary}
                                             </button>
                                           </div>
                                         </td>
@@ -1860,7 +2170,10 @@ export function ItinerarioContent() {
                               </tbody>
                             </table>
                             {itinerariosEnArea.length > 4 && (
-                              <div className="px-4 py-3 border-t border-neutral-200 bg-neutral-50/60 flex justify-center sm:justify-end">
+                              <div className="px-4 py-2.5 border-t border-[#e8f0fb] bg-gradient-to-r from-[#f5f9ff] to-[#eef4fb] flex items-center justify-between">
+                                <span className="text-[11px] text-[#1e3a6e]/50 tabular-nums">
+                                  {isExpanded ? itinerariosEnArea.length : 4} / {itinerariosEnArea.length} salidas
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1869,11 +2182,12 @@ export function ItinerarioContent() {
                                       [areaKey]: !isExpanded,
                                     }))
                                   }
-                                  className="text-xs font-medium text-brand-blue hover:text-brand-blue/80 transition-colors"
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00529b] hover:text-[#0d6cbf] transition-colors"
                                 >
+                                  <Icon icon={isExpanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={13} height={13} aria-hidden />
                                   {isExpanded
                                     ? tr.showLessRows?.replace("{{count}}", String(itinerariosEnArea.length)) ??
-                                      `Ver menos (${itinerariosEnArea.length})`
+                                      `Ver menos`
                                     : tr.showMoreRows?.replace("{{count}}", String(itinerariosEnArea.length)) ??
                                       `Ver todas (${itinerariosEnArea.length})`}
                                 </button>

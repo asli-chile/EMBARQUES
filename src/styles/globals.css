@@ -5,9 +5,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Fuente global: Fira Sans ── */
+html, body {
+  font-family: 'Fira Sans', 'Open Sans', system-ui, sans-serif;
+}
+
 /* ── Tamaño base global — escala todos los rem de Tailwind ── */
 html {
-  font-size: 112.5%; /* 18px base → text-xs=13.5px  text-sm=15.75px  text-base=18px */
+  font-size: 90%; /* 14.4px base (112.5% × 0.8) → text-xs=10.8px  text-sm=12.6px  text-base=14.4px */
 }
 
 /* ── Ocultar scrollbar manteniendo scroll funcional ── */

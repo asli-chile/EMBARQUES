@@ -10,12 +10,14 @@ import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 const BRAND_BLUE: [number, number, number] = [0, 82, 155];
 const BRAND_BLUE_LIGHT: [number, number, number] = [13, 108, 191];
 const WHITE: [number, number, number] = [255, 255, 255];
-const ROW_ALT: [number, number, number] = [246, 249, 255];
-const DEST_BG: [number, number, number] = [232, 241, 254];
-const DEST_ALT: [number, number, number] = [214, 230, 252];
-const BORDER_COLOR: [number, number, number] = [214, 224, 240];
+const ROW_ALT: [number, number, number] = [245, 249, 255];
+const DEST_BG: [number, number, number] = [235, 245, 255];
+const DEST_ALT: [number, number, number] = [219, 234, 254];
+const BORDER_COLOR: [number, number, number] = [210, 222, 240];
 const TEXT_MUTED: [number, number, number] = [100, 116, 139];
 const TEXT_DARK: [number, number, number] = [30, 41, 59];
+const SERVICE_BAR_BG: [number, number, number] = [235, 244, 255];
+const SERVICE_BAR_TEXT: [number, number, number] = [30, 58, 110];
 
 const AREA_COLORS: Record<string, [number, number, number]> = {
   AMERICA:        [22, 120, 60],
@@ -75,14 +77,15 @@ export async function generateItinerarioPDF(
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  // ── Filtrar y agrupar: byArea[area][service] = rows ──────────────────────
+  // ── Filtrar y agrupar: byArea[area][naviera][service] = rows ─────────────
   const todayRows = itinerarios.filter((it) => {
     if (!it.etd?.trim()) return false;
     const d = new Date(it.etd.includes("T") ? it.etd : `${it.etd}T12:00:00`);
     return !isNaN(d.getTime()) && d >= todayStart;
   });
 
-  const byArea = new Map<string, Map<string, ItinerarioWithEscalas[]>>();
+  // Map<area, Map<naviera, Map<service, rows[]>>>
+  const byArea = new Map<string, Map<string, Map<string, ItinerarioWithEscalas[]>>>();
   for (const it of todayRows) {
     const escalas = it.escalas ?? [];
     const areas = new Set<string>(escalas.map((e) => (e.area || "").trim() || "").filter(Boolean));
@@ -90,19 +93,24 @@ export async function generateItinerarioPDF(
     for (const area of areas) {
       if (selectedArea && selectedArea !== "ALL" && area !== selectedArea) continue;
       if (!byArea.has(area)) byArea.set(area, new Map());
-      const am = byArea.get(area)!;
-      const key = (it.servicio || "").trim() || "—";
-      const list = am.get(key) ?? [];
+      const navMap = byArea.get(area)!;
+      const navKey = (it.naviera || "—").trim();
+      if (!navMap.has(navKey)) navMap.set(navKey, new Map());
+      const svcMap = navMap.get(navKey)!;
+      const svcKey = (it.servicio || "—").trim();
+      const list = svcMap.get(svcKey) ?? [];
       list.push(it);
-      am.set(key, list);
+      svcMap.set(svcKey, list);
     }
   }
 
   // Sort each service list by ETD asc, cap at MAX
-  for (const am of byArea.values()) {
-    for (const [k, list] of am) {
-      list.sort((a, b) => (a.etd ? new Date(a.etd).getTime() : Infinity) - (b.etd ? new Date(b.etd).getTime() : Infinity));
-      am.set(k, list.slice(0, MAX_ROWS_PER_SERVICE));
+  for (const navMap of byArea.values()) {
+    for (const svcMap of navMap.values()) {
+      for (const [k, list] of svcMap) {
+        list.sort((a, b) => (a.etd ? new Date(a.etd).getTime() : Infinity) - (b.etd ? new Date(b.etd).getTime() : Infinity));
+        svcMap.set(k, list.slice(0, MAX_ROWS_PER_SERVICE));
+      }
     }
   }
 
@@ -110,7 +118,9 @@ export async function generateItinerarioPDF(
     ...AREA_ORDER.filter((a) => byArea.has(a)),
     ...[...byArea.keys()].filter((a) => !AREA_ORDER.includes(a)).sort(),
   ];
-  const totalRows = [...byArea.values()].reduce((s, am) => s + [...am.values()].reduce((ss, l) => ss + l.length, 0), 0);
+  const totalRows = [...byArea.values()].reduce((s, navMap) =>
+    s + [...navMap.values()].reduce((s2, svcMap) =>
+      s2 + [...svcMap.values()].reduce((s3, l) => s3 + l.length, 0), 0), 0);
 
   const logo = await loadLogo();
 
@@ -183,151 +193,203 @@ export async function generateItinerarioPDF(
     );
   } else {
     for (const area of sortedAreas) {
-      const serviceMap = byArea.get(area)!;
-      const serviceNames = [...serviceMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+      const navMap = byArea.get(area)!;
+      const sortedNavieras = [...navMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
       const areaColor = AREA_COLORS[area] ?? BRAND_BLUE;
       const areaLabel = AREA_LABELS[area] ?? area;
+      const totalNavieras = sortedNavieras.length;
 
       // ── Area banner ────────────────────────────────────────────────────
       if (y > pageH - 50) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
 
-      const bannerH = 8;
+      const bannerH = 9;
       doc.setFillColor(...areaColor);
-      doc.roundedRect(margin, y, pageW - margin * 2, bannerH, 1.5, 1.5, "F");
+      doc.roundedRect(margin, y, pageW - margin * 2, bannerH, 2, 2, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
+      doc.setFontSize(9);
       doc.setTextColor(...WHITE);
-      doc.text(areaLabel.toUpperCase(), margin + 4, y + 5.5);
+      doc.text(areaLabel.toUpperCase(), margin + 5, y + 6);
+      const areaCount = `${totalNavieras} ${totalNavieras === 1 ? (locale === "es" ? "naviera" : "carrier") : (locale === "es" ? "navieras" : "carriers")}`;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(200, 230, 255);
-      doc.text(
-        `${serviceNames.length} ${serviceNames.length === 1 ? (locale === "es" ? "servicio" : "service") : (locale === "es" ? "servicios" : "services")}`,
-        pageW - margin - 3, y + 5.5, { align: "right" }
-      );
-      y += bannerH + 3;
+      doc.setFontSize(6.5);
+      doc.setTextColor(210, 228, 250);
+      doc.text(areaCount, pageW - margin - 4, y + 6, { align: "right" });
+      y += bannerH + 2;
 
-      // ── Services ────────────────────────────────────────────────────────
-      for (const servicioNombre of serviceNames) {
-        const list = serviceMap.get(servicioNombre)!;
-        if (list.length === 0) continue;
-
-        const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
-
-        // Destinos de ESTA área únicamente
-        const portKeysByEta = new Map<string, number>();
-        for (const it of list) {
-          for (const e of (it.escalas ?? []).filter((e) => (e.area || "").trim() === area)) {
-            const key = e.puerto_nombre || e.puerto || "—";
-            if (!key) continue;
-            const t = e.eta ? new Date(e.eta).getTime() : Infinity;
-            if (!portKeysByEta.has(key) || t < (portKeysByEta.get(key) ?? Infinity)) portKeysByEta.set(key, t);
-          }
-        }
-        const destinations = [...portKeysByEta.entries()].sort((a, b) => a[1] - b[1]).map(([n]) => n);
+      // ── Navieras ────────────────────────────────────────────────────────
+      for (const naviera of sortedNavieras) {
+        const svcMap = navMap.get(naviera)!;
+        const serviceNames = [...svcMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
         if (y > pageH - 45) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
 
-        // Service name bar
-        doc.setFillColor(BRAND_BLUE_LIGHT[0], BRAND_BLUE_LIGHT[1], BRAND_BLUE_LIGHT[2]);
-        doc.rect(margin, y, pageW - margin * 2, 7.5, "F");
+        // ── Naviera bar (primary — dark navy) ──────────────────────────
+        const navBarH = 9;
+        doc.setFillColor(25, 48, 95);
+        doc.rect(margin, y, pageW - margin * 2, navBarH, "F");
+        // colored left accent
+        doc.setFillColor(...areaColor);
+        doc.rect(margin, y, 3, navBarH, "F");
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
+        doc.setFontSize(8.5);
         doc.setTextColor(...WHITE);
-        doc.text(servicioNombre, margin + 3, y + 5.2);
-        if (navieras.length > 0) {
+        doc.text(naviera, margin + 6, y + 6);
+        // service count badge right
+        const svcCount = `${serviceNames.length} ${serviceNames.length === 1 ? (locale === "es" ? "servicio" : "service") : (locale === "es" ? "servicios" : "services")}`;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(170, 200, 240);
+        doc.text(svcCount, pageW - margin - 3, y + 6, { align: "right" });
+        y += navBarH + 1;
+
+        // ── Services within naviera ──────────────────────────────────────
+        for (const servicioNombre of serviceNames) {
+          const list = svcMap.get(servicioNombre)!;
+          if (list.length === 0) continue;
+
+          // Destinos de ESTA área únicamente
+          const portKeysByEta = new Map<string, number>();
+          for (const it of list) {
+            for (const e of (it.escalas ?? []).filter((e) => (e.area || "").trim() === area)) {
+              const key = e.puerto_nombre || e.puerto || "—";
+              if (!key) continue;
+              const t = e.eta ? new Date(e.eta).getTime() : Infinity;
+              if (!portKeysByEta.has(key) || t < (portKeysByEta.get(key) ?? Infinity)) portKeysByEta.set(key, t);
+            }
+          }
+          const destinations = [...portKeysByEta.entries()].sort((a, b) => a[1] - b[1]).map(([n]) => n);
+
+          if (y > pageH - 40) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
+
+          // ── Service sub-bar (secondary — light bg, colored accent) ─────
+          const svcBarH = 7;
+          doc.setFillColor(...SERVICE_BAR_BG);
+          doc.rect(margin, y, pageW - margin * 2, svcBarH, "F");
+          doc.setFillColor(...areaColor);
+          doc.rect(margin + 3, y, 1.5, svcBarH, "F");
+          doc.setDrawColor(...BORDER_COLOR);
+          doc.setLineWidth(0.15);
+          doc.line(margin, y + svcBarH, pageW - margin, y + svcBarH);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7.5);
+          doc.setTextColor(...SERVICE_BAR_TEXT);
+          doc.text(servicioNombre, margin + 7, y + 4.8);
           doc.setFont("helvetica", "normal");
-          doc.setFontSize(6.5);
-          doc.setTextColor(190, 220, 255);
-          doc.text(navieras.join(" · "), pageW - margin - 3, y + 5.2, { align: "right" });
-        }
-        y += 9;
+          doc.setFontSize(5.5);
+          doc.setTextColor(160, 180, 210);
+          doc.text(locale === "es" ? "servicio / consorcio" : "service / consortium", pageW - margin - 3, y + 4.8, { align: "right" });
+          y += svcBarH + 0.5;
 
-        // Column widths
-        const baseCols = [11, 34, 24, 14, 28];
-        const usedW = baseCols.reduce((a, b) => a + b, 0);
-        const destColW = destinations.length > 0
-          ? Math.max(18, Math.min(36, (pageW - margin * 2 - usedW) / destinations.length))
-          : 28;
+          // Column widths: Sem | Nave | Viaje | POL+ETD | destinations...
+          const availableW = pageW - margin * 2;
+          const destCount = destinations.length;
+          const BASE_COLS_COUNT = 4;
+          const rawBase = [10, 40, 15, 28];
+          const rawBaseTotal = rawBase.reduce((a, b) => a + b, 0); // 93mm
+          const MIN_DEST_W = 18; // minimum mm per dest col so text fits without mid-word breaks
 
-        const head: string[] = [
-          locale === "es" ? "Sem." : "Wk.",
-          locale === "es" ? "Nave" : "Vessel",
-          locale === "es" ? "Operador" : "Operator",
-          locale === "es" ? "Viaje" : "Voyage",
-          `POL\nETD`,
-          ...destinations.map((d) => `${d}\nETA / TT`),
-        ];
+          let baseCols: number[];
+          let destColW: number;
+          if (destCount === 0) {
+            baseCols = rawBase.map((w) => w * (availableW / rawBaseTotal));
+            destColW = 0;
+          } else if (rawBaseTotal + MIN_DEST_W * destCount <= availableW) {
+            // Enough room: base cols at natural size, give leftover to dest cols
+            baseCols = rawBase.slice();
+            destColW = (availableW - rawBaseTotal) / destCount;
+          } else {
+            // Too many dests: shrink base cols so dest cols get MIN_DEST_W each
+            const baseAvail = availableW - MIN_DEST_W * destCount;
+            baseCols = rawBase.map((w) => w * Math.max(0.4, baseAvail / rawBaseTotal));
+            destColW = MIN_DEST_W;
+          }
 
-        const body = list.map((it) => {
-          const escalas = (it.escalas ?? []).filter((e) => (e.area || "").trim() === area);
-          return [
-            it.semana != null ? String(it.semana) : "—",
-            it.nave || "—",
-            it.operador || it.naviera || "—",
-            it.viaje || "—",
-            `${it.pol || "—"}\n${formatDate(it.etd)}`,
-            ...destinations.map((portKey) => {
-              const e = escalas.find((esc) => ((esc.puerto_nombre || esc.puerto) || "—") === portKey);
-              if (!e) return "—";
-              const eta = e.eta ? formatDate(e.eta) : "—";
-              const tt = e.dias_transito != null ? `${e.dias_transito}d` : "";
-              return tt ? `${eta}\n${tt}` : eta;
-            }),
+          const head: string[] = [
+            locale === "es" ? "Sem." : "Wk.",
+            locale === "es" ? "Nave" : "Vessel",
+            locale === "es" ? "Viaje" : "Voyage",
+            `POL / ETD`,
+            ...destinations.map((d) => `${d}\nETA / TT`),
           ];
-        });
 
-        const columnStyles: Record<number, object> = {};
-        baseCols.forEach((w, i) => {
-          columnStyles[i] = { cellWidth: w, halign: i === 0 ? "center" : "left" };
-        });
-        destinations.forEach((_, i) => {
-          columnStyles[baseCols.length + i] = { cellWidth: destColW, halign: "center", fillColor: DEST_BG };
-        });
+          const body = list.map((it) => {
+            const escalas = (it.escalas ?? []).filter((e) => (e.area || "").trim() === area);
+            return [
+              it.semana != null ? String(it.semana) : "—",
+              it.nave || "—",
+              it.viaje || "—",
+              `${it.pol || "—"} · ${formatDate(it.etd)}`,
+              ...destinations.map((portKey) => {
+                const e = escalas.find((esc) => ((esc.puerto_nombre || esc.puerto) || "—") === portKey);
+                if (!e) return "—";
+                const eta = e.eta ? formatDate(e.eta) : "—";
+                const tt = e.dias_transito != null ? `${e.dias_transito}d` : "";
+                return tt ? `${eta}\n${tt}` : eta;
+              }),
+            ];
+          });
 
-        autoTable(doc, {
-          head: [head],
-          body,
-          startY: y,
-          margin: { left: margin, right: margin },
-          tableWidth: pageW - margin * 2,
-          styles: {
-            fontSize: 7,
-            cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
-            lineColor: BORDER_COLOR,
-            lineWidth: 0.15,
-            valign: "middle",
-            overflow: "linebreak",
-            font: "helvetica",
-            textColor: TEXT_DARK,
-          },
-          headStyles: {
-            fillColor: BRAND_BLUE,
-            textColor: WHITE,
-            fontStyle: "bold",
-            fontSize: 7,
-            halign: "center",
-            valign: "middle",
-            cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
-            lineColor: BRAND_BLUE,
-          },
-          alternateRowStyles: { fillColor: ROW_ALT },
-          columnStyles,
-          didParseCell: (data) => {
-            if (data.section === "body" && data.column.index >= baseCols.length) {
-              data.cell.styles.fillColor = data.row.index % 2 === 0 ? DEST_BG : DEST_ALT;
-            }
-            if (data.section === "body" && data.column.index === 0) {
-              data.cell.styles.fontStyle = "bold";
-              data.cell.styles.textColor = BRAND_BLUE;
-            }
-          },
-          didDrawPage: () => { drawPageHeader(); },
-        });
+          const columnStyles: Record<number, object> = {};
+          baseCols.forEach((w, i) => {
+            columnStyles[i] = { cellWidth: w, halign: i === 0 ? "center" : "left" };
+          });
+          destinations.forEach((_, i) => {
+            columnStyles[BASE_COLS_COUNT + i] = { cellWidth: destColW, halign: "center" };
+          });
 
-        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
+          autoTable(doc, {
+            head: [head],
+            body,
+            startY: y,
+            margin: { left: margin, right: margin },
+            tableWidth: pageW - margin * 2,
+            styles: {
+              fontSize: 7,
+              cellPadding: { top: 2, bottom: 2, left: 2.5, right: 2.5 },
+              lineColor: BORDER_COLOR,
+              lineWidth: 0.15,
+              valign: "middle",
+              overflow: "linebreak",
+              font: "helvetica",
+              textColor: TEXT_DARK,
+            },
+            headStyles: {
+              fillColor: [30, 58, 110] as [number, number, number],
+              textColor: WHITE,
+              fontStyle: "bold",
+              fontSize: 6.5,
+              halign: "center",
+              valign: "middle",
+              cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+              lineColor: [20, 45, 90] as [number, number, number],
+              overflow: "linebreak",
+            },
+            alternateRowStyles: { fillColor: ROW_ALT },
+            columnStyles,
+            didParseCell: (data) => {
+              if (data.section === "body" && data.column.index >= BASE_COLS_COUNT) {
+                data.cell.styles.fillColor = data.row.index % 2 === 0 ? DEST_BG : DEST_ALT;
+              }
+              if (data.section === "body" && data.column.index === 0) {
+                data.cell.styles.fontStyle = "bold";
+                data.cell.styles.textColor = BRAND_BLUE;
+                data.cell.styles.halign = "center";
+              }
+              if (data.section === "head" && data.column.index >= BASE_COLS_COUNT) {
+                data.cell.styles.fillColor = [20, 70, 160] as [number, number, number];
+                // Smaller font + tighter padding so port names wrap at spaces, not mid-word
+                data.cell.styles.fontSize = 5.5;
+                data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 1.5, right: 1.5 };
+              }
+            },
+            didDrawPage: () => { drawPageHeader(); },
+          });
+
+          y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
+        }
+        y += 4; // gap between navieras
       }
-      y += 3; // extra gap between areas
+      y += 3; // gap between areas
     }
   }
 

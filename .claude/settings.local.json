@@ -29,7 +29,8 @@
       "Skill(update-config)",
       "Skill(update-config:*)",
       "Bash(npx vercel:*)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npm run:*)"
     ]
   }
 }

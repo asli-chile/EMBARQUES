@@ -144,6 +144,16 @@ export default function ItinerarioMap({
       });
   }, []);
 
+  // Aplicar zoom inicial vía API cada vez que el estilo carga (bypasa initialViewState que es uncontrolled)
+  useEffect(() => {
+    if (!styleLoaded) return;
+    const raw = mapRef.current as unknown as { getMap?: () => unknown } | null;
+    const map = (raw?.getMap ? raw.getMap() : raw) as { jumpTo?: (opts: object) => void } | null;
+    if (typeof map?.jumpTo === "function") {
+      map.jumpTo({ zoom: 0.1, center: [10, 10] });
+    }
+  }, [styleLoaded]);
+
   const highlightArea = hoveredArea ?? selectedArea;
 
   const portsGeoJson = useMemo((): GeoJSON.FeatureCollection => {
@@ -367,18 +377,21 @@ export default function ItinerarioMap({
             ref={mapRef}
             initialViewState={{
               longitude: 10,
-              latitude: 30,
-              zoom: 0.5,
+              latitude: 10,
+              zoom: 0.1,
             }}
+            minZoom={0}
+            maxZoom={20}
             style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
             mapStyle={MAP_STYLE}
             renderWorldCopies={false}
             dragRotate={false}
             touchPitch={false}
             onLoad={(e) => {
-              const map = e.target as { setRenderWorldCopies?: (v: boolean) => void; resize?: () => void };
+              const map = e.target as { setRenderWorldCopies?: (v: boolean) => void; resize?: () => void; jumpTo?: (opts: object) => void };
               if (typeof map.setRenderWorldCopies === "function") map.setRenderWorldCopies(false);
               if (typeof map.resize === "function") map.resize();
+              if (typeof map.jumpTo === "function") map.jumpTo({ zoom: 0.1, center: [10, 10] });
               setStyleLoaded(true);
             }}
             onError={() => {

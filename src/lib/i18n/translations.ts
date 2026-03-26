@@ -3697,6 +3697,8 @@ export const translations = {
       successDeleted: "Itinerary deleted successfully.",
       selectServiceAria: "Select service to fill carrier, POL and destinations",
       selectConsortiumAria: "Select consortium to fill carrier, POL and destinations",
+      showMoreRows: "Show all {{count}} rows",
+      showLessRows: "Show only 4 rows (of {{count}})",
       mapAreaLabel: "Area",
       mapHint: "Click a region to filter itineraries.",
       mapLoading: "Loading map…",
