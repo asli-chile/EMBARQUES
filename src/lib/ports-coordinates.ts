@@ -303,6 +303,117 @@ export const PORTS_COORDINATES: Record<string, [number, number] | null> = {
   "LA PAZ": [-68.1193, -16.5],
   "SANTA CRUZ": [-63.1812, -17.8146],
   "ZAMBRANO": [-63.6167, -38.4161],
+  // India
+  "NHAVA SHEVA": [72.9478, 18.9322],
+  "NHAVA-SHEVA": [72.9478, 18.9322],
+  "JNPT": [72.9478, 18.9322],
+  "JAWAHARLAL NEHRU PORT": [72.9478, 18.9322],
+  "JAWAHARLAL NEHRU": [72.9478, 18.9322],
+  "MUNDRA": [69.7067, 22.8392],
+  "PIPAVAV": [71.5167, 20.9167],
+  "CHENNAI": [80.2707, 13.0827],
+  "MADRAS": [80.2707, 13.0827],
+  "KOLKATA": [88.3639, 22.5726],
+  "CALCUTTA": [88.3639, 22.5726],
+  "MUMBAI": [72.8777, 19.076],
+  "COCHIN": [76.2674, 9.9312],
+  "KOCHI": [76.2674, 9.9312],
+  "TUTICORIN": [78.1348, 8.7642],
+  "TUTICORIN PORT": [78.1348, 8.7642],
+  "HAZIRA": [72.6372, 21.1256],
+  // Bangladesh
+  "CHITTAGONG": [91.8333, 22.3333],
+  "CTGM": [91.8333, 22.3333],
+  // Pakistan
+  "KARACHI": [66.9738, 24.8608],
+  "PORT QASIM": [67.3083, 24.7861],
+  // Sri Lanka
+  "COLOMBO": [79.8612, 6.9271],
+  "COLO": [79.8612, 6.9271],
+  // Indonesia
+  "SURABAYA": [112.7508, -7.2575],
+  "JAKARTA, INDONESIA": [106.8451, -6.2088],
+  "TANJUNG PRIOK": [106.8894, -6.1006],
+  "BELAWAN": [98.6908, 3.7894],
+  "BITUNG": [125.1839, 1.4406],
+  // Philippines
+  "MANILA": [120.9842, 14.5995],
+  "CEBU": [123.8854, 10.3157],
+  "DAVAO": [125.6124, 7.0707],
+  // Malaysia
+  "PENANG": [100.3327, 5.4164],
+  "PASIR GUDANG": [103.8961, 1.4725],
+  "TANJUNG PELEPAS": [103.5509, 1.3628],
+  // Vietnam
+  "HO CHI MINH": [106.6297, 10.8231],
+  "VUNG TAU": [107.0843, 10.3458],
+  "CAI MEP": [107.0167, 10.55],
+  "DANANG": [108.2022, 16.0544],
+  // Japan
+  "OSAKA": [135.5023, 34.6937],
+  "TOKYO": [139.6917, 35.6895],
+  "SHIMIZU": [138.4899, 34.9928],
+  // Myanmar
+  "YANGON": [96.1561, 16.8409],
+  "THILAWA": [96.2667, 16.7],
+  // Cambodia
+  "SIHANOUKVILLE": [103.5278, 10.6333],
+  // Iran
+  "BANDAR ABBAS": [56.2808, 27.1832],
+  "BANDAR-ABBAS": [56.2808, 27.1832],
+  "SHAHID RAJAEE": [56.0833, 27.1167],
+  // Oman
+  "SALALAH": [54.008, 17.0228],
+  "MUSCAT": [58.5922, 23.6139],
+  // Saudi Arabia
+  "DAMMAM": [50.1039, 26.4367],
+  "KING FAHAD": [50.1039, 26.4367],
+  "RIYADH": [46.7219, 24.6877],
+  // UAE extra
+  "ABU DHABI": [54.3773, 24.4539],
+  "KHALIFA PORT": [54.5408, 24.8029],
+  "SHARJAH": [55.3781, 25.3463],
+  // Kuwait
+  "SHUAIBA": [47.9731, 29.05],
+  // Iraq
+  "UMM QASR": [47.9219, 30.0331],
+  // Israel
+  "ASHDOD": [34.6415, 31.8167],
+  "HAIFA": [35.0, 32.8167],
+  // Egypt
+  "PORT SAID": [32.2897, 31.2581],
+  "DAMIETTA": [31.8178, 31.4167],
+  "ALEXANDRIA": [29.9553, 31.2001],
+  // Morocco
+  "TANGER MED": [-5.5, 35.8833],
+  "CASABLANCA": [-7.6189, 33.5731],
+  // Africa East
+  "MOMBASA": [39.6682, -4.0435],
+  "DAR ES SALAAM": [39.2083, -6.7924],
+  "DJIBOUTI": [43.1436, 11.5721],
+  "BERBERA": [45.0083, 10.4333],
+  // Africa West
+  "DURBAN": [31.0218, -29.8587],
+  "PORT ELIZABETH": [25.6018, -33.9608],
+  "APAPA": [3.3792, 6.4531],
+  "LAGOS": [3.3792, 6.4531],
+  "TEMA": [-0.0167, 5.6333],
+  "ABIDJAN": [-4.0167, 5.3167],
+  "DAKAR": [-17.4441, 14.6928],
+  "LOME": [1.2167, 6.1333],
+  "COTONOU": [2.4167, 6.35],
+  "DOUALA": [9.7167, 4.05],
+  "BATA": [9.7833, 1.8667],
+  // Oceania extra
+  "AUCKLAND": [174.7633, -36.8485],
+  "PORT CHALMERS": [170.6333, -45.8167],
+  "WELLINGTON": [174.7762, -41.2865],
+  "NOUMEA": [166.4581, -22.2758],
+  "SUVA": [178.4419, -18.1416],
+  "PORT MORESBY": [147.1925, -9.4438],
+  "DARWIN": [130.8456, -12.4578],
+  "PORT HEDLAND": [118.5833, -20.3167],
+  "TOWNSVILLE": [146.8239, -19.2589],
 };
 
 /** Devuelve [lng, lat] para un nombre de puerto o código; prueba varias normalizaciones. */

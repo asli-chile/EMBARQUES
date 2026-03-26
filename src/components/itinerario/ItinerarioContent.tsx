@@ -1142,10 +1142,10 @@ export function ItinerarioContent() {
                     <div className="flex gap-1.5 lg:hidden overflow-x-auto scrollbar-none pb-0.5">
                       {(
                         [
+                          { area: "AMERICA",            bg: "bg-emerald-400/15 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
                           { area: "ASIA",               bg: "bg-amber-400/15 border-amber-400/35 text-amber-200",  dot: "bg-amber-400" },
                           { area: "EUROPA",             bg: "bg-sky-400/15 border-sky-400/35 text-sky-200",         dot: "bg-sky-400" },
-                          { area: "AMERICA",            bg: "bg-emerald-400/15 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
-                          { area: "MEDIO-ORIENTE", bg: "bg-orange-400/15 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
+                          { area: "MEDIO-ORIENTE",      bg: "bg-orange-400/15 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
                           { area: "OCEANIA",            bg: "bg-teal-400/15 border-teal-400/35 text-teal-200",      dot: "bg-teal-400" },
                         ]
                       )
@@ -1166,10 +1166,10 @@ export function ItinerarioContent() {
                     <div className="hidden lg:grid grid-cols-2 gap-1.5">
                       {(
                         [
+                          { area: "AMERICA",            bg: "bg-emerald-400/15 hover:bg-emerald-400/25 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
                           { area: "ASIA",               bg: "bg-amber-400/15  hover:bg-amber-400/25  border-amber-400/35  text-amber-200",  dot: "bg-amber-400" },
                           { area: "EUROPA",             bg: "bg-sky-400/15    hover:bg-sky-400/25    border-sky-400/35    text-sky-200",    dot: "bg-sky-400" },
-                          { area: "AMERICA",            bg: "bg-emerald-400/15 hover:bg-emerald-400/25 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
-                          { area: "MEDIO-ORIENTE", bg: "bg-orange-400/15 hover:bg-orange-400/25 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
+                          { area: "MEDIO-ORIENTE",      bg: "bg-orange-400/15 hover:bg-orange-400/25 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
                           { area: "OCEANIA",            bg: "bg-teal-400/15   hover:bg-teal-400/25   border-teal-400/35   text-teal-200",   dot: "bg-teal-400" },
                         ]
                       )
@@ -1389,7 +1389,7 @@ export function ItinerarioContent() {
                 list.push(it);
                 byServicio.set(key, list);
               }
-              const areaOrder = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA", ""];
+              const areaOrder = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA", ""];
               const sortArea = (a: string, b: string) => {
                 const iA = areaOrder.indexOf(a);
                 const iB = areaOrder.indexOf(b);

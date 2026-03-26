@@ -2,7 +2,7 @@
  * Áreas canónicas para destinos/servicios.
  * Normaliza variantes como "INDIA MEDIO ORIENTE" → "INDIA-MEDIOORIENTE" para evitar errores al guardar.
  */
-export const AREAS_CANONICAL = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA"] as const;
+export const AREAS_CANONICAL = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA"] as const;
 
 export function normalizeArea(area: unknown): string {
   if (area == null || String(area).trim() === "") return "ASIA";
