@@ -1912,49 +1912,60 @@ export function ItinerarioContent() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-white"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-itinerario-title"
+          onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
         >
-          {/* Gradient accent */}
-          <div className="flex-shrink-0 h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          {/* Sticky header bar */}
-          <div className="flex-shrink-0 flex items-center justify-between px-5 sm:px-8 py-4 border-b border-neutral-200 bg-white">
-            <div>
-              <h2 id="modal-itinerario-title" className="text-lg font-semibold text-brand-blue tracking-tight">
-                {editingItinerarioId ? tr.modalTitleEdit : tr.modalTitle}
-              </h2>
-              <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed max-w-xl">
-                {tr.modalDescription}
-              </p>
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl max-h-[96dvh] sm:max-h-[92dvh] flex flex-col overflow-hidden">
+          {/* Hero header con gradiente */}
+          <div className="flex-shrink-0 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] px-5 sm:px-7 py-5 relative overflow-hidden">
+            {/* Círculos decorativos */}
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/[0.06] pointer-events-none" aria-hidden />
+            <div className="absolute -bottom-10 right-16 w-24 h-24 rounded-full bg-white/[0.04] pointer-events-none" aria-hidden />
+            <div className="flex items-center justify-between gap-3 relative">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/20">
+                  <Icon icon="lucide:ship" width={20} height={20} className="text-white" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h2 id="modal-itinerario-title" className="text-base sm:text-lg font-bold text-white tracking-tight drop-shadow-sm truncate">
+                    {editingItinerarioId ? tr.modalTitleEdit : tr.modalTitle}
+                  </h2>
+                  <p className="text-xs text-white/70 mt-0.5 leading-relaxed truncate">
+                    {tr.modalDescription}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="ml-2 p-2 rounded-lg text-white/70 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40 shrink-0 transition-colors"
+                aria-label={tr.cancel}
+              >
+                <Icon icon="lucide:x" width={20} height={20} aria-hidden />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              className="ml-4 p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shrink-0"
-              aria-label={tr.cancel}
-            >
-              <Icon icon="lucide:x" width={20} height={20} aria-hidden />
-            </button>
           </div>
           <div ref={modalRef} className="flex flex-col min-h-0 flex-1 overflow-y-auto">
-            <div className="p-6 sm:p-8 w-full pb-28">
+            <div className="p-4 sm:p-6 w-full">
 
               {modalError && (
-                <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-3" role="alert">
+                <div className="mb-5 p-4 rounded-xl bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-3" role="alert">
                   <Icon icon="lucide:alert-circle" width={20} height={20} className="shrink-0" />
                   <span>{modalError}</span>
                 </div>
               )}
 
-              <div className="space-y-8">
+              <div className="space-y-5">
                 {/* Sección: Servicio / Consorcio */}
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Icon icon="lucide:layers" width={16} height={16} className="text-brand-blue" />
-                    {tr.sectionServiceConsortium}
-                  </h3>
+                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center gap-2">
+                    <Icon icon="lucide:layers" width={15} height={15} className="text-brand-blue shrink-0" />
+                    <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionServiceConsortium}</h3>
+                  </div>
+                  <div className="p-5 sm:p-6 bg-white">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
@@ -2050,14 +2061,16 @@ export function ItinerarioContent() {
                       )}
                     </div>
                   </div>
+                  </div>
                 </section>
 
                 {/* Sección: Naviera, Nave, Viaje */}
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Icon icon="lucide:ship" width={16} height={16} className="text-brand-blue" />
-                    {tr.sectionVesselVoyage}
-                  </h3>
+                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center gap-2">
+                    <Icon icon="lucide:ship" width={15} height={15} className="text-brand-blue shrink-0" />
+                    <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionVesselVoyage}</h3>
+                  </div>
+                  <div className="p-5 sm:p-6 bg-white">
                   <div className="space-y-5">
                     <div>
                       <label htmlFor="it-naviera" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -2119,14 +2132,16 @@ export function ItinerarioContent() {
                       </div>
                     </div>
                   </div>
+                  </div>
                 </section>
 
                 {/* Sección: Salida (POL, ETD, Semana) */}
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Icon icon="lucide:calendar" width={16} height={16} className="text-brand-blue" />
-                    {tr.sectionDeparture}
-                  </h3>
+                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center gap-2">
+                    <Icon icon="lucide:calendar" width={15} height={15} className="text-brand-blue shrink-0" />
+                    <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionDeparture}</h3>
+                  </div>
+                  <div className="p-5 sm:p-6 bg-white">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div>
                       <label htmlFor="it-pol" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -2199,24 +2214,26 @@ export function ItinerarioContent() {
                       />
                     </div>
                   </div>
+                  </div>
                 </section>
 
                 {/* Sección: Escalas */}
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-2">
-                      <Icon icon="lucide:route" width={16} height={16} className="text-brand-blue" />
-                      {tr.sectionScales} <span className="text-red-500">*</span>
-                    </h3>
+                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
+                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Icon icon="lucide:route" width={15} height={15} className="text-brand-blue shrink-0" />
+                      <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionScales} <span className="text-red-400">*</span></h3>
+                    </div>
                     <button
                       type="button"
                       onClick={addEscala}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/15 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
                     >
-                      <Icon icon="lucide:plus" width={16} height={16} />
+                      <Icon icon="lucide:plus" width={14} height={14} />
                       {tr.addScale}
                     </button>
                   </div>
+                  <div className="p-5 sm:p-6 bg-white">
                   <ul className="space-y-4">
                     {form.escalas.map((e, i) => (
                       <li
@@ -2337,18 +2354,19 @@ export function ItinerarioContent() {
                       </li>
                     ))}
                   </ul>
+                  </div>
                 </section>
               </div>
 
             </div>
           </div>
-          {/* Sticky footer */}
-          <div className="flex-shrink-0 flex gap-4 px-5 sm:px-8 py-4 bg-white/95 border-t border-neutral-200 backdrop-blur-sm">
+          {/* Footer */}
+          <div className="flex-shrink-0 flex gap-3 px-5 sm:px-7 py-4 bg-neutral-50/80 border-t border-neutral-100">
             <button
               type="button"
               onClick={handleCloseModal}
               disabled={saving}
-              className="flex-1 px-5 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+              className="flex-1 px-5 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-100 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors text-sm"
             >
               {tr.cancel}
             </button>
@@ -2356,7 +2374,7 @@ export function ItinerarioContent() {
               type="button"
               onClick={handleSubmit}
               disabled={saving}
-              className="flex-1 px-5 py-3 rounded-xl bg-brand-blue text-white font-medium hover:bg-brand-blue/90 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+              className="flex-[2] px-5 py-2.5 rounded-xl bg-brand-blue text-white font-medium hover:bg-brand-blue/90 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors text-sm shadow-sm shadow-brand-blue/30"
             >
               {saving ? (
                 <>
@@ -2365,6 +2383,7 @@ export function ItinerarioContent() {
                 </>
               ) : editingItinerarioId ? tr.saveChanges : tr.create}
             </button>
+          </div>
           </div>
         </div>
       )}
