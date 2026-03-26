@@ -21,21 +21,24 @@ const AREA_COLORS: Record<string, string> = {
   AMERICA: "rgba(34, 197, 94, 0.55)",
   EUROPA: "rgba(0, 82, 155, 0.55)",
   ASIA: "rgba(234, 179, 8, 0.55)",
-  "INDIA-MEDIOORIENTE": "rgba(120, 53, 15, 0.6)",
+  "MEDIO-ORIENTE": "rgba(249, 115, 22, 0.55)",
+  OCEANIA: "rgba(20, 184, 166, 0.55)",
 };
 
 const AREA_STROKES: Record<string, string> = {
   AMERICA: "rgba(22, 163, 74, 0.9)",
   EUROPA: "rgba(0, 65, 124, 0.9)",
   ASIA: "rgba(202, 138, 4, 0.9)",
-  "INDIA-MEDIOORIENTE": "rgba(146, 64, 14, 0.9)",
+  "MEDIO-ORIENTE": "rgba(234, 88, 12, 0.9)",
+  OCEANIA: "rgba(13, 148, 136, 0.9)",
 };
 
 const AREA_LABELS: Record<string, string> = {
   AMERICA: "América",
   EUROPA: "Europa",
   ASIA: "Asia",
-  "INDIA-MEDIOORIENTE": "India y Medio Oriente",
+  "MEDIO-ORIENTE": "Medio Oriente",
+  OCEANIA: "Oceanía",
 };
 
 /** Posición aproximada (lon, lat) para etiquetas de región */
@@ -43,7 +46,8 @@ const AREA_LABEL_POS: Record<string, [number, number]> = {
   AMERICA: [-75, 15],
   EUROPA: [12, 52],
   ASIA: [105, 38],
-  "INDIA-MEDIOORIENTE": [55, 22],
+  "MEDIO-ORIENTE": [55, 22],
+  OCEANIA: [140, -25],
 };
 
 const W = 360;

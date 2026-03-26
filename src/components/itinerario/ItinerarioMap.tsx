@@ -12,7 +12,7 @@ import { MapWebGLErrorBoundary } from "./MapWebGLErrorBoundary";
 import { FallbackSvgMap } from "./FallbackSvgMap";
 
 
-/** Países con property "area": AMERICA | EUROPA | ASIA | INDIA-MEDIOORIENTE (generado por scripts/build-countries-by-region.mjs). */
+/** Países con property "area": AMERICA | EUROPA | ASIA | MEDIO-ORIENTE | OCEANIA (generado por scripts/build-countries-by-region.mjs). */
 const COUNTRIES_BY_REGION_URL = "/geo/countries-by-region.geojson";
 
 /** Estilo tipo Google Maps: calles, etiquetas, terreno (Carto Voyager, gratuito). */
@@ -40,7 +40,7 @@ export type MapPortPoint = {
   dias_transito: number | null;
   servicio: string;
   naviera: string;
-  /** Área geográfica de la escala (ASIA, EUROPA, AMERICA, INDIA-MEDIOORIENTE) */
+  /** Área geográfica de la escala (ASIA, EUROPA, AMERICA, MEDIO-ORIENTE, OCEANIA) */
   area?: string;
 };
 
@@ -407,8 +407,10 @@ export default function ItinerarioMap({
                       "rgba(0, 82, 155, 0.5)",
                       "ASIA",
                       "rgba(234, 179, 8, 0.5)",
-                      "INDIA-MEDIOORIENTE",
-                      "rgba(120, 53, 15, 0.55)",
+                      "MEDIO-ORIENTE",
+                      "rgba(249, 115, 22, 0.5)",
+                      "OCEANIA",
+                      "rgba(20, 184, 166, 0.5)",
                       "rgba(0, 0, 0, 0)",
                     ],
                     "fill-opacity": 1,
@@ -465,9 +467,9 @@ export default function ItinerarioMap({
           </Map>
           </MapWebGLErrorBoundary>
           {hoveredPortDetail && (() => {
-            // AMERICA → esquina inferior derecha; otras regiones → esquina inferior izquierda
-            const isAmerica = hoveredPortDetail.area === "AMERICA";
-            const cornerClass = isAmerica
+            // AMERICA/OCEANIA → esquina inferior derecha; otras regiones → esquina inferior izquierda
+            const isRight = hoveredPortDetail.area === "AMERICA" || hoveredPortDetail.area === "OCEANIA";
+            const cornerClass = isRight
               ? "right-4 bottom-4"
               : "left-4 bottom-4";
             return (

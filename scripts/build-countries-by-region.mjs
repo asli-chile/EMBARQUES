@@ -1,7 +1,7 @@
 /**
  * Genera public/geo/countries-by-region.geojson a partir de Natural Earth 110m.
- * Cada país tiene property "area": AMERICA | EUROPA | ASIA | INDIA-MEDIOORIENTE.
- * África → INDIA-MEDIOORIENTE; Australia/Nueva Zelanda/Oceanía → ASIA.
+ * Cada país tiene property "area": AMERICA | EUROPA | ASIA | MEDIO-ORIENTE | OCEANIA.
+ * África → MEDIO-ORIENTE; Australia/Nueva Zelanda/Oceanía → OCEANIA.
  */
 import https from "node:https";
 import fs from "node:fs";
@@ -33,10 +33,10 @@ function getArea(properties) {
   const sub = (properties.SUBREGION || "").toLowerCase();
   if (region === "Americas") return "AMERICA";
   if (region === "Europe") return "EUROPA";
-  if (region === "Africa") return "INDIA-MEDIOORIENTE";
-  if (region === "Oceania") return "ASIA";
+  if (region === "Africa") return "MEDIO-ORIENTE";
+  if (region === "Oceania") return "OCEANIA";
   if (region === "Asia") {
-    if (sub.includes("southern asia") || sub.includes("western asia")) return "INDIA-MEDIOORIENTE";
+    if (sub.includes("southern asia") || sub.includes("western asia")) return "MEDIO-ORIENTE";
     return "ASIA";
   }
   return null;

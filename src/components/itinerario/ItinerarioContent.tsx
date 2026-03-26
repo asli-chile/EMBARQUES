@@ -1146,7 +1146,8 @@ export function ItinerarioContent() {
                           { area: "EUROPA",             bg: "bg-sky-400/15 border-sky-400/35 text-sky-200",         dot: "bg-sky-400" },
                           { area: "AMERICA",            bg: "bg-emerald-400/15 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
                           { area: "MEDIO-ORIENTE", bg: "bg-orange-400/15 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
-                        ] as const
+                          { area: "OCEANIA",            bg: "bg-teal-400/15 border-teal-400/35 text-teal-200",      dot: "bg-teal-400" },
+                        ]
                       )
                         .filter(({ area }) => areasWithData.includes(area))
                         .map(({ area, bg, dot }) => (
@@ -1157,7 +1158,7 @@ export function ItinerarioContent() {
                             className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold uppercase shrink-0 ${bg}`}
                           >
                             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
-                            {area === "MEDIO-ORIENTE" ? "M.Oriente" : area}
+                            {area === "MEDIO-ORIENTE" ? "M.Oriente" : area === "OCEANIA" ? "Oceanía" : area}
                           </button>
                         ))}
                     </div>
@@ -1169,7 +1170,8 @@ export function ItinerarioContent() {
                           { area: "EUROPA",             bg: "bg-sky-400/15    hover:bg-sky-400/25    border-sky-400/35    text-sky-200",    dot: "bg-sky-400" },
                           { area: "AMERICA",            bg: "bg-emerald-400/15 hover:bg-emerald-400/25 border-emerald-400/35 text-emerald-200", dot: "bg-emerald-400" },
                           { area: "MEDIO-ORIENTE", bg: "bg-orange-400/15 hover:bg-orange-400/25 border-orange-400/35 text-orange-200", dot: "bg-orange-400" },
-                        ] as const
+                          { area: "OCEANIA",            bg: "bg-teal-400/15   hover:bg-teal-400/25   border-teal-400/35   text-teal-200",   dot: "bg-teal-400" },
+                        ]
                       )
                         .filter(({ area }) => areasWithData.includes(area))
                         .map(({ area, bg, dot }) => (
@@ -1180,7 +1182,7 @@ export function ItinerarioContent() {
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wide transition-all duration-150 hover:scale-[1.03] active:scale-95 w-full justify-center ${bg}`}
                           >
                             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
-                            <span>{area === "MEDIO-ORIENTE" ? "M.Oriente" : area}</span>
+                            <span>{area === "MEDIO-ORIENTE" ? "M.Oriente" : area === "OCEANIA" ? "Oceanía" : area}</span>
                           </button>
                         ))}
                     </div>
@@ -1224,8 +1226,9 @@ export function ItinerarioContent() {
                               EUROPA: "bg-sky-400/20 text-sky-300",
                               AMERICA: "bg-emerald-400/20 text-emerald-300",
                               "MEDIO-ORIENTE": "bg-orange-400/20 text-orange-300",
+                              OCEANIA: "bg-teal-400/20 text-teal-300",
                             };
-                            const areaLabel = p.area === "MEDIO-ORIENTE" ? "M.Oriente" : (p.area ?? "");
+                            const areaLabel = p.area === "MEDIO-ORIENTE" ? "M.Oriente" : p.area === "OCEANIA" ? "Oceanía" : (p.area ?? "");
                             const areaClass = p.area ? (areaColors[p.area] ?? "bg-white/10 text-white/50") : "";
                             return (
                               <li key={i}>
@@ -2562,6 +2565,7 @@ export function ItinerarioContent() {
                     EUROPA: "Europa",
                     AMERICA: "América",
                     "MEDIO-ORIENTE": "Medio Oriente",
+                    OCEANIA: "Oceanía",
                     SIN_AREA: "Sin área",
                   };
                   const grouped: Record<string, ServicioConDetalle[]> = {};
@@ -2641,6 +2645,7 @@ export function ItinerarioContent() {
                     EUROPA: "Europa",
                     AMERICA: "América",
                     "MEDIO-ORIENTE": "Medio Oriente",
+                    OCEANIA: "Oceanía",
                     SIN_AREA: "Sin área",
                   };
                   const grouped: Record<string, ConsorcioConDetalle[]> = {};
