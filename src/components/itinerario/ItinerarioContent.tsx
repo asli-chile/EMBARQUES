@@ -1382,54 +1382,60 @@ export function ItinerarioContent() {
 
             {itinerarios.length > 0 && selectedAreaFromMap && (() => {
               type ItinerarioWithEscalasType = typeof itinerarios[0];
-              const byServicio = new Map<string, ItinerarioWithEscalasType[]>();
-              for (const it of itinerarios) {
-                const key = (it.servicio || "").trim() || "—";
-                const list = byServicio.get(key) ?? [];
-                list.push(it);
-                byServicio.set(key, list);
-              }
               const areaOrder = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA", ""];
-              const sortArea = (a: string, b: string) => {
-                const iA = areaOrder.indexOf(a);
-                const iB = areaOrder.indexOf(b);
-                if (iA >= 0 && iB >= 0) return iA - iB;
-                if (iA >= 0) return -1;
-                if (iB >= 0) return 1;
-                return a.localeCompare(b, undefined, { sensitivity: "base" });
-              };
-              const servicioNames = [...byServicio.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
-              const getServicioAreaIndex = (nombre: string): number => {
-                const list = byServicio.get(nombre) ?? [];
-                let minIndex = Number.POSITIVE_INFINITY;
-                for (const it of list) {
-                  for (const e of it.escalas ?? []) {
-                    const raw = ((e.area || "").trim() || "") as string;
-                    if (!raw) continue;
-                    if (hasAreaFilter && (raw || "") !== (selectedAreaFromMap || "")) continue;
-                    const idx = areaOrder.indexOf(raw);
-                    if (idx >= 0 && idx < minIndex) minIndex = idx;
-                  }
+              // Group: byArea[area][serviceName] = itinerarios[]
+              const byArea = new Map<string, Map<string, ItinerarioWithEscalasType[]>>();
+              for (const it of itinerarios) {
+                const escalas = it.escalas ?? [];
+                const areasOfIt = new Set<string>();
+                for (const e of escalas) {
+                  const a = (e.area || "").trim() || "";
+                  if (hasAreaFilter && a !== selectedAreaFromMap) continue;
+                  areasOfIt.add(a);
                 }
-                return Number.isFinite(minIndex) ? minIndex : Number.POSITIVE_INFINITY;
+                if (areasOfIt.size === 0) {
+                  if (!hasAreaFilter) areasOfIt.add("");
+                }
+                for (const area of areasOfIt) {
+                  if (!byArea.has(area)) byArea.set(area, new Map());
+                  const areaMap = byArea.get(area)!;
+                  const key = (it.servicio || "").trim() || "—";
+                  const list = areaMap.get(key) ?? [];
+                  list.push(it);
+                  areaMap.set(key, list);
+                }
+              }
+
+              const sortedAreas = [
+                ...areaOrder.filter((a) => byArea.has(a)),
+                ...[...byArea.keys()].filter((a) => !areaOrder.includes(a)).sort(),
+              ];
+
+              const areaDisplayLabels: Record<string, string> = {
+                AMERICA: "América",
+                ASIA: "Asia",
+                EUROPA: "Europa",
+                "MEDIO-ORIENTE": "Medio Oriente",
+                OCEANIA: "Oceanía",
               };
-              const filteredServicioNames = (hasAreaFilter
-                ? servicioNames.filter((nombre) => {
-                    const list = byServicio.get(nombre)!;
-                    return list.some((it) =>
-                      (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
-                    );
-                  })
-                : servicioNames).sort((a, b) => {
-                  const iA = getServicioAreaIndex(a);
-                  const iB = getServicioAreaIndex(b);
-                  if (iA !== iB) return iA - iB;
-                  return a.localeCompare(b, undefined, { sensitivity: "base" });
-                });
+              const areaDisplayIcons: Record<string, string> = {
+                AMERICA: "lucide:trees",
+                ASIA: "lucide:building-2",
+                EUROPA: "lucide:landmark",
+                "MEDIO-ORIENTE": "lucide:sun",
+                OCEANIA: "lucide:waves",
+              };
+              const areaGradients: Record<string, string> = {
+                AMERICA: "from-emerald-600 to-emerald-700",
+                ASIA: "from-amber-500 to-amber-600",
+                EUROPA: "from-sky-600 to-sky-700",
+                "MEDIO-ORIENTE": "from-orange-500 to-orange-600",
+                OCEANIA: "from-teal-500 to-teal-600",
+              };
 
               return (
-                <div className="space-y-8 mt-8">
+                <div className="space-y-10 mt-8">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm border border-white/20">
                       <Icon icon="lucide:list" width={16} height={16} aria-hidden />
@@ -1437,114 +1443,98 @@ export function ItinerarioContent() {
                     </span>
                   </div>
 
-                  {filteredServicioNames.map((servicioNombre) => {
-                const list = byServicio.get(servicioNombre)!;
-                const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
-                const areasSet = new Set<string>();
-                for (const it of list) {
-                  for (const e of it.escalas ?? []) {
-                    areasSet.add((e.area || "").trim() || "");
-                  }
-                }
-                const areasRaw = areasSet.size > 0 ? [...areasSet].sort(sortArea) : [""];
-                const areas = hasAreaFilter
-                  ? areasRaw.filter((a) => (a || "").trim() === selectedAreaFromMap)
-                  : areasRaw;
+                  {sortedAreas.map((area) => {
+                    const serviceMap = byArea.get(area)!;
+                    const serviceNames = [...serviceMap.keys()].sort((a, b) =>
+                      a.localeCompare(b, undefined, { sensitivity: "base" })
+                    );
+                    const gradient = areaGradients[area] ?? "from-neutral-600 to-neutral-700";
+                    const icon = areaDisplayIcons[area] ?? "lucide:map-pin";
+                    const label = areaDisplayLabels[area] ?? area;
 
-                return (
-                  <section key={servicioNombre} id={`srv-${servicioNombre}`}>
-                    <div className="relative bg-white rounded-2xl overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,82,155,0.15),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-brand-blue/10">
-                      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-start justify-between gap-3 flex-wrap">
-                        <div className="space-y-1">
-                          <h2 className="text-base sm:text-xl font-bold text-white tracking-tight drop-shadow-sm">
-                            {servicioNombre}
-                          </h2>
-                          {navieras.length > 0 && (
-                            <p className="text-sm text-white/80 flex items-center gap-2 flex-wrap">
-                              <span className="inline-flex items-center gap-1.5">
-                                <Icon icon="lucide:ship" width={14} height={14} className="shrink-0" aria-hidden />
-                                {tr.carriersInService}:
-                              </span>
-                              <span className="font-semibold text-white">{navieras.join(", ")}</span>
+                    return (
+                      <div key={area} className="space-y-4">
+                        {/* ── Cabecera de región ─────────────────────────────────────────── */}
+                        <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r ${gradient} shadow-lg`}>
+                          <span className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/20">
+                            <Icon icon={icon} width={18} height={18} className="text-white" aria-hidden />
+                          </span>
+                          <div>
+                            <h2 className="text-base sm:text-lg font-bold text-white tracking-tight drop-shadow-sm">{label}</h2>
+                            <p className="text-xs text-white/70 mt-0.5">
+                              {serviceNames.length} {serviceNames.length === 1 ? "servicio" : "servicios"}
                             </p>
-                          )}
+                          </div>
                         </div>
-                        {areas.length === 1 && (
-                          <div className="ml-auto hidden sm:block">
-                            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/15 backdrop-blur-sm border border-white/25">
-                              <Icon icon="lucide:map-pin" width={18} height={18} className="shrink-0 text-white/80" aria-hidden />
-                              <div className="text-right">
-                                <p className="text-[10px] font-semibold text-white/60 uppercase tracking-[0.18em]">
-                                  Área
-                                </p>
-                                <p className="mt-0.5 text-lg font-bold text-white tracking-tight uppercase">
-                                  {areas[0] || "Sin área"}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
 
-                      {areas.map((area, areaIndex) => {
-                      const itinerariosEnArea = list.filter((it) => {
-                        const esc = it.escalas ?? [];
-                        if (area === "") return esc.length === 0 || esc.every((e) => ((e.area || "").trim() || "") === "");
-                        return esc.some((e) => ((e.area || "").trim() || "") === area);
-                      });
-                      if (itinerariosEnArea.length === 0) return null;
+                        {/* ── Servicios en esta región ───────────────────────────────────── */}
+                        <div className="space-y-5">
+                          {serviceNames.map((servicioNombre) => {
+                            const list = serviceMap.get(servicioNombre)!;
+                            const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
 
-                      const escalasEnArea = itinerariosEnArea.flatMap((it) =>
-                        (it.escalas ?? []).filter((e) => ((e.area || "").trim() || "") === area)
-                      );
-                      const portKeysByEta = new Map<string, number>();
-                      for (const e of escalasEnArea) {
-                        const key = e.puerto_nombre || e.puerto || "—";
-                        if (!key) continue;
-                        const t = e.eta ? new Date(e.eta).getTime() : Infinity;
-                        if (!portKeysByEta.has(key) || t < (portKeysByEta.get(key) ?? Infinity)) {
-                          portKeysByEta.set(key, t);
-                        }
-                      }
-                      const destinosColumnas = [...portKeysByEta.entries()]
-                        .sort((a, b) => a[1] - b[1])
-                        .map(([nombre]) => nombre);
+                            const escalasEnArea = list.flatMap((it) =>
+                              (it.escalas ?? []).filter((e) => ((e.area || "").trim() || "") === area)
+                            );
+                            const portKeysByEta = new Map<string, number>();
+                            for (const e of escalasEnArea) {
+                              const key = e.puerto_nombre || e.puerto || "—";
+                              if (!key) continue;
+                              const t = e.eta ? new Date(e.eta).getTime() : Infinity;
+                              if (!portKeysByEta.has(key) || t < (portKeysByEta.get(key) ?? Infinity)) {
+                                portKeysByEta.set(key, t);
+                              }
+                            }
+                            const destinosColumnas = [...portKeysByEta.entries()]
+                              .sort((a, b) => a[1] - b[1])
+                              .map(([nombre]) => nombre);
 
-                      const getEscalaForPort = (escalas: ItinerarioWithEscalasType["escalas"], portKey: string) =>
-                        (escalas ?? []).find((e) => ((e.puerto_nombre || e.puerto) || "—") === portKey);
+                            const itinerariosEnArea = list.filter((it) =>
+                              (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === area)
+                            );
 
-                      const areaKey = `${servicioNombre}__${area || "sin-area"}`;
-                      const isExpanded = expandedAreas[areaKey] ?? false;
+                            const getEscalaForPort = (escalas: ItinerarioWithEscalasType["escalas"], portKey: string) =>
+                              (escalas ?? []).find((e) => ((e.puerto_nombre || e.puerto) || "—") === portKey);
 
-                      const displayedItinerarios = isExpanded ? itinerariosEnArea : itinerariosEnArea.slice(0, 4);
+                            const areaKey = `${servicioNombre}__${area || "sin-area"}`;
+                            const isExpanded = expandedAreas[areaKey] ?? false;
+                            const displayedItinerarios = isExpanded ? itinerariosEnArea : itinerariosEnArea.slice(0, 4);
 
-                      return (
-                        <div
-                          key={`${servicioNombre}-${area}`}
-                          className={areaIndex === 0 ? "" : "border-t border-neutral-200"}
-                        >
-                          <div className="px-4 py-3 bg-gradient-to-r from-brand-blue/5 via-white to-white flex items-center justify-between gap-3 flex-wrap border-b border-neutral-100">
-                            {areas.length > 1 ? (
-                              <h3 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue text-white text-xs font-bold uppercase tracking-wider shadow-sm shadow-brand-blue/30">
-                                <Icon icon="lucide:map-pin" width={13} height={13} className="shrink-0" aria-hidden />
-                                <span>{area || "Sin área"}</span>
-                              </h3>
-                            ) : (
-                              <div className="flex-1" />
-                            )}
-                            {isLoggedIn && isSuperadmin && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 transition-colors"
-                                aria-label={tr.addRow}
-                              >
-                                <Icon icon="lucide:plus" width={16} height={16} aria-hidden />
-                                {tr.addRow}
-                              </button>
-                            )}
-                          </div>
-                          {/* ── Vista de tarjetas (mobile, < sm) ─────────────── */}
+                            return (
+                              <section key={servicioNombre} id={`srv-${area}-${servicioNombre}`}>
+                                <div className="relative bg-white rounded-2xl overflow-hidden shadow-[0_4px_24px_-4px_rgba(0,82,155,0.15),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-brand-blue/10">
+                                  {/* ── Service header ── */}
+                                  <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-start justify-between gap-3 flex-wrap">
+                                    <div className="space-y-1">
+                                      <h3 className="text-base sm:text-xl font-bold text-white tracking-tight drop-shadow-sm">
+                                        {servicioNombre}
+                                      </h3>
+                                      {navieras.length > 0 && (
+                                        <p className="text-sm text-white/80 flex items-center gap-2 flex-wrap">
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <Icon icon="lucide:ship" width={14} height={14} className="shrink-0" aria-hidden />
+                                            {tr.carriersInService}:
+                                          </span>
+                                          <span className="font-semibold text-white">{navieras.join(", ")}</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* ── Add Row bar ── */}
+                                  <div className="px-4 py-2.5 bg-gradient-to-r from-brand-blue/5 via-white to-white flex items-center justify-end gap-3 border-b border-neutral-100">
+                                    {isLoggedIn && isSuperadmin && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 transition-colors"
+                                        aria-label={tr.addRow}
+                                      >
+                                        <Icon icon="lucide:plus" width={16} height={16} aria-hidden />
+                                        {tr.addRow}
+                                      </button>
+                                    )}
+                                  </div>
                           <div className="sm:hidden divide-y divide-neutral-100/80">
                             {displayedItinerarios.map((it) => {
                               const escalas = it.escalas ?? [];
@@ -1667,7 +1657,6 @@ export function ItinerarioContent() {
                               );
                             })}
                           </div>
-
                           {/* ── Vista de tabla (sm+) ─────────────────────────── */}
                           <div className="overflow-x-auto hidden sm:block">
                             <table className="w-full text-sm" role="table">
@@ -1899,14 +1888,15 @@ export function ItinerarioContent() {
                               </div>
                             )}
                           </div>
+                                </div>
+                              </section>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
+                      </div>
+                    );
+                  })}
+                </div>
               );
             })()}
           </>
