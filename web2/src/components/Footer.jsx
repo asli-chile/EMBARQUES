@@ -112,7 +112,7 @@ const Footer = () => {
 
           {/* Contact column */}
           <div className="md:col-span-3 md:col-start-10">
-            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">Contac|||to</p>
+            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">Contacto</p>
             <div className="flex flex-col gap-3">
               <a
                 href="mailto:informaciones@asli.cl"
