@@ -1,70 +1,97 @@
 # Despliegue en Vercel: Embarques y Web2 por separado
 
-El repositorio tiene **dos aplicaciones** que se despliegan como **dos proyectos distintos** en Vercel (mismo repo Git, distinta raíz de build).
+## Importante: por qué solo ves Embarques
 
-| Proyecto | Carpeta raíz en Vercel | Framework | Comando de build |
-|----------|------------------------|-----------|------------------|
-| **Embarques** (Astro) | `/` (raíz del repo) | Astro | `astro build` |
-| **Web2** (marketing) | `web2` | Next.js | `npm run build` |
+En Vercel, **cada proyecto está ligado a una sola carpeta de build**. Si importaste el repositorio **una vez** y dejaste la raíz en `/`, solo se despliega **Embarques** (Astro). La carpeta `web2` **no se construye sola**: no hay forma de que un único proyecto despliegue las dos apps a la vez.
+
+**Para tener Web2 en producción debes crear un segundo proyecto en Vercel** con el mismo repo Git y **Root Directory = `web2`**.
+
+---
+
+## Resumen rápido
+
+| Qué quieres | Qué necesitas en Vercel |
+|-------------|-------------------------|
+| Solo Embarques (Astro) | 1 proyecto, raíz del repo (`.`) |
+| Embarques + sitio marketing (Web2) | **2 proyectos**: uno en la raíz y **otro con raíz `web2`** |
+
+| Proyecto | Root Directory en Vercel | Framework | Build |
+|----------|-------------------------|-----------|--------|
+| **Embarques** | vacío o `.` | Astro | `astro build` |
+| **Web2** | **`web2`** (exactamente) | Next.js | `npm run build` |
+
+---
+
+## Crear el proyecto Web2 (paso a paso)
+
+1. Entra a [vercel.com](https://vercel.com) → **Add New…** → **Project**.
+2. Elige **el mismo repositorio Git** que ya usas para Embarques (Import si hace falta).
+3. Antes de pulsar **Deploy**, abre **Root Directory** (a veces “Configure” o un lápiz junto al nombre del proyecto).
+4. Pulsa **Edit** → selecciona la carpeta **`web2`** del monorepo y confirma.
+5. Comprueba que el framework sea **Next.js** y el comando de build **`npm run build`** (coincide con `web2/vercel.json`).
+6. **Deploy**.
+
+Tras esto tendrás **dos URLs distintas** (por ejemplo `embarques-xxx.vercel.app` y `asli-web-xxx.vercel.app`). En el proyecto Web2, en **Settings → Environment Variables**, configura `NEXT_PUBLIC_ERP_URL` y, si Embarques está en otro dominio, `NEXT_PUBLIC_EMBARQUES_BASE_URL` (ver más abajo).
+
+Documentación oficial (monorepos): [Vercel — Monorepos](https://vercel.com/docs/monorepos).
+
+---
 
 ## 1. Proyecto Embarques (Astro)
 
-1. En [Vercel](https://vercel.com) → **Add New** → **Project** → importar el repositorio.
-2. **Root Directory**: dejar vacío o `.` (raíz del repo).
-3. **Framework Preset**: Astro (Vercel detecta `vercel.json` y `astro.config.mjs`).
-4. **Build & Output**: usar el `vercel.json` de la raíz (`buildCommand: astro build`).
-5. Variables de entorno: copiar desde `.env.example` (Supabase `PUBLIC_*`, etc.) en **Settings → Environment Variables**.
+1. **Root Directory**: raíz del repo (sin subcarpeta).
+2. **Build**: `astro build` (definido en `vercel.json` de la raíz).
+3. Variables: según `.env.example` (Supabase `PUBLIC_*`, etc.).
 
-La app usa `base: "/embarques"` en `astro.config.mjs`, así que en producción la URL pública incluye el prefijo `/embarques` (por ejemplo `https://tu-proyecto.vercel.app/embarques/inicio` o `https://asli.cl/embarques/inicio` si enlazas un dominio con esa ruta).
+La app usa `base: "/embarques"` en `astro.config.mjs`: la URL pública incluye `/embarques` (ej. `https://tu-proyecto.vercel.app/embarques/inicio`).
+
+---
 
 ## 2. Proyecto Web2 (Next.js)
 
-1. **Add New** → **Project** → **mismo repositorio** (segundo proyecto).
-2. **Root Directory**: `web2` (obligatorio).
-3. **Framework Preset**: Next.js.
-4. **Build**: `npm run build` (definido en `web2/vercel.json`).
-5. Variables de entorno mínimas para enlazar al Embarques desplegado aparte — ver `web2/.env.example`.
+- **Root Directory**: obligatorio **`web2`**.
+- **Install**: `npm ci` y **Build**: `npm run build` (`web2/vercel.json`).
+- Plantilla de variables: `web2/.env.example`.
 
 ### Variables recomendadas (Web2)
 
 | Variable | Descripción |
 |----------|-------------|
-| `NEXT_PUBLIC_ERP_URL` | URL pública del sitio marketing (este proyecto web2), sin barra final. Ej: `https://www.asli.cl` |
-| `NEXT_PUBLIC_EMBARQUES_BASE_URL` | URL **completa** de la base del sistema Astro, incluyendo `/embarques`. Ej: `https://embarques-xxx.vercel.app/embarques` o `https://asli.cl/embarques` si el dominio del Astro apunta ahí |
+| `NEXT_PUBLIC_ERP_URL` | URL pública **de este** despliegue Web2, sin barra final. Ej: `https://www.asli.cl` o la URL `*.vercel.app` del proyecto Web2. |
+| `NEXT_PUBLIC_EMBARQUES_BASE_URL` | URL **completa** del Astro con `/embarques`. Ej: `https://tu-proyecto-astro.vercel.app/embarques`. Si Web2 y Embarques comparten dominio con rutas `/` y `/embarques`, puedes omitirla y se usará `{NEXT_PUBLIC_ERP_URL}/embarques`. |
 
-Si no defines `NEXT_PUBLIC_EMBARQUES_BASE_URL`, se usa `{NEXT_PUBLIC_ERP_URL}/embarques` (mismo dominio, ruta `/embarques`).
+---
 
 ## 3. Dominios y Supabase
 
-- Si Web2 y Embarques viven en **dominios o subdominios distintos**, en **Supabase → Authentication → URL Configuration** debes añadir las **Redirect URLs** y **Site URL** que correspondan a ambos orígenes.
-- CORS y cookies dependen de esa configuración; prueba login y callbacks tras cada cambio de dominio.
+Si Web2 y Embarques usan **dominios distintos**, en **Supabase → Authentication → URL Configuration** añade las **Redirect URLs** y **Site URL** de ambos orígenes.
 
-## 4. Despliegue por CLI (opcional)
+---
+
+## 4. CLI (opcional)
 
 ```bash
 # Embarques (desde la raíz del repo)
 npx vercel
 
-# Web2 (indicando carpeta)
+# Web2 (solo esta carpeta; crea/enlaza otro proyecto Vercel)
 cd web2
 npx vercel
 ```
 
-Cada carpeta puede tener su propio enlace de proyecto Vercel (`.vercel` está en `.gitignore`).
+La carpeta `web2` debe enlazarse a **su propio** proyecto Vercel (no al de Embarques).
 
-## 5. Build local de comprobación
+---
+
+## 5. Build local
 
 ```bash
-# Raíz: Embarques
-npm ci
-npm run build
-
-# Web2
-npm run build:web2
+npm ci && npm run build          # Embarques
+npm run build:web2               # Web2 (desde la raíz del repo)
 ```
 
-El script `build:web2` está definido en el `package.json` de la raíz.
+---
 
 ## 6. Archivos legacy
 
-- `web2/vercel.proxy-legacy.json`: configuración antigua de rewrites; el despliegue actual usa `web2/vercel.json` y `next.config.js`. No sustituye la configuración del proyecto en el dashboard.
+- `web2/vercel.proxy-legacy.json`: antiguo; el despliegue usa `web2/vercel.json` y `next.config.js`.
