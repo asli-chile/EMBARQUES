@@ -8,6 +8,7 @@ import ImagePlaceholder from '../src/components/ImagePlaceholder'
 import ClientesPrincipales from '../src/components/ClientesPrincipales'
 import NavierasPrincipales from '../src/components/NavierasPrincipales'
 import SomosParteDe from '../src/components/SomosParteDe'
+import { useLang } from '../src/lib/LangContext'
 
 /* ══════════════════════════════════════════════════════
    ANIMATION VARIANTS
@@ -102,77 +103,22 @@ function Orb({ className }) {
   )
 }
 
-/* ══════════════════════════════════════════════════════
-   DATA
-══════════════════════════════════════════════════════ */
-const STATS = [
-  { value: '9+',   label: 'Servicios logísticos' },
-  { value: '15+',  label: 'Navieras y aerolíneas' },
-  { value: '100%', label: 'Compromiso con el cliente' },
-]
-
-const AUDIENCIA = [
-  {
-    label: 'Exportadores',
-    desc: 'Empresas que venden al mundo y necesitan control logístico total.',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Productores y packings',
-    desc: 'Productores agrícolas que requieren coordinación directa desde campo.',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Importadores y traders',
-    desc: 'Empresas que traen productos del mundo y necesitan gestión aduanera eficiente.',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ),
-  },
-]
-
-const VALOR = [
-  'Coordinación integral de la operación (más allá del transporte)',
-  'Seguimiento activo y visibilidad operativa en cada etapa',
-  'Fuerte experiencia en logística frutícola (fresca y congelada) y manejo de carga sensible',
-  'Red de navieras, aerolíneas y agentes internacionales',
-  'Atención directa y comunicación ágil',
-  'Experiencia en operaciones críticas de temporada (especialmente cereza)',
-]
-
-const SERVICIOS_HOME = [
-  { label: 'Transporte internacional marítimo, aéreo y terrestre' },
-  { label: 'Coordinación aduanera y gestión documental' },
-  { label: 'Operación integral de comercio exterior (end-to-end)' },
-  { label: 'Asesoría en comercio exterior y certificación OEA' },
-]
-
-const CARGA = [
-  { label: 'Carga perecible',       sub: 'Fresh cargo',  icon: '🍒' },
-  { label: 'Carga refrigerada',     sub: 'Reefer cargo', icon: '❄️' },
-  { label: 'Fruta congelada',       sub: 'Frozen cargo', icon: '🧊' },
-  { label: 'Carga general',         sub: 'General cargo',icon: '📦' },
-  { label: 'Carga especial',        sub: 'Special cargo',icon: '⚙️' },
-  { label: 'Nueces y fruta seca',   sub: 'Dry cargo',    icon: '🌰' },
-  { label: 'Vino y bebidas',        sub: 'Beverages',    icon: '🍷' },
-]
-
-const PROCESO = [
-  { num: '01', title: 'Evaluamos tu operación' },
-  { num: '02', title: 'Definimos la solución logística más eficiente' },
-  { num: '03', title: 'Coordinamos la operación desde origen' },
-  { num: '04', title: 'Realizamos seguimiento continuo' },
-  { num: '05', title: 'Aseguramos la llegada a destino' },
+const AUDIENCIA_ICONS = [
+  (
+    <svg key="i0" className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+    </svg>
+  ),
+  (
+    <svg key="i1" className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  ),
+  (
+    <svg key="i2" className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.4} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+  ),
 ]
 
 /* ══════════════════════════════════════════════════════
@@ -203,11 +149,15 @@ function H2({ children, center = false }) {
    PAGE
 ══════════════════════════════════════════════════════ */
 export default function Home() {
+  const { t } = useLang()
+  const h = t.home
+  const audiencia = h.audienceCards.map((item, i) => ({ ...item, icon: AUDIENCIA_ICONS[i] }))
+
   return (
     <>
       <Head>
-        <title>ASLI | Logística y Comercio Exterior — Chile</title>
-        <meta name="description" content="Operador logístico integral desde Curicó. Expertos en exportaciones e importaciones: transporte marítimo, aéreo, logística frutícola y gestión aduanera end-to-end." />
+        <title>{h.metaTitle}</title>
+        <meta name="description" content={h.metaDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
 
@@ -258,13 +208,13 @@ export default function Home() {
                 >
                   <span className="w-8 h-px bg-asli-primary" />
                   <span className="eyebrow [text-shadow:0_1px_10px_rgba(0,0,0,0.85),0_0_20px_rgba(0,0,0,0.45)]">
-                    Coordinamos operaciones logísticas desde origen
+                    {h.heroEyebrow}
                   </span>
                 </motion.div>
 
                 {/* Headline — line by line reveal */}
                 <div className="overflow-hidden mb-4 space-y-[5px]">
-                  {['Soluciones logísticas', 'para exportaciones'].map((line, i) => (
+                  {[h.heroLine1, h.heroLine2].map((line, i) => (
                     <div key={i} className="overflow-hidden">
                       <motion.h1
                         initial={{ y: '110%', opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -283,7 +233,7 @@ export default function Home() {
                       className="font-display font-black italic text-asli-primary leading-[1.06] block [text-shadow:0_2px_18px_rgba(0,0,0,0.5),0_1px_2px_rgba(0,0,0,0.7),0_0_18px_rgba(0,0,0,0.3)]"
                       style={{ fontSize: 'clamp(1.85rem, 4.4vw, 3.85rem)', letterSpacing: '-0.025em' }}
                     >
-                      e importaciones.
+                      {h.heroLine3}
                     </motion.h1>
                   </div>
                 </div>
@@ -294,15 +244,14 @@ export default function Home() {
                   transition={{ duration: 0.7, delay: 0.92 }}
                   className="text-white/60 text-base md:text-lg max-w-2xl leading-relaxed mb-1 font-light [text-shadow:0_1px_14px_rgba(0,0,0,0.75),0_0_2px_rgba(0,0,0,0.6)]"
                 >
-                  Operador logístico integral, con experiencia en múltiples tipos de carga
-                  y especialización en logística frutícola (fresca y congelada).
+                  {h.heroBody1}
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 1.02 }}
                   className="text-white/45 text-sm md:text-base max-w-xl leading-relaxed mb-4 sm:mb-8 font-light [text-shadow:0_1px_12px_rgba(0,0,0,0.7),0_0_1px_rgba(0,0,0,0.5)]"
                 >
-                  Gestión integral de operaciones de comercio exterior end-to-end.
+                  {h.heroBody2}
                 </motion.p>
 
                 {/* CTAs */}
@@ -323,7 +272,7 @@ export default function Home() {
                       transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.5, ease: 'linear' }}
                     />
                     <span className="relative z-10 flex items-center gap-3">
-                      Solicitar cotización
+                      {h.quoteBtn}
                       <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                       </svg>
@@ -335,7 +284,7 @@ export default function Home() {
                     whileTap={{ scale: 0.97 }}
                     className="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full border border-white/25 text-white/80 font-semibold hover:border-white/50 hover:text-white transition-all duration-300 w-full sm:w-auto"
                   >
-                    Hablar con un ejecutivo
+                    {h.talkBtn}
                   </motion.a>
                 </motion.div>
               </div>
@@ -347,7 +296,7 @@ export default function Home() {
               transition={{ duration: 0.85, delay: 1.28 }}
               className="relative z-20 border-t border-white/10 grid grid-cols-3 shrink-0 pb-[env(safe-area-inset-bottom,0px)]"
             >
-              {STATS.map((stat, i, arr) => (
+              {h.stats.map((stat, i, arr) => (
                 <motion.div
                   key={stat.label}
                   whileHover={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
@@ -374,7 +323,7 @@ export default function Home() {
                 className="eyebrow [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]"
                 style={{ writingMode: 'vertical-rl' }}
               >
-                Scroll
+                {h.scroll}
               </span>
               <motion.div
                 animate={{ y: [0, 8, 0] }}
@@ -407,27 +356,26 @@ export default function Home() {
                   variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                 >
                   <motion.div variants={fadeSlideLeft}>
-                    <Eyebrow>Industrias</Eyebrow>
+                    <Eyebrow>{h.industries}</Eyebrow>
                   </motion.div>
                   <motion.h2
                     variants={fadeSlideLeft}
                     className="font-display font-black text-white leading-tight mb-6"
                     style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', letterSpacing: '-0.022em' }}
                   >
-                    Industrias en las que<br />
-                    <span className="text-asli-primary">operamos</span>
+                    {h.industriesTitle1}<br />
+                    <span className="text-asli-primary">{h.industriesTitle2}</span>
                   </motion.h2>
                   <motion.p variants={fadeSlideLeft} className="text-white/65 text-lg leading-relaxed mb-3">
-                    Operamos en distintos sectores del comercio internacional, incluyendo
-                    carga general y operaciones de alta exigencia.
+                    {h.industriesP1}
                   </motion.p>
                   <motion.p variants={fadeSlideLeft} className="text-white/50 text-lg leading-relaxed mb-10">
-                    Con experiencia destacada en logística frutícola, especialmente en temporadas críticas.
+                    {h.industriesP2}
                   </motion.p>
 
                   {/* Industry pills */}
                   <motion.div variants={staggerContainer} className="flex flex-wrap gap-3 mb-10">
-                    {['Logística frutícola', 'Exportación agrícola', 'Carga general', 'Importaciones', 'Cadena de frío', 'Comercio exterior'].map((item) => (
+                    {h.industryPills.map((item) => (
                       <motion.span
                         key={item}
                         variants={scaleIn}
@@ -446,7 +394,7 @@ export default function Home() {
                       whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-asli-primary text-white text-sm font-semibold shadow-lg shadow-asli-primary/25"
                     >
-                      Coordinar mi operación
+                      {h.coordOperation}
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                     </motion.a>
                     <motion.a
@@ -454,7 +402,7 @@ export default function Home() {
                       whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/20 text-white/75 text-sm font-semibold hover:border-white/40 hover:text-white transition-all duration-300"
                     >
-                      Ver servicios
+                      {h.viewServices}
                     </motion.a>
                   </motion.div>
                 </motion.div>
@@ -498,22 +446,22 @@ export default function Home() {
                   variants={fadeSlideUp}
                   className="col-span-1 mb-4 w-full max-w-4xl justify-self-center text-center sm:col-span-3 sm:mb-6 md:mb-8 [&_.eyebrow]:[text-shadow:0_1px_6px_rgba(0,0,0,0.95),0_0_14px_rgba(0,0,0,0.55)]"
                 >
-                  <Eyebrow center>A quién apoyamos</Eyebrow>
+                  <Eyebrow center>{h.audienceEyebrow}</Eyebrow>
                   <h2
                     className="font-display mt-3 text-center font-black leading-[1.12] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.82),0_1px_3px_rgba(0,0,0,0.95)]"
                     style={{ fontSize: 'clamp(1.5rem, 3.2vw, 2.65rem)', letterSpacing: '-0.022em' }}
                   >
-                    Empresas que requieren<br />
+                    {h.audienceTitle1}<br />
                     <span className="text-asli-primary [text-shadow:0_0_28px_rgba(0,0,0,0.75),0_2px_14px_rgba(0,0,0,0.85),0_1px_2px_rgba(0,0,0,0.9)]">
-                      control logístico continuo
+                      {h.audienceTitle2}
                     </span>
                   </h2>
                   <p className="mx-auto mt-3 max-w-2xl text-sm leading-snug text-white/55 sm:mt-4 sm:text-base md:text-lg sm:leading-relaxed [text-shadow:0_1px_10px_rgba(0,0,0,0.92),0_0_18px_rgba(0,0,0,0.45)]">
-                    Apoyamos a empresas que requieren coordinación logística desde origen y control operativo continuo.
+                    {h.audienceP}
                   </p>
                 </motion.div>
 
-                {AUDIENCIA.map((item) => (
+                {audiencia.map((item) => (
                   <motion.div
                     key={item.label}
                     variants={scaleIn}
@@ -544,7 +492,7 @@ export default function Home() {
                     whileTap={{ scale: 0.97 }}
                     className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-7 py-3.5 text-sm font-semibold text-white transition-all duration-300 hover:border-asli-primary hover:bg-asli-primary [text-shadow:0_1px_8px_rgba(0,0,0,0.9)] drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
                   >
-                    Solicitar cotización sin compromiso
+                    {h.quoteNoCommit}
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
@@ -574,24 +522,23 @@ export default function Home() {
                     variants={fadeSlideLeft}
                     className="[&_.eyebrow]:font-semibold [&_.eyebrow]:text-teal-200 [&_.eyebrow]:[text-shadow:0_1px_4px_rgba(0,0,0,0.95)] [&_span.h-px]:bg-teal-300"
                   >
-                    <Eyebrow>Propuesta de valor</Eyebrow>
+                    <Eyebrow>{h.value}</Eyebrow>
                   </motion.div>
                   <motion.h2
                     variants={fadeSlideLeft}
                     className="font-display mb-6 font-black leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.55)]"
                     style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', letterSpacing: '-0.022em' }}
                   >
-                    Logística coordinada<br />
+                    {h.valueTitle1}<br />
                     <span className="text-teal-200 [text-shadow:0_2px_14px_rgba(0,0,0,0.75),0_0_28px_rgba(0,122,123,0.35)]">
-                      desde origen
+                      {h.valueTitle2}
                     </span>
                   </motion.h2>
                   <motion.p
                     variants={fadeSlideLeft}
                     className="text-lg font-medium leading-relaxed text-white/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.65)]"
                   >
-                    Con foco en control y continuidad operativa. Más allá del transporte,
-                    coordinamos toda la cadena logística de principio a fin.
+                    {h.valueP}
                   </motion.p>
                 </motion.div>
 
@@ -600,7 +547,7 @@ export default function Home() {
                   variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                   className="space-y-3 rounded-2xl border border-white/[0.1] bg-asli-dark/70 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md md:p-8"
                 >
-                  {VALOR.map((item, i) => (
+                  {h.valueBullets.map((item, i) => (
                     <motion.div
                       key={item}
                       variants={fadeSlideRight}
@@ -630,7 +577,7 @@ export default function Home() {
                       whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       className="inline-flex items-center gap-2 rounded-full bg-asli-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-asli-primary/30"
                     >
-                      Quiero saber más
+                      {h.wantMore}
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                     </motion.a>
                     <motion.a
@@ -638,7 +585,7 @@ export default function Home() {
                       whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       className="inline-flex items-center gap-2 rounded-full border-2 border-white/35 bg-white/[0.08] px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_12px_rgba(0,0,0,0.35)] transition-all duration-300 hover:border-white/55 hover:bg-white/[0.12] hover:text-white"
                     >
-                      Hablar con un ejecutivo
+                      {h.talkExec}
                     </motion.a>
                   </motion.div>
                 </motion.div>
@@ -665,22 +612,22 @@ export default function Home() {
                   variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                   className="[&_.eyebrow]:[text-shadow:0_1px_6px_rgba(0,0,0,0.95),0_0_14px_rgba(0,0,0,0.55)]"
                 >
-                  <motion.div variants={fadeSlideLeft}><Eyebrow>Servicios</Eyebrow></motion.div>
+                  <motion.div variants={fadeSlideLeft}><Eyebrow>{h.services}</Eyebrow></motion.div>
                   <motion.h2
                     variants={fadeSlideLeft}
                     className="font-display font-black text-white leading-tight mb-6 [text-shadow:0_2px_20px_rgba(0,0,0,0.82),0_1px_3px_rgba(0,0,0,0.95)]"
                     style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', letterSpacing: '-0.022em' }}
                   >
-                    Servicios logísticos para<br />
+                    {h.servicesTitle1}<br />
                     <span className="text-asli-primary [text-shadow:0_0_28px_rgba(0,0,0,0.75),0_2px_14px_rgba(0,0,0,0.85),0_1px_2px_rgba(0,0,0,0.9)]">
-                      exportación e importación
+                      {h.servicesTitle2}
                     </span>
                   </motion.h2>
                   <motion.p
                     variants={fadeSlideLeft}
                     className="text-white/55 text-lg leading-relaxed mb-10 [text-shadow:0_1px_10px_rgba(0,0,0,0.92),0_0_18px_rgba(0,0,0,0.45)]"
                   >
-                    Coordinamos operaciones desde origen, con soluciones integrales para todo tipo de carga y destino.
+                    {h.servicesP}
                   </motion.p>
                   <motion.div variants={fadeSlideLeft} className="flex flex-wrap gap-3">
                     <motion.a
@@ -689,7 +636,7 @@ export default function Home() {
                       whileTap={{ scale: 0.97 }}
                       className="group inline-flex items-center gap-3 px-7 py-4 rounded-full bg-asli-primary text-white font-semibold shadow-xl shadow-asli-primary/20 [text-shadow:0_1px_6px_rgba(0,0,0,0.45)] drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
                     >
-                      Ver todos los servicios
+                      {h.viewAllServices}
                       <svg className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                       </svg>
@@ -699,7 +646,7 @@ export default function Home() {
                       whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       className="inline-flex items-center gap-2 px-7 py-4 rounded-full border border-white/20 text-white/75 font-semibold text-sm hover:border-asli-primary/50 hover:text-white transition-all duration-300 [text-shadow:0_1px_8px_rgba(0,0,0,0.9)] drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
                     >
-                      Solicitar cotización
+                      {h.requestQuote}
                     </motion.a>
                   </motion.div>
                 </motion.div>
@@ -709,7 +656,7 @@ export default function Home() {
                   variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                   className="space-y-3 pt-2 lg:pt-14"
                 >
-                  {SERVICIOS_HOME.map((item, i) => (
+                  {h.serviciosHome.map((item, i) => (
                     <motion.div
                       key={item.label}
                       variants={fadeSlideRight}
@@ -770,22 +717,21 @@ export default function Home() {
                   variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                   className="order-1 lg:order-2"
                 >
-                  <motion.div variants={fadeSlideRight}><Eyebrow>Especialización</Eyebrow></motion.div>
+                  <motion.div variants={fadeSlideRight}><Eyebrow>{h.specialization}</Eyebrow></motion.div>
                   <motion.h2
                     variants={fadeSlideRight}
                     className="font-display font-black text-white leading-tight mb-5"
                     style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', letterSpacing: '-0.022em' }}
                   >
-                    Tipos de carga<br />
-                    <span className="text-asli-primary">que manejamos</span>
+                    {h.specTitle1}<br />
+                    <span className="text-asli-primary">{h.specTitle2}</span>
                   </motion.h2>
                   <motion.p variants={fadeSlideRight} className="text-white/60 text-base leading-relaxed mb-8">
-                    Con experiencia en manejo de carga frutícola y operaciones bajo cadena de frío.
-                    Gestionamos operaciones logísticas para distintos tipos de carga:
+                    {h.specP}
                   </motion.p>
 
                   <div className="space-y-2.5 mb-8">
-                    {CARGA.map((item, i) => (
+                    {h.cargoTypes.map((item, i) => (
                       <motion.div
                         key={item.label}
                         variants={fadeSlideRight}
@@ -809,7 +755,7 @@ export default function Home() {
                       whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-asli-primary text-white text-sm font-semibold shadow-lg shadow-asli-primary/20"
                     >
-                      Consultar disponibilidad
+                      {h.consultAvailability}
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                     </motion.a>
                   </motion.div>
@@ -843,18 +789,18 @@ export default function Home() {
                 variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                 className="text-center mb-16"
               >
-                <motion.div variants={fadeSlideUp}><Eyebrow center>Proceso</Eyebrow></motion.div>
+                <motion.div variants={fadeSlideUp}><Eyebrow center>{h.process}</Eyebrow></motion.div>
                 <motion.h2
                   variants={fadeSlideUp}
                   className="font-display font-black text-white leading-tight"
                   style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', letterSpacing: '-0.022em' }}
                 >
-                  ¿Cómo trabajamos?
+                  {h.processTitle}
                 </motion.h2>
               </motion.div>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                {PROCESO.map((step, i) => (
+                {h.proceso.map((step, i) => (
                   <motion.div
                     key={step.num}
                     initial={{ opacity: 0, y: 50 }}
@@ -876,7 +822,7 @@ export default function Home() {
                     </p>
 
                     {/* Connector dot (not last) */}
-                    {i < PROCESO.length - 1 && (
+                    {i < h.proceso.length - 1 && (
                       <div className="absolute top-1/2 -right-2 w-4 h-px bg-asli-primary/30 hidden lg:block" />
                     )}
                   </motion.div>
@@ -894,7 +840,7 @@ export default function Home() {
                   whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-3 px-8 py-4 rounded-full border border-asli-primary/40 text-asli-primary font-semibold hover:bg-asli-primary hover:text-white transition-all duration-300 text-sm"
                 >
-                  Comenzar mi operación
+                  {h.startOperation}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                 </motion.a>
               </motion.div>
@@ -910,20 +856,20 @@ export default function Home() {
                 variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                 className="text-center mb-14"
               >
-                <motion.div variants={fadeSlideUp}><Eyebrow center>Confianza</Eyebrow></motion.div>
+                <motion.div variants={fadeSlideUp}><Eyebrow center>{h.trust}</Eyebrow></motion.div>
                 <motion.h2
                   variants={fadeSlideUp}
                   className="font-display font-black text-white leading-tight"
                   style={{ fontSize: 'clamp(2rem, 3.8vw, 3.1rem)', letterSpacing: '-0.022em' }}
                 >
-                  Empresas que{' '}
-                  <span className="text-asli-primary">confían en nosotros</span>
+                  {h.trustTitle1}{' '}
+                  <span className="text-asli-primary">{h.trustTitleSpan}</span>
                 </motion.h2>
                 <motion.p
                   variants={fadeSlideUp}
                   className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-white/50 md:text-base"
                 >
-                  Colaboramos con las mejores empresas del sector exportador chileno.
+                  {h.trustP}
                 </motion.p>
               </motion.div>
             </div>
@@ -944,8 +890,8 @@ export default function Home() {
                 className="font-display font-black italic text-white/80 leading-tight max-w-3xl mx-auto mb-10"
                 style={{ fontSize: 'clamp(1.4rem, 3vw, 2.2rem)' }}
               >
-                "No solo movemos carga —{' '}
-                <span className="text-asli-primary">coordinamos la operación desde origen.</span>"
+                &ldquo;{h.quoteLine1}{' '}
+                <span className="text-asli-primary">{h.quoteLine2}</span>&rdquo;
               </motion.p>
 
               {/* CTA */}
@@ -959,7 +905,7 @@ export default function Home() {
                   whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-asli-primary text-white text-sm font-semibold shadow-lg shadow-asli-primary/25"
                 >
-                  Únete a nuestros clientes
+                  {h.joinClients}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                 </motion.a>
                 <motion.a
@@ -967,7 +913,7 @@ export default function Home() {
                   whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full border border-white/20 text-white/70 text-sm font-semibold hover:border-white/40 hover:text-white transition-all duration-300"
                 >
-                  Hablar con un ejecutivo
+                  {h.talkExecShort}
                 </motion.a>
               </motion.div>
             </div>
@@ -987,18 +933,17 @@ export default function Home() {
                 variants={staggerContainer} initial="hidden" whileInView="visible" viewport={VP}
                 className="max-w-2xl mx-auto"
               >
-                <motion.div variants={fadeSlideUp}><Eyebrow center>Comencemos</Eyebrow></motion.div>
+                <motion.div variants={fadeSlideUp}><Eyebrow center>{h.start}</Eyebrow></motion.div>
                 <motion.h2
                   variants={fadeSlideUp}
                   className="font-display font-black text-white leading-tight mb-6"
                   style={{ fontSize: 'clamp(2rem, 4.5vw, 3.5rem)', letterSpacing: '-0.025em' }}
                 >
-                  Coordina tu próxima operación<br />
-                  <span className="text-asli-primary">con nosotros</span>
+                  {h.finalTitleA}<br />
+                  <span className="text-asli-primary">{h.finalTitleB}</span>
                 </motion.h2>
                 <motion.p variants={fadeSlideUp} className="text-white/60 text-lg leading-relaxed mb-10">
-                  Te ayudamos a planificar y ejecutar tu logística de forma eficiente,
-                  segura y sin contratiempos.
+                  {h.finalCtaP}
                 </motion.p>
 
                 <motion.div variants={fadeSlideUp} className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1014,7 +959,7 @@ export default function Home() {
                       transition={{ duration: 2, repeat: Infinity, repeatDelay: 2, ease: 'linear' }}
                     />
                     <span className="relative z-10 flex items-center gap-3">
-                      Solicitar cotización
+                      {h.quoteBtn}
                       <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                       </svg>
@@ -1026,7 +971,7 @@ export default function Home() {
                     whileTap={{ scale: 0.97 }}
                     className="inline-flex items-center justify-center gap-3 px-10 py-4 rounded-full border border-white/25 text-white/85 font-semibold hover:border-white/50 hover:text-white transition-all duration-300"
                   >
-                    Hablar con un ejecutivo
+                    {h.talkBtn}
                   </motion.a>
                 </motion.div>
               </motion.div>
@@ -1038,13 +983,13 @@ export default function Home() {
           ══════════════════════════════════════════════════════ */}
           <section id="contacto" className="py-16 bg-asli-deep border-t border-white/[0.06]">
             <div className="container mx-auto px-6 lg:px-10">
+              <p className="eyebrow text-white/40 mb-3">{h.contactEyebrow}</p>
               <motion.p
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={VP} transition={{ duration: 0.6 }}
                 className="text-white/55 text-base leading-relaxed max-w-xl mb-8"
               >
-                Estamos disponibles para coordinar tus operaciones de exportación e importación,
-                con seguimiento y control en cada etapa.
+                {h.quickContactText}
               </motion.p>
 
               <motion.div
@@ -1054,17 +999,17 @@ export default function Home() {
                 {[
                   {
                     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-                    label: 'Email', value: 'informaciones@asli.cl', href: 'mailto:informaciones@asli.cl',
+                    label: h.labelEmail, value: 'informaciones@asli.cl', href: 'mailto:informaciones@asli.cl',
                     accent: 'text-asli-primary',
                   },
                   {
                     icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>,
-                    label: 'WhatsApp', value: '+56 9 6839 4225', href: 'https://api.whatsapp.com/send/?phone=56968394225',
+                    label: h.labelWhatsApp, value: '+56 9 6839 4225', href: 'https://api.whatsapp.com/send/?phone=56968394225',
                     accent: 'text-emerald-400',
                   },
                   {
                     icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
-                    label: 'Ubicación', value: 'Curicó, Chile', href: null,
+                    label: h.location, value: h.locationValue, href: null,
                     accent: 'text-asli-primary',
                   },
                 ].map((item) => {

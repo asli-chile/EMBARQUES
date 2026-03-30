@@ -1,17 +1,18 @@
 import { motion } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
+import { useLang } from '../lib/LangContext'
 
-const equipo = [
-  { nombre: 'Mario Basaez',      cargo: 'Fundador y Gerente General' },
-  { nombre: 'Hans Vasquez',      cargo: 'Subgerente de Operaciones' },
-  { nombre: 'Poliana Cisternas', cargo: 'Subgerente Comercial' },
-  { nombre: 'Rocio Villareal',   cargo: 'Subgerente Seguridad Alimentaria' },
-  { nombre: 'Stefanie Córdova',  cargo: 'Subgerente Administración y Finanzas' },
-  { nombre: 'Rodrigo Casillo',   cargo: 'Ejecutivo comercial zona sur' },
-  { nombre: 'Nina Scotti',       cargo: 'Ejecutiva Comercial e Importaciones' },
-  { nombre: 'Ricardo Lazo',      cargo: 'Subgerente Comercio Exterior' },
-  { nombre: 'Alex Cárdenas',     cargo: 'Coordinador de Transportes' },
-  { nombre: 'Rodrigo Cáceres',   cargo: 'Customer Services' },
+const equipoNombres = [
+  'Mario Basaez',
+  'Hans Vasquez',
+  'Poliana Cisternas',
+  'Rocio Villareal',
+  'Stefanie Córdova',
+  'Rodrigo Casillo',
+  'Nina Scotti',
+  'Ricardo Lazo',
+  'Alex Cárdenas',
+  'Rodrigo Cáceres',
 ]
 
 const MemberCard = ({ member, index }) => (
@@ -49,8 +50,15 @@ const MemberCard = ({ member, index }) => (
   </motion.div>
 )
 
-const NuestroEquipo = () => (
-  <section id="equipo" className="relative py-14 md:py-36 bg-asli-dark overflow-hidden">
+const NuestroEquipo = () => {
+  const { t } = useLang()
+  const equipo = equipoNombres.map((nombre, i) => ({
+    nombre,
+    cargo: t.equipo.cargos[i] || '',
+  }))
+
+  return (
+    <section id="equipo" className="relative py-14 md:py-36 bg-asli-dark overflow-hidden">
 
     <div className="container mx-auto px-6 lg:px-10">
       <motion.div
@@ -64,15 +72,15 @@ const NuestroEquipo = () => (
           variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
           className="eyebrow mb-4"
         >
-          Nuestro Equipo
+          {t.equipo.eyebrow}
         </motion.p>
         <motion.h2
           variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22,1,0.36,1] } } }}
           className="font-display font-black text-white max-w-xl"
           style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
         >
-          Profesionales que{' '}
-          <em className="not-italic text-asli-primary">hacen la diferencia</em>
+          {t.equipo.title}{' '}
+          <em className="not-italic text-asli-primary">{t.equipo.titleSpan}</em>
         </motion.h2>
       </motion.div>
 
@@ -82,7 +90,8 @@ const NuestroEquipo = () => (
         ))}
       </div>
     </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export default NuestroEquipo

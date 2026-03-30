@@ -3,75 +3,72 @@ import { motion } from 'framer-motion'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
 import ImagePlaceholder from '../src/components/ImagePlaceholder'
-
-const EJECUTIVOS = [
-  {
-    nombre: 'Poliana Cisternas',
-    cargo: 'Subgerente Comercial',
-    servicio: 'Exportaciones maritimas',
-    descripcion:
-      'Especialista en coordinacion y negociacion con navieras para optimizar tarifas, espacios y condiciones de embarque en operaciones de exportacion.',
-    email: 'poliana.cisternas@asli.cl',
-  },
-  {
-    nombre: 'Nina Scotti',
-    cargo: 'Ejecutiva de Operaciones e Importaciones',
-    servicio: 'Importaciones y coordinacion documental',
-    descripcion:
-      'Acompana cada importacion desde la planificacion hasta la recepcion final, coordinando documentos, tiempos y actores para una operacion fluida.',
-    email: 'nina.scotti@asli.cl',
-  },
-  {
-    nombre: 'Alex Cardenas',
-    cargo: 'Coordinador de Transportes',
-    servicio: 'Transporte terrestre en origen y destino',
-    descripcion:
-      'Gestiona unidades y coordinacion terrestre entre campo, packing, puertos y aeropuertos para asegurar continuidad operativa y tiempos de retiro.',
-    email: 'alex.cardenas@asli.cl',
-  },
-  {
-    nombre: 'Rocio Villarroel',
-    cargo: 'Subgerente de Seguridad Alimentaria',
-    servicio: 'Asesoria en certificacion OEA',
-    descripcion:
-      'Asesora empresas en cumplimiento normativo y preparacion para certificacion OEA, fortaleciendo seguridad, trazabilidad y eficiencia en comercio exterior.',
-    email: 'rocio.villarroel@asli.cl',
-  },
-  {
-    nombre: 'Hans Vasquez',
-    cargo: 'Subgerente de Operaciones',
-    servicio: 'Supervision operativa integral',
-    descripcion:
-      'Coordina y supervisa el flujo operativo completo para mantener control de hitos clave, comunicacion directa y resolucion rapida de incidencias.',
-    email: 'hans.vasquez@asli.cl',
-  },
-]
-
-const mailHref = (email, nombre, servicio) =>
-  `https://mail.google.com/mail/?view=cm&to=${email}&su=${encodeURIComponent(
-    `Consulta por ${servicio}`
-  )}&body=${encodeURIComponent(
-    `Hola ${nombre}, me gustaria recibir informacion sobre ${servicio}.`
-  )}`
+import { useLang } from '../src/lib/LangContext'
+import { ejecutivosByLang } from '../src/lib/ejecutivosTranslations'
 
 const INFORMACIONES_EMAIL = 'informaciones@asli.cl'
 
-const mailHrefInformaciones = () =>
+const COPY = {
+  es: {
+    pageTitle: 'Hablar con un ejecutivo | ASLI',
+    pageDesc: 'Contacta al ejecutivo ASLI según el servicio que necesitas.',
+    heroTitle: 'Habla con un ejecutivo',
+    heroSub:
+      'Selecciona el ejecutivo según el servicio que necesitas y contáctalo directamente por correo. Para consultas generales puedes escribir al correo de informaciones.',
+    sendMail: 'Enviar correo',
+    infoTitle: 'Informaciones',
+    infoRole: 'Consultas varias',
+    infoService: 'Correo general',
+    infoDesc:
+      'Para información general, cotizaciones amplias o cuando no sepas a qué ejecutivo escribir.',
+  },
+  en: {
+    pageTitle: 'Talk to an Executive | ASLI',
+    pageDesc: 'Contact the ASLI executive based on the service you need.',
+    heroTitle: 'Talk to an executive',
+    heroSub:
+      'Select the executive based on the service you need and contact them directly by email. For general inquiries, write to the information mailbox.',
+    sendMail: 'Send email',
+    infoTitle: 'Information',
+    infoRole: 'General inquiries',
+    infoService: 'General mailbox',
+    infoDesc:
+      'For general information, broad quotations, or if you are unsure which executive to contact.',
+  },
+  zh: {
+    pageTitle: '联系业务顾问 | ASLI',
+    pageDesc: '根据您需要的服务联系对应的 ASLI 顾问。',
+    heroTitle: '联系业务顾问',
+    heroSub:
+      '请选择符合您需求的顾问并通过邮件直接联系。如为一般咨询，可写信至信息邮箱。',
+    sendMail: '发送邮件',
+    infoTitle: '综合咨询',
+    infoRole: '一般问题',
+    infoService: '总邮箱',
+    infoDesc: '用于一般信息咨询、综合报价，或您不确定该联系哪位顾问时。',
+  },
+}
+
+const mailHref = (ej, email, nombre, servicio) =>
+  `https://mail.google.com/mail/?view=cm&to=${email}&su=${encodeURIComponent(
+    `${ej.mailSubjectPrefix} ${servicio}`
+  )}&body=${encodeURIComponent(`${ej.mailGreeting} ${nombre}, ${ej.mailAsk} ${servicio}.`)}`
+
+const mailHrefInformaciones = (ej) =>
   `https://mail.google.com/mail/?view=cm&to=${INFORMACIONES_EMAIL}&su=${encodeURIComponent(
-    'Consulta general — ASLI'
-  )}&body=${encodeURIComponent(
-    'Hola,\n\nEscribo para la siguiente consulta:\n\n'
-  )}`
+    ej.mailGeneralSubject
+  )}&body=${encodeURIComponent(ej.mailGeneralBody)}`
 
 const EjecutivosPage = () => {
+  const { lang } = useLang()
+  const tr = COPY[lang] || COPY.es
+  const ej = ejecutivosByLang[lang] || ejecutivosByLang.es
+
   return (
     <>
       <Head>
-        <title>Hablar con un ejecutivo | ASLI</title>
-        <meta
-          name="description"
-          content="Contacta al ejecutivo ASLI segun el servicio que necesitas."
-        />
+        <title>{tr.pageTitle}</title>
+        <meta name="description" content={tr.pageDesc} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
 
@@ -90,19 +87,16 @@ const EjecutivosPage = () => {
                 className="font-display font-black text-white leading-tight mb-6"
                 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', letterSpacing: '-0.025em' }}
               >
-                Habla con un ejecutivo
+                {tr.heroTitle}
               </h1>
-              <p className="text-white/65 text-lg leading-relaxed max-w-3xl">
-                Selecciona el ejecutivo según el servicio que necesitas y contáctalo directamente por correo. Para
-                consultas generales puedes escribir al correo de informaciones.
-              </p>
+              <p className="text-white/65 text-lg leading-relaxed max-w-3xl">{tr.heroSub}</p>
             </div>
           </section>
 
           <section className="py-16 md:py-24 border-y border-white/[0.06]">
             <div className="container mx-auto px-6 lg:px-10">
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {EJECUTIVOS.map((item, idx) => (
+                {ej.members.map((item, idx) => (
                   <motion.article
                     key={item.email}
                     initial={{ opacity: 0, y: 28 }}
@@ -126,12 +120,12 @@ const EjecutivosPage = () => {
                     <p className="text-white/70 text-sm leading-relaxed mb-5">{item.descripcion}</p>
 
                     <a
-                      href={mailHref(item.email, item.nombre, item.servicio)}
+                      href={mailHref(ej, item.email, item.nombre, item.servicio)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-asli-primary text-white text-sm font-semibold hover:bg-asli-primary/85 transition-all duration-200"
                     >
-                      Enviar correo
+                      {tr.sendMail}
                     </a>
                   </motion.article>
                 ))}
@@ -141,7 +135,7 @@ const EjecutivosPage = () => {
                   initial={{ opacity: 0, y: 28 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.55, delay: EJECUTIVOS.length * 0.05 }}
+                  transition={{ duration: 0.55, delay: ej.members.length * 0.05 }}
                   className="rounded-2xl border border-asli-primary/35 bg-asli-primary/[0.06] p-6 shadow-[0_18px_36px_rgba(0,0,0,0.22)] sm:col-span-2 xl:col-span-1"
                 >
                   <div className="flex items-start gap-4 mb-4">
@@ -164,24 +158,22 @@ const EjecutivosPage = () => {
                       </svg>
                     </div>
                     <div>
-                      <h2 className="text-white font-semibold leading-tight">Informaciones</h2>
-                      <p className="text-white/60 text-sm">Consultas varias</p>
+                      <h2 className="text-white font-semibold leading-tight">{tr.infoTitle}</h2>
+                      <p className="text-white/60 text-sm">{tr.infoRole}</p>
                     </div>
                   </div>
 
-                  <p className="text-asli-primary text-sm font-semibold mb-2">Correo general</p>
-                  <p className="text-white/70 text-sm leading-relaxed mb-2">
-                    Para información general, cotizaciones amplias o cuando no sepas a qué ejecutivo escribir.
-                  </p>
+                  <p className="text-asli-primary text-sm font-semibold mb-2">{tr.infoService}</p>
+                  <p className="text-white/70 text-sm leading-relaxed mb-2">{tr.infoDesc}</p>
                   <p className="text-white/45 text-xs mb-5 font-mono break-all">{INFORMACIONES_EMAIL}</p>
 
                   <a
-                    href={mailHrefInformaciones()}
+                    href={mailHrefInformaciones(ej)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-asli-primary text-white text-sm font-semibold hover:bg-asli-primary/85 transition-all duration-200"
                   >
-                    Enviar correo
+                    {tr.sendMail}
                   </a>
                 </motion.article>
               </div>

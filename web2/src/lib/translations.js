@@ -1,8 +1,28 @@
+import { homeByLang } from './homeTranslations'
+
 const t = {
   es: {
+    common: {
+      language: 'Idioma',
+      langEs: 'ES',
+      langEn: 'EN',
+      langZh: '中文',
+    },
+    header: {
+      taglineTop: 'Coordinamos operaciones logísticas desde origen',
+      clientAccess: 'Acceso clientes',
+      requestQuote: 'Solicitar cotización',
+      whatsappWrite: 'Escribir por WhatsApp',
+      openMenu: 'Abrir menú',
+      closeMenu: 'Cerrar menú',
+      companyName: 'Asesorías y Servicios Logísticos Integrales Ltda.',
+      companyTag: 'Logística y Comercio Exterior.',
+    },
     nav: {
       inicio:       'Inicio',
       servicios:    'Servicios',
+      nosotros:     'Nosotros',
+      contacto:     'Contacto',
       equipo:       'Equipo',
       tracking:     'Tracking',
       itinerario:   'Itinerario',
@@ -48,6 +68,8 @@ const t = {
       stat1l:    'Año de fundación',
       stat2l:    'Región de origen',
       stat3l:    'Foco exportador',
+      p2:        'Nuestra experiencia también mostró un desafío recurrente: para pequeños y medianos exportadores, la logística suele ser su principal barrera de crecimiento.',
+      p3:        'Así nace ASLI: una empresa cercana, experta y comprometida, que entrega asesoría real y estratégica en cada etapa.',
     },
     servicios: {
       eyebrow:   'Nuestros Servicios',
@@ -85,16 +107,30 @@ const t = {
       eyebrow:   'Nuestro Equipo',
       title:     'Profesionales que',
       titleSpan: 'hacen la diferencia',
+      cargos: [
+        'Fundador y Gerente General',
+        'Subgerente de Operaciones',
+        'Subgerente Comercial',
+        'Subgerente Seguridad Alimentaria',
+        'Subgerente Administración y Finanzas',
+        'Ejecutivo comercial zona sur',
+        'Ejecutiva Comercial e Importaciones',
+        'Subgerente Comercio Exterior',
+        'Coordinador de Transportes',
+        'Customer Services',
+      ],
     },
     clientes: {
       eyebrow: 'Nuestros Clientes',
       title:   'Empresas que',
       titleSpan: 'confían en ASLI',
+      blurb: 'Colaboramos con las mejores empresas del sector exportador chileno.',
     },
     somos: {
       eyebrow: 'Alianzas Estratégicas',
       title:   'Somos parte de',
       titleSpan: 'la red exportadora',
+      blurb: 'Respaldados por alianzas con líderes de la industria logística y agroexportadora.',
     },
     navieras: {
       eyebrow: 'Nuestros Socios Logísticos',
@@ -110,6 +146,34 @@ const t = {
       google:    'Abrir en Google Maps',
       waze:      'Navegar con Waze',
       apple:     'Apple Maps',
+      line1:     'Longitudinal Sur Km. 186',
+      line2:     '3340000 Curicó, Región del Maule, Chile',
+    },
+    porQue: {
+      title: 'Por qué ASLI',
+      intro: 'Somos una agencia logística con enfoque en resultados concretos y relaciones de largo plazo.',
+      items: [
+        {
+          titulo: 'Acompañamiento completo',
+          descripcion:
+            'Estamos contigo en cada etapa del proceso, desde la planificación hasta la entrega final, asegurando transparencia y comunicación constante.',
+        },
+        {
+          titulo: 'Claridad operativa',
+          descripcion:
+            'Procesos definidos y documentados. Sabrás en todo momento el estado de tu operación, sin sorpresas ni imprevistos.',
+        },
+        {
+          titulo: 'Experiencia en fruta',
+          descripcion:
+            'Especialización comprobada en el manejo de fruta fresca y congelada, con conocimiento profundo de requisitos fitosanitarios, cadena de frío y tiempos críticos.',
+        },
+        {
+          titulo: 'Control de procesos',
+          descripcion:
+            'Sistemas y procedimientos que garantizan el seguimiento detallado de cada operación, minimizando riesgos y maximizando eficiencia.',
+        },
+      ],
     },
     footer: {
       tagline:   '"Nuestro límite\nes tu destino"',
@@ -138,12 +202,31 @@ const t = {
       ctaBtn:     'Enviar consulta',
     },
     dolar: 'Dólar Observado',
+    home: homeByLang.es,
   },
 
   en: {
+    common: {
+      language: 'Language',
+      langEs: 'ES',
+      langEn: 'EN',
+      langZh: '中文',
+    },
+    header: {
+      taglineTop: 'We coordinate logistics operations from origin',
+      clientAccess: 'Client access',
+      requestQuote: 'Request a quote',
+      whatsappWrite: 'Chat on WhatsApp',
+      openMenu: 'Open menu',
+      closeMenu: 'Close menu',
+      companyName: 'Integral Logistics Advisory & Services Ltd.',
+      companyTag: 'Logistics & Foreign Trade.',
+    },
     nav: {
       inicio:     'Home',
       servicios:  'Services',
+      nosotros:   'About',
+      contacto:   'Contact',
       equipo:     'Team',
       tracking:   'Tracking',
       itinerario: 'Schedule',
@@ -189,6 +272,8 @@ const t = {
       stat1l:    'Year founded',
       stat2l:    'Region of origin',
       stat3l:    'Export focus',
+      p2:        'Our experience revealed a repeated challenge: for small and medium exporters, logistics often became their main barrier to growth.',
+      p3:        'ASLI was created as a close, expert, and committed company that delivers real strategic guidance in every stage.',
     },
     servicios: {
       eyebrow:   'Our Services',
@@ -226,16 +311,30 @@ const t = {
       eyebrow:   'Our Team',
       title:     'Professionals who',
       titleSpan: 'make the difference',
+      cargos: [
+        'Founder & CEO',
+        'Operations Deputy Manager',
+        'Commercial Deputy Manager',
+        'Food Safety Deputy Manager',
+        'Administration & Finance Deputy Manager',
+        'Commercial executive — south zone',
+        'Commercial & Imports Executive',
+        'Foreign Trade Deputy Manager',
+        'Transport Coordinator',
+        'Customer Services',
+      ],
     },
     clientes: {
       eyebrow:   'Our Clients',
       title:     'Companies that',
       titleSpan: 'trust ASLI',
+      blurb: 'We collaborate with top companies in Chilean exports.',
     },
     somos: {
       eyebrow:   'Strategic Alliances',
       title:     'We are part of',
       titleSpan: 'the export network',
+      blurb: 'Backed by alliances with leaders in logistics and agro-export sectors.',
     },
     navieras: {
       eyebrow:   'Our Logistics Partners',
@@ -251,6 +350,34 @@ const t = {
       google:    'Open in Google Maps',
       waze:      'Navigate with Waze',
       apple:     'Apple Maps',
+      line1:     'Longitudinal Sur Km. 186',
+      line2:     '3340000 Curicó, Maule Region, Chile',
+    },
+    porQue: {
+      title: 'Why ASLI',
+      intro: 'We are a logistics agency focused on concrete results and long-term relationships.',
+      items: [
+        {
+          titulo: 'Full support',
+          descripcion:
+            'We are with you at every stage, from planning to final delivery, ensuring transparency and constant communication.',
+        },
+        {
+          titulo: 'Operational clarity',
+          descripcion:
+            'Defined and documented processes. You always know the status of your operation without surprises.',
+        },
+        {
+          titulo: 'Fruit expertise',
+          descripcion:
+            'Proven specialization in fresh and frozen fruit with deep knowledge of phytosanitary requirements and cold chain.',
+        },
+        {
+          titulo: 'Process control',
+          descripcion:
+            'Systems and procedures that ensure detailed monitoring of each operation, minimizing risks and maximizing efficiency.',
+        },
+      ],
     },
     footer: {
       tagline:   '"Our limit\nis your destination"',
@@ -279,6 +406,211 @@ const t = {
       ctaBtn:    'Send inquiry',
     },
     dolar: 'Exchange Rate',
+    home: homeByLang.en,
+  },
+
+  zh: {
+    common: {
+      language: '语言',
+      langEs: 'ES',
+      langEn: 'EN',
+      langZh: '中文',
+    },
+    header: {
+      taglineTop: '我们从起点协调全程物流运营',
+      clientAccess: '客户入口',
+      requestQuote: '申请报价',
+      whatsappWrite: '通过 WhatsApp 联系',
+      openMenu: '打开菜单',
+      closeMenu: '关闭菜单',
+      companyName: 'ASLI 综合物流咨询与服务有限公司',
+      companyTag: '物流与国际贸易。',
+    },
+    nav: {
+      inicio: '首页',
+      servicios: '服务',
+      nosotros: '关于我们',
+      contacto: '联系我们',
+      equipo: '团队',
+      tracking: '追踪',
+      itinerario: '船期',
+      acceder: '登录',
+    },
+    hero: {
+      eyebrow: '物流与国际贸易 · 智利库里科',
+      line1: '从起点',
+      line2: '到终点，',
+      line3: '全程同行。',
+      sub: '综合物流咨询与服务。公司成立于 2021 年，为智利出口商提供与大型企业同等标准的服务。',
+      cta1: '我们的服务',
+      cta2: '进入系统',
+      cta3: '联系我们',
+      stat1l: '成立于库里科',
+      stat2l: '物流服务',
+      stat3l: '航运与航空伙伴',
+      stat4l: '客户承诺',
+    },
+    quienes: {
+      eyebrow: '关于我们',
+      title: '您在',
+      titleSpan: '综合物流',
+      p1: '我们专注于综合物流服务，以专业与卓越为核心。',
+      p2: '自 2021 年在库里科成立以来，我们建立了稳固的战略合作网络，为每位客户提供完整高效的解决方案。',
+      stat1l: '行业经验',
+      stat1s: '自 2021 年起',
+      stat2l: '满意度',
+      stat2s: '坚持卓越服务',
+      stat3l: '综合服务',
+      stat3s: '全链路多式联运',
+      sede: '总部',
+      sedeCity: '智利 Maule 大区库里科',
+    },
+    historia: {
+      eyebrow: '我们的故事',
+      title1: '一个',
+      titleSpan: '清晰',
+      title2: '的初心',
+      sub: '2021 年创立于智利 Maule 大区库里科',
+      quote: '“为出口企业提供顾问、陪伴与保障，帮助他们以大型企业的标准运营。”',
+      quoteBy: '— Mario Basaez，创始人兼总经理',
+      stat1l: '成立年份',
+      stat2l: '起源地区',
+      stat3l: '出口导向',
+      p2: '我们的经验也发现一个反复出现的问题：对中小出口商而言，物流往往成为增长的主要障碍。',
+      p3: '因此诞生了 ASLI：一家贴近客户、专业且负责的公司，在每个阶段提供真实且有策略的支持。',
+    },
+    servicios: {
+      eyebrow: '我们的服务',
+      title: '推动世界运转的',
+      titleSpan: '物流方案',
+      items: [
+        { titulo: '出口咨询', desc: '覆盖从单证到与船公司及海关协调的出口全流程管理。' },
+        { titulo: '进口咨询', desc: '协助您完成进口流程，处理海关手续与物流协调。' },
+        { titulo: '单证咨询', desc: '提供海关文件、证书、许可及所需全部手续支持。' },
+        { titulo: '海运运输', desc: '与全球主要船公司协作，确保货物安全运输。' },
+        { titulo: '空运运输', desc: '为紧急或高价值货物提供高效空运方案。' },
+        { titulo: '陆运运输', desc: '可靠陆运网络，覆盖港口与机场往返运输。' },
+        { titulo: '集装箱管理', desc: '高效管理集装箱，优化空间、成本与时效。' },
+        { titulo: '报关服务', desc: '完整报关流程与合规支持，提升进出口效率。' },
+        { titulo: '综合物流', desc: '按企业需求定制的端到端综合物流方案。' },
+      ],
+    },
+    asesoria: {
+      eyebrow: '国际贸易',
+      title: '进出口',
+      titleSpan: '综合咨询',
+      desc: '我们专长于鲜果与冷冻果物流，从起点到终点提供完整支持，确保流程、法规与认证全面合规。',
+      badge1: '专业方向',
+      badge2: '鲜果与\n冷冻果',
+      features: [
+        '全流程综合咨询',
+        '供应商协调',
+        'OEA 认证辅导',
+        '法规合规保障',
+        '鲜果与冷冻果物流',
+        '专业包装管理',
+      ],
+    },
+    equipo: {
+      eyebrow: '我们的团队',
+      title: '真正带来差异的',
+      titleSpan: '专业团队',
+      cargos: [
+        '创始人兼总经理',
+        '运营副经理',
+        '商务副经理',
+        '食品安全副经理',
+        '行政与财务副经理',
+        '南部商务执行',
+        '商务与进口执行',
+        '外贸副经理',
+        '运输协调',
+        '客户服务',
+      ],
+    },
+    clientes: {
+      eyebrow: '我们的客户',
+      title: '信任 ASLI 的',
+      titleSpan: '企业伙伴',
+      blurb: '我们与智利出口行业优秀企业合作。',
+    },
+    somos: {
+      eyebrow: '战略联盟',
+      title: '我们是',
+      titleSpan: '出口网络的一部分',
+      blurb: '我们与物流和农产品出口领域的领先伙伴建立了合作联盟。',
+    },
+    navieras: {
+      eyebrow: '物流合作伙伴',
+      title: '连接全球',
+      titleSpan: '优秀船公司',
+    },
+    ubicacion: {
+      eyebrow: '联系我们',
+      title: '我们的',
+      titleSpan: '办公室',
+      dir: '地址',
+      contacto: '联系方式',
+      google: '在 Google 地图打开',
+      waze: '使用 Waze 导航',
+      apple: 'Apple 地图',
+      line1: '5 号南公路 186 公里',
+      line2: '3340000 智利马乌莱大区库里科',
+    },
+    porQue: {
+      title: '为什么选择 ASLI',
+      intro: '我们是一家以实际成果和长期合作为导向的物流公司。',
+      items: [
+        {
+          titulo: '全程支持',
+          descripcion:
+            '我们在每个阶段与您同行，从规划到交付，确保透明与持续沟通。',
+        },
+        {
+          titulo: '运营清晰',
+          descripcion:
+            '流程明确且文档化，您可随时掌握操作状态，避免意外。',
+        },
+        {
+          titulo: '果品经验',
+          descripcion:
+            '在鲜果与冷冻果方面具备成熟经验，熟悉植检要求与冷链管理。',
+        },
+        {
+          titulo: '流程控制',
+          descripcion:
+            '通过系统化流程实现精细跟踪，降低风险并提升效率。',
+        },
+      ],
+    },
+    footer: {
+      tagline: '"我们的边界\n就是你的目的地"',
+      cta: '准备好增长了吗？',
+      ctaBtn: '获取报价',
+      whatsapp: 'WhatsApp',
+      servicios: '服务',
+      empresa: '公司',
+      rights: '版权所有。',
+      srvList: ['多式联运', '果品物流', '报关服务', '物流咨询', '国际贸易'],
+      empList: ['关于我们', '团队', '战略伙伴', '船期', '公司介绍'],
+    },
+    tracking: {
+      eyebrow: '货物追踪',
+      title1: '实时',
+      titleSpan: '追踪',
+      sub: '选择您的船公司或航空公司，直接进入其官方追踪系统。',
+      maritimo: '🚢  海运',
+      aereo: '✈️  空运',
+      buscar: '搜索船公司或航空公司…',
+      nota: '点击后将跳转到各承运方的官方追踪网站',
+      ctaEyebrow: '需要帮助？',
+      ctaTitle: '您的货物追踪',
+      ctaSpan: '遇到问题了吗？',
+      ctaSub: '联系我们，我们的团队将协助您了解运输状态。',
+      ctaBtn: '发送咨询',
+    },
+    dolar: '汇率',
+    home: homeByLang.zh,
   },
 }
 

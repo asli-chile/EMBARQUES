@@ -1,17 +1,13 @@
 import { motion } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
+import { useLang } from '../lib/LangContext'
 
-const features = [
-  { icon: '✓', text: 'Asesoría Integral en todo momento' },
-  { icon: '✓', text: 'Coordinación con Proveedores' },
-  { icon: '✓', text: 'Guía en Certificación OEA' },
-  { icon: '✓', text: 'Cumplimiento de Normativas' },
-  { icon: '✓', text: 'Logística de fruta fresca y congelada' },
-  { icon: '✓', text: 'Gestión de packaging especializado' },
-]
+const AsesoriaComercioInternacional = () => {
+  const { t } = useLang()
+  const features = (t.asesoria?.features || []).map((text) => ({ icon: '✓', text }))
 
-const AsesoriaComercioInternacional = () => (
-  <section className="relative py-14 md:py-36 bg-asli-secondary overflow-hidden">
+  return (
+    <section className="relative py-14 md:py-36 bg-asli-secondary overflow-hidden">
 
     {/* Background decoration */}
     <div
@@ -47,9 +43,9 @@ const AsesoriaComercioInternacional = () => (
             transition={{ duration: 0.6, delay: 0.4 }}
             className="absolute bottom-6 left-6 glass rounded-2xl p-5"
           >
-            <p className="eyebrow mb-1">Especialización</p>
+            <p className="eyebrow mb-1">{t.asesoria.badge1}</p>
             <p className="text-white font-display font-bold text-lg leading-tight">
-              Fruta Fresca<br/>& Congelada
+              {t.asesoria.badge2}
             </p>
           </motion.div>
 
@@ -68,15 +64,15 @@ const AsesoriaComercioInternacional = () => (
             variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
             className="eyebrow mb-4"
           >
-            Comercio Internacional
+            {t.asesoria.eyebrow}
           </motion.p>
           <motion.h2
             variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22,1,0.36,1] } } }}
             className="font-display font-black text-white mb-4"
             style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
           >
-            Asesoría integral en{' '}
-            <em className="not-italic text-asli-primary">importación y exportación</em>
+            {t.asesoria.title}{' '}
+            <em className="not-italic text-asli-primary">{t.asesoria.titleSpan}</em>
           </motion.h2>
           <motion.div
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.4 } } }}
@@ -86,10 +82,7 @@ const AsesoriaComercioInternacional = () => (
             variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
             className="text-white/60 text-lg leading-relaxed font-light mb-8"
           >
-            Especializados en logística de fruta fresca y congelada,
-            ofrecemos acompañamiento completo desde el origen hasta el destino.
-            Nuestro equipo gestiona todos los aspectos de tu operación,
-            asegurando cumplimiento de normativas y certificaciones.
+            {t.asesoria.desc}
           </motion.p>
 
           {/* Feature grid */}
@@ -113,7 +106,8 @@ const AsesoriaComercioInternacional = () => (
         </motion.div>
       </div>
     </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export default AsesoriaComercioInternacional

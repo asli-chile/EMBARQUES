@@ -1,20 +1,18 @@
 import { motion } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
+import { useLang } from '../lib/LangContext'
 
-const servicios = [
-  { id: 1, titulo: 'Asesoría en Exportaciones',  desc: 'Gestión completa del proceso exportador, desde documentación hasta coordinación con navieras y aduanas.',  icon: '⚓' },
-  { id: 2, titulo: 'Asesoría en Importaciones',  desc: 'Facilitamos la importación de tus productos, manejando trámites aduaneros y coordinación logística.',       icon: '📦' },
-  { id: 3, titulo: 'Asesoría Documental',         desc: 'Documentación aduanera, certificados, permisos y toda la tramitación necesaria para operar.',                icon: '📋' },
-  { id: 4, titulo: 'Transporte Marítimo',         desc: 'Coordinación con las principales navieras del mundo para el transporte seguro de tu carga.',                 icon: '🚢' },
-  { id: 5, titulo: 'Transporte Aéreo',            desc: 'Soluciones de transporte aéreo para cargas urgentes o de alto valor con las mejores aerolíneas.',             icon: '✈️' },
-  { id: 6, titulo: 'Transporte Terrestre',        desc: 'Red de transporte terrestre confiable para mover tu carga desde y hacia puertos y aeropuertos.',              icon: '🚛' },
-  { id: 7, titulo: 'Gestión de Contenedores',     desc: 'Administración eficiente de contenedores, optimizando espacio, costos y tiempos de despacho.',               icon: '🗃️' },
-  { id: 8, titulo: 'Servicios Aduaneros',         desc: 'Tramitación aduanera completa, cumplimiento normativo y agilización de procesos de importación/exportación.', icon: '🏛️' },
-  { id: 9, titulo: 'Logística Integral',          desc: 'Soluciones logísticas completas y personalizadas para cada necesidad operativa de tu empresa.',               icon: '🌐' },
-]
-
-const Servicios = () => (
-  <section id="servicios" className="relative py-14 md:py-36 bg-asli-dark overflow-hidden">
+const Servicios = () => {
+  const { t } = useLang()
+  const icons = ['⚓', '📦', '📋', '🚢', '✈️', '🚛', '🗃️', '🏛️', '🌐']
+  const servicios = (t.servicios.items || []).map((item, i) => ({
+    id: i + 1,
+    titulo: item.titulo,
+    desc: item.desc,
+    icon: icons[i] || '•',
+  }))
+  return (
+    <section id="servicios" className="relative py-14 md:py-36 bg-asli-dark overflow-hidden">
 
     <div className="container mx-auto px-6 lg:px-10">
 
@@ -30,15 +28,15 @@ const Servicios = () => (
           variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
           className="eyebrow mb-4"
         >
-          Nuestros Servicios
+          {t.servicios.eyebrow}
         </motion.p>
         <motion.h2
           variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22,1,0.36,1] } } }}
           className="font-display font-black text-white"
           style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
         >
-          Soluciones que{' '}
-          <em className="not-italic text-asli-primary">mueven el mundo</em>
+          {t.servicios.title}{' '}
+          <em className="not-italic text-asli-primary">{t.servicios.titleSpan}</em>
         </motion.h2>
       </motion.div>
 
@@ -87,7 +85,8 @@ const Servicios = () => (
         ))}
       </div>
     </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export default Servicios

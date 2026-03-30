@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useLang } from '../lib/LangContext'
 
 const clientes = [
   { nombre: 'Alma', logo: '/img/alma.png' },
@@ -12,8 +13,10 @@ const clientes = [
 
 const allClientes = [...clientes, ...clientes]
 
-const ClientesPrincipales = ({ embedded = false }) => (
-  <section className={`relative overflow-hidden bg-transparent ${embedded ? 'pb-2 pt-0 md:pb-4' : 'py-24 md:py-32'}`}>
+const ClientesPrincipales = ({ embedded = false }) => {
+  const { t } = useLang()
+  return (
+    <section className={`relative overflow-hidden bg-transparent ${embedded ? 'pb-2 pt-0 md:pb-4' : 'py-24 md:py-32'}`}>
     {!embedded && (
       <div className="container mx-auto mb-14 px-6 lg:px-10">
         <motion.div
@@ -28,22 +31,22 @@ const ClientesPrincipales = ({ embedded = false }) => (
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
               className="eyebrow mb-4 text-asli-primary"
             >
-              Nuestros Clientes
+              {t.clientes.eyebrow}
             </motion.p>
             <motion.h2
               variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } } }}
               className="font-display font-black text-white"
               style={{ fontSize: 'clamp(2rem, 4.5vw, 3.4rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
             >
-              Empresas que confían{' '}
-              <em className="not-italic text-asli-primary">en nosotros</em>
+              {t.clientes.title}{' '}
+              <em className="not-italic text-asli-primary">{t.clientes.titleSpan}</em>
             </motion.h2>
           </div>
           <motion.p
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.6, delay: 0.2 } } }}
             className="max-w-xs text-right text-sm font-light text-white/50 md:text-left"
           >
-            Colaboramos con las mejores empresas del sector exportador chileno
+            {t.clientes.blurb}
           </motion.p>
         </motion.div>
       </div>
@@ -73,7 +76,8 @@ const ClientesPrincipales = ({ embedded = false }) => (
         ))}
       </div>
     </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export default ClientesPrincipales

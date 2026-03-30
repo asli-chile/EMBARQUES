@@ -1,18 +1,17 @@
 import { motion } from 'framer-motion'
+import { useLang } from '../lib/LangContext'
 
 const fadeUp = {
   hidden:  { opacity: 0, y: 28 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
 }
 
-const paragraphs = [
-  'ASLI nace a partir de la experiencia y convicción de su Gerente General, Mario Basaez, profesional formado en el corazón de la industria exportadora chilena. Durante años de trabajo en Copefrut, una de las empresas más grandes del sector, Mario fue testigo directo del alto nivel de exigencia, coordinación y precisión que requiere una operación logística de exportación exitosa.',
-  'Sin embargo, esa misma experiencia le permitió identificar una realidad que se repetía con frecuencia: para los pequeños y medianos exportadores, la logística se transformaba en la principal barrera para crecer. Procesos complejos, falta de acompañamiento técnico, decisiones críticas sin asesoría adecuada.',
-  'Con esa inquietud como motor, surge ASLI: una empresa distinta. Cercana, experta y comprometida, que no solo ofrece servicios logísticos, sino que acompaña a sus clientes en cada etapa del proceso, entregando asesoría real, honesta y estratégica.',
-]
+const NuestraHistoria = () => {
+  const { t } = useLang()
+  const paragraphs = [t.historia.p2, t.historia.p3]
 
-const NuestraHistoria = () => (
-  <section className="relative py-14 md:py-36 bg-asli-light overflow-hidden">
+  return (
+    <section className="relative py-14 md:py-36 bg-asli-light overflow-hidden">
 
     {/* Large decorative number */}
     <div
@@ -36,20 +35,20 @@ const NuestraHistoria = () => (
             className="lg:sticky lg:top-32"
           >
             <motion.p variants={fadeUp} className="eyebrow text-asli-primary mb-4">
-              Nuestra Historia
+              {t.historia.eyebrow}
             </motion.p>
             <motion.h2
               variants={fadeUp}
               className="font-display font-black text-asli-dark mb-6"
               style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.5rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
             >
-              Un propósito{' '}
-              <em className="not-italic text-asli-primary">claro</em>{' '}
-              desde el origen
+              {t.historia.title1}{' '}
+              <em className="not-italic text-asli-primary">{t.historia.titleSpan}</em>{' '}
+              {t.historia.title2}
             </motion.h2>
             <motion.div variants={fadeUp} className="w-12 h-0.5 bg-asli-primary rounded-full mb-6" />
             <motion.p variants={fadeUp} className="text-asli-dark/50 text-sm font-light leading-relaxed">
-              Fundada en Curicó, Región del Maule, 2021
+              {t.historia.sub}
             </motion.p>
           </motion.div>
         </div>
@@ -66,11 +65,10 @@ const NuestraHistoria = () => (
             className="border-l-4 border-asli-primary pl-6 py-4 bg-asli-primary/5 rounded-r-2xl"
           >
             <p className="font-display font-bold italic text-asli-secondary text-xl md:text-2xl leading-relaxed">
-              "Asesorar, acompañar y respaldar a los exportadores, ayudándolos
-              a operar con el mismo estándar de las grandes compañías."
+              {t.historia.quote}
             </p>
             <footer className="mt-3 eyebrow text-asli-primary">
-              — Mario Basaez, Fundador y Gerente General
+              {t.historia.quoteBy}
             </footer>
           </motion.blockquote>
 
@@ -97,9 +95,9 @@ const NuestraHistoria = () => (
             className="grid grid-cols-3 gap-4 mt-4 pt-8 border-t border-asli-dark/10"
           >
             {[
-              { v: '2021', l: 'Año de fundación' },
-              { v: 'Maule', l: 'Región de origen' },
-              { v: 'PyME', l: 'Foco exportador' },
+              { v: '2021', l: t.historia.stat1l },
+              { v: 'Maule', l: t.historia.stat2l },
+              { v: 'PyME', l: t.historia.stat3l },
             ].map(item => (
               <div key={item.l} className="text-center">
                 <p className="font-display font-black text-asli-primary text-3xl mb-1">{item.v}</p>
@@ -110,7 +108,8 @@ const NuestraHistoria = () => (
         </div>
       </div>
     </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export default NuestraHistoria

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useLang } from '../lib/LangContext'
 
 const navieras = [
   { nombre: 'Avianca', logo: '/img/avianca.png' },
@@ -40,8 +41,11 @@ const LogoCard = ({ n }) => (
   </div>
 )
 
-const NavierasPrincipales = () => (
-  <section className="relative overflow-hidden bg-transparent py-16 md:py-24">
+const NavierasPrincipales = () => {
+  const { t } = useLang()
+
+  return (
+    <section className="relative overflow-hidden bg-transparent py-16 md:py-24">
 
     <div className="container mx-auto px-6 lg:px-10 mb-14">
       <motion.div
@@ -54,15 +58,15 @@ const NavierasPrincipales = () => (
           variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
           className="eyebrow mb-4 text-center"
         >
-          Conectados globalmente
+          {t.navieras.eyebrow}
         </motion.p>
         <motion.h2
           variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22,1,0.36,1] } } }}
           className="font-display font-black text-white text-center"
           style={{ fontSize: 'clamp(2rem, 4.5vw, 3.4rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
         >
-          Navieras y{' '}
-          <em className="not-italic text-asli-primary">aerolíneas</em>
+          {t.navieras.title}{' '}
+          <em className="not-italic text-asli-primary">{t.navieras.titleSpan}</em>
         </motion.h2>
       </motion.div>
     </div>
@@ -86,7 +90,8 @@ const NavierasPrincipales = () => (
         ))}
       </div>
     </div>
-  </section>
-)
+    </section>
+  )
+}
 
 export default NavierasPrincipales

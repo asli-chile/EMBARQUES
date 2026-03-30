@@ -1,10 +1,42 @@
 import { useState } from 'react'
+import { useLang } from '../lib/LangContext'
 
 /**
  * Sección: Cotización rápida
  * Formulario simple para solicitar cotización referencial
  */
 const Cotizacion = () => {
+  const { lang } = useLang()
+  const tr = lang === 'en'
+    ? {
+        selectService: 'Select service type', export: 'Export', import: 'Import', land: 'Land transport', full: 'Full service',
+        selectCargo: 'Select cargo type', fresh: 'Fresh fruit', frozen: 'Frozen fruit', other: 'Other cargo',
+        ok: 'Thank you for your interest. We will contact you soon with a detailed quotation.',
+        title: 'Quick quotation', sub: 'Complete the form and we will send a reference quotation',
+        service: 'Service type', origin: 'Origin', destination: 'Destination', cargo: 'Cargo type',
+        originPh: 'Origin city or port', destinationPh: 'Destination city or port', btn: 'Request quotation',
+        note: '* This quotation is referential. We will contact you with a detailed proposal.',
+      }
+    : lang === 'zh'
+      ? {
+          selectService: '请选择服务类型', export: '出口', import: '进口', land: '陆运', full: '完整服务',
+          selectCargo: '请选择货物类型', fresh: '鲜果', frozen: '冷冻果', other: '其他货物',
+          ok: '感谢您的咨询。我们将尽快与您联系并提供详细报价。',
+          title: '快速报价', sub: '填写表单，我们将发送参考报价',
+          service: '服务类型', origin: '起点', destination: '目的地', cargo: '货物类型',
+          originPh: '起点城市或港口', destinationPh: '目的地城市或港口', btn: '申请报价',
+          note: '* 本报价为参考报价，我们将与您联系提供详细方案。',
+        }
+      : {
+          selectService: 'Seleccione tipo de servicio', export: 'Exportación', import: 'Importación', land: 'Transporte terrestre', full: 'Servicio completo',
+          selectCargo: 'Seleccione tipo de carga', fresh: 'Fruta fresca', frozen: 'Fruta congelada', other: 'Otra carga',
+          ok: 'Gracias por tu interés. Nos pondremos en contacto contigo pronto para enviarte una cotización detallada.',
+          title: 'Cotización rápida', sub: 'Completa el formulario y te enviaremos una cotización referencial',
+          service: 'Tipo de servicio', origin: 'Origen', destination: 'Destino', cargo: 'Tipo de carga',
+          originPh: 'Ciudad o puerto de origen', destinationPh: 'Ciudad o puerto de destino', btn: 'Solicitar cotización',
+          note: '* Esta cotización es referencial. Te contactaremos para enviarte una propuesta detallada.',
+        }
+
   const [formData, setFormData] = useState({
     tipoServicio: '',
     origen: '',
@@ -13,18 +45,18 @@ const Cotizacion = () => {
   })
 
   const tiposServicio = [
-    { value: '', label: 'Seleccione tipo de servicio' },
-    { value: 'exportacion', label: 'Exportación' },
-    { value: 'importacion', label: 'Importación' },
-    { value: 'transporte', label: 'Transporte terrestre' },
-    { value: 'completo', label: 'Servicio completo' },
+    { value: '', label: tr.selectService },
+    { value: 'exportacion', label: tr.export },
+    { value: 'importacion', label: tr.import },
+    { value: 'transporte', label: tr.land },
+    { value: 'completo', label: tr.full },
   ]
 
   const tiposCarga = [
-    { value: '', label: 'Seleccione tipo de carga' },
-    { value: 'fruta-fresca', label: 'Fruta fresca' },
-    { value: 'fruta-congelada', label: 'Fruta congelada' },
-    { value: 'otra', label: 'Otra carga' },
+    { value: '', label: tr.selectCargo },
+    { value: 'fruta-fresca', label: tr.fresh },
+    { value: 'fruta-congelada', label: tr.frozen },
+    { value: 'otra', label: tr.other },
   ]
 
   const handleChange = (event) => {
@@ -37,10 +69,11 @@ const Cotizacion = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    // TODO: Implementar envío de cotización cuando se integre con backend
-    console.log('Cotización:', formData)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Cotización:', formData)
+    }
     alert(
-      'Gracias por tu interés. Nos pondremos en contacto contigo pronto para enviarte una cotización detallada.'
+      tr.ok
     )
     // Reset form
     setFormData({
@@ -57,10 +90,10 @@ const Cotizacion = () => {
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-asli-dark mb-4">
-              Cotización rápida
+              {tr.title}
             </h2>
             <p className="text-lg text-gray-700">
-              Completa el formulario y te enviaremos una cotización referencial
+              {tr.sub}
             </p>
           </div>
 
@@ -74,7 +107,7 @@ const Cotizacion = () => {
                   htmlFor="tipoServicio"
                   className="block text-sm font-semibold text-gray-700 mb-2"
                 >
-                  Tipo de servicio
+                  {tr.service}
                 </label>
                 <select
                   id="tipoServicio"
@@ -97,7 +130,7 @@ const Cotizacion = () => {
                   htmlFor="origen"
                   className="block text-sm font-semibold text-gray-700 mb-2"
                 >
-                  Origen
+                  {tr.origin}
                 </label>
                 <input
                   type="text"
@@ -105,7 +138,7 @@ const Cotizacion = () => {
                   name="origen"
                   value={formData.origen}
                   onChange={handleChange}
-                  placeholder="Ciudad o puerto de origen"
+                  placeholder={tr.originPh}
                   className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-asli-primary focus:border-transparent"
                   required
                 />
@@ -116,7 +149,7 @@ const Cotizacion = () => {
                   htmlFor="destino"
                   className="block text-sm font-semibold text-gray-700 mb-2"
                 >
-                  Destino
+                  {tr.destination}
                 </label>
                 <input
                   type="text"
@@ -124,7 +157,7 @@ const Cotizacion = () => {
                   name="destino"
                   value={formData.destino}
                   onChange={handleChange}
-                  placeholder="Ciudad o puerto de destino"
+                  placeholder={tr.destinationPh}
                   className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-asli-primary focus:border-transparent"
                   required
                 />
@@ -135,7 +168,7 @@ const Cotizacion = () => {
                   htmlFor="tipoCarga"
                   className="block text-sm font-semibold text-gray-700 mb-2"
                 >
-                  Tipo de carga
+                  {tr.cargo}
                 </label>
                 <select
                   id="tipoCarga"
@@ -158,11 +191,10 @@ const Cotizacion = () => {
                   type="submit"
                   className="w-full bg-asli-primary text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-opacity-90 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  Solicitar cotización
+                  {tr.btn}
                 </button>
                 <p className="text-sm text-gray-500 text-center mt-4">
-                  * Esta cotización es referencial. Te contactaremos para
-                  enviarte una propuesta detallada.
+                  {tr.note}
                 </p>
               </div>
             </div>
