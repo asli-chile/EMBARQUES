@@ -22,7 +22,7 @@ const NAV_LINKS = [
   { href: '/nosotros',   label: 'Nosotros' },
   { href: '/contacto',   label: 'Contacto' },
 ]
-
+//asli_chile
 const SOCIAL = [
   {
     href:  'https://www.linkedin.com/company/aslichile',
@@ -60,6 +60,7 @@ const Footer = () => {
               <img
                 src="/img/logoblanco.png"
                 alt="ASLI Logística"
+                title="ASLI"
                 className="h-9 w-[96px] object-cover object-left transition-opacity group-hover:opacity-80"
               />
               <div className="leading-tight">
