@@ -1,5 +1,8 @@
 import { brand, icons } from "./brand";
 
+/** Inicio del sitio web corporativo (fuera de la app /embarques). Usar en el logo del header. */
+export const marketingHomeUrl = "/" as const;
+
 export const siteConfig = {
   logo: brand.logo,
   companyTitle: brand.companyTitle,

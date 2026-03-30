@@ -5,9 +5,9 @@ import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { withBase } from "@/lib/basePath";
 
-// Ítems fijos que siempre se muestran en la barra cuando está logueado
+// Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
 const PINNED_NAV = [
-  { labelKey: "inicio"     as const, href: "/inicio" },
+  { labelKey: "inicio"     as const, href: "/dashboard" },
   { labelKey: "itinerario" as const, href: "/itinerario" },
   { labelKey: "stacking"   as const, href: "/stacking" },
 ];

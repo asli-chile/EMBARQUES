@@ -1,5 +1,4 @@
-import { withBase } from "@/lib/basePath";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, marketingHomeUrl } from "@/lib/site";
 import { AuthWidget } from "@/components/ui/AuthWidget";
 import { OnlineUsersButton } from "@/components/ui/OnlineUsersButton";
 import { VisitCounterBadge } from "@/components/ui/VisitCounterBadge";
@@ -12,7 +11,11 @@ export function Header() {
       role="banner"
     >
       {/* Logo — mobile: tamaño reducido, desktop: tamaño completo */}
-      <a href={withBase("/inicio")} className="h-7 md:h-[46px] w-auto flex items-center flex-shrink-0">
+      <a
+        href={marketingHomeUrl}
+        className="h-7 md:h-[46px] w-auto flex items-center flex-shrink-0"
+        aria-label="Ir al inicio del sitio web"
+      >
         <img
           src={siteConfig.logo}
           alt={siteConfig.companyTitle}
