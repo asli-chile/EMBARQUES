@@ -37,6 +37,27 @@ Documentación oficial (monorepos): [Vercel — Monorepos](https://vercel.com/do
 
 ---
 
+## Web2 no se despliega o sale “Skipped”
+
+Revisa en **este orden** (proyecto **web2** en Vercel):
+
+1. **Settings → Git → Production Branch**  
+   El repo usa **`master`**. Si aquí está **`main`**, los pushes a `master` **no** actualizan producción. Cámbialo a **`master`** (o alinea tu rama por defecto en GitHub).
+
+2. **Settings → Git → Ignored Build Step**  
+   Si hay un comando personalizado mal puesto, puede **omitir siempre** el build (quedarás en “Skipped”). **Déjalo vacío** salvo que sepas lo que haces. Un comando típico erróneo es uno que siempre termina en código `0` (omitir).
+
+3. **Solo cambiaste Embarques (fuera de `web2/`)**  
+   Si en el futuro activas un “Ignored Build Step” que solo construye cuando cambia `web2/`, es **normal** que un push que solo toque Astro **no** redeploye web2. En ese caso usa **Deployments → … → Redeploy** en el proyecto web2 para publicar de nuevo el marketing sin cambiar código.
+
+4. **Settings → General → Root Directory**  
+   Debe ser exactamente **`web2`**.
+
+5. **Build fallido**  
+   Abre el último deployment en rojo y revisa los logs (Node, `npm ci`, errores de Next).
+
+---
+
 ## 1. Proyecto Embarques (Astro)
 
 1. **Root Directory**: raíz del repo (sin subcarpeta).
