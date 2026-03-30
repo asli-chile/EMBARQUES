@@ -62,7 +62,7 @@
     },
     {
       "source": "/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png",
-      "destination": "https://embarques-teal.vercel.app/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
+      "destination": "/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
     },
     {
       "source": "/api/admin/:path*",
