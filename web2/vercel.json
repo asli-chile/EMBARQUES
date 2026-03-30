@@ -37,6 +37,14 @@
       "destination": "https://registo-de-embarques-asli-toox.vercel.app/fonts/:path*"
     },
     {
+      "source": "/embarques",
+      "destination": "https://embarques-teal.vercel.app"
+    },
+    {
+      "source": "/embarques/:path*",
+      "destination": "https://embarques-teal.vercel.app/:path*"
+    },
+    {
       "source": "/api/admin/:path*",
       "destination": "https://registo-de-embarques-asli-toox.vercel.app/api/admin/:path*"
     },
