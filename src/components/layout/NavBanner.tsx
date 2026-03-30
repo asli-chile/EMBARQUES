@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
+import { withBase } from "@/lib/basePath";
 
 // Ítems fijos que siempre se muestran en la barra cuando está logueado
 const PINNED_NAV = [
@@ -146,7 +147,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
         return (
           <div key={item.id} className="flex flex-col gap-1">
             {hasHref ? (
-              <a href={item.href!} onClick={() => setDrawerOpen(false)}
+              <a href={withBase(item.href!)} onClick={() => setDrawerOpen(false)}
                 className={isActive ? cardActive : cardNormal}
                 aria-current={isActive ? "page" : undefined}
               >
@@ -196,7 +197,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                             {itinerarioSubs.map((sub) => {
                               const isSubActive = pathname === sub.href;
                               return (
-                                <a key={sub.id} href={sub.href} onClick={() => setDrawerOpen(false)}
+                                <a key={sub.id} href={withBase(sub.href)} onClick={() => setDrawerOpen(false)}
                                   className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all duration-200 ${
                                     isSubActive
                                       ? "bg-brand-olive/20 border-brand-olive/40 text-white"
@@ -217,7 +218,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
                   const isChildActive = pathname === child.href;
                   return (
-                    <a key={child.id} href={child.href ?? "#"} onClick={() => setDrawerOpen(false)}
+                    <a key={child.id} href={child.href ? withBase(child.href) : "#"} onClick={() => setDrawerOpen(false)}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 ${
                         isChildActive
                           ? "bg-brand-olive/20 border-brand-olive/40 text-white"
@@ -273,7 +274,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
             {PINNED_NAV.map(({ labelKey, href }) => {
               const isActive = pathname === href;
               return (
-                <a key={href} href={href}
+                <a key={href} href={withBase(href)}
                   className={`px-3 py-1.5 text-sm font-medium uppercase tracking-wide rounded-lg transition-all duration-200 ${
                     isActive
                       ? "text-white bg-white/15 border border-white/20 shadow-sm"
@@ -323,7 +324,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
               {siteConfig.navItems.map(({ labelKey, href }) => {
                 const isActive = pathname === href;
                 return (
-                  <a key={href} href={href}
+                  <a key={href} href={withBase(href)}
                     className={`px-3 py-1.5 text-sm font-medium uppercase tracking-wide rounded-lg transition-all duration-200 ${
                       isActive
                         ? "text-white bg-white/15 border border-white/20 shadow-sm"

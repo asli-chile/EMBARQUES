@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
+import { withBase } from "@/lib/basePath";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -588,7 +589,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                     <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
                       <Icon icon="lucide:file-x" width={24} height={24} className="text-neutral-300" />
                       <p className="text-xs text-neutral-500">{cfg.emptyMsg}</p>
-                      <a href="/configuracion/formatos-documentos" className="text-xs text-brand-blue hover:underline font-medium mt-1">
+                      <a href={withBase("/configuracion/formatos-documentos")} className="text-xs text-brand-blue hover:underline font-medium mt-1">
                         {tr.crearFormato}
                       </a>
                     </div>

@@ -1,5 +1,6 @@
 ---
 import { AppShell } from "@/components/layout";
+import { stripBasePathname, withBase } from "@/lib/basePath";
 import "@/styles/globals.css";
 
 interface Props {
@@ -8,7 +9,7 @@ interface Props {
 }
 
 const { title = "EMBARQUES - Logística y Comercio Exterior", description = "Logística y Comercio Exterior" } = Astro.props;
-const pathname = Astro.url.pathname;
+const pathname = stripBasePathname(Astro.url.pathname);
 ---
 
 <!DOCTYPE html>
@@ -16,7 +17,7 @@ const pathname = Astro.url.pathname;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/LOGO ASLI SIN FONDO AZUL.png" />
+    <link rel="icon" type="image/png" href={withBase("/LOGO ASLI SIN FONDO AZUL.png")} />
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

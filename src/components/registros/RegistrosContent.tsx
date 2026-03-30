@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { columnWidths } from "@/lib/registros-table-config";
 import { sileo } from "sileo";
+import { withBase } from "@/lib/basePath";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -1261,7 +1262,7 @@ export function RegistrosContent() {
             <>
               {/* Botón Agregar Reserva */}
               <a
-                href="/reservas/crear"
+                href={withBase("/reservas/crear")}
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
               >
                 <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />

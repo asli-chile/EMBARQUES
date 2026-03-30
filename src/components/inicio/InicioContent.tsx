@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand, icons } from "@/lib/brand";
+import { withBase } from "@/lib/basePath";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -226,7 +227,7 @@ export function InicioContent() {
             </div>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
               {isLoggedIn ? (
-                <a href="/dashboard" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
+                <a href={withBase("/dashboard")} className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
                   <Icon icon="lucide:layout-dashboard" width={18} height={18} />
                   Ir al Dashboard
                 </a>
@@ -237,7 +238,7 @@ export function InicioContent() {
                 </AuthFormTrigger>
               )}
               {isLoggedIn ? (
-                <a href="/registros" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
+                <a href={withBase("/registros")} className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
                   <Icon icon="lucide:table-2" width={18} height={18} />
                   Ir a Registros
                 </a>
@@ -600,7 +601,7 @@ export function InicioContent() {
           </div>
 
           <div className="text-center">
-            <a href="/dashboard" className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-black/50 backdrop-blur-md border border-white/30 rounded-xl text-white font-medium hover:bg-black/60 hover:border-blue-400/50 transition-all shadow-lg shadow-black/20 text-sm sm:text-base">
+            <a href={withBase("/dashboard")} className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-black/50 backdrop-blur-md border border-white/30 rounded-xl text-white font-medium hover:bg-black/60 hover:border-blue-400/50 transition-all shadow-lg shadow-black/20 text-sm sm:text-base">
               <Icon icon="lucide:layout-dashboard" width={18} height={18} />
               {t.inicio.kpiCta}
               <Icon icon="lucide:arrow-right" width={16} height={16} />

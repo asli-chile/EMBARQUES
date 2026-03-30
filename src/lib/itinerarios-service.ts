@@ -2,6 +2,7 @@
  * Servicio de itinerarios
  * Obtiene datos públicos y crea itinerarios (admin) desde la API.
  */
+import { getApiOriginPrefix } from "@/lib/basePath";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 
 export type ItinerarioEscalaInput = {
@@ -27,10 +28,7 @@ export type CreateItinerarioInput = {
 };
 
 function getApiUrl(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.PUBLIC_API_URL) {
-    return String(import.meta.env.PUBLIC_API_URL);
-  }
-  return typeof window !== "undefined" ? "" : "http://localhost:4321";
+  return getApiOriginPrefix();
 }
 
 export async function fetchPublicItinerarios(): Promise<ItinerarioWithEscalas[]> {

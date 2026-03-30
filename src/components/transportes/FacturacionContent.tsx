@@ -700,7 +700,7 @@ export function FacturacionContent() {
   <!-- ENCABEZADO -->
   <div class="header">
     <div class="logo-area">
-      <img src="${window.location.origin}/LOGO ASLI SIN FONDO AZUL.png" alt="ASLI"
+      <img src="${typeof window !== "undefined" ? window.location.origin : ""}${brand.logo}" alt="ASLI"
            onerror="this.style.display='none';document.getElementById('brand-text').style.display='block'">
       <div id="brand-text" style="display:none">
         <div class="company-name">ASLI Ltda.</div>

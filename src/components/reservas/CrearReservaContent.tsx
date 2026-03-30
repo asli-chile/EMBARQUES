@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
+import { withBase } from "@/lib/basePath";
 import { useAuth } from "@/lib/auth/AuthContext";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
@@ -1915,7 +1916,7 @@ export function CrearReservaContent() {
                 <p className="text-sm text-neutral-600 mb-5">{success}</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setSuccess(null)} className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm">{tr.btnClose}</button>
-                  <a href="/reservas/mis-reservas" className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm">
+                  <a href={withBase("/reservas/mis-reservas")} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm">
                     Ver reservas <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>
                 </div>

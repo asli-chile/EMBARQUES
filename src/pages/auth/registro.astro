@@ -1,3 +1,5 @@
 ---
-return Astro.redirect("/inicio", 301);
+import { withBase } from "@/lib/basePath";
+
+return Astro.redirect(withBase("/inicio"), 301);
 ---

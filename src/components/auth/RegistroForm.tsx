@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
+import { withBase } from "@/lib/basePath";
 import { useLocale } from "@/lib/i18n";
 
 export function RegistroForm() {
@@ -17,7 +18,7 @@ export function RegistroForm() {
     const formData = new FormData(form);
 
     try {
-      const res = await fetch("/api/auth/signup", {
+      const res = await fetch(withBase("/api/auth/signup"), {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -25,7 +26,7 @@ export function RegistroForm() {
       const data = await res.json().catch(() => ({}));
       setIsPending(false);
       if (data.success && data.redirect) {
-        window.location.href = data.redirect;
+        window.location.href = withBase(data.redirect);
         return;
       }
       setError(

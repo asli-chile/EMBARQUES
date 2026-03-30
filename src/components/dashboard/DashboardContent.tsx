@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
 import { format, differenceInDays, addDays, subDays, formatDistanceToNow, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
+import { withBase } from "@/lib/basePath";
 
 type OperacionResumen = {
   id: string;
@@ -310,14 +311,14 @@ export function DashboardContent() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <a
-              href="/reservas/crear"
+              href={withBase("/reservas/crear")}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors shadow-sm"
             >
               <Icon icon="typcn:plus" width={16} height={16} />
               {t.sidebar.crearReserva}
             </a>
             <a
-              href="/registros"
+              href={withBase("/registros")}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-brand-blue bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
             >
               <Icon icon="typcn:th-list" width={16} height={16} />
@@ -580,7 +581,7 @@ export function DashboardContent() {
                 {tr.upcomingDepartures}
               </h2>
               <a
-                href="/reservas/mis-reservas"
+                href={withBase("/reservas/mis-reservas")}
                 className="text-xs font-medium text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
               >
                 {tr.viewAll}
@@ -631,7 +632,7 @@ export function DashboardContent() {
                 {tr.recentOperations}
               </h2>
               <a
-                href="/registros"
+                href={withBase("/registros")}
                 className="text-xs font-medium text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
               >
                 {tr.viewAll}

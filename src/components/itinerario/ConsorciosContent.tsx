@@ -6,12 +6,10 @@ import { useLocale } from "@/lib/i18n";
 import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { getApiOriginPrefix } from "@/lib/basePath";
 
 function getApiUrl(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.PUBLIC_API_URL) {
-    return String(import.meta.env.PUBLIC_API_URL);
-  }
-  return "";
+  return getApiOriginPrefix();
 }
 
 type ServicioOption = {

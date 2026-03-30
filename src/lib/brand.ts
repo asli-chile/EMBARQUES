@@ -5,13 +5,15 @@
  * Usar como receta al crear nuevos elementos para mantener congruencia.
  */
 
+import { withBase } from "./basePath";
+
 // ─── LOGOS Y MARCA ─────────────────────────────────────────────────────────
 
 export const brand = {
   /** Logo principal (header, auth layout) */
-  logo: "/LOGO ASLI SIN FONDO AZUL.png",
+  logo: withBase("/LOGO ASLI SIN FONDO AZUL.png"),
   /** Logo en blanco — fondo oscuro, página de inicio */
-  logoWhite: "/LOGO ASLI SIN FONDO BLANCO.png",
+  logoWhite: withBase("/LOGO ASLI SIN FONDO BLANCO.png"),
   /** Nombre de la empresa */
   companyTitle: "Asesorias y Servicios Logisticos Integrales Ltda.",
   /**

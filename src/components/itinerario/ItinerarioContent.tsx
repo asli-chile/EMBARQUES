@@ -26,6 +26,7 @@ import {
 } from "@/lib/stacking-drafts";
 import ItinerarioMap from "./ItinerarioMap";
 import { generateItinerarioPDF } from "@/lib/itinerario-pdf";
+import { getApiOriginPrefix, withBase } from "@/lib/basePath";
 
 const DATE_DISPLAY = "dd/MM/yyyy";
 
@@ -106,13 +107,7 @@ function fromDDMMYYYY(s: string): string | null {
 }
 
 function getApiUrl(): string {
-  try {
-    const env = (import.meta as { env?: { PUBLIC_API_URL?: string } }).env;
-    if (env?.PUBLIC_API_URL) return String(env.PUBLIC_API_URL);
-  } catch {
-    // ignore
-  }
-  return "";
+  return getApiOriginPrefix();
 }
 
 type EscalaForm = { puerto: string; puerto_nombre: string; eta: string; dias_transito: string; area: string };
@@ -672,7 +667,7 @@ export function ItinerarioContent() {
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get("stackingItId")) {
-          window.location.assign("/stacking");
+          window.location.assign(withBase("/stacking"));
         }
       } catch {
         // Ignorar errores de navegación

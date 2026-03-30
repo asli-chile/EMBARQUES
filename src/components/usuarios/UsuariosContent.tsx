@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
+import { withBase } from "@/lib/basePath";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 
@@ -84,7 +85,7 @@ export function UsuariosContent() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch("/api/usuarios-empresas", {
+      const res = await fetch(withBase("/api/usuarios-empresas"), {
         credentials: "include",
         signal: controller.signal,
       });
@@ -126,7 +127,7 @@ export function UsuariosContent() {
       e.preventDefault();
       setCreateError(null);
       setCreateSuccess(false);
-      const res = await fetch("/api/auth/create-user", {
+      const res = await fetch(withBase("/api/auth/create-user"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -262,7 +263,7 @@ export function UsuariosContent() {
       setResetError(null);
       setIsResetting(true);
       try {
-        const res = await fetch("/api/auth/reset-user", {
+        const res = await fetch(withBase("/api/auth/reset-user"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -291,7 +292,7 @@ export function UsuariosContent() {
       setActivateError(null);
       setIsActivating(true);
       try {
-        const res = await fetch("/api/auth/activate-user", {
+        const res = await fetch(withBase("/api/auth/activate-user"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -320,7 +321,7 @@ export function UsuariosContent() {
       setChangePasswordError(null);
       setIsVerifying(true);
       try {
-        const res = await fetch("/api/auth/verify-user-password", {
+        const res = await fetch(withBase("/api/auth/verify-user-password"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -360,7 +361,7 @@ export function UsuariosContent() {
       setChangePasswordError(null);
       setIsChangingPassword(true);
       try {
-        const res = await fetch("/api/auth/change-password", {
+        const res = await fetch(withBase("/api/auth/change-password"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -402,7 +403,7 @@ export function UsuariosContent() {
           bulkAssigningUsers.map(async (u) => {
             const currentIds = empresasPorUsuario[u.id] ?? [];
             const mergedIds = [...new Set([...currentIds, ...assignEmpresaIds])];
-            const res = await fetch("/api/usuarios-empresas", {
+            const res = await fetch(withBase("/api/usuarios-empresas"), {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
@@ -445,7 +446,7 @@ export function UsuariosContent() {
       setEditError(null);
       setIsUpdating(true);
       try {
-        const res = await fetch("/api/usuarios-empresas", {
+        const res = await fetch(withBase("/api/usuarios-empresas"), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

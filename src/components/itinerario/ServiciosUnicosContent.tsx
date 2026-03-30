@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { getApiOriginPrefix } from "@/lib/basePath";
 
 const AREAS = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA"] as const;
 
@@ -21,10 +22,7 @@ function normalizeArea(area: string | null | undefined): string {
 }
 
 function getApiUrl(): string {
-  if (typeof import.meta !== "undefined" && import.meta.env?.PUBLIC_API_URL) {
-    return String(import.meta.env.PUBLIC_API_URL);
-  }
-  return "";
+  return getApiOriginPrefix();
 }
 
 type Naviera = { id: string; nombre: string };

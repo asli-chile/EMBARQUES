@@ -8,6 +8,8 @@ import tailwind from "@astrojs/tailwind";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  /** Producción detrás de asli.cl/embarques — enlaces y assets bajo /embarques */
+  base: "/embarques",
   devToolbar: { enabled: false },
   integrations: [
     react(),

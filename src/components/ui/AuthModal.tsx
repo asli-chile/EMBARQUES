@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
+import { withBase } from "@/lib/basePath";
 
 export type AuthUser = {
   name: string;
@@ -177,7 +178,7 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
             </div>
 
             <form
-              action="/api/auth/signout"
+              action={withBase("/api/auth/signout")}
               method="post"
               className="mt-6 pt-4 border-t border-neutral-200"
             >

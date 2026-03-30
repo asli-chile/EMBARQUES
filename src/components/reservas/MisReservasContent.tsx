@@ -11,6 +11,7 @@ import { es } from "date-fns/locale";
 import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { withBase } from "@/lib/basePath";
 
 type Operacion = {
   id: string;
@@ -951,7 +952,7 @@ export function MisReservasContent() {
               </button>
             </div>
             <a
-              href="/reservas/crear"
+              href={withBase("/reservas/crear")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
             >
               <Icon icon="lucide:plus" width={13} height={13} />
@@ -1359,7 +1360,7 @@ export function MisReservasContent() {
                   {tr.close}
                 </button>
                 <a
-                  href="/transportes/reserva-asli"
+                  href={withBase("/transportes/reserva-asli")}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm"
                 >
                   {tr.goToTransports}
@@ -1410,7 +1411,7 @@ export function MisReservasContent() {
                   <button type="button" onClick={() => setShowTransportModal(false)} className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
                     {tr.close}
                   </button>
-                  <a href="/transportes/reserva-asli" className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-xs">
+                  <a href={withBase("/transportes/reserva-asli")} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-xs">
                     {tr.goToTransports}
                     <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>

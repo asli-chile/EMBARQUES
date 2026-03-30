@@ -38,27 +38,11 @@
     },
     {
       "source": "/embarques",
-      "destination": "https://embarques-teal.vercel.app/dashboard"
+      "destination": "https://embarques-teal.vercel.app/embarques/inicio"
     },
     {
       "source": "/embarques/:path*",
-      "destination": "https://embarques-teal.vercel.app/:path*"
-    },
-    {
-      "source": "/_astro/:path*",
-      "destination": "https://embarques-teal.vercel.app/_astro/:path*"
-    },
-    {
-      "source": "/cliente.:path*",
-      "destination": "https://embarques-teal.vercel.app/cliente.:path*"
-    },
-    {
-      "source": "/layout.:path*",
-      "destination": "https://embarques-teal.vercel.app/layout.:path*"
-    },
-    {
-      "source": "/client.:path*",
-      "destination": "https://embarques-teal.vercel.app/client.:path*"
+      "destination": "https://embarques-teal.vercel.app/embarques/:path*"
     },
     {
       "source": "/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png",

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
+import { withBase } from "@/lib/basePath";
 import { useLocale } from "@/lib/i18n";
 
 export function LoginForm() {
@@ -18,7 +19,7 @@ export function LoginForm() {
     const password = form.querySelector<HTMLInputElement>('[name="password"]')?.value ?? "";
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(withBase("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -27,7 +28,7 @@ export function LoginForm() {
       const data = await res.json();
       setIsPending(false);
       if (data.success && data.redirect) {
-        window.location.href = data.redirect;
+        window.location.href = withBase(data.redirect);
       } else if (data.error) {
         setError(data.error);
       }

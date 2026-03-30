@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { withBase } from "@/lib/basePath";
 
-const API_CLIENTES = "/api/clientes";
+const API_CLIENTES = withBase("/api/clientes");
 
 export type ClienteRow = {
   id: string;
