@@ -1,6 +1,6 @@
 /**
  * Codifica cada segmento de ruta (espacios, tildes, etc.) sin tocar las barras.
- * Así los assets en /public con nombre "LOGO ASLI SIN FONDO AZUL.png" cargan bien
+ * Así los assets en /public (p. ej. nombres con espacios) cargan bien
  * detrás de proxies (asli.cl → Vercel) y en CDNs que son estrictos con la URL.
  */
 function encodePathSegments(path: string): string {

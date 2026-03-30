@@ -1400,7 +1400,7 @@ export function CrearProformaContent() {
   <colgroup><col style="width:14%"/><col style="width:58%"/><col style="width:28%"/></colgroup>
   <tr>
     <td rowspan="3" style="vertical-align:middle;padding:4px">
-      <img src="${withBase("/almafruit-logo.png")}" style="height:54px;width:auto"/>
+      <img src="${withBase("/logoasli.png")}" style="height:54px;width:auto"/>
     </td>
     <td style="font-weight:bold;font-size:8.5px">${escH(header.exportador || "EXPORTADORA ALMA FRUIT SPA")}</td>
     <td style="font-weight:bold">RUT: ${escH(header.exportador_rut)}</td>

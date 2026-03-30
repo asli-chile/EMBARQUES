@@ -6,6 +6,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
+import { withBase } from "@/lib/basePath";
 
 const BRAND_BLUE: [number, number, number] = [0, 82, 155];
 const WHITE: [number, number, number] = [255, 255, 255];
@@ -42,7 +43,7 @@ function formatDate(dateStr: string | null | undefined): string {
 
 async function loadLogo(): Promise<{ dataUrl: string; w: number; h: number } | null> {
   try {
-    const resp = await fetch("/LOGO ASLI SIN FONDO BLANCO.png");
+    const resp = await fetch(withBase("/logoblanco.png"));
     if (!resp.ok) return null;
     const blob = await resp.blob();
     const dataUrl = await new Promise<string>((resolve, reject) => {

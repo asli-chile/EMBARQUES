@@ -297,7 +297,7 @@ const TEMPLATE_BASE = `<!DOCTYPE html>
 </head>
 <body>
   <div class="header">
-    <div class="logo-area"><img src="${withBase("/LOGO ASLI SIN FONDO AZUL.png")}" alt="ASLI"></div>
+    <div class="logo-area"><img src="${withBase("/logoasli.png")}" alt="ASLI"></div>
     <div>
       <div class="doc-title">Documento</div>
       <div class="doc-ref">Ref: {{ref_asli}}</div>

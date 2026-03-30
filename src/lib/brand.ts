@@ -10,10 +10,10 @@ import { withBase } from "./basePath";
 // ─── LOGOS Y MARCA ─────────────────────────────────────────────────────────
 
 export const brand = {
-  /** Logo principal (header, auth layout) */
-  logo: withBase("/LOGO ASLI SIN FONDO AZUL.png"),
-  /** Logo en blanco — fondo oscuro, página de inicio */
-  logoWhite: withBase("/LOGO ASLI SIN FONDO BLANCO.png"),
+  /** Logo principal (header, auth layout) — archivo en `public/logoasli.png` */
+  logo: withBase("/logoasli.png"),
+  /** Logo en blanco — fondo oscuro, página de inicio — `public/logoblanco.png` */
+  logoWhite: withBase("/logoblanco.png"),
   /** Nombre de la empresa */
   companyTitle: "Asesorias y Servicios Logisticos Integrales Ltda.",
   /**
