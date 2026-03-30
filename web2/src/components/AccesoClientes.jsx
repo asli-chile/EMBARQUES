@@ -3,11 +3,6 @@
  * Fondo #11224E, información sobre plataforma privada
  */
 const AccesoClientes = () => {
-  const handleAccesoClick = () => {
-    // TODO: Redirigir a ruta de login cuando esté implementada
-    window.location.href = '/clientes'
-  }
-
   const caracteristicas = [
     'Dashboards en tiempo real',
     'Estados de operaciones',
@@ -52,14 +47,13 @@ const AccesoClientes = () => {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={handleAccesoClick}
-            className="bg-asli-primary text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-opacity-90 transition-all duration-200 shadow-md hover:shadow-lg"
-            aria-label="Ingresar a la plataforma de clientes"
+          <a
+            href="/embarques"
+            className="inline-block bg-asli-primary text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-opacity-90 transition-all duration-200 shadow-md hover:shadow-lg"
+            aria-label="Ingresar a la plataforma de clientes (Embarques)"
           >
             Ingresar a la plataforma
-          </button>
+          </a>
         </div>
       </div>
     </section>
