@@ -1,48 +1,24 @@
 {
   "rewrites": [
     {
-      "source": "/_next/static/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/_next/static/:path*"
-    },
-    {
-      "source": "/_next/image/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/_next/image/:path*"
-    },
-    {
-      "source": "/_next/chunks/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/_next/chunks/:path*"
-    },
-    {
-      "source": "/_next/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/_next/:path*"
-    },
-    {
-      "source": "/next/static/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/_next/static/:path*"
-    },
-    {
-      "source": "/next/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/_next/:path*"
-    },
-    {
       "source": "/logoasli.png",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/logoasli.png"
+      "destination": "https://asli.cl/embarques/logoasli.png"
     },
     {
       "source": "/favicon.ico",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/favicon.ico"
+      "destination": "https://asli.cl/embarques/favicon.ico"
     },
     {
       "source": "/fonts/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/fonts/:path*"
+      "destination": "https://asli.cl/embarques/fonts/:path*"
     },
     {
       "source": "/embarques",
-      "destination": "https://embarques-teal.vercel.app/embarques/inicio"
+      "destination": "https://asli.cl/embarques/inicio"
     },
     {
       "source": "/embarques/:path*",
-      "destination": "https://embarques-teal.vercel.app/embarques/:path*"
+      "destination": "https://asli.cl/embarques/:path*"
     },
     {
       "source": "/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png",
@@ -50,15 +26,15 @@
     },
     {
       "source": "/api/admin/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/api/admin/:path*"
+      "destination": "https://asli.cl/embarques/api/admin/:path*"
     },
     {
       "source": "/api/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/api/:path*"
+      "destination": "https://asli.cl/embarques/api/:path*"
     },
     {
       "source": "/auth",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/auth",
+      "destination": "https://asli.cl/embarques/auth/login",
       "has": [
         {
           "type": "header",
@@ -69,123 +45,119 @@
     },
     {
       "source": "/indicadores",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/indicadores"
-    },
-    {
-      "source": "/contacto",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/contacto"
+      "destination": "https://asli.cl/embarques/indicadores"
     },
     {
       "source": "/dashboard",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/dashboard"
+      "destination": "https://asli.cl/embarques/dashboard"
     },
     {
       "source": "/dashboard/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/dashboard/:path*"
+      "destination": "https://asli.cl/embarques/dashboard/:path*"
     },
     {
       "source": "/documentos",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/documentos"
+      "destination": "https://asli.cl/embarques/documentos"
     },
     {
       "source": "/documentos/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/documentos/:path*"
+      "destination": "https://asli.cl/embarques/documentos/:path*"
     },
     {
       "source": "/generar-documentos",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/generar-documentos"
+      "destination": "https://asli.cl/embarques/generar-documentos"
     },
     {
       "source": "/generar-documentos/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/generar-documentos/:path*"
+      "destination": "https://asli.cl/embarques/generar-documentos/:path*"
     },
     {
       "source": "/facturas",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/facturas"
+      "destination": "https://asli.cl/embarques/facturas"
     },
     {
       "source": "/facturas/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/facturas/:path*"
+      "destination": "https://asli.cl/embarques/facturas/:path*"
     },
     {
       "source": "/facturar-preview",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/facturar-preview"
+      "destination": "https://asli.cl/embarques/facturar-preview"
     },
     {
       "source": "/facturar-preview/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/facturar-preview/:path*"
+      "destination": "https://asli.cl/embarques/facturar-preview/:path*"
     },
     {
       "source": "/itinerario",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/itinerario"
+      "destination": "https://asli.cl/embarques/itinerario"
     },
     {
       "source": "/itinerario/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/itinerario/:path*"
+      "destination": "https://asli.cl/embarques/itinerario/:path*"
     },
     {
       "source": "/mantenimiento",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/mantenimiento"
+      "destination": "https://asli.cl/embarques/mantenimiento"
     },
     {
       "source": "/mantenimiento/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/mantenimiento/:path*"
+      "destination": "https://asli.cl/embarques/mantenimiento/:path*"
     },
     {
       "source": "/profile",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/profile"
+      "destination": "https://asli.cl/embarques/profile"
     },
     {
       "source": "/profile/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/profile/:path*"
+      "destination": "https://asli.cl/embarques/profile/:path*"
     },
     {
       "source": "/registros",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/registros"
+      "destination": "https://asli.cl/embarques/registros"
     },
     {
       "source": "/registros/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/registros/:path*"
+      "destination": "https://asli.cl/embarques/registros/:path*"
     },
     {
       "source": "/reportes",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/reportes"
+      "destination": "https://asli.cl/embarques/reportes"
     },
     {
       "source": "/reportes/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/reportes/:path*"
+      "destination": "https://asli.cl/embarques/reportes/:path*"
     },
     {
       "source": "/finanzas",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/finanzas"
+      "destination": "https://asli.cl/embarques/finanzas"
     },
     {
       "source": "/finanzas/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/finanzas/:path*"
+      "destination": "https://asli.cl/embarques/finanzas/:path*"
     },
     {
       "source": "/tablas-personalizadas",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/tablas-personalizadas"
+      "destination": "https://asli.cl/embarques/tablas-personalizadas"
     },
     {
       "source": "/tablas-personalizadas/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/tablas-personalizadas/:path*"
+      "destination": "https://asli.cl/embarques/tablas-personalizadas/:path*"
     },
     {
       "source": "/transportes",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/transportes"
+      "destination": "https://asli.cl/embarques/transportes"
     },
     {
       "source": "/transportes/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/transportes/:path*"
+      "destination": "https://asli.cl/embarques/transportes/:path*"
     },
     {
       "source": "/vessel-diagnose",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/vessel-diagnose"
+      "destination": "https://asli.cl/embarques/vessel-diagnose"
     },
     {
       "source": "/vessel-diagnose/:path*",
-      "destination": "https://registo-de-embarques-asli-toox.vercel.app/vessel-diagnose/:path*"
+      "destination": "https://asli.cl/embarques/vessel-diagnose/:path*"
     }
   ],
   "headers": [

@@ -10,6 +10,7 @@
     "dev": "astro dev",
     "dev:android": "astro dev --host",
     "build": "astro build",
+    "build:web2": "npm run build --prefix web2",
     "preview": "astro preview",
     "lint": "eslint .",
     "deploy:function:send-email": "supabase functions deploy send-email"
