@@ -38,7 +38,7 @@
     },
     {
       "source": "/embarques",
-      "destination": "https://embarques-teal.vercel.app"
+      "destination": "https://embarques-teal.vercel.app/dashboard"
     },
     {
       "source": "/embarques/:path*",
