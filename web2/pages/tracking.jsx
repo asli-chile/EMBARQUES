@@ -3,12 +3,16 @@ import { motion } from 'framer-motion'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
 import Tracking from '../src/components/Tracking'
+import { useLang } from '../src/lib/LangContext'
 
-const TrackingPage = () => (
-  <>
+const TrackingPage = () => {
+  const { t, lang } = useLang()
+
+  return (
+    <>
     <Head>
-      <title>Tracking de Cargas — ASLI Logística</title>
-      <meta name="description" content="Consulta el estado de tus cargas en tiempo real. Accede al seguimiento oficial directamente con la naviera o aerolínea." />
+      <title>{lang === 'en' ? 'Cargo Tracking — ASLI Logistics' : lang === 'zh' ? '货物追踪 — ASLI 物流' : 'Tracking de Cargas — ASLI Logística'}</title>
+      <meta name="description" content={lang === 'en' ? 'Track your cargo in real time. Access official tracking directly with the shipping line or airline.' : lang === 'zh' ? '实时查询货物状态，直接进入船公司或航空公司的官方追踪系统。' : 'Consulta el estado de tus cargas en tiempo real. Accede al seguimiento oficial directamente con la naviera o aerolínea.'} />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     </Head>
 
@@ -46,7 +50,7 @@ const TrackingPage = () => (
                 className="flex items-center gap-3 mb-5"
               >
                 <span className="w-8 h-px bg-asli-primary" />
-                <span className="eyebrow">Seguimiento de Cargas</span>
+                <span className="eyebrow">{t.tracking.eyebrow}</span>
               </motion.div>
 
               <motion.h1
@@ -55,15 +59,14 @@ const TrackingPage = () => (
                 style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.03em' }}
               >
                 Tracking{' '}
-                <em className="not-italic text-asli-primary">en tiempo real</em>
+                <em className="not-italic text-asli-primary">{t.tracking.titleSpan}</em>
               </motion.h1>
 
               <motion.p
                 variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.1 } } }}
                 className="text-white/55 text-lg md:text-xl leading-relaxed font-light"
               >
-                Selecciona la naviera o aerolínea de tu carga para acceder
-                directamente a su sistema oficial de seguimiento.
+                {t.tracking.sub}
               </motion.p>
             </motion.div>
           </div>
@@ -82,16 +85,16 @@ const TrackingPage = () => (
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               className="max-w-2xl mx-auto text-center"
             >
-              <p className="eyebrow mb-4">¿Necesitas ayuda?</p>
+              <p className="eyebrow mb-4">{t.tracking.ctaEyebrow}</p>
               <h2
                 className="font-display font-black text-white mb-5"
                 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', lineHeight: 1.1, letterSpacing: '-0.02em' }}
               >
-                ¿Tienes problemas con el{' '}
-                <em className="not-italic text-asli-primary">seguimiento de tu carga?</em>
+                {t.tracking.ctaTitle}{' '}
+                <em className="not-italic text-asli-primary">{t.tracking.ctaSpan}</em>
               </h2>
               <p className="text-white/55 text-lg font-light mb-8">
-                Contáctanos y nuestro equipo te ayuda con cualquier consulta sobre el estado de tu envío.
+                {t.tracking.ctaSub}
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <a
@@ -100,7 +103,7 @@ const TrackingPage = () => (
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-asli-accent text-white font-semibold hover:bg-asli-accent/90 transition-all duration-300 shadow-lg shadow-asli-accent/20"
                 >
-                  Enviar consulta
+                  {t.tracking.ctaBtn}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
@@ -122,6 +125,7 @@ const TrackingPage = () => (
       <Footer />
     </div>
   </>
-)
+  )
+}
 
 export default TrackingPage

@@ -1,15 +1,58 @@
 import Head from 'next/head'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
+import { useLang } from '../src/lib/LangContext'
+
+const I18N = {
+  es: {
+    title: 'Presentación - ASLI - Asesorías y Servicios Logísticos Integrales',
+    desc: 'Conoce más sobre ASLI - Asesorías y Servicios Logísticos Integrales. Descarga nuestra presentación corporativa.',
+    heroTitle: 'PRESENTACIÓN DE LA EMPRESA',
+    heroSub: 'Conoce más sobre ASLI y nuestros servicios',
+    boxTitle: 'Presentación ASLI',
+    download: 'Descargar PDF',
+    ctaTitle: '¿Tienes preguntas sobre nuestros servicios?',
+    ctaSub: 'Contáctanos y te ayudaremos con cualquier consulta',
+    ctaBtn: 'CONTACTAR',
+    iframeTitle: 'Presentación ASLI',
+  },
+  en: {
+    title: 'Presentation - ASLI - Integral Logistics Advisory and Services',
+    desc: 'Learn more about ASLI and download our corporate presentation.',
+    heroTitle: 'COMPANY PRESENTATION',
+    heroSub: 'Learn more about ASLI and our services',
+    boxTitle: 'ASLI Presentation',
+    download: 'Download PDF',
+    ctaTitle: 'Do you have questions about our services?',
+    ctaSub: 'Contact us and we will help you with any inquiry',
+    ctaBtn: 'CONTACT',
+    iframeTitle: 'ASLI presentation',
+  },
+  zh: {
+    title: '企业介绍 - ASLI 综合物流服务',
+    desc: '了解更多 ASLI 信息并下载我们的企业介绍。',
+    heroTitle: '公司介绍',
+    heroSub: '进一步了解 ASLI 及我们的服务',
+    boxTitle: 'ASLI 企业介绍',
+    download: '下载 PDF',
+    ctaTitle: '对我们的服务有疑问吗？',
+    ctaSub: '联系我们，我们将协助您解决任何问题',
+    ctaBtn: '联系',
+    iframeTitle: 'ASLI 企业介绍',
+  },
+}
 
 const PresentacionPage = () => {
+  const { lang } = useLang()
+  const tr = I18N[lang] || I18N.es
+
   return (
     <>
       <Head>
-        <title>Presentación - ASLI - Asesorías y Servicios Logísticos Integrales</title>
+        <title>{tr.title}</title>
         <meta
           name="description"
-          content="Conoce más sobre ASLI - Asesorías y Servicios Logísticos Integrales. Descarga nuestra presentación corporativa."
+          content={tr.desc}
         />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
@@ -21,10 +64,10 @@ const PresentacionPage = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center max-w-4xl mx-auto">
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
-                  PRESENTACIÓN DE LA EMPRESA
+                  {tr.heroTitle}
                 </h1>
                 <p className="text-xl md:text-2xl text-white/90 leading-relaxed">
-                  Conoce más sobre ASLI y nuestros servicios
+                  {tr.heroSub}
                 </p>
               </div>
             </div>
@@ -37,7 +80,7 @@ const PresentacionPage = () => {
                 <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
                   <div className="bg-asli-primary text-white px-6 py-4 flex items-center justify-between">
                     <h2 className="text-xl md:text-2xl font-bold">
-                      Presentación ASLI
+                      {tr.boxTitle}
                     </h2>
                     <a
                       href="/presentacion-asli.pdf"
@@ -49,7 +92,7 @@ const PresentacionPage = () => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                      Descargar PDF
+                      {tr.download}
                     </a>
                   </div>
                   <div className="w-full bg-gray-100" style={{ minHeight: '800px' }}>
@@ -57,7 +100,7 @@ const PresentacionPage = () => {
                       src="/presentacion-asli.pdf#toolbar=1&navpanes=1&scrollbar=1"
                       className="w-full border-0"
                       style={{ minHeight: '800px', height: 'calc(100vh - 300px)' }}
-                      title="Presentación ASLI"
+                      title={tr.iframeTitle}
                       allow="fullscreen"
                     />
                   </div>
@@ -71,10 +114,10 @@ const PresentacionPage = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="max-w-3xl mx-auto text-center">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                  ¿Tienes preguntas sobre nuestros servicios?
+                  {tr.ctaTitle}
                 </h2>
                 <p className="text-xl text-white/90 mb-8">
-                  Contáctanos y te ayudaremos con cualquier consulta
+                  {tr.ctaSub}
                 </p>
                 <a
                   href="https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Consulta sobre servicios"
@@ -82,7 +125,7 @@ const PresentacionPage = () => {
                   rel="noopener noreferrer"
                   className="inline-block bg-asli-primary text-white px-8 py-4 rounded-md hover:bg-opacity-90 transition-all duration-200 text-lg font-semibold"
                 >
-                  CONTACTAR
+                  {tr.ctaBtn}
                 </a>
               </div>
             </div>

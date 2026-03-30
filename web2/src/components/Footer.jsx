@@ -1,3 +1,4 @@
+import { useLang } from '../lib/LangContext'
 const IconLinkedIn = () => (
   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
@@ -17,10 +18,10 @@ const IconWhatsApp = () => (
 )
 
 const NAV_LINKS = [
-  { href: '/',           label: 'Inicio' },
-  { href: '/servicios',  label: 'Servicios' },
-  { href: '/nosotros',   label: 'Nosotros' },
-  { href: '/contacto',   label: 'Contacto' },
+  { href: '/', key: 'inicio' },
+  { href: '/servicios', key: 'servicios' },
+  { href: '/nosotros', key: 'nosotros' },
+  { href: '/contacto', key: 'contacto' },
 ]
 //asli_chile
 const SOCIAL = [
@@ -46,6 +47,7 @@ const SOCIAL = [
 
 const Footer = () => {
   const year = new Date().getFullYear()
+  const { t } = useLang()
 
   return (
     <footer className="bg-asli-deep border-t border-white/[0.06]">
@@ -65,17 +67,17 @@ const Footer = () => {
               />
               <div className="leading-tight">
                 <p className="text-white/90 text-[11px] sm:text-xs font-semibold">
-                  Asesorias y Servicios logisticos integrales ltda
+                  {t.header.companyName}
                 </p>
                 <p className="text-white/70 text-[11px] sm:text-xs">
-                  Logistica y comercio exterior
+                  {t.header.companyTag}
                 </p>
               </div>
             </a>
 
             <p className="text-white/55 text-sm leading-relaxed mb-6 max-w-xs">
-              <span className="block">Asesorias y Servicios logisticos integrales ltda</span>
-              <span className="block">Logistica y comercio exterior</span>
+              <span className="block">{t.header.companyName}</span>
+              <span className="block">{t.header.companyTag}</span>
             </p>
 
             {/* Social icons */}
@@ -97,7 +99,7 @@ const Footer = () => {
 
           {/* Nav column */}
           <div className="md:col-span-3 md:col-start-6">
-            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">Navegación</p>
+            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">{t.nav.inicio === 'Home' ? 'Navigation' : t.nav.inicio === '首页' ? '导航' : 'Navegación'}</p>
             <nav className="flex flex-col gap-3">
               {NAV_LINKS.map((link) => (
                 <a
@@ -105,7 +107,7 @@ const Footer = () => {
                   href={link.href}
                   className="text-white/55 text-sm hover:text-asli-primary transition-colors duration-200 w-fit"
                 >
-                  {link.label}
+                  {t.nav[link.key]}
                 </a>
               ))}
             </nav>
@@ -113,7 +115,7 @@ const Footer = () => {
 
           {/* Contact column */}
           <div className="md:col-span-3 md:col-start-10">
-            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">Contacto</p>
+            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">{t.nav.contacto}</p>
             <div className="flex flex-col gap-3">
               <a
                 href="mailto:informaciones@asli.cl"
@@ -149,8 +151,8 @@ const Footer = () => {
         {/* Divider */}
         <div className="border-t border-white/[0.06] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-white/30 text-xs text-center sm:text-left leading-relaxed">
-            <span className="block">Asesorias y Servicios logisticos integrales ltda</span>
-            <span className="block">Logistica y comercio exterior</span>
+            <span className="block">{t.header.companyName}</span>
+            <span className="block">{t.header.companyTag}</span>
           </p>
           <div className="flex items-center gap-1.5 text-white/25 text-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-asli-primary/60 animate-pulse" />

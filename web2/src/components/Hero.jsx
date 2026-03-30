@@ -1,16 +1,16 @@
 import { motion } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
-
-const stats = [
-  { value: '2021', label: 'Fundada en Curicó' },
-  { value: '9+',   label: 'Servicios logísticos' },
-  { value: '15+',  label: 'Navieras y aerolíneas' },
-  { value: '100%', label: 'Compromiso con el cliente' },
-]
-
-const words = ['CADA', 'PASO', 'DEL', 'CAMINO']
+import { useLang } from '../lib/LangContext'
 
 const Hero = () => {
+  const { t } = useLang()
+  const stats = [
+    { value: '2021', label: t.hero.stat1l },
+    { value: '9+', label: t.hero.stat2l },
+    { value: '15+', label: t.hero.stat3l },
+    { value: '100%', label: t.hero.stat4l },
+  ]
+
   const handleScroll = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -32,7 +32,7 @@ const Hero = () => {
         <ImagePlaceholder
           variant="hero"
           src="/frontis.webp"
-          alt="ASLI Logística — logística y comercio exterior"
+          alt="ASLI"
         />
       </div>
 
@@ -68,7 +68,7 @@ const Hero = () => {
             className="flex items-center gap-3 mb-6"
           >
             <span className="w-8 h-px bg-asli-primary" />
-            <span className="eyebrow">Logística y Comercio Exterior · Curicó, Chile</span>
+            <span className="eyebrow">{t.hero.eyebrow}</span>
           </motion.div>
 
           {/* Logo */}
@@ -93,7 +93,7 @@ const Hero = () => {
               className="font-display font-black text-white leading-none"
               style={{ fontSize: 'clamp(2.8rem, 7vw, 6rem)', letterSpacing: '-0.03em' }}
             >
-              {['DEL ORIGEN', 'AL DESTINO,'].map((line, li) => (
+              {[t.hero.line1, t.hero.line2].map((line, li) => (
                 <motion.span
                   key={li}
                   initial={{ y: '110%' }}
@@ -111,7 +111,7 @@ const Hero = () => {
                 className="block italic text-asli-primary"
                 style={{ WebkitTextStroke: '0px' }}
               >
-                en cada paso.
+                {t.hero.line3}
               </motion.span>
             </motion.h1>
           </div>
@@ -123,8 +123,7 @@ const Hero = () => {
             transition={{ duration: 0.7, delay: 0.9 }}
             className="text-white/60 text-lg md:text-xl max-w-xl leading-relaxed mb-10 font-light"
           >
-            Asesorías y Servicios Logísticos Integrales. Fundada en 2021 para
-            acompañar a exportadores chilenos con el mismo estándar de las grandes.
+            {t.hero.sub}
           </motion.p>
 
           {/* CTAs */}
@@ -138,7 +137,7 @@ const Hero = () => {
               onClick={() => handleScroll('servicios')}
               className="group inline-flex items-center justify-center gap-3 px-7 py-4 rounded-full bg-asli-primary text-white font-semibold hover:bg-asli-primary/90 transition-all duration-300 shadow-lg shadow-asli-primary/25 w-full sm:w-auto"
             >
-              Nuestros Servicios
+              {t.hero.cta1}
               <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -150,13 +149,13 @@ const Hero = () => {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
-              Acceder a la App
+              {t.hero.cta2}
             </button>
             <button
               onClick={() => handleScroll('contacto')}
               className="inline-flex items-center justify-center gap-3 px-7 py-4 rounded-full border border-white/20 text-white/80 font-semibold hover:border-white/40 hover:text-white transition-all duration-300 w-full sm:w-auto"
             >
-              Contáctanos
+              {t.hero.cta3}
             </button>
           </motion.div>
         </div>

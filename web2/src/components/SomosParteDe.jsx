@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useLang } from '../lib/LangContext'
 
 const partners = [
   { nombre: 'Agronexo', logo: '/img/agronexo.png' },
@@ -10,8 +11,10 @@ const partners = [
 
 const allPartners = [...partners, ...partners]
 
-const SomosParteDe = () => (
-  <div id="socios" className="relative overflow-hidden pt-8 pb-2 md:pt-12 md:pb-6">
+const SomosParteDe = () => {
+  const { t } = useLang()
+  return (
+    <div id="socios" className="relative overflow-hidden pt-8 pb-2 md:pt-12 md:pb-6">
     <div className="container relative z-10 mx-auto mb-10 px-6 lg:px-10 md:mb-12">
       <motion.div
         initial="hidden"
@@ -24,21 +27,21 @@ const SomosParteDe = () => (
           variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
           className="eyebrow mb-4"
         >
-          Partners
+          {t.somos.eyebrow}
         </motion.p>
         <motion.h2
           variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } } }}
           className="font-display font-black text-white"
           style={{ fontSize: 'clamp(1.75rem, 3.8vw, 3rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
         >
-          Somos parte de{' '}
-          <em className="not-italic text-asli-primary">un ecosistema mayor</em>
+          {t.somos.title}{' '}
+          <em className="not-italic text-asli-primary">{t.somos.titleSpan}</em>
         </motion.h2>
         <motion.p
           variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.2 } } }}
           className="mx-auto mt-3 max-w-xl text-base font-light text-white/50 md:text-lg"
         >
-          Respaldados por alianzas con líderes de la industria logística y agroexportadora.
+          {t.somos.blurb}
         </motion.p>
       </motion.div>
     </div>
@@ -67,7 +70,8 @@ const SomosParteDe = () => (
         ))}
       </div>
     </div>
-  </div>
-)
+    </div>
+  )
+}
 
 export default SomosParteDe

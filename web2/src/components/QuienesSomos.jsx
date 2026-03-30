@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
+import { useLang } from '../lib/LangContext'
 
 const fadeUp = {
   hidden:  { opacity: 0, y: 32 },
@@ -25,13 +26,13 @@ function CountUp({ target, suffix = '', inView }) {
   return <>{count}{suffix}</>
 }
 
-const stats = [
-  { value: 3, suffix: '+', label: 'Años de experiencia', sub: 'Desde 2021 en el mercado' },
-  { value: 100, suffix: '%', label: 'Satisfacción', sub: 'Compromiso con la excelencia' },
-  { value: 9, suffix: '', label: 'Servicios integrales', sub: 'Cobertura multimodal completa' },
-]
-
 const QuienesSomos = () => {
+  const { t } = useLang()
+  const stats = [
+    { value: 3, suffix: '+', label: t.quienes.stat1l, sub: t.quienes.stat1s },
+    { value: 100, suffix: '%', label: t.quienes.stat2l, sub: t.quienes.stat2s },
+    { value: 9, suffix: '', label: t.quienes.stat3l, sub: t.quienes.stat3s },
+  ]
   const ref     = useRef(null)
   const inView  = useInView(ref, { once: true, margin: '-100px' })
 
@@ -49,25 +50,22 @@ const QuienesSomos = () => {
             variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
           >
             <motion.p variants={fadeUp} className="eyebrow mb-4">
-              Quiénes Somos
+              {t.quienes.eyebrow}
             </motion.p>
             <motion.h2
               variants={fadeUp}
               className="font-display font-black text-white mb-6"
               style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
             >
-              Tu mejor opción en{' '}
-              <em className="not-italic text-asli-primary">logística integral</em>
+              {t.quienes.title}{' '}
+              <em className="not-italic text-asli-primary">{t.quienes.titleSpan}</em>
             </motion.h2>
             <motion.div variants={fadeUp} className="w-12 h-0.5 bg-asli-primary rounded-full mb-6" />
             <motion.p variants={fadeUp} className="text-white/60 text-lg leading-relaxed mb-4 font-light">
-              Somos una empresa especializada en servicios logísticos integrales,
-              con un enfoque profesional y comprometido con la excelencia.
+              {t.quienes.p1}
             </motion.p>
             <motion.p variants={fadeUp} className="text-white/60 text-lg leading-relaxed font-light">
-              Desde nuestra fundación en 2021 en Curicó, hemos construido una red
-              sólida de alianzas estratégicas que nos permite ofrecer soluciones
-              completas y eficientes para cada cliente.
+              {t.quienes.p2}
             </motion.p>
           </motion.div>
 
@@ -111,8 +109,8 @@ const QuienesSomos = () => {
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-asli-secondary/80 via-transparent to-transparent" />
           <div className="absolute bottom-8 left-8">
-            <p className="eyebrow mb-1">Nuestra sede</p>
-            <p className="text-white font-display font-bold text-2xl">Curicó, Región del Maule</p>
+            <p className="eyebrow mb-1">{t.quienes.sede}</p>
+            <p className="text-white font-display font-bold text-2xl">{t.quienes.sedeCity}</p>
           </div>
           {/* Teal border accent */}
           <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-asli-primary via-asli-accent to-transparent" />

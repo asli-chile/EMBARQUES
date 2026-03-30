@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
+import { useLang } from '../lib/LangContext'
 
 const navieras = [
   { value: 'msc',         label: 'MSC',          url: 'https://www.msc.com/es/track-a-shipment' },
@@ -28,6 +29,7 @@ const Tracking = () => {
   const [query, setQuery]   = useState('')
   const [tab, setTab]       = useState('maritimo') // 'maritimo' | 'aereo'
   const [hovered, setHovered] = useState(null)
+  const { t } = useLang()
 
   const list   = tab === 'maritimo' ? navieras : aereas
   const filtered = query.trim()
@@ -46,8 +48,8 @@ const Tracking = () => {
         {/* Tabs */}
         <div className="flex gap-2 mb-8 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
           {[
-            { id: 'maritimo', label: '🚢  Marítimo' },
-            { id: 'aereo',    label: '✈️  Aéreo' },
+            { id: 'maritimo', label: t.tracking.maritimo },
+            { id: 'aereo',    label: t.tracking.aereo },
           ].map(t => (
             <button
               key={t.id}
@@ -77,7 +79,7 @@ const Tracking = () => {
           </svg>
           <input
             type="text"
-            placeholder="Buscar naviera o aerolínea…"
+            placeholder={t.tracking.buscar}
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-asli-primary/50 focus:bg-white/[0.06] transition-all duration-200"
@@ -141,7 +143,7 @@ const Tracking = () => {
               </motion.button>
             )) : (
               <div className="col-span-full py-12 text-center text-white/30 text-sm">
-                No se encontró ninguna naviera con ese nombre
+                {t.nav.inicio === '首页' ? '未找到匹配的航运公司或航空公司' : t.nav.inicio === 'Home' ? 'No shipping line or airline found with that name' : 'No se encontró ninguna naviera o aerolínea con ese nombre'}
               </div>
             )}
           </motion.div>
@@ -149,7 +151,7 @@ const Tracking = () => {
 
         {/* Nota */}
         <p className="mt-8 text-white/25 text-xs text-center">
-          Al hacer clic serás redirigido al sitio oficial de tracking de cada naviera o aerolínea
+          {t.tracking.nota}
         </p>
       </div>
     </section>

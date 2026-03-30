@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
+import { useLang } from '../lib/LangContext'
 
 const Ubicacion = () => {
+  const { t } = useLang()
   const openMap = (type) => {
     const urls = {
       google: 'https://maps.app.goo.gl/cGrni677vZDk5pp26',
@@ -27,15 +29,15 @@ const Ubicacion = () => {
             variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
             className="eyebrow mb-4"
           >
-            Encuéntranos
+            {t.ubicacion.eyebrow}
           </motion.p>
           <motion.h2
             variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22,1,0.36,1] } } }}
             className="font-display font-black text-white"
             style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
           >
-            Nuestras{' '}
-            <em className="not-italic text-asli-primary">oficinas</em>
+            {t.ubicacion.title}{' '}
+            <em className="not-italic text-asli-primary">{t.ubicacion.titleSpan}</em>
           </motion.h2>
         </motion.div>
 
@@ -58,10 +60,10 @@ const Ubicacion = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <p className="eyebrow">Dirección</p>
+                <p className="eyebrow">{t.ubicacion.dir}</p>
               </div>
-              <p className="text-white font-semibold text-lg leading-snug">Longitudinal Sur Km. 186</p>
-              <p className="text-white/60 text-sm mt-1">3340000 Curicó, Región del Maule, Chile</p>
+              <p className="text-white font-semibold text-lg leading-snug">{t.ubicacion.line1}</p>
+              <p className="text-white/60 text-sm mt-1">{t.ubicacion.line2}</p>
             </div>
 
             {/* Contact */}
@@ -72,7 +74,7 @@ const Ubicacion = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
-                <p className="eyebrow">Contacto</p>
+                <p className="eyebrow">{t.ubicacion.contacto}</p>
               </div>
               <p className="text-white font-semibold">Mario Basaez</p>
               <a href="tel:+56968394225" className="text-asli-primary hover:text-asli-accent transition-colors duration-200 font-medium">
@@ -84,9 +86,9 @@ const Ubicacion = () => {
             {/* Map buttons */}
             <div className="flex flex-col gap-3">
               {[
-                { id: 'google', label: 'Abrir en Google Maps', color: 'bg-asli-primary hover:bg-asli-primary/90' },
-                { id: 'waze',   label: 'Navegar con Waze',    color: 'bg-asli-secondary hover:bg-asli-secondary/80 border border-white/15' },
-                { id: 'apple',  label: 'Apple Maps',          color: 'glass hover:border-asli-primary/40' },
+                { id: 'google', label: t.ubicacion.google, color: 'bg-asli-primary hover:bg-asli-primary/90' },
+                { id: 'waze',   label: t.ubicacion.waze,   color: 'bg-asli-secondary hover:bg-asli-secondary/80 border border-white/15' },
+                { id: 'apple',  label: t.ubicacion.apple,  color: 'glass hover:border-asli-primary/40' },
               ].map(btn => (
                 <button
                   key={btn.id}
@@ -115,7 +117,7 @@ const Ubicacion = () => {
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title="Ubicación ASLI"
+              title={`${t.ubicacion.title} ASLI`}
             />
           </motion.div>
         </div>

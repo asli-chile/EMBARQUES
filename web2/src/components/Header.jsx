@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { useLang } from '../lib/LangContext'
 
 const NAV_LINKS = [
-  { href: '/',          label: 'Inicio' },
-  { href: '/servicios', label: 'Servicios' },
-  { href: '/nosotros',  label: 'Nosotros' },
-  { href: '/contacto',  label: 'Contacto' },
+  { href: '/', key: 'inicio' },
+  { href: '/servicios', key: 'servicios' },
+  { href: '/nosotros', key: 'nosotros' },
+  { href: '/contacto', key: 'contacto' },
 ]
 
 const IconLinkedIn = () => (
@@ -30,6 +31,13 @@ const Header = () => {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const router = useRouter()
+  const { lang, setLang, t } = useLang()
+
+  const langOptions = [
+    { id: 'es', label: t.common.langEs },
+    { id: 'en', label: t.common.langEn },
+    { id: 'zh', label: t.common.langZh },
+  ]
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30)
@@ -51,8 +59,10 @@ const Header = () => {
           : 'bg-gradient-to-b from-black/50 to-transparent backdrop-blur-none'
       }`}
     >
-      {/* ── Top bar ── */}
-      <div className={`transition-all duration-300 border-b border-white/[0.06] ${scrolled ? 'py-1' : 'py-1.5'}`}>
+      {/* ── Top bar: solo a partir de 1100px (por debajo, solo logo + hamburguesa) ── */}
+      <div
+        className={`hidden min-[1100px]:block transition-all duration-300 border-b border-white/[0.06] ${scrolled ? 'py-1' : 'py-1.5'}`}
+      >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Social links */}
           <div className="flex items-center gap-2 text-[11px]">
@@ -83,17 +93,32 @@ const Header = () => {
           </div>
 
           {/* Tagline */}
-          <p className="hidden lg:block text-[11px] text-white/35 tracking-[0.1em] uppercase">
-            Coordinamos operaciones logisticas desde origen
-          </p>
+          <p className="hidden lg:block text-[11px] text-white/35 tracking-[0.1em] uppercase">{t.header.taglineTop}</p>
 
-          {/* Acceso clientes pill */}
-          <a
-            href="/embarques"
-            className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1 rounded-full bg-asli-primary/15 border border-asli-primary/25 text-asli-primary hover:bg-asli-primary hover:text-white hover:border-asli-primary transition-all duration-300"
-          >
-            Acceso clientes
-          </a>
+          <div className="flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] p-1">
+              {langOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setLang(option.id)}
+                  aria-label={`${t.common.language}: ${option.label}`}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide transition-colors ${
+                    lang === option.id ? 'bg-asli-primary text-white' : 'text-white/65 hover:text-white hover:bg-white/[0.08]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <a
+              href="/embarques"
+              className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1 rounded-full bg-asli-primary/15 border border-asli-primary/25 text-asli-primary hover:bg-asli-primary hover:text-white hover:border-asli-primary transition-all duration-300"
+            >
+              {t.header.clientAccess}
+            </a>
+          </div>
         </div>
       </div>
 
@@ -104,17 +129,17 @@ const Header = () => {
           <img
             src="/img/logoblanco.png"
             alt="ASLI"
-            className="h-8 md:h-9 w-auto max-w-[140px] md:max-w-[160px] object-contain object-left transition-opacity group-hover:opacity-90"
+            className="h-8 min-[1100px]:h-9 w-auto max-w-[140px] min-[1100px]:max-w-[160px] object-contain object-left transition-opacity group-hover:opacity-90"
             style={{ filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.35))' }}
           />
-          <div className="hidden sm:block leading-tight">
-            <p className="text-white font-bold tracking-[0.18em] text-[15px]">Asesorias y Servicios Logisticos Integrales Ltda.</p>
-            <p className="text-white/40 tracking-[0.3em] text-[9px] uppercase">Logística y Comercio Exterior.</p>
+          <div className="hidden min-[1100px]:block leading-tight">
+            <p className="text-white font-bold tracking-[0.18em] text-[15px]">{t.header.companyName}</p>
+            <p className="text-white/40 tracking-[0.3em] text-[9px] uppercase">{t.header.companyTag}</p>
           </div>
         </a>
 
         {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden min-[1100px]:flex items-center gap-1">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
@@ -125,7 +150,7 @@ const Header = () => {
                   : 'text-white/60 hover:text-white hover:bg-white/[0.05]'
               }`}
             >
-              {link.label}
+              {t.nav[link.key]}
               {isActive(link.href) && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3.5 h-[2px] bg-asli-primary rounded-full" />
               )}
@@ -136,9 +161,9 @@ const Header = () => {
         {/* Desktop CTA */}
         <a
           href="/contacto"
-          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-asli-primary text-white text-[13px] font-semibold hover:bg-asli-primary/85 transition-all duration-300 shadow-lg shadow-asli-primary/20 hover:shadow-asli-primary/35 hover:-translate-y-px"
+          className="hidden min-[1100px]:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-asli-primary text-white text-[13px] font-semibold hover:bg-asli-primary/85 transition-all duration-300 shadow-lg shadow-asli-primary/20 hover:shadow-asli-primary/35 hover:-translate-y-px"
         >
-          Solicitar cotización
+          {t.header.requestQuote}
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
@@ -148,8 +173,8 @@ const Header = () => {
         <button
           type="button"
           onClick={() => setOpen((p) => !p)}
-          className="md:hidden w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-xl border border-white/15 hover:border-white/30 hover:bg-white/[0.05] transition-all duration-200"
-          aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+          className="flex min-[1100px]:hidden w-10 h-10 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/15 hover:border-white/30 hover:bg-white/[0.05] transition-all duration-200"
+          aria-label={open ? t.header.closeMenu : t.header.openMenu}
         >
           <span
             className={`block w-5 h-[1.5px] bg-white rounded-full transition-all duration-300 origin-center ${
@@ -171,8 +196,8 @@ const Header = () => {
 
       {/* ── Mobile menu ── */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-350 ease-in-out ${
-          open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        className={`min-[1100px]:hidden overflow-hidden transition-all duration-350 ease-in-out ${
+          open ? 'max-h-[min(85vh,520px)] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="border-t border-white/[0.06] bg-asli-dark/98 backdrop-blur-xl px-4 pt-3 pb-5">
@@ -188,16 +213,37 @@ const Header = () => {
                     : 'text-white/65 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
-                {link.label}
+                {t.nav[link.key]}
               </a>
             ))}
           </nav>
           <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-col gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2">
+              {langOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setLang(option.id)}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${
+                    lang === option.id ? 'bg-asli-primary text-white' : 'text-white/65 hover:text-white hover:bg-white/[0.08]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <a
+              href="/embarques"
+              onClick={() => setOpen(false)}
+              className="w-full py-3 rounded-xl border border-asli-primary/35 bg-asli-primary/10 text-asli-primary text-sm font-semibold text-center hover:bg-asli-primary/20 transition-colors"
+            >
+              {t.header.clientAccess}
+            </a>
             <a
               href="/contacto"
               className="w-full py-3 rounded-xl bg-asli-primary text-white text-sm font-semibold text-center hover:bg-asli-primary/90 transition-colors"
             >
-              Solicitar cotización
+              {t.header.requestQuote}
             </a>
             <a
               href="https://api.whatsapp.com/send/?phone=56968394225"
@@ -205,7 +251,7 @@ const Header = () => {
               rel="noopener noreferrer"
               className="w-full py-3 rounded-xl border border-white/15 text-white/70 text-sm font-medium text-center hover:border-emerald-500/40 hover:text-emerald-400 transition-all duration-200 flex items-center justify-center gap-2"
             >
-              <IconWhatsApp /> Escribir por WhatsApp
+              <IconWhatsApp /> {t.header.whatsappWrite}
             </a>
           </div>
         </div>

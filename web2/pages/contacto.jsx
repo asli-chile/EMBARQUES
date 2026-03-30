@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
 import ImagePlaceholder from '../src/components/ImagePlaceholder'
+import { useLang } from '../src/lib/LangContext'
 
 const fadeUp = {
   hidden:  { opacity: 0, y: 36 },
@@ -75,9 +76,110 @@ const INITIAL_FORM = {
   mensaje: '',
 }
 
+const COPY = {
+  es: {
+    title: 'Contacto | ASLI Logística',
+    desc: 'Coordina tu próxima operación de exportación o importación con ASLI. Contacto directo con ejecutivos logísticos.',
+    eyebrow: 'Contacto',
+    heroTitleA: 'Coordina tu próxima operación',
+    heroTitleB: 'con nosotros',
+    heroSub: 'Estamos disponibles para apoyar tus procesos de exportación e importación, con seguimiento y control en cada etapa.',
+    contactData: 'Datos de contacto',
+    opQuestion: '¿Tienes una operación en proceso?',
+    opHelp: 'Te ayudamos a coordinarla de forma eficiente y sin contratiempos. También puedes contactarnos directamente vía WhatsApp o LinkedIn.',
+    formTitle: 'Formulario de contacto',
+    sent: '¡Solicitud enviada!',
+    sentSub: 'Te responderemos a la brevedad con una propuesta ajustada a tus necesidades.',
+    reset: 'Restablecer',
+    name: 'Nombre',
+    company: 'Empresa',
+    email: 'Email',
+    phone: 'Teléfono',
+    operationType: 'Tipo de operación',
+    select: 'Seleccionar...',
+    export: 'Exportación',
+    import: 'Importación',
+    both: 'Ambas',
+    message: 'Mensaje',
+    namePh: 'Tu nombre',
+    companyPh: 'Nombre de la empresa',
+    emailPh: 'correo@empresa.cl',
+    phonePh: '+56 9 ...',
+    msgPh: 'Cuéntanos sobre tu operación, tipo de carga, destino y cualquier detalle relevante...',
+    send: 'Enviar solicitud',
+    responseTime: 'Te responderemos en menos de 24 horas hábiles.',
+  },
+  en: {
+    title: 'Contact | ASLI Logistics',
+    desc: 'Coordinate your next export or import operation with ASLI. Direct contact with logistics executives.',
+    eyebrow: 'Contact',
+    heroTitleA: 'Coordinate your next operation',
+    heroTitleB: 'with us',
+    heroSub: 'We are available to support your export and import processes, with tracking and control at every stage.',
+    contactData: 'Contact details',
+    opQuestion: 'Do you have an operation in progress?',
+    opHelp: 'We help you coordinate it efficiently and without setbacks. You can also contact us directly via WhatsApp or LinkedIn.',
+    formTitle: 'Contact form',
+    sent: 'Request sent!',
+    sentSub: 'We will reply shortly with a proposal tailored to your needs.',
+    reset: 'Reset',
+    name: 'Name',
+    company: 'Company',
+    email: 'Email',
+    phone: 'Phone',
+    operationType: 'Operation type',
+    select: 'Select...',
+    export: 'Export',
+    import: 'Import',
+    both: 'Both',
+    message: 'Message',
+    namePh: 'Your name',
+    companyPh: 'Company name',
+    emailPh: 'email@company.com',
+    phonePh: '+56 9 ...',
+    msgPh: 'Tell us about your operation, cargo type, destination, and any relevant details...',
+    send: 'Send request',
+    responseTime: 'We will respond within 24 business hours.',
+  },
+  zh: {
+    title: '联系我们 | ASLI 物流',
+    desc: '与 ASLI 协调您的下一次进出口操作，直接联系物流顾问。',
+    eyebrow: '联系',
+    heroTitleA: '与我们一起协调',
+    heroTitleB: '您的下一次操作',
+    heroSub: '我们可支持您的进出口流程，并在每个阶段提供追踪与管控。',
+    contactData: '联系方式',
+    opQuestion: '您是否有正在进行的操作？',
+    opHelp: '我们可帮助您高效、顺畅地协调流程。也可通过 WhatsApp 或 LinkedIn 直接联系我们。',
+    formTitle: '联系表单',
+    sent: '提交成功！',
+    sentSub: '我们将尽快回复并提供贴合您需求的方案。',
+    reset: '重置',
+    name: '姓名',
+    company: '公司',
+    email: '邮箱',
+    phone: '电话',
+    operationType: '业务类型',
+    select: '请选择...',
+    export: '出口',
+    import: '进口',
+    both: '两者',
+    message: '留言',
+    namePh: '请输入姓名',
+    companyPh: '公司名称',
+    emailPh: 'email@company.com',
+    phonePh: '+56 9 ...',
+    msgPh: '请告诉我们您的操作、货物类型、目的地及其他相关信息...',
+    send: '发送请求',
+    responseTime: '我们将在 24 个工作小时内回复。',
+  },
+}
+
 const ContactoPage = () => {
   const [enviado, setEnviado] = useState(false)
   const [form, setForm] = useState({ ...INITIAL_FORM })
+  const { lang } = useLang()
+  const tr = COPY[lang] || COPY.es
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -99,10 +201,10 @@ const ContactoPage = () => {
   return (
     <>
       <Head>
-        <title>Contacto | ASLI Logística</title>
+        <title>{tr.title}</title>
         <meta
           name="description"
-          content="Coordina tu próxima operación de exportación o importación con ASLI. Contacto directo con ejecutivos logísticos."
+          content={tr.desc}
         />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
@@ -127,7 +229,7 @@ const ContactoPage = () => {
                 className="flex items-center gap-3 mb-5"
               >
                 <span className="w-6 h-px bg-asli-primary" />
-                <span className="eyebrow">Contacto</span>
+                <span className="eyebrow">{tr.eyebrow}</span>
               </motion.div>
 
               <motion.h1
@@ -136,8 +238,8 @@ const ContactoPage = () => {
                 className="font-display font-black text-white leading-tight mb-6"
                 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', letterSpacing: '-0.025em' }}
               >
-                Coordina tu próxima operación<br />
-                <span className="text-asli-primary italic">con nosotros</span>
+                {tr.heroTitleA}<br />
+                <span className="text-asli-primary italic">{tr.heroTitleB}</span>
               </motion.h1>
 
               <motion.p
@@ -145,8 +247,7 @@ const ContactoPage = () => {
                 transition={{ duration: 0.7, delay: 0.3 }}
                 className="text-white/65 text-lg leading-relaxed max-w-2xl"
               >
-                Estamos disponibles para apoyar tus procesos de exportación e importación,
-                con seguimiento y control en cada etapa.
+                {tr.heroSub}
               </motion.p>
             </div>
           </section>
@@ -163,7 +264,7 @@ const ContactoPage = () => {
                 >
                   {/* Datos de contacto */}
                   <div>
-                    <h2 className="text-white font-bold text-lg mb-5">Datos de contacto</h2>
+                    <h2 className="text-white font-bold text-lg mb-5">{tr.contactData}</h2>
                     <div className="space-y-3">
                       {DATOS.map((dato) => {
                         const Tag = dato.href ? 'a' : 'div'
@@ -195,10 +296,9 @@ const ContactoPage = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
                       <div>
-                        <p className="text-white font-semibold text-sm mb-1.5">¿Tienes una operación en proceso?</p>
+                        <p className="text-white font-semibold text-sm mb-1.5">{tr.opQuestion}</p>
                         <p className="text-white/55 text-sm leading-relaxed">
-                          Te ayudamos a coordinarla de forma eficiente y sin contratiempos.
-                          También puedes contactarnos directamente vía WhatsApp o LinkedIn.
+                          {tr.opHelp}
                         </p>
                       </div>
                     </div>
@@ -211,7 +311,7 @@ const ContactoPage = () => {
                   className="lg:col-span-3"
                 >
                   <div className="glass rounded-2xl p-7 md:p-9 border border-white/[0.08] shadow-[0_22px_50px_rgba(0,0,0,0.22)]">
-                    <h2 className="text-white font-bold text-lg mb-6">Formulario de contacto</h2>
+                    <h2 className="text-white font-bold text-lg mb-6">{tr.formTitle}</h2>
 
                     {enviado ? (
                       <div className="text-center py-12">
@@ -220,39 +320,39 @@ const ContactoPage = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
-                        <h3 className="text-white font-bold text-xl mb-2">¡Solicitud enviada!</h3>
+                        <h3 className="text-white font-bold text-xl mb-2">{tr.sent}</h3>
                         <p className="text-white/60 leading-relaxed max-w-sm mx-auto">
-                          Te responderemos a la brevedad con una propuesta ajustada a tus necesidades.
+                          {tr.sentSub}
                         </p>
                         <button
                           type="button"
                           onClick={handleReset}
                           className="mt-8 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-white/20 text-white/85 text-sm font-semibold hover:border-asli-primary/50 hover:text-white hover:bg-white/[0.04] transition-all duration-300"
                         >
-                          Restablecer
+                          {tr.reset}
                         </button>
                       </div>
                     ) : (
                       <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Nombre</label>
+                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{tr.name}</label>
                             <input
                               type="text"
                               name="nombre"
                               required
-                              placeholder="Tu nombre"
+                              placeholder={tr.namePh}
                               value={form.nombre}
                               onChange={handleChange}
                               className={inputCls}
                             />
                           </div>
                           <div>
-                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Empresa</label>
+                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{tr.company}</label>
                             <input
                               type="text"
                               name="empresa"
-                              placeholder="Nombre de la empresa"
+                              placeholder={tr.companyPh}
                               value={form.empresa}
                               onChange={handleChange}
                               className={inputCls}
@@ -262,23 +362,23 @@ const ContactoPage = () => {
 
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Email</label>
+                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{tr.email}</label>
                             <input
                               type="email"
                               name="email"
                               required
-                              placeholder="correo@empresa.cl"
+                              placeholder={tr.emailPh}
                               value={form.email}
                               onChange={handleChange}
                               className={inputCls}
                             />
                           </div>
                           <div>
-                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Teléfono</label>
+                            <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{tr.phone}</label>
                             <input
                               type="tel"
                               name="telefono"
-                              placeholder="+56 9 ..."
+                              placeholder={tr.phonePh}
                               value={form.telefono}
                               onChange={handleChange}
                               className={inputCls}
@@ -287,27 +387,27 @@ const ContactoPage = () => {
                         </div>
 
                         <div>
-                          <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Tipo de operación</label>
+                          <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{tr.operationType}</label>
                           <select
                             name="tipo"
                             value={form.tipo}
                             onChange={handleChange}
                             className={`${inputCls} cursor-pointer`}
                           >
-                            <option value="" className="bg-asli-dark">Seleccionar...</option>
-                            <option value="exportacion" className="bg-asli-dark">Exportación</option>
-                            <option value="importacion" className="bg-asli-dark">Importación</option>
-                            <option value="ambas" className="bg-asli-dark">Ambas</option>
+                            <option value="" className="bg-asli-dark">{tr.select}</option>
+                            <option value="exportacion" className="bg-asli-dark">{tr.export}</option>
+                            <option value="importacion" className="bg-asli-dark">{tr.import}</option>
+                            <option value="ambas" className="bg-asli-dark">{tr.both}</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">Mensaje</label>
+                          <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">{tr.message}</label>
                           <textarea
                             name="mensaje"
                             rows={5}
                             required
-                            placeholder="Cuéntanos sobre tu operación, tipo de carga, destino y cualquier detalle relevante..."
+                            placeholder={tr.msgPh}
                             value={form.mensaje}
                             onChange={handleChange}
                             className={`${inputCls} resize-none`}
@@ -320,13 +420,13 @@ const ContactoPage = () => {
                             onClick={handleReset}
                             className="sm:w-40 shrink-0 inline-flex items-center justify-center px-4 py-4 rounded-xl border border-white/20 text-white/80 text-sm font-semibold hover:border-white/35 hover:text-white hover:bg-white/[0.04] transition-all duration-300"
                           >
-                            Restablecer
+                            {tr.reset}
                           </button>
                           <button
                             type="submit"
                             className="group sm:flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-asli-primary text-white font-semibold hover:bg-asli-primary/85 transition-all duration-300 shadow-lg shadow-asli-primary/20 hover:-translate-y-px ring-1 ring-asli-primary/30"
                           >
-                            Enviar solicitud
+                            {tr.send}
                             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
@@ -334,7 +434,7 @@ const ContactoPage = () => {
                         </div>
 
                         <p className="text-white/30 text-xs text-center">
-                          Te responderemos en menos de 24 horas hábiles.
+                          {tr.responseTime}
                         </p>
                       </form>
                     )}
