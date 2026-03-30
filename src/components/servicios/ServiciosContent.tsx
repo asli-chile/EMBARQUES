@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
+import { withBase } from "@/lib/basePath";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const servicios = [
@@ -200,7 +201,7 @@ export function ServiciosContent() {
           onTimeUpdate={handleTimeUpdate}
           className="absolute inset-0 w-full h-full object-cover"
         >
-          <source src="/BACKGOUND PLANWETA.mp4" type="video/mp4" />
+          <source src={withBase("/BACKGOUND PLANWETA.mp4")} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
       </div>

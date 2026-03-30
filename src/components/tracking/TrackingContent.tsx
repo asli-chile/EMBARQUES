@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { withBase } from "@/lib/basePath";
 
 type TrackingResult = {
   id: string;
@@ -119,7 +120,7 @@ export function TrackingContent() {
         onTimeUpdate={handleVideoTimeUpdate}
         className="fixed inset-0 w-full h-full object-cover -z-10"
       >
-        <source src="/trackingvideo.mp4" type="video/mp4" />
+        <source src={withBase("/trackingvideo.mp4")} type="video/mp4" />
       </video>
       {/* Oscurecimiento en bordes para suavizar el loop + overlay central para contraste del texto */}
       <div

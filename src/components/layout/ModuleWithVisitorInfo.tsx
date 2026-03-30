@@ -13,6 +13,7 @@ import { CrearInstructivoVisitorPreview } from "@/components/documentos/CrearIns
 import { CrearProformaVisitorPreview } from "@/components/documentos/CrearProformaVisitorPreview";
 import { ReportesVisitorPreview } from "@/components/reportes/ReportesVisitorPreview";
 import { FinanzasVisitorPreview } from "@/components/finanzas/FinanzasVisitorPreview";
+import { withBase } from "@/lib/basePath";
 
 export type VisitorModuleKey =
   | "registros"
@@ -30,19 +31,19 @@ export type VisitorModuleKey =
   | "finanzas";
 
 const MODULE_KEY_TO_HREF: Record<VisitorModuleKey, string> = {
-  registros: "/registros",
-  crearReserva: "/reservas/crear",
-  misReservas: "/reservas/mis-reservas",
-  papelera: "/reservas/papelera",
-  reservaAsli: "/transportes/reserva-asli",
-  reservaExt: "/transportes/reserva-ext",
-  facturacion: "/transportes/facturacion",
-  misDocumentos: "/documentos/mis-documentos",
-  crearInstructivo: "/documentos/crear-instructivo",
-  crearProforma: "/documentos/crear-proforma",
-  correoInformativo: "/comunicaciones/correo-informativo",
-  reportes: "/reportes",
-  finanzas: "/finanzas",
+  registros: withBase("/registros"),
+  crearReserva: withBase("/reservas/crear"),
+  misReservas: withBase("/reservas/mis-reservas"),
+  papelera: withBase("/reservas/papelera"),
+  reservaAsli: withBase("/transportes/reserva-asli"),
+  reservaExt: withBase("/transportes/reserva-ext"),
+  facturacion: withBase("/transportes/facturacion"),
+  misDocumentos: withBase("/documentos/mis-documentos"),
+  crearInstructivo: withBase("/documentos/crear-instructivo"),
+  crearProforma: withBase("/documentos/crear-proforma"),
+  correoInformativo: withBase("/comunicaciones/correo-informativo"),
+  reportes: withBase("/reportes"),
+  finanzas: withBase("/finanzas"),
 };
 
 type ModuleWithVisitorInfoProps = {

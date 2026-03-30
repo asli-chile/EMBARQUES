@@ -193,7 +193,7 @@ export function InicioContent() {
         onTimeUpdate={handleVideoTimeUpdate}
         className="fixed inset-0 w-full h-full object-cover -z-10 contrast-[1.1] saturate-[1.2] brightness-[1.05]"
       >
-        <source src="/BACKGOUND CONECCIONES.mp4" type="video/mp4" />
+        <source src={withBase("/BACKGOUND CONECCIONES.mp4")} type="video/mp4" />
       </video>
       <div className="fixed inset-0 bg-[#0a1628]/50 -z-10" />
 
@@ -549,7 +549,7 @@ export function InicioContent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {quickLinks.map(({ key, descKey, href, icon }) => (
-              <a key={key} href={href} className="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl hover:border-violet-400/50 hover:bg-black/50 transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-black/20">
+              <a key={key} href={withBase(href)} className="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl hover:border-violet-400/50 hover:bg-black/50 transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-black/20">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-500/25 to-violet-900/20 border border-violet-500/40 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:from-violet-500/40 group-hover:border-violet-400/60 transition-all">
                   <Icon icon={icon} className="text-violet-300 drop-shadow-[0_0_8px_rgba(167,139,250,0.6)]" width={20} height={20} />
                 </div>

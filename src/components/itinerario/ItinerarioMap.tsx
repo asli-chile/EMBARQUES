@@ -10,10 +10,10 @@ import { format } from "date-fns";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapWebGLErrorBoundary } from "./MapWebGLErrorBoundary";
 import { FallbackSvgMap } from "./FallbackSvgMap";
-
+import { withBase } from "@/lib/basePath";
 
 /** Países con property "area": AMERICA | EUROPA | ASIA | MEDIO-ORIENTE | OCEANIA (generado por scripts/build-countries-by-region.mjs). */
-const COUNTRIES_BY_REGION_URL = "/geo/countries-by-region.geojson";
+const COUNTRIES_BY_REGION_URL = withBase("/geo/countries-by-region.geojson");
 
 /** Estilo tipo Google Maps: calles, etiquetas, terreno (Carto Voyager, gratuito). */
 const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";

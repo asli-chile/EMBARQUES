@@ -1,6 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
+import { withBase } from "@/lib/basePath";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const missionCards = [
@@ -212,7 +213,7 @@ export function SobreNosotrosContent() {
           onTimeUpdate={handleTimeUpdate}
           className="absolute inset-0 w-full h-full object-cover"
         >
-          <source src="/BACKGOUND PLANWETA.mp4" type="video/mp4" />
+          <source src={withBase("/BACKGOUND PLANWETA.mp4")} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
       </div>
@@ -264,7 +265,7 @@ export function SobreNosotrosContent() {
                 <div className="relative aspect-[4/3] w-full sm:flex-1 max-w-md bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden shadow-xl shadow-black/30">
                   <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 opacity-70 rounded-t-2xl" />
                   <img
-                    src="/images/puerto-contenedores.jpg"
+                    src={withBase("/images/puerto-contenedores.jpg")}
                     alt="Puerto con contenedores"
                     className="w-full h-full object-cover opacity-80"
                     onError={(e) => {
@@ -450,7 +451,7 @@ export function SobreNosotrosContent() {
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 opacity-50 rounded-t-2xl" />
                 <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4 rounded-full overflow-hidden border-2 border-blue-500/40 group-hover:border-blue-400/70 transition-colors shadow-lg ring-2 ring-black/20">
                   <img
-                    src={imagen}
+                    src={withBase(imagen)}
                     alt={nombre}
                     className="w-full h-full object-cover"
                     onError={(e) => {

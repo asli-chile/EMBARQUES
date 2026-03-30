@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "@/lib/i18n";
 import type { StackingData } from "@/types/stacking";
 import { fetchPublicItinerarios } from "@/lib/itinerarios-service";
+import { withBase } from "@/lib/basePath";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { format } from "date-fns";
 import { Icon } from "@iconify/react";
@@ -526,7 +527,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
                           </div>
                           {isSuperadmin && (
                             <a
-                              href={`/itinerario?stackingItId=${encodeURIComponent(selected.id)}`}
+                              href={`${withBase("/itinerario")}?stackingItId=${encodeURIComponent(selected.id)}`}
                               className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-xl bg-brand-blue text-white px-2.5 py-1 text-xs font-semibold shadow-sm shadow-brand-blue/20 hover:bg-brand-blue/90 transition-colors"
                             >
                               <Icon icon="lucide:pencil" width={12} height={12} aria-hidden />

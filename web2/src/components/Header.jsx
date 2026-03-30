@@ -89,7 +89,7 @@ const Header = () => {
 
           {/* Acceso clientes pill */}
           <a
-            href="/embarques"
+            href="/embarques/inicio"
             className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1 rounded-full bg-asli-primary/15 border border-asli-primary/25 text-asli-primary hover:bg-asli-primary hover:text-white hover:border-asli-primary transition-all duration-300"
           >
             Acceso clientes

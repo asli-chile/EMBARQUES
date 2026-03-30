@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
+import { stripBasePathname, withBase } from "@/lib/basePath";
 
 type SidebarLink = { href: string; labelKey: string };
 
@@ -47,7 +48,8 @@ export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAc
         {t.visitor.quickAccessModules}:
       </span>
       {links.map((link) => {
-        const isCurrent = currentHref === link.href;
+        const isCurrent =
+          stripBasePathname(currentHref ?? "") === stripBasePathname(link.href);
         const btnClass = isCurrent
           ? `${baseBtnClass} text-white bg-brand-blue border border-brand-blue cursor-default`
           : `${baseBtnClass} text-brand-blue bg-white border border-neutral-200
@@ -57,7 +59,7 @@ export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAc
             {t.sidebar[link.labelKey]}
           </span>
         ) : (
-          <a key={link.href} href={link.href} className={btnClass}>
+          <a key={link.href} href={withBase(link.href)} className={btnClass}>
             {t.sidebar[link.labelKey]}
           </a>
         );

@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
+import { withBase } from "@/lib/basePath";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -296,7 +297,7 @@ const TEMPLATE_BASE = `<!DOCTYPE html>
 </head>
 <body>
   <div class="header">
-    <div class="logo-area"><img src="/LOGO ASLI SIN FONDO AZUL.png" alt="ASLI"></div>
+    <div class="logo-area"><img src="${withBase("/LOGO ASLI SIN FONDO AZUL.png")}" alt="ASLI"></div>
     <div>
       <div class="doc-title">Documento</div>
       <div class="doc-ref">Ref: {{ref_asli}}</div>

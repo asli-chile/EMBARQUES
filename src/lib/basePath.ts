@@ -1,13 +1,34 @@
 /**
+ * Codifica cada segmento de ruta (espacios, tildes, etc.) sin tocar las barras.
+ * Así los assets en /public con nombre "LOGO ASLI SIN FONDO AZUL.png" cargan bien
+ * detrás de proxies (asli.cl → Vercel) y en CDNs que son estrictos con la URL.
+ */
+function encodePathSegments(path: string): string {
+  return path
+    .split("/")
+    .map((segment) => {
+      if (segment === "") return "";
+      try {
+        return encodeURIComponent(decodeURIComponent(segment));
+      } catch {
+        return encodeURIComponent(segment);
+      }
+    })
+    .join("/");
+}
+
+/**
  * Rutas bajo prefijo de despliegue (p. ej. /embarques en producción vía asli.cl/embarques).
  * Evita que enlaces a "/inicio" salgan del subpath y terminen en asli.cl/inicio.
  */
 export function withBase(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-  if (!base) return p;
-  if (p === base || p.startsWith(`${base}/`)) return p;
-  return `${base}${p}`;
+  let out: string;
+  if (!base) out = p;
+  else if (p === base || p.startsWith(`${base}/`)) out = p;
+  else out = `${base}${p}`;
+  return encodePathSegments(out);
 }
 
 export function stripBasePathname(pathname: string): string {

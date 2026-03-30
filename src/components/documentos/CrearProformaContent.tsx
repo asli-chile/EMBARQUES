@@ -8,6 +8,7 @@ import { es as esLocale } from "date-fns/locale";
 import JSZip from "jszip";
 import * as XLSX from "xlsx";
 import { parseProformaRows, sheetToRows, type ProformaNormalizada } from "@/lib/documentos/proforma-normalizer";
+import { withBase } from "@/lib/basePath";
 
 // -- Types --------------------------------------------------------------------
 
@@ -1399,7 +1400,7 @@ export function CrearProformaContent() {
   <colgroup><col style="width:14%"/><col style="width:58%"/><col style="width:28%"/></colgroup>
   <tr>
     <td rowspan="3" style="vertical-align:middle;padding:4px">
-      <img src="/almafruit-logo.png" style="height:54px;width:auto"/>
+      <img src="${withBase("/almafruit-logo.png")}" style="height:54px;width:auto"/>
     </td>
     <td style="font-weight:bold;font-size:8.5px">${escH(header.exportador || "EXPORTADORA ALMA FRUIT SPA")}</td>
     <td style="font-weight:bold">RUT: ${escH(header.exportador_rut)}</td>
@@ -1616,7 +1617,7 @@ export function CrearProformaContent() {
     // ── Cargar template Almafruit desde /public ───────────────────────────────
     // Usamos JSZip para modificar el XML directamente — esto preserva la imagen/logo.
     // xlsx-js-style strip images al hacer write(), por eso se abandonó ese approach.
-    const resp = await fetch("/FORMATO ALMAFRUIT.xlsx");
+    const resp = await fetch(withBase("/FORMATO ALMAFRUIT.xlsx"));
     if (!resp.ok) throw new Error("No se pudo cargar el formato Almafruit");
     const buffer = await resp.arrayBuffer();
     const zip = await JSZip.loadAsync(buffer);
