@@ -1,6 +1,7 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
 import { ConfigGuard } from "./ConfigGuard";
+import { CartolasNuboxGuard } from "./CartolasNuboxGuard";
 import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -107,6 +108,9 @@ const LazyCorreoInformativoContent = lazy(() =>
   import("@/components/comunicaciones/CorreoInformativoContent").then((m) => ({
     default: m.CorreoInformativoContent,
   })),
+);
+const LazyCartolasNuboxContent = lazy(() =>
+  import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
 );
 
 function RouteFallback() {
@@ -215,6 +219,12 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyFinanzasContent />
         </Sus>
       </ModuleWithVisitorInfo>
+    ) : pathname === "/cartolas-nubox" ? (
+      <CartolasNuboxGuard>
+        <Sus>
+          <LazyCartolasNuboxContent />
+        </Sus>
+      </CartolasNuboxGuard>
     ) : pathname === "/configuracion/clientes" ? (
       <ConfigGuard>
         <Sus>

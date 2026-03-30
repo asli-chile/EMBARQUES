@@ -16,6 +16,7 @@ export const translations = {
       cliente: "Cliente",
       reportes: "Reportes",
       finanzas: "Finanzas",
+      cartolasNubox: "Cartolas a Nubox",
       reservas: "Reservas",
       crearReserva: "Crear reserva",
       misReservas: "Mis reservas",
@@ -842,6 +843,17 @@ export const translations = {
       export: "Exportar a Excel",
       exportFilename: "finanzas_operaciones.csv",
       loading: "Cargando finanzas…",
+    },
+    cartolasNuboxPage: {
+      title: "Cartolas a Nubox",
+      subtitle: "Área para gestión de cartolas y conciliación con Nubox.",
+      body1:
+        "Desde aquí podrás centralizar el trabajo con cartolas hacia Nubox. Si necesitas enlaces externos, exportaciones o integraciones adicionales, se pueden añadir en esta sección.",
+      body2:
+        "El acceso está limitado a usuarios autorizados por correo institucional.",
+      forbidden: "No tienes permiso para ver esta sección. Solo usuarios autorizados pueden acceder.",
+      loginRequired: "Inicia sesión para continuar.",
+      loading: "Cargando…",
     },
     misReservas: {
       loading: "Cargando reservas...",
@@ -2198,6 +2210,7 @@ export const translations = {
       cliente: "Client",
       reportes: "Reports",
       finanzas: "Finance",
+      cartolasNubox: "Statements to Nubox",
       reservas: "Bookings",
       crearReserva: "Create booking",
       misReservas: "My bookings",
@@ -3024,6 +3037,16 @@ export const translations = {
       export: "Export to Excel",
       exportFilename: "finanzas_operaciones.csv",
       loading: "Loading finance…",
+    },
+    cartolasNuboxPage: {
+      title: "Statements to Nubox",
+      subtitle: "Area for statement management and reconciliation with Nubox.",
+      body1:
+        "Use this space to centralize statement work toward Nubox. External links, exports or integrations can be added here as needed.",
+      body2: "Access is restricted to authorized institutional email addresses.",
+      forbidden: "You do not have permission to view this section.",
+      loginRequired: "Sign in to continue.",
+      loading: "Loading…",
     },
     misReservas: {
       loading: "Loading bookings...",

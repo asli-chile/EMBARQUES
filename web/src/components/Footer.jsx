@@ -54,9 +54,9 @@ const Footer = () => {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <img src="/img/logoblanco.png" alt="ASLI" className="h-8 object-contain mb-3" />
-            <p className="eyebrow text-white/30 mb-1.5">{f.servicios === 'Servicios' ? 'Logística y Comercio Exterior' : 'Logistics & Foreign Trade'}</p>
-            <p className="text-asli-primary font-display font-bold italic text-base leading-snug whitespace-pre-line">
-              {f.tagline}
+            <p className="text-white/55 text-sm leading-relaxed mb-1.5">
+              <span className="block">Asesorias y Servicios logisticos integrales ltda</span>
+              <span className="block">Logistica y comercio exterior</span>
             </p>
             {/* Socials */}
             <div className="flex gap-2 mt-4">
@@ -112,8 +112,9 @@ const Footer = () => {
 
         {/* Bottom bar */}
         <div className="pt-5 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-white/25 text-xs font-light text-center sm:text-left">
-            &copy; {year} ASLI – Asesorías y Servicios Logísticos Integrales Ltda. {f.rights}
+          <p className="text-white/25 text-xs font-light text-center sm:text-left leading-relaxed">
+            <span className="block">Asesorias y Servicios logisticos integrales ltda</span>
+            <span className="block">Logistica y comercio exterior</span>
           </p>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-asli-accent animate-pulse" />

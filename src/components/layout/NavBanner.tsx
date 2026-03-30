@@ -4,6 +4,7 @@ import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { withBase } from "@/lib/basePath";
+import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
 
 // Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
 const PINNED_NAV = [
@@ -22,7 +23,11 @@ const PUBLIC_NAV_CARDS = [
   { labelKey: "stacking"     as const, href: "/stacking",       icon: "lucide:layers",      desc: "Fechas de stacking por servicio" },
 ];
 
-type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean; ejecutivoAndAbove?: boolean };
+type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
+  superadminOnly?: boolean;
+  ejecutivoAndAbove?: boolean;
+  allowedEmails?: readonly string[];
+};
 
 // Metadatos visuales de cada módulo (ícono + descripción)
 const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
@@ -56,6 +61,7 @@ const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
   "configuracion-transportes": { icon: "lucide:truck",       desc: "Empresas y tarifas de transporte" },
   consignatarios:        { icon: "lucide:contact",           desc: "Consignatarios y notify parties" },
   "formatos-documentos": { icon: "lucide:layout-template",  desc: "Plantillas de documentos" },
+  "cartolas-nubox": { icon: "lucide:file-spreadsheet", desc: "Cartolas y conciliación Nubox" },
 };
 
 type NavBannerProps = { pathname: string };
@@ -63,6 +69,7 @@ type NavBannerProps = { pathname: string };
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
   const { user, profile, isExternalUser, empresaNombres, isSuperadmin, isAdmin, isEjecutivo } = useAuth();
+  const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -77,17 +84,10 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
 
-  // Filtrar sidebarItems según rol
-  const visibleSidebarItems = useMemo(() =>
-    (siteConfig.sidebarItems as SidebarItem[]).filter(
-      (item) => !(("superadminOnly" in item && item.superadminOnly) || false) || isSuperadmin
-    ).map((item) => {
-      if (!("children" in item) || !item.children) return item;
-      const filtered = (item.children as SidebarItem[]).filter(
-        (child) => !child.ejecutivoAndAbove || canAccessEjecutivoAndAbove
-      );
-      return { ...item, children: filtered };
-    }), [isSuperadmin, canAccessEjecutivoAndAbove]);
+  const visibleSidebarItems = useMemo(
+    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail) as SidebarItem[],
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
+  );
 
   // Auto-expandir sección activa al abrir drawer
   useEffect(() => {

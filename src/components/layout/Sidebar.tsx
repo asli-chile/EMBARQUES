@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
 
 const AUTO_COLLAPSE_MS = 2000;
 const HOVER_OPEN_DELAY_MS = 1000;
@@ -16,22 +17,16 @@ type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?:
 
 export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
-  const { isSuperadmin, isAdmin, isEjecutivo } = useAuth();
+  const { isSuperadmin, isAdmin, isEjecutivo, user, profile } = useAuth();
+  const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
   const [isOpen, setIsOpen] = useState(false);
 
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
 
-  const visibleItems = useMemo(() => {
-    return (siteConfig.sidebarItems as SidebarItem[]).filter(
-      (item) => !(("superadminOnly" in item && item.superadminOnly) || false) || isSuperadmin
-    ).map((item) => {
-      if (!("children" in item) || !item.children) return item;
-      const filtered = (item.children as SidebarItem[]).filter(
-        (child) => !child.ejecutivoAndAbove || canAccessEjecutivoAndAbove
-      );
-      return { ...item, children: filtered };
-    });
-  }, [isSuperadmin, canAccessEjecutivoAndAbove]);
+  const visibleItems = useMemo(
+    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail) as SidebarItem[],
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
+  );
   const [isMouseInside, setIsMouseInside] = useState(false);
 
   useEffect(() => {

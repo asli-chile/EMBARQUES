@@ -60,17 +60,21 @@ const Footer = () => {
               <img
                 src="/img/logoblanco.png"
                 alt="ASLI Logística"
-                className="h-9 w-auto transition-opacity group-hover:opacity-80"
+                className="h-9 w-[96px] object-cover object-left transition-opacity group-hover:opacity-80"
               />
-              <div className="leading-none">
-                <p className="text-white font-bold tracking-[0.18em] text-[13px]">ASLI</p>
-                <p className="text-white/35 tracking-[0.3em] text-[9px] uppercase">Logística</p>
+              <div className="leading-tight">
+                <p className="text-white/90 text-[11px] sm:text-xs font-semibold">
+                  Asesorias y Servicios logisticos integrales ltda
+                </p>
+                <p className="text-white/70 text-[11px] sm:text-xs">
+                  Logistica y comercio exterior
+                </p>
               </div>
             </a>
 
             <p className="text-white/55 text-sm leading-relaxed mb-6 max-w-xs">
-              Asesorias y Servicios Logisticos Integrales. Coordinamos operaciones de exportacion
-              e importacion desde Curico, Chile.
+              <span className="block">Asesorias y Servicios logisticos integrales ltda</span>
+              <span className="block">Logistica y comercio exterior</span>
             </p>
 
             {/* Social icons */}
@@ -108,7 +112,7 @@ const Footer = () => {
 
           {/* Contact column */}
           <div className="md:col-span-3 md:col-start-10">
-            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">Contacto</p>
+            <p className="text-white text-xs font-semibold uppercase tracking-[0.2em] mb-5">Contac|||to</p>
             <div className="flex flex-col gap-3">
               <a
                 href="mailto:informaciones@asli.cl"
@@ -143,8 +147,9 @@ const Footer = () => {
 
         {/* Divider */}
         <div className="border-t border-white/[0.06] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-white/30 text-xs">
-            © {year} ASLI — Asesorías y Servicios Logísticos Integrales Ltda.
+          <p className="text-white/30 text-xs text-center sm:text-left leading-relaxed">
+            <span className="block">Asesorias y Servicios logisticos integrales ltda</span>
+            <span className="block">Logistica y comercio exterior</span>
           </p>
           <div className="flex items-center gap-1.5 text-white/25 text-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-asli-primary/60 animate-pulse" />

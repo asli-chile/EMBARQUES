@@ -1,15 +1,14 @@
 import { useMemo } from "react";
 import { useLocale } from "@/lib/i18n";
-import { siteConfig } from "@/lib/site";
 import { stripBasePathname, withBase } from "@/lib/basePath";
+import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 type SidebarLink = { href: string; labelKey: string };
 
-function getSidebarLinks(): SidebarLink[] {
+function linksFromVisibleSidebar(visible: ReturnType<typeof getVisibleSidebarItems>): SidebarLink[] {
   const links: SidebarLink[] = [];
-  for (const item of siteConfig.sidebarItems) {
-    const isSuperadminOnly = "superadminOnly" in item && item.superadminOnly;
-    if (isSuperadminOnly) continue;
+  for (const item of visible) {
     if ("href" in item && item.href) {
       links.push({ href: item.href, labelKey: item.labelKey });
     }
@@ -36,7 +35,13 @@ type VisitorSidebarQuickAccessProps = {
  */
 export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAccessProps) {
   const { t } = useLocale();
-  const links = useMemo(getSidebarLinks, []);
+  const { isSuperadmin, isAdmin, isEjecutivo, user, profile } = useAuth();
+  const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
+  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
+  const links = useMemo(
+    () => linksFromVisibleSidebar(getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail)),
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
+  );
 
   const baseBtnClass =
     "px-2 py-0.5 text-[11px] font-medium rounded transition-colors duration-200 " +
