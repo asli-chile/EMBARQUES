@@ -1,4 +1,4 @@
-# ASLI Logistics — Documentación Completa del Sistema
+# EMBARQUES — Documentación completa del sistema (ASLI)
 
 > **Versión:** 2026-03 · **Stack:** Astro 5 + React 19 + Supabase + Tailwind CSS v4
 
@@ -25,7 +25,7 @@
 
 ## 1. Visión General
 
-**ASLI Logistics** es una plataforma web de gestión de exportaciones frutícolas. Permite a ejecutivos y operadores gestionar el ciclo completo de una operación de exportación: desde la creación de la reserva hasta la emisión de documentos, asignación de transporte y facturación.
+**EMBARQUES** (plataforma de **ASLI** — Asesorías y Servicios Logísticos Integrales) es una aplicación web de gestión de exportaciones frutícolas. Permite a ejecutivos y operadores gestionar el ciclo completo de una operación de exportación: desde la creación de la reserva hasta la emisión de documentos, asignación de transporte y facturación.
 
 ### Flujo principal de una operación
 

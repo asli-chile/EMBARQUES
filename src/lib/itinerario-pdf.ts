@@ -8,7 +8,6 @@ import { format } from "date-fns";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 
 const BRAND_BLUE: [number, number, number] = [0, 82, 155];
-const BRAND_BLUE_LIGHT: [number, number, number] = [13, 108, 191];
 const WHITE: [number, number, number] = [255, 255, 255];
 const ROW_ALT: [number, number, number] = [245, 249, 255];
 const DEST_BG: [number, number, number] = [235, 245, 255];
@@ -16,8 +15,6 @@ const DEST_ALT: [number, number, number] = [219, 234, 254];
 const BORDER_COLOR: [number, number, number] = [210, 222, 240];
 const TEXT_MUTED: [number, number, number] = [100, 116, 139];
 const TEXT_DARK: [number, number, number] = [30, 41, 59];
-const SERVICE_BAR_BG: [number, number, number] = [235, 244, 255];
-const SERVICE_BAR_TEXT: [number, number, number] = [30, 58, 110];
 
 const AREA_COLORS: Record<string, [number, number, number]> = {
   AMERICA:        [22, 120, 60],
@@ -45,7 +42,7 @@ function formatDate(dateStr: string | null | undefined): string {
 
 async function loadLogo(): Promise<{ dataUrl: string; w: number; h: number } | null> {
   try {
-    const resp = await fetch("/LOGO ASLI SIN FONDO AZUL.png");
+    const resp = await fetch("/LOGO ASLI SIN FONDO BLANCO.png");
     if (!resp.ok) return null;
     const blob = await resp.blob();
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -144,12 +141,12 @@ export async function generateItinerarioPDF(
     const textX = margin + logoDisplayW + (logo ? 4 : 0);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
+    doc.setFontSize(9.5);
     doc.setTextColor(...WHITE);
     doc.text(locale === "es" ? "Itinerarios de Naves" : "Ship Itineraries", textX, 10);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(5.5);
     doc.setTextColor(170, 210, 255);
     const filterLabel = selectedArea && selectedArea !== "ALL"
       ? `${AREA_LABELS[selectedArea] ?? selectedArea}`
@@ -158,11 +155,11 @@ export async function generateItinerarioPDF(
 
     // Right: date + count
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
+    doc.setFontSize(6.5);
     doc.setTextColor(...WHITE);
     doc.text(format(now, "dd/MM/yyyy"), pageW - margin, 10, { align: "right" });
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(5.5);
     doc.setTextColor(170, 210, 255);
     doc.text(`${totalRows} ${locale === "es" ? "registros" : "records"}`, pageW - margin, 17, { align: "right" });
   };
@@ -173,7 +170,7 @@ export async function generateItinerarioPDF(
     doc.setLineWidth(0.25);
     doc.line(margin, pageH - 7, pageW - margin, pageH - 7);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6);
+    doc.setFontSize(5);
     doc.setTextColor(...TEXT_MUTED);
     doc.text(`${locale === "es" ? "Pág." : "Page"} ${pageNum} / ${totalPages}`, margin, pageH - 3.5);
     doc.text(COMPANY_NAME, pageW / 2, pageH - 3.5, { align: "center" });
@@ -185,64 +182,44 @@ export async function generateItinerarioPDF(
 
   if (totalRows === 0) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setTextColor(...TEXT_MUTED);
     doc.text(
       locale === "es" ? "No hay itinerarios con ETD pendiente." : "No itineraries with pending ETD.",
       pageW / 2, pageH / 2, { align: "center" }
     );
   } else {
-    for (const area of sortedAreas) {
+    for (const [areaIndex, area] of sortedAreas.entries()) {
       const navMap = byArea.get(area)!;
       const sortedNavieras = [...navMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
       const areaColor = AREA_COLORS[area] ?? BRAND_BLUE;
       const areaLabel = AREA_LABELS[area] ?? area;
       const totalNavieras = sortedNavieras.length;
 
-      // ── Area banner ────────────────────────────────────────────────────
-      if (y > pageH - 50) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
+      // ── Cada región empieza en hoja nueva (excepto la primera) ─────────
+      if (areaIndex > 0) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
 
       const bannerH = 9;
+      const bannerMidY = y + bannerH / 2 + 0.9; // baseline centrada verticalmente (7pt cap ≈ 1.73mm → offset ~0.87)
       doc.setFillColor(...areaColor);
       doc.roundedRect(margin, y, pageW - margin * 2, bannerH, 2, 2, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
+      doc.setFontSize(7);
       doc.setTextColor(...WHITE);
-      doc.text(areaLabel.toUpperCase(), margin + 5, y + 6);
+      // Centrar etiqueta de área horizontalmente
+      doc.text(areaLabel.toUpperCase(), margin + (pageW - margin * 2) / 2, bannerMidY, { align: "center" });
       const areaCount = `${totalNavieras} ${totalNavieras === 1 ? (locale === "es" ? "naviera" : "carrier") : (locale === "es" ? "navieras" : "carriers")}`;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.5);
+      doc.setFontSize(5);
       doc.setTextColor(210, 228, 250);
-      doc.text(areaCount, pageW - margin - 4, y + 6, { align: "right" });
+      doc.text(areaCount, pageW - margin - 4, bannerMidY, { align: "right" });
       y += bannerH + 2;
 
-      // ── Navieras ────────────────────────────────────────────────────────
+      // ── Servicios (barra única naviera + servicio combinados) ───────────
       for (const naviera of sortedNavieras) {
         const svcMap = navMap.get(naviera)!;
         const serviceNames = [...svcMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
-        if (y > pageH - 45) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
-
-        // ── Naviera bar (primary — dark navy) ──────────────────────────
-        const navBarH = 9;
-        doc.setFillColor(25, 48, 95);
-        doc.rect(margin, y, pageW - margin * 2, navBarH, "F");
-        // colored left accent
-        doc.setFillColor(...areaColor);
-        doc.rect(margin, y, 3, navBarH, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8.5);
-        doc.setTextColor(...WHITE);
-        doc.text(naviera, margin + 6, y + 6);
-        // service count badge right
-        const svcCount = `${serviceNames.length} ${serviceNames.length === 1 ? (locale === "es" ? "servicio" : "service") : (locale === "es" ? "servicios" : "services")}`;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(6.5);
-        doc.setTextColor(170, 200, 240);
-        doc.text(svcCount, pageW - margin - 3, y + 6, { align: "right" });
-        y += navBarH + 1;
-
-        // ── Services within naviera ──────────────────────────────────────
         for (const servicioNombre of serviceNames) {
           const list = svcMap.get(servicioNombre)!;
           if (list.length === 0) continue;
@@ -259,49 +236,76 @@ export async function generateItinerarioPDF(
           }
           const destinations = [...portKeysByEta.entries()].sort((a, b) => a[1] - b[1]).map(([n]) => n);
 
-          if (y > pageH - 40) { doc.addPage(); drawPageHeader(); y = HEADER_H + 4; }
+          // ── Barra única combinada (naviera + servicio en una sola fila) ─
+          const svcBarH = 9;
 
-          // ── Service sub-bar (secondary — light bg, colored accent) ─────
-          const svcBarH = 7;
-          doc.setFillColor(...SERVICE_BAR_BG);
+          // Estimar altura total del bloque
+          const EST_HEAD_H = 10;
+          const EST_ROW_H = 6;
+          const estServiceH = svcBarH + 0.5 + EST_HEAD_H + list.length * EST_ROW_H + 4;
+          const usablePage = pageH - margin - HEADER_H;
+          if (y + estServiceH > pageH - margin && estServiceH <= usablePage) {
+            doc.addPage(); drawPageHeader(); y = HEADER_H + 4;
+          } else if (y > pageH - 40) {
+            doc.addPage(); drawPageHeader(); y = HEADER_H + 4;
+          }
+
+          const barMidY = y + svcBarH / 2 + 0.9;
+          // Fondo navy oscuro
+          doc.setFillColor(25, 48, 95);
           doc.rect(margin, y, pageW - margin * 2, svcBarH, "F");
+          // Acento de color de región a la izquierda
           doc.setFillColor(...areaColor);
-          doc.rect(margin + 3, y, 1.5, svcBarH, "F");
-          doc.setDrawColor(...BORDER_COLOR);
-          doc.setLineWidth(0.15);
-          doc.line(margin, y + svcBarH, pageW - margin, y + svcBarH);
+          doc.rect(margin, y, 3, svcBarH, "F");
+          // Naviera — bold, blanco, prominente
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(7.5);
-          doc.setTextColor(...SERVICE_BAR_TEXT);
-          doc.text(servicioNombre, margin + 7, y + 4.8);
+          doc.setFontSize(7);
+          doc.setTextColor(...WHITE);
+          doc.text(naviera, margin + 6, barMidY);
+          // Separador + nombre de servicio — más tenue
+          const navieraW = doc.getTextWidth(naviera);
           doc.setFont("helvetica", "normal");
           doc.setFontSize(5.5);
-          doc.setTextColor(160, 180, 210);
-          doc.text(locale === "es" ? "servicio / consorcio" : "service / consortium", pageW - margin - 3, y + 4.8, { align: "right" });
+          doc.setTextColor(160, 195, 240);
+          doc.text(`  ·  ${servicioNombre}`, margin + 6 + navieraW, barMidY);
+          // "servicio / consorcio" a la derecha
+          doc.setFontSize(4.5);
+          doc.setTextColor(100, 150, 210);
+          doc.text(locale === "es" ? "servicio / consorcio" : "service / consortium", pageW - margin - 3, barMidY, { align: "right" });
           y += svcBarH + 0.5;
 
           // Column widths: Sem | Nave | Viaje | POL+ETD | destinations...
           const availableW = pageW - margin * 2;
           const destCount = destinations.length;
           const BASE_COLS_COUNT = 4;
-          const rawBase = [10, 40, 15, 28];
-          const rawBaseTotal = rawBase.reduce((a, b) => a + b, 0); // 93mm
-          const MIN_DEST_W = 18; // minimum mm per dest col so text fits without mid-word breaks
+          const rawBase  = [9, 28, 13, 24];         // Sem | Nave | Viaje | POL+ETD (naturales)
+          const minBase  = [8, 22, 11, 20];         // mínimos absolutos — nunca comprimir más
+          const rawBaseTotal = rawBase.reduce((a, b) => a + b, 0); // 74mm
+          const minBaseTotal = minBase.reduce((a, b) => a + b, 0); // 61mm
+          const MIN_DEST_W = 16;
 
           let baseCols: number[];
           let destColW: number;
           if (destCount === 0) {
             baseCols = rawBase.map((w) => w * (availableW / rawBaseTotal));
             destColW = 0;
-          } else if (rawBaseTotal + MIN_DEST_W * destCount <= availableW) {
-            // Enough room: base cols at natural size, give leftover to dest cols
-            baseCols = rawBase.slice();
-            destColW = (availableW - rawBaseTotal) / destCount;
           } else {
-            // Too many dests: shrink base cols so dest cols get MIN_DEST_W each
-            const baseAvail = availableW - MIN_DEST_W * destCount;
-            baseCols = rawBase.map((w) => w * Math.max(0.4, baseAvail / rawBaseTotal));
-            destColW = MIN_DEST_W;
+            const idealDestTotal = destCount * MIN_DEST_W;
+            const baseAvail = availableW - idealDestTotal;
+            if (baseAvail >= rawBaseTotal) {
+              // Espacio suficiente — base a tamaño natural
+              baseCols = rawBase.slice();
+              destColW = (availableW - rawBaseTotal) / destCount;
+            } else if (baseAvail >= minBaseTotal) {
+              // Comprimir base proporcionalmente pero respetando mínimos
+              const scale = baseAvail / rawBaseTotal;
+              baseCols = rawBase.map((w, i) => Math.max(minBase[i], w * scale));
+              destColW = (availableW - baseCols.reduce((a, b) => a + b, 0)) / destCount;
+            } else {
+              // Demasiados destinos: usar mínimos absolutos
+              baseCols = minBase.slice();
+              destColW = Math.max(MIN_DEST_W, (availableW - minBaseTotal) / destCount);
+            }
           }
 
           const head: string[] = [
@@ -318,7 +322,7 @@ export async function generateItinerarioPDF(
               it.semana != null ? String(it.semana) : "—",
               it.nave || "—",
               it.viaje || "—",
-              `${it.pol || "—"} · ${formatDate(it.etd)}`,
+              `${it.pol || "—"}\n${formatDate(it.etd)}`,
               ...destinations.map((portKey) => {
                 const e = escalas.find((esc) => ((esc.puerto_nombre || esc.puerto) || "—") === portKey);
                 if (!e) return "—";
@@ -331,7 +335,7 @@ export async function generateItinerarioPDF(
 
           const columnStyles: Record<number, object> = {};
           baseCols.forEach((w, i) => {
-            columnStyles[i] = { cellWidth: w, halign: i === 0 ? "center" : "left" };
+            columnStyles[i] = { cellWidth: w, halign: "center", overflow: "ellipsis" };
           });
           destinations.forEach((_, i) => {
             columnStyles[BASE_COLS_COUNT + i] = { cellWidth: destColW, halign: "center" };
@@ -344,8 +348,8 @@ export async function generateItinerarioPDF(
             margin: { left: margin, right: margin },
             tableWidth: pageW - margin * 2,
             styles: {
-              fontSize: 7,
-              cellPadding: { top: 2, bottom: 2, left: 2.5, right: 2.5 },
+              fontSize: 5.5,
+              cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
               lineColor: BORDER_COLOR,
               lineWidth: 0.15,
               valign: "middle",
@@ -357,10 +361,10 @@ export async function generateItinerarioPDF(
               fillColor: [30, 58, 110] as [number, number, number],
               textColor: WHITE,
               fontStyle: "bold",
-              fontSize: 6.5,
+              fontSize: 5,
               halign: "center",
               valign: "middle",
-              cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+              cellPadding: { top: 2, bottom: 2, left: 1.5, right: 1.5 },
               lineColor: [20, 45, 90] as [number, number, number],
               overflow: "linebreak",
             },
@@ -378,8 +382,8 @@ export async function generateItinerarioPDF(
               if (data.section === "head" && data.column.index >= BASE_COLS_COUNT) {
                 data.cell.styles.fillColor = [20, 70, 160] as [number, number, number];
                 // Smaller font + tighter padding so port names wrap at spaces, not mid-word
-                data.cell.styles.fontSize = 5.5;
-                data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 1.5, right: 1.5 };
+                data.cell.styles.fontSize = 4.5;
+                data.cell.styles.cellPadding = { top: 1.5, bottom: 1.5, left: 1, right: 1 };
               }
             },
             didDrawPage: () => { drawPageHeader(); },

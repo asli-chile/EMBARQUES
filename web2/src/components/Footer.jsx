@@ -63,8 +63,8 @@ const Footer = () => {
                 className="h-9 w-auto transition-opacity group-hover:opacity-80"
               />
               <div className="leading-none">
-                <p className="text-white font-bold tracking-[0.18em] text-[13px]">ASLI</p>
-                <p className="text-white/35 tracking-[0.3em] text-[9px] uppercase">Logística</p>
+                <p className="text-white font-bold tracking-[0.18em] text-[13px]">Asesorias y servicios logisticos integrales ltda.</p>
+                <p className="text-white/35 tracking-[0.3em] text-[9px] uppercase">Logistica comercio exterior</p>
               </div>
             </a>
 

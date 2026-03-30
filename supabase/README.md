@@ -32,3 +32,16 @@ supabase db push
 | updated_at       | timestamptz | Última actualización  |
 
 La columna **usuario(s)** se vinculará cuando exista la tabla `usuarios` (relación muchos a muchos).
+
+---
+
+## Edge Function `send-email` (secrets)
+
+Además de `GOOGLE_SERVICE_ACCOUNT`, puedes definir en **Project Settings → Edge Functions → Secrets**:
+
+| Secret | Descripción |
+|--------|-------------|
+| `GMAIL_SHARED_FROM_EMAIL` | Buzón desde el que se envía el **correo informativo** (por defecto `informaciones@asli.cl`). |
+| `GMAIL_SHARED_FROM_NAME` | Nombre visible en `From` para ese buzón (por defecto `ASLI`). |
+
+La cuenta de servicio de Google debe tener **delegación de dominio** para poder impersonar ese buzón (mismo alcance que el resto de @asli.cl).

@@ -4,6 +4,7 @@ import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
+import { brand } from "@/lib/brand";
 import { useAuth } from "@/lib/auth/AuthContext";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
@@ -785,7 +786,7 @@ export function CrearReservaContent() {
       + "<p style=\"font-size:14px;color:#222\">Se ha creado una nueva solicitud de reserva con los siguientes datos:</p>"
       + general + carga + naviera + planta + obs
       + "<p style=\"font-size:14px;color:#222\">Quedo atento.</p>"
-      + "<p style=\"color:#aaa;font-size:11px;margin-bottom:0\">ASLI Logistics &middot; Sistema de Reservas</p>"
+      + `<p style="color:#aaa;font-size:11px;margin-bottom:0">${brand.companyShort} &middot; Sistema de Reservas</p>`
       + "</div>"
       + "</body></html>";
 

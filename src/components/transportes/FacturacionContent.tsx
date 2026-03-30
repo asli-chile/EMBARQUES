@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { brand } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -549,7 +550,7 @@ export function FacturacionContent() {
     // ── PIE ──
     setCell(1, row, "Este documento es una Proforma Invoice y no tiene validez tributaria.", styleNote); merge(row, 1, row, 5);
     row++;
-    setCell(1, row, `Generado el ${fecha} — ASLI Logistics — ${ref}`, styleNote); merge(row, 1, row, 5);
+    setCell(1, row, `Generado el ${fecha} — ${brand.companyShort} — ${ref}`, styleNote); merge(row, 1, row, 5);
 
     // Configuración de hoja
     ws["!ref"] = `A1:E${row}`;
@@ -828,14 +829,14 @@ export function FacturacionContent() {
   <!-- PIE DE PÁGINA -->
   <div class="footer">
     <div class="footer-left">
-      <strong>ASLI — Asesorías y Servicios Logísticos Integrales Ltda.</strong><br>
+      <strong>${brand.companyShort} — ${brand.companyTitle}</strong><br>
       Este documento es una <strong>Proforma Invoice</strong> y no tiene validez tributaria.<br>
       Generado el ${fecha} · Referencia ${ref}
     </div>
     <div class="sign-area">
       <div class="sign-line"></div>
       <div class="sign-name">Firma Autorizada</div>
-      <div class="sign-role">ASLI Logistics</div>
+      <div class="sign-role">${brand.companyShort}</div>
     </div>
   </div>
   <div class="bottom-bar"></div>

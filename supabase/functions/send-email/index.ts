@@ -38,20 +38,37 @@ Deno.serve(async (req) => {
 
     const { data: perfil } = await supabaseAdmin
       .from("usuarios")
-      .select("email, nombre")
+      .select("email, nombre, rol")
       .eq("auth_id", userId)
       .single();
 
-    const senderEmail = perfil?.email ?? userEmail;
-    const senderName  = perfil?.nombre ?? senderEmail;
-    if (!senderEmail) return json({ success: false, error: "No se encontró el email del usuario" }, 400);
+    const profileEmail = perfil?.email ?? userEmail;
+    if (!profileEmail) return json({ success: false, error: "No se encontró el email del usuario" }, 400);
 
     // ── 3. Leer cuerpo de la solicitud ────────────────────────────────────
-    const { to, subject, body, attachments } = await req.json() as {
+    const { to, subject, body, attachments, sendFrom } = await req.json() as {
       to: string; subject: string; body: string;
       attachments?: { name: string; content: string; mimeType: string }[];
+      /** Solo "informaciones": envía desde buzón corporativo (delegación Google). */
+      sendFrom?: string;
     };
     if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" }, 400);
+
+    const sharedMailbox = (Deno.env.get("GMAIL_SHARED_FROM_EMAIL") ?? "informaciones@asli.cl").trim().toLowerCase();
+    const sharedFromName = (Deno.env.get("GMAIL_SHARED_FROM_NAME") ?? "ASLI").trim() || "ASLI";
+
+    let senderEmail = profileEmail;
+    let senderName = perfil?.nombre ?? profileEmail;
+
+    if (sendFrom === "informaciones") {
+      const rol = perfil?.rol as string | undefined;
+      const canUseShared = rol === "ejecutivo" || rol === "admin" || rol === "superadmin";
+      if (!canUseShared) {
+        return json({ success: false, error: "No autorizado a enviar desde el buzón informativo" }, 403);
+      }
+      senderEmail = sharedMailbox;
+      senderName = sharedFromName;
+    }
 
     // ── 4. Obtener token de servicio con impersonación del ejecutivo ───────
     const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT");

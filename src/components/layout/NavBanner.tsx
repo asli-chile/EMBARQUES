@@ -41,6 +41,8 @@ const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
   "mis-documentos":      { icon: "lucide:folder-open",       desc: "Ver documentos generados" },
   "crear-instructivo":   { icon: "lucide:file-plus",         desc: "Crear instructivo de embarque" },
   "crear-proforma":      { icon: "lucide:file-plus",         desc: "Crear proforma de costos" },
+  comunicaciones:      { icon: "lucide:megaphone",           desc: "Mensajes y difusión" },
+  "correo-informativo":  { icon: "lucide:mail-plus",         desc: "Correos informativos con plantilla" },
   reportes:              { icon: "lucide:bar-chart-2",       desc: "Reportes e indicadores" },
   finanzas:              { icon: "lucide:dollar-sign",       desc: "Gestión financiera y pagos" },
   itinerarios:           { icon: "lucide:ship",              desc: "Itinerarios navieros" },

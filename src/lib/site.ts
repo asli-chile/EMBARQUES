@@ -39,6 +39,18 @@ export const siteConfig = {
         { labelKey: "crearProforma", id: "crear-proforma", href: "/documentos/crear-proforma", ejecutivoAndAbove: true },
       ],
     },
+    {
+      labelKey: "comunicaciones",
+      id: "comunicaciones",
+      children: [
+        {
+          labelKey: "correoInformativo",
+          id: "correo-informativo",
+          href: "/comunicaciones/correo-informativo",
+          ejecutivoAndAbove: true,
+        },
+      ],
+    },
     { labelKey: "reportes", id: "reportes", href: "/reportes" },
     { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },

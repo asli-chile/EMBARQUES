@@ -103,6 +103,11 @@ const LazyCrearInstructivoContent = lazy(() =>
 const LazyCrearProformaContent = lazy(() =>
   import("@/components/documentos").then((m) => ({ default: m.CrearProformaContent })),
 );
+const LazyCorreoInformativoContent = lazy(() =>
+  import("@/components/comunicaciones/CorreoInformativoContent").then((m) => ({
+    default: m.CorreoInformativoContent,
+  })),
+);
 
 function RouteFallback() {
   return (
@@ -306,6 +311,12 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ModuleWithVisitorInfo moduleKey="crearProforma">
         <Sus>
           <LazyCrearProformaContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
+    ) : pathname === "/comunicaciones/correo-informativo" ? (
+      <ModuleWithVisitorInfo moduleKey="correoInformativo">
+        <Sus>
+          <LazyCorreoInformativoContent />
         </Sus>
       </ModuleWithVisitorInfo>
     ) : (

@@ -1072,7 +1072,10 @@ export function ItinerarioContent() {
   /** Todas las navieras de un itinerario: directa + miembros de servicio/consorcio */
   const getAllNavierasForIt = useCallback((it: ItinerarioWithEscalas): string[] => {
     const set = new Set<string>();
-    if (it.naviera?.trim()) set.add(it.naviera.trim());
+    // it.naviera puede ser una lista separada por comas — dividir en individuales
+    if (it.naviera?.trim()) {
+      for (const n of it.naviera.split(",").map((s) => s.trim()).filter(Boolean)) set.add(n);
+    }
     for (const n of getNavierasForItinerario(it, serviciosConDetalle, consorciosConDetalle)) set.add(n);
     return [...set];
   }, [serviciosConDetalle, consorciosConDetalle]);
@@ -1124,7 +1127,33 @@ export function ItinerarioContent() {
       result = result.filter((it) => getAllNavierasForIt(it).includes(filterNaviera));
     }
     if (filterSemana != null) {
-      result = result.filter((it) => it.semana === filterSemana);
+      // Calcular rangos de semana por servicio sobre TODOS los itinerarios
+      const rangosPorServicio = new Map<string, Set<number>>();
+      for (const it of itinerarios) {
+        const key = `${it.servicio ?? ""}|${it.consorcio ?? ""}`;
+        if (!rangosPorServicio.has(key)) rangosPorServicio.set(key, new Set());
+        if (it.semana != null) rangosPorServicio.get(key)!.add(it.semana);
+      }
+      // Servicios donde filterSemana es un gap (blank sailing)
+      const blankSvcKeys = new Set<string>();
+      for (const [key, semanas] of rangosPorServicio) {
+        if (!semanas.size) continue;
+        const arr = [...semanas];
+        const min = Math.min(...arr), max = Math.max(...arr);
+        if (filterSemana > min && filterSemana < max && !semanas.has(filterSemana)) {
+          blankSvcKeys.add(key);
+        }
+      }
+      result = result.filter((it) => {
+        if (it.semana === filterSemana) return true;
+        const key = `${it.servicio ?? ""}|${it.consorcio ?? ""}`;
+        if (!blankSvcKeys.has(key)) return false;
+        // Incluir la semana más cercana antes y después del gap para que se detecte el blank sailing
+        const arr = [...(rangosPorServicio.get(key) ?? [])];
+        const before = Math.max(...arr.filter((s) => s < filterSemana));
+        const after  = Math.min(...arr.filter((s) => s > filterSemana));
+        return it.semana === before || it.semana === after;
+      });
     }
     return result;
   }, [itinerarios, filterSearch, filterNaviera, filterSemana, getAllNavierasForIt]);
@@ -1699,6 +1728,11 @@ export function ItinerarioContent() {
                               (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === area)
                             );
 
+                            // Navieras del servicio (incluyendo miembros de consorcio)
+                            const navierasDelServicio = [...new Set(
+                              list.flatMap((it) => getAllNavierasForIt(it))
+                            )].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
                             const getEscalaForPort = (escalas: ItinerarioWithEscalasType["escalas"], portKey: string) =>
                               (escalas ?? []).find((e) => ((e.puerto_nombre || e.puerto) || "—") === portKey);
 
@@ -1743,19 +1777,8 @@ export function ItinerarioContent() {
                             } else {
                               for (const it of sortedByWeek) allDisplayRows.push({ type: "it", data: it });
                             }
-                            // ── Current week always first ──────────────────────────────────
-                            const currentISOWeek = getISOWeek(new Date());
-                            const getSem = (r: DisplayRow) =>
-                              r.type === "blank" ? r.semana : (r.data.semana ?? 9999);
-                            // Split: current+future rows first, then past rows
-                            const futureRows = allDisplayRows.filter(r => getSem(r) >= currentISOWeek);
-                            const pastRows = allDisplayRows.filter(r => getSem(r) < currentISOWeek);
-                            // If current week has no row yet (before minSem), prepend a blank sailing for it
-                            const hasCurrentWeek = futureRows.some(r => getSem(r) === currentISOWeek);
-                            if (!hasCurrentWeek) {
-                              futureRows.unshift({ type: "blank", semana: currentISOWeek });
-                            }
-                            const orderedRows: DisplayRow[] = [...futureRows, ...pastRows];
+                            // Orden cronológico estricto — blank sailing en su posición exacta
+                            const orderedRows: DisplayRow[] = allDisplayRows;
 
                             const displayedRows: DisplayRow[] = isExpanded
                               ? orderedRows
@@ -1777,16 +1800,18 @@ export function ItinerarioContent() {
                                 <div className="relative bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_-2px_rgba(0,82,155,0.12),0_1px_3px_rgba(0,0,0,0.05)] ring-1 ring-brand-blue/10">
                                   {/* ── Service header ── */}
                                   <div className="px-3 py-2 border-b border-[#0a2659]/20 bg-gradient-to-r from-[#00529b] via-[#0d6cbf] to-[#1a7ad4] flex items-center justify-between gap-2 flex-wrap">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <h3 className="text-xs font-bold text-white tracking-tight truncate">
-                                        {servicioNombre}
-                                      </h3>
-                                      {navieras.length > 0 && (
-                                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-white/65 shrink-0">
-                                          <Icon icon="lucide:ship" width={10} height={10} className="shrink-0" aria-hidden />
-                                          {navieras.join(" · ")}
-                                        </span>
+                                    <div className="flex flex-col min-w-0 gap-0.5">
+                                      {navierasDelServicio.length > 0 && (
+                                        <div className="flex items-center gap-1.5">
+                                          <Icon icon="lucide:ship" width={11} height={11} className="text-white/80 shrink-0" aria-hidden />
+                                          <span className="text-sm font-bold text-white tracking-tight truncate">
+                                            {navierasDelServicio.join(" · ")}
+                                          </span>
+                                        </div>
                                       )}
+                                      <span className="text-[10px] text-white/60 truncate tracking-tight pl-0.5">
+                                        {servicioNombre}
+                                      </span>
                                     </div>
                                     {isLoggedIn && isSuperadmin && (
                                       <button
@@ -1958,7 +1983,7 @@ export function ItinerarioContent() {
                                   <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[42px]">
                                     {tr.colSemana}
                                   </th>
-                                  <th className="text-left px-2 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[18%]">
+                                  <th className="text-center px-2 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[18%]">
                                     {tr.colNave}
                                   </th>
                                   <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[14%]">
@@ -2043,7 +2068,7 @@ export function ItinerarioContent() {
                                           <span className="text-neutral-300 text-xs">—</span>
                                         )}
                                       </td>
-                                      <td className="px-2 py-2 text-left align-middle max-w-[0] w-[18%]">
+                                      <td className="px-2 py-2 text-center align-middle max-w-[0] w-[18%]">
                                         <p className="font-semibold text-[#1e3a6e] text-xs truncate leading-tight">{it.nave || "—"}</p>
                                         {it.naviera ? (
                                           <p className="text-neutral-400 text-[10px] truncate mt-px">{it.naviera}</p>

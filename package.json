@@ -11,7 +11,8 @@
     "dev:android": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "deploy:function:send-email": "supabase functions deploy send-email"
   },
   "dependencies": {
     "@astrojs/node": "^9.0.4",
@@ -51,6 +52,7 @@
     "pg": "^8.19.0",
     "postcss": "^8.4.49",
     "stream-browserify": "^3.0.0",
+    "supabase": "^2.49.8",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"
   },

@@ -14,6 +14,12 @@ export const brand = {
   logoWhite: "/LOGO ASLI SIN FONDO BLANCO.png",
   /** Nombre de la empresa */
   companyTitle: "Asesorias y Servicios Logisticos Integrales Ltda.",
+  /**
+   * Marca corta en firmas, pies de correo y PDFs (no usar «ASLI Logistics»).
+   */
+  companyShort: "ASLI",
+  /** Línea típica de pie en correos HTML */
+  emailFooterLine: "ASLI · Curicó, Chile",
 } as const;
 
 // ─── TIPOGRAFÍA ─────────────────────────────────────────────────────────────
