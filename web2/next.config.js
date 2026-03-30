@@ -16,6 +16,8 @@ const nextConfig = {
       { source: "/logoasli.png", destination: `${erpBaseUrl}/logoasli.png` },
       { source: "/favicon.ico", destination: `${erpBaseUrl}/favicon.ico` },
       { source: "/fonts/:path*", destination: `${erpBaseUrl}/fonts/:path*` },
+      { source: "/embarques", destination: "https://embarques-teal.vercel.app" },
+      { source: "/embarques/:path*", destination: "https://embarques-teal.vercel.app/:path*" },
       { source: "/api/:path*", destination: `${erpBaseUrl}/api/:path*` },
       { source: "/auth", destination: `${erpBaseUrl}/auth` },
       { source: "/indicadores", destination: `${erpBaseUrl}/indicadores` },
