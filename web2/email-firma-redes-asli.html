@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Firma correo — redes ASLI (para copiar a Gmail)</title>
+</head>
+<body style="margin:16px;font-family:Arial,sans-serif;color:#333;">
+  <!--
+    PASOS:
+    1) Despliega la web (Vercel, etc.) para que existan las URLs públicas de los PNG en /img/email-social/
+    2) Busca y reemplaza en TODO el archivo: BASE_URL_ASLI
+       por tu dominio SIN barra final, ej: https://tu-dominio.vercel.app
+    3) Abre este archivo en Chrome, selecciona solo la tabla de abajo, copia y pega en Gmail.
+
+    Si aún no tienes sitio publicado: en Gmail usa Insertar imagen y sube instagram.png, linkedin.png, whatsapp.png
+    desde web2/public/img/email-social/ — Gmail las hospeda en Google y suelen verse bien.
+  -->
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;max-width:560px;">
+    <tr>
+      <td style="padding:0 0 16px;font-size:15px;line-height:1.5;color:#333;">
+        Hola,<br><br>
+        Te dejamos nuestros canales por si quieres seguirnos o escribirnos directo:
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding:0 10px 10px 0;vertical-align:middle;">
+              <a href="https://www.instagram.com/asli_chile" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;background:#E4405F;border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;font-weight:bold;">
+                <img src="BASE_URL_ASLI/img/email-social/instagram.png" width="22" height="22" alt="" style="vertical-align:middle;border:0;display:inline-block;margin-right:8px;">
+                <span style="vertical-align:middle;color:#fff;">Instagram</span>
+              </a>
+            </td>
+            <td style="padding:0 10px 10px 0;vertical-align:middle;">
+              <a href="https://www.linkedin.com/company/aslichile" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;background:#0A66C2;border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;font-weight:bold;">
+                <img src="BASE_URL_ASLI/img/email-social/linkedin.png" width="22" height="22" alt="" style="vertical-align:middle;border:0;display:inline-block;margin-right:8px;">
+                <span style="vertical-align:middle;color:#fff;">LinkedIn</span>
+              </a>
+            </td>
+            <td style="padding:0 0 10px 0;vertical-align:middle;">
+              <a href="https://api.whatsapp.com/send/?phone=56968394225" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;background:#25D366;border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;font-weight:bold;">
+                <img src="BASE_URL_ASLI/img/email-social/whatsapp.png" width="22" height="22" alt="" style="vertical-align:middle;border:0;display:inline-block;margin-right:8px;">
+                <span style="vertical-align:middle;color:#fff;">WhatsApp</span>
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-top:8px;font-size:13px;color:#666;">
+        ASLI · Curicó, Chile
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
