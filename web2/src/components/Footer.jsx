@@ -61,7 +61,7 @@ const Footer = () => {
                 src="/img/logoblanco.png"
                 alt="ASLI Logística"
                 title="ASLI"
-                className="h-9 w-[96px] object-cover object-left transition-opacity group-hover:opacity-80"
+                className="h-9 w-[74px] object-cover object-left transition-opacity group-hover:opacity-80"
               />
               <div className="leading-tight">
                 <p className="text-white/90 text-[11px] sm:text-xs font-semibold">
