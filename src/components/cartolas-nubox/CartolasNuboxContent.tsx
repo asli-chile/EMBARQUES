@@ -22,22 +22,38 @@ interface HeaderBanco {
 // ── Parser de cartola bancaria ────────────────────────────────────────────────
 
 function parseFecha(raw: string): string {
-  // Entrada: "DD/MM/YYYY" o serial numérico de Excel → "DD-MM-AAAA"
+  // Normaliza cualquier formato de fecha a "DD-MM-AAAA" requerido por Nubox
   if (!raw) return "";
   const s = String(raw).trim();
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-    const [d, m, y] = s.split("/");
-    return `${d}-${m}-${y}`;
-  }
-  // Serial Excel (número de días desde 1900-01-01)
+
+  // D/M/YYYY o DD/MM/YYYY (con o sin ceros)
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0") + "-" + m[3];
+
+  // D-M-YYYY o DD-MM-YYYY (ya en el formato correcto o sin ceros)
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m) return m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0") + "-" + m[3];
+
+  // DD.MM.YYYY o D.M.YYYY
+  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) return m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0") + "-" + m[3];
+
+  // YYYY-MM-DD (ISO)
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3] + "-" + m[2] + "-" + m[1];
+
+  // YYYY/MM/DD
+  m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (m) return m[3] + "-" + m[2] + "-" + m[1];
+
+  // Serial numérico de Excel (días desde 1900-01-01)
   if (/^\d+$/.test(s)) {
     const date = XLSX.SSF.parse_date_code(Number(s));
     if (date) {
-      const dd = String(date.d).padStart(2, "0");
-      const mm = String(date.m).padStart(2, "0");
-      return `${dd}-${mm}-${date.y}`;
+      return String(date.d).padStart(2, "0") + "-" + String(date.m).padStart(2, "0") + "-" + date.y;
     }
   }
+
   return s;
 }
 
@@ -133,13 +149,15 @@ function parseCartola(workbook: XLSX.WorkBook): {
 
     const montoNum = Math.abs(Number(monto));
     const fecha = parseFecha(fechaRaw);
+    const esAbono = cargoAbono.startsWith("A");
+    const esCargo = cargoAbono.startsWith("C");
 
     movimientos.push({
       fecha,
       descripcion: desc,
       referencia: nDoc === "0" || nDoc === "" ? "" : nDoc,
-      abono: cargoAbono === "A" ? montoNum : "",
-      cargo: cargoAbono === "C" ? montoNum : "",
+      abono: esAbono ? montoNum : "",
+      cargo: esCargo ? montoNum : "",
     });
   }
 
@@ -150,67 +168,76 @@ function parseCartola(workbook: XLSX.WorkBook): {
   return { movimientos, header };
 }
 
+// ── Conversión DD-MM-YYYY → serial numérico de Excel ─────────────────────────
+function toExcelSerial(ddmmyyyy: string): number {
+  const [dd, mm, yyyy] = ddmmyyyy.split("-").map(Number);
+  // Época de Excel: 30-dic-1899 (compensa el bug de año bisiesto 1900)
+  const excelEpoch = new Date(1899, 11, 30).getTime();
+  const jsDate     = new Date(yyyy, mm - 1, dd).getTime();
+  return Math.round((jsDate - excelEpoch) / 86400000);
+}
+
 // ── Generador del Excel Nubox ─────────────────────────────────────────────────
 
-function generateNuboxXlsx(
+function generateNuboxXls(
   movimientos: MovimientoNubox[],
   header: HeaderBanco,
 ): Uint8Array {
   const wb = XLSX.utils.book_new();
-
-  // Construir hoja celda por celda para posicionamiento exacto
   const ws: XLSX.WorkSheet = {};
 
-  const s = () => ({
-    font: { name: "Calibri", sz: 10 },
-    alignment: { horizontal: "center" as const, vertical: "center" as const },
+  // Celda texto
+  const txt = (v: string) => ({ t: "s" as const, v });
+  // Celda fecha: serial numérico con formato DD-MM-YYYY (igual al template)
+  const fecha = (ddmmyyyy: string) => ({
+    t: "n" as const,
+    v: toExcelSerial(ddmmyyyy),
+    z: "DD-MM-YYYY",
   });
-  const sNum = () => ({
-    font: { name: "Calibri", sz: 10 },
-    alignment: { horizontal: "center" as const, vertical: "center" as const },
-    numFmt: '"$"#,##0',
-  });
+  // Celda número entero
+  const num = (v: number) => ({ t: "n" as const, v });
 
-  // ── Encabezado (filas 2-4, columnas B y C) ─────────────────────────────────
-  ws["B2"] = { t: "s", v: "Banco",         s: s() };
-  ws["C2"] = { t: "s", v: header.banco,    s: s() };
-  ws["B3"] = { t: "s", v: "Tipo Cuenta",   s: s() };
-  ws["C3"] = { t: "s", v: header.tipoCuenta, s: s() };
-  ws["B4"] = { t: "s", v: "Numero Cuenta", s: s() };
-  ws["C4"] = { t: "s", v: header.numeroCuenta, s: s() };
+  // ── Encabezado banco (filas 2-4, columnas B-C) ────────────────────────────
+  ws["B2"] = txt("Banco");          ws["C2"] = txt(header.banco);
+  ws["B3"] = txt("Tipo Cuenta");    ws["C3"] = txt(header.tipoCuenta);
+  ws["B4"] = txt("Numero Cuenta");  ws["C4"] = txt(header.numeroCuenta);
 
-  // ── Cabecera de tabla (fila 6) ──────────────────────────────────────────────
-  ws["A6"] = { t: "s", v: "Fecha",         s: s() };
-  ws["B6"] = { t: "s", v: "Descripcion",   s: s() };
-  ws["C6"] = { t: "s", v: "Referencia",    s: s() };
-  ws["D6"] = { t: "s", v: "Monto Abonado", s: s() };
-  ws["E6"] = { t: "s", v: "Monto Cargo",   s: s() };
+  // ── Cabecera de datos (fila 6) ────────────────────────────────────────────
+  ws["A6"] = txt("Fecha");
+  ws["B6"] = txt("Descripcion");
+  ws["C6"] = txt("Referencia");
+  ws["D6"] = txt("Monto Abono");
+  ws["E6"] = txt("Monto Cargo");
 
-  // ── Datos desde fila 7 ─────────────────────────────────────────────────────
-  movimientos.forEach((m, i) => {
-    const row = 7 + i;
-    ws[`A${row}`] = { t: "s", v: m.fecha,        s: s() };
-    ws[`B${row}`] = { t: "s", v: m.descripcion,  s: s() };
-    ws[`C${row}`] = { t: "s", v: m.referencia,   s: s() };
-    if (m.abono !== "") ws[`D${row}`] = { t: "n", v: m.abono, s: sNum() };
-    if (m.cargo  !== "") ws[`E${row}`] = { t: "n", v: m.cargo,  s: sNum() };
+  // ── Movimientos desde fila 7 ──────────────────────────────────────────────
+  movimientos.forEach((mov, i) => {
+    const r = 7 + i;
+    ws[`A${r}`] = fecha(mov.fecha);
+    ws[`B${r}`] = txt(mov.descripcion);
+    ws[`C${r}`] = txt(mov.referencia);
+    if (mov.abono !== "") ws[`D${r}`] = num(mov.abono as number);
+    if (mov.cargo !== "") ws[`E${r}`] = num(mov.cargo as number);
   });
 
-  // ── Rango de la hoja ───────────────────────────────────────────────────────
+  // ── Rango, anchos de columna y sin protección ─────────────────────────────
   const lastRow = 6 + movimientos.length;
-  ws["!ref"] = `A1:E${lastRow}`;
-
-  // ── Ancho de columnas ──────────────────────────────────────────────────────
+  ws["!ref"] = `A2:E${lastRow}`;
   ws["!cols"] = [
-    { wch: 14 }, // A Fecha
-    { wch: 45 }, // B Descripcion
-    { wch: 16 }, // C Referencia
-    { wch: 16 }, // D Monto Abonado
-    { wch: 16 }, // E Monto Cargo
+    { wch: 11 }, // A Fecha
+    { wch: 13 }, // B Descripcion
+    { wch: 14 }, // C Referencia
+    { wch: 14 }, // D Monto Abono
+    { wch: 11 }, // E Monto Cargo
   ];
+  // Sin protección de hoja
+  delete (ws as Record<string, unknown>)["!protect"];
 
   XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
-  return XLSX.write(wb, { type: "array", bookType: "xlsx" }) as Uint8Array;
+
+  // Sin protección de libro
+  if (wb.Workbook) delete wb.Workbook.WBProps;
+
+  return XLSX.write(wb, { type: "array", bookType: "biff8", bookSST: true }) as Uint8Array;
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -288,13 +315,13 @@ export function CartolasNuboxContent() {
   );
 
   const handleDownload = useCallback(() => {
-    const bytes = generateNuboxXlsx(movimientos!, header);
-    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const bytes = generateNuboxXls(movimientos!, header);
+    const blob = new Blob([bytes], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     const base = fileName.replace(/\.(xlsx|xls)$/i, "");
-    a.download = `${base}_Nubox.xlsx`;
+    a.download = `${base}_Nubox.xls`;
     a.click();
     URL.revokeObjectURL(url);
   }, [movimientos, header, fileName]);

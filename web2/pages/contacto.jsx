@@ -177,6 +177,8 @@ const COPY = {
 
 const ContactoPage = () => {
   const [enviado, setEnviado] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const [form, setForm] = useState({ ...INITIAL_FORM })
   const { lang } = useLang()
   const tr = COPY[lang] || COPY.es
@@ -186,16 +188,30 @@ const ContactoPage = () => {
   const handleReset = () => {
     setForm({ ...INITIAL_FORM })
     setEnviado(false)
+    setErrorMsg('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const asunto = encodeURIComponent('Solicitud desde web ASLI')
-    const cuerpo = encodeURIComponent(
-      `Nombre: ${form.nombre}\nEmpresa: ${form.empresa}\nEmail: ${form.email}\nTelefono: ${form.telefono}\nTipo de operacion: ${form.tipo}\n\nMensaje:\n${form.mensaje}`
-    )
-    window.open(`mailto:informaciones@asli.cl?subject=${asunto}&body=${cuerpo}`, '_blank')
-    setEnviado(true)
+    setEnviando(true)
+    setErrorMsg('')
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setEnviado(true)
+      } else {
+        setErrorMsg('No se pudo enviar el mensaje. Por favor intenta nuevamente.')
+      }
+    } catch {
+      setErrorMsg('Error de conexión. Por favor intenta nuevamente.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -418,20 +434,38 @@ const ContactoPage = () => {
                           <button
                             type="button"
                             onClick={handleReset}
-                            className="sm:w-40 shrink-0 inline-flex items-center justify-center px-4 py-4 rounded-xl border border-white/20 text-white/80 text-sm font-semibold hover:border-white/35 hover:text-white hover:bg-white/[0.04] transition-all duration-300"
+                            disabled={enviando}
+                            className="sm:w-40 shrink-0 inline-flex items-center justify-center px-4 py-4 rounded-xl border border-white/20 text-white/80 text-sm font-semibold hover:border-white/35 hover:text-white hover:bg-white/[0.04] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             {tr.reset}
                           </button>
                           <button
                             type="submit"
-                            className="group sm:flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-asli-primary text-white font-semibold hover:bg-asli-primary/85 transition-all duration-300 shadow-lg shadow-asli-primary/20 hover:-translate-y-px ring-1 ring-asli-primary/30"
+                            disabled={enviando}
+                            className="group sm:flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-asli-primary text-white font-semibold hover:bg-asli-primary/85 transition-all duration-300 shadow-lg shadow-asli-primary/20 hover:-translate-y-px ring-1 ring-asli-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                           >
-                            {tr.send}
-                            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
+                            {enviando ? (
+                              <>
+                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Enviando...
+                              </>
+                            ) : (
+                              <>
+                                {tr.send}
+                                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                </svg>
+                              </>
+                            )}
                           </button>
                         </div>
+
+                        {errorMsg && (
+                          <p className="text-red-400 text-xs text-center">{errorMsg}</p>
+                        )}
 
                         <p className="text-white/30 text-xs text-center">
                           {tr.responseTime}
