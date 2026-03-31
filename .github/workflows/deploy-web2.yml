@@ -1,0 +1,56 @@
+# Despliega web2 en Vercel en cada push a master que toque web2/ (y permite disparo manual).
+#
+# GitHub → Settings → Secrets and variables → Actions:
+#   VERCEL_TOKEN        (Vercel → Account → Tokens)
+#   VERCEL_ORG_ID       (team / org id, ej. team_xxx)
+#   VERCEL_PROJECT_ID   (ej. prj_xxx; en .vercel/project.json tras vercel link en web2)
+#
+# Si no quieres usar Actions: Vercel → proyecto web2 → Settings → Git → Connect Repository
+# con Root Directory = web2 y rama master.
+#
+name: Deploy web2 (Vercel)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "web2/**"
+      - ".github/workflows/deploy-web2.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web2/package-lock.json
+
+      - name: Install & build web2
+        working-directory: web2
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Vercel (production)
+        working-directory: web2
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::notice::Sin secrets VERCEL_* — no se ejecuta deploy. Conecta Git en Vercel (web2) o añade VERCEL_TOKEN, VERCEL_ORG_ID y VERCEL_PROJECT_ID en GitHub Actions."
+            exit 0
+          fi
+          npx vercel deploy --prod --token="$VERCEL_TOKEN" --yes

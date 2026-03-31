@@ -116,3 +116,19 @@ npm run build:web2               # Web2 (desde la raíz del repo)
 ## 6. Archivos legacy
 
 - `web2/vercel.proxy-legacy.json`: antiguo; el despliegue usa `web2/vercel.json` y `next.config.js`.
+
+---
+
+## 7. Traducciones / cambios en web2 que “no se ven” en producción
+
+**Causa habitual:** el proyecto **web2** en Vercel se desplegó con `vercel deploy` (CLI) y **no está conectado a Git**. Los pushes a GitHub **no** generan un nuevo deploy; solo cambia el código en el repo.
+
+**Qué hacer (elige una):**
+
+1. **Conectar Git en Vercel** (recomendado): proyecto **web2** → **Settings → Git** → conectar el repo, **Root Directory = `web2`**, rama **master**. A partir de ahí, cada push que toque `web2/` despliega solo.
+
+2. **GitHub Actions**: workflow `.github/workflows/deploy-web2.yml`. Añade en el repo (GitHub → **Settings → Secrets and variables → Actions**) los secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID` (los obtienes con `vercel link` en `web2` y un token en Vercel).
+
+**Dominio `asli.cl`:** debe estar asignado al **mismo** proyecto Vercel donde queda el deploy actual (p. ej. `web2-sigma-one`). Si el DNS apunta a otro sitio, verás una versión vieja aunque Vercel esté al día.
+
+**Caché del navegador:** tras un deploy, prueba ventana privada o recarga forzada (Ctrl+F5). En `next.config.js` las rutas HTML usan `Cache-Control: max-age=0, must-revalidate` para reducir HTML obsoleto en CDN.

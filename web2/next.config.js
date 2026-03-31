@@ -15,6 +15,26 @@ const nextConfig = {
   images: {
     domains: ["asli.cl", "www.asli.cl", "embarques-teal.vercel.app"],
   },
+  /** Evita HTML viejo en CDN al publicar traducciones o textos nuevos */
+  async headers() {
+    const htmlNoCache = {
+      key: "Cache-Control",
+      value: "public, max-age=0, must-revalidate",
+    };
+    const paths = [
+      "/",
+      "/contacto",
+      "/ejecutivos",
+      "/nosotros",
+      "/presentacion",
+      "/servicios",
+      "/tracking",
+    ];
+    return paths.map((source) => ({
+      source,
+      headers: [htmlNoCache],
+    }));
+  },
   async rewrites() {
     return [
       { source: "/logoasli.png", destination: `${embarquesBase}/logoasli.png` },
