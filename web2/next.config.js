@@ -3,13 +3,17 @@
  * Sitio público (web2):  https://asli.cl
  * Sistema embarques en URL pública: https://asli.cl/embarques/...
  *
- * IMPORTANTE: NEXT_PUBLIC_EMBARQUES_BASE_URL debe ser la URL del proyecto Astro en Vercel
- * (p. ej. https://embarques-teal.vercel.app/embarques), NUNCA https://asli.cl/embarques
- * (si no, el proxy apunta a sí mismo → 404).
+ * IMPORTANTE: embarquesBase debe ser la URL raíz del proyecto Astro en Vercel,
+ * SIN el sufijo /embarques. Astro con base:"/embarques" genera links con ese prefijo
+ * en el HTML, pero el servidor Vercel sirve las rutas SIN él (/inicio, no /embarques/inicio).
+ * El proxy de Next.js strip-ea /embarques del source y llama al destino sin ese prefijo.
+ *
+ * NUNCA poner https://embarques-teal.vercel.app/embarques → doble prefijo → 404.
+ * NUNCA poner https://asli.cl → el proxy apuntaría a sí mismo → loop 404.
  */
 const embarquesBase =
   process.env.NEXT_PUBLIC_EMBARQUES_BASE_URL ||
-  "https://embarques-teal.vercel.app/embarques";
+  "https://embarques-teal.vercel.app";
 
 const nextConfig = {
   reactStrictMode: true,
