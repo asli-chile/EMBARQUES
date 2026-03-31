@@ -30,7 +30,15 @@
       "Skill(update-config:*)",
       "Bash(npx vercel:*)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(VERCEL_TOKEN=vca_8UunFqJtEd0X5XZx7WAzfWuU2vikwywC0awXjmOpFDXcxpPCJl03HK7T)",
+      "Bash(TEAM_ID=team_EoxMNL9xIxVKntYRVbJDmFxP)",
+      "Read(//c/Users/rodri/OneDrive/Desktop/ASLI PROGRAMA DEFINITIVO/EMBARQUES - ANTIGRAVITY/$HOME/**)",
+      "Read(//c/Users/rodri/OneDrive/Desktop/ASLI PROGRAMA DEFINITIVO/EMBARQUES - ANTIGRAVITY/$HOME/.config/**)",
+      "Bash(pip install:*)",
+      "Bash(python -c \":*)",
+      "Bash(cd /tmp)",
+      "Bash(npm init:*)"
     ]
   }
 }

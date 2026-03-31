@@ -56,7 +56,14 @@ function doPost(e) {
       options.attachments = blobs;
     }
 
-    // ── Crear borrador ─────────────────────────────────────────────────────
+    // ── Enviar o crear borrador ────────────────────────────────────────────
+    if (data.sendNow) {
+      GmailApp.sendEmail(data.to, data.subject, "", options);
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     var draft = GmailApp.createDraft(data.to, data.subject, "", options);
     var draftUrl = "https://mail.google.com/mail/#drafts/" + draft.getMessage().getId();
 
