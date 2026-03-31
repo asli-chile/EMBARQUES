@@ -168,6 +168,41 @@ function parseCartola(workbook: XLSX.WorkBook): {
   return { movimientos, header };
 }
 
+// ── Códigos de banco Nubox ────────────────────────────────────────────────────
+const BANCOS_NUBOX = [
+  "1101-02 BANCO SANTANDER",
+  "1101-03 BANCO SANTANDER USD",
+  "1101-04 BANCO SANTANDER EURO",
+  "1101-05 BANCO ITAU",
+  "1101-06 BANCO ITAU OPERMAN",
+  "1101-07 BANCO SCOTIABANK",
+  "1101-08 BANCO SCOTIABANK USD",
+  "1101-09 BANCO SANTANDER OPERMAN",
+  "1101-10 BANCO SANTANDER USD OPERMAN",
+  "1101-11 BANCO SANTANDER EURO OPERMAN",
+  "1101-12 BANCO CHILE",
+  "1101-13 BANCO CHILE USD",
+  "1101-14 BANCO ESTADO",
+  "1101-15 BANCO SANTANDER PESOS VIF",
+  "1101-16 BANCO ITAU USD",
+] as const;
+
+// Mapea el nombre detectado en la cartola al código Nubox más probable
+function detectarCodigoBanco(nombreDetectado: string): string {
+  const n = nombreDetectado.toUpperCase();
+  if (n.includes("ESTADO"))                          return "1101-14 BANCO ESTADO";
+  if (n.includes("CHILE") && !n.includes("USD"))     return "1101-12 BANCO CHILE";
+  if (n.includes("CHILE") && n.includes("USD"))      return "1101-13 BANCO CHILE USD";
+  if (n.includes("SANTANDER") && !n.includes("USD") && !n.includes("EURO")) return "1101-02 BANCO SANTANDER";
+  if (n.includes("SANTANDER") && n.includes("USD"))  return "1101-03 BANCO SANTANDER USD";
+  if (n.includes("SANTANDER") && n.includes("EURO")) return "1101-04 BANCO SANTANDER EURO";
+  if (n.includes("ITAU") && n.includes("USD"))       return "1101-16 BANCO ITAU USD";
+  if (n.includes("ITAU"))                            return "1101-05 BANCO ITAU";
+  if (n.includes("SCOTIABANK") && n.includes("USD")) return "1101-08 BANCO SCOTIABANK USD";
+  if (n.includes("SCOTIABANK"))                      return "1101-07 BANCO SCOTIABANK";
+  return "";
+}
+
 // ── Conversión DD-MM-YYYY → serial numérico de Excel ─────────────────────────
 function toExcelSerial(ddmmyyyy: string): number {
   const [dd, mm, yyyy] = ddmmyyyy.split("-").map(Number);
@@ -279,7 +314,7 @@ export function CartolasNuboxContent() {
           setParseError("empty");
         } else {
           setMovimientos(movs);
-          setHeader(h);
+          setHeader({ ...h, banco: detectarCodigoBanco(h.banco) });
           setFileName(file.name);
         }
       } catch {
@@ -369,9 +404,26 @@ export function CartolasNuboxContent() {
               Datos del banco
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Banco — select con códigos Nubox */}
+              <div>
+                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                  {tr.fieldBanco}
+                </label>
+                <select
+                  value={header.banco}
+                  onChange={(e) => setHeader((h) => ({ ...h, banco: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all text-sm cursor-pointer"
+                >
+                  <option value="">Seleccionar banco...</option>
+                  {BANCOS_NUBOX.map((cod) => (
+                    <option key={cod} value={cod}>{cod}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tipo cuenta y número cuenta — texto libre */}
               {(
                 [
-                  { key: "banco" as const, label: tr.fieldBanco, placeholder: tr.fieldBancoPlaceholder },
                   { key: "tipoCuenta" as const, label: tr.fieldTipoCuenta, placeholder: tr.fieldTipoCuentaPlaceholder },
                   { key: "numeroCuenta" as const, label: tr.fieldNumeroCuenta, placeholder: "0-000-0000000-0" },
                 ] as const
