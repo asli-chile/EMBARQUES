@@ -76,8 +76,10 @@ function extractHeaderBanco(rows: unknown[][]): HeaderBanco {
     }
     // Detectar banco por código de sucursal o texto en cualquier celda
     for (const cell of cells) {
-      if (/0285\s*CURICO|CURICO\s*PLAZA/i.test(cell) || /BANCO\s*ESTADO/i.test(cell)) {
+      if (/BANCO\s*ESTADO/i.test(cell)) {
         banco = "Banco Estado";
+      } else if (/0285\s*CURICO|CURICO\s*PLAZA|BANCO\s*SANTANDER/i.test(cell)) {
+        banco = "Banco Santander";
       } else if (/BANCO\s*DE\s*CHILE/i.test(cell)) {
         banco = "Banco de Chile";
       } else if (/BANCO\s*SANTANDER/i.test(cell)) {
