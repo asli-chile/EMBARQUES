@@ -7,3 +7,5 @@ En **Vercel** debe existir un **proyecto propio** con **Root Directory = `web2`*
 Instrucciones detalladas: [docs/DESPLEGUE-VERCEL.md](../docs/DESPLEGUE-VERCEL.md).
 
 Variables de entorno: copiar de `.env.example` (definir en Vercel → Settings → Environment Variables).
+
+Último disparo de deploy (repo): 2026-03-31.

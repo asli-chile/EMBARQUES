@@ -224,3 +224,5 @@ Opciones válidas para `authIcon`:
 | [docs/DATABASE-SCHEMA.md](docs/DATABASE-SCHEMA.md) | Esquema de base de datos y tablas en Supabase |
 
 La sección anterior incluye la guía para usuarios; el resto son documentos técnicos.
+
+Último disparo de deploy (repo): 2026-03-31.
