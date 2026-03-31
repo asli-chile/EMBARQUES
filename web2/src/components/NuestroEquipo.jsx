@@ -8,7 +8,7 @@ const equipoNombres = [
   'Poliana Cisternas',
   'Rocio Villareal',
   'Stefanie Córdova',
-  'Rodrigo Casillo',
+  'Rodrigo Castillo',
   'Nina Scotti',
   'Ricardo Lazo',
   'Alex Cárdenas',
