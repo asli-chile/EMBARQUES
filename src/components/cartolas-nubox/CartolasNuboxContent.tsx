@@ -58,9 +58,24 @@ function extractHeaderBanco(rows: unknown[][]): HeaderBanco {
         numeroCuenta = m[2].trim();
       }
     }
-    // Detectar banco desde primera celda no vacía que diga algo útil
-    // (en la cartola del Banco de Chile no aparece el nombre del banco explícito,
-    //  se infiere del título de la hoja o se deja vacío para que el usuario lo complete)
+    // Detectar banco por código de sucursal o texto en cualquier celda
+    for (const cell of cells) {
+      if (/0285\s*CURICO|CURICO\s*PLAZA/i.test(cell) || /BANCO\s*ESTADO/i.test(cell)) {
+        banco = "Banco Estado";
+      } else if (/BANCO\s*DE\s*CHILE/i.test(cell)) {
+        banco = "Banco de Chile";
+      } else if (/BANCO\s*SANTANDER/i.test(cell)) {
+        banco = "Banco Santander";
+      } else if (/BCI|BANCO\s*DE\s*CR[EÉ]DITO/i.test(cell)) {
+        banco = "BCI";
+      } else if (/SCOTIABANK/i.test(cell)) {
+        banco = "Scotiabank";
+      } else if (/ITAU/i.test(cell)) {
+        banco = "Banco Itaú";
+      } else if (/BICE/i.test(cell)) {
+        banco = "Banco BICE";
+      }
+    }
   }
 
   return { banco, tipoCuenta, numeroCuenta };
@@ -142,59 +157,56 @@ function generateNuboxXlsx(
   header: HeaderBanco,
 ): Uint8Array {
   const wb = XLSX.utils.book_new();
-  const wsData: unknown[][] = [];
 
-  // Filas de encabezado Nubox
-  wsData.push(["", "Banco", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  wsData.push(["", header.banco, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  wsData.push(["", "Tipo Cuenta", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  wsData.push(["", header.tipoCuenta, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  wsData.push(["", "Numero Cuenta", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  wsData.push(["", header.numeroCuenta, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  wsData.push([]); // fila vacía (fila 4 del original está vacía)
+  // Construir hoja celda por celda para posicionamiento exacto
+  const ws: XLSX.WorkSheet = {};
 
-  // Cabecera de columnas de datos (fila 5 del formato Nubox)
-  wsData.push(["Fecha", "Descripcion", "Referencia", "Monto Abono", "Monto Cargo"]);
-
-  // Filas de datos
-  for (const m of movimientos) {
-    wsData.push([m.fecha, m.descripcion, m.referencia, m.abono, m.cargo]);
-  }
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Estilos cabecera de columnas (fila 8 en base 1)
-  const headerRowIdx = 7; // 0-based
-  const cols = ["A", "B", "C", "D", "E"];
-  const headerStyle = {
-    font: { bold: true, color: { rgb: "FFFFFF" } },
-    fill: { fgColor: { rgb: "1D4ED8" } },
-    alignment: { horizontal: "center" as const },
-  };
-  cols.forEach((col) => {
-    const cell = ws[`${col}${headerRowIdx + 1}`];
-    if (cell) cell.s = headerStyle;
+  const s = () => ({
+    font: { name: "Calibri", sz: 10 },
+    alignment: { horizontal: "center" as const, vertical: "center" as const },
+  });
+  const sNum = () => ({
+    font: { name: "Calibri", sz: 10 },
+    alignment: { horizontal: "center" as const, vertical: "center" as const },
+    numFmt: '"$"#,##0',
   });
 
-  // Formato numérico para montos
-  for (let i = 0; i < movimientos.length; i++) {
-    const rowNum = headerRowIdx + 2 + i; // 1-based
-    (["D", "E"] as const).forEach((col) => {
-      const cell = ws[`${col}${rowNum}`];
-      if (cell && cell.v !== "") {
-        cell.t = "n";
-        cell.z = "#,##0";
-      }
-    });
-  }
+  // ── Encabezado (filas 2-4, columnas B y C) ─────────────────────────────────
+  ws["B2"] = { t: "s", v: "Banco",         s: s() };
+  ws["C2"] = { t: "s", v: header.banco,    s: s() };
+  ws["B3"] = { t: "s", v: "Tipo Cuenta",   s: s() };
+  ws["C3"] = { t: "s", v: header.tipoCuenta, s: s() };
+  ws["B4"] = { t: "s", v: "Numero Cuenta", s: s() };
+  ws["C4"] = { t: "s", v: header.numeroCuenta, s: s() };
 
-  // Ancho de columnas
+  // ── Cabecera de tabla (fila 6) ──────────────────────────────────────────────
+  ws["A6"] = { t: "s", v: "Fecha",         s: s() };
+  ws["B6"] = { t: "s", v: "Descripcion",   s: s() };
+  ws["C6"] = { t: "s", v: "Referencia",    s: s() };
+  ws["D6"] = { t: "s", v: "Monto Abonado", s: s() };
+  ws["E6"] = { t: "s", v: "Monto Cargo",   s: s() };
+
+  // ── Datos desde fila 7 ─────────────────────────────────────────────────────
+  movimientos.forEach((m, i) => {
+    const row = 7 + i;
+    ws[`A${row}`] = { t: "s", v: m.fecha,        s: s() };
+    ws[`B${row}`] = { t: "s", v: m.descripcion,  s: s() };
+    ws[`C${row}`] = { t: "s", v: m.referencia,   s: s() };
+    if (m.abono !== "") ws[`D${row}`] = { t: "n", v: m.abono, s: sNum() };
+    if (m.cargo  !== "") ws[`E${row}`] = { t: "n", v: m.cargo,  s: sNum() };
+  });
+
+  // ── Rango de la hoja ───────────────────────────────────────────────────────
+  const lastRow = 6 + movimientos.length;
+  ws["!ref"] = `A1:E${lastRow}`;
+
+  // ── Ancho de columnas ──────────────────────────────────────────────────────
   ws["!cols"] = [
-    { wch: 14 }, // Fecha
-    { wch: 45 }, // Descripcion
-    { wch: 16 }, // Referencia
-    { wch: 16 }, // Monto Abono
-    { wch: 16 }, // Monto Cargo
+    { wch: 14 }, // A Fecha
+    { wch: 45 }, // B Descripcion
+    { wch: 16 }, // C Referencia
+    { wch: 16 }, // D Monto Abonado
+    { wch: 16 }, // E Monto Cargo
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
@@ -295,22 +307,31 @@ export function CartolasNuboxContent() {
   }, []);
 
   const fmtMonto = (n: number | "") =>
-    n === "" ? "" : n.toLocaleString("es-CL");
+    n === "" ? "" : "$ " + Math.round(n as number).toLocaleString("es-CL");
 
   // ── Estado: tiene movimientos parseados ────────────────────────────────────
   if (movimientos) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-50" role="main">
+      <main
+        className="flex-1 min-h-0 overflow-auto"
+        role="main"
+        style={{
+          backgroundImage: "url('/embarques/girasol.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }}
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
           {/* Header */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-sm border border-white/60">
+            <div className="w-10 h-10 rounded-xl bg-brand-blue/15 border border-brand-blue/30 flex items-center justify-center shrink-0">
               <Icon icon="lucide:file-spreadsheet" className="text-brand-blue" width={22} height={22} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-neutral-900">{tr.title}</h1>
-              <p className="text-xs text-neutral-500">{fileName}</p>
+              <p className="text-xs text-neutral-600 font-medium">{fileName}</p>
             </div>
           </div>
 
@@ -405,7 +426,16 @@ export function CartolasNuboxContent() {
 
   // ── Estado: dropzone ───────────────────────────────────────────────────────
   return (
-    <main className="flex-1 min-h-0 overflow-auto bg-neutral-50" role="main">
+    <main
+      className="flex-1 min-h-0 overflow-auto"
+      role="main"
+      style={{
+        backgroundImage: "url('/embarques/girasol.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6">
 
         {/* Header */}
@@ -437,6 +467,7 @@ export function CartolasNuboxContent() {
             accept=".xlsx,.xls"
             className="hidden"
             onChange={handleFileInput}
+            onClick={(e) => e.stopPropagation()}
           />
           {processing ? (
             <>
