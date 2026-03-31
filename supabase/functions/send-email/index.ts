@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   try {
     // ── 1. Extraer JWT y decodificar user ID directamente ──────────────────
     const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
-    if (!authHeader) return json({ success: false, error: "Sin header de autorización" }, 401);
+    if (!authHeader) return json({ success: false, error: "Sin header de autorización" });
 
     const jwt = authHeader.replace(/^Bearer\s+/i, "");
 
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       userEmail = payload.email as string | undefined;
       if (!userId) throw new Error("sin sub");
     } catch {
-      return json({ success: false, error: "JWT inválido" }, 401);
+      return json({ success: false, error: "JWT inválido" });
     }
 
     // ── 2. Obtener email del ejecutivo desde usuarios (service role) ────────
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       .single();
 
     const profileEmail = perfil?.email ?? userEmail;
-    if (!profileEmail) return json({ success: false, error: "No se encontró el email del usuario" }, 400);
+    if (!profileEmail) return json({ success: false, error: "No se encontró el email del usuario" });
 
     // ── 3. Leer cuerpo de la solicitud ────────────────────────────────────
     const { to, subject, body, attachments, sendFrom } = await req.json() as {
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       /** Solo "informaciones": envía desde buzón corporativo (delegación Google). */
       sendFrom?: string;
     };
-    if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" }, 400);
+    if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" });
 
     const sharedMailbox = (Deno.env.get("GMAIL_SHARED_FROM_EMAIL") ?? "informaciones@asli.cl").trim().toLowerCase();
     const sharedFromName = (Deno.env.get("GMAIL_SHARED_FROM_NAME") ?? "ASLI").trim() || "ASLI";
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       const rol = perfil?.rol as string | undefined;
       const canUseShared = rol === "ejecutivo" || rol === "admin" || rol === "superadmin";
       if (!canUseShared) {
-        return json({ success: false, error: "No autorizado a enviar desde el buzón informativo" }, 403);
+        return json({ success: false, error: "No autorizado a enviar desde el buzón informativo" });
       }
       senderEmail = sharedMailbox;
       senderName = sharedFromName;
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
     // ── 4. Obtener token de servicio con impersonación del ejecutivo ───────
     const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT");
-    if (!saJson) return json({ success: false, error: "GOOGLE_SERVICE_ACCOUNT no configurado" }, 500);
+    if (!saJson) return json({ success: false, error: "GOOGLE_SERVICE_ACCOUNT no configurado" });
 
     const sa = JSON.parse(saJson);
     const accessToken = await getServiceAccountToken(sa, senderEmail);
@@ -110,13 +110,13 @@ Deno.serve(async (req) => {
     if (!gmailRes.ok) {
       const errText = await gmailRes.text();
       console.error("Gmail API error:", errText);
-      return json({ success: false, error: `Gmail API: ${gmailRes.status} — ${errText.slice(0, 200)}` }, 500);
+      return json({ success: false, error: `Gmail API ${gmailRes.status}: ${errText.slice(0, 300)}` });
     }
 
     return json({ success: true, sender: senderEmail });
   } catch (e) {
     console.error("Edge function error:", e);
-    return json({ success: false, error: e instanceof Error ? e.message : "Error interno" }, 500);
+    return json({ success: false, error: e instanceof Error ? e.message : "Error interno" });
   }
 });
 
