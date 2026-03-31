@@ -1,35 +1,19 @@
 /** @type {import('next').NextConfig} */
 /**
- * Sitio público (web2) en producción: https://asli.cl
- * Sistema embarques (Astro, base "/embarques"): https://asli.cl/embarques
+ * Sitio público (web2):  https://asli.cl          → proyecto web2 en Vercel
+ * Sistema embarques:     https://asli.cl/embarques → proxy a embarques-teal.vercel.app/embarques
  *
- * NEXT_PUBLIC_ERP_URL — origen del sitio (ej. https://asli.cl)
- * NEXT_PUBLIC_EMBARQUES_BASE_URL — override de la app embarques (ej. https://asli.cl/embarques)
+ * NEXT_PUBLIC_EMBARQUES_BASE_URL — override si el proyecto Astro cambia de URL
  */
-const publicSiteOrigin =
-  process.env.NEXT_PUBLIC_ERP_URL || "https://asli.cl";
 const embarquesBase =
   process.env.NEXT_PUBLIC_EMBARQUES_BASE_URL ||
-  `${publicSiteOrigin}/embarques`;
-
-/** Hostnames permitidos para next/image cuando Embarques y web2 están en dominios distintos */
-function imageAllowedHosts() {
-  const hosts = new Set(["asli.cl", "www.asli.cl"]);
-  for (const base of [publicSiteOrigin, embarquesBase]) {
-    try {
-      hosts.add(new URL(base).hostname);
-    } catch {
-      /* ignore */
-    }
-  }
-  return Array.from(hosts);
-}
+  "https://embarques-teal.vercel.app/embarques";
 
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: imageAllowedHosts(),
+    domains: ["asli.cl", "www.asli.cl", "embarques-teal.vercel.app"],
   },
   async rewrites() {
     return [
