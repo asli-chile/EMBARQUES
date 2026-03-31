@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
 /**
- * Sitio público (web2):  https://asli.cl          → proyecto web2 en Vercel
- * Sistema embarques:     https://asli.cl/embarques → proxy a embarques-teal.vercel.app/embarques
+ * Sitio público (web2):  https://asli.cl
+ * Sistema embarques en URL pública: https://asli.cl/embarques/...
  *
- * NEXT_PUBLIC_EMBARQUES_BASE_URL — override si el proyecto Astro cambia de URL
+ * IMPORTANTE: NEXT_PUBLIC_EMBARQUES_BASE_URL debe ser la URL del proyecto Astro en Vercel
+ * (p. ej. https://embarques-teal.vercel.app/embarques), NUNCA https://asli.cl/embarques
+ * (si no, el proxy apunta a sí mismo → 404).
  */
 const embarquesBase =
   process.env.NEXT_PUBLIC_EMBARQUES_BASE_URL ||
@@ -14,6 +16,21 @@ const nextConfig = {
   swcMinify: true,
   images: {
     domains: ["asli.cl", "www.asli.cl", "embarques-teal.vercel.app"],
+  },
+  /** Normaliza /embarques y /embarques/ hacia /embarques/inicio antes del proxy */
+  async redirects() {
+    return [
+      {
+        source: "/embarques",
+        destination: "/embarques/inicio",
+        permanent: false,
+      },
+      {
+        source: "/embarques/",
+        destination: "/embarques/inicio",
+        permanent: false,
+      },
+    ];
   },
   /** Evita HTML viejo en CDN al publicar traducciones o textos nuevos */
   async headers() {
@@ -38,9 +55,13 @@ const nextConfig = {
   async rewrites() {
     return [
       { source: "/logoasli.png", destination: `${embarquesBase}/logoasli.png` },
-      { source: "/favicon.ico", destination: `${embarquesBase}/favicon.ico` },
+      // Astro usa logoasli.png como icono; no hay favicon.ico en public → evita 404 en consola
+      { source: "/favicon.ico", destination: `${embarquesBase}/logoasli.png` },
+      {
+        source: "/embarques/favicon.ico",
+        destination: `${embarquesBase}/logoasli.png`,
+      },
       { source: "/fonts/:path*", destination: `${embarquesBase}/fonts/:path*` },
-      { source: "/embarques", destination: `${embarquesBase}/inicio` },
       { source: "/embarques/:path*", destination: `${embarquesBase}/:path*` },
       { source: "/api/:path*", destination: `${embarquesBase}/api/:path*` },
       { source: "/auth", destination: `${embarquesBase}/auth/login` },

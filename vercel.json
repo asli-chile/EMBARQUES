@@ -2,5 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm ci",
   "buildCommand": "astro build",
-  "framework": "astro"
+  "framework": "astro",
+  "redirects": [
+    {
+      "source": "/favicon.ico",
+      "destination": "/embarques/logoasli.png",
+      "permanent": false
+    },
+    {
+      "source": "/embarques/favicon.ico",
+      "destination": "/embarques/logoasli.png",
+      "permanent": false
+    }
+  ]
 }
