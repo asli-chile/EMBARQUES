@@ -21,7 +21,7 @@ const EQUIPO = [
   { nombre: 'Mario Basaez', cargo: { es: 'Fundador y CEO', en: 'Founder & CEO', zh: '创始人兼首席执行官' }, foto: '/img/mariobasaez.png' },
   { nombre: 'Hans Vasquez', cargo: { es: 'Operaciones', en: 'Operations', zh: '运营' }, foto: '/img/hansv.png' },
   { nombre: 'Poliana Cisternas', cargo: { es: 'Ejecutiva Comercial', en: 'Commercial Executive', zh: '商务顾问' }, foto: '/img/poli.jpg' },
-  { nombre: 'Rocio Villareal', cargo: { es: 'Inocuidad Alimentaria', en: 'Food Safety', zh: '食品安全' }, foto: '/img/rocio.png' },
+  { nombre: 'Rocio Villarroel', cargo: { es: 'Seguridad Alimentaria', en: 'Food Safety', zh: '食品安全' }, foto: '/img/rocio.png' },
   { nombre: 'Stefanie Cordova', cargo: { es: 'Administración y Finanzas', en: 'Administration and Finance', zh: '行政与财务' }, foto: '/img/stefanie.png' },
   { nombre: 'Rodrigo Castillo', cargo: { es: 'Ejecutivo comercial zona sur', en: 'Southern Zone Executive', zh: '南部区域业务顾问' }, foto: null },
   { nombre: 'Nina Scotti', cargo: { es: 'Ventas e Importaciones', en: 'Sales and Imports', zh: '销售与进口' }, foto: '/img/nina.png' },
