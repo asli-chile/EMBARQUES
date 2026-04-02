@@ -35,7 +35,7 @@ export function VisitCounterBadge() {
   };
 
   useEffect(() => {
-    if (!supabase || counted.current) return;
+    if (!supabase || counted.current || !isSuperadmin) return;
     const alreadyCounted = sessionStorage.getItem(VISITED_KEY);
     if (alreadyCounted) {
       counted.current = true;
@@ -56,7 +56,7 @@ export function VisitCounterBadge() {
       })
       .catch(() => fetchTotal());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+  }, [supabase, isSuperadmin]);
 
   useEffect(() => {
     if (!open) return;

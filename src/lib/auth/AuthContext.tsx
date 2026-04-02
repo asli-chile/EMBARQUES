@@ -53,19 +53,54 @@ export function getRolLabel(rol: UserRole): string {
   return ROL_LABELS[rol] ?? rol;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [empresaNombres, setEmpresaNombres] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const AUTH_CACHE_KEY = "_auth_cache_v1";
+const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutos
 
-  const loadSession = useCallback(async () => {
+type AuthCache = {
+  user: AuthUser;
+  profile: AuthProfile;
+  empresaNombres: string[];
+  cachedAt: number;
+};
+
+function readAuthCache(): AuthCache | null {
+  try {
+    const raw = localStorage.getItem(AUTH_CACHE_KEY);
+    if (!raw) return null;
+    const parsed: AuthCache = JSON.parse(raw);
+    if (Date.now() - parsed.cachedAt > AUTH_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeAuthCache(data: Omit<AuthCache, "cachedAt">) {
+  try {
+    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ ...data, cachedAt: Date.now() }));
+  } catch {}
+}
+
+function clearAuthCache() {
+  try { localStorage.removeItem(AUTH_CACHE_KEY); } catch {}
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  // Lazy init: lee localStorage una sola vez al montar
+  const [user, setUser] = useState<AuthUser | null>(() => readAuthCache()?.user ?? null);
+  const [profile, setProfile] = useState<AuthProfile | null>(() => readAuthCache()?.profile ?? null);
+  const [empresaNombres, setEmpresaNombres] = useState<string[]>(() => readAuthCache()?.empresaNombres ?? []);
+  // Si hay cache válido arrancamos con isLoading=false de inmediato
+  const [isLoading, setIsLoading] = useState(() => !readAuthCache());
+
+  const loadSession = useCallback(async (background = false) => {
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
     const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
     if (!supabaseUrl || !supabaseKey) {
       setUser(null);
       setProfile(null);
       setIsLoading(false);
+      clearAuthCache();
       return;
     }
 
@@ -81,7 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setProfile(null);
         setEmpresaNombres([]);
-        setIsLoading(false);
+        clearAuthCache();
+        if (!background) setIsLoading(false);
+        else setIsLoading(false);
         return;
       }
 
@@ -94,59 +131,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           session.user.email?.split("@")[0] ??
           "Usuario",
       };
-      setUser(authUser);
 
-      const { data: perfil } = await supabase
+      // Lanzar consulta de perfil inmediatamente
+      const perfilPromise = supabase
         .from("usuarios")
         .select("id, nombre, email, rol, activo")
         .eq("auth_id", session.user.id)
         .single();
 
+      const { data: perfil } = await perfilPromise;
+
+      let resolvedProfile: AuthProfile;
+      let resolvedEmpresas: string[] = [];
+
       if (perfil && perfil.activo) {
-        setProfile({
+        resolvedProfile = {
           id: perfil.id,
           nombre: perfil.nombre ?? authUser.name,
           email: perfil.email ?? authUser.email,
           rol: perfil.rol as UserRole,
           activo: perfil.activo,
-        });
+        };
+
         if (perfil.rol === "cliente" || perfil.rol === "ejecutivo") {
           const { data: ueData } = await supabase
             .from("usuarios_empresas")
             .select("empresas(nombre)")
             .eq("usuario_id", perfil.id);
-          const nombres = (ueData ?? [])
-            .map((r) => (r.empresas as { nombre: string } | null)?.nombre)
+          resolvedEmpresas = (ueData ?? [])
+            .map((r) => (r.empresas as unknown as { nombre: string } | null)?.nombre)
             .filter((n): n is string => !!n);
-          setEmpresaNombres(nombres);
-        } else {
-          setEmpresaNombres([]);
         }
       } else {
-        setProfile({
+        resolvedProfile = {
           id: session.user.id,
           nombre: authUser.name,
           email: authUser.email,
           rol: "usuario",
           activo: true,
-        });
-        setEmpresaNombres([]);
+        };
       }
-    } catch (err) {
+
+      setUser(authUser);
+      setProfile(resolvedProfile);
+      setEmpresaNombres(resolvedEmpresas);
+      writeAuthCache({ user: authUser, profile: resolvedProfile, empresaNombres: resolvedEmpresas });
+    } catch {
       setUser(null);
       setProfile(null);
       setEmpresaNombres([]);
+      clearAuthCache();
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadSession();
+    // Si arrancamos con cache, refrescamos en background sin bloquear UI
+    void loadSession(!!readAuthCache());
 
     const safetyTimeout = setTimeout(() => {
       setIsLoading(false);
-    }, 8000);
+    }, 5000);
 
     let unsub: (() => void) | undefined;
     import("@/lib/supabase/client")

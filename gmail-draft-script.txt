@@ -58,6 +58,7 @@ function doPost(e) {
 
     // ── Enviar o crear borrador ────────────────────────────────────────────
     if (data.sendNow) {
+      if (data.from) options.from = data.from;
       GmailApp.sendEmail(data.to, data.subject, "", options);
       return ContentService
         .createTextOutput(JSON.stringify({ success: true }))
