@@ -1,6 +1,7 @@
 ---
 import { AppShell } from "@/components/layout";
 import { stripBasePathname, withBase } from "@/lib/basePath";
+import { brand } from "@/lib/brand";
 import "@/styles/globals.css";
 
 interface Props {
@@ -51,30 +52,17 @@ const pathname = stripBasePathname(Astro.url.pathname);
       <div
         class="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-neutral-200/90 bg-white/85 px-8 py-10 shadow-[0_24px_60px_-16px_rgba(29,78,216,0.18)] backdrop-blur-sm sm:py-12"
       >
-        <div class="flex flex-col items-center gap-5" aria-hidden="true">
-          <svg
-            width="120"
+        <div class="flex flex-col items-center gap-5">
+          <img
+            src={brand.logo}
+            alt={brand.companyShort}
+            width="200"
             height="56"
-            viewBox="0 0 120 56"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            class="animate-module-loader-ship text-brand-blue drop-shadow-sm"
-          >
-            <path d="M8 38h104v4H8v-4z" class="fill-neutral-200"></path>
-            <path
-              d="M14 26h14v10H14V26zm22 0h14v10H36V26zm22 0h14v10H58V26z"
-              class="fill-brand-blue/85"
-            ></path>
-            <path d="M12 20h52v6H12v-6z" class="fill-brand-blue/25"></path>
-            <path
-              d="M4 42c18 4 36 4 54 0s36-4 54 0"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              class="text-brand-teal/40"
-            ></path>
-          </svg>
-          <div class="flex h-8 w-full max-w-[7rem] items-end justify-center gap-1.5">
+            class="h-12 w-auto max-w-[min(220px,85vw)] object-contain object-center drop-shadow-sm animate-module-loader-ship sm:h-14"
+            decoding="async"
+            fetchpriority="high"
+          />
+          <div class="flex h-8 w-full max-w-[7rem] items-end justify-center gap-1.5" aria-hidden="true">
             <span
               class="animate-module-loader-bar h-[1.35rem] w-2 rounded-sm bg-brand-blue"
               style="animation-delay: 0ms"

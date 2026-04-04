@@ -1,8 +1,9 @@
 import { useLocale } from "@/lib/i18n";
+import { brand } from "@/lib/brand";
 
 /**
  * Fallback de Suspense al cargar chunks lazy de cada ruta (AppShell).
- * Estilo alineado a la marca: azul institucional, tarjeta suave, animación CSS (sin GSAP).
+ * Estilo alineado a la marca: logo ASLI, tarjeta suave, animación CSS (sin GSAP).
  */
 export function ModuleRouteLoader() {
   const { t } = useLocale();
@@ -25,37 +26,18 @@ export function ModuleRouteLoader() {
       />
 
       <div className="relative z-10 flex flex-col items-center gap-6 px-8 py-10 sm:py-12 max-w-sm w-full mx-4 rounded-2xl border border-neutral-200/90 bg-white/85 backdrop-blur-sm shadow-[0_24px_60px_-16px_rgba(29,78,216,0.18)] transition-[box-shadow] duration-500">
-        <div className="flex flex-col items-center gap-5" aria-hidden>
-          <svg
-            width="120"
-            height="56"
-            viewBox="0 0 120 56"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="text-brand-blue animate-module-loader-ship drop-shadow-sm"
-          >
-            <path
-              d="M8 38h104v4H8v-4z"
-              className="fill-neutral-200"
-            />
-            <path
-              d="M14 26h14v10H14V26zm22 0h14v10H36V26zm22 0h14v10H58V26z"
-              className="fill-brand-blue/85"
-            />
-            <path
-              d="M12 20h52v6H12v-6z"
-              className="fill-brand-blue/25"
-            />
-            <path
-              d="M4 42c18 4 36 4 54 0s36-4 54 0"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              className="text-brand-teal/40"
-            />
-          </svg>
+        <div className="flex flex-col items-center gap-5">
+          <img
+            src={brand.logo}
+            alt={brand.companyShort}
+            width={200}
+            height={56}
+            className="h-12 sm:h-14 w-auto max-w-[min(220px,85vw)] object-contain object-center drop-shadow-sm animate-module-loader-ship"
+            decoding="async"
+            fetchPriority="high"
+          />
 
-          <div className="flex items-end justify-center gap-1.5 h-8 w-full max-w-[7rem]">
+          <div className="flex items-end justify-center gap-1.5 h-8 w-full max-w-[7rem]" aria-hidden>
             <span
               className="w-2 rounded-sm bg-brand-blue animate-module-loader-bar"
               style={{ height: "1.35rem", animationDelay: "0ms" }}
