@@ -17,10 +17,9 @@ const Hero = () => {
 
   const handleAccederApp = () => {
     if (typeof window === 'undefined') return
-    const { hostname } = window.location
-    const isLocal = ['localhost', '127.0.0.1', ''].includes(hostname) ||
-      /^(192\.168\.|10\.|172\.)/.test(hostname)
-    window.location.href = isLocal ? 'http://localhost:3001' : '/auth'
+    // Misma ruta en local y producción: el proxy de Next (web2) envía a Astro según
+    // NEXT_PUBLIC_EMBARQUES_BASE_URL en .env.local (p. ej. http://localhost:4321/embarques).
+    window.location.href = '/auth'
   }
 
   return (

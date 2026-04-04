@@ -42,10 +42,10 @@ const SERVICIOS_ES = [
   {
     num:    '05',
     img:    '/img/expo.webp',
-    titulo: 'Gestión integral de operaciones de comercio exterior (end-to-end)',
+    titulo: 'Gestión integral de operaciones de comercio exterior (puerta a puerta)',
     descripcion:
       'Coordinación completa de la operación logística, integrando transporte, documentación, tiempos, costos y soporte administrativo-contable, incluyendo soluciones puerta a puerta.',
-    tags: ['End-to-end', 'Puerta a puerta', 'Soporte administrativo'],
+    tags: ['Puerta a puerta', 'Cadena completa', 'Soporte administrativo'],
   },
   {
     num:    '06',
@@ -89,9 +89,9 @@ const SERVICIOS_EN = [
   {
     num: '05',
     img: '/img/expo.webp',
-    titulo: 'End-to-end foreign trade operation management',
+    titulo: 'Door-to-door foreign trade operation management',
     descripcion: 'Complete logistics operation coordination including transport, documentation, timing, costs, and admin support.',
-    tags: ['End-to-end', 'Door to door', 'Administrative support'],
+    tags: ['Door to door', 'Full chain', 'Administrative support'],
   },
   {
     num: '06',
@@ -134,9 +134,9 @@ const SERVICIOS_ZH = [
   {
     num: '05',
     img: '/img/expo.webp',
-    titulo: '外贸业务全流程管理（端到端）',
-    descripcion: '整合运输、单证、时效、成本与行政支持，提供完整端到端协调。',
-    tags: ['端到端', '门到门', '行政支持'],
+    titulo: '外贸业务全流程管理（门到门）',
+    descripcion: '整合运输、单证、时效、成本与行政支持，提供完整门到门协调。',
+    tags: ['门到门', '全链路', '行政支持'],
   },
   {
     num: '06',
@@ -168,7 +168,7 @@ const COPY = {
     heroB: 'for export and import',
     heroSub: 'We coordinate operations from origin, including door-to-door solutions for all cargo types.',
     ctaTitle: 'Coordinate your operation with',
-    ctaSub: 'We support you with end-to-end tracking and operational control.',
+    ctaSub: 'We support you with door-to-door tracking and operational control.',
     talk: 'Talk to an executive',
     quote: 'Request a quote',
   },
@@ -180,7 +180,7 @@ const COPY = {
     heroB: '覆盖进出口业务',
     heroSub: '我们从起点协调全流程，并提供适用于各类货物的门到门方案。',
     ctaTitle: '与 ASLI 一起协调您的业务',
-    ctaSub: '我们提供端到端追踪与运营管控支持。',
+    ctaSub: '我们提供门到门追踪与运营管控支持。',
     talk: '联系业务顾问',
     quote: '申请报价',
   },

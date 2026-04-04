@@ -5,7 +5,7 @@ export const homeByLang = {
   es: {
     metaTitle: 'ASLI | Logística y Comercio Exterior — Chile',
     metaDesc:
-      'Operador logístico integral desde Curicó. Expertos en exportaciones e importaciones: transporte marítimo, aéreo, logística frutícola y gestión aduanera end-to-end.',
+      'Operador logístico integral desde Curicó. Expertos en exportaciones e importaciones: transporte marítimo, aéreo, logística frutícola y gestión aduanera puerta a puerta.',
     scroll: 'Scroll',
     heroEyebrow: 'Coordinamos operaciones logísticas desde origen',
     heroLine1: 'Soluciones logísticas',
@@ -13,7 +13,7 @@ export const homeByLang = {
     heroLine3: 'e importaciones.',
     heroBody1:
       'Operador logístico integral, con experiencia en múltiples tipos de carga y especialización en logística frutícola (fresca y congelada).',
-    heroBody2: 'Gestión integral de operaciones de comercio exterior end-to-end.',
+    heroBody2: 'Gestión integral de operaciones de comercio exterior puerta a puerta.',
     quoteBtn: 'Solicitar cotización',
     talkBtn: 'Hablar con un ejecutivo',
     industries: 'Industrias',
@@ -95,7 +95,7 @@ export const homeByLang = {
     serviciosHome: [
       { label: 'Transporte internacional marítimo, aéreo y terrestre' },
       { label: 'Coordinación aduanera y gestión documental' },
-      { label: 'Operación integral de comercio exterior (end-to-end)' },
+      { label: 'Operación integral de comercio exterior (puerta a puerta)' },
       { label: 'Asesoría en comercio exterior y certificación OEA' },
     ],
     specTitle1: 'Tipos de carga',
@@ -135,7 +135,7 @@ export const homeByLang = {
   en: {
     metaTitle: 'ASLI | Logistics and Foreign Trade — Chile',
     metaDesc:
-      'Comprehensive logistics operator from Curicó. Experts in exports and imports: sea and air transport, fruit logistics, and end-to-end customs management.',
+      'Comprehensive logistics operator from Curicó. Experts in exports and imports: sea and air transport, fruit logistics, and door-to-door customs management.',
     scroll: 'Scroll',
     heroEyebrow: 'We coordinate logistics operations from origin',
     heroLine1: 'Logistics solutions',
@@ -143,7 +143,7 @@ export const homeByLang = {
     heroLine3: 'and imports.',
     heroBody1:
       'Comprehensive logistics operator with experience in multiple cargo types and specialization in fruit logistics (fresh and frozen).',
-    heroBody2: 'End-to-end foreign trade operation management.',
+    heroBody2: 'Door-to-door foreign trade operation management.',
     quoteBtn: 'Request a quote',
     talkBtn: 'Talk to an executive',
     industries: 'Industries',
@@ -205,9 +205,9 @@ export const homeByLang = {
     valueTitle1: 'Coordinated logistics',
     valueTitle2: 'from origin',
     valueP:
-      'Focused on control and operational continuity. Beyond transport, we coordinate the full logistics chain end to end.',
+      'Focused on control and operational continuity. Beyond transport, we coordinate the full logistics chain door to door.',
     valueBullets: [
-      'End-to-end coordination of the operation (beyond transport)',
+      'Door-to-door coordination of the operation (beyond transport)',
       'Active tracking and operational visibility at every stage',
       'Strong experience in fruit logistics (fresh and frozen) and sensitive cargo',
       'Network of shipping lines, airlines, and international agents',
@@ -225,7 +225,7 @@ export const homeByLang = {
     serviciosHome: [
       { label: 'International sea, air, and land transport' },
       { label: 'Customs coordination and document management' },
-      { label: 'End-to-end foreign trade operations' },
+      { label: 'Door-to-door foreign trade operations' },
       { label: 'Foreign trade advisory and AEO certification' },
     ],
     specTitle1: 'Cargo types',
@@ -265,14 +265,14 @@ export const homeByLang = {
   zh: {
     metaTitle: 'ASLI | 物流与国际贸易 — 智利',
     metaDesc:
-      '来自库里科的综合物流运营商。专注进出口海运空运、果品物流和端到端报关管理。',
+      '来自库里科的综合物流运营商。专注进出口海运空运、果品物流和门到门报关管理。',
     scroll: '滚动',
     heroEyebrow: '我们从起点协调全程物流运营',
     heroLine1: '物流解决方案',
     heroLine2: '覆盖出口业务',
     heroLine3: '与进口业务。',
     heroBody1: '综合物流运营商，具备多类货物经验，并专注果品物流（鲜果与冷冻）。',
-    heroBody2: '进出口业务端到端管理。',
+    heroBody2: '进出口业务门到门管理。',
     quoteBtn: '申请报价',
     talkBtn: '联系业务顾问',
     industries: '行业',
@@ -315,9 +315,9 @@ export const homeByLang = {
     valueTitle1: '从起点协调的',
     valueTitle2: '一体化物流',
     valueP:
-      '注重管控与运营连续性。除运输外，我们端到端协调整条物流链。',
+      '注重管控与运营连续性。除运输外，我们门到门协调整条物流链。',
     valueBullets: [
-      '全程协调（超越运输本身）',
+      '门到门全程协调（超越运输本身）',
       '各阶段主动跟踪与可视化管理',
       '丰富的果品（鲜/冻）与敏感货物经验',
       '航运、航空与国际代理网络',
@@ -334,7 +334,7 @@ export const homeByLang = {
     serviciosHome: [
       { label: '国际海运、空运与陆运' },
       { label: '报关协调与单证管理' },
-      { label: '对外贸易端到端操作' },
+      { label: '对外贸易门到门操作' },
       { label: '外贸咨询与 AEO 认证辅导' },
     ],
     specTitle1: '我们处理的',

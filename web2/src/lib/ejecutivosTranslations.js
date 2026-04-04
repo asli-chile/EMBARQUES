@@ -93,7 +93,7 @@ export const ejecutivosByLang = {
       {
         nombre: 'Hans Vásquez',
         cargo: 'Operations Deputy Manager',
-        servicio: 'End-to-end operational oversight',
+        servicio: 'Door-to-door operational oversight',
         descripcion:
           'Coordinates and oversees the full operational flow to maintain milestone control, direct communication, and fast incident resolution.',
         email: 'hans.vasquez@asli.cl',

@@ -3,17 +3,40 @@
  * Sitio público (web2):  https://asli.cl
  * Sistema embarques en URL pública: https://asli.cl/embarques/...
  *
- * IMPORTANTE: embarquesBase debe ser la URL raíz del proyecto Astro en Vercel,
- * SIN el sufijo /embarques. Astro con base:"/embarques" genera links con ese prefijo
- * en el HTML, pero el servidor Vercel sirve las rutas SIN él (/inicio, no /embarques/inicio).
- * El proxy de Next.js strip-ea /embarques del source y llama al destino sin ese prefijo.
+ * IMPORTANTE — dos formas de embarquesBase:
  *
- * NUNCA poner https://embarques-teal.vercel.app/embarques → doble prefijo → 404.
+ * • Vercel (Astro): URL del deployment SIN sufijo /embarques. Allí las rutas efectivas
+ *   son /inicio, /auth/login, etc. El rewrite /embarques/:path* → embarquesBase/:path*
+ *   añade solo el segmento (p. ej. inicio).
+ *
+ * • Local (astro dev con base:"/embarques"): las URLs reales son
+ *   http://localhost:4321/embarques/inicio. Define entonces:
+ *   NEXT_PUBLIC_EMBARQUES_BASE_URL=http://localhost:4321/embarques
+ *   (en web2/.env.local). Sin esto, el proxy sigue apuntando a Vercel y no verás tus cambios.
+ *
+ * NUNCA poner https://embarques-teal.vercel.app/embarques en Vercel → doble ruta → 404.
  * NUNCA poner https://asli.cl → el proxy apuntaría a sí mismo → loop 404.
  */
 const embarquesBase =
   process.env.NEXT_PUBLIC_EMBARQUES_BASE_URL ||
   "https://embarques-teal.vercel.app";
+
+/**
+ * En dev, Astro inyecta scripts/CSS de Vite con rutas en la raíz (/@vite/client, /src/...).
+ * Si abres el ERP vía web2 (localhost:3000/embarques/...), el navegador pide eso en :3000 → 404.
+ * Estos rewrites solo aplican cuando el backend es Astro local.
+ */
+function embarquesDevViteRewrites(baseUrl) {
+  if (!baseUrl || !/localhost|127\.0\.0\.1/i.test(String(baseUrl))) return [];
+  const origin = String(baseUrl).replace(/\/$/, "");
+  return [
+    { source: "/@vite/:path*", destination: `${origin}/@vite/:path*` },
+    { source: "/@id/:path*", destination: `${origin}/@id/:path*` },
+    { source: "/@fs/:path*", destination: `${origin}/@fs/:path*` },
+    { source: "/node_modules/:path*", destination: `${origin}/node_modules/:path*` },
+    { source: "/src/:path*", destination: `${origin}/src/:path*` },
+  ];
+}
 
 const nextConfig = {
   reactStrictMode: true,
@@ -58,6 +81,7 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      ...embarquesDevViteRewrites(embarquesBase),
       { source: "/logoasli.png", destination: `${embarquesBase}/logoasli.png` },
       // Astro usa logoasli.png como icono; no hay favicon.ico en public → evita 404 en consola
       { source: "/favicon.ico", destination: `${embarquesBase}/logoasli.png` },

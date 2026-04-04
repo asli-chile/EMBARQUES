@@ -503,13 +503,9 @@ export function InicioContent() {
           {/* Desktop: timeline horizontal */}
           <div data-inicio-reveal className="hidden lg:block">
             <div className="relative grid grid-cols-5 gap-4">
-              {/* Línea de conexión — top-10 = 40px = centro exacto del círculo h-20 (80px) */}
-              <div className="absolute top-10 left-[10%] right-[10%] h-px bg-gradient-to-r from-cyan-500/20 via-cyan-500/60 to-cyan-500/20" />
-              <div className="absolute top-10 left-[10%] right-[10%] h-px bg-gradient-to-r from-cyan-500/0 via-cyan-400/40 to-cyan-500/0 blur-sm" />
-
               {workflowSteps.map(({ key, descKey, icon, num }, index) => (
                 <div key={key} className="relative flex flex-col items-center group">
-                  {/* Nodo circular — centro en top-10 (40px) */}
+                  {/* Nodo circular */}
                   <div className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/25 to-cyan-900/40 border-2 border-cyan-500/50 flex items-center justify-center shadow-lg shadow-cyan-500/15 group-hover:border-cyan-400/80 group-hover:shadow-cyan-500/35 group-hover:from-cyan-500/40 transition-all duration-300">
                     {/* Badge número */}
                     <div className="absolute -top-2 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 text-white text-xs font-bold flex items-center justify-center shadow-md shadow-cyan-500/40 z-20">
@@ -518,10 +514,19 @@ export function InicioContent() {
                     <Icon icon={icon} className="text-cyan-300 group-hover:text-cyan-200 group-hover:scale-110 transition-all duration-300 drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]" width={36} height={36} />
                   </div>
 
-                  {/* Flecha centrada en la línea (top 40px = centro del círculo h-20) */}
                   {index < workflowSteps.length - 1 && (
-                    <div className="absolute z-20" style={{ top: '40px', right: 0, transform: 'translate(50%, -50%)' }}>
-                      <Icon icon="lucide:chevron-right" className="text-cyan-400/80" width={18} height={18} />
+                    <div
+                      className="pointer-events-none absolute right-0 top-10 z-20 flex translate-x-1/2 -translate-y-1/2 items-center justify-center leading-none"
+                      aria-hidden
+                    >
+                      <span className="relative flex items-center justify-center rounded-full border border-cyan-400/35 bg-gradient-to-br from-cyan-500/20 to-cyan-950/40 px-1.5 py-1 shadow-[0_0_18px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] ring-1 ring-cyan-400/15 backdrop-blur-[2px] transition-all duration-300 ease-out motion-safe:group-hover:scale-110 motion-safe:group-hover:border-cyan-300/55 motion-safe:group-hover:shadow-[0_0_32px_rgba(34,211,238,0.45),0_0_12px_rgba(45,212,191,0.2)] motion-safe:group-hover:ring-cyan-300/30">
+                        <Icon
+                          icon="lucide:chevrons-right"
+                          className="block shrink-0 text-cyan-200 drop-shadow-[0_0_10px_rgba(34,211,238,0.85)] motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:translate-x-px motion-safe:group-hover:text-white"
+                          width={22}
+                          height={22}
+                        />
+                      </span>
                     </div>
                   )}
 
