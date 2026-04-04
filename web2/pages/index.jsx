@@ -249,15 +249,22 @@ export default function Home() {
                 <motion.p
                   initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 1.02 }}
-                  className="text-white/45 text-sm md:text-base max-w-xl leading-relaxed mb-4 sm:mb-8 font-light [text-shadow:0_1px_12px_rgba(0,0,0,0.7),0_0_1px_rgba(0,0,0,0.5)]"
+                  className="text-white/50 text-sm md:text-base max-w-xl leading-relaxed mb-1 font-light [text-shadow:0_1px_12px_rgba(0,0,0,0.7),0_0_1px_rgba(0,0,0,0.5)]"
                 >
                   {h.heroBody2}
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 1.08 }}
+                  className="text-white/45 text-sm md:text-base max-w-xl leading-relaxed mb-4 sm:mb-8 font-light [text-shadow:0_1px_12px_rgba(0,0,0,0.7),0_0_1px_rgba(0,0,0,0.5)]"
+                >
+                  {h.heroBody3}
                 </motion.p>
 
                 {/* CTAs */}
                 <motion.div
                   initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7, delay: 1.12 }}
+                  transition={{ duration: 0.7, delay: 1.18 }}
                   className="flex flex-col sm:flex-row gap-2 sm:gap-3"
                 >
                   <motion.a

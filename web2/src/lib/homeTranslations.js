@@ -13,7 +13,9 @@ export const homeByLang = {
     heroLine3: 'e importaciones.',
     heroBody1:
       'Operador logístico integral, con experiencia en múltiples tipos de carga y especialización en logística frutícola (fresca y congelada).',
-    heroBody2: 'Gestión integral de operaciones de comercio exterior puerta a puerta.',
+    heroBody2:
+      'Transporte internacional marítimo, aéreo y multimodal (FCL/LCL).',
+    heroBody3: 'Gestión integral de operaciones de comercio exterior puerta a puerta.',
     quoteBtn: 'Solicitar cotización',
     talkBtn: 'Hablar con un ejecutivo',
     industries: 'Industrias',
@@ -143,7 +145,8 @@ export const homeByLang = {
     heroLine3: 'and imports.',
     heroBody1:
       'Comprehensive logistics operator with experience in multiple cargo types and specialization in fruit logistics (fresh and frozen).',
-    heroBody2: 'Door-to-door foreign trade operation management.',
+    heroBody2: 'International sea, air, and multimodal transport (FCL/LCL).',
+    heroBody3: 'Door-to-door foreign trade operation management.',
     quoteBtn: 'Request a quote',
     talkBtn: 'Talk to an executive',
     industries: 'Industries',
@@ -272,7 +275,8 @@ export const homeByLang = {
     heroLine2: '覆盖出口业务',
     heroLine3: '与进口业务。',
     heroBody1: '综合物流运营商，具备多类货物经验，并专注果品物流（鲜果与冷冻）。',
-    heroBody2: '进出口业务门到门管理。',
+    heroBody2: '国际海运、空运及多式联运（FCL/LCL）。',
+    heroBody3: '进出口业务门到门管理。',
     quoteBtn: '申请报价',
     talkBtn: '联系业务顾问',
     industries: '行业',

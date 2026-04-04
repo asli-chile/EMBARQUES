@@ -54,28 +54,33 @@ const pathname = stripBasePathname(Astro.url.pathname);
           style="background: radial-gradient(ellipse 68% 56% at 58% 48%, rgba(13, 148, 136, 0.16), transparent 70%);"
         ></div>
         <svg
-          class="absolute bottom-0 left-[-8%] h-14 w-[116%] min-w-[640px] animate-module-loader-wave text-brand-blue/20 sm:h-[4.25rem]"
+          class="absolute bottom-0 left-[-8%] h-14 w-[116%] min-w-[640px] overflow-visible text-brand-blue/20 sm:h-[4.25rem]"
           viewBox="0 0 1200 100"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
         >
-          <path
-            d="M0 52 C 200 42 280 62 400 52 S 600 38 800 52 S 1000 62 1200 48"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            stroke-linecap="round"
-            vector-effect="non-scaling-stroke"
-          ></path>
-          <path
-            d="M0 68 C 180 78 320 58 520 68 S 720 82 920 68 S 1080 58 1200 72"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.15"
-            stroke-linecap="round"
-            class="text-brand-teal/30"
-            vector-effect="non-scaling-stroke"
-          ></path>
+          <g class="animate-module-loader-wave-a">
+            <path
+              d="M0 52 C 200 42 280 62 400 52 S 600 38 800 52 S 1000 62 1200 48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              vector-effect="non-scaling-stroke"
+            ></path>
+          </g>
+          <g class="animate-module-loader-wave-b">
+            <path
+              d="M0 68 C 180 78 320 58 520 68 S 720 82 920 68 S 1080 58 1200 72"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.15"
+              stroke-linecap="round"
+              class="text-brand-teal/30"
+              vector-effect="non-scaling-stroke"
+            ></path>
+          </g>
         </svg>
       </div>
       <div

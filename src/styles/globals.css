@@ -207,17 +207,33 @@ html {
   animation: module-loader-bg-drift-reverse 22s ease-in-out infinite;
 }
 
-/* Onda inferior (línea de “agua” del SVG original), desplazamiento horizontal suave */
-@keyframes module-loader-wave {
-  0% {
+/* Ondas inferiores del loader: cada trazo con fase y eje distintos (más “vivo” que un solo pan) */
+@keyframes module-loader-wave-a {
+  0%,
+  100% {
     transform: translate3d(0, 0, 0);
   }
-  100% {
-    transform: translate3d(-4%, 0, 0);
+  50% {
+    transform: translate3d(-6%, -4px, 0);
   }
 }
-.animate-module-loader-wave {
-  animation: module-loader-wave 8s ease-in-out infinite alternate;
+@keyframes module-loader-wave-b {
+  0%,
+  100% {
+    transform: translate3d(-2%, 3px, 0);
+  }
+  50% {
+    transform: translate3d(-8%, -2px, 0);
+  }
+}
+.animate-module-loader-wave-a {
+  transform-origin: 50% 100%;
+  animation: module-loader-wave-a 7s ease-in-out infinite alternate;
+}
+.animate-module-loader-wave-b {
+  transform-origin: 50% 100%;
+  animation: module-loader-wave-b 9s ease-in-out infinite alternate;
+  animation-delay: -2.5s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -226,7 +242,8 @@ html {
   .animate-module-loader-rail,
   .animate-module-loader-bg,
   .animate-module-loader-bg-reverse,
-  .animate-module-loader-wave {
+  .animate-module-loader-wave-a,
+  .animate-module-loader-wave-b {
     animation: none;
   }
   .animate-module-loader-bar {
@@ -238,7 +255,8 @@ html {
   }
   .animate-module-loader-bg,
   .animate-module-loader-bg-reverse,
-  .animate-module-loader-wave {
+  .animate-module-loader-wave-a,
+  .animate-module-loader-wave-b {
     transform: none;
   }
 }

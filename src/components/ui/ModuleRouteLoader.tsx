@@ -10,9 +10,8 @@ export function ModuleRouteLoader() {
 
   return (
     <main
-      className="flex-1 min-h-0 min-w-0 overflow-auto flex items-center justify-center bg-gradient-to-b from-neutral-50 via-neutral-100 to-neutral-100/95 relative"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden bg-neutral-100 bg-gradient-to-b from-neutral-50 via-neutral-100 to-neutral-100"
       role="main"
-      style={{ minHeight: "120px" }}
       aria-busy="true"
       aria-live="polite"
     >
@@ -32,28 +31,33 @@ export function ModuleRouteLoader() {
           }}
         />
         <svg
-          className="absolute bottom-0 left-[-8%] h-14 w-[116%] min-w-[640px] text-brand-blue/20 animate-module-loader-wave sm:h-[4.25rem]"
+          className="absolute bottom-0 left-[-8%] h-14 w-[116%] min-w-[640px] overflow-visible text-brand-blue/20 sm:h-[4.25rem]"
           viewBox="0 0 1200 100"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
         >
-          <path
-            d="M0 52 C 200 42 280 62 400 52 S 600 38 800 52 S 1000 62 1200 48"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d="M0 68 C 180 78 320 58 520 68 S 720 82 920 68 S 1080 58 1200 72"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.15"
-            strokeLinecap="round"
-            className="text-brand-teal/30"
-            vectorEffect="non-scaling-stroke"
-          />
+          <g className="animate-module-loader-wave-a">
+            <path
+              d="M0 52 C 200 42 280 62 400 52 S 600 38 800 52 S 1000 62 1200 48"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+          <g className="animate-module-loader-wave-b">
+            <path
+              d="M0 68 C 180 78 320 58 520 68 S 720 82 920 68 S 1080 58 1200 72"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.15"
+              strokeLinecap="round"
+              className="text-brand-teal/30"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
         </svg>
       </div>
 

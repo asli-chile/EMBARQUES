@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
-import { brand, icons } from "@/lib/brand";
+import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -285,30 +285,18 @@ export function InicioContent() {
                 <p className="relative text-sm sm:text-base lg:text-lg text-white px-4 sm:px-6 py-1.5 [text-shadow:2px_2px_0_#000,3px_3px_0_#000]">{t.inicio.heroDescriptionLine2}</p>
               </div>
             </div>
-            <div data-hero-item className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
-              {isLoggedIn ? (
+            {isLoggedIn && (
+              <div data-hero-item className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
                 <a href={withBase("/dashboard")} className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
                   <Icon icon="lucide:layout-dashboard" width={18} height={18} />
                   Ir al Dashboard
                 </a>
-              ) : (
-                <AuthFormTrigger mode="login" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
-                  <Icon icon={icons.auth} width={18} height={18} />
-                  {t.inicio.ctaLogin}
-                </AuthFormTrigger>
-              )}
-              {isLoggedIn ? (
                 <a href={withBase("/registros")} className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
                   <Icon icon="lucide:table-2" width={18} height={18} />
                   Ir a Registros
                 </a>
-              ) : (
-                <a href="#pilares" className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded border-2 border-white/80 text-white font-medium hover:bg-white/10 transition-colors text-sm sm:text-base">
-                  <Icon icon="lucide:layers" width={18} height={18} />
-                  {t.inicio.ctaModules}
-                </a>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </header>

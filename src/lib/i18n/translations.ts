@@ -84,9 +84,7 @@ export const translations = {
       heroTitle: "Plataforma de Gestión Logística Integral",
       heroDescriptionLine1: "Administra embarques, clientes, transporte y documentación",
       heroDescriptionLine2: "en una sola solución.",
-      ctaLogin: "Ingresar al sistema",
-      ctaModules: "Ver módulos",
-      
+
       // Pilares
       pillarsTag: "Plataforma integral",
       pillarsTitle: "Una plataforma, cuatro pilares",
@@ -2319,9 +2317,7 @@ export const translations = {
       heroTitle: "Integrated Logistics Management Platform",
       heroDescriptionLine1: "Manage shipments, clients, transport and documentation",
       heroDescriptionLine2: "in a single solution.",
-      ctaLogin: "Log in",
-      ctaModules: "View modules",
-      
+
       // Pillars
       pillarsTag: "Integral platform",
       pillarsTitle: "One platform, four pillars",

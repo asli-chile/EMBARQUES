@@ -8,6 +8,14 @@ export const ejecutivosByLang = {
     mailAsk: 'me gustaría recibir información sobre',
     mailGeneralSubject: 'Consulta general — ASLI',
     mailGeneralBody: 'Hola,\n\nEscribo para la siguiente consulta:\n\n',
+    generalContact: {
+      nombre: 'Rodrigo Castillo',
+      cargo: 'Ejecutivo Comercial',
+      servicio: 'Consultas generales y cotizaciones',
+      descripcion:
+        'Para información general, cotizaciones amplias o cuando no sepas a qué ejecutivo escribir. Te orienta y canaliza tu consulta dentro del equipo ASLI.',
+      email: 'rodrigo.castillo@asli.cl',
+    },
     members: [
       {
         nombre: 'Poliana Cisternas',
@@ -57,6 +65,14 @@ export const ejecutivosByLang = {
     mailAsk: 'I would like to receive information about',
     mailGeneralSubject: 'General inquiry — ASLI',
     mailGeneralBody: 'Hello,\n\nI am writing with the following inquiry:\n\n',
+    generalContact: {
+      nombre: 'Rodrigo Castillo',
+      cargo: 'Commercial Executive',
+      servicio: 'General inquiries and quotations',
+      descripcion:
+        'For general information, broad quotations, or if you are unsure which executive to contact. He will guide you and route your inquiry within the ASLI team.',
+      email: 'rodrigo.castillo@asli.cl',
+    },
     members: [
       {
         nombre: 'Poliana Cisternas',
@@ -106,6 +122,14 @@ export const ejecutivosByLang = {
     mailAsk: '希望了解以下业务的更多信息：',
     mailGeneralSubject: '一般咨询 — ASLI',
     mailGeneralBody: '您好，\n\n我想咨询以下事项：\n\n',
+    generalContact: {
+      nombre: 'Rodrigo Castillo',
+      cargo: '商务执行',
+      servicio: '一般咨询与报价',
+      descripcion:
+        '适用于一般信息、综合报价，或不确定该联系哪位顾问时。将协助引导并把您的需求转达 ASLI 团队。',
+      email: 'rodrigo.castillo@asli.cl',
+    },
     members: [
       {
         nombre: 'Poliana Cisternas',
