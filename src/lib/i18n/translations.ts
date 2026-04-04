@@ -76,7 +76,10 @@ export const translations = {
       accessDeniedTitle: "Sin acceso",
       accessDeniedBody: "Solo ejecutivos, administradores y superadmin pueden usar esta sección.",
     },
-    header: {},
+    header: {
+      /** Hidratación inicial (BaseLayout) y Suspense de rutas lazy (ModuleRouteLoader) */
+      preparingUi: "Preparando interfaz…",
+    },
     inicio: {
       heroTitle: "Plataforma de Gestión Logística Integral",
       heroDescriptionLine1: "Administra embarques, clientes, transporte y documentación",
@@ -2309,7 +2312,9 @@ export const translations = {
       accessDeniedTitle: "Access denied",
       accessDeniedBody: "Only executives, administrators and superadmin can use this section.",
     },
-    header: {},
+    header: {
+      preparingUi: "Preparing interface…",
+    },
     inicio: {
       heroTitle: "Integrated Logistics Management Platform",
       heroDescriptionLine1: "Manage shipments, clients, transport and documentation",

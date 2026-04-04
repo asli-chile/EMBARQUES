@@ -1,12 +1,15 @@
 import Head from 'next/head'
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
 import Tracking from '../src/components/Tracking'
 import { useLang } from '../src/lib/LangContext'
+import { usePageScrollReveal } from '../src/hooks/usePageScrollReveal'
 
 const TrackingPage = () => {
   const { t, lang } = useLang()
+  const parallaxRef = useRef(null)
+  const rootRef = usePageScrollReveal(parallaxRef)
 
   return (
     <>
@@ -16,7 +19,7 @@ const TrackingPage = () => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     </Head>
 
-    <div className="min-h-screen flex flex-col bg-asli-dark">
+    <div ref={rootRef} className="min-h-screen flex flex-col bg-asli-dark">
       <Header />
 
       <main className="flex-grow pt-24 md:pt-28">
@@ -32,43 +35,33 @@ const TrackingPage = () => {
             TRACK
           </div>
 
-          {/* Teal radial glow */}
+          {/* Teal radial glow (parallax) */}
           <div
-            className="absolute left-1/4 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none"
+            ref={parallaxRef}
+            className="absolute left-1/4 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none will-change-transform"
             style={{ background: 'radial-gradient(circle, rgba(0,122,123,0.08) 0%, transparent 70%)' }}
           />
 
           <div className="container mx-auto px-6 lg:px-10 relative z-10">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-              className="max-w-2xl"
-            >
-              <motion.div
-                variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0, transition: { duration: 0.6 } } }}
-                className="flex items-center gap-3 mb-5"
-              >
+            <div className="max-w-2xl">
+              <div data-hero-item className="flex items-center gap-3 mb-5">
                 <span className="w-8 h-px bg-asli-primary" />
                 <span className="eyebrow">{t.tracking.eyebrow}</span>
-              </motion.div>
+              </div>
 
-              <motion.h1
-                variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22,1,0.36,1] } } }}
+              <h1
+                data-hero-item
                 className="font-display font-black text-white mb-5"
                 style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.03em' }}
               >
                 Tracking{' '}
                 <em className="not-italic text-asli-primary">{t.tracking.titleSpan}</em>
-              </motion.h1>
+              </h1>
 
-              <motion.p
-                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.1 } } }}
-                className="text-white/55 text-lg md:text-xl leading-relaxed font-light"
-              >
+              <p data-hero-item className="text-white/55 text-lg md:text-xl leading-relaxed font-light">
                 {t.tracking.sub}
-              </motion.p>
-            </motion.div>
+              </p>
+            </div>
           </div>
         </section>
 
@@ -76,15 +69,9 @@ const TrackingPage = () => {
         <Tracking />
 
         {/* CTA */}
-        <section className="py-20 md:py-28 bg-asli-secondary">
+        <section data-page-section className="py-20 md:py-28 bg-asli-secondary">
           <div className="container mx-auto px-6 lg:px-10">
-            <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-2xl mx-auto text-center"
-            >
+            <div data-page-reveal className="max-w-2xl mx-auto text-center">
               <p className="eyebrow mb-4">{t.tracking.ctaEyebrow}</p>
               <h2
                 className="font-display font-black text-white mb-5"
@@ -117,7 +104,7 @@ const TrackingPage = () => {
                   WhatsApp
                 </a>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </main>

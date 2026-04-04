@@ -1,19 +1,10 @@
 import Head from 'next/head'
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
 import ImagePlaceholder from '../src/components/ImagePlaceholder'
 import { useLang } from '../src/lib/LangContext'
-
-const fadeUp = {
-  hidden:  { opacity: 0, y: 40 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.75, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
-  }),
-}
-
-const VP_ONCE = { once: true, amount: 0.15 }
+import { usePageScrollReveal } from '../src/hooks/usePageScrollReveal'
 
 const SERVICIOS_ES = [
   {
@@ -199,6 +190,8 @@ const ServiciosPage = () => {
   const { lang } = useLang()
   const tr = COPY[lang] || COPY.es
   const servicios = lang === 'zh' ? SERVICIOS_ZH : lang === 'en' ? SERVICIOS_EN : SERVICIOS_ES
+  const parallaxRef = useRef(null)
+  const rootRef = usePageScrollReveal(parallaxRef)
 
   return (
     <>
@@ -211,15 +204,15 @@ const ServiciosPage = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
 
-      <div className="min-h-screen flex flex-col bg-asli-dark">
+      <div ref={rootRef} className="min-h-screen flex flex-col bg-asli-dark">
         <Header />
 
         <main className="flex-grow">
 
           {/* ── Hero de página ── */}
           <section className="relative pt-36 pb-20 md:pb-28 overflow-hidden bg-gradient-to-b from-asli-deep to-asli-dark">
-            {/* Bg image */}
-            <div className="absolute inset-0 overflow-hidden opacity-20">
+            {/* Bg image (parallax) */}
+            <div ref={parallaxRef} className="absolute inset-0 overflow-hidden opacity-20 will-change-transform">
               <ImagePlaceholder variant="hero" src="/img/expo.webp" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-asli-deep to-asli-deep/70" />
@@ -228,43 +221,34 @@ const ServiciosPage = () => {
             <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-asli-primary/50 to-transparent" />
 
             <div className="relative z-10 container mx-auto px-6 lg:px-10 max-w-4xl">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="flex items-center gap-3 mb-5"
-              >
+              <div data-hero-item className="flex items-center gap-3 mb-5">
                 <span className="w-6 h-px bg-asli-primary" />
                 <span className="eyebrow">{tr.eyebrow}</span>
-              </motion.div>
+              </div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.75, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              <h1
+                data-hero-item
                 className="font-display font-black text-white leading-tight mb-6"
                 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', letterSpacing: '-0.025em' }}
               >
                 {tr.heroA}<br />
                 <span className="text-asli-primary italic">{tr.heroB}</span>
-              </motion.h1>
+              </h1>
 
-              <motion.p
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.35 }}
-                className="text-white/65 text-lg leading-relaxed max-w-2xl"
-              >
+              <p data-hero-item className="text-white/65 text-lg leading-relaxed max-w-2xl">
                 {tr.heroSub}
-              </motion.p>
+              </p>
             </div>
           </section>
 
           {/* ── Lista de servicios ── */}
-          <section className="py-16 md:py-24 border-y border-white/[0.06]">
+          <section data-page-section className="py-16 md:py-24 border-y border-white/[0.06]">
             <div className="container mx-auto px-6 lg:px-10">
               <div className="space-y-6">
-                {servicios.map((svc, i) => (
-                  <motion.article
+                {servicios.map((svc) => (
+                  <article
                     key={svc.num}
-                    variants={fadeUp} custom={i * 0.3} initial="hidden" whileInView="visible" viewport={VP_ONCE}
+                    data-page-reveal
                     className="group grid md:grid-cols-12 gap-0 rounded-2xl overflow-hidden border border-white/[0.07] hover:border-asli-primary/25 transition-all duration-500 hover:shadow-[0_18px_36px_rgba(0,0,0,0.24)]"
                   >
                     {/* Image panel */}
@@ -308,18 +292,16 @@ const ServiciosPage = () => {
                         </div>
                       </div>
                     </div>
-                  </motion.article>
+                  </article>
                 ))}
               </div>
             </div>
           </section>
 
           {/* ── CTA ── */}
-          <section className="py-20 bg-asli-secondary/25 border-t border-white/[0.06]">
+          <section data-page-section className="py-20 bg-asli-secondary/25 border-t border-white/[0.06]">
             <div className="container mx-auto px-6 lg:px-10 text-center">
-              <motion.div
-                variants={fadeUp} initial="hidden" whileInView="visible" viewport={VP_ONCE}
-              >
+              <div data-page-reveal>
                 <h3
                   className="font-display font-black text-white mb-4 leading-tight"
                   style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', letterSpacing: '-0.02em' }}
@@ -347,7 +329,7 @@ const ServiciosPage = () => {
                     {tr.quote}
                   </a>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </section>
 

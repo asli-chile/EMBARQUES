@@ -42,11 +42,11 @@ const Tracking = () => {
   }
 
   return (
-    <section className="py-16 md:py-24 bg-asli-dark">
+    <section data-page-section className="py-16 md:py-24 bg-asli-dark">
       <div className="container mx-auto px-6 lg:px-10">
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
+        <div data-page-reveal className="flex gap-2 mb-8 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
           {[
             { id: 'maritimo', label: t.tracking.maritimo },
             { id: 'aereo',    label: t.tracking.aereo },
@@ -73,7 +73,7 @@ const Tracking = () => {
         </div>
 
         {/* Search */}
-        <div className="relative mb-8 max-w-sm">
+        <div data-page-reveal className="relative mb-8 max-w-sm">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -97,6 +97,7 @@ const Tracking = () => {
         </div>
 
         {/* Cards grid */}
+        <div data-page-reveal>
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
@@ -106,12 +107,9 @@ const Tracking = () => {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
           >
-            {filtered.length > 0 ? filtered.map((n, i) => (
+            {filtered.length > 0 ? filtered.map((n) => (
               <motion.button
                 key={n.value}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: i * 0.04 }}
                 onClick={() => handleOpen(n.url)}
                 onMouseEnter={() => setHovered(n.value)}
                 onMouseLeave={() => setHovered(null)}
@@ -148,9 +146,10 @@ const Tracking = () => {
             )}
           </motion.div>
         </AnimatePresence>
+        </div>
 
         {/* Nota */}
-        <p className="mt-8 text-white/25 text-xs text-center">
+        <p data-page-reveal className="mt-8 text-white/25 text-xs text-center">
           {t.tracking.nota}
         </p>
       </div>

@@ -35,9 +35,11 @@ export default defineConfig({
         clientPort: 4321,
       },
       allowedHosts: true,
-      /** Precalienta el grafo del itinerario para reducir carreras del optimizador (504 Outdated Optimize Dep). */
+      /** Precalienta islas pesadas para reducir carreras del optimizador (504 Outdated Optimize Dep). */
       warmup: {
         clientFiles: [
+          "src/components/inicio/InicioContent.tsx",
+          "src/components/ui/AnimatedNetworkBackground.tsx",
           "src/components/itinerario/ItinerarioContent.tsx",
           "src/components/itinerario/ItinerarioMap.tsx",
           "src/lib/itinerario-pdf.ts",
@@ -54,10 +56,12 @@ export default defineConfig({
     // Incluir dependencias pesadas del itinerario evita solicitudes a deps obsoletas (504 Outdated Optimize Dep).
     optimizeDeps: {
       include: [
+        "gsap",
         "maplibre-gl",
         "react-map-gl/maplibre",
         "jspdf",
         "jspdf-autotable",
+        "date-fns",
       ],
       esbuildOptions: {
         target: "es2022",

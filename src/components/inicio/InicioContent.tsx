@@ -4,8 +4,12 @@ import { brand, icons } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { AnimatedNetworkBackground } from "@/components/ui/AnimatedNetworkBackground";
+
+gsap.registerPlugin(ScrollTrigger);
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
@@ -91,6 +95,7 @@ export function InicioContent() {
   const { profile, isExternalUser, isLoading: authLoading } = useAuth();
   const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
   const mainRef = useRef<HTMLElement>(null);
+  const bgParallaxRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [kpiData, setKpiData] = useState<KpiData>({
     operacionesActivas: 0,
@@ -117,6 +122,76 @@ export function InicioContent() {
     mainElement.addEventListener("scroll", handleScroll);
     return () => mainElement.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useLayoutEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      const heroItems = main.querySelectorAll<HTMLElement>("[data-hero-item]");
+      if (heroItems.length) {
+        gsap.set(heroItems, { autoAlpha: 0, y: 36 });
+        gsap.to(heroItems, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.75,
+          stagger: 0.12,
+          ease: "power3.out",
+          delay: 0.06,
+        });
+      }
+
+      const parallaxEl = bgParallaxRef.current;
+      if (parallaxEl) {
+        gsap.to(parallaxEl, {
+          y: 72,
+          ease: "none",
+          scrollTrigger: {
+            trigger: main,
+            scroller: main,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 0.55,
+          },
+        });
+      }
+
+      main.querySelectorAll<HTMLElement>("[data-inicio-section]").forEach((section) => {
+        const items = section.querySelectorAll<HTMLElement>("[data-inicio-reveal]");
+        if (!items.length) return;
+        gsap.fromTo(
+          items,
+          { autoAlpha: 0, y: 44 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.07,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: section,
+              scroller: main,
+              start: "top 86%",
+              toggleActions: "play none none none",
+            },
+          }
+        );
+      });
+    }, main);
+
+    return () => {
+      ctx.revert();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!loadingKpis) {
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    }
+  }, [loadingKpis]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -173,7 +248,11 @@ export function InicioContent() {
   return (
     <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative isolate scroll-smooth snap-y snap-mandatory" role="main">
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden min-h-[100dvh] w-full">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900" />
+        <div
+          ref={bgParallaxRef}
+          className="absolute inset-0 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 will-change-transform"
+          aria-hidden
+        />
         <AnimatedNetworkBackground />
       </div>
       <div className="pointer-events-none fixed inset-0 z-0 bg-[#0f3d5c]/20" />
@@ -183,30 +262,30 @@ export function InicioContent() {
         <div className="max-w-5xl mx-auto px-4 sm:-translate-y-[50px]">
           <div className="flex flex-col items-center text-center">
             {isLoggedIn && profile && (
-              <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-full backdrop-blur-sm">
+              <div data-hero-item className="mb-4 flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-full backdrop-blur-sm">
                 <Icon icon="lucide:user-check" className="text-emerald-400 flex-shrink-0" width={16} height={16} />
                 <span className="text-white/90 text-sm font-medium">Bienvenido, <span className="text-white font-semibold">{profile.nombre}</span></span>
               </div>
             )}
-            <img src={brand.logo} alt={brand.companyTitle} width={800} height={400} className="h-28 sm:h-36 lg:h-48 w-auto object-contain mb-4 sm:mb-6 brightness-0 invert" loading="eager" />
-            <div className="relative inline-block mb-3">
+            <img data-hero-item src={brand.logo} alt={brand.companyTitle} width={800} height={400} className="h-28 sm:h-36 lg:h-48 w-auto object-contain mb-4 sm:mb-6 brightness-0 invert" loading="eager" />
+            <div data-hero-item className="relative inline-block mb-3">
               <div className="absolute bg-gradient-to-r from-brand-red/90 via-brand-red to-brand-red/90 shadow-[0_8px_32px_rgba(185,28,28,0.5),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.2)]" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
               <div className="absolute border border-white/20" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
               <h1 className="relative text-lg sm:text-2xl lg:text-4xl font-bold tracking-tight text-white px-4 sm:px-6 py-2 [text-shadow:2px_2px_0_#000,3px_3px_0_#000]">{t.inicio.heroTitle}</h1>
             </div>
             <div className="flex flex-col items-center gap-2 mb-6 sm:mb-8">
-              <div className="relative inline-block">
+              <div data-hero-item className="relative inline-block">
                 <div className="absolute bg-gradient-to-r from-brand-olive/90 via-brand-olive to-brand-olive/90 shadow-[0_6px_24px_rgba(102,153,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.2)]" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
                 <div className="absolute border border-white/20" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
                 <p className="relative text-sm sm:text-base lg:text-lg text-white px-4 sm:px-6 py-1.5 [text-shadow:2px_2px_0_#000,3px_3px_0_#000]">{t.inicio.heroDescriptionLine1}</p>
               </div>
-              <div className="relative inline-block">
+              <div data-hero-item className="relative inline-block">
                 <div className="absolute bg-gradient-to-r from-brand-olive/90 via-brand-olive to-brand-olive/90 shadow-[0_6px_24px_rgba(102,153,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.2)]" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
                 <div className="absolute border border-white/20" style={{ top: "4px", bottom: "4px", left: "12px", right: "12px", transform: "skewX(-40deg)" }} />
                 <p className="relative text-sm sm:text-base lg:text-lg text-white px-4 sm:px-6 py-1.5 [text-shadow:2px_2px_0_#000,3px_3px_0_#000]">{t.inicio.heroDescriptionLine2}</p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
+            <div data-hero-item className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center">
               {isLoggedIn ? (
                 <a href={withBase("/dashboard")} className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded bg-white text-brand-blue font-semibold hover:bg-white/95 transition-colors text-sm sm:text-base">
                   <Icon icon="lucide:layout-dashboard" width={18} height={18} />
@@ -235,10 +314,10 @@ export function InicioContent() {
       </header>
 
       {/* Pilares */}
-      <section id="pilares" className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section id="pilares" data-inicio-section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-6xl mx-auto px-4 w-full">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div data-inicio-reveal className="text-center mb-8">
             <span className="inline-block px-4 py-1.5 bg-brand-blue/30 border border-brand-blue/50 text-xs font-semibold text-white uppercase tracking-wider mb-3 rounded-full">{t.inicio.pillarsTag}</span>
             <h2 className="text-2xl lg:text-4xl font-bold text-white mb-2">{t.inicio.pillarsTitle}</h2>
             <p className="text-white/50 max-w-lg mx-auto text-sm">{t.inicio.pillarsSubtitle}</p>
@@ -292,7 +371,7 @@ export function InicioContent() {
               const c = colors[color];
 
               return (
-                <div key={key} className={`group relative bg-black/40 backdrop-blur-md border ${c.border} rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-black/55 shadow-xl shadow-black/30 ${c.glow}`}>
+                <div key={key} data-inicio-reveal className={`group relative bg-black/40 backdrop-blur-md border ${c.border} rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-black/55 shadow-xl shadow-black/30 ${c.glow}`}>
                   {/* Línea de acento superior */}
                   <div className={`absolute top-0 left-0 right-0 h-[2px] ${c.accent} opacity-70`} />
 
@@ -332,16 +411,16 @@ export function InicioContent() {
       </section>
 
       {/* Stats */}
-      <section className="relative z-10 py-8 bg-black/35 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section data-inicio-section className="relative z-10 py-8 bg-black/35 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4 w-full">
-          <div className="text-center mb-8">
+          <div data-inicio-reveal className="text-center mb-8">
             <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-3 rounded-full">{t.inicio.statsTag}</span>
             <h2 className="text-2xl lg:text-4xl font-bold text-white mb-2">{t.inicio.statsTitle}</h2>
             <p className="text-white/50 text-sm max-w-md mx-auto">{t.inicio.statsSubtitle}</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map(({ valueKey, labelKey, icon }) => (
-              <div key={valueKey} className="group relative text-center p-5 sm:p-6 bg-black/40 backdrop-blur-md border border-white/15 hover:border-emerald-500/40 rounded-2xl shadow-xl shadow-black/20 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div key={valueKey} data-inicio-reveal className="group relative text-center p-5 sm:p-6 bg-black/40 backdrop-blur-md border border-white/15 hover:border-emerald-500/40 rounded-2xl shadow-xl shadow-black/20 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-500 opacity-50 rounded-t-2xl" />
                 <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
                   <Icon icon={icon} width={80} height={80} />
@@ -358,16 +437,16 @@ export function InicioContent() {
       </section>
 
       {/* Comparación Antes/Después */}
-      <section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section data-inicio-section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center mb-8 sm:mb-12">
+          <div data-inicio-reveal className="text-center mb-8 sm:mb-12">
             <span className="inline-block px-4 py-1.5 bg-rose-500/20 border border-rose-500/40 text-xs font-semibold text-rose-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.comparisonTag}</span>
             <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">{t.inicio.comparisonTitle}</h2>
             <p className="text-white/60 text-sm sm:text-base">{t.inicio.comparisonSubtitle}</p>
           </div>
 
           {/* Desktop: tabla de 2 columnas */}
-          <div className="hidden sm:block bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden shadow-xl shadow-black/30">
+          <div data-inicio-reveal className="hidden sm:block bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden shadow-xl shadow-black/30">
             <div className="grid grid-cols-2">
               <div className="bg-rose-500/15 border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4">
                 <p className="text-rose-400 font-semibold text-xs sm:text-sm uppercase tracking-wide flex items-center gap-2">
@@ -395,7 +474,7 @@ export function InicioContent() {
           </div>
 
           {/* Mobile: lista vertical */}
-          <div className="sm:hidden space-y-3">
+          <div data-inicio-reveal className="sm:hidden space-y-3">
             {comparisons.map(({ beforeKey, afterKey }) => (
               <div key={beforeKey} className="bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                 <div className="bg-rose-500/15 px-4 py-2.5 flex items-center gap-2">
@@ -413,16 +492,16 @@ export function InicioContent() {
       </section>
 
       {/* Workflow */}
-      <section className="relative z-10 py-8 bg-black/35 backdrop-blur-md overflow-hidden min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section data-inicio-section className="relative z-10 py-8 bg-black/35 backdrop-blur-md overflow-hidden min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-10 sm:mb-16">
+          <div data-inicio-reveal className="text-center mb-10 sm:mb-16">
             <span className="inline-block px-4 py-1.5 bg-cyan-500/20 border border-cyan-500/40 text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.workflowTag}</span>
             <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">{t.inicio.workflowTitle}</h2>
             <p className="text-white/60 text-sm sm:text-base">{t.inicio.workflowSubtitle}</p>
           </div>
 
           {/* Desktop: timeline horizontal */}
-          <div className="hidden lg:block">
+          <div data-inicio-reveal className="hidden lg:block">
             <div className="relative grid grid-cols-5 gap-4">
               {/* Línea de conexión — top-10 = 40px = centro exacto del círculo h-20 (80px) */}
               <div className="absolute top-10 left-[10%] right-[10%] h-px bg-gradient-to-r from-cyan-500/20 via-cyan-500/60 to-cyan-500/20" />
@@ -458,7 +537,7 @@ export function InicioContent() {
           </div>
 
           {/* Tablet: 3+2 grid */}
-          <div className="hidden sm:block lg:hidden">
+          <div data-inicio-reveal className="hidden sm:block lg:hidden">
             <div className="grid grid-cols-3 gap-4 mb-4">
               {workflowSteps.slice(0, 3).map(({ key, descKey, icon, num }) => (
                 <div key={key} className="relative bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:border-cyan-500/50 hover:bg-black/60 transition-all shadow-lg shadow-black/20 group">
@@ -490,7 +569,7 @@ export function InicioContent() {
           </div>
 
           {/* Mobile: lista vertical con línea de conexión */}
-          <div className="sm:hidden relative">
+          <div data-inicio-reveal className="sm:hidden relative">
             {/* Línea vertical de conexión */}
             <div className="absolute top-8 bottom-8 left-6 w-0.5 bg-gradient-to-b from-cyan-500/60 via-cyan-500/40 to-cyan-500/60" />
             
@@ -520,9 +599,9 @@ export function InicioContent() {
       </section>
 
       {/* Quick Links */}
-      <section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section data-inicio-section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-8 sm:mb-12">
+          <div data-inicio-reveal className="text-center mb-8 sm:mb-12">
             <span className="inline-block px-4 py-1.5 bg-violet-500/20 border border-violet-500/40 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.quickLinksTag}</span>
             <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">{t.inicio.quickLinksTitle}</h2>
             <p className="text-white/60 text-sm sm:text-base">{t.inicio.quickLinksSubtitle}</p>
@@ -530,7 +609,7 @@ export function InicioContent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {quickLinks.map(({ key, descKey, href, icon }) => (
-              <a key={key} href={withBase(href)} className="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl hover:border-violet-400/50 hover:bg-black/50 transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-black/20">
+              <a key={key} data-inicio-reveal href={withBase(href)} className="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl hover:border-violet-400/50 hover:bg-black/50 transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-black/20">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-violet-500/25 to-violet-900/20 border border-violet-500/40 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:from-violet-500/40 group-hover:border-violet-400/60 transition-all">
                   <Icon icon={icon} className="text-violet-300 drop-shadow-[0_0_8px_rgba(167,139,250,0.6)]" width={20} height={20} />
                 </div>
@@ -546,9 +625,9 @@ export function InicioContent() {
       </section>
 
       {/* KPIs Preview */}
-      <section className="relative z-10 py-8 bg-black/35 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section data-inicio-section className="relative z-10 py-8 bg-black/35 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-8 sm:mb-12">
+          <div data-inicio-reveal className="text-center mb-8 sm:mb-12">
             <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.kpiTag}</span>
             <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">{t.inicio.kpiTitle}</h2>
             <p className="text-white/60 text-sm sm:text-base">{t.inicio.kpiSubtitle}</p>
@@ -558,7 +637,7 @@ export function InicioContent() {
             {kpiConfig.map(({ key, descKey, dataKey, icon }) => {
               const value = kpiData[dataKey];
               return (
-                <div key={key} className="p-4 sm:p-5 bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg shadow-black/20 hover:border-blue-500/40 hover:-translate-y-0.5 transition-all duration-300">
+                <div key={key} data-inicio-reveal className="p-4 sm:p-5 bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg shadow-black/20 hover:border-blue-500/40 hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-center justify-between mb-3 sm:mb-4">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500/25 to-blue-900/20 border border-blue-500/40 rounded-xl flex items-center justify-center">
                       <Icon icon={icon} className="text-blue-300 drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]" width={16} height={16} />
@@ -581,7 +660,7 @@ export function InicioContent() {
             })}
           </div>
 
-          <div className="text-center">
+          <div data-inicio-reveal className="text-center">
             <a href={withBase("/dashboard")} className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-black/50 backdrop-blur-md border border-white/30 rounded-xl text-white font-medium hover:bg-black/60 hover:border-blue-400/50 transition-all shadow-lg shadow-black/20 text-sm sm:text-base">
               <Icon icon="lucide:layout-dashboard" width={18} height={18} />
               {t.inicio.kpiCta}
@@ -592,11 +671,11 @@ export function InicioContent() {
       </section>
 
       {/* CTA Final + Footer */}
-      <section className="relative z-10 min-h-[calc(100vh-90px)] flex flex-col snap-start snap-always">
+      <section data-inicio-section className="relative z-10 min-h-[calc(100vh-90px)] flex flex-col snap-start snap-always">
         {/* CTA centrado */}
         <div className="flex-1 flex flex-col justify-center py-8">
           <div className="max-w-3xl mx-auto px-4 w-full">
-            <div className="bg-black/35 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-10 lg:p-14 text-center shadow-xl shadow-black/30">
+            <div data-inicio-reveal className="bg-black/35 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-10 lg:p-14 text-center shadow-xl shadow-black/30">
               <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">{t.inicio.ctaFinalTitle}</h2>
               <p className="text-white/60 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto">{t.inicio.ctaFinalSubtitle}</p>
 
@@ -626,7 +705,7 @@ export function InicioContent() {
         </div>
 
         {/* Footer anclado al fondo */}
-        <footer className="py-6 bg-black/80 backdrop-blur-lg text-white border-t border-white/10 flex-shrink-0">
+        <footer data-inicio-reveal className="py-6 bg-black/80 backdrop-blur-lg text-white border-t border-white/10 flex-shrink-0">
           <div className="max-w-5xl mx-auto px-4">
             <div className="flex flex-col items-center mb-4">
               <img src={brand.logo} alt={brand.companyTitle} width={160} height={80} className="h-8 sm:h-10 w-auto object-contain brightness-0 invert mb-3" />

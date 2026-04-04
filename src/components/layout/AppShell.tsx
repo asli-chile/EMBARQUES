@@ -9,6 +9,7 @@ import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
 import { Toaster } from "sileo";
 import { lazy, Suspense, type ReactNode } from "react";
+import { ModuleRouteLoader } from "@/components/ui/ModuleRouteLoader";
 
 /** Cada ruta en su propio chunk: evita cargar MapLibre/xlsx/ag-grid en /inicio (crítico en Android + Vite dev). */
 const LazyDashboardContent = lazy(() =>
@@ -114,20 +115,7 @@ const LazyCartolasNuboxContent = lazy(() =>
 );
 
 function RouteFallback() {
-  return (
-    <main
-      className="flex-1 min-h-0 min-w-0 overflow-auto bg-neutral-100 flex items-center justify-center"
-      role="main"
-      style={{ minHeight: "120px" }}
-    >
-      <p
-        className="text-neutral-500 text-sm"
-        style={{ margin: 0, fontFamily: "system-ui, sans-serif", color: "#737373" }}
-      >
-        Cargando módulo…
-      </p>
-    </main>
-  );
+  return <ModuleRouteLoader />;
 }
 
 function Sus({ children }: { children: ReactNode }) {

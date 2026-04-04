@@ -36,13 +36,74 @@ const pathname = stripBasePathname(Astro.url.pathname);
     </style>
   </head>
   <body class="h-screen overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
+    <!-- Mismo lenguaje visual que ModuleRouteLoader (hasta que hidrata AppShell). -->
     <div
       id="app-shell-loading"
-      class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-white px-6 text-center text-neutral-600"
-      style="position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#fff;padding:0 24px;text-align:center;font-family:system-ui,sans-serif"
+      class="fixed inset-0 z-[2147483647] flex flex-col items-center justify-center px-4 py-8 text-center antialiased bg-gradient-to-b from-neutral-50 via-neutral-100 to-neutral-100/95"
+      aria-busy="true"
+      aria-live="polite"
     >
-      <p style="margin:0;font-size:14px;font-weight:600;color:#11224E">Cargando aplicación…</p>
-      <p id="app-shell-loading-hint" class="hidden max-w-sm text-xs text-neutral-500" style="display:none;max-width:20rem;margin:0;font-size:12px;line-height:1.45;color:#737373">
+      <div
+        class="pointer-events-none absolute inset-0 opacity-[0.35]"
+        aria-hidden="true"
+        style="background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 78, 216, 0.14), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(13, 148, 136, 0.08), transparent);"
+      />
+      <div
+        class="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-neutral-200/90 bg-white/85 px-8 py-10 shadow-[0_24px_60px_-16px_rgba(29,78,216,0.18)] backdrop-blur-sm sm:py-12"
+      >
+        <div class="flex flex-col items-center gap-5" aria-hidden="true">
+          <svg
+            width="120"
+            height="56"
+            viewBox="0 0 120 56"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            class="animate-module-loader-ship text-brand-blue drop-shadow-sm"
+          >
+            <path d="M8 38h104v4H8v-4z" class="fill-neutral-200"></path>
+            <path
+              d="M14 26h14v10H14V26zm22 0h14v10H36V26zm22 0h14v10H58V26z"
+              class="fill-brand-blue/85"
+            ></path>
+            <path d="M12 20h52v6H12v-6z" class="fill-brand-blue/25"></path>
+            <path
+              d="M4 42c18 4 36 4 54 0s36-4 54 0"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              class="text-brand-teal/40"
+            ></path>
+          </svg>
+          <div class="flex h-8 w-full max-w-[7rem] items-end justify-center gap-1.5">
+            <span
+              class="animate-module-loader-bar h-[1.35rem] w-2 rounded-sm bg-brand-blue"
+              style="animation-delay: 0ms"
+            ></span>
+            <span
+              class="animate-module-loader-bar h-[1.35rem] w-2 rounded-sm bg-brand-teal"
+              style="animation-delay: 140ms"
+            ></span>
+            <span
+              class="animate-module-loader-bar h-[1.35rem] w-2 rounded-sm bg-brand-blue"
+              style="animation-delay: 280ms"
+            ></span>
+          </div>
+        </div>
+        <p class="m-0 px-2 text-center text-sm font-medium tracking-tight text-neutral-600">
+          Preparando interfaz…
+        </p>
+        <div class="h-1 w-full max-w-[11rem] overflow-hidden rounded-full bg-neutral-200/90" aria-hidden="true">
+          <div
+            class="animate-module-loader-rail h-full w-2/5 rounded-full bg-gradient-to-r from-brand-blue via-brand-teal to-brand-blue bg-[length:200%_100%]"
+          >
+          </div>
+        </div>
+      </div>
+      <p
+        id="app-shell-loading-hint"
+        class="relative z-10 mt-6 hidden max-w-sm text-xs leading-snug text-neutral-500"
+        style="display: none"
+      >
         Si esto no desaparece, el JavaScript falló en este dispositivo. En Chrome (Android): USB → Depurar en el PC
         (chrome://inspect). Revisa la consola y la pestaña Red por URLs en rojo (a veces fallan rutas con espacios en la carpeta del proyecto).
       </p>

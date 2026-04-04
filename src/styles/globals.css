@@ -138,6 +138,63 @@ html {
   animation: fade-in 0.3s ease-out forwards;
 }
 
+/* Loader de ruta (Suspense / lazy chunks en AppShell) */
+@keyframes module-loader-bar {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+.animate-module-loader-bar {
+  transform-origin: center bottom;
+  animation: module-loader-bar 0.95s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+@keyframes module-loader-ship {
+  0%,
+  100% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+.animate-module-loader-ship {
+  animation: module-loader-ship 2.4s ease-in-out infinite;
+}
+
+@keyframes module-loader-rail {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.animate-module-loader-rail {
+  animation: module-loader-rail 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-module-loader-bar,
+  .animate-module-loader-ship,
+  .animate-module-loader-rail {
+    animation: none;
+  }
+  .animate-module-loader-bar {
+    transform: scaleY(0.85);
+    opacity: 0.88;
+  }
+  .animate-module-loader-rail {
+    background-position: 50% 0;
+  }
+}
+
 /* Safe area para barras fijas en dispositivos con notch */
 .safe-bottom {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
