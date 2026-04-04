@@ -44,11 +44,40 @@ const pathname = stripBasePathname(Astro.url.pathname);
       aria-busy="true"
       aria-live="polite"
     >
-      <div
-        class="pointer-events-none absolute inset-0 opacity-[0.35]"
-        aria-hidden="true"
-        style="background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 78, 216, 0.14), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(13, 148, 136, 0.08), transparent);"
-      />
+      <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div
+          class="absolute -left-[12%] -top-[18%] h-[90%] w-[95%] animate-module-loader-bg rounded-full opacity-90 blur-3xl sm:blur-[72px]"
+          style="background: radial-gradient(ellipse 72% 58% at 48% 42%, rgba(29, 78, 216, 0.2), transparent 72%);"
+        ></div>
+        <div
+          class="absolute -bottom-[22%] -right-[18%] h-[80%] w-[90%] animate-module-loader-bg-reverse rounded-full opacity-90 blur-3xl sm:blur-[64px]"
+          style="background: radial-gradient(ellipse 68% 56% at 58% 48%, rgba(13, 148, 136, 0.16), transparent 70%);"
+        ></div>
+        <svg
+          class="absolute bottom-0 left-[-8%] h-14 w-[116%] min-w-[640px] animate-module-loader-wave text-brand-blue/20 sm:h-[4.25rem]"
+          viewBox="0 0 1200 100"
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0 52 C 200 42 280 62 400 52 S 600 38 800 52 S 1000 62 1200 48"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            vector-effect="non-scaling-stroke"
+          ></path>
+          <path
+            d="M0 68 C 180 78 320 58 520 68 S 720 82 920 68 S 1080 58 1200 72"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.15"
+            stroke-linecap="round"
+            class="text-brand-teal/30"
+            vector-effect="non-scaling-stroke"
+          ></path>
+        </svg>
+      </div>
       <div
         class="relative z-10 flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-neutral-200/90 bg-white/85 px-8 py-10 shadow-[0_24px_60px_-16px_rgba(29,78,216,0.18)] backdrop-blur-sm sm:py-12"
       >

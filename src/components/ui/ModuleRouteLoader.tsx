@@ -16,14 +16,46 @@ export function ModuleRouteLoader() {
       aria-busy="true"
       aria-live="polite"
     >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
-        aria-hidden
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 78, 216, 0.14), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(13, 148, 136, 0.08), transparent)",
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div
+          className="absolute -left-[12%] -top-[18%] h-[90%] w-[95%] animate-module-loader-bg rounded-full opacity-90 blur-3xl sm:blur-[72px]"
+          style={{
+            background:
+              "radial-gradient(ellipse 72% 58% at 48% 42%, rgba(29, 78, 216, 0.2), transparent 72%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-[22%] -right-[18%] h-[80%] w-[90%] animate-module-loader-bg-reverse rounded-full opacity-90 blur-3xl sm:blur-[64px]"
+          style={{
+            background:
+              "radial-gradient(ellipse 68% 56% at 58% 48%, rgba(13, 148, 136, 0.16), transparent 70%)",
+          }}
+        />
+        <svg
+          className="absolute bottom-0 left-[-8%] h-14 w-[116%] min-w-[640px] text-brand-blue/20 animate-module-loader-wave sm:h-[4.25rem]"
+          viewBox="0 0 1200 100"
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0 52 C 200 42 280 62 400 52 S 600 38 800 52 S 1000 62 1200 48"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <path
+            d="M0 68 C 180 78 320 58 520 68 S 720 82 920 68 S 1080 58 1200 72"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.15"
+            strokeLinecap="round"
+            className="text-brand-teal/30"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </div>
 
       <div className="relative z-10 flex flex-col items-center gap-6 px-8 py-10 sm:py-12 max-w-sm w-full mx-4 rounded-2xl border border-neutral-200/90 bg-white/85 backdrop-blur-sm shadow-[0_24px_60px_-16px_rgba(29,78,216,0.18)] transition-[box-shadow] duration-500">
         <div className="flex flex-col items-center gap-5">
