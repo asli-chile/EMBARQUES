@@ -10,6 +10,8 @@ export type StackingFormFromOcr = {
   reeferFin: string;
   lateInicio: string;
   lateFin: string;
+  xlateInicio: string;
+  xlateFin: string;
   cutoffDry: string;
   cutoffReefer: string;
   cutoffAnticipado: string;
@@ -23,6 +25,8 @@ const EMPTY_FORM: StackingFormFromOcr = {
   reeferFin: "",
   lateInicio: "",
   lateFin: "",
+  xlateInicio: "",
+  xlateFin: "",
   cutoffDry: "",
   cutoffReefer: "",
   cutoffAnticipado: "",
@@ -80,6 +84,9 @@ function parseByKeywords(text: string): Partial<StackingFormFromOcr> {
     dry: ["dryInicio", "dryFin"],
     reefer: ["reeferInicio", "reeferFin"],
     late: ["lateInicio", "lateFin"],
+    xlate: ["xlateInicio", "xlateFin"],
+    "x-late": ["xlateInicio", "xlateFin"],
+    documental: ["cutoffDry"],
     "cut off": ["cutoffDry", "cutoffReefer"],
     cutoff: ["cutoffDry", "cutoffReefer"],
     anticipado: ["cutoffAnticipado"],
@@ -122,6 +129,8 @@ function parseByOrder(text: string): Partial<StackingFormFromOcr> {
     "reeferFin",
     "lateInicio",
     "lateFin",
+    "xlateInicio",
+    "xlateFin",
     "cutoffDry",
     "cutoffReefer",
     "cutoffAnticipado",

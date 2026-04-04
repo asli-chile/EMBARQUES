@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale } from "@/lib/i18n";
 import type { StackingData } from "@/types/stacking";
 import { fetchPublicItinerarios } from "@/lib/itinerarios-service";
 import { withBase } from "@/lib/basePath";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
-import { format } from "date-fns";
+import { formatDisplayDateLocal } from "@/lib/calendarUtils";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   STACKING_DRAFTS_STORAGE_KEY,
   getDraftForItinerary,
+  getEmptyStackingDraft,
   saveDraftToStorage,
   type StackingDraft,
 } from "@/lib/stacking-drafts";
@@ -41,7 +42,7 @@ function formatEtdDisplay(etd: string | null): string {
   if (!etd?.trim()) return "—";
   try {
     const d = etd.includes("T") ? etd.slice(0, 10) : etd;
-    return format(new Date(d + "T12:00:00"), "dd/MM/yyyy");
+    return formatDisplayDateLocal(new Date(d + "T12:00:00"));
   } catch {
     return etd;
   }
@@ -94,21 +95,6 @@ function daysUntil(dateStr: string | null, offsetDays = 0): number | null {
   return diffDays;
 }
 
-function daysUntilLabel(dateStr: string | null, offsetDays = 0): string {
-  const n = daysUntil(dateStr, offsetDays);
-  if (n == null) return "—";
-  return `${n} d`;
-}
-
-/** Fecha de cierre de stacking (ETD + offset en días). */
-function getStackingCloseDate(etd: string | null): string {
-  const base = parseCalendarDate(etd ?? "");
-  if (!base) return "—";
-  const d = new Date(base);
-  d.setDate(d.getDate() + STACKING_CLOSE_OFFSET_DAYS);
-  return format(d, "dd/MM/yyyy");
-}
-
 function readDraftsFromStorage(): Record<string, StackingDraft> {
   if (typeof window === "undefined") return {};
   try {
@@ -142,6 +128,70 @@ function isTodayEtd(etd: string | null): boolean {
   } catch {
     return false;
   }
+}
+
+function StackingFieldRow({
+  label,
+  field,
+  value,
+  editable,
+  placeholder,
+  onChange,
+  onBlurSave,
+}: {
+  label: string;
+  field: keyof StackingDraft;
+  value: string;
+  editable: boolean;
+  placeholder?: string;
+  onChange: (field: keyof StackingDraft, v: string) => void;
+  onBlurSave: (field: keyof StackingDraft) => void;
+}) {
+  return (
+    <div className="space-y-1 min-w-0">
+      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">{label}</p>
+      {editable ? (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(field, e.target.value)}
+          onBlur={() => onBlurSave(field)}
+          placeholder={placeholder}
+          className="w-full text-xs font-mono rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-shadow"
+        />
+      ) : (
+        <p className="text-xs font-mono font-semibold text-neutral-800 tabular-nums min-h-[28px] flex items-center">
+          {value.trim() || "—"}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StackingScheduleCard({
+  title,
+  icon,
+  borderAccent,
+  children,
+}: {
+  title: string;
+  icon: string;
+  borderAccent: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`rounded-xl border border-neutral-200 bg-white/95 shadow-sm hover:shadow-md hover:border-brand-blue/25 transition-all duration-200 overflow-hidden group ${borderAccent}`}
+    >
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-100 bg-gradient-to-r from-neutral-50 to-white">
+        <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/15 transition-colors">
+          <Icon icon={icon} width={15} height={15} className="text-brand-blue" aria-hidden />
+        </span>
+        <span className="text-[11px] font-bold text-neutral-800 uppercase tracking-wide">{title}</span>
+      </div>
+      <div className="p-3">{children}</div>
+    </div>
+  );
 }
 
 export function StackingContent({ data = null }: StackingContentProps) {
@@ -271,8 +321,9 @@ export function StackingContent({ data = null }: StackingContentProps) {
       return;
     }
     const drafts = readDraftsFromStorage();
-    setStackingDraft(getDraftForItinerary(drafts, selected));
-  }, [selected]);
+    const raw = getDraftForItinerary(drafts, selected);
+    setStackingDraft({ ...getEmptyStackingDraft(), ...(raw ?? {}) });
+  }, [selected?.id]);
 
   const showEmptyState = !hasPropData && !loading && !error && stackingItinerarios.length === 0;
   const showNoResultsAfterFilter =
@@ -475,126 +526,156 @@ export function StackingContent({ data = null }: StackingContentProps) {
                     const daysToClose = daysUntil(selected.etd, STACKING_CLOSE_OFFSET_DAYS);
                     const zarpeUrgency = daysToZarpe === null ? null : daysToZarpe <= 3 ? "red" : daysToZarpe <= 7 ? "amber" : "emerald";
                     const closeUrgency = daysToClose === null ? null : daysToClose <= 2 ? "red" : daysToClose <= 5 ? "amber" : "emerald";
-                    const urgencyCardClass = (u: string | null) =>
-                      u === "red" ? "border-red-200 bg-red-50/60" :
-                      u === "amber" ? "border-amber-200 bg-amber-50/60" :
-                      "border-neutral-200 bg-neutral-50/60";
                     const urgencyNumClass = (u: string | null) =>
                       u === "red" ? "text-red-600" :
                       u === "amber" ? "text-amber-600" :
                       "text-emerald-600";
+                    const sp = tr as Record<string, string>;
+                    const d = stackingDraft ?? getEmptyStackingDraft();
+                    const placeholderFmt = sp.placeholderDateFormat ?? "DD/MM/AAAA HH:MM";
+                    const setField = (key: keyof StackingDraft, v: string) => {
+                      setStackingDraft((prev) => ({ ...getEmptyStackingDraft(), ...(prev ?? {}), [key]: v }));
+                    };
+                    const blurSave = (key: keyof StackingDraft) => {
+                      if (!selected) return;
+                      setStackingDraft((prev) => {
+                        const next = { ...getEmptyStackingDraft(), ...(prev ?? {}) };
+                        saveDraftToStorage(selected.nave, { [key]: next[key] });
+                        return next;
+                      });
+                    };
                     return (
                     <>
-                      {/* Header: gradient bar + nave/viaje + meta */}
-                      <div className="flex-shrink-0">
+                      {/* Cabecera: identidad embarque + métricas */}
+                      <div className="flex-shrink-0 relative overflow-hidden">
                         <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                        <div className="px-3 py-2 flex items-center gap-2 border-b border-neutral-100 flex-wrap">
-                          {/* Back button — mobile only */}
-                          <button
-                            type="button"
-                            onClick={() => setMobileView("list")}
-                            className="lg:hidden shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-brand-blue hover:text-brand-blue/80 transition-colors"
-                          >
-                            <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
-                            Lista
-                          </button>
-                          <span className="w-7 h-7 rounded-lg bg-brand-blue flex items-center justify-center shrink-0 shadow-sm shadow-brand-blue/20">
-                            <Icon icon="lucide:ship" width={14} height={14} className="text-white" aria-hidden />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-neutral-900 truncate leading-tight">
-                              {selected.nave || "—"} <span className="font-normal text-neutral-400">·</span> {selected.viaje || "—"}
-                            </p>
-                            <p className="text-[11px] text-neutral-500 truncate leading-tight">
-                              {(selected.operador || selected.naviera || selected.servicio || "").trim() || "—"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <div>
-                              <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">POL</p>
-                              <p className="text-[11px] font-semibold text-neutral-800">{selected.pol || "—"}</p>
-                            </div>
-                            <div className="w-px h-5 bg-neutral-100" />
-                            <div>
-                              <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">ETD</p>
-                              <p className="text-[11px] font-semibold text-neutral-800 font-mono tabular-nums">
-                                {formatEtdDisplay(selected.etd)}
-                                {isTodayEtd(selected.etd) && (
-                                  <span className="ml-1 inline-flex items-center rounded-full bg-brand-olive/10 text-brand-olive px-1.5 py-0.5 text-[9px] font-black uppercase">HOY</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          {isSuperadmin && (
-                            <a
-                              href={`${withBase("/itinerario")}?stackingItId=${encodeURIComponent(selected.id)}`}
-                              className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-xl bg-brand-blue text-white px-2.5 py-1 text-xs font-semibold shadow-sm shadow-brand-blue/20 hover:bg-brand-blue/90 transition-colors"
+                        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/[0.04] to-transparent pointer-events-none" aria-hidden />
+                        <div className="relative px-3 py-3 border-b border-neutral-100">
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setMobileView("list")}
+                              className="lg:hidden shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-brand-blue hover:text-brand-blue/80 transition-colors mt-0.5"
                             >
-                              <Icon icon="lucide:pencil" width={12} height={12} aria-hidden />
-                              {(tr as { editStacking?: string }).editStacking ?? "Editar"}
-                            </a>
-                          )}
+                              <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
+                              Lista
+                            </button>
+                            <span className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center shrink-0 shadow-md shadow-brand-blue/25">
+                              <Icon icon="lucide:ship" width={18} height={18} className="text-white" aria-hidden />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-black text-neutral-900 tracking-tight leading-tight">
+                                <span className="text-brand-blue">{selected.nave || "—"}</span>
+                                <span className="font-normal text-neutral-300 mx-1.5">·</span>
+                                <span>{selected.viaje || "—"}</span>
+                              </p>
+                              <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                                {(selected.operador || selected.naviera || selected.servicio || "").trim() || "—"}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white/90 px-2.5 py-1 text-[11px] shadow-sm">
+                                  <Icon icon="lucide:anchor" width={12} height={12} className="text-brand-blue shrink-0" aria-hidden />
+                                  <span className="text-neutral-400 font-bold uppercase text-[9px]">{tr.polLabel}</span>
+                                  <span className="font-mono font-bold text-neutral-800">{selected.pol || "—"}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white/90 px-2.5 py-1 text-[11px] shadow-sm tabular-nums">
+                                  <Icon icon="lucide:calendar-days" width={12} height={12} className="text-brand-blue shrink-0" aria-hidden />
+                                  <span className="text-neutral-400 font-bold uppercase text-[9px]">{sp.etdBadge ?? "ETD"}</span>
+                                  <span className="font-mono font-bold text-neutral-800">{formatEtdDisplay(selected.etd)}</span>
+                                  {isTodayEtd(selected.etd) && (
+                                    <span className="ml-0.5 inline-flex rounded bg-brand-olive/15 text-brand-olive px-1 py-0.5 text-[8px] font-black uppercase">{sp.todayTag ?? "HOY"}</span>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+                              {daysToZarpe !== null && (
+                                <div className="text-right rounded-xl border border-neutral-200 bg-neutral-50/90 px-3 py-1.5 min-w-[4.5rem]">
+                                  <p className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(zarpeUrgency)}`}>{daysToZarpe}</p>
+                                  <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wide">{sp.zarpeDaysLabel ?? "días al zarpe"}</p>
+                                </div>
+                              )}
+                              {daysToClose !== null && (
+                                <div className="text-right rounded-xl border border-neutral-200 bg-neutral-50/90 px-3 py-1.5 min-w-[4.5rem]">
+                                  <p className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(closeUrgency)}`}>{daysToClose}</p>
+                                  <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wide">{sp.stackingDaysLabel ?? "cierre est."}</p>
+                                </div>
+                              )}
+                              {isSuperadmin && (
+                                <a
+                                  href={`${withBase("/itinerario")}?stackingItId=${encodeURIComponent(selected.id)}`}
+                                  className="inline-flex items-center gap-1 rounded-xl bg-brand-blue text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm shadow-brand-blue/20 hover:bg-brand-blue/90 transition-colors"
+                                >
+                                  <Icon icon="lucide:pencil" width={12} height={12} aria-hidden />
+                                  {sp.editStacking ?? "Editar"}
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Countdown cards — número grande + fecha */}
-                      <div className="flex-shrink-0 px-3 py-2 flex gap-2">
-                        {/* Cierre stacking */}
-                        <div className={`flex-1 rounded-xl border px-3 py-2 flex items-center justify-between gap-2 ${urgencyCardClass(closeUrgency)}`}>
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide mb-1">
-                              {(tr as { cardCierreStacking?: string }).cardCierreStacking ?? "Cierre stacking"}
-                            </p>
-                            {isSuperadmin ? (
-                              <input
-                                type="text"
-                                value={stackingDraft?.reeferFin ?? ""}
-                                onChange={(e) => { const v = e.target.value; setStackingDraft((prev) => ({ ...(prev ?? {}), reeferFin: v } as StackingDraft)); }}
-                                onBlur={(e) => { saveDraftToStorage(selected.nave, { reeferFin: e.target.value.trim() }); setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected)); }}
-                                placeholder={getStackingCloseDate(selected.etd)}
-                                className="w-full text-xs font-mono rounded-lg border border-neutral-200 bg-white px-2 py-1 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
-                              />
-                            ) : (
-                              <p className="text-xs font-bold font-mono text-neutral-800 tabular-nums">
-                                {stackingDraft?.reeferFin?.trim() || getStackingCloseDate(selected.etd)}
-                              </p>
-                            )}
-                          </div>
-                          {daysToClose !== null && (
-                            <div className="shrink-0 text-right">
-                              <p className={`text-2xl font-black tabular-nums leading-none ${urgencyNumClass(closeUrgency)}`}>{daysToClose}</p>
-                              <p className={`text-[8px] font-bold uppercase tracking-wide ${urgencyNumClass(closeUrgency)} opacity-70`}>días</p>
-                            </div>
-                          )}
+                      {/* Cronograma: ventanas y cortes */}
+                      <div className="flex-shrink-0 px-3 py-2 border-b border-neutral-100 bg-neutral-50/50">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <h2 className="text-[11px] font-black text-neutral-700 uppercase tracking-widest flex items-center gap-2">
+                            <Icon icon="lucide:calendar-clock" width={14} height={14} className="text-brand-blue" aria-hidden />
+                            {sp.scheduleTitle ?? "Cronograma"}
+                          </h2>
                         </div>
-
-                        {/* Cut off Reefer */}
-                        <div className={`flex-1 rounded-xl border px-3 py-2 flex items-center justify-between gap-2 ${urgencyCardClass(zarpeUrgency)}`}>
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide mb-1">
-                              {(tr as { cardCutoffReefer?: string }).cardCutoffReefer ?? "Cut off Reefer"}
-                            </p>
-                            {isSuperadmin ? (
-                              <input
-                                type="text"
-                                value={stackingDraft?.cutoffReefer ?? ""}
-                                onChange={(e) => { const v = e.target.value; setStackingDraft((prev) => ({ ...(prev ?? {}), cutoffReefer: v } as StackingDraft)); }}
-                                onBlur={(e) => { saveDraftToStorage(selected.nave, { cutoffReefer: e.target.value.trim() }); setStackingDraft(getDraftForItinerary(readDraftsFromStorage(), selected)); }}
-                                placeholder={(tr as { placeholderDateFormat?: string }).placeholderDateFormat ?? "DD/MM/AAAA HH:MM"}
-                                className="w-full text-xs font-mono rounded-lg border border-neutral-200 bg-white px-2 py-1 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
-                              />
-                            ) : (
-                              <p className="text-xs font-bold font-mono text-neutral-800 tabular-nums">
-                                {stackingDraft?.cutoffReefer?.trim() ?? "—"}
-                              </p>
-                            )}
-                          </div>
-                          {daysToZarpe !== null && (
-                            <div className="shrink-0 text-right">
-                              <p className={`text-2xl font-black tabular-nums leading-none ${urgencyNumClass(zarpeUrgency)}`}>{daysToZarpe}</p>
-                              <p className={`text-[8px] font-bold uppercase tracking-wide ${urgencyNumClass(zarpeUrgency)} opacity-70`}>al zarpe</p>
+                        <p className="text-[10px] text-neutral-500 mb-2 leading-snug">{sp.scheduleHint ?? ""}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                          <StackingScheduleCard title={sp.rowStackingDry ?? "Stacking"} icon="lucide:package" borderAccent="border-l-[3px] border-l-brand-blue">
+                            <div className="grid grid-cols-2 gap-2">
+                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="dryInicio" value={d.dryInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="dryFin" value={d.dryFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
                             </div>
-                          )}
+                          </StackingScheduleCard>
+                          <StackingScheduleCard title={sp.rowCorteDocumental ?? "Corte documental"} icon="lucide:file-badge" borderAccent="border-l-[3px] border-l-amber-500">
+                            <StackingFieldRow label={sp.rowCorteDocumental ?? "Corte documental"} field="cutoffDry" value={d.cutoffDry} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                          </StackingScheduleCard>
+                          <StackingScheduleCard title={sp.rowLate ?? "Late"} icon="lucide:clock-alert" borderAccent="border-l-[3px] border-l-orange-500">
+                            <div className="grid grid-cols-2 gap-2">
+                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="lateInicio" value={d.lateInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="lateFin" value={d.lateFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                            </div>
+                          </StackingScheduleCard>
+                          <StackingScheduleCard title={sp.rowXlate ?? "X-Late"} icon="lucide:timer" borderAccent="border-l-[3px] border-l-violet-500">
+                            <div className="grid grid-cols-2 gap-2">
+                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="xlateInicio" value={d.xlateInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="xlateFin" value={d.xlateFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                            </div>
+                          </StackingScheduleCard>
+                          <StackingScheduleCard title={sp.rowReefer ?? "Reefer"} icon="lucide:snowflake" borderAccent="border-l-[3px] border-l-sky-500">
+                            <div className="grid grid-cols-2 gap-2">
+                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="reeferInicio" value={d.reeferInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="reeferFin" value={d.reeferFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                            </div>
+                          </StackingScheduleCard>
+                          <StackingScheduleCard title={sp.rowCutoffReefer ?? "Cut off Reefer"} icon="lucide:thermometer-snowflake" borderAccent="border-l-[3px] border-l-cyan-600">
+                            <StackingFieldRow label={sp.rowCutoffReefer ?? "Cut off Reefer"} field="cutoffReefer" value={d.cutoffReefer} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                          </StackingScheduleCard>
+                          <div className="sm:col-span-2 xl:col-span-3">
+                          <StackingScheduleCard title={sp.rowCutoffAnticipado ?? "Cut off anticipado"} icon="lucide:calendar-x-2" borderAccent="border-l-[3px] border-l-neutral-500">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <StackingFieldRow label={sp.rowCutoffAnticipado ?? "Fecha / hora"} field="cutoffAnticipado" value={d.cutoffAnticipado} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
+                              <div className="space-y-1 min-w-0 sm:col-span-2">
+                                <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">{sp.cutoffAnticipadoDescLabel ?? "Descripción"}</p>
+                                {isSuperadmin ? (
+                                  <input
+                                    type="text"
+                                    value={d.cutoffAnticipadoDescripcion}
+                                    onChange={(e) => setField("cutoffAnticipadoDescripcion", e.target.value)}
+                                    onBlur={() => blurSave("cutoffAnticipadoDescripcion")}
+                                    className="w-full text-xs rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+                                  />
+                                ) : (
+                                  <p className="text-xs text-neutral-700 min-h-[28px]">{d.cutoffAnticipadoDescripcion.trim() || "—"}</p>
+                                )}
+                              </div>
+                            </div>
+                          </StackingScheduleCard>
+                          </div>
                         </div>
                       </div>
 

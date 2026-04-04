@@ -6,7 +6,7 @@ import type { MapRef } from "@vis.gl/react-maplibre";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
-import { format } from "date-fns";
+import { formatDisplayDateLocal } from "@/lib/calendarUtils";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapWebGLErrorBoundary } from "./MapWebGLErrorBoundary";
 import { FallbackSvgMap } from "./FallbackSvgMap";
@@ -18,12 +18,11 @@ const COUNTRIES_BY_REGION_URL = withBase("/geo/countries-by-region.geojson");
 /** Estilo tipo Google Maps: calles, etiquetas, terreno (Carto Voyager, gratuito). */
 const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-const DATE_DISPLAY = "dd/MM/yyyy";
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr?.trim()) return "—";
   try {
     const d = dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`;
-    return format(new Date(d), DATE_DISPLAY);
+    return formatDisplayDateLocal(new Date(d));
   } catch {
     return dateStr;
   }

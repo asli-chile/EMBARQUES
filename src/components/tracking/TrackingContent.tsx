@@ -1,10 +1,8 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { withBase } from "@/lib/basePath";
+import { AnimatedNetworkBackground } from "@/components/ui/AnimatedNetworkBackground";
 
 type TrackingResult = {
   id: string;
@@ -44,8 +42,15 @@ function getEstadoStyle(estado: string | null): string {
 function formatDate(dateStr: string | null, locale: "es" | "en"): string {
   if (!dateStr) return "—";
   try {
-    const d = dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`;
-    return format(new Date(d), "dd MMM yyyy", { locale: locale === "es" ? es : undefined });
+    const iso = dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`;
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    const tag = locale === "es" ? "es-CL" : "en-US";
+    return new Intl.DateTimeFormat(tag, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
   } catch {
     return dateStr;
   }
@@ -54,15 +59,7 @@ function formatDate(dateStr: string | null, locale: "es" | "en"): string {
 export function TrackingContent() {
   const { t, locale } = useLocale();
   const tr = t.trackingPage;
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [termino, setTermino] = useState("");
-
-  const handleVideoTimeUpdate = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.currentTime < 0.3) video.currentTime = 0.5;
-    if (video.duration - video.currentTime < 0.5) video.currentTime = 0.5;
-  }, []);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<TrackingResult[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -110,27 +107,20 @@ export function TrackingContent() {
   );
 
   return (
-    <main className="flex-1 min-h-0 overflow-auto relative" role="main">
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        onTimeUpdate={handleVideoTimeUpdate}
-        className="fixed inset-0 w-full h-full object-cover -z-10"
-      >
-        <source src={withBase("/trackingvideo.mp4")} type="video/mp4" />
-      </video>
-      {/* Oscurecimiento en bordes para suavizar el loop + overlay central para contraste del texto */}
+    <main className="flex-1 min-h-0 overflow-auto relative isolate" role="main">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden min-h-[100dvh] w-full">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-600 via-slate-800 to-slate-900" />
+        <AnimatedNetworkBackground />
+      </div>
       <div
-        className="fixed inset-0 -z-10 pointer-events-none"
+        className="pointer-events-none fixed inset-0 z-0"
         style={{
-          background: "linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.5) 25%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.5) 75%, rgba(0,0,0,0.75) 100%)",
+          background:
+            "linear-gradient(to bottom, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.2) 30%, rgba(15,23,42,0.15) 50%, rgba(15,23,42,0.2) 70%, rgba(15,23,42,0.35) 100%)",
         }}
       />
 
-      <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12 space-y-6 relative">
+      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8 sm:py-12 space-y-6">
         <header className="text-center">
           <h1
             className="text-xl sm:text-2xl font-bold text-white tracking-tight"

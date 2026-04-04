@@ -4,7 +4,7 @@
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format } from "date-fns";
+import { formatDisplayDateLocal, formatIsoDateLocal } from "@/lib/calendarUtils";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { withBase } from "@/lib/basePath";
 
@@ -37,7 +37,7 @@ function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr?.trim()) return "—";
   try {
     const d = dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`;
-    return format(new Date(d), "dd/MM/yyyy");
+    return formatDisplayDateLocal(new Date(d));
   } catch { return dateStr; }
 }
 
@@ -158,7 +158,7 @@ export async function generateItinerarioPDF(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(6.5);
     doc.setTextColor(...WHITE);
-    doc.text(format(now, "dd/MM/yyyy"), pageW - margin, 10, { align: "right" });
+    doc.text(formatDisplayDateLocal(now), pageW - margin, 10, { align: "right" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(5.5);
     doc.setTextColor(170, 210, 255);
@@ -175,7 +175,7 @@ export async function generateItinerarioPDF(
     doc.setTextColor(...TEXT_MUTED);
     doc.text(`${locale === "es" ? "Pág." : "Page"} ${pageNum} / ${totalPages}`, margin, pageH - 3.5);
     doc.text(COMPANY_NAME, pageW / 2, pageH - 3.5, { align: "center" });
-    doc.text(format(now, "dd/MM/yyyy"), pageW - margin, pageH - 3.5, { align: "right" });
+    doc.text(formatDisplayDateLocal(now), pageW - margin, pageH - 3.5, { align: "right" });
   };
 
   drawPageHeader();
@@ -406,5 +406,5 @@ export async function generateItinerarioPDF(
   }
 
   const areaSlug = selectedArea && selectedArea !== "ALL" ? `-${selectedArea.toLowerCase()}` : "";
-  doc.save(`itinerarios${areaSlug}-${format(now, "yyyy-MM-dd")}.pdf`);
+  doc.save(`itinerarios${areaSlug}-${formatIsoDateLocal(now)}.pdf`);
 }

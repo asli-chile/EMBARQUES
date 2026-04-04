@@ -35,6 +35,14 @@ export default defineConfig({
         clientPort: 4321,
       },
       allowedHosts: true,
+      /** Precalienta el grafo del itinerario para reducir carreras del optimizador (504 Outdated Optimize Dep). */
+      warmup: {
+        clientFiles: [
+          "src/components/itinerario/ItinerarioContent.tsx",
+          "src/components/itinerario/ItinerarioMap.tsx",
+          "src/lib/itinerario-pdf.ts",
+        ],
+      },
     },
     resolve: {
       alias: {
@@ -43,8 +51,14 @@ export default defineConfig({
       },
     },
     // MapLibre 5.x: evita "__publicField is not defined" en el worker (target ES2022 + pre-bundle).
+    // Incluir dependencias pesadas del itinerario evita solicitudes a deps obsoletas (504 Outdated Optimize Dep).
     optimizeDeps: {
-      include: ["maplibre-gl"],
+      include: [
+        "maplibre-gl",
+        "react-map-gl/maplibre",
+        "jspdf",
+        "jspdf-autotable",
+      ],
       esbuildOptions: {
         target: "es2022",
       },

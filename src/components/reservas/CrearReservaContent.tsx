@@ -11,6 +11,17 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
 import { format, parse, differenceInDays } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
+import {
+  STACKING_DRAFTS_STORAGE_KEY,
+  getDraftForItinerary,
+  getEmptyStackingDraft,
+  normalizeDraftsKeys,
+  type StackingDraft,
+} from "@/lib/stacking-drafts";
+import {
+  draftToReservaStackingDatetimeFields,
+  pickItinerarioForStackingSync,
+} from "@/lib/stacking-reserva-sync";
 
 registerLocale("es", es);
 
@@ -417,6 +428,66 @@ export function CrearReservaContent() {
     void fetchViajes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.nave, supabase]);
+
+  // Sincronizar inicio/fin stacking y corte documental desde borradores de Stacking (localStorage) cuando nave + viaje coinciden con un itinerario
+  useEffect(() => {
+    if (typeof window === "undefined" || !supabase) return;
+
+    const naveName =
+      navesFiltered.find((n) => n.id === formData.nave)?.nombre ??
+      naves.find((n) => n.id === formData.nave)?.nombre;
+    const viaje = (formData.viaje || "").trim();
+    if (!naveName || !viaje) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("itinerarios")
+        .select("id, viaje, stacking_imagen_url")
+        .eq("nave", naveName);
+
+      if (error || cancelled || !data?.length) return;
+
+      const it = pickItinerarioForStackingSync(data, viaje);
+      if (!it) return;
+
+      let draftsRaw: Record<string, StackingDraft> = {};
+      try {
+        const ls = localStorage.getItem(STACKING_DRAFTS_STORAGE_KEY);
+        if (ls) {
+          draftsRaw = normalizeDraftsKeys(JSON.parse(ls) as Record<string, StackingDraft>);
+        }
+      } catch {
+        draftsRaw = {};
+      }
+
+      const draftMerged = {
+        ...getEmptyStackingDraft(),
+        ...(getDraftForItinerary(draftsRaw, { id: it.id, nave: naveName, viaje }) ?? {}),
+      };
+      const mapped = draftToReservaStackingDatetimeFields(draftMerged);
+
+      setFormData((prev) => {
+        if (cancelled) return prev;
+        const canFillInicio = Boolean(mapped.inicio_stacking && !prev.inicio_stacking.trim());
+        const canFillFin = Boolean(mapped.fin_stacking && !prev.fin_stacking.trim());
+        const canFillCorte = Boolean(mapped.corte_documental && !prev.corte_documental.trim());
+        if (!canFillInicio && !canFillFin && !canFillCorte) return prev;
+        return {
+          ...prev,
+          inicio_stacking: canFillInicio ? mapped.inicio_stacking : prev.inicio_stacking,
+          fin_stacking: canFillFin ? mapped.fin_stacking : prev.fin_stacking,
+          corte_documental: canFillCorte ? mapped.corte_documental : prev.corte_documental,
+        };
+      });
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.nave, formData.viaje, supabase, navesFiltered, naves]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -1754,6 +1825,10 @@ export function CrearReservaContent() {
     deposito: (
       <>
         {renderSelect("deposito", depositos, tr.deposito)}
+        <p className="sm:col-span-2 lg:col-span-3 text-[11px] text-neutral-500 leading-snug rounded-lg border border-brand-blue/15 bg-brand-blue/[0.04] px-3 py-2">
+          <Icon icon="lucide:info" className="inline-block align-middle mr-1 text-brand-blue" width={14} height={14} aria-hidden />
+          {tr.depositoStackingAutoHint}
+        </p>
         <div>
           <label htmlFor="inicio_stacking" className={labelClass}>{tr.inicioStacking}</label>
           <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} />

@@ -4,7 +4,8 @@ import { brand, icons } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import { AnimatedNetworkBackground } from "@/components/ui/AnimatedNetworkBackground";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
@@ -90,7 +91,6 @@ export function InicioContent() {
   const { profile, isExternalUser, isLoading: authLoading } = useAuth();
   const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
   const mainRef = useRef<HTMLElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [kpiData, setKpiData] = useState<KpiData>({
     operacionesActivas: 0,
@@ -116,17 +116,6 @@ export function InicioContent() {
     const handleScroll = () => setShowScrollTop(mainElement.scrollTop > 400);
     mainElement.addEventListener("scroll", handleScroll);
     return () => mainElement.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const handleVideoTimeUpdate = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.currentTime < 0.3) {
-      video.currentTime = 0.5;
-    }
-    if (video.duration - video.currentTime < 0.5) {
-      video.currentTime = 0.5;
-    }
   }, []);
 
   useEffect(() => {
@@ -182,23 +171,15 @@ export function InicioContent() {
   };
 
   return (
-    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative scroll-smooth snap-y snap-mandatory" role="main">
-      {/* Video de fondo con loop fluido */}
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        onTimeUpdate={handleVideoTimeUpdate}
-        className="fixed inset-0 w-full h-full object-cover -z-10 contrast-[1.1] saturate-[1.2] brightness-[1.05]"
-      >
-        <source src={withBase("/BACKGOUND CONECCIONES.mp4")} type="video/mp4" />
-      </video>
-      <div className="fixed inset-0 bg-[#0a1628]/50 -z-10" />
+    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative isolate scroll-smooth snap-y snap-mandatory" role="main">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden min-h-[100dvh] w-full">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900" />
+        <AnimatedNetworkBackground />
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[#0f3d5c]/20" />
 
       {/* Hero */}
-      <header className="relative text-white min-h-[calc(100vh-90px)] flex items-center justify-center py-12 sm:py-16 snap-start snap-always">
+      <header className="relative z-10 text-white min-h-[calc(100vh-90px)] flex items-center justify-center py-12 sm:py-16 snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4 sm:-translate-y-[50px]">
           <div className="flex flex-col items-center text-center">
             {isLoggedIn && profile && (
@@ -254,7 +235,7 @@ export function InicioContent() {
       </header>
 
       {/* Pilares */}
-      <section id="pilares" className="py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section id="pilares" className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-6xl mx-auto px-4 w-full">
           {/* Header */}
           <div className="text-center mb-8">
@@ -351,7 +332,7 @@ export function InicioContent() {
       </section>
 
       {/* Stats */}
-      <section className="py-8 bg-black/60 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section className="relative z-10 py-8 bg-black/35 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4 w-full">
           <div className="text-center mb-8">
             <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-3 rounded-full">{t.inicio.statsTag}</span>
@@ -377,7 +358,7 @@ export function InicioContent() {
       </section>
 
       {/* Comparación Antes/Después */}
-      <section className="py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-8 sm:mb-12">
             <span className="inline-block px-4 py-1.5 bg-rose-500/20 border border-rose-500/40 text-xs font-semibold text-rose-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.comparisonTag}</span>
@@ -432,7 +413,7 @@ export function InicioContent() {
       </section>
 
       {/* Workflow */}
-      <section className="py-8 bg-black/60 backdrop-blur-md overflow-hidden min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section className="relative z-10 py-8 bg-black/35 backdrop-blur-md overflow-hidden min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-16">
             <span className="inline-block px-4 py-1.5 bg-cyan-500/20 border border-cyan-500/40 text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.workflowTag}</span>
@@ -539,7 +520,7 @@ export function InicioContent() {
       </section>
 
       {/* Quick Links */}
-      <section className="py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section className="relative z-10 py-8 min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-8 sm:mb-12">
             <span className="inline-block px-4 py-1.5 bg-violet-500/20 border border-violet-500/40 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.quickLinksTag}</span>
@@ -565,7 +546,7 @@ export function InicioContent() {
       </section>
 
       {/* KPIs Preview */}
-      <section className="py-8 bg-black/60 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
+      <section className="relative z-10 py-8 bg-black/35 backdrop-blur-md min-h-[calc(100vh-90px)] flex flex-col justify-center snap-start snap-always">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-8 sm:mb-12">
             <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-3 sm:mb-4 rounded-full">{t.inicio.kpiTag}</span>
@@ -611,11 +592,11 @@ export function InicioContent() {
       </section>
 
       {/* CTA Final + Footer */}
-      <section className="min-h-[calc(100vh-90px)] flex flex-col snap-start snap-always">
+      <section className="relative z-10 min-h-[calc(100vh-90px)] flex flex-col snap-start snap-always">
         {/* CTA centrado */}
         <div className="flex-1 flex flex-col justify-center py-8">
           <div className="max-w-3xl mx-auto px-4 w-full">
-            <div className="bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-10 lg:p-14 text-center shadow-xl shadow-black/30">
+            <div className="bg-black/35 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-10 lg:p-14 text-center shadow-xl shadow-black/30">
               <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">{t.inicio.ctaFinalTitle}</h2>
               <p className="text-white/60 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto">{t.inicio.ctaFinalSubtitle}</p>
 

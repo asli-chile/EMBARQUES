@@ -11,6 +11,10 @@ export type StackingDraft = {
   reeferFin: string;
   lateInicio: string;
   lateFin: string;
+  /** Ventana X-Late (inicio / fin). */
+  xlateInicio: string;
+  xlateFin: string;
+  /** Corte documental (fecha/hora límite). */
   cutoffDry: string;
   cutoffReefer: string;
   cutoffAnticipado: string;
@@ -55,6 +59,8 @@ const EMPTY_DRAFT: StackingDraft = {
   reeferFin: "",
   lateInicio: "",
   lateFin: "",
+  xlateInicio: "",
+  xlateFin: "",
   cutoffDry: "",
   cutoffReefer: "",
   cutoffAnticipado: "",

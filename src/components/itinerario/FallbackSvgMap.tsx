@@ -3,15 +3,14 @@
 import { useMemo, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
-import { format } from "date-fns";
+import { formatDisplayDateLocal } from "@/lib/calendarUtils";
 import type { MapPortPoint } from "./ItinerarioMap";
 
-const DATE_DISPLAY = "dd/MM/yyyy";
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr?.trim()) return "—";
   try {
     const d = dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`;
-    return format(new Date(d), DATE_DISPLAY);
+    return formatDisplayDateLocal(new Date(d));
   } catch {
     return dateStr ?? "—";
   }

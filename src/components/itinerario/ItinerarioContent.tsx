@@ -14,12 +14,19 @@ import {
 } from "@/lib/itinerarios-service";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import type { MapPortPoint } from "./ItinerarioMap";
-import { format, getISOWeek, differenceInCalendarDays, addDays } from "date-fns";
+import {
+  formatIsoDateLocal,
+  formatDisplayDateLocal,
+  getISOWeek,
+  differenceInCalendarDays,
+  addDays,
+} from "@/lib/calendarUtils";
 import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
 import {
   STACKING_DRAFTS_STORAGE_KEY,
   getStackingDraftKey,
   getDraftForItinerary,
+  getEmptyStackingDraft,
   normalizeNave,
   normalizeDraftsKeys,
   type StackingDraft,
@@ -27,8 +34,6 @@ import {
 import ItinerarioMap from "./ItinerarioMap";
 import { generateItinerarioPDF } from "@/lib/itinerario-pdf";
 import { getApiOriginPrefix, withBase } from "@/lib/basePath";
-
-const DATE_DISPLAY = "dd/MM/yyyy";
 
 // ── Metadatos de área (módulo-level para reusar en filtros e IIFE) ─────────────
 const AREA_ORDER_UI = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA"] as const;
@@ -57,7 +62,7 @@ function formatDate(dateStr: string | null): string {
   if (!dateStr?.trim()) return "—";
   try {
     const d = dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`;
-    return format(new Date(d), DATE_DISPLAY);
+    return formatDisplayDateLocal(new Date(d));
   } catch {
     return dateStr;
   }
@@ -71,7 +76,7 @@ function toDDMMYYYY(iso: string): string {
     const [y, m, d] = s.split("-").map(Number);
     if (!y || !m || !d) return iso;
     const date = new Date(y, m - 1, d);
-    return format(date, DATE_DISPLAY);
+    return formatDisplayDateLocal(date);
   } catch {
     return iso;
   }
@@ -103,7 +108,7 @@ function fromDDMMYYYY(s: string): string | null {
   if (year < 1900 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) return null;
   const date = new Date(year, month, day);
   if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
-  return format(date, "yyyy-MM-dd");
+  return formatIsoDateLocal(date);
 }
 
 function getApiUrl(): string {
@@ -316,18 +321,7 @@ export function ItinerarioContent() {
   const [etaInputValues, setEtaInputValues] = useState<string[]>([]);
 
   const [stackingDrafts, setStackingDrafts] = useState<Record<string, StackingDraft>>({});
-  const [stackingForm, setStackingForm] = useState({
-    dryInicio: "",
-    dryFin: "",
-    reeferInicio: "",
-    reeferFin: "",
-    lateInicio: "",
-    lateFin: "",
-    cutoffDry: "",
-    cutoffReefer: "",
-    cutoffAnticipado: "",
-    cutoffAnticipadoDescripcion: "",
-  });
+  const [stackingForm, setStackingForm] = useState<StackingDraft>(() => getEmptyStackingDraft());
   const [stackingEditMode, setStackingEditMode] = useState(false);
   const [stackingImageUrl, setStackingImageUrl] = useState<string | null>(null);
   const [stackingImageUploading, setStackingImageUploading] = useState(false);
@@ -346,7 +340,7 @@ export function ItinerarioContent() {
     viaje: "",
     semana: "" as string | number,
     pol: "",
-    etd: format(new Date(), "yyyy-MM-dd"),
+    etd: formatIsoDateLocal(new Date()),
     escalas: [initialEscala()] as EscalaForm[],
   });
 
@@ -560,10 +554,10 @@ export function ItinerarioContent() {
       viaje: "",
       semana: "",
       pol: "",
-      etd: format(new Date(), "yyyy-MM-dd"),
+      etd: formatIsoDateLocal(new Date()),
       escalas: [initialEscala()],
     });
-    setEtdInputValue(toDDMMYYYY(format(new Date(), "yyyy-MM-dd")));
+    setEtdInputValue(toDDMMYYYY(formatIsoDateLocal(new Date())));
     setEtaInputValues([""]);
     setModalOpen(true);
   }, []);
@@ -573,7 +567,7 @@ export function ItinerarioContent() {
     setEditingItinerarioId(it.id);
     setSelectedServicioId("");
     setSelectedConsorcioId("");
-    const etdIso = it.etd ? (it.etd.includes("T") ? it.etd.slice(0, 10) : it.etd) : format(new Date(), "yyyy-MM-dd");
+    const etdIso = it.etd ? (it.etd.includes("T") ? it.etd.slice(0, 10) : it.etd) : formatIsoDateLocal(new Date());
     const escalasForm: EscalaForm[] =
       (it.escalas ?? []).length > 0
         ? (it.escalas ?? []).map((e) => ({
@@ -627,21 +621,9 @@ export function ItinerarioContent() {
       );
       setStackingModalMinimized(false);
       setStackingEditMode(false);
-      setStackingForm((prev) => {
-        const existing = getDraftForItinerary(stackingDrafts, it);
-        if (existing) return existing;
-        return {
-          dryInicio: "",
-          dryFin: "",
-          reeferInicio: "",
-          reeferFin: "",
-          lateInicio: "",
-          lateFin: "",
-          cutoffDry: "",
-          cutoffReefer: "",
-          cutoffAnticipado: "",
-          cutoffAnticipadoDescripcion: "",
-        };
+      setStackingForm({
+        ...getEmptyStackingDraft(),
+        ...(getDraftForItinerary(stackingDrafts, it) ?? {}),
       });
       setStackingImageUrl(sharedImageUrl);
     },
@@ -676,7 +658,7 @@ export function ItinerarioContent() {
   }, []);
 
   const handleChangeStackingField = useCallback(
-    (field: keyof typeof stackingForm, value: string) => {
+    (field: keyof StackingDraft, value: string) => {
       setStackingForm((prev) => {
         const next = { ...prev, [field]: value };
         if (stackingModalItinerario) {
@@ -837,10 +819,10 @@ export function ItinerarioContent() {
     setAddRowForm({
       nave: "",
       viaje: "",
-      etd: template.etd ? (template.etd.includes("T") ? template.etd.slice(0, 10) : template.etd) : format(new Date(), "yyyy-MM-dd"),
+      etd: template.etd ? (template.etd.includes("T") ? template.etd.slice(0, 10) : template.etd) : formatIsoDateLocal(new Date()),
     });
     setAddRowEtdInputValue(
-      template.etd ? toDDMMYYYY(template.etd.includes("T") ? template.etd.slice(0, 10) : template.etd) : toDDMMYYYY(format(new Date(), "yyyy-MM-dd"))
+      template.etd ? toDDMMYYYY(template.etd.includes("T") ? template.etd.slice(0, 10) : template.etd) : toDDMMYYYY(formatIsoDateLocal(new Date()))
     );
     setAddRowModalError(null);
     setAddRowModalOpen(true);
@@ -887,7 +869,7 @@ export function ItinerarioContent() {
     const escalas = escalasDelArea.map((e, i) => {
       const dias = e.dias_transito ?? 0;
       const etaDate = addDays(etdDate, dias);
-      const etaStr = format(etaDate, "yyyy-MM-dd");
+      const etaStr = formatIsoDateLocal(etaDate);
       return {
         puerto: (e.puerto ?? "").trim(),
         puerto_nombre: (e.puerto_nombre ?? "").trim() || null,

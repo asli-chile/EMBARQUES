@@ -2,7 +2,8 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import { AnimatedNetworkBackground } from "@/components/ui/AnimatedNetworkBackground";
 
 const missionCards = [
   { key: "proposito" as const, icon: "lucide:target", color: "blue" },
@@ -174,7 +175,6 @@ export function SobreNosotrosContent() {
   const { t } = useLocale();
   const tr = t.sobreNosotrosPage;
   const mainRef = useRef<HTMLElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
@@ -189,37 +189,16 @@ export function SobreNosotrosContent() {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleTimeUpdate = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.currentTime < 0.3) {
-      video.currentTime = 0.5;
-    }
-    if (video.duration - video.currentTime < 0.5) {
-      video.currentTime = 0.5;
-    }
-  }, []);
-
   return (
-    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative scroll-smooth" role="main">
-      {/* Video de fondo con loop fluido */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <video
-          ref={videoRef}
-          autoPlay
-          loop
-          muted
-          playsInline
-          onTimeUpdate={handleTimeUpdate}
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src={withBase("/BACKGOUND PLANWETA.mp4")} type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-black/60" />
+    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative isolate scroll-smooth" role="main">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden min-h-[100dvh] w-full">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-600 via-slate-800 to-slate-900" />
+        <AnimatedNetworkBackground />
+        <div className="absolute inset-0 bg-slate-900/30 pointer-events-none" />
       </div>
 
       {/* Hero */}
-      <header className="relative text-white py-20 sm:py-28 lg:py-36">
+      <header className="relative z-10 text-white py-20 sm:py-28 lg:py-36">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
             <span className="inline-block px-4 py-1.5 bg-brand-olive/20 border border-brand-olive/40 text-xs font-semibold text-brand-olive uppercase tracking-wider mb-4 sm:mb-6 rounded-full">
@@ -239,7 +218,7 @@ export function SobreNosotrosContent() {
       </header>
 
       {/* Nuestra Historia */}
-      <section className="py-16 sm:py-24">
+      <section className="relative z-10 py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="order-2 lg:order-1">
@@ -289,7 +268,7 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Propósito / Misión / Visión / Valores */}
-      <section className="py-16 sm:py-24 bg-black/50 backdrop-blur-md">
+      <section className="relative z-10 py-16 sm:py-24 bg-black/35 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-14">
             <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-4 rounded-full">
@@ -346,7 +325,7 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Nuestros Diferenciales */}
-      <section className="py-16 sm:py-24">
+      <section className="relative z-10 py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-14">
             <span className="inline-block px-4 py-1.5 bg-violet-500/20 border border-violet-500/40 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-4 rounded-full">
@@ -391,7 +370,7 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Métricas de Confianza */}
-      <section className="py-16 sm:py-24 bg-black/50 backdrop-blur-md">
+      <section className="relative z-10 py-16 sm:py-24 bg-black/35 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-8">
             <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-3 rounded-full">
@@ -428,7 +407,7 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Nuestro Equipo */}
-      <section className="py-16 sm:py-24">
+      <section className="relative z-10 py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-10 sm:mb-14">
             <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-4 rounded-full">
@@ -471,9 +450,9 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* CTA Final */}
-      <section className="py-16 sm:py-24">
+      <section className="relative z-10 py-16 sm:py-24">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="relative bg-black/50 backdrop-blur-md border border-brand-olive/30 rounded-2xl overflow-hidden p-8 sm:p-12 lg:p-16 text-center shadow-xl shadow-black/30">
+          <div className="relative z-10 bg-black/35 backdrop-blur-md border border-brand-olive/30 rounded-2xl overflow-hidden p-8 sm:p-12 lg:p-16 text-center shadow-xl shadow-black/30">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-olive opacity-70" />
             <div className="absolute -bottom-8 -right-8 opacity-[0.04] pointer-events-none">
               <Icon icon="lucide:handshake" width={180} height={180} />
@@ -515,7 +494,7 @@ export function SobreNosotrosContent() {
       </section>
 
       {/* Footer */}
-      <footer className="py-6 bg-black/80 backdrop-blur-lg text-white border-t border-white/10">
+      <footer className="relative z-10 py-6 bg-black/50 backdrop-blur-lg text-white border-t border-white/10">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex flex-col items-center mb-4">
             <img src={brand.logo} alt={brand.companyTitle} width={160} height={80} className="h-8 sm:h-10 w-auto object-contain brightness-0 invert mb-3" />
