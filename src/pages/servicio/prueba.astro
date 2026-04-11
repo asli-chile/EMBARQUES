@@ -1,0 +1,835 @@
+---
+import { withBase } from "@/lib/basePath";
+---
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5"
+    />
+    <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@600;700&family=Lilita+One&family=Nunito:wght@600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <title>Prueba — EMBARQUES</title>
+    <style is:global>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 100dvh;
+        min-height: 100svh;
+        overflow: hidden;
+        background-color: #f8d7e4;
+        touch-action: manipulation;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+          max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+      }
+      #fx-canvas {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .btn-prueba-wrap {
+        position: relative;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-prueba-wrap::before {
+        content: "";
+        position: absolute;
+        inset: -14px -20px;
+        border-radius: 9999px;
+        background: linear-gradient(
+          125deg,
+          rgba(255, 182, 193, 0.55) 0%,
+          rgba(233, 213, 255, 0.5) 45%,
+          rgba(252, 231, 243, 0.6) 100%
+        );
+        filter: blur(18px);
+        z-index: 0;
+        opacity: 0.95;
+        pointer-events: none;
+      }
+      .btn-prueba {
+        position: relative;
+        z-index: 1;
+        font-family: "Nunito", system-ui, sans-serif;
+        font-size: clamp(1rem, 3.5vw, 1.0625rem);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        min-height: 48px;
+        min-width: min(100%, 200px);
+        padding: 0.95rem 1.75rem;
+        border-radius: 9999px;
+        -webkit-tap-highlight-color: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        color: #831843;
+        cursor: pointer;
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.92) 0%,
+          rgba(255, 241, 246, 0.98) 40%,
+          rgba(250, 245, 255, 0.95) 100%
+        );
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.85) inset,
+          0 10px 28px rgba(157, 23, 77, 0.12),
+          0 4px 10px rgba(190, 24, 93, 0.08);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition:
+          transform 0.2s cubic-bezier(0.34, 1.2, 0.64, 1),
+          box-shadow 0.25s ease-out,
+          border-color 0.2s ease-out;
+      }
+      .btn-prueba:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.9);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.95) inset,
+          0 16px 36px rgba(157, 23, 77, 0.16),
+          0 6px 14px rgba(190, 24, 93, 0.1);
+      }
+      .btn-prueba:active {
+        transform: translateY(0) scale(0.98);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.7) inset,
+          0 6px 16px rgba(157, 23, 77, 0.12);
+      }
+      .btn-prueba:focus-visible {
+        outline: 2px solid rgba(190, 24, 93, 0.45);
+        outline-offset: 4px;
+      }
+      .btn-prueba:disabled {
+        opacity: 0.52;
+        cursor: not-allowed;
+        transform: none;
+        pointer-events: none;
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.75) inset,
+          0 6px 18px rgba(157, 23, 77, 0.1);
+      }
+      .btn-prueba:disabled:hover {
+        transform: none;
+        border-color: rgba(255, 255, 255, 0.65);
+      }
+      .stefi-banner {
+        position: fixed;
+        top: max(0.85rem, calc(env(safe-area-inset-top) + 0.45rem));
+        left: 0;
+        right: 0;
+        z-index: 4;
+        text-align: center;
+        pointer-events: none;
+        padding: 0 max(0.65rem, env(safe-area-inset-left)) 0 max(0.65rem, env(safe-area-inset-right));
+        opacity: 0;
+        transform: translateY(-14px);
+        transition:
+          opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .stefi-banner.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .stefi-banner__line1,
+      .stefi-banner__line2 {
+        letter-spacing: 0.06em;
+        line-height: 1.22;
+        paint-order: stroke fill;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .stefi-banner__line1 {
+        font-family: "Bungee", system-ui, sans-serif;
+        font-weight: 400;
+        font-size: clamp(1.55rem, 8.5vw, 3.75rem);
+        margin-bottom: 0.75rem;
+        line-height: 1.12;
+        background-image: linear-gradient(
+          168deg,
+          #fffef7 0%,
+          #ffe082 14%,
+          #ffb74d 32%,
+          #ff7043 52%,
+          #ec407a 72%,
+          #ab47bc 88%,
+          #7e57c2 100%
+        );
+        -webkit-text-stroke: clamp(1px, 0.08em, 3px) rgba(74, 20, 60, 0.45);
+        filter: drop-shadow(0 3px 0 rgba(255, 255, 255, 0.55)) drop-shadow(0 5px 0 rgba(131, 24, 67, 0.22))
+          drop-shadow(0 8px 16px rgba(106, 27, 120, 0.35));
+      }
+      .stefi-banner__line2 {
+        font-family: "Lilita One", system-ui, sans-serif;
+        font-weight: 400;
+        font-size: clamp(1.1rem, 5.2vw, 2.65rem);
+        line-height: 1.18;
+        background-image: linear-gradient(
+          185deg,
+          #e1f5fe 0%,
+          #80deea 22%,
+          #ba68c8 48%,
+          #f48fb1 72%,
+          #ffecb3 100%
+        );
+        -webkit-text-stroke: clamp(1px, 0.06em, 2.5px) rgba(74, 20, 60, 0.4);
+        filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.5)) drop-shadow(0 4px 0 rgba(131, 24, 67, 0.18))
+          drop-shadow(0 7px 14px rgba(63, 81, 181, 0.28));
+      }
+      .stefi-footer {
+        position: fixed;
+        bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.65rem));
+        left: 50%;
+        transform: translateX(-50%) translateY(12px);
+        z-index: 4;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem 0.55rem;
+        pointer-events: none;
+        padding: 0.5rem max(0.85rem, env(safe-area-inset-left)) 0.5rem max(0.85rem, env(safe-area-inset-right));
+        max-width: min(calc(100vw - 1.25rem), 22rem);
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.95) inset,
+          0 6px 20px rgba(131, 24, 67, 0.14);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        opacity: 0;
+        transition:
+          opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+          transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
+      }
+      .stefi-footer.is-visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      .stefi-footer__text {
+        margin: 0;
+        font-family: "Fredoka", system-ui, sans-serif;
+        font-size: clamp(0.88rem, 3.6vw, 1.35rem);
+        font-weight: 700;
+        letter-spacing: 0.045em;
+        text-align: center;
+        text-wrap: balance;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-image: linear-gradient(
+          102deg,
+          #ffffff 0%,
+          #fce4ec 12%,
+          #e91e63 38%,
+          #8e24aa 62%,
+          #5e35b1 82%,
+          #ad1457 100%
+        );
+        -webkit-text-stroke: clamp(1px, 0.085em, 3px) rgba(45, 8, 35, 0.58);
+        paint-order: stroke fill;
+        filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9)) drop-shadow(0 2px 1px rgba(0, 0, 0, 0.12))
+          drop-shadow(0 4px 10px rgba(74, 20, 60, 0.35));
+      }
+      .stefi-girasol {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: clamp(2.15rem, 7.5vw, 3.1rem);
+        height: clamp(2.15rem, 7.5vw, 3.1rem);
+        flex-shrink: 0;
+        filter: drop-shadow(0 2px 6px rgba(131, 24, 67, 0.2));
+        animation: stefi-girasol-spin 5.5s linear infinite;
+      }
+      .stefi-girasol__svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      @keyframes stefi-girasol-spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (max-width: 480px) {
+        .stefi-banner__line1 {
+          filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.5)) drop-shadow(0 3px 0 rgba(131, 24, 67, 0.18))
+            drop-shadow(0 5px 10px rgba(106, 27, 120, 0.28));
+        }
+        .stefi-banner__line2 {
+          filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.45)) drop-shadow(0 3px 0 rgba(131, 24, 67, 0.14))
+            drop-shadow(0 4px 8px rgba(63, 81, 181, 0.22));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+    <div id="stefi-banner" class="stefi-banner" aria-hidden="true">
+      <div class="stefi-banner__line1">PERDON</div>
+      <div class="stefi-banner__line2">STEFITA BONITA</div>
+    </div>
+    <div class="btn-prueba-wrap">
+      <button type="button" class="btn-prueba">Presiona aquí</button>
+    </div>
+    <div id="stefi-footer" class="stefi-footer" aria-hidden="true">
+      <p class="stefi-footer__text">tkm, bañate porfi</p>
+      <div class="stefi-girasol" role="img" aria-label="Girasol">
+        <svg class="stefi-girasol__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <g fill="#f5d547" stroke="#d4a82a" stroke-width="0.75">
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(0 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(30 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(60 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(90 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(120 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(150 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(180 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(210 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(240 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(270 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(300 50 50)"></ellipse>
+            <ellipse cx="50" cy="27" rx="11" ry="20.5" transform="rotate(330 50 50)"></ellipse>
+          </g>
+          <circle cx="50" cy="50" r="16" fill="#4a3728"></circle>
+          <circle cx="50" cy="50" r="12" fill="#5d4037" opacity="0.5"></circle>
+        </svg>
+      </div>
+    </div>
+    <script is:inline>
+      (function () {
+        const canvas = document.getElementById("fx-canvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const particles = [];
+        const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+        let running = false;
+        let animLocked = false;
+        let finaleHasFired = false;
+
+        function resize() {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          const maxDpr = Math.min(w, h) < 520 ? 1.5 : 2;
+          const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+          canvas.style.width = w + "px";
+          canvas.style.height = h + "px";
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+        window.addEventListener("resize", resize);
+        window.addEventListener("orientationchange", function () {
+          window.setTimeout(resize, 180);
+        });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", resize);
+        }
+
+        function heartLocal(t) {
+          const x = 16 * Math.pow(Math.sin(t), 3);
+          const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+          return { x, y };
+        }
+
+        function burstHeartGiant(cx, cy) {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          const minWH = Math.min(w, h);
+          const isPhone = minWH <= 520;
+          const isNarrow = minWH <= 720;
+          const halfSpanX = 16.6;
+          const spanYTop = 17.4;
+          const spanYBot = 14.2;
+          const marginX = isPhone ? 0.055 : isNarrow ? 0.065 : 0.07;
+          const marginY = isPhone ? 0.2 : isNarrow ? 0.155 : 0.11;
+          const usableW = w * (1 - 2 * marginX);
+          const usableH = h * (1 - 2 * marginY);
+          const scaleByWidth = usableW / (2 * halfSpanX);
+          const scaleByHeight = usableH / (spanYTop + spanYBot);
+          const scaleMax = Math.min(scaleByWidth, scaleByHeight) * 0.94;
+          const scale = scaleMax * (0.9 + Math.random() * 0.08);
+          const n = isPhone ? 240 : isNarrow ? 310 : 420;
+          const nBurst = isPhone ? 48 : isNarrow ? 64 : 85;
+          const nRing = isPhone ? 32 : isNarrow ? 42 : 52;
+          for (let i = 0; i < n; i++) {
+            const t = (i / n) * Math.PI * 2;
+            const p = heartLocal(t);
+            const tx = cx + p.x * scale;
+            const ty = cy + p.y * scale;
+            particles.push({
+              kind: "travel",
+              sx: cx,
+              sy: cy,
+              x: cx,
+              y: cy,
+              tx,
+              ty,
+              prog: 0,
+              progSpd: 0.005 + Math.random() * 0.0035,
+              life: 980 + Math.random() * 420,
+              age: 0,
+              hue: 318 + Math.random() * 35,
+              sat: 85 + Math.random() * 12,
+              s: 1.6 + Math.random() * 2.6,
+              giantSpark: true,
+            });
+          }
+          for (let j = 0; j < nBurst; j++) {
+            const a = Math.random() * Math.PI * 2;
+            const sp = 1.1 + Math.random() * 3.2;
+            particles.push({
+              kind: "spark",
+              x: cx,
+              y: cy,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp,
+              life: 380 + Math.random() * 340,
+              age: 0,
+              hue: 48 + Math.random() * 25,
+              sat: 96,
+              s: 2.4 + Math.random() * 3.2,
+              drag: 0.9935,
+              gv: 0.011,
+              giantAsh: true,
+            });
+          }
+          for (let k = 0; k < nRing; k++) {
+            const a = (k / nRing) * Math.PI * 2;
+            const sp = 2 + Math.random() * 1.3;
+            particles.push({
+              kind: "spark",
+              x: cx,
+              y: cy,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp,
+              life: 300 + Math.random() * 260,
+              age: 0,
+              hue: 335 + Math.random() * 15,
+              sat: 90,
+              s: 2.8 + Math.random() * 2.4,
+              drag: 0.993,
+              gv: 0.013,
+              giantAsh: true,
+            });
+          }
+        }
+
+        function burstHeart(cx, cy, scale) {
+          const n = 170;
+          for (let i = 0; i < n; i++) {
+            const t = (i / n) * Math.PI * 2;
+            const p = heartLocal(t);
+            const tx = cx + p.x * scale;
+            const ty = cy + p.y * scale;
+            particles.push({
+              kind: "travel",
+              sx: cx,
+              sy: cy,
+              x: cx,
+              y: cy,
+              tx,
+              ty,
+              prog: 0,
+              progSpd: 0.02 + Math.random() * 0.015,
+              life: 195 + Math.random() * 95,
+              age: 0,
+              hue: 328 + Math.random() * 28,
+              sat: 82 + Math.random() * 15,
+              s: 1.1 + Math.random() * 1.6,
+            });
+          }
+          for (let j = 0; j < 30; j++) {
+            const a = Math.random() * Math.PI * 2;
+            const sp = 1.5 + Math.random() * 4.5;
+            particles.push({
+              kind: "spark",
+              x: cx,
+              y: cy,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp,
+              life: 55 + Math.random() * 60,
+              age: 0,
+              hue: 50 + Math.random() * 20,
+              sat: 95,
+              s: 1.8 + Math.random() * 2.2,
+              drag: 0.975,
+              gv: 0.055,
+            });
+          }
+        }
+
+        function burstSunflower(cx, cy, R) {
+          const n = 190;
+          for (let i = 0; i < n; i++) {
+            const idx = i + 1;
+            const a = idx * GOLDEN;
+            const r = R * Math.sqrt(idx / n);
+            const tx = cx + Math.cos(a) * r;
+            const ty = cy + Math.sin(a) * r;
+            const center = i < n * 0.07;
+            particles.push({
+              kind: "travel",
+              sx: cx,
+              sy: cy,
+              x: cx,
+              y: cy,
+              tx,
+              ty,
+              prog: 0,
+              progSpd: 0.017 + Math.random() * 0.012,
+              life: 205 + Math.random() * 95,
+              age: 0,
+              hue: center ? 28 + Math.random() * 12 : 42 + Math.random() * 18,
+              sat: center ? 70 : 88 + Math.random() * 10,
+              s: center ? 2 + Math.random() * 1.2 : 1 + Math.random() * 1.3,
+            });
+          }
+          const petals = 16;
+          for (let p = 0; p < petals; p++) {
+            const ang = (p / petals) * Math.PI * 2;
+            const tx2 = cx + Math.cos(ang) * R * 1.38;
+            const ty2 = cy + Math.sin(ang) * R * 1.38;
+            particles.push({
+              kind: "travel",
+              sx: cx,
+              sy: cy,
+              x: cx,
+              y: cy,
+              tx: tx2,
+              ty: ty2,
+              prog: 0,
+              progSpd: 0.023 + Math.random() * 0.01,
+              life: 145 + Math.random() * 55,
+              age: 0,
+              hue: 46 + Math.random() * 12,
+              sat: 92,
+              s: 2.4 + Math.random() * 1.4,
+            });
+          }
+        }
+
+        function addTrailSpark(x, y, hue) {
+          particles.push({
+            kind: "spark",
+            x: x + (Math.random() - 0.5) * 4,
+            y: y + (Math.random() - 0.5) * 4,
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: 1 + Math.random() * 1.2,
+            life: 26 + Math.random() * 22,
+            age: 0,
+            hue,
+            sat: 90,
+            s: 1.2 + Math.random(),
+            drag: 0.965,
+            gv: 0.04,
+          });
+        }
+
+        function pickBurstTarget(w, h) {
+          const r = Math.random();
+          let tx;
+          let ty;
+          if (r < 0.2) {
+            tx = w * (0.06 + Math.random() * 0.88);
+            ty = h * (0.04 + Math.random() * 0.2);
+          } else if (r < 0.4) {
+            tx = w * (0.06 + Math.random() * 0.88);
+            ty = h * (0.76 + Math.random() * 0.18);
+          } else if (r < 0.58) {
+            tx = w * (0.04 + Math.random() * 0.24);
+            ty = h * (0.1 + Math.random() * 0.78);
+          } else if (r < 0.76) {
+            tx = w * (0.74 + Math.random() * 0.2);
+            ty = h * (0.1 + Math.random() * 0.78);
+          } else {
+            tx = w * (0.18 + Math.random() * 0.64);
+            ty = h * (0.22 + Math.random() * 0.56);
+          }
+          tx = Math.max(w * 0.04, Math.min(w * 0.96, tx));
+          ty = Math.max(h * 0.04, Math.min(h * 0.96, ty));
+          return { tx, ty };
+        }
+
+        function pickLaunchForTarget(tx, ty, w, h) {
+          const zones = [];
+          if (ty < h * 0.48) zones.push("bottom");
+          if (ty > h * 0.52) zones.push("top");
+          if (tx < w * 0.4) zones.push("right");
+          if (tx > w * 0.6) zones.push("left");
+          if (zones.length === 0) zones.push("bottom", "top", "left", "right");
+          const z = zones[Math.floor(Math.random() * zones.length)];
+          if (z === "bottom") {
+            return {
+              sx: tx + (Math.random() - 0.5) * w * 0.14,
+              sy: h + 24,
+            };
+          }
+          if (z === "top") {
+            return {
+              sx: tx + (Math.random() - 0.5) * w * 0.14,
+              sy: -24,
+            };
+          }
+          if (z === "left") {
+            return {
+              sx: -24,
+              sy: ty + (Math.random() - 0.5) * h * 0.22,
+            };
+          }
+          return {
+            sx: w + 24,
+            sy: ty + (Math.random() - 0.5) * h * 0.22,
+          };
+        }
+
+        function spawnRocket(w, h, burstType) {
+          const tgt = pickBurstTarget(w, h);
+          const tx = tgt.tx;
+          const ty = tgt.ty;
+          const L = pickLaunchForTarget(tx, ty, w, h);
+          const sx = L.sx;
+          const sy = L.sy;
+          const dist = Math.hypot(tx - sx, ty - sy) || 1;
+          const T = Math.min(220, Math.max(78, Math.floor(72 + dist / 11 + Math.random() * 55)));
+          const arcMag = 28 + Math.random() * (Math.min(w, h) * 0.14);
+          let px = tx - sx;
+          let py = ty - sy;
+          const plen = Math.hypot(px, py) || 1;
+          px /= plen;
+          py /= plen;
+          const perpX = -py;
+          const perpY = px;
+          particles.push({
+            kind: "rocket",
+            sx,
+            sy,
+            tx,
+            ty,
+            T,
+            arcMag,
+            perpX,
+            perpY,
+            x: sx,
+            y: sy,
+            burstType,
+            age: 0,
+            trail: 0,
+            hue: burstType === "heart" ? 330 + Math.random() * 25 : 40 + Math.random() * 18,
+          });
+        }
+
+        function explodeAt(tx, ty, burstType) {
+          const scaleHeart = 4.2 + Math.random() * 1.6;
+          const rSun = 48 + Math.random() * 42;
+          if (burstType === "heart") burstHeart(tx, ty, scaleHeart);
+          else burstSunflower(tx, ty, rSun);
+        }
+
+        function explodeRocket(r) {
+          explodeAt(r.tx, r.ty, r.burstType);
+        }
+
+        function step() {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          ctx.globalCompositeOperation = "source-over";
+          ctx.fillStyle = "rgba(248, 215, 228, 0.14)";
+          ctx.fillRect(0, 0, w, h);
+          ctx.globalCompositeOperation = "lighter";
+
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.age += 1;
+
+            if (p.kind === "rocket") {
+              p.trail += 1;
+              if (p.trail % 3 === 0) addTrailSpark(p.x, p.y, p.hue);
+              const u = Math.min(p.age / p.T, 1);
+              const ease = 1 - Math.pow(1 - u, 2.55);
+              const bx = p.sx + (p.tx - p.sx) * ease;
+              const by = p.sy + (p.ty - p.sy) * ease;
+              const arc = Math.sin(u * Math.PI) * p.arcMag;
+              p.x = bx + p.perpX * arc;
+              p.y = by + p.perpY * arc;
+              if (p.age >= p.T) {
+                explodeRocket(p);
+                particles.splice(i, 1);
+                continue;
+              }
+              const fade = Math.max(0, 1 - p.age / (p.T + 35));
+              ctx.fillStyle = "hsla(" + p.hue + ",90%,68%," + (0.88 * fade) + ")";
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+              continue;
+            }
+
+            if (p.kind === "travel") {
+              p.prog += p.progSpd;
+              const t = Math.min(p.prog, 1);
+              const e = 1 - Math.pow(1 - t, 3.2);
+              p.x = p.sx + (p.tx - p.sx) * e;
+              p.y = p.sy + (p.ty - p.sy) * e;
+              if (p.prog >= 1) {
+                p.kind = "spark";
+                if (p.giantSpark) {
+                  p.vx = (Math.random() - 0.5) * 0.48;
+                  p.vy = (Math.random() - 0.5) * 0.48 - 0.08;
+                  p.drag = 0.9955;
+                  p.gv = 0.014;
+                  p.life = Math.max(p.life, p.age + 720 + Math.floor(Math.random() * 520));
+                  p.giantAsh = true;
+                } else {
+                  p.vx = (Math.random() - 0.5) * 1.25;
+                  p.vy = (Math.random() - 0.5) * 1.25 - 0.25;
+                  p.drag = 0.989;
+                  p.gv = 0.065;
+                }
+                delete p.giantSpark;
+              }
+              const rawLife = p.age < p.life ? 1 - p.age / p.life : 0;
+              const fade = p.giantSpark ? Math.pow(Math.max(0, rawLife), 0.5) : rawLife;
+              const alpha = fade * (0.35 + 0.65 * e);
+              ctx.fillStyle =
+                "hsla(" + p.hue + "," + p.sat + "%," + (52 + (1 - e) * 18) + "%," + alpha + ")";
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.s * (0.75 + 0.25 * e), 0, Math.PI * 2);
+              ctx.fill();
+              if (p.age > p.life) particles.splice(i, 1);
+              continue;
+            }
+
+            if (p.kind === "spark") {
+              p.vx *= p.drag;
+              p.vy *= p.drag;
+              const fall = p.giantAsh ? (p.gv != null ? p.gv : 0.012) : p.gv || 0.075;
+              p.vy += fall;
+              p.x += p.vx;
+              p.y += p.vy;
+              const raw = 1 - p.age / p.life;
+              const fade = p.giantAsh ? Math.pow(Math.max(0, raw), 0.48) : raw;
+              if (raw <= 0) {
+                particles.splice(i, 1);
+                continue;
+              }
+              const alpha = p.giantAsh ? fade * 0.92 : fade * 0.9;
+              ctx.fillStyle =
+                "hsla(" + p.hue + "," + p.sat + "%," + (p.light != null ? p.light : 62) + "%," + alpha + ")";
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.s * fade, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          if (particles.length > 0) {
+            requestAnimationFrame(step);
+          } else {
+            running = false;
+            if (animLocked && finaleHasFired) {
+              animLocked = false;
+              finaleHasFired = false;
+              const b = document.querySelector(".btn-prueba");
+              if (b) {
+                b.disabled = false;
+                b.removeAttribute("aria-busy");
+              }
+            }
+          }
+        }
+
+        function startLoop() {
+          if (running) return;
+          running = true;
+          requestAnimationFrame(step);
+        }
+
+        function launchFireworks() {
+          if (animLocked) return;
+          animLocked = true;
+          finaleHasFired = false;
+          const btnEl = document.querySelector(".btn-prueba");
+          if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.setAttribute("aria-busy", "true");
+          }
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          const minWH = Math.min(w, h);
+          const compact = minWH <= 720 || w <= 520;
+          const types = ["heart", "sunflower"];
+          let toggle = 0;
+          const waves = compact ? 8 : 11;
+          const perWave = compact ? 2 : 3;
+          const waveGap = compact ? 128 : 155;
+          for (let wave = 0; wave < waves; wave++) {
+            window.setTimeout(
+              function () {
+                for (let b = 0; b < perWave; b++) {
+                  spawnRocket(w, h, types[toggle % 2]);
+                  toggle += 1;
+                }
+                startLoop();
+              },
+              wave * waveGap + Math.floor(Math.random() * 40),
+            );
+          }
+          const finaleDelay = (waves - 1) * waveGap + 55 + (compact ? 3200 : 4100);
+          window.setTimeout(function () {
+            const stefiBn = document.getElementById("stefi-banner");
+            const stefiFt = document.getElementById("stefi-footer");
+            if (stefiBn) {
+              stefiBn.classList.add("is-visible");
+              stefiBn.setAttribute("aria-hidden", "false");
+            }
+            if (stefiFt) {
+              stefiFt.classList.add("is-visible");
+              stefiFt.setAttribute("aria-hidden", "false");
+            }
+            const cyGiant = h * (compact ? 0.43 : 0.4);
+            burstHeartGiant(w * 0.5, cyGiant);
+            finaleHasFired = true;
+            startLoop();
+          }, finaleDelay);
+        }
+
+        const btn = document.querySelector(".btn-prueba");
+        if (btn) btn.addEventListener("click", launchFireworks);
+      })();
+    </script>
+  </body>
+</html>

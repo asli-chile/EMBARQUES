@@ -86,12 +86,16 @@ function clearAuthCache() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Lazy init: lee localStorage una sola vez al montar
-  const [user, setUser] = useState<AuthUser | null>(() => readAuthCache()?.user ?? null);
-  const [profile, setProfile] = useState<AuthProfile | null>(() => readAuthCache()?.profile ?? null);
-  const [empresaNombres, setEmpresaNombres] = useState<string[]>(() => readAuthCache()?.empresaNombres ?? []);
-  // Si hay cache válido arrancamos con isLoading=false de inmediato
-  const [isLoading, setIsLoading] = useState(() => !readAuthCache());
+  /**
+   * Primer render idéntico en SSR y en el cliente: sin leer localStorage en useState.
+   * Si leyéramos el cache aquí, en servidor no hay localStorage → null, en navegador con cache → usuario;
+   * eso rompe la hidratación de React (Header, AuthWidget, VisitCounterBadge, etc.).
+   * El cache se aplica en useEffect tras montar solo en el cliente.
+   */
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
+  const [empresaNombres, setEmpresaNombres] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadSession = useCallback(async (background = false) => {
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -187,8 +191,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Si arrancamos con cache, refrescamos en background sin bloquear UI
-    void loadSession(!!readAuthCache());
+    const cached = readAuthCache();
+    if (cached) {
+      setUser(cached.user);
+      setProfile(cached.profile);
+      setEmpresaNombres(cached.empresaNombres);
+      setIsLoading(false);
+    }
+    void loadSession(!!cached);
 
     const safetyTimeout = setTimeout(() => {
       setIsLoading(false);

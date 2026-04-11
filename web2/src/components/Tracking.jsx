@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ImagePlaceholder from './ImagePlaceholder'
+import VesselAisTracking from './VesselAisTracking'
 import { useLang } from '../lib/LangContext'
 
 const navieras = [
@@ -44,6 +45,8 @@ const Tracking = () => {
   return (
     <section data-page-section className="py-16 md:py-24 bg-asli-dark">
       <div className="container mx-auto px-6 lg:px-10">
+
+        <VesselAisTracking />
 
         {/* Tabs */}
         <div data-page-reveal className="flex gap-2 mb-8 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">

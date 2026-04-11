@@ -43,10 +43,16 @@ export default defineConfig({
           "src/components/itinerario/ItinerarioContent.tsx",
           "src/components/itinerario/ItinerarioMap.tsx",
           "src/lib/itinerario-pdf.ts",
+          "src/components/reservas/index.ts",
+          "src/components/reservas/CrearReservaContent.tsx",
+          "src/components/reservas/MisReservasContent.tsx",
+          "src/components/reservas/PapeleraContent.tsx",
         ],
       },
     },
     resolve: {
+      /** Una sola copia de React en cliente (evita "Invalid hook call" en LocaleProvider, etc.). */
+      dedupe: ["react", "react-dom"],
       alias: {
         "@": path.resolve(__dirname, "src"),
         stream: "stream-browserify",
@@ -54,15 +60,25 @@ export default defineConfig({
     },
     // MapLibre 5.x: evita "__publicField is not defined" en el worker (target ES2022 + pre-bundle).
     // Incluir dependencias pesadas del itinerario evita solicitudes a deps obsoletas (504 Outdated Optimize Dep).
+    // xlsx / xlsx-js-style: NO incluir en optimizeDeps — al preempaquetarlos, esbuild encadena stream-browserify
+    // y Vite externaliza events/buffer/util → error en el cliente. Se cargan sin dep cache o vía chunk de build.
     optimizeDeps: {
       include: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
         "gsap",
         "maplibre-gl",
         "react-map-gl/maplibre",
         "jspdf",
         "jspdf-autotable",
         "date-fns",
+        "date-fns/locale",
+        "react-datepicker",
+        "ag-grid-community",
+        "ag-grid-react",
       ],
+      exclude: ["xlsx", "xlsx-js-style"],
       esbuildOptions: {
         target: "es2022",
       },
