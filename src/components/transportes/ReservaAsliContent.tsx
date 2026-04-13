@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
@@ -144,7 +145,7 @@ const initialFormData: FormData = {
 
 export function ReservaAsliContent() {
   const { t } = useLocale();
-  const { isCliente, isSuperadmin, isAdmin, empresaNombres, isLoading: authLoading } = useAuth();
+  const { user, isCliente, isSuperadmin, isAdmin, empresaNombres, isLoading: authLoading, profile } = useAuth();
   const canManageTransport = isSuperadmin || isAdmin;
   const tr = t.transporteAsli;
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -674,6 +675,20 @@ export function ReservaAsliContent() {
     } else {
       sileo.success({ title: "Reserva de transporte guardada exitosamente" });
       void fetchData();
+
+      // Notificar al equipo
+      if (user && profile) {
+        const opInfo = [formData.transporte, formData.patente_camion].filter(Boolean).join(" · ");
+        const refLabel = selectedOperacion?.ref_asli ?? formData.operacion_id ?? "";
+        void insertarNotificacion({
+          tipo: "nuevo_transporte",
+          titulo: `${profile.nombre} asignó reserva de transporte`,
+          mensaje: [refLabel, opInfo].filter(Boolean).join(" · "),
+          creadoPorAuthId: user.id,
+          creadoPorNombre: profile.nombre,
+          datos: { operacion_id: formData.operacion_id, ref_asli: refLabel },
+        });
+      }
     }
   };
 

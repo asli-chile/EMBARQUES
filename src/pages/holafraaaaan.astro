@@ -47,6 +47,30 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         padding-bottom: calc(clamp(12px, 4vw, 24px) + env(safe-area-inset-bottom));
       }
 
+      /* Con formulario abierto: sin translate en .page (recortaba el gato por overflow:hidden) */
+      @media (max-width: 767px) {
+        body.cita-form-open .page {
+          overflow: visible;
+        }
+      }
+
+      .page-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        position: relative;
+        z-index: 20;
+        transition: transform 0.55s cubic-bezier(0.33, 1, 0.68, 1);
+      }
+
+      @media (max-width: 767px) {
+        body.cita-form-open .page-stack {
+          transform: scale(0.93);
+          transform-origin: 50% 42%;
+        }
+      }
+
       .btn {
         position: relative;
         overflow: hidden;
@@ -121,172 +145,187 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         }
       }
 
-      /* ── base compartida ── */
-      .checks-section,
+      /* ── formulario cita (contenedor fijo) ── */
       .cita-section {
         position: fixed;
-        z-index: 22;
+        z-index: 30;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.8s ease;
-        background: rgba(255,255,255,0.68);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1.5px solid rgba(236,72,153,0.22);
-        border-radius: 16px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        box-shadow: 0 4px 18px rgba(236,72,153,0.13);
+        align-items: stretch;
+        gap: 0;
+        width: min(320px, 88vw);
+        max-width: 100%;
       }
 
-      /* ── mobile: apilados arriba / abajo ── */
-      .checks-section {
-        top: 25%;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 10px 20px;
-        width: min(300px, 82vw);
+      .cita-section.form-visible {
+        opacity: 1;
+        pointer-events: auto;
       }
 
-      .cita-section {
-        bottom: 10%;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 10px 16px 12px;
-        width: min(300px, 82vw);
-      }
-
-      /* ── desktop: a los lados, centrados verticalmente ── */
-      @media (min-width: 768px) {
-        .checks-section {
-          top: 50%;
-          left: 2%;
-          transform: translateY(-50%);
-          width: min(260px, 22vw);
-          padding: 16px 22px;
+      /* ── mobile: panel compacto, scroll si hace falta ── */
+      @media (max-width: 767px) {
+        .cita-section {
+          bottom: max(10px, env(safe-area-inset-bottom));
+          left: 50%;
+          transform: translateX(-50%);
+          width: min(300px, 92vw);
+          max-height: min(440px, 50dvh);
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          padding: 2px 0 0;
         }
 
+        .cita-section .cita-card {
+          padding: 14px 14px 14px;
+          gap: 10px;
+        }
+
+        .cita-section .cita-card textarea {
+          min-height: 60px;
+        }
+      }
+
+      /* ── desktop ── */
+      @media (min-width: 768px) {
         .cita-section {
           top: 50%;
-          right: 2%;
+          right: max(12px, env(safe-area-inset-right));
           left: auto;
           bottom: auto;
           transform: translateY(-50%);
-          width: min(280px, 24vw);
-          padding: 14px 18px 16px;
+          width: min(300px, 26vw);
         }
       }
 
-      .checks-section label, .cita-section label {
+      .cita-card {
+        background: #ffffff;
+        border: 1px solid rgba(244, 114, 182, 0.28);
+        border-radius: 18px;
+        padding: 18px 16px 16px;
         display: flex;
-        align-items: center;
-        gap: 10px;
-        font-family: Georgia, serif;
-        font-size: clamp(13px, 3.3vw, 16px);
-        font-weight: 700;
-        color: #be185d;
-        cursor: pointer;
-        user-select: none;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow:
+          0 4px 6px -1px rgba(190, 24, 93, 0.06),
+          0 12px 28px -8px rgba(190, 24, 93, 0.18),
+          0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+        transition: box-shadow 0.25s ease-out, transform 0.25s ease-out;
       }
 
-      .checks-section input[type="checkbox"],
-      .cita-section  input[type="checkbox"] {
-        appearance: none;
-        -webkit-appearance: none;
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
-        border: 2px solid #f472b6;
-        border-radius: 5px;
-        background: white;
-        cursor: pointer;
-        transition: background 0.18s, border-color 0.18s;
-        position: relative;
+      .cita-section.form-visible .cita-card {
+        box-shadow:
+          0 4px 6px -1px rgba(190, 24, 93, 0.08),
+          0 18px 36px -10px rgba(190, 24, 93, 0.22),
+          0 0 0 1px rgba(255, 255, 255, 0.7) inset;
       }
 
-      .checks-section input[type="checkbox"]:checked,
-      .cita-section  input[type="checkbox"]:checked {
-        background: linear-gradient(135deg, #f472b6, #c026d3);
-        border-color: #c026d3;
-      }
-
-      .checks-section input[type="checkbox"]:checked::after,
-      .cita-section  input[type="checkbox"]:checked::after {
-        content: '✓';
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        color: white;
-        font-size: 13px;
-        font-weight: 900;
-        line-height: 1;
-      }
-
-      .cita-section textarea {
+      .cita-card textarea {
         width: 100%;
-        border: 1.5px solid rgba(236,72,153,0.35);
-        border-radius: 10px;
-        padding: 8px 10px;
-        font-family: Georgia, serif;
-        font-size: clamp(12px, 3vw, 14px);
+        min-height: 72px;
+        border: 1.5px solid rgba(244, 114, 182, 0.38);
+        border-radius: 12px;
+        padding: 11px 12px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(13px, 3.2vw, 15px);
         color: #831843;
-        background: rgba(255,255,255,0.85);
+        background: #fdf2f8;
         resize: none;
         outline: none;
-        transition: border-color 0.2s;
-        line-height: 1.5;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        line-height: 1.55;
       }
 
-      .cita-section textarea::placeholder { color: #f9a8d4; }
-      .cita-section textarea:focus {
+      .cita-card textarea::placeholder {
+        color: #f9a8d4;
+      }
+
+      .cita-card textarea:focus {
         border-color: #ec4899;
-        box-shadow: 0 0 0 3px rgba(236,72,153,0.12);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.18);
       }
 
       .save-btn {
-        background: linear-gradient(135deg, #f472b6, #c026d3);
+        background: linear-gradient(135deg, #f472b6 0%, #e879a0 45%, #c026d3 100%);
         color: white;
         border: none;
-        border-radius: 50px;
-        padding: 8px 20px;
-        font-family: Georgia, serif;
-        font-size: clamp(13px, 3vw, 15px);
+        border-radius: 999px;
+        padding: 11px 22px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(13px, 3.2vw, 15px);
         font-weight: 700;
+        letter-spacing: 0.02em;
         cursor: pointer;
-        box-shadow: 0 4px 14px rgba(236,72,153,0.35);
-        transition: opacity 0.2s, transform 0.15s;
+        box-shadow: 0 6px 20px rgba(192, 38, 211, 0.35), 0 2px 6px rgba(236, 72, 153, 0.2);
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease;
         align-self: center;
+        width: 100%;
+        max-width: 100%;
       }
 
-      .save-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
-      .save-btn:active { transform: translateY(1px); }
-      .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .save-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 26px rgba(192, 38, 211, 0.4), 0 3px 8px rgba(236, 72, 153, 0.25);
+      }
+
+      .save-btn:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .save-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+      }
 
       .save-status {
         text-align: center;
         font-family: Georgia, serif;
         font-size: 12px;
         font-weight: 700;
-        min-height: 16px;
+        min-height: 18px;
         color: #16a34a;
       }
-      .save-status.error { color: #dc2626; }
 
-      .checks-section.form-visible,
-      .cita-section.form-visible {
-        opacity: 1;
-        pointer-events: auto;
+      .save-status.error {
+        color: #dc2626;
       }
 
       .field-label {
-        font-family: Georgia, serif;
-        font-size: clamp(10px, 2.6vw, 12px);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(11px, 2.8vw, 12px);
         font-weight: 700;
-        color: #db2777;
-        letter-spacing: 0.04em;
+        color: #be185d;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
-        margin-bottom: -2px;
+      }
+
+      .cita-quote {
+        margin: 0;
+        margin-top: 4px;
+        padding: 14px 2px 2px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(11.5px, 3vw, 13px);
+        font-style: italic;
+        font-weight: 600;
+        line-height: 1.5;
+        text-align: center;
+        color: #86198f;
+        border-top: 1px solid rgba(244, 114, 182, 0.28);
+      }
+
+      @media (min-width: 768px) {
+        .cita-quote {
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+        }
       }
 
       #fireworksCanvas {
@@ -303,28 +342,21 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
   <body>
     <canvas id="fireworksCanvas"></canvas>
 
-    <!-- Checkboxes: espacio vacío superior -->
-    <div class="checks-section">
-      <label>
-        <input type="checkbox" id="check-acepto" />
-        Acepto 🌸
-      </label>
-      <label>
-        <input type="checkbox" id="check-no-acepto" />
-        Perdón a todos, no acepto 😔
-      </label>
-    </div>
-
-    <!-- Cita: espacio vacío inferior -->
+    <!-- Cita -->
     <div class="cita-section">
-      <span class="field-label">📅 Fecha, hora y lugar</span>
-      <textarea id="cita-input" rows="2" placeholder="tocaple el miércoles…"></textarea>
-      <button class="save-btn" id="save-btn">Enviar respuesta ✉️</button>
-      <p class="save-status" id="save-status"></p>
+      <div class="cita-card">
+        <span class="field-label">📅 Fecha, hora y lugar</span>
+        <textarea id="cita-input" rows="3" placeholder="tocaple el miércoles…"></textarea>
+        <button class="save-btn" type="button" id="save-btn">Enviar respuesta ✉️</button>
+        <p class="save-status" id="save-status"></p>
+        <p class="cita-quote">
+          ¡Eres imparable, brilla con toda tu fuerza y ve por ese éxito que tanto te mereces!
+        </p>
+      </div>
     </div>
 
     <div class="page">
-      <div style="display:flex; flex-direction:column; align-items:center; gap: 0; position: relative; z-index: 20;">
+      <div class="page-stack">
         <img
           src={withBase("/img/gatito.svg")}
           alt="gatito"
@@ -665,6 +697,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       function drawArcText(cx, opacity) {
         const text = "Holi Fraaaaan \u2764";
+        const arcFill = "#fbcfe8";
+        const arcGlow = "#db2777";
         const W = fireworksCanvas.width;
         const H = fireworksCanvas.height;
 
@@ -710,9 +744,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           fwCtx.strokeStyle = "#ffffff";
           fwCtx.strokeText(ch, 0, 0);
 
-          fwCtx.shadowBlur = 12;
-          fwCtx.shadowColor = "#fbbf24";
-          fwCtx.fillStyle = "#fef08a";
+          fwCtx.shadowBlur = 14;
+          fwCtx.shadowColor = arcGlow;
+          fwCtx.fillStyle = arcFill;
           fwCtx.fillText(ch, 0, 0);
 
           fwCtx.restore();
@@ -720,18 +754,28 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         }
         fwCtx.restore();
 
-        // Sub-líneas justo debajo del arco
-        const sub1 = "te invito a conversar de la vida";
-        const sub2 = "un d\u00EDa a tu elecci\u00F3n \u2728 no faltes \uD83D\uDC83";
+        // Sub-líneas bajo el arco (en móvil suben un poco para no chocar con el gato)
+        const sub1 = "\u00A1Buen lunes, Fraaaaan!";
+        const sub2 = "Que tengas una muy buena semana \u2728";
         const subSize = Math.min(W * 0.038, 34);
         const lineH = subSize * 1.7;
-        const subY = arcCenterY + fontSize * 0.6 - lineH * 1.4;
+        const isNarrow = W < 768;
+        const subY =
+          arcCenterY + fontSize * 0.6 - lineH * 1.4 - (isNarrow ? lineH * 0.65 : 0);
         drawStyledText(sub1, cx, subY,          subSize, opacity);
         drawStyledText(sub2, cx, subY + lineH,  subSize, opacity);
 
-        // tkm anclado al fondo de la pantalla
-        const tkmSize = Math.min(W * 0.034, 30);
-        drawStyledText("tkm, no olvides tomar agua y aire \uD83C\uDF3F", cx, H - tkmSize * 1.4, tkmSize, opacity);
+        // Línea inferior solo en pantalla ancha (en móvil chocaba con el formulario / frase)
+        if (!isNarrow) {
+          const tkmSize = Math.min(W * 0.034, 30);
+          drawStyledText(
+            "tkm, no olvides tomar agua y aire \uD83C\uDF3F",
+            cx,
+            H - tkmSize * 1.4,
+            tkmSize,
+            opacity
+          );
+        }
       }
 
       function spawnGrandHeart(cx, cy) {
@@ -763,8 +807,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         // Texto aparece al formarse el corazón y persiste
         setTimeout(() => {
           arcTextVisible = true;
-          document.querySelector(".checks-section").classList.add("form-visible");
           document.querySelector(".cita-section").classList.add("form-visible");
+          document.body.classList.add("cita-form-open");
           gsap.to({ v: 0 }, {
             v: 1,
             duration: 1.2,
@@ -819,8 +863,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         grandHeartDrawn = false;
         arcTextOpacity = 0;
         arcTextVisible = false;
-        document.querySelector(".checks-section").classList.remove("form-visible");
         document.querySelector(".cita-section").classList.remove("form-visible");
+        document.body.classList.remove("cita-form-open");
 
         const count = 10 + Math.floor(Math.random() * 6);
         const totalDelay = count * 150;
@@ -866,26 +910,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       // ── Supabase: guardar respuesta ───────────────────────────────────────
       const supaClient = supabase.createClient(window._supaUrl, window._supaKey);
 
-      // Mutually exclusive checkboxes
-      document.getElementById("check-acepto").addEventListener("change", function() {
-        if (this.checked) document.getElementById("check-no-acepto").checked = false;
-      });
-      document.getElementById("check-no-acepto").addEventListener("change", function() {
-        if (this.checked) document.getElementById("check-acepto").checked = false;
-      });
-
       document.getElementById("save-btn").addEventListener("click", async function() {
         const btn = this;
         const statusEl = document.getElementById("save-status");
-        const acepto   = document.getElementById("check-acepto").checked;
-        const noAcepto = document.getElementById("check-no-acepto").checked;
         const cita     = document.getElementById("cita-input").value.trim();
-
-        if (!acepto && !noAcepto) {
-          statusEl.textContent = "Elige una opción primero 🌸";
-          statusEl.className = "save-status error";
-          return;
-        }
 
         btn.disabled = true;
         statusEl.textContent = "Enviando…";
@@ -893,7 +921,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         const { error } = await supaClient
           .from("fran_respuestas")
-          .insert({ acepto, no_acepto: noAcepto, cita: cita || null });
+          .insert({ acepto: false, no_acepto: false, cita: cita || null });
 
         if (error) {
           statusEl.textContent = "Error al enviar 😢 " + error.message;
@@ -902,11 +930,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           return;
         }
 
-        const respuesta = acepto ? "Acepto" : "Perdon a todos, no acepto";
-        const citaLinea = cita ? "\nFecha, hora y lugar: " + cita : "";
-        const msg = "Holi!\n\nMi respuesta: " + respuesta + citaLinea;
+        const citaLinea = cita ? "\n\nFecha, hora y lugar: " + cita : "";
+        const msg = "\u00A1Buen lunes y buena semana!\n\nHoli!" + citaLinea;
 
-        statusEl.textContent = acepto ? "¡Enviado! 🎉 abriendo WhatsApp…" : "Enviado 💛 abriendo WhatsApp…";
+        statusEl.textContent = "¡Enviado! 🎉 abriendo WhatsApp…";
         statusEl.className = "save-status";
 
         // Abrir WhatsApp con el mensaje listo

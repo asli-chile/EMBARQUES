@@ -6,6 +6,7 @@ import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
+import { NotificationsProvider } from "@/lib/notifications/NotificationsContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
 import { Toaster } from "sileo";
 import { lazy, Suspense, type ReactNode } from "react";
@@ -108,6 +109,9 @@ const LazyCrearProformaContent = lazy(() =>
 const LazyCartolasNuboxContent = lazy(() =>
   import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
 );
+const LazyTarifarioContent = lazy(() =>
+  import("@/components/tarifario/TarifarioContent").then((m) => ({ default: m.TarifarioContent })),
+);
 
 function RouteFallback() {
   return <ModuleRouteLoader />;
@@ -202,6 +206,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyFinanzasContent />
         </Sus>
       </ModuleWithVisitorInfo>
+    ) : pathname === "/tarifario" ? (
+      <Sus>
+        <LazyTarifarioContent />
+      </Sus>
     ) : pathname === "/cartolas-nubox" ? (
       <CartolasNuboxGuard>
         <Sus>
@@ -313,15 +321,17 @@ export function AppShell({ children, pathname }: AppShellProps) {
   return (
     <LocaleProvider>
       <AuthProvider>
-        <AuthFormModalProvider>
-          <div className="h-dvh flex flex-col overflow-hidden">
-            <Header />
-            <NavBanner pathname={pathname} />
-            <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">{mainContent}</div>
-          </div>
-          <AuthFormModalOverlay />
-          <Toaster position="bottom-right" />
-        </AuthFormModalProvider>
+        <NotificationsProvider>
+          <AuthFormModalProvider>
+            <div className="h-dvh flex flex-col overflow-hidden">
+              <Header />
+              <NavBanner pathname={pathname} />
+              <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">{mainContent}</div>
+            </div>
+            <AuthFormModalOverlay />
+            <Toaster position="bottom-right" />
+          </AuthFormModalProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </LocaleProvider>
   );

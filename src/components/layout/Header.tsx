@@ -2,6 +2,7 @@ import { siteConfig, marketingHomeUrl } from "@/lib/site";
 import { AuthWidget } from "@/components/ui/AuthWidget";
 import { OnlineUsersButton } from "@/components/ui/OnlineUsersButton";
 import { VisitCounterBadge } from "@/components/ui/VisitCounterBadge";
+import { NotificationsBell } from "@/components/ui/NotificationsBell";
 import { HeaderTitle } from "./HeaderTitle";
 
 export function Header() {
@@ -38,6 +39,7 @@ export function Header() {
       {/* Auth widget — visible en todas las pantallas */}
       <VisitCounterBadge />
       <OnlineUsersButton />
+      <NotificationsBell />
       <AuthWidget />
     </header>
   );

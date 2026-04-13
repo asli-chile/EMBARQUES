@@ -13,6 +13,7 @@ export const translations = {
     sidebar: {
       dashboard: "Dashboard",
       registros: "Registros",
+      tarifario: "Tarifario",
       cliente: "Cliente",
       reportes: "Reportes",
       finanzas: "Finanzas",
@@ -2260,6 +2261,7 @@ export const translations = {
     sidebar: {
       dashboard: "Dashboard",
       registros: "Records",
+      tarifario: "Rate Sheet",
       cliente: "Client",
       reportes: "Reports",
       finanzas: "Finance",

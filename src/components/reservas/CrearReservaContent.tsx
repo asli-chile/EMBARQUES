@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { Icon } from "@iconify/react";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { createClient } from "@/lib/supabase/client";
@@ -131,7 +132,7 @@ const SECTION_ORDER: SectionKey[] = [
 export function CrearReservaContent() {
   const { t } = useLocale();
   const tr = t.crearReserva;
-  const { profile, empresaNombres, isSuperadmin } = useAuth();
+  const { user, profile, empresaNombres, isSuperadmin } = useAuth();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -813,6 +814,21 @@ export function CrearReservaContent() {
     setSuccess(copias > 1 ? `${copias} operaciones guardadas correctamente.` : tr.successMessage);
     setCopias(1);
     setShowEmailModal(true);
+
+    // Notificar al resto del equipo
+    if (user && profile) {
+      const clienteNombre = String(payload.cliente ?? "");
+      const navieraLabel = [payload.naviera, payload.nave].filter(Boolean).join(" / ");
+      const refLabel = (insertedRows?.[0] as { ref_asli?: string } | undefined)?.ref_asli ?? "";
+      void insertarNotificacion({
+        tipo: "nueva_reserva",
+        titulo: `${profile.nombre} creó nueva solicitud de reserva`,
+        mensaje: [clienteNombre, navieraLabel, refLabel].filter(Boolean).join(" · "),
+        creadoPorAuthId: user.id,
+        creadoPorNombre: profile.nombre,
+        datos: { ref_asli: refLabel, cliente: clienteNombre, copias },
+      });
+    }
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
     // Pre-generar Excel en background mientras el usuario decide si enviar correo

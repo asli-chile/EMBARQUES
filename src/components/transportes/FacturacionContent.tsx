@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { brand } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
@@ -117,7 +118,7 @@ function normalizeText(input: string) {
 
 export function FacturacionContent() {
   const { t, locale } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { user, isCliente, empresaNombres, isLoading: authLoading, profile } = useAuth();
   const tr = t.facturacion;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -292,7 +293,26 @@ export function FacturacionContent() {
 
     const { error: err } = await supabase.from("operaciones").update(updates).eq("id", formData.operacion_id);
     setSaving(false);
-    if (err) { setError(err.message); } else { sileo.success({ title: tr.saveSuccess }); void fetchData(); }
+    if (err) {
+      setError(err.message);
+    } else {
+      sileo.success({ title: tr.saveSuccess });
+      void fetchData();
+
+      // Notificar al equipo
+      if (user && profile) {
+        const numFactura = formData.numero_factura_asli ?? "";
+        const refLabel = formData.operacion_id ?? "";
+        void insertarNotificacion({
+          tipo: "facturacion",
+          titulo: `${profile.nombre} registró facturación de transporte`,
+          mensaje: [numFactura, formData.concepto_facturado].filter(Boolean).join(" · "),
+          creadoPorAuthId: user.id,
+          creadoPorNombre: profile.nombre,
+          datos: { operacion_id: refLabel, numero_factura: numFactura },
+        });
+      }
+    }
   };
 
   const formatDate = (dateStr: string | null) => {

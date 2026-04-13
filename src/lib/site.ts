@@ -44,6 +44,7 @@ export const siteConfig = {
         { labelKey: "crearProforma", id: "crear-proforma", href: "/documentos/crear-proforma", ejecutivoAndAbove: true },
       ],
     },
+    { labelKey: "tarifario", id: "tarifario", href: "/tarifario", ejecutivoAndAbove: true },
     { labelKey: "reportes", id: "reportes", href: "/reportes" },
     { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
     {
