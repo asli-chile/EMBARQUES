@@ -34,7 +34,7 @@ const estadoConfig: Record<string, { dot: string; bg: string; text: string; bord
 
 export function PapeleraContent() {
   const { t } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papelera;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,17 +221,19 @@ export function PapeleraContent() {
                   <Icon icon="lucide:rotate-ccw" width={14} height={14} />
                   {tr.restore} ({selectedIds.size})
                 </button>
-                <button
-                  onClick={() => handleDeletePermanently(Array.from(selectedIds))}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-500/20 text-red-300 border border-red-400/30 rounded-xl hover:bg-red-500/30 transition-colors disabled:opacity-50"
-                >
-                  <Icon icon="lucide:trash-2" width={14} height={14} />
-                  {tr.delete} ({selectedIds.size})
-                </button>
+                {isSuperadmin && (
+                  <button
+                    onClick={() => handleDeletePermanently(Array.from(selectedIds))}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-500/20 text-red-300 border border-red-400/30 rounded-xl hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                  >
+                    <Icon icon="lucide:trash-2" width={14} height={14} />
+                    {tr.delete} ({selectedIds.size})
+                  </button>
+                )}
               </>
             )}
-            {operaciones.length > 0 && selectedIds.size === 0 && (
+            {isSuperadmin && operaciones.length > 0 && selectedIds.size === 0 && (
               <button
                 onClick={handleEmptyTrash}
                 disabled={actionLoading}
@@ -335,14 +337,16 @@ export function PapeleraContent() {
                           >
                             <Icon icon="lucide:rotate-ccw" width={15} height={15} />
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); void handleDeletePermanently([op.id]); }}
-                            disabled={actionLoading}
-                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                            title={tr.delete}
-                          >
-                            <Icon icon="lucide:trash-2" width={15} height={15} />
-                          </button>
+                          {isSuperadmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); void handleDeletePermanently([op.id]); }}
+                              disabled={actionLoading}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              title={tr.delete}
+                            >
+                              <Icon icon="lucide:trash-2" width={15} height={15} />
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -463,14 +467,16 @@ export function PapeleraContent() {
                                 >
                                   <Icon icon="lucide:rotate-ccw" width={15} height={15} />
                                 </button>
-                                <button
-                                  onClick={() => void handleDeletePermanently([op.id])}
-                                  disabled={actionLoading}
-                                  className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                  title={tr.delete}
-                                >
-                                  <Icon icon="lucide:trash-2" width={15} height={15} />
-                                </button>
+                                {isSuperadmin && (
+                                  <button
+                                    onClick={() => void handleDeletePermanently([op.id])}
+                                    disabled={actionLoading}
+                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                    title={tr.delete}
+                                  >
+                                    <Icon icon="lucide:trash-2" width={15} height={15} />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>

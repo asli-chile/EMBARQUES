@@ -47,6 +47,9 @@ const TIPOS_DOCUMENTO = [
 
 type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 
+/** Tipos visibles para clientes (vista simplificada) */
+const CLIENTE_TIPOS: TipoDocumento[] = ["SOLICITUD_RESERVA", "FULLSET"];
+
 const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: string }> = {
   SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-emerald-600 bg-emerald-50" },
   BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-blue-600 bg-blue-50" },
@@ -65,6 +68,7 @@ export function MisDocumentosContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misDocumentos;
+  const visibleTipos = isCliente ? CLIENTE_TIPOS : (TIPOS_DOCUMENTO as readonly TipoDocumento[]);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [docCounts, setDocCounts] = useState<Map<string, number>>(new Map());
@@ -102,6 +106,8 @@ export function MisDocumentosContent() {
 
     const docsByOperacion = new Map<string, { count: number; hasBookingDoc: boolean }>();
     (docsData ?? []).forEach((d: { operacion_id: string; tipo: string }) => {
+      // Para clientes: contar solo tipos visibles
+      if (isCliente && !CLIENTE_TIPOS.includes(d.tipo as TipoDocumento)) return;
       const current = docsByOperacion.get(d.operacion_id) ?? { count: 0, hasBookingDoc: false };
       current.count += 1;
       if (d.tipo === "BOOKING") current.hasBookingDoc = true;
@@ -111,11 +117,11 @@ export function MisDocumentosContent() {
     const counts = new Map<string, number>();
     ops.forEach((op) => {
       const current = docsByOperacion.get(op.id) ?? { count: 0, hasBookingDoc: false };
-      const syntheticBookingExtra = op.booking_doc_url && !current.hasBookingDoc ? 1 : 0;
+      const syntheticBookingExtra = !isCliente && op.booking_doc_url && !current.hasBookingDoc ? 1 : 0;
       counts.set(op.id, current.count + syntheticBookingExtra);
     });
     setDocCounts(counts);
-  }, [supabase]);
+  }, [supabase, isCliente]);
 
   // Mantener ref siempre actualizada
   useEffect(() => { reloadCountsRef.current = reloadCounts; }, [reloadCounts]);
@@ -233,7 +239,7 @@ export function MisDocumentosContent() {
 
   const documentosPorTipo = useMemo(() => {
     const map = new Map<TipoDocumento, Documento | null>();
-    TIPOS_DOCUMENTO.forEach((tipo) => {
+    visibleTipos.forEach((tipo) => {
       let doc = documentos.find((d) => d.tipo === tipo) || null;
       // Si es BOOKING y no hay doc en tabla, usar booking_doc_url de la operación
       if (!doc && tipo === "BOOKING" && operacionActual && operacionActual.booking_doc_url) {
@@ -253,13 +259,15 @@ export function MisDocumentosContent() {
       map.set(tipo, doc);
     });
     return map;
-  }, [documentos, operacionActual]);
+  }, [documentos, operacionActual, visibleTipos]);
 
   const docsCompletados = useMemo(() => {
+    const visibleDocs = documentos.filter((d) => visibleTipos.includes(d.tipo as TipoDocumento));
     const hasBookingUrl = !!operacionActual?.booking_doc_url;
     const hasBookingDoc = documentos.some((d) => d.tipo === "BOOKING");
-    return documentos.length + (hasBookingUrl && !hasBookingDoc ? 1 : 0);
-  }, [documentos, operacionActual]);
+    const syntheticExtra = !isCliente && hasBookingUrl && !hasBookingDoc ? 1 : 0;
+    return visibleDocs.length + syntheticExtra;
+  }, [documentos, operacionActual, visibleTipos, isCliente]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -351,7 +359,7 @@ export function MisDocumentosContent() {
     );
   }
 
-  const progressPct = Math.round((docsCompletados / TIPOS_DOCUMENTO.length) * 100);
+  const progressPct = Math.round((docsCompletados / visibleTipos.length) * 100);
 
   return (
     <>
@@ -373,7 +381,7 @@ export function MisDocumentosContent() {
             {selectedOperacion && (
               <div className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 ${progressPct === 100 ? "bg-emerald-400/30" : "bg-white/15"}`}>
                 <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:gauge"} width={13} height={13} className={progressPct === 100 ? "text-emerald-200" : "text-white/80"} />
-                <span className="text-xs font-bold">{docsCompletados}/{TIPOS_DOCUMENTO.length}</span>
+                <span className="text-xs font-bold">{docsCompletados}/{visibleTipos.length}</span>
               </div>
             )}
             <button type="button" onClick={() => void fetchOperaciones()}
@@ -431,7 +439,7 @@ export function MisDocumentosContent() {
                       const isActive = selectedOperacion === op.id;
                       const ref = op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
                       const count = docCounts.get(op.id) ?? 0;
-                      const total = TIPOS_DOCUMENTO.length;
+                      const total = visibleTipos.length;
                       const completo = count >= total;
                       const opProgressPct = Math.min(100, Math.round((count / total) * 100));
                       return (
@@ -491,7 +499,7 @@ export function MisDocumentosContent() {
                               style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#1d4ed8,#0ea5e9)" }} />
                           </div>
                           <span className={`text-[11px] font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
-                            {docsCompletados}/{TIPOS_DOCUMENTO.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
+                            {docsCompletados}/{visibleTipos.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
                           </span>
                         </div>
                       </div>
@@ -512,7 +520,7 @@ export function MisDocumentosContent() {
 
                 {/* Grid de documentos */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {TIPOS_DOCUMENTO.map((tipo) => {
+                  {visibleTipos.map((tipo) => {
                     const doc = documentosPorTipo.get(tipo);
                     const isUploading = uploading === tipo;
                     const meta = TIPO_META[tipo];

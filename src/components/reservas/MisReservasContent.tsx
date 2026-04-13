@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { withBase } from "@/lib/basePath";
@@ -843,37 +842,90 @@ export function MisReservasContent() {
     })
   );
 
-  const handleExportExcel = () => {
-    const blue = "1D4ED8";
-    const ws: XLSX.WorkSheet = {};
+  const handleExportExcel = async () => {
+    type ExcelJsCtor = typeof import("exceljs");
+    const raw = (await import("exceljs")) as ExcelJsCtor & { default?: ExcelJsCtor };
+    const d = raw.default;
+    const ExcelJS =
+      d && typeof (d as { Workbook?: unknown }).Workbook === "function"
+        ? d
+        : raw;
+
     const headers = exportCols.map((c) => c.label);
+    const nCols = headers.length;
+    const blue = "FF1D4ED8";
+    const white = "FFFFFFFF";
+    const graySub = "FF888888";
+    const body = "FF1E293B";
+    const zebra = "FFF5F5F5";
+    const border = "FFE2E8F0";
 
-    ws["A1"] = { v: "MIS RESERVAS", t: "s", s: { font: { bold: true, sz: 13, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: blue } }, alignment: { horizontal: "left" } } };
-    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
-    ws["A2"] = { v: `Exportado: ${new Date().toLocaleDateString("es-CL")}   |   ${filteredOperaciones.length} registros`, t: "s", s: { font: { sz: 8, color: { rgb: "888888" } } } };
-    ws["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } });
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Reservas", { views: [{ showGridLines: true }] });
 
-    headers.forEach((h, c) => {
-      const ref = XLSX.utils.encode_cell({ r: 2, c });
-      ws[ref] = { v: h, t: "s", s: { font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: blue } }, alignment: { horizontal: "center" } } };
+    ws.mergeCells(1, 1, 1, nCols);
+    const title = ws.getCell(1, 1);
+    title.value = "MIS RESERVAS";
+    title.font = { bold: true, size: 13, color: { argb: white } };
+    title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: blue } };
+    title.alignment = { vertical: "middle", horizontal: "left", wrapText: false };
+    ws.getRow(1).height = 22;
+
+    ws.mergeCells(2, 1, 2, nCols);
+    const sub = ws.getCell(2, 1);
+    sub.value = `Exportado: ${new Date().toLocaleDateString("es-CL")}   |   ${filteredOperaciones.length} registros`;
+    sub.font = { size: 8, color: { argb: graySub } };
+    sub.alignment = { vertical: "middle", horizontal: "left", wrapText: false };
+    ws.getRow(2).height = 16;
+
+    const headerRowIndex = 3;
+    const hr = ws.getRow(headerRowIndex);
+    hr.height = 18;
+    headers.forEach((h, i) => {
+      const cell = hr.getCell(i + 1);
+      cell.value = h;
+      cell.font = { bold: true, size: 9, color: { argb: white } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: blue } };
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: false };
     });
-    exportRows.forEach((row, r) => {
-      row.forEach((val, c) => {
-        const ref = XLSX.utils.encode_cell({ r: r + 3, c });
-        ws[ref] = { v: val ?? "", t: "s", s: { font: { sz: 9 }, fill: { fgColor: { rgb: r % 2 === 0 ? "FFFFFF" : "F5F5F5" } } } };
+
+    exportRows.forEach((row, ri) => {
+      const r = ws.getRow(headerRowIndex + 1 + ri);
+      r.height = 16;
+      const z = ri % 2 === 1;
+      row.forEach((val, ci) => {
+        const cell = r.getCell(ci + 1);
+        cell.value = String(val ?? "");
+        cell.font = { size: 9, color: { argb: body } };
+        cell.alignment = { vertical: "middle", wrapText: false };
+        if (z) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: zebra } };
+        }
+        cell.border = {
+          top: { style: "thin", color: { argb: border } },
+          bottom: { style: "thin", color: { argb: border } },
+          left: { style: "thin", color: { argb: border } },
+          right: { style: "thin", color: { argb: border } },
+        };
       });
     });
 
-    ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: exportRows.length + 2, c: headers.length - 1 } });
-    ws["!cols"] = headers.map((_, i) => ({ wch: i === 2 ? 22 : i === 4 || i === 5 ? 18 : 12 }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Reservas");
-    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    headers.forEach((_, i) => {
+      const w = i === 2 ? 22 : i === 4 || i === 5 ? 18 : 12;
+      ws.getColumn(i + 1).width = w;
+    });
+
+    const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `MisReservas_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click(); URL.revokeObjectURL(url);
+    a.href = url;
+    a.download = `MisReservas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleExportPDF = () => {
@@ -952,6 +1004,13 @@ export function MisReservasContent() {
               </button>
             </div>
             <a
+              href={withBase("/reservas/papelera")}
+              className="p-2 bg-white/15 border border-white/20 rounded-xl hover:bg-white/25 transition-colors text-white/70 hover:text-white"
+              title="Papelera"
+            >
+              <Icon icon="lucide:trash-2" width={16} height={16} />
+            </a>
+            <a
               href={withBase("/reservas/crear")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
             >
@@ -999,7 +1058,7 @@ export function MisReservasContent() {
           </button>
           {/* Exportar Excel */}
           <button
-            onClick={handleExportExcel}
+            onClick={() => void handleExportExcel()}
             disabled={filteredOperaciones.length === 0}
             className="inline-flex items-center gap-1.5 px-2.5 py-2 border border-neutral-200 bg-neutral-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-xl text-xs font-medium text-neutral-600 transition-colors shrink-0 disabled:opacity-40"
             title="Exportar a Excel"

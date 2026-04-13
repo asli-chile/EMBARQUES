@@ -26,7 +26,6 @@ export type VisitorModuleKey =
   | "misDocumentos"
   | "crearInstructivo"
   | "crearProforma"
-  | "correoInformativo"
   | "reportes"
   | "finanzas";
 
@@ -41,7 +40,6 @@ const MODULE_KEY_TO_HREF: Record<VisitorModuleKey, string> = {
   misDocumentos: withBase("/documentos/mis-documentos"),
   crearInstructivo: withBase("/documentos/crear-instructivo"),
   crearProforma: withBase("/documentos/crear-proforma"),
-  correoInformativo: withBase("/comunicaciones/correo-informativo"),
   reportes: withBase("/reportes"),
   finanzas: withBase("/finanzas"),
 };

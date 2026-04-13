@@ -16,6 +16,7 @@ export const siteConfig = {
     { labelKey: "stacking", href: "/stacking" },
   ] as const,
   sidebarItems: [
+    { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
     {
       labelKey: "reservas",
       id: "reservas",
@@ -43,18 +44,6 @@ export const siteConfig = {
         { labelKey: "crearProforma", id: "crear-proforma", href: "/documentos/crear-proforma", ejecutivoAndAbove: true },
       ],
     },
-    {
-      labelKey: "comunicaciones",
-      id: "comunicaciones",
-      children: [
-        {
-          labelKey: "correoInformativo",
-          id: "correo-informativo",
-          href: "/comunicaciones/correo-informativo",
-          ejecutivoAndAbove: true,
-        },
-      ],
-    },
     { labelKey: "reportes", id: "reportes", href: "/reportes" },
     { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
     {
@@ -63,7 +52,6 @@ export const siteConfig = {
       href: "/cartolas-nubox",
       allowedEmails: [...CARTOLAS_NUBOX_ALLOWED_EMAILS],
     },
-    { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
     { labelKey: "registros", id: "registros", href: "/registros" },
     {
       labelKey: "configuracion",

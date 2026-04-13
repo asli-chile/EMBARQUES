@@ -2,6 +2,7 @@
 
 import type { AuthFormMode } from "@/lib/auth/AuthFormModalContext";
 import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
+import { withBase } from "@/lib/basePath";
 
 type AuthFormTriggerProps = {
   mode: AuthFormMode;
@@ -16,7 +17,7 @@ type AuthFormTriggerProps = {
  */
 export function AuthFormTrigger({ mode, className, children, as = "button" }: AuthFormTriggerProps) {
   const { openAuthForm } = useAuthFormModal();
-  const href = mode === "login" ? "/auth/login" : "/auth/registro";
+  const href = mode === "login" ? withBase("/auth/login") : withBase("/auth/registro");
 
   if (as === "a") {
     return (

@@ -1,0 +1,919 @@
+---
+import { withBase } from "@/lib/basePath";
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
+    <title>Prueba — EMBARQUES</title>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script is:inline define:vars={{ SUPA_URL, SUPA_KEY }}>
+      window._supaUrl = SUPA_URL;
+      window._supaKey = SUPA_KEY;
+    </script>
+    <style is:global>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        max-height: 100dvh;
+        overflow: hidden;
+        background-color: #f8d7e4;
+        background-image: radial-gradient(circle, rgba(236,72,153,0.12) 1px, transparent 1px);
+        background-size: 28px 28px;
+      }
+
+      .page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        padding: clamp(12px, 4vw, 24px);
+        padding-top: calc(clamp(12px, 4vw, 24px) + env(safe-area-inset-top));
+        padding-bottom: calc(clamp(12px, 4vw, 24px) + env(safe-area-inset-bottom));
+      }
+
+      .btn {
+        position: relative;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: linear-gradient(135deg, #f472b6, #e879a0, #c026d3);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: clamp(14px, 3vw, 20px) clamp(32px, 7vw, 64px);
+        font-size: clamp(15px, 3.5vw, 18px);
+        font-weight: 600;
+        font-family: Georgia, 'Times New Roman', serif;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        box-shadow: 0 8px 30px rgba(236,72,153,0.45), 0 2px 8px rgba(236,72,153,0.2);
+        transition: transform 0.22s cubic-bezier(.34,1.56,.64,1), box-shadow 0.22s ease;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        min-height: 52px;
+        min-width: 160px;
+        width: min(340px, 85vw);
+        z-index: 20;
+      }
+
+      .btn:hover {
+        transform: translateY(-3px) scale(1.03);
+        box-shadow: 0 14px 40px rgba(236,72,153,0.55), 0 4px 12px rgba(236,72,153,0.25);
+      }
+
+      .btn:active {
+        transform: translateY(1px) scale(0.97);
+      }
+
+      .btn:focus-visible {
+        outline: 3px solid #f472b6;
+        outline-offset: 4px;
+      }
+
+      .btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -75%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+        transform: skewX(-20deg);
+      }
+
+      .btn:hover::after {
+        animation: shine 0.55s ease forwards;
+      }
+
+      @keyframes shine {
+        0%   { left: -75%; }
+        100% { left: 125%; }
+      }
+
+      .btn-icon {
+        font-size: 0.9em;
+        opacity: 0.85;
+      }
+
+
+
+      @media (max-width: 767px) {
+        .gatito {
+          transform: translateY(-38px);
+        }
+      }
+
+      /* ── base compartida ── */
+      .checks-section,
+      .cita-section {
+        position: fixed;
+        z-index: 22;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.8s ease;
+        background: rgba(255,255,255,0.68);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1.5px solid rgba(236,72,153,0.22);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 4px 18px rgba(236,72,153,0.13);
+      }
+
+      /* ── mobile: apilados arriba / abajo ── */
+      .checks-section {
+        top: 25%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 20px;
+        width: min(300px, 82vw);
+      }
+
+      .cita-section {
+        bottom: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 16px 12px;
+        width: min(300px, 82vw);
+      }
+
+      /* ── desktop: a los lados, centrados verticalmente ── */
+      @media (min-width: 768px) {
+        .checks-section {
+          top: 50%;
+          left: 2%;
+          transform: translateY(-50%);
+          width: min(260px, 22vw);
+          padding: 16px 22px;
+        }
+
+        .cita-section {
+          top: 50%;
+          right: 2%;
+          left: auto;
+          bottom: auto;
+          transform: translateY(-50%);
+          width: min(280px, 24vw);
+          padding: 14px 18px 16px;
+        }
+      }
+
+      .checks-section label, .cita-section label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: Georgia, serif;
+        font-size: clamp(13px, 3.3vw, 16px);
+        font-weight: 700;
+        color: #be185d;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .checks-section input[type="checkbox"],
+      .cita-section  input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        border: 2px solid #f472b6;
+        border-radius: 5px;
+        background: white;
+        cursor: pointer;
+        transition: background 0.18s, border-color 0.18s;
+        position: relative;
+      }
+
+      .checks-section input[type="checkbox"]:checked,
+      .cita-section  input[type="checkbox"]:checked {
+        background: linear-gradient(135deg, #f472b6, #c026d3);
+        border-color: #c026d3;
+      }
+
+      .checks-section input[type="checkbox"]:checked::after,
+      .cita-section  input[type="checkbox"]:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 13px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .cita-section textarea {
+        width: 100%;
+        border: 1.5px solid rgba(236,72,153,0.35);
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-family: Georgia, serif;
+        font-size: clamp(12px, 3vw, 14px);
+        color: #831843;
+        background: rgba(255,255,255,0.85);
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s;
+        line-height: 1.5;
+      }
+
+      .cita-section textarea::placeholder { color: #f9a8d4; }
+      .cita-section textarea:focus {
+        border-color: #ec4899;
+        box-shadow: 0 0 0 3px rgba(236,72,153,0.12);
+      }
+
+      .save-btn {
+        background: linear-gradient(135deg, #f472b6, #c026d3);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 8px 20px;
+        font-family: Georgia, serif;
+        font-size: clamp(13px, 3vw, 15px);
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(236,72,153,0.35);
+        transition: opacity 0.2s, transform 0.15s;
+        align-self: center;
+      }
+
+      .save-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+      .save-btn:active { transform: translateY(1px); }
+      .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .save-status {
+        text-align: center;
+        font-family: Georgia, serif;
+        font-size: 12px;
+        font-weight: 700;
+        min-height: 16px;
+        color: #16a34a;
+      }
+      .save-status.error { color: #dc2626; }
+
+      .checks-section.form-visible,
+      .cita-section.form-visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .field-label {
+        font-family: Georgia, serif;
+        font-size: clamp(10px, 2.6vw, 12px);
+        font-weight: 700;
+        color: #db2777;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: -2px;
+      }
+
+      #fireworksCanvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="fireworksCanvas"></canvas>
+
+    <!-- Checkboxes: espacio vacío superior -->
+    <div class="checks-section">
+      <label>
+        <input type="checkbox" id="check-acepto" />
+        Acepto 🌸
+      </label>
+      <label>
+        <input type="checkbox" id="check-no-acepto" />
+        Perdón a todos, no acepto 😔
+      </label>
+    </div>
+
+    <!-- Cita: espacio vacío inferior -->
+    <div class="cita-section">
+      <span class="field-label">📅 Fecha, hora y lugar</span>
+      <textarea id="cita-input" rows="2" placeholder="tocaple el miércoles…"></textarea>
+      <button class="save-btn" id="save-btn">Enviar respuesta ✉️</button>
+      <p class="save-status" id="save-status"></p>
+    </div>
+
+    <div class="page">
+      <div style="display:flex; flex-direction:column; align-items:center; gap: 0; position: relative; z-index: 20;">
+        <img
+          src={withBase("/img/gatito.svg")}
+          alt="gatito"
+          class="gatito"
+          style="width: clamp(280px, 60vw, 520px); height: auto; display: block; margin-bottom: -60px; position: relative; z-index: 21; filter: drop-shadow(0px 18px 12px rgba(0,0,0,0.25)); pointer-events: none;"
+        />
+      <button class="btn" id="launch-btn">
+        <span class="btn-icon">✦</span>
+        Pulsa aquí
+        <span class="btn-icon">✦</span>
+      </button>
+      </div>
+    </div>
+
+    <script is:inline>
+      const fireworksCanvas = document.getElementById("fireworksCanvas");
+      const fwCtx = fireworksCanvas.getContext("2d");
+      let fireworks = [];
+      let particles = [];
+
+      function resizeFireworksCanvas() {
+        fireworksCanvas.width  = window.innerWidth;
+        fireworksCanvas.height = window.innerHeight;
+      }
+      window.addEventListener("resize", resizeFireworksCanvas);
+      resizeFireworksCanvas();
+
+      // Genera N puntos distribuidos sobre la curva de corazón
+      function heartPoints(count, scale) {
+        const pts = [];
+        for (let i = 0; i < count; i++) {
+          const t = (i / count) * Math.PI * 2;
+          const hx =  16 * Math.pow(Math.sin(t), 3);
+          const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+          pts.push({ x: hx * scale, y: hy * scale });
+        }
+        return pts;
+      }
+
+      class Firework {
+        constructor(x, targetY) {
+          this.x = x;
+          this.y = window.innerHeight;
+          this.targetY = targetY;
+          this.element = { x: this.x, y: this.y };
+          this.animate();
+        }
+
+        animate() {
+          gsap.to(this.element, {
+            y: this.targetY,
+            duration: 1.6 + Math.random() * 0.6,
+            ease: "power2.out",
+            onUpdate: () => {
+              this.y = this.element.y;
+              this.draw();
+            },
+            onComplete: () => {
+              explode(this.x, this.y);
+              fireworks = fireworks.filter(f => f !== this);
+            }
+          });
+        }
+
+        draw() {
+          fwCtx.beginPath();
+          fwCtx.arc(this.x, this.y, 2.5, 0, 2 * Math.PI);
+          fwCtx.fillStyle = "rgba(255, 255, 255, 0.9)";
+          fwCtx.shadowBlur = 6;
+          fwCtx.shadowColor = "#fff";
+          fwCtx.fill();
+          fwCtx.shadowBlur = 0;
+        }
+      }
+
+      class HeartParticle {
+        constructor(originX, originY, targetX, targetY) {
+          this.element = { x: originX, y: originY, opacity: 1 };
+          this.tx = targetX;
+          this.ty = targetY;
+          this.trail = [];
+          this.animate();
+        }
+
+        animate() {
+          // Fase 1: vuela hacia su punto en el corazón
+          gsap.to(this.element, {
+            x: this.tx,
+            y: this.ty,
+            duration: 0.7,
+            ease: "power2.out",
+            onUpdate: () => this.draw(),
+            onComplete: () => {
+              // Fase 2: cae con gravedad dejando chispa, y se desvanece
+              gsap.to(this.element, {
+                y: this.ty + 180 + Math.random() * 160,
+                x: this.tx + (Math.random() - 0.5) * 70,
+                opacity: 0,
+                duration: 1.1 + Math.random() * 0.6,
+                delay: 0.25 + Math.random() * 0.15,
+                ease: "power2.in",
+                onUpdate: () => this.draw(),
+                onComplete: () => {
+                  particles = particles.filter(p => p !== this);
+                }
+              });
+            }
+          });
+        }
+
+        draw() {
+          const cx = this.element.x;
+          const cy = this.element.y;
+          const op = this.element.opacity;
+
+          this.trail.push({ x: cx, y: cy });
+          if (this.trail.length > 6) this.trail.shift();
+
+          fwCtx.save();
+
+          // Estela de chispa
+          for (let i = 0; i < this.trail.length; i++) {
+            fwCtx.globalAlpha = (i / this.trail.length) * op * 0.45;
+            fwCtx.beginPath();
+            fwCtx.arc(this.trail[i].x, this.trail[i].y, 1.2, 0, 2 * Math.PI);
+            fwCtx.fillStyle = "#ffffff";
+            fwCtx.fill();
+          }
+
+          // Partícula principal con glow
+          fwCtx.globalAlpha = op;
+          fwCtx.shadowBlur = 8;
+          fwCtx.shadowColor = "#ffffff";
+          fwCtx.beginPath();
+          fwCtx.arc(cx, cy, 2.5, 0, 2 * Math.PI);
+          fwCtx.fillStyle = "#ffffff";
+          fwCtx.fill();
+          fwCtx.shadowBlur = 0;
+
+          fwCtx.restore();
+        }
+      }
+
+      // Partículas normales (corazones pequeños con chispas)
+      function explode(x, y) {
+        const count = 120;
+        const scale = Math.min(window.innerWidth, window.innerHeight) * 0.018;
+        const pts = heartPoints(count, scale);
+        pts.forEach(pt => {
+          particles.push(new HeartParticle(x, y, x + pt.x, y + pt.y));
+        });
+      }
+
+      // Genera puntos en forma de girasol (pétalos + espiral de semillas)
+      function sunflowerPoints(count, scale) {
+        const pts = [];
+        const numPetals = 14;
+        const petalPts = Math.floor(count * 0.55);
+        const centerPts = count - petalPts;
+        const ptsPerPetal = Math.floor(petalPts / numPetals);
+
+        // Pétalos: elipses apuntando hacia afuera
+        for (let p = 0; p < numPetals; p++) {
+          const pa = (p / numPetals) * Math.PI * 2;
+          const pcx = Math.cos(pa) * scale * 1.25;
+          const pcy = Math.sin(pa) * scale * 1.25;
+          const semiMaj = scale * 0.68;
+          const semiMin = scale * 0.22;
+          for (let i = 0; i < ptsPerPetal; i++) {
+            const t = (i / ptsPerPetal) * Math.PI * 2;
+            const lx = Math.cos(t) * semiMaj;
+            const ly = Math.sin(t) * semiMin;
+            pts.push({
+              x: pcx + lx * Math.cos(pa) - ly * Math.sin(pa),
+              y: pcy + lx * Math.sin(pa) + ly * Math.cos(pa)
+            });
+          }
+        }
+
+        // Centro: espiral filotáxica (patrón de semillas dorado)
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+        for (let i = 0; i < centerPts; i++) {
+          const r = Math.sqrt(i / centerPts) * scale * 0.72;
+          const theta = i * goldenAngle;
+          pts.push({ x: r * Math.cos(theta), y: r * Math.sin(theta) });
+        }
+
+        return pts;
+      }
+
+      // ── Girasol gigante final ──────────────────────────────────────────────
+
+      let grandHeartParticles = [];
+      let grandHeartDrawn = false;
+
+      class GrandHeartParticle {
+        constructor(originX, originY, targetX, targetY, color) {
+          this.element = { x: originX, y: originY, opacity: 0 };
+          this.tx = targetX;
+          this.ty = targetY;
+          this.color = color;
+          this.trail = [];
+          this.settled = false;
+          this.animate();
+        }
+
+        animate() {
+          // Vuela al punto del corazón y se queda
+          gsap.to(this.element, {
+            x: this.tx,
+            y: this.ty,
+            opacity: 1,
+            duration: 1.2,
+            ease: "power3.out",
+            onUpdate: () => this.draw(),
+            onComplete: () => {
+              this.settled = true;
+            }
+          });
+        }
+
+        draw() {
+          const cx = this.element.x;
+          const cy = this.element.y;
+          const op = this.element.opacity;
+
+          if (!this.settled) {
+            this.trail.push({ x: cx, y: cy });
+            if (this.trail.length > 8) this.trail.shift();
+          }
+
+          fwCtx.save();
+
+          // Estela durante el vuelo
+          if (!this.settled) {
+            for (let i = 0; i < this.trail.length; i++) {
+              fwCtx.globalAlpha = (i / this.trail.length) * op * 0.4;
+              fwCtx.beginPath();
+              fwCtx.arc(this.trail[i].x, this.trail[i].y, 1.5, 0, 2 * Math.PI);
+              fwCtx.fillStyle = this.color;
+              fwCtx.fill();
+            }
+          }
+
+          // Punto principal
+          fwCtx.globalAlpha = op;
+          fwCtx.shadowBlur = this.settled ? 14 : 8;
+          fwCtx.shadowColor = this.color;
+          fwCtx.beginPath();
+          fwCtx.arc(cx, cy, this.settled ? 4 : 3, 0, 2 * Math.PI);
+          fwCtx.fillStyle = this.color;
+          fwCtx.fill();
+          fwCtx.shadowBlur = 0;
+
+          fwCtx.restore();
+        }
+
+        drawStatic() {
+          fwCtx.save();
+          fwCtx.globalAlpha = 1;
+          fwCtx.shadowBlur = 14;
+          fwCtx.shadowColor = this.color;
+          fwCtx.beginPath();
+          fwCtx.arc(this.tx, this.ty, 4, 0, 2 * Math.PI);
+          fwCtx.fillStyle = this.color;
+          fwCtx.fill();
+          fwCtx.shadowBlur = 0;
+          fwCtx.restore();
+        }
+      }
+
+      // Cohete especial que va al centro y hace el corazón gigante
+      class GrandRocket {
+        constructor() {
+          this.x = fireworksCanvas.width / 2;
+          this.y = fireworksCanvas.height;
+          this.targetY = fireworksCanvas.height * 0.55;
+          this.element = { x: this.x, y: this.y };
+          this.animate();
+        }
+
+        animate() {
+          gsap.to(this.element, {
+            y: this.targetY,
+            duration: 1.8,
+            ease: "power2.out",
+            onUpdate: () => {
+              this.y = this.element.y;
+              this.draw();
+            },
+            onComplete: () => {
+              spawnGrandHeart(this.x, this.y);
+            }
+          });
+        }
+
+        draw() {
+          fwCtx.save();
+          fwCtx.beginPath();
+          fwCtx.arc(this.x, this.y, 4, 0, 2 * Math.PI);
+          fwCtx.fillStyle = "#ff69b4";
+          fwCtx.shadowBlur = 16;
+          fwCtx.shadowColor = "#ff69b4";
+          fwCtx.fill();
+          fwCtx.shadowBlur = 0;
+          fwCtx.restore();
+        }
+      }
+
+      let arcTextOpacity = 0;
+      let arcTextCx = 0;
+      let arcTextCy = 0;
+      let arcTextVisible = false;
+
+      function drawStyledText(text, x, y, fontSize, opacity) {
+        fwCtx.save();
+        fwCtx.globalAlpha = opacity;
+        fwCtx.font = `900 ${fontSize}px Georgia, serif`;
+        fwCtx.textAlign = "center";
+        fwCtx.textBaseline = "middle";
+        fwCtx.lineJoin = "round";
+
+        fwCtx.lineWidth = fontSize * 0.22;
+        fwCtx.strokeStyle = "rgba(0,0,0,0.85)";
+        fwCtx.shadowBlur = 0;
+        fwCtx.strokeText(text, x, y);
+
+        fwCtx.lineWidth = fontSize * 0.10;
+        fwCtx.strokeStyle = "#ffffff";
+        fwCtx.strokeText(text, x, y);
+
+        fwCtx.shadowBlur = 12;
+        fwCtx.shadowColor = "#fbbf24";
+        fwCtx.fillStyle = "#fef08a";
+        fwCtx.fillText(text, x, y);
+        fwCtx.restore();
+      }
+
+      function drawArcText(cx, opacity) {
+        const text = "Holi Fraaaaan \u2764";
+        const W = fireworksCanvas.width;
+        const H = fireworksCanvas.height;
+
+        // Radio calculado para que el arco quede en la franja superior
+        const radius = Math.min(W, H) * 0.36;
+        const fontSize = Math.min(W * 0.062, 62);
+
+        // Centro del arco fijo en la parte superior de la pantalla
+        const arcCenterY = fontSize * 0.6 + radius;
+
+        fwCtx.save();
+        fwCtx.font = `900 ${fontSize}px Georgia, serif`;
+        fwCtx.textAlign = "center";
+        fwCtx.textBaseline = "middle";
+
+        let totalWidth = 0;
+        for (let i = 0; i < text.length; i++) {
+          totalWidth += fwCtx.measureText(text[i]).width;
+        }
+        const angleSpan = totalWidth / radius;
+        let startAngle = -Math.PI / 2 - angleSpan / 2;
+
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i];
+          const chWidth = fwCtx.measureText(ch).width;
+          const angle = startAngle + chWidth / radius / 2;
+
+          fwCtx.save();
+          fwCtx.globalAlpha = opacity;
+          fwCtx.translate(
+            cx + radius * Math.cos(angle),
+            arcCenterY + radius * Math.sin(angle)
+          );
+          fwCtx.rotate(angle + Math.PI / 2);
+
+          fwCtx.lineWidth = fontSize * 0.22;
+          fwCtx.strokeStyle = "rgba(0,0,0,0.85)";
+          fwCtx.lineJoin = "round";
+          fwCtx.shadowBlur = 0;
+          fwCtx.strokeText(ch, 0, 0);
+
+          fwCtx.lineWidth = fontSize * 0.10;
+          fwCtx.strokeStyle = "#ffffff";
+          fwCtx.strokeText(ch, 0, 0);
+
+          fwCtx.shadowBlur = 12;
+          fwCtx.shadowColor = "#fbbf24";
+          fwCtx.fillStyle = "#fef08a";
+          fwCtx.fillText(ch, 0, 0);
+
+          fwCtx.restore();
+          startAngle += chWidth / radius;
+        }
+        fwCtx.restore();
+
+        // Sub-líneas justo debajo del arco
+        const sub1 = "te invito a conversar de la visa";
+        const sub2 = "un d\u00EDa a tu elecci\u00F3n \u2728 no faltes \uD83D\uDC83";
+        const subSize = Math.min(W * 0.038, 34);
+        const lineH = subSize * 1.7;
+        const subY = arcCenterY + fontSize * 0.6 - lineH * 1.4;
+        drawStyledText(sub1, cx, subY,          subSize, opacity);
+        drawStyledText(sub2, cx, subY + lineH,  subSize, opacity);
+
+        // tkm anclado al fondo de la pantalla
+        const tkmSize = Math.min(W * 0.034, 30);
+        drawStyledText("tkm, no olvides tomar agua y aire \uD83C\uDF3F", cx, H - tkmSize * 1.4, tkmSize, opacity);
+      }
+
+      function spawnGrandHeart(cx, cy) {
+        const count = 600;
+        const scale = Math.min(fireworksCanvas.width, fireworksCanvas.height) * 0.29;
+        const pts = sunflowerPoints(count, scale);
+
+        // Pétalos: amarillos/naranjas; centro: marrones/dorados
+        const PETAL_COLORS = ["#fbbf24", "#f59e0b", "#fde68a", "#fcd34d", "#fef08a", "#f97316"];
+        const CENTER_COLORS = ["#92400e", "#b45309", "#d97706", "#78350f", "#a16207"];
+        const petalCount = Math.floor(count * 0.55);
+
+        const HEART_COLORS = pts.map((_, i) =>
+          i < petalCount
+            ? PETAL_COLORS[i % PETAL_COLORS.length]
+            : CENTER_COLORS[i % CENTER_COLORS.length]
+        );
+
+        pts.forEach((pt, i) => {
+          const color = HEART_COLORS[i];
+          grandHeartParticles.push(
+            new GrandHeartParticle(cx, cy, cx + pt.x, cy + pt.y, color)
+          );
+        });
+
+        arcTextCx = cx;
+        arcTextCy = cy;
+
+        // Texto aparece al formarse el corazón y persiste
+        setTimeout(() => {
+          arcTextVisible = true;
+          document.querySelector(".checks-section").classList.add("form-visible");
+          document.querySelector(".cita-section").classList.add("form-visible");
+          gsap.to({ v: 0 }, {
+            v: 1,
+            duration: 1.2,
+            ease: "power2.out",
+            onUpdate: function() { arcTextOpacity = this.targets()[0].v; }
+          });
+        }, 900);
+
+        // A los 5 segundos: solo caen las partículas, el texto permanece
+        setTimeout(() => {
+          grandHeartParticles.forEach(p => {
+            gsap.to(p.element, {
+              y: p.ty + 300 + Math.random() * 300,
+              x: p.tx + (Math.random() - 0.5) * 100,
+              opacity: 0,
+              duration: 1.5 + Math.random() * 0.8,
+              ease: "power2.in",
+              onUpdate: () => { if (!p.settled) return; p.settled = false; p.draw(); },
+              onComplete: () => { grandHeartParticles = grandHeartParticles.filter(pp => pp !== p); }
+            });
+          });
+          // Al terminar todas las partículas, apagar grandHeartDrawn pero dejar texto
+          setTimeout(() => { grandHeartDrawn = false; }, 2500);
+        }, 5000);
+
+        grandHeartDrawn = true;
+      }
+
+      // Loop de animación
+      function animateFireworks() {
+        fwCtx.fillStyle = "rgba(248, 215, 228, 0.2)";
+        fwCtx.fillRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+
+        // Redibujar corazón gigante estático en cada frame
+        if (grandHeartDrawn) {
+          grandHeartParticles.forEach(p => {
+            if (p.settled) p.drawStatic();
+          });
+        }
+
+        // Texto persiste independientemente de las partículas
+        if (arcTextVisible && arcTextOpacity > 0) {
+          drawArcText(arcTextCx, arcTextOpacity);
+        }
+
+        requestAnimationFrame(animateFireworks);
+      }
+
+      function launchBurst() {
+        // Limpiar corazón anterior si había
+        grandHeartParticles = [];
+        grandHeartDrawn = false;
+        arcTextOpacity = 0;
+        arcTextVisible = false;
+        document.querySelector(".checks-section").classList.remove("form-visible");
+        document.querySelector(".cita-section").classList.remove("form-visible");
+
+        const count = 10 + Math.floor(Math.random() * 6);
+        const totalDelay = count * 150;
+
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            const x = fireworksCanvas.width  * (0.1 + Math.random() * 0.8);
+            const y = fireworksCanvas.height * (0.08 + Math.random() * 0.45);
+            fireworks.push(new Firework(x, y));
+          }, i * 150);
+        }
+
+        // Cohete grande al final
+        setTimeout(() => {
+          new GrandRocket();
+        }, totalDelay + 800);
+      }
+
+      let burstActive = false;
+
+      function launchBurstOnce() {
+        if (burstActive) return;
+        burstActive = true;
+        const btn = document.getElementById("launch-btn");
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.style.cursor = "not-allowed";
+
+        launchBurst();
+
+        // Re-habilitar cuando el girasol haya caído (~5s vuelo + 2.5s caída)
+        setTimeout(() => {
+          burstActive = false;
+          btn.disabled = false;
+          btn.style.opacity = "";
+          btn.style.cursor = "";
+        }, 10000);
+      }
+
+      animateFireworks();
+      document.getElementById("launch-btn").addEventListener("click", launchBurstOnce);
+
+      // ── Supabase: guardar respuesta ───────────────────────────────────────
+      const supaClient = supabase.createClient(window._supaUrl, window._supaKey);
+
+      // Mutually exclusive checkboxes
+      document.getElementById("check-acepto").addEventListener("change", function() {
+        if (this.checked) document.getElementById("check-no-acepto").checked = false;
+      });
+      document.getElementById("check-no-acepto").addEventListener("change", function() {
+        if (this.checked) document.getElementById("check-acepto").checked = false;
+      });
+
+      document.getElementById("save-btn").addEventListener("click", async function() {
+        const btn = this;
+        const statusEl = document.getElementById("save-status");
+        const acepto   = document.getElementById("check-acepto").checked;
+        const noAcepto = document.getElementById("check-no-acepto").checked;
+        const cita     = document.getElementById("cita-input").value.trim();
+
+        if (!acepto && !noAcepto) {
+          statusEl.textContent = "Elige una opción primero 🌸";
+          statusEl.className = "save-status error";
+          return;
+        }
+
+        btn.disabled = true;
+        statusEl.textContent = "Enviando…";
+        statusEl.className = "save-status";
+
+        const { error } = await supaClient
+          .from("fran_respuestas")
+          .insert({ acepto, no_acepto: noAcepto, cita: cita || null });
+
+        if (error) {
+          statusEl.textContent = "Error al enviar 😢 " + error.message;
+          statusEl.className = "save-status error";
+          btn.disabled = false;
+          return;
+        }
+
+        const respuesta = acepto ? "Acepto" : "Perdon a todos, no acepto";
+        const citaLinea = cita ? "\nFecha, hora y lugar: " + cita : "";
+        const msg = "Holi!\n\nMi respuesta: " + respuesta + citaLinea;
+
+        statusEl.textContent = acepto ? "¡Enviado! 🎉 abriendo WhatsApp…" : "Enviado 💛 abriendo WhatsApp…";
+        statusEl.className = "save-status";
+
+        // Abrir WhatsApp con el mensaje listo
+        setTimeout(() => {
+          window.open("https://wa.me/56952029769?text=" + encodeURIComponent(msg), "_blank");
+        }, 600);
+      });
+    </script>
+  </body>
+</html>

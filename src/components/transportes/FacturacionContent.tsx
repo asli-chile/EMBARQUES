@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
 
 type Operacion = {
   id: string;
@@ -350,7 +351,7 @@ export function FacturacionContent() {
   const exportarExcel = async () => {
     const op = selectedOperacion;
     if (!op) return;
-    const XLSX = await import("xlsx-js-style");
+    const XLSX = await loadXlsxJsStyle();
     const ref = op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
     const fecha = format(new Date(), "dd/MM/yyyy");
     const monedaDoc = formData.moneda || itemsProforma[0]?.moneda || "USD";

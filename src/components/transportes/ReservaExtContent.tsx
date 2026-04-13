@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -6,16 +6,6 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
 import { sileo } from "sileo";
-import {
-  type FormatoInstructivo,
-  type InstructivoOpData,
-  buildInstructivoTagValues,
-  generateInstructivoHtml,
-  buildInstructivoSubject,
-  buildInstructivoPlainBody,
-  applyTagsToExcelBuffer,
-} from "@/lib/documentos/instructivo";
-import { sendEmail, type EmailAttachment } from "@/lib/email/sendEmail";
 
 type ReservaExt = {
   id: string;
@@ -226,16 +216,11 @@ export function ReservaExtContent() {
 
   const [bookingDocUrl, setBookingDocUrl] = useState<string | null>(null);
   // Instructivo
-  const [formatos, setFormatos] = useState<FormatoInstructivo[]>([]);
-  const [selectedFormatoId, setSelectedFormatoId] = useState<string>("");
-  type InstructivoPhase = "idle" | "generating" | "ready" | "sending" | "sent" | "error";
-  const [instrPhase, setInstrPhase] = useState<InstructivoPhase>("idle");
-  const [instrDraftUrl, setInstrDraftUrl] = useState<string | undefined>(undefined);
-  const [instrError, setInstrError] = useState<string>("");
-  const [instrBlob, setInstrBlob] = useState<Blob | null>(null);
   const [instrFilename, setInstrFilename] = useState<string>("");
   const [instrSavedUrl, setInstrSavedUrl] = useState<string | null>(null);
   const [instrSaveError, setInstrSaveError] = useState<string | null>(null);
+  const [instrUploading, setInstrUploading] = useState(false);
+  const instrFileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +245,7 @@ export function ReservaExtContent() {
     if (!supabase || authLoading) return;
     setLoading(true);
 
-    const [reservasRes, empresasRes, tramosRes, navierasRes, navesRes, destinosRes, plantasRes, depositosRes, formatosRes] = await Promise.all([
+    const [reservasRes, empresasRes, tramosRes, navierasRes, navesRes, destinosRes, plantasRes, depositosRes] = await Promise.all([
       supabase.from("transportes_reservas_ext").select("*").order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
       supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
@@ -269,7 +254,6 @@ export function ReservaExtContent() {
       supabase.from("destinos").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("plantas").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
-      supabase.from("formatos_documentos").select("id, nombre, tipo, template_type, descripcion, contenido_html, excel_path, excel_nombre, cliente").eq("tipo", "instructivo").eq("activo", true).order("nombre"),
     ]);
 
     setReservas((reservasRes.data ?? []) as ReservaExt[]);
@@ -280,9 +264,6 @@ export function ReservaExtContent() {
     setDestinos((destinosRes.data ?? []) as SelectOption[]);
     setPlantas((plantasRes.data ?? []) as SelectOption[]);
     setDepositos((depositosRes.data ?? []) as SelectOption[]);
-    const fmts = (formatosRes.data ?? []) as FormatoInstructivo[];
-    setFormatos(fmts);
-    if (fmts.length === 1) setSelectedFormatoId(fmts[0].id);
     setLoading(false);
   }, [supabase, authLoading]);
 
@@ -304,11 +285,7 @@ export function ReservaExtContent() {
 
   // Al seleccionar/deseleccionar una reserva, resetear estado del instructivo y cargar el existente
   useEffect(() => {
-    setInstrPhase("idle");
-    setInstrBlob(null);
     setInstrFilename("");
-    setInstrDraftUrl(undefined);
-    setInstrError("");
     setInstrSavedUrl(null);
     setInstrSaveError(null);
 
@@ -354,19 +331,6 @@ export function ReservaExtContent() {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, supabase]);
-
-  // Formatos filtrados por cliente de la reserva seleccionada
-  const filteredFormatos = useMemo(() => {
-    const clienteActual = formData.cliente?.trim();
-    if (!clienteActual) return formatos.filter((f) => !f.cliente);
-    return formatos.filter((f) => !f.cliente || f.cliente === clienteActual);
-  }, [formatos, formData.cliente]);
-
-  // Auto-seleccionar formato si hay exactamente uno disponible
-  useEffect(() => {
-    if (filteredFormatos.length === 1) setSelectedFormatoId(filteredFormatos[0].id);
-    else if (filteredFormatos.length === 0) setSelectedFormatoId("");
-  }, [filteredFormatos]);
 
   const filteredReservas = useMemo(() => {
     if (!searchTerm.trim()) return reservas;
@@ -808,200 +772,38 @@ export function ReservaExtContent() {
     setConfirmDelete(null);
   };
 
-  // Helper para construir InstructivoOpData enriquecido con datos de operaciones
-  const buildOpData = async (): Promise<InstructivoOpData> => {
-    let opData: InstructivoOpData = {
-      id: selectedId ?? "",
-      correlativo: 0,
-      cliente: formData.cliente || null,
-      naviera: formData.naviera || null,
-      nave: formData.nave || null,
-      booking: formData.booking || null,
-      booking_doc_url: bookingDocUrl,
-      pod: formData.pod || null,
-      etd: formData.etd || null,
-      contenedor: formData.contenedor || null,
-      sello: formData.sello || null,
-      tara: formData.tara ? parseFloat(formData.tara) : null,
-      deposito: formData.deposito || null,
-      transporte: formData.transporte || null,
-      tramo: formData.tramo || null,
-      moneda: null,
-      observaciones: formData.observaciones || null,
-      inicio_stacking: formData.inicio_stacking || null,
-      fin_stacking: formData.fin_stacking || null,
-      ingreso_stacking: formData.ingreso_stacking || null,
-      citacion: formData.citacion || null,
-    };
-    if (formData.booking && supabase) {
-      const { data: opRow } = await supabase
-        .from("operaciones")
-        .select("id, ref_asli, correlativo, consignatario, pol, eta, especie, pais, pallets, peso_bruto, peso_neto, tipo_unidad, temperatura, ventilacion, incoterm, forma_pago, moneda, booking_doc_url")
-        .eq("booking", formData.booking)
-        .is("deleted_at", null)
-        .limit(1)
-        .maybeSingle();
-      if (opRow) {
-        const row = opRow as Record<string, unknown>;
-        opData = {
-          ...opData,
-          id: (row.id as string) ?? opData.id,
-          ref_asli: (row.ref_asli as string | null) ?? null,
-          correlativo: (row.correlativo as number) ?? 0,
-          consignatario: row.consignatario as string | null,
-          pol: row.pol as string | null,
-          eta: row.eta as string | null,
-          especie: row.especie as string | null,
-          pais: row.pais as string | null,
-          pallets: row.pallets as number | null,
-          peso_bruto: row.peso_bruto as number | null,
-          peso_neto: row.peso_neto as number | null,
-          tipo_unidad: row.tipo_unidad as string | null,
-          temperatura: row.temperatura as string | null,
-          ventilacion: row.ventilacion as number | null,
-          incoterm: row.incoterm as string | null,
-          forma_pago: row.forma_pago as string | null,
-          moneda: row.moneda as string | null,
-          booking_doc_url: (row.booking_doc_url as string | null) ?? bookingDocUrl,
-        };
-      }
-    }
-    return opData;
-  };
-
-  // ── Paso 1: Generar el Excel instructivo ─────────────────────────────────
-  const handleGenerarInstructivo = async () => {
-    if (!selectedFormatoId || !supabase) return;
-    const formato = formatos.find((f) => f.id === selectedFormatoId);
-    if (!formato) return;
-
-    setInstrPhase("generating");
-    setInstrError("");
-    setInstrBlob(null);
-    setInstrFilename("");
-    setInstrDraftUrl(undefined);
-
+  // ── Subir instructivo ────────────────────────────────────────────────────
+  const handleSubirInstructivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedId || !supabase) return;
+    setInstrUploading(true);
+    setInstrSaveError(null);
     try {
-      const opData = await buildOpData();
-      const ref = opData.ref_asli || `A${String(opData.correlativo).padStart(5, "0")}`;
-      const tagValues = buildInstructivoTagValues(opData);
-
-      if (formato.template_type === "excel" && formato.excel_path) {
-        const { data: tmplData, error: tmplErr } = await supabase.storage
-          .from("formatos-templates")
-          .download(formato.excel_path);
-        if (tmplErr || !tmplData) throw new Error(`No se pudo descargar la plantilla Excel: ${tmplErr?.message ?? "sin datos"}`);
-        const buf = await tmplData.arrayBuffer();
-        const blob = await applyTagsToExcelBuffer(buf, tagValues);
-        const filename = formato.excel_nombre
-          ? formato.excel_nombre.replace(/\.xlsx$/i, "") + `_${ref}.xlsx`
-          : `instructivo_${ref}.xlsx`;
-        setInstrBlob(blob);
-        setInstrFilename(filename);
-        setInstrPhase("ready");
-
-        // ── Guardar en bucket + registrar en documentos si hay operaciones.id real ──
-        // buildOpData() parte con id = selectedId (reservas_ext.id); lo reemplaza con
-        // operaciones.id solo si encuentra un registro via el booking.
-        setInstrSaveError(null);
-        const hasRealOperacionId = opData.id && opData.id !== selectedId;
-        // La ruta de storage usa el operaciones.id real cuando existe, o el
-        // reservas_ext.id como fallback (para no perder el archivo generado).
-        const storageBaseId = hasRealOperacionId ? opData.id : (selectedId ?? opData.id);
-        const storagePath = `${storageBaseId}/INSTRUCTIVO_EMBARQUE/${filename}`;
-        const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, blob, {
-          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          upsert: true,
-        });
-        if (upErr) {
-          setInstrSaveError(`Error al subir al bucket: ${upErr.message}`);
-        } else {
-          const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
-          if (hasRealOperacionId) {
-            // Solo registrar en la tabla documentos cuando hay un operaciones.id válido
-            // (la FK documentos.operacion_id → operaciones.id lo exige).
-            await supabase.from("documentos")
-              .delete()
-              .eq("operacion_id", opData.id)
-              .eq("tipo", "INSTRUCTIVO_EMBARQUE");
-            const { error: insErr } = await supabase.from("documentos").insert({
-              operacion_id: opData.id,
-              tipo: "INSTRUCTIVO_EMBARQUE",
-              nombre_archivo: filename,
-              url: urlData.publicUrl,
-              tamano: blob.size,
-              mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            });
-            if (insErr) {
-              setInstrSaveError(`Error al registrar en documentos: ${insErr.message}`);
-            } else {
-              setInstrSavedUrl(urlData.publicUrl);
-            }
-          } else {
-            // Sin operaciones coincidente: el archivo queda en storage de todas formas.
-            setInstrSavedUrl(urlData.publicUrl);
-          }
+      const storagePath = `${selectedId}/INSTRUCTIVO_EMBARQUE/${file.name}`;
+      const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, file, { upsert: true });
+      if (upErr) throw new Error(`Error al subir: ${upErr.message}`);
+      const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
+      if (formData.booking) {
+        const { data: opRow } = await supabase.from("operaciones").select("id").eq("booking", formData.booking).is("deleted_at", null).limit(1).maybeSingle();
+        if (opRow?.id) {
+          await supabase.from("documentos").delete().eq("operacion_id", opRow.id).eq("tipo", "INSTRUCTIVO_EMBARQUE");
+          await supabase.from("documentos").insert({
+            operacion_id: opRow.id,
+            tipo: "INSTRUCTIVO_EMBARQUE",
+            nombre_archivo: file.name,
+            url: urlData.publicUrl,
+            tamano: file.size,
+            mime_type: file.type || "application/octet-stream",
+          });
         }
-      } else if (formato.contenido_html) {
-        const html = generateInstructivoHtml(formato, tagValues);
-        const win = window.open("", "_blank", "width=960,height=720");
-        if (win) {
-          win.document.write(html + `<style>@media print{@page{margin:16mm 14mm;size:A4}}</style><script>window.onload=()=>{window.print()}<\/script>`);
-          win.document.close();
-        }
-        setInstrPhase("idle");
-      } else {
-        throw new Error("El formato no tiene plantilla Excel ni contenido HTML.");
       }
-    } catch (e) {
-      setInstrPhase("error");
-      setInstrError(e instanceof Error ? e.message : "Error inesperado al generar el instructivo.");
-    }
-  };
-
-  // ── Descarga local ────────────────────────────────────────────────────────
-  const handleDownloadInstructivo = () => {
-    if (!instrBlob || !instrFilename) return;
-    const url = URL.createObjectURL(instrBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = instrFilename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // ── Paso 2: Enviar instructivo por correo desde la cuenta del ejecutivo ──
-  const handleSendInstructivo = async () => {
-    if (!instrBlob || !supabase) return;
-    setInstrPhase("sending");
-    setInstrError("");
-
-    try {
-      const opData  = await buildOpData();
-      const subject = buildInstructivoSubject(opData);
-      const body    = buildInstructivoPlainBody(opData);
-
-      const arrayBuffer = await instrBlob.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = "";
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const attachments: EmailAttachment[] = [{
-        name: instrFilename || "Instructivo.pdf",
-        content: btoa(binary),
-        mimeType: "application/pdf",
-      }];
-
-      const result = await sendEmail({ to: "roodericus7@gmail.com", subject, body, attachments });
-
-      if (result.success) {
-        setInstrPhase("sent");
-      } else {
-        setInstrPhase("error");
-        setInstrError(result.error ?? "Error al enviar el correo.");
-      }
-    } catch (e) {
-      setInstrPhase("error");
-      setInstrError(e instanceof Error ? e.message : "Error inesperado.");
+      setInstrSavedUrl(urlData.publicUrl);
+      setInstrFilename(file.name);
+    } catch (err) {
+      setInstrSaveError(err instanceof Error ? err.message : "Error al subir el instructivo.");
+    } finally {
+      setInstrUploading(false);
+      if (instrFileInputRef.current) instrFileInputRef.current.value = "";
     }
   };
 
@@ -1329,135 +1131,58 @@ export function ReservaExtContent() {
                           <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.instructivoTitle}</p>
+                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Instructivo de Embarque</p>
                           <p className="text-[10px] text-neutral-400 mt-0.5">
-                            {instrPhase === "ready" || instrPhase === "sent"
-                              ? `${instrFilename} · ${tr.instructivoReady}`
-                              : tr.instructivoHint}
+                            {instrSavedUrl ? `${instrFilename} · subido` : "Sube el instructivo preparado (Excel o PDF)"}
                           </p>
                         </div>
-                        {(instrPhase === "idle" || instrPhase === "error") && filteredFormatos.length > 1 && (
-                          <select
-                            value={selectedFormatoId}
-                            onChange={(e) => { setSelectedFormatoId(e.target.value); setInstrPhase("idle"); }}
-                            className="text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 max-w-[160px]"
-                          >
-                            <option value="">{tr.selectFormat}</option>
-                            {filteredFormatos.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
-                          </select>
-                        )}
-                        {filteredFormatos.length === 0 && (
-                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">{tr.noFormats}</span>
-                        )}
                       </div>
 
-                      {/* Instructivo previo guardado */}
-                      {instrSavedUrl && instrPhase === "idle" && (
-                        <div className="px-4 py-2 border-b border-violet-100 bg-violet-50 flex items-center gap-2 flex-wrap">
-                          <Icon icon="lucide:cloud-check" className="w-3.5 h-3.5 text-violet-600 flex-shrink-0" />
-                          <span className="text-[10px] font-semibold text-violet-700 flex-1">{tr.instructivoSaved}</span>
+                      {/* Archivo guardado */}
+                      {instrSavedUrl && (
+                        <div className="px-4 py-2.5 border-b border-violet-100 bg-violet-50 flex items-center gap-2 flex-wrap">
+                          <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-violet-700 flex-1 truncate">{instrFilename}</span>
                           <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
-                            className="text-[10px] font-semibold text-violet-700 underline hover:text-violet-900 whitespace-nowrap">
-                            {tr.viewFile}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 underline hover:text-violet-900 whitespace-nowrap">
+                            <Icon icon="lucide:download" className="w-3 h-3" />
+                            Descargar
                           </a>
                         </div>
                       )}
+
+                      {/* Error */}
                       {instrSaveError && (
                         <div className="px-4 py-2 border-b border-red-100 bg-red-50 flex items-center gap-2">
-                          <Icon icon="lucide:alert-circle" className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                          <Icon icon="lucide:cloud-off" className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                           <span className="text-[10px] text-red-700 flex-1">{instrSaveError}</span>
+                          <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-600">
+                            <Icon icon="lucide:x" className="w-3 h-3" />
+                          </button>
                         </div>
                       )}
 
                       {/* Acciones */}
-                      <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
-                        {(instrPhase === "idle" || instrPhase === "error") && (
-                          <button
-                            type="button"
-                            disabled={!selectedFormatoId}
-                            onClick={() => void handleGenerarInstructivo()}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
-                            {instrSavedUrl ? tr.regenerateInstructivo : tr.generateInstructivo}
-                          </button>
-                        )}
-                        {instrPhase === "generating" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-100 text-violet-700">
-                            <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
-                            {tr.generating}
-                          </span>
-                        )}
-                        {(instrPhase === "ready" || instrPhase === "sent") && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={handleDownloadInstructivo}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                            >
-                              <Icon icon="lucide:download" className="w-3.5 h-3.5" />
-                              {tr.downloadExcel}
-                            </button>
-                            {instrPhase !== "sent" && (
-                              <button
-                                type="button"
-                                onClick={() => void handleSendInstructivo()}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-                              >
-                                <Icon icon="lucide:send" className="w-3.5 h-3.5" />
-                                {tr.sendToAlex}
-                                {!bookingDocUrl && (
-                                  <span className="text-[9px] bg-amber-400 text-amber-900 px-1 py-0.5 rounded font-bold">{tr.noBookingBadge}</span>
-                                )}
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => { setInstrPhase("idle"); setInstrBlob(null); setInstrFilename(""); }}
-                              className="inline-flex items-center gap-1 px-2 py-2 rounded-xl text-xs text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-                              title={tr.regenerateTooltip}
-                            >
-                              <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
-                            </button>
-                            {instrSavedUrl && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border bg-violet-50 text-violet-700 border-violet-200">
-                                <Icon icon="lucide:cloud-upload" className="w-3 h-3" />
-                                {tr.savedInDocs}
-                              </span>
-                            )}
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border ${
-                              bookingDocUrl
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
-                            }`}>
-                              <Icon icon={bookingDocUrl ? "lucide:paperclip" : "lucide:alert-triangle"} className="w-3 h-3" />
-                              {bookingDocUrl ? tr.bookingReady : tr.noBookingDoc}
-                            </span>
-                          </>
-                        )}
-                        {instrPhase === "sending" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-violet-100 text-violet-700">
-                            <Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />
-                            {tr.sending}
-                          </span>
-                        )}
+                      <div className="px-4 py-3 flex items-center gap-2">
+                        <input
+                          ref={instrFileInputRef}
+                          type="file"
+                          accept=".xlsx,.xls,.pdf"
+                          className="hidden"
+                          onChange={(e) => void handleSubirInstructivo(e)}
+                        />
+                        <button
+                          type="button"
+                          disabled={instrUploading}
+                          onClick={() => instrFileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-300 text-violet-700 bg-white hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {instrUploading
+                            ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
+                            : <><Icon icon="lucide:upload" className="w-3.5 h-3.5" />{instrSavedUrl ? "Reemplazar instructivo" : "Subir instructivo"}</>
+                          }
+                        </button>
                       </div>
-
-                      {instrPhase === "sent" && (
-                        <div className="px-4 py-2.5 border-t border-emerald-100 bg-emerald-50 flex items-start gap-2 flex-wrap">
-                          <Icon icon="lucide:check-circle" className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-xs font-semibold text-emerald-700 flex-1">{tr.sentSuccess}</span>
-                        </div>
-                      )}
-                      {instrPhase === "error" && (
-                        <div className="px-4 py-2.5 border-t border-red-100 bg-red-50 flex items-center gap-2">
-                          <Icon icon="lucide:alert-circle" className="w-4 h-4 text-red-500 flex-shrink-0" />
-                          <span className="text-xs text-red-700 flex-1">{instrError}</span>
-                          <button type="button" onClick={() => setInstrPhase("idle")} className="text-red-400 hover:text-red-600">
-                            <Icon icon="lucide:x" className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
 

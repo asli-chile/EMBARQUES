@@ -278,21 +278,26 @@ export function DashboardContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
-        <div className="w-full max-w-[1600px] mx-auto space-y-3 sm:space-y-4 animate-pulse">
-          <div className="h-10 w-48 bg-neutral-200 rounded-lg" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 h-20 sm:h-24" />
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
+        <div className="bg-white border-b border-neutral-200 h-14" />
+        <div className="p-4 sm:p-5 w-full max-w-[1600px] mx-auto space-y-4 animate-pulse">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className={`bg-white rounded-2xl border border-neutral-200 h-24 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`} />
             ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm h-64 sm:h-72" />
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm h-64 sm:h-72" />
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-neutral-200 h-20" />
+            ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm h-56 sm:h-60" />
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm h-56 sm:h-60" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-neutral-200 h-72" />
+            <div className="bg-white rounded-2xl border border-neutral-200 h-72" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-neutral-200 h-60" />
+            <div className="bg-white rounded-2xl border border-neutral-200 h-60" />
           </div>
         </div>
       </main>
@@ -300,136 +305,104 @@ export function DashboardContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
-      <div className="w-full max-w-[1600px] mx-auto space-y-3 sm:space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">{tr.title}</h1>
-            <p className="text-neutral-500 text-xs mt-0.5 truncate">
-              {tr.subtitle} · {format(new Date(), "EEEE d MMM", { locale: locale === "es" ? es : undefined })}
+    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-base font-bold text-neutral-900 tracking-tight leading-tight">{tr.title}</h1>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              {format(new Date(), "EEEE d MMM yyyy", { locale: locale === "es" ? es : undefined })}
+              {lastFetchedAt && getLastUpdatedText() && (
+                <> · <span className="text-neutral-300">actualizado {getLastUpdatedText()}</span></>
+              )}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors shadow-sm"
-            >
-              <Icon icon="typcn:plus" width={16} height={16} />
+          <div className="flex items-center gap-2">
+            <a href={withBase("/reservas/crear")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors shadow-sm">
+              <Icon icon="lucide:plus" className="w-3.5 h-3.5" />
               {t.sidebar.crearReserva}
             </a>
-            <a
-              href={withBase("/registros")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-brand-blue bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
-            >
-              <Icon icon="typcn:th-list" width={16} height={16} />
+            <a href={withBase("/registros")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+              <Icon icon="lucide:list" className="w-3.5 h-3.5" />
               {t.sidebar.registros}
             </a>
-            {lastFetchedAt && getLastUpdatedText() && (
-              <span className="text-[11px] text-neutral-500 hidden md:inline">
-                {tr.lastUpdated} {getLastUpdatedText()}
-              </span>
-            )}
-            <button
-              onClick={() => void fetchDashboardData()}
-              className="inline-flex items-center justify-center p-2 text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
-              aria-label={tr.refresh}
-            >
-              <Icon icon="typcn:refresh" width={18} height={18} />
+            <button onClick={() => void fetchDashboardData()}
+              className="p-1.5 text-neutral-400 hover:text-brand-blue bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+              title={tr.refresh}>
+              <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal">
-          <button
-            type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center justify-between w-full text-left text-sm font-medium text-neutral-700 hover:text-brand-blue transition-colors"
-            aria-expanded={showFilters}
-          >
+      <div className="p-3 sm:p-4 lg:p-5 w-full max-w-[1600px] mx-auto space-y-4">
+
+        {/* ── Filtros ─────────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <button type="button" onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center justify-between w-full text-left px-4 py-3 text-sm font-medium text-neutral-700 hover:text-brand-blue transition-colors"
+            aria-expanded={showFilters}>
             <span className="flex items-center gap-2">
-              <Icon icon="typcn:filter" width={18} height={18} />
-              {tr.filters}
+              <Icon icon="lucide:sliders-horizontal" className="w-4 h-4 text-neutral-400" />
+              <span>{tr.filters}</span>
               {hasActiveFilters && (
-                <span className="px-1.5 py-0.5 text-xs bg-brand-blue/10 text-brand-blue rounded">
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-brand-blue text-white rounded-full">
                   {[filters.etdDesde, filters.etdHasta, filters.estado, filters.cliente, filters.naviera].filter(Boolean).length}
                 </span>
               )}
             </span>
-            <Icon icon={showFilters ? "typcn:arrow-sorted-up" : "typcn:arrow-sorted-down"} width={14} height={14} />
+            <Icon icon={showFilters ? "lucide:chevron-up" : "lucide:chevron-down"} className="w-4 h-4 text-neutral-300" />
           </button>
           {showFilters && (
-            <div className="mt-3 pt-3 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="px-4 pb-4 border-t border-neutral-100 pt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.dateFrom}</label>
-                <input
-                  type="date"
-                  value={filters.etdDesde}
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.dateFrom}</label>
+                <input type="date" value={filters.etdDesde}
                   onChange={(e) => setFilters((f) => ({ ...f, etdDesde: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
-                />
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.dateTo}</label>
-                <input
-                  type="date"
-                  value={filters.etdHasta}
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.dateTo}</label>
+                <input type="date" value={filters.etdHasta}
                   onChange={(e) => setFilters((f) => ({ ...f, etdHasta: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
-                />
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.state}</label>
-                <select
-                  value={filters.estado}
-                  onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white"
-                >
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.state}</label>
+                <select value={filters.estado} onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50">
                   <option value="">{tr.allStates}</option>
-                  {ESTADOS_OPTS.map((e) => (
-                    <option key={e} value={e}>{e}</option>
-                  ))}
+                  {ESTADOS_OPTS.map((e) => <option key={e} value={e}>{e}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.client}</label>
-                <select
-                  value={filters.cliente}
-                  onChange={(e) => setFilters((f) => ({ ...f, cliente: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white"
-                >
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.client}</label>
+                <select value={filters.cliente} onChange={(e) => setFilters((f) => ({ ...f, cliente: e.target.value }))}
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50">
                   <option value="">{tr.allClients}</option>
-                  {clientesOpts.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+                  {clientesOpts.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">{tr.carrier}</label>
-                <select
-                  value={filters.naviera}
-                  onChange={(e) => setFilters((f) => ({ ...f, naviera: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white"
-                >
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.carrier}</label>
+                <select value={filters.naviera} onChange={(e) => setFilters((f) => ({ ...f, naviera: e.target.value }))}
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50">
                   <option value="">{tr.allCarriers}</option>
-                  {navierasOpts.map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
+                  {navierasOpts.map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleApplyFilters}
-                  className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
-                >
+                <button type="button" onClick={handleApplyFilters}
+                  className="flex-1 px-3 py-1.5 text-sm font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors">
                   {tr.applyFilters}
                 </button>
                 {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={handleClearFilters}
-                    className="px-3 py-1.5 text-sm font-medium text-neutral-600 hover:text-brand-blue transition-colors"
-                  >
+                  <button type="button" onClick={handleClearFilters}
+                    className="px-3 py-1.5 text-sm text-neutral-400 hover:text-red-500 transition-colors">
                     {tr.clearFilters}
                   </button>
                 )}
@@ -438,304 +411,232 @@ export function DashboardContent() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-slate-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.totalOperations}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-neutral-800 mt-0.5 sm:mt-1">{totalOperaciones}</p>
+        {/* ── KPIs fila 1: card destacada + estados activos ────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {/* Total — card destacada */}
+          <div className="col-span-2 sm:col-span-1 bg-brand-blue rounded-2xl p-4 text-white shadow-sm flex flex-col justify-between min-h-[96px]">
+            <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">{tr.totalOperations}</p>
+            <p className="text-4xl font-bold leading-none mt-1">{totalOperaciones}</p>
+            <p className="text-[11px] text-white/50 mt-2">{tr.activeClients}: <span className="text-white/80 font-semibold">{activeClientsCount}</span></p>
+          </div>
+
+          {/* Pendiente */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+            <div className="flex items-start justify-between gap-1">
+              <div>
+                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.pending}</p>
+                <p className="text-2xl font-bold text-amber-500 mt-1">{pendientes}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:chart-bar" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-blue" />
+              <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:clock" className="w-4 h-4 text-amber-500" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-amber-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.pending}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-amber-600 mt-0.5 sm:mt-1">{pendientes}</p>
+          {/* En proceso */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+            <div className="flex items-start justify-between gap-1">
+              <div>
+                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.inProcess}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{enProceso}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:time" className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-blue-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.inProcess}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-0.5 sm:mt-1">{enProceso}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:cog" className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:settings-2" className="w-4 h-4 text-blue-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-purple-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.inTransit}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-purple-600 mt-0.5 sm:mt-1">{enTransito}</p>
+          {/* En tránsito */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+            <div className="flex items-start justify-between gap-1">
+              <div>
+                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.inTransit}</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">{enTransito}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:plane" className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-emerald-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.arrived}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-emerald-600 mt-0.5 sm:mt-1">{arribados}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:location" className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
+              <div className="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:ship" className="w-4 h-4 text-purple-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-green-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.completed}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-0.5 sm:mt-1">{completadas}</p>
+          {/* Arribado */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+            <div className="flex items-start justify-between gap-1">
+              <div>
+                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.arrived}</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">{arribados}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:tick" className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-red-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.cancelled}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-red-600 mt-0.5 sm:mt-1">{cancelados}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:times" className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-orange-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.rolled}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-orange-600 mt-0.5 sm:mt-1">{roleados}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:arrow-repeat" className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-teal-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.thisWeek}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-brand-teal mt-0.5 sm:mt-1">{thisWeekCount}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-teal/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="typcn:calendar" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-teal" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-blue-500 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.thisMonth}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-brand-blue mt-0.5 sm:mt-1">{thisMonthCount}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:calendar-days" className="w-5 h-5 sm:w-6 sm:h-6 text-brand-blue" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-neutral-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm text-neutral-500 truncate">{tr.activeClients}</p>
-                <p className="text-2xl sm:text-3xl font-bold text-neutral-700 mt-0.5 sm:mt-1">{activeClientsCount}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:users" className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-600" />
+              <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:map-pin" className="w-4 h-4 text-emerald-600" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal min-h-0 flex flex-col">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between flex-shrink-0 rounded-t-xl">
-              <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
-                <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
-                <Icon icon="typcn:calendar" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
-                {tr.upcomingDepartures}
-              </h2>
-              <a
-                href={withBase("/reservas/mis-reservas")}
-                className="text-xs font-medium text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
-              >
-                {tr.viewAll}
-              </a>
+        {/* ── KPIs fila 2: métricas secundarias ───────────────────────────── */}
+        <div className="grid grid-cols-3 sm:grid-cols-5 xl:grid-cols-7 gap-3">
+          {[
+            { label: tr.completed,   value: completadas,   icon: "lucide:check-circle-2", cls: "text-green-600",  bg: "bg-green-50"  },
+            { label: tr.cancelled,   value: cancelados,    icon: "lucide:x-circle",        cls: "text-red-500",   bg: "bg-red-50"    },
+            { label: tr.rolled,      value: roleados,      icon: "lucide:refresh-cw",      cls: "text-orange-500",bg: "bg-orange-50" },
+            { label: tr.thisWeek,    value: thisWeekCount, icon: "lucide:calendar",        cls: "text-brand-teal",bg: "bg-teal-50"   },
+            { label: tr.thisMonth,   value: thisMonthCount,icon: "lucide:calendar-days",   cls: "text-brand-blue",bg: "bg-blue-50"   },
+          ].map(({ label, value, icon, cls, bg }) => (
+            <div key={label} className="bg-white rounded-2xl border border-neutral-200 p-3 shadow-sm">
+              <div className={`w-7 h-7 ${bg} rounded-lg flex items-center justify-center mb-2`}>
+                <Icon icon={icon} className={`w-3.5 h-3.5 ${cls}`} />
+              </div>
+              <p className={`text-xl font-bold ${cls}`}>{value}</p>
+              <p className="text-[11px] text-neutral-400 mt-0.5 truncate leading-tight">{label}</p>
             </div>
-            <div className="p-2.5 sm:p-3 flex-1 min-h-0 overflow-auto max-h-[280px] sm:max-h-[320px]">
+          ))}
+        </div>
+
+        {/* ── Listas ──────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Próximos zarpes */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-brand-blue/10 rounded-lg flex items-center justify-center">
+                  <Icon icon="lucide:anchor" className="w-3.5 h-3.5 text-brand-blue" />
+                </div>
+                <h2 className="font-semibold text-neutral-800 text-sm">{tr.upcomingDepartures}</h2>
+                {proximosZarpes.length > 0 && (
+                  <span className="text-[10px] font-bold bg-brand-blue/10 text-brand-blue px-1.5 py-0.5 rounded-full">{proximosZarpes.length}</span>
+                )}
+              </div>
+              <a href={withBase("/reservas/mis-reservas")} className="text-xs font-medium text-brand-blue hover:underline">{tr.viewAll}</a>
+            </div>
+            <div className="divide-y divide-neutral-50 overflow-auto max-h-[300px] flex-1">
               {proximosZarpes.length === 0 ? (
-                <p className="text-neutral-500 text-xs sm:text-sm text-center py-4 sm:py-6">{tr.noUpcoming}</p>
+                <p className="text-neutral-400 text-sm text-center py-10">{tr.noUpcoming}</p>
               ) : (
-                <div className="space-y-1.5 sm:space-y-2">
-                  {proximosZarpes.map((op) => {
-                    const daysUntil = getDaysUntil(op.etd);
-                    return (
-                      <div
-                        key={op.id}
-                        className="flex items-center justify-between p-2 sm:p-2.5 bg-neutral-50 rounded-lg hover:bg-neutral-100/80 transition-colors gap-2"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-brand-blue/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Icon icon="typcn:export" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-neutral-800 text-sm truncate">{op.ref_asli || op.booking || "-"}</p>
-                            <p className="text-[10px] sm:text-xs text-neutral-500 truncate">{op.cliente || "-"} → {op.pod || "-"}</p>
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-xs sm:text-sm font-medium text-neutral-700">{formatDate(op.etd)}</p>
-                          {daysUntil !== null && (
-                            <p className={`text-[10px] sm:text-xs ${daysUntil <= 2 ? "text-red-500 font-medium" : "text-neutral-500"}`}>
-                              {daysUntil === 0 ? tr.today : daysUntil === 1 ? tr.tomorrow : `${daysUntil} ${tr.days}`}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal min-h-0 flex flex-col">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center justify-between flex-shrink-0 rounded-t-xl">
-              <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
-                <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
-                <Icon icon="typcn:th-list" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
-                {tr.recentOperations}
-              </h2>
-              <a
-                href={withBase("/registros")}
-                className="text-xs font-medium text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
-              >
-                {tr.viewAll}
-              </a>
-            </div>
-            <div className="p-2.5 sm:p-3 flex-1 min-h-0 overflow-auto max-h-[280px] sm:max-h-[320px]">
-              {recientes.length === 0 ? (
-                <p className="text-neutral-500 text-xs sm:text-sm text-center py-4 sm:py-6">{tr.noRecent}</p>
-              ) : (
-                <div className="space-y-1.5 sm:space-y-2">
-                  {recientes.map((op) => {
-                    const style = getEstadoStyle(op.estado_operacion);
-                    return (
-                      <div
-                        key={op.id}
-                        className="flex items-center justify-between p-2 sm:p-2.5 bg-neutral-50 rounded-lg hover:bg-neutral-100/80 transition-colors gap-2"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                          <div className={`w-8 h-8 sm:w-10 sm:h-10 ${style.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                            <Icon icon={style.icon} className={`w-4 h-4 sm:w-5 sm:h-5 ${style.text}`} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-neutral-800 text-sm truncate">{op.ref_asli || op.booking || "-"}</p>
-                            <p className="text-[10px] sm:text-xs text-neutral-500 truncate">{op.cliente || "-"}</p>
-                          </div>
-                        </div>
-                        <span className={`px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${style.bg} ${style.text} flex-shrink-0 truncate max-w-[80px] sm:max-w-none`}>
-                          {op.estado_operacion || "-"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4">
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 rounded-t-xl">
-              <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
-                <span className="w-1 h-4 bg-brand-teal rounded-full flex-shrink-0" />
-                <Icon icon="typcn:chart-pie" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
-                {tr.byStatus}
-              </h2>
-            </div>
-            <div className="p-2.5 sm:p-3">
-              <div className="space-y-1.5 sm:space-y-2">
-                {estadosCounts.map((item) => {
-                  const style = getEstadoStyle(item.estado);
-                  const percentage = totalOperaciones > 0 ? (item.count / totalOperaciones) * 100 : 0;
+                proximosZarpes.map((op) => {
+                  const daysUntil = getDaysUntil(op.etd);
+                  const urgent = daysUntil !== null && daysUntil <= 2;
                   return (
-                    <div key={item.estado} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-neutral-700 truncate">{item.estado}</span>
-                        <span className="font-medium text-neutral-800 ml-2">{item.count}</span>
+                    <div key={op.id}
+                      className={`flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${urgent ? "bg-red-50/50" : ""}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${urgent ? "bg-red-100" : "bg-brand-blue/10"}`}>
+                        <Icon icon="lucide:ship" className={`w-4 h-4 ${urgent ? "text-red-500" : "text-brand-blue"}`} />
                       </div>
-                      <div className="h-1.5 sm:h-2 bg-neutral-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${style.bg} rounded-full transition-all duration-500`}
-                          style={{ width: `${percentage}%` }}
-                        />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-neutral-800 truncate">{op.ref_asli || op.booking || "-"}</p>
+                        <p className="text-[11px] text-neutral-400 truncate">{op.cliente || "-"} · {op.naviera || "-"} → {op.pod || "-"}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs font-semibold text-neutral-700">{formatDate(op.etd)}</p>
+                        {daysUntil !== null && (
+                          <p className={`text-[10px] font-semibold ${urgent ? "text-red-500" : "text-neutral-400"}`}>
+                            {daysUntil === 0 ? tr.today : daysUntil === 1 ? tr.tomorrow : `${daysUntil}d`}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                })
+              )}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 rounded-t-xl">
-              <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
-                <span className="w-1 h-4 bg-brand-olive rounded-full flex-shrink-0" />
-                <Icon icon="typcn:anchor" className="w-4 h-4 sm:w-5 sm:h-5 text-brand-blue" />
-                {tr.topCarriers}
-              </h2>
+          {/* Operaciones recientes */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-neutral-100 rounded-lg flex items-center justify-center">
+                  <Icon icon="lucide:clock" className="w-3.5 h-3.5 text-neutral-500" />
+                </div>
+                <h2 className="font-semibold text-neutral-800 text-sm">{tr.recentOperations}</h2>
+              </div>
+              <a href={withBase("/registros")} className="text-xs font-medium text-brand-blue hover:underline">{tr.viewAll}</a>
             </div>
-            <div className="p-2.5 sm:p-3">
-              {navierasCounts.length === 0 ? (
-                <p className="text-neutral-500 text-xs sm:text-sm text-center py-4 sm:py-6">{tr.noCarriers}</p>
+            <div className="divide-y divide-neutral-50 overflow-auto max-h-[300px] flex-1">
+              {recientes.length === 0 ? (
+                <p className="text-neutral-400 text-sm text-center py-10">{tr.noRecent}</p>
               ) : (
-                <div className="space-y-1.5 sm:space-y-2">
+                recientes.map((op) => {
+                  const style = getEstadoStyle(op.estado_operacion || "");
+                  return (
+                    <div key={op.id} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors">
+                      <div className={`w-9 h-9 ${style.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                        <Icon icon={style.icon} className={`w-4 h-4 ${style.text}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-neutral-800 truncate">{op.ref_asli || op.booking || "-"}</p>
+                        <p className="text-[11px] text-neutral-400 truncate">{op.cliente || "-"} · ETD {formatDate(op.etd)}</p>
+                      </div>
+                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${style.bg} ${style.text}`}>
+                        {op.estado_operacion || "-"}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Analytics ───────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Por estado */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+              <div className="w-7 h-7 bg-brand-teal/10 rounded-lg flex items-center justify-center">
+                <Icon icon="lucide:pie-chart" className="w-3.5 h-3.5 text-brand-teal" />
+              </div>
+              <h2 className="font-semibold text-neutral-800 text-sm">{tr.byStatus}</h2>
+            </div>
+            <div className="p-4 space-y-3">
+              {estadosCounts.map((item) => {
+                const style = getEstadoStyle(item.estado);
+                const pct = totalOperaciones > 0 ? Math.round((item.count / totalOperaciones) * 100) : 0;
+                return (
+                  <div key={item.estado}>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-neutral-600 font-medium">{item.estado}</span>
+                      <span className="text-neutral-500 tabular-nums">{item.count} <span className="text-neutral-300">({pct}%)</span></span>
+                    </div>
+                    <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${style.bg} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Top navieras */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+              <div className="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center">
+                <Icon icon="lucide:anchor" className="w-3.5 h-3.5 text-amber-600" />
+              </div>
+              <h2 className="font-semibold text-neutral-800 text-sm">{tr.topCarriers}</h2>
+            </div>
+            <div className="p-4">
+              {navierasCounts.length === 0 ? (
+                <p className="text-neutral-400 text-sm text-center py-6">{tr.noCarriers}</p>
+              ) : (
+                <div className="space-y-3">
                   {navierasCounts.map((item, index) => {
                     const maxCount = navierasCounts[0]?.count ?? 1;
-                    const percentage = (item.count / maxCount) * 100;
+                    const pct = Math.round((item.count / maxCount) * 100);
                     return (
-                      <div key={item.naviera} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs sm:text-sm">
-                          <span className="text-neutral-700 flex items-center gap-1.5 sm:gap-2 min-w-0">
-                            <span className="w-4 h-4 sm:w-5 sm:h-5 bg-brand-blue/10 text-brand-blue rounded text-[10px] sm:text-xs flex items-center justify-center font-medium flex-shrink-0">
+                      <div key={item.naviera}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-4 h-4 bg-brand-blue/10 text-brand-blue rounded text-[10px] flex items-center justify-center font-bold flex-shrink-0">
                               {index + 1}
                             </span>
-                            <span className="truncate">{item.naviera}</span>
+                            <span className="text-neutral-600 font-medium truncate">{item.naviera}</span>
                           </span>
-                          <span className="font-medium text-neutral-800 ml-2 flex-shrink-0">{item.count}</span>
+                          <span className="text-neutral-500 ml-2 flex-shrink-0 tabular-nums">{item.count}</span>
                         </div>
-                        <div className="h-1.5 sm:h-2 bg-neutral-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-brand-blue/60 rounded-full transition-all duration-500"
-                            style={{ width: `${percentage}%` }}
-                          />
+                        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-brand-blue/40 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
                     );

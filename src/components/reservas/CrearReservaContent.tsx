@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
+import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
 import { withBase } from "@/lib/basePath";
 import { useAuth } from "@/lib/auth/AuthContext";
 import DatePicker, { registerLocale } from "react-datepicker";
@@ -677,6 +678,55 @@ export function CrearReservaContent() {
     setShowPreview(true);
   };
 
+  const friendlyDbError = (msg: string): string => {
+    const colNames: Record<string, string> = {
+      ejecutivo:            "Ejecutivo",
+      cliente:              "Cliente",
+      tipo_operacion:       "Tipo de operación",
+      naviera:              "Naviera",
+      nave:                 "Nave",
+      viaje:                "Viaje",
+      pol:                  "Puerto de origen (POL)",
+      pod:                  "Puerto de destino (POD)",
+      etd:                  "Fecha de zarpe (ETD)",
+      eta:                  "Fecha de llegada (ETA)",
+      especie:              "Especie",
+      tipo_unidad:          "Tipo de unidad",
+      incoterm:             "Incoterm",
+      forma_pago:           "Forma de pago",
+      planta_presentacion:  "Planta de presentación",
+      booking:              "Booking",
+      ref_asli:             "Referencia ASLI",
+    };
+
+    // null value in column "X" violates not-null constraint
+    const nullMatch = msg.match(/null value in column "(\w+)"/);
+    if (nullMatch) {
+      const field = colNames[nullMatch[1]] ?? nullMatch[1];
+      return `El campo "${field}" es obligatorio. Por favor complétalo antes de guardar.`;
+    }
+
+    // duplicate key value violates unique constraint
+    if (msg.includes("duplicate key") || msg.includes("unique constraint")) {
+      if (msg.includes("booking")) return 'Ya existe una operación con ese número de Booking. Verifica el dato e intenta nuevamente.';
+      if (msg.includes("ref_asli")) return 'La referencia ASLI ya está en uso. Intenta nuevamente.';
+      return 'Ya existe un registro con estos datos. Verifica la información e intenta nuevamente.';
+    }
+
+    // foreign key constraint
+    if (msg.includes("foreign key constraint") || msg.includes("violates foreign key")) {
+      return 'Uno de los valores seleccionados ya no existe en el sistema. Actualiza la página e intenta nuevamente.';
+    }
+
+    // connection / timeout
+    if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
+      return 'No se pudo conectar con el servidor. Verifica tu conexión a internet e intenta nuevamente.';
+    }
+
+    // fallback genérico
+    return 'Ocurrió un error al guardar la reserva. Verifica que todos los campos obligatorios estén completos e intenta nuevamente.';
+  };
+
   const handleConfirmSubmit = async () => {
     if (!supabase) {
       setError(tr.supabaseError);
@@ -753,7 +803,7 @@ export function CrearReservaContent() {
     setSubmitting(false);
 
     if (insertError) {
-      setError(insertError.message);
+      setError(friendlyDbError(insertError.message));
       return;
     }
 
@@ -866,7 +916,7 @@ export function CrearReservaContent() {
   };
 
   const generateReservaExcel = async (p: Record<string, unknown>, copias: number): Promise<string> => {
-    const XLSX = await import("xlsx-js-style");
+    const XLSX = await loadXlsxJsStyle();
     const val = (v: unknown) => (v != null && v !== "" ? String(v) : "");
     const fecha = new Date().toLocaleDateString("es-CL");
 
@@ -1129,17 +1179,20 @@ export function CrearReservaContent() {
 
   const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5";
 
+  const reqMark = <span className="ml-0.5 text-red-500 font-bold" aria-hidden="true">*</span>;
+
   const renderCatalogoSelect = (
     name: keyof FormData,
     categoria: string,
-    label: string
+    label: string,
+    required?: boolean
   ) => {
     const htmlName = name === "forma_pago" ? "form_payment_method" : name;
     const items = catalogos[categoria] ?? [];
     return (
       <div>
         <label htmlFor={name} className={labelClass}>
-          {label}
+          {label}{required && reqMark}
         </label>
         <select
           id={name}
@@ -1166,11 +1219,12 @@ export function CrearReservaContent() {
   const renderSelect = (
     name: keyof FormData,
     options: SelectOption[],
-    label: string
+    label: string,
+    required?: boolean
   ) => (
     <div>
       <label htmlFor={name} className={labelClass}>
-        {label}
+        {label}{required && reqMark}
         {options.length > 0 && (
           <span className="ml-2 text-neutral-400 font-normal">({options.length})</span>
         )}
@@ -1199,11 +1253,12 @@ export function CrearReservaContent() {
     name: keyof FormData,
     label: string,
     type: string = "text",
-    placeholder?: string
+    placeholder?: string,
+    required?: boolean
   ) => (
     <div>
       <label htmlFor={name} className={labelClass}>
-        {label}
+        {label}{required && reqMark}
       </label>
       <input
         id={name}
@@ -1553,9 +1608,9 @@ export function CrearReservaContent() {
   const sectionFieldsMap: Record<SectionKey, React.ReactNode> = {
     general: (
       <>
-        {renderCatalogoSelect("tipo_operacion", "tipo_operacion", tr.tipoOperacion)}
+        {renderCatalogoSelect("tipo_operacion", "tipo_operacion", tr.tipoOperacion, true)}
         {renderCatalogoSelect("estado_operacion", "estado_operacion", tr.estadoOperacion)}
-        {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo)}
+        {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo, true)}
         {(() => {
           const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
           return (
@@ -1564,7 +1619,7 @@ export function CrearReservaContent() {
               label={tr.cliente}
               labelClass={labelClass}
               inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
-              labelExtra={isReadOnly ? <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span> : undefined}
+              labelExtra={<>{reqMark}{isReadOnly && <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>}</>}
               value={clienteInput}
               options={clientesFiltradosPorRol}
               onSelect={handleSelectCliente}
@@ -1604,8 +1659,8 @@ export function CrearReservaContent() {
     ),
     comercial: (
       <>
-        {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm)}
-        {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago)}
+        {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm, true)}
+        {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago, true)}
         {renderSelect("consignatario", consignatarios, tr.consignatario)}
       </>
     ),
@@ -1614,6 +1669,7 @@ export function CrearReservaContent() {
         <ComboboxInput
           id="especie"
           label={tr.especie}
+          labelExtra={reqMark}
           labelClass={labelClass}
           inputClass={inputClass}
           value={especieInput}
@@ -1684,16 +1740,16 @@ export function CrearReservaContent() {
             disabled={!formData.tipo_atmosfera}
           />
         </div>
-        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad)}
+        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true)}
       </>
     ),
     naviera: (
       <>
-        {renderSelect("naviera", navieras, tr.naviera)}
-        {renderSelect("nave", navesFiltered, tr.nave)}
+        {renderSelect("naviera", navieras, tr.naviera, true)}
+        {renderSelect("nave", navesFiltered, tr.nave, true)}
         <div>
           <label htmlFor="viaje" className={labelClass}>
-            {tr.viaje}
+            {tr.viaje}{reqMark}
             {viajesSugeridos.length > 0 && !viajeInputManual && (
               <span className="ml-2 text-brand-blue font-normal normal-case">{tr.fromItinerary}</span>
             )}
@@ -1750,11 +1806,11 @@ export function CrearReservaContent() {
             </div>
           )}
         </div>
-        {renderSelect("pol", puertosOrigen, tr.pol)}
-        {renderSelect("pod", destinos, tr.pod)}
+        {renderSelect("pol", puertosOrigen, tr.pol, true)}
+        {renderSelect("pod", destinos, tr.pod, true)}
         <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-3 gap-3">
           <div>
-            <label htmlFor="etd" className={labelClass}>{tr.etd}</label>
+            <label htmlFor="etd" className={labelClass}>{tr.etd}{reqMark}</label>
             <DatePicker
               id="etd"
               name="etd_date_field"
@@ -1798,6 +1854,7 @@ export function CrearReservaContent() {
         <ComboboxInput
           id="planta_presentacion"
           label={tr.planta}
+          labelExtra={reqMark}
           labelClass={labelClass}
           inputClass={inputClass}
           value={plantaInput}
@@ -2026,9 +2083,12 @@ export function CrearReservaContent() {
             </div>
 
             {/* Fields */}
-            <form id="reserva-form" onSubmit={handleSubmit} autoComplete="off" className="px-5 py-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <form id="reserva-form" onSubmit={handleSubmit} autoComplete="off" className="px-5 pt-5 pb-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {sectionFieldsMap[activeKey]}
             </form>
+            <p className="px-5 pb-4 text-[11px] text-neutral-400">
+              <span className="text-red-500 font-bold">*</span> Campo obligatorio
+            </p>
           </div>
         </div>
 

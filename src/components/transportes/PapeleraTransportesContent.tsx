@@ -26,7 +26,7 @@ type Operacion = {
 
 export function PapeleraTransportesContent() {
   const { t, locale } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papeleraTransportes;
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -217,7 +217,7 @@ export function PapeleraTransportesContent() {
                 <Icon icon="lucide:package-x" width={13} height={13} className="text-white/80" />
                 <span className="text-xs font-bold">{operaciones.length} {tr.itemsInTrash}</span>
               </div>
-              {operaciones.length > 0 && (
+              {isSuperadmin && operaciones.length > 0 && (
                 <button
                   onClick={() => void handleEmptyTrash()}
                   disabled={actionLoading}
@@ -252,14 +252,16 @@ export function PapeleraTransportesContent() {
               <Icon icon="lucide:undo-2" width={13} height={13} />
               <span className="hidden sm:inline">{tr.restore}</span>
             </button>
-            <button
-              onClick={() => void handleDeletePermanently(Array.from(selectedIds))}
-              disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-            >
-              <Icon icon="lucide:trash-2" width={13} height={13} />
-              <span className="hidden sm:inline">{tr.deletePermanent}</span>
-            </button>
+            {isSuperadmin && (
+              <button
+                onClick={() => void handleDeletePermanently(Array.from(selectedIds))}
+                disabled={actionLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                <Icon icon="lucide:trash-2" width={13} height={13} />
+                <span className="hidden sm:inline">{tr.deletePermanent}</span>
+              </button>
+            )}
             <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
               <Icon icon="lucide:x" width={13} height={13} />
             </button>
@@ -331,14 +333,16 @@ export function PapeleraTransportesContent() {
                           <Icon icon="lucide:undo-2" width={13} height={13} />
                           {tr.restore}
                         </button>
-                        <button
-                          onClick={() => void handleDeletePermanently([op.id])}
-                          disabled={actionLoading}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                        >
-                          <Icon icon="lucide:trash-2" width={13} height={13} />
-                          {tr.deletePermanent}
-                        </button>
+                        {isSuperadmin && (
+                          <button
+                            onClick={() => void handleDeletePermanently([op.id])}
+                            disabled={actionLoading}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                          >
+                            <Icon icon="lucide:trash-2" width={13} height={13} />
+                            {tr.deletePermanent}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -394,9 +398,11 @@ export function PapeleraTransportesContent() {
                               <button onClick={() => void handleRestore([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50" title={tr.restore}>
                                 <Icon icon="lucide:undo-2" width={15} height={15} />
                               </button>
-                              <button onClick={() => void handleDeletePermanently([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title={tr.deletePermanent}>
-                                <Icon icon="lucide:trash-2" width={15} height={15} />
-                              </button>
+                              {isSuperadmin && (
+                                <button onClick={() => void handleDeletePermanently([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title={tr.deletePermanent}>
+                                  <Icon icon="lucide:trash-2" width={15} height={15} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

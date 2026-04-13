@@ -1,12 +1,13 @@
 import { type Ref, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+import { AllCommunityModule, ModuleRegistry, SELECTION_COLUMN_ID } from "ag-grid-community";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { columnWidths } from "@/lib/registros-table-config";
+import { exportRegistrosSimpleExcel } from "@/lib/registros-export-simple-excel";
 import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
 
@@ -1234,6 +1235,46 @@ export function RegistrosContent() {
     setAddNewModal(null);
   }, [addNewModal, supabase, fetchCatalogos]);
 
+  const handleExportExcel = useCallback(async () => {
+    if (rowData.length === 0) return;
+    const api = gridRef.current?.api;
+    if (!api) return;
+
+    const displayed = api.getAllDisplayedColumns();
+    const exportColumns: { field: string; header: string }[] = [];
+    for (const col of displayed) {
+      if (col.getColId() === SELECTION_COLUMN_ID) continue;
+      const def = col.getColDef();
+      const field = def.field;
+      if (!field || typeof field !== "string") continue;
+      const header = def.headerName != null ? String(def.headerName) : field;
+      exportColumns.push({ field, header });
+    }
+    if (exportColumns.length === 0) return;
+
+    const tr = t.registros;
+    const fecha = new Date().toLocaleDateString(locale === "en" ? "en-US" : "es-CL", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const colsWord = locale === "en" ? "columns" : "columnas";
+    const subtitle = `${exportColumns.length} ${colsWord} · ${rowData.length} ${tr.records} · ${fecha}`;
+    const fileStamp = new Date().toISOString().slice(0, 10);
+    await exportRegistrosSimpleExcel(
+      rowData as unknown as Record<string, unknown>[],
+      exportColumns,
+      {
+        sheetTitle: tr.exportExcelClientTitle,
+        sheetSubtitle: subtitle,
+        fileName: `Registros_ASLI_tabla_${fileStamp}.xlsx`,
+        sheetTabName: tr.exportExcelTabName,
+        yesLabel: tr.yes,
+        noLabel: tr.no,
+      }
+    );
+  }, [rowData, t.registros, locale]);
+
   if (loading && rowData.length === 0) {
     return (
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
@@ -1306,6 +1347,16 @@ export function RegistrosContent() {
             <span className="hidden sm:inline">{t.registros.refresh}</span>
           </button>
 
+          {/* Botón Papelera */}
+          <a
+            href={withBase("/reservas/papelera")}
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-red-50 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+            title="Papelera"
+          >
+            <Icon icon="lucide:trash-2" width={14} height={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Papelera</span>
+          </a>
+
           {/* Botón Columnas */}
           <button
             type="button"
@@ -1319,6 +1370,19 @@ export function RegistrosContent() {
             <Icon icon="lucide:columns" width={14} height={14} className="sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Columnas{hiddenColumns.size > 0 ? ` (${hiddenColumns.size} oculta${hiddenColumns.size > 1 ? "s" : ""})` : ""}</span>
             <span className="sm:hidden">Cols{hiddenColumns.size > 0 ? ` (${hiddenColumns.size})` : ""}</span>
+          </button>
+
+          {/* Botón Exportar Excel */}
+          <button
+            type="button"
+            onClick={() => void handleExportExcel()}
+            disabled={rowData.length === 0}
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
+          >
+            <Icon icon="lucide:table-2" width={14} height={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">{t.registros.exportExcelButton}</span>
+            <span className="sm:hidden">{t.registros.exportExcelShort}</span>
           </button>
 
           {/* Contador de registros */}
