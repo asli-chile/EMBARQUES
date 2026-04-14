@@ -345,12 +345,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
     <!-- Cita -->
     <div class="cita-section">
       <div class="cita-card">
-        <span class="field-label">📅 Fecha, hora y lugar</span>
+        <span class="field-label"></span>
         <textarea id="cita-input" rows="3" placeholder="tocaple el miércoles…"></textarea>
         <button class="save-btn" type="button" id="save-btn">Enviar respuesta ✉️</button>
         <p class="save-status" id="save-status"></p>
         <p class="cita-quote">
-          ¡Eres imparable, brilla con toda tu fuerza y ve por ese éxito que tanto te mereces!
+          Ojalá algún día llegar a ser tan bacan y seguro como tú 💫
         </p>
       </div>
     </div>
@@ -755,15 +755,24 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         fwCtx.restore();
 
         // Sub-líneas bajo el arco (en móvil suben un poco para no chocar con el gato)
-        const sub1 = "\u00A1Buen lunes, Fraaaaan!";
-        const sub2 = "Que tengas una muy buena semana \u2728";
-        const subSize = Math.min(W * 0.038, 34);
-        const lineH = subSize * 1.7;
-        const isNarrow = W < 768;
-        const subY =
-          arcCenterY + fontSize * 0.6 - lineH * 1.4 - (isNarrow ? lineH * 0.65 : 0);
-        drawStyledText(sub1, cx, subY,          subSize, opacity);
-        drawStyledText(sub2, cx, subY + lineH,  subSize, opacity);
+const sub1 = "\u00A1Que tengas un lindo martes por la tarde ✨";
+const sub2 = "Eres una mujer realmente increíble, \u2728";
+const sub3 = "De esas que inspiran sin darse cuenta. \u2728";
+const sub4 = "";
+const sub5 = "Queda extendida la invitación para cañoski. \u2728";
+
+const subSize = Math.min(W * 0.038, 34);
+const lineH = subSize * 1.7;
+const isNarrow = W < 768;
+
+const subY =
+  arcCenterY + fontSize * 0.6 - lineH * 1.4 - (isNarrow ? lineH * 0.65 : 0);
+
+drawStyledText(sub1, cx, subY,               subSize, opacity);
+drawStyledText(sub2, cx, subY + lineH,       subSize, opacity);
+drawStyledText(sub3, cx, subY + lineH * 2,   subSize, opacity);
+drawStyledText(sub4, cx, subY + lineH * 3,   subSize, opacity);
+drawStyledText(sub5, cx, subY + lineH * 4,   subSize, opacity);
 
         // Línea inferior solo en pantalla ancha (en móvil chocaba con el formulario / frase)
         if (!isNarrow) {

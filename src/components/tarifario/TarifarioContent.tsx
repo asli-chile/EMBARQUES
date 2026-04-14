@@ -115,6 +115,73 @@ function isMissingDbRelation(err: unknown): boolean {
   );
 }
 
+// ─── Datos de prueba ─────────────────────────────────────────────────────────
+
+const DEMO_HEADER: Omit<Tarifario, "id" | "created_at" | "updated_at" | "activo"> = {
+  titulo:   "Temporada 2026",
+  cliente:  "Exportadora del Sur",
+  servicio: "Marítimo",
+  pol:      "San Antonio / Valparaíso",
+  pod:      "Nhava Sheva / Rotterdam / Livorno / Fos Sur Mer / Buenaventura",
+  producto: "Kiwi",
+  notas:    "*VALORES GATE OUT = N/A\n*FLETE + GASTOS LOCALES SON PAGADOS POR EXPORTADOR DIRECTO A LA NAVIERA\n**SITRANS $193725 (PAGO DIRECTO A DEPOSITO) // $184500 (PAGO PORTAL UMAR) // DYC $171000 // AGUNSA $172000 // MEDLOG $154000\n**DYC $ 166400 // AGUNSA $ 16000 // SITRANS $ 172400 (ONE)\n*Tarifa por contenedor (Fee ASLI): $200.000",
+};
+
+const DEMO_FILAS: Omit<Fila, "id" | "tarifario_id" | "orden">[] = [
+  {
+    naviera: "Yang Ming", pol: "San Antonio", pod: "Nhava Sheva",
+    publica: 5500, neta: 3300, vd: 2200, moneda: "USD",
+    gate_out: "USD 190",
+    recargos: "DTHC+DDF+IS+PF+MH+EQ+EC+BC+BKGASTOS LOCALES ORIGEN Y DESTINO",
+    tt: 44, t1: "Ningbo", t2: "", servicio: "SA8",
+    dias_libres_origen: "10 Días Libres", demurrage: "", detention: "10 Días Libres",
+    desde: "2026-04-13", hasta: "2026-06-30",
+    observaciones: "Más gastos locales en origen y destino",
+  },
+  {
+    naviera: "Evergreen", pol: "Valparaíso", pod: "Nhava Sheva",
+    publica: 6800, neta: 4100, vd: 2700, moneda: "USD",
+    gate_out: "VER NOTA **",
+    recargos: "DTHC + GASTOS LOCALES ORIGEN Y DESTINO",
+    tt: 48, t1: "Kaohsiung", t2: "", servicio: "WSA1",
+    dias_libres_origen: "10 Días Libres", demurrage: "", detention: "15 DíasLibres",
+    desde: "2026-04-13", hasta: "2026-05-31",
+    observaciones: "Emisión, Release o Emisión Destino $47000xbl",
+  },
+  {
+    naviera: "One", pol: "Valparaíso", pod: "Nhava Sheva",
+    publica: 6642, neta: 3742, vd: 2900, moneda: "USD",
+    gate_out: "VER NOTA **",
+    recargos: "DTHC + GASTOS LOCALES ORIGEN Y DESTINO",
+    tt: 32, t1: "Hong Kong", t2: "Singapore", servicio: "AX1",
+    dias_libres_origen: "21 Días Libres", demurrage: "", detention: "15 DíasLibres",
+    desde: "2026-04-13", hasta: "2026-06-30",
+    observaciones: "1a corrección sin costo posterior a 48 hrs del zarpe",
+  },
+  {
+    naviera: "Cma Cgm", pol: "San Antonio", pod: "Rotterdam",
+    publica: 7819, neta: 5819, vd: 2000, moneda: "USD",
+    gate_out: "USD 110",
+    recargos: "DTHC + BAF 798 usd + ENVG6 316 usd + AMS FEE 27 usd/bl + local charges both ends + EFS 360 USD + PSS 800 USD",
+    tt: 24, t1: "", t2: "", servicio: "EUROSAL XL WCC",
+    dias_libres_origen: "3 DÍAS LIBRES (1 DÍA LIBRE SI NO ES CARGADO)", demurrage: "3 días libres", detention: "3 días libres",
+    desde: "2026-04-13", hasta: "2026-04-30",
+    observaciones: "Más gastos locales en origen y destino",
+  },
+  {
+    naviera: "Cma Cgm", pol: "San Antonio", pod: "Livorno",
+    publica: 7432, neta: 5862, vd: 1570, moneda: "CLP",
+    gate_out: "CLP 154000",
+    recargos: "DTHC 325 EUR+GPS 22 EUR",
+    tt: 29, t1: "", t2: "", servicio: "NNC",
+    dias_libres_origen: "5 DÍAS LIBRES", demurrage: "TBC", detention: "TBC",
+    desde: "2026-04-13", hasta: "2026-06-30",
+    observaciones: "Más gastos locales en origen y destino",
+  },
+];
+
+const DEMO_FILA_SINGLE: Omit<Fila, "id" | "tarifario_id" | "orden"> = DEMO_FILAS[0];
+
 const TARIFARIOS_SETUP_MSG =
   "En Supabase: SQL Editor → pega y ejecuta el contenido de supabase/migrations/20260413000002_tarifarios.sql (tablas public.tarifarios y public.tarifarios_filas). Después recarga la página.";
 
@@ -125,6 +192,27 @@ const fmtDate = (d: string | null | undefined) => {
   if (!d) return "";
   try { return format(new Date(d), "dd-MM-yyyy", { locale: es }); } catch { return d; }
 };
+
+// ─── Helpers de exportación ──────────────────────────────────────────────────
+
+const LOGO_PATH = "/img/ANIMACIONLOGO.png";
+
+/** Descarga logo → ArrayBuffer (ExcelJS acepta ArrayBuffer directamente). */
+async function getLogoBuffer(): Promise<ArrayBuffer | null> {
+  try {
+    const r = await fetch(LOGO_PATH);
+    return r.ok ? r.arrayBuffer() : null;
+  } catch { return null; }
+}
+
+/** Descarga logo → Blob URL (para incrustar en HTML de PDF via <img src>). */
+async function getLogoBlobUrl(): Promise<string> {
+  try {
+    const r = await fetch(LOGO_PATH);
+    if (!r.ok) return "";
+    return URL.createObjectURL(await r.blob());
+  } catch { return ""; }
+}
 
 // ─── Excel Export ────────────────────────────────────────────────────────────
 
@@ -152,115 +240,192 @@ async function exportarExcel(tar: Tarifario, filas: Fila[]) {
   const raw = (await import("exceljs")) as ExcelJsCtor & { default?: ExcelJsCtor };
   const ExcelJS = resolveExcelJs(raw);
 
-  const BLUE     = "FF11224E";
-  const LBLUE    = "FFE8EDF8";
-  const WHITE    = "FFFFFFFF";
-  const ZEBRA    = "FFF4F7FF";
-  const BORDER   = "FFD1D9F0";
-  const GREY_TXT = "FF64748B";
-  const GREEN    = "FF065F46";
+  const DARK_BLUE  = "FF11224E";
+  const MID_BLUE   = "FF1D3A6E";
+  const GROUP_BLUE = "FF2C4A8A";
+  const LBLUE      = "FFE8EDF8";
+  const WHITE      = "FFFFFFFF";
+  const ZEBRA      = "FFF4F7FF";
+  const BORDER     = "FFD1D9F0";
+  const GREY_TXT   = "FF64748B";
+  const GREEN      = "FF065F46";
+  const TEXT_DARK  = "FF1E293B";
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "ASLI";
-  const ws = wb.addWorksheet("Tarifario", { views: [{ showGridLines: true }] });
+  const ws = wb.addWorksheet("Tarifario", { views: [{ showGridLines: false }] });
 
   const clienteSlug = tar.cliente.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
   const fileName = `TARIFARIO_${clienteSlug}_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
 
-  // ── Header info ──────────────────────────────────────────────────────────
-  const infoRows: [string, string][] = [
-    ["Cliente", tar.cliente],
-    ...(tar.servicio ? [["Servicio", tar.servicio] as [string, string]] : []),
-    ...(tar.pol ? [["Puerto de Carga (POL)", tar.pol] as [string, string]] : []),
-    ...(tar.pod ? [["Puerto Destino (POD)", tar.pod] as [string, string]] : []),
-    ...(tar.producto ? [["Producto", tar.producto] as [string, string]] : []),
-  ];
+  // Columns: 18 (no separate Moneda column — currency encoded in gate_out / shown in group)
+  const TOTAL_COLS = 18;
 
-  // Fila título
-  ws.mergeCells(1, 1, 1, 18);
-  const titleCell = ws.getCell(1, 1);
-  titleCell.value = `TARIFARIO${tar.titulo ? ` — ${tar.titulo}` : ""}`;
-  titleCell.font = { bold: true, size: 13, color: { argb: WHITE } };
-  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
-  titleCell.alignment = { vertical: "middle", horizontal: "center" };
-  ws.getRow(1).height = 24;
-
-  // Filas de info
-  infoRows.forEach(([lbl, val], i) => {
-    const r = ws.getRow(2 + i);
-    r.height = 15;
-    const lblCell = r.getCell(1);
-    lblCell.value = lbl;
-    lblCell.font = { bold: true, size: 9, color: { argb: BLUE } };
-    lblCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: LBLUE } };
-    ws.mergeCells(2 + i, 1, 2 + i, 3);
-
-    const valCell = r.getCell(4);
-    valCell.value = val;
-    valCell.font = { size: 9 };
-    ws.mergeCells(2 + i, 4, 2 + i, 18);
-  });
-
-  const headerRow = 2 + infoRows.length + 1; // fila separadora vacía
-
-  // ── Encabezados tabla ────────────────────────────────────────────────────
-  const cols: { header: string; key: string; width: number; numFmt?: string }[] = [
-    { header: "Naviera",           key: "naviera",            width: 14 },
-    { header: "POL",               key: "pol",                width: 16 },
-    { header: "POD",               key: "pod",                width: 16 },
-    { header: "Pública",           key: "publica",            width: 11, numFmt: "#,##0" },
-    { header: "Neta",              key: "neta",               width: 11, numFmt: "#,##0" },
-    { header: "VD",                key: "vd",                 width: 10, numFmt: "#,##0" },
-    { header: "Moneda",            key: "moneda",             width: 8  },
-    { header: "Gate Out",          key: "gate_out",           width: 14 },
-    { header: "Recargos (collect)", key: "recargos",          width: 40 },
-    { header: "TT",                key: "tt",                 width: 6  },
-    { header: "T1",                key: "t1",                 width: 14 },
-    { header: "T2",                key: "t2",                 width: 14 },
-    { header: "Servicio",          key: "servicio",           width: 10 },
-    { header: "Días libres Origen", key: "dias_libres_origen", width: 16 },
-    { header: "Demurrage",         key: "demurrage",          width: 14 },
-    { header: "Detention",         key: "detention",          width: 14 },
-    { header: "Desde",             key: "desde",              width: 12 },
-    { header: "Hasta",             key: "hasta",              width: 12 },
-    { header: "Observaciones",     key: "observaciones",      width: 30 },
+  const cols: { header: string; key: string; width: number }[] = [
+    { header: "Naviera",                      key: "naviera",            width: 13 },
+    { header: "POL",                          key: "pol",                width: 16 },
+    { header: "POD",                          key: "pod",                width: 16 },
+    { header: "Pública",                      key: "publica",            width: 10 },
+    { header: "Neta",                         key: "neta",               width: 10 },
+    { header: "VD",                           key: "vd",                 width: 9  },
+    { header: "Gate Out",                     key: "gate_out",           width: 14 },
+    { header: "Recargos en destino (collect)", key: "recargos",          width: 44 },
+    { header: "TT",                           key: "tt",                 width: 5  },
+    { header: "T1",                           key: "t1",                 width: 14 }, // 10 — Puertos de Transbordo
+    { header: "T2",                           key: "t2",                 width: 14 }, // 11
+    { header: "Servicio",                     key: "servicio",           width: 10 }, // 12
+    { header: "Origen",                       key: "dias_libres_origen", width: 18 }, // 13 — Días libres
+    { header: "Demurrage",                    key: "demurrage",          width: 14 }, // 14
+    { header: "Detention",                    key: "detention",          width: 14 }, // 15
+    { header: "Desde",                        key: "desde",              width: 12 }, // 16 — Vigencia
+    { header: "Hasta",                        key: "hasta",              width: 12 }, // 17
+    { header: "Observaciones",                key: "observaciones",      width: 30 }, // 18
   ];
 
   ws.columns = cols.map((c) => ({ key: c.key, width: c.width }));
 
-  const hRow = ws.getRow(headerRow);
-  hRow.height = 18;
+  // ── Fila 1: banner ASLI ──────────────────────────────────────────────────
+  ws.mergeCells(1, 1, 1, TOTAL_COLS);
+  const bannerCell = ws.getCell(1, 1);
+  bannerCell.value = "ASLI — Asesorías y Servicios Logísticos Integrales";
+  bannerCell.font = { bold: true, size: 13, color: { argb: WHITE }, name: "Arial" };
+  bannerCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DARK_BLUE } };
+  bannerCell.alignment = { vertical: "middle", horizontal: "center" };
+  ws.getRow(1).height = 28;
+
+  // Logo — se incrusta junto al bloque de info (ver más abajo)
+
+  // ── Filas 2-N: bloque de información ────────────────────────────────────
+  const infoRows: [string, string][] = [
+    ["Cliente", tar.cliente],
+    ...(tar.servicio ? [["Servicio", tar.servicio] as [string, string]] : []),
+    ...(tar.pol      ? [["Puerto de Carga (POL)", tar.pol] as [string, string]] : []),
+    ...(tar.pod      ? [["Puerto destino (POD)", tar.pod] as [string, string]] : []),
+    ...(tar.producto ? [["Producto", tar.producto] as [string, string]] : []),
+  ];
+
+  infoRows.forEach(([lbl, val], i) => {
+    const rowNum = 2 + i;
+    const r = ws.getRow(rowNum);
+    r.height = 14;
+
+    ws.mergeCells(rowNum, 1, rowNum, 3);
+    const lblCell = r.getCell(1);
+    lblCell.value = lbl;
+    lblCell.font = { bold: true, size: 9, color: { argb: DARK_BLUE }, name: "Arial" };
+    lblCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: LBLUE } };
+    lblCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    lblCell.border = { bottom: { style: "thin", color: { argb: BORDER } }, right: { style: "thin", color: { argb: BORDER } } };
+
+    ws.mergeCells(rowNum, 4, rowNum, 12);
+    const valCell = r.getCell(4);
+    valCell.value = val;
+    valCell.font = { size: 9, color: { argb: TEXT_DARK }, name: "Arial" };
+    valCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
+    valCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    valCell.border = { bottom: { style: "thin", color: { argb: BORDER } } };
+  });
+
+  // ── Logo ──────────────────────────────────────────────────────────────────
+  const logoBuf = await getLogoBuffer();
+  if (logoBuf) {
+    const logoId = wb.addImage({ buffer: logoBuf, extension: "png" });
+    const endRow = 1 + infoRows.length; // 1-based
+    ws.addImage(logoId, `M2:R${endRow}`);
+  }
+
+  // Fila separadora
+  const SEP_ROW = 2 + infoRows.length;
+  ws.getRow(SEP_ROW).height = 6;
+
+  // ── Fila de grupos ───────────────────────────────────────────────────────
+  const GROUP_ROW = SEP_ROW + 1;
+  const COL_ROW   = GROUP_ROW + 1;
+
+  ws.getRow(GROUP_ROW).height = 13;
+
+  // Fondo oscuro en toda la fila de grupos
+  for (let ci = 1; ci <= TOTAL_COLS; ci++) {
+    const cell = ws.getRow(GROUP_ROW).getCell(ci);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DARK_BLUE } };
+  }
+
+  // "Puertos de Transbordo" — cols 10-11
+  ws.mergeCells(GROUP_ROW, 10, GROUP_ROW, 11);
+  const gTransb = ws.getRow(GROUP_ROW).getCell(10);
+  gTransb.value = "Puertos de Transbordo";
+  gTransb.font = { bold: true, size: 8, color: { argb: WHITE }, name: "Arial" };
+  gTransb.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GROUP_BLUE } };
+  gTransb.alignment = { vertical: "middle", horizontal: "center" };
+  gTransb.border = {
+    left:  { style: "medium", color: { argb: DARK_BLUE } },
+    right: { style: "medium", color: { argb: DARK_BLUE } },
+  };
+
+  // "Días libres" — cols 13-15
+  ws.mergeCells(GROUP_ROW, 13, GROUP_ROW, 15);
+  const gDias = ws.getRow(GROUP_ROW).getCell(13);
+  gDias.value = "Días libres";
+  gDias.font = { bold: true, size: 8, color: { argb: WHITE }, name: "Arial" };
+  gDias.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GROUP_BLUE } };
+  gDias.alignment = { vertical: "middle", horizontal: "center" };
+  gDias.border = {
+    left:  { style: "medium", color: { argb: DARK_BLUE } },
+    right: { style: "medium", color: { argb: DARK_BLUE } },
+  };
+
+  // "Vigencia" — cols 16-17
+  ws.mergeCells(GROUP_ROW, 16, GROUP_ROW, 17);
+  const gVig = ws.getRow(GROUP_ROW).getCell(16);
+  gVig.value = "Vigencia";
+  gVig.font = { bold: true, size: 8, color: { argb: WHITE }, name: "Arial" };
+  gVig.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GROUP_BLUE } };
+  gVig.alignment = { vertical: "middle", horizontal: "center" };
+  gVig.border = {
+    left:  { style: "medium", color: { argb: DARK_BLUE } },
+    right: { style: "medium", color: { argb: DARK_BLUE } },
+  };
+
+  // ── Fila de encabezados de columnas ──────────────────────────────────────
+  ws.getRow(COL_ROW).height = 16;
   cols.forEach((c, i) => {
-    const cell = hRow.getCell(i + 1);
+    const cell = ws.getRow(COL_ROW).getCell(i + 1);
     cell.value = c.header;
-    cell.font = { bold: true, size: 9, color: { argb: WHITE } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE } };
+    cell.font = { bold: true, size: 8, color: { argb: WHITE }, name: "Arial" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DARK_BLUE } };
     cell.alignment = { vertical: "middle", horizontal: "center", wrapText: false };
     cell.border = {
-      bottom: { style: "thin", color: { argb: BORDER } },
-      right:  { style: "thin", color: { argb: "FF1D3A6E" } },
+      top:    { style: "thin",   color: { argb: MID_BLUE } },
+      bottom: { style: "medium", color: { argb: "FF0d1b3e" } },
+      right:  { style: "thin",   color: { argb: MID_BLUE } },
     };
+    // Borde izquierdo destacado en primera col de cada grupo
+    if (i + 1 === 10 || i + 1 === 13 || i + 1 === 16) {
+      cell.border = { ...cell.border, left: { style: "medium", color: { argb: DARK_BLUE } } };
+    }
   });
 
   // ── Filas de datos ───────────────────────────────────────────────────────
-  filas.forEach((f, ri) => {
-    const r = ws.getRow(headerRow + 1 + ri);
-    r.height = 15;
+  const activas = filas.filter((f) => f.naviera || f.pol || f.pod);
+
+  activas.forEach((f, ri) => {
+    const r = ws.getRow(COL_ROW + 1 + ri);
+    r.height = 14;
     const zebra = ri % 2 !== 0;
+    const bg = zebra ? ZEBRA : WHITE;
 
     const values: (string | number | null)[] = [
       f.naviera || null,
-      f.pol || null,
-      f.pod || null,
+      f.pol     || null,
+      f.pod     || null,
       f.publica ?? null,
-      f.neta ?? null,
-      f.vd ?? null,
-      f.moneda || "USD",
+      f.neta    ?? null,
+      f.vd      ?? null,
       f.gate_out || null,
       f.recargos || null,
-      f.tt ?? null,
-      f.t1 || null,
-      f.t2 || null,
+      f.tt      ?? null,
+      f.t1      || null,
+      f.t2      || null,
       f.servicio || null,
       f.dias_libres_origen || null,
       f.demurrage || null,
@@ -273,30 +438,35 @@ async function exportarExcel(tar: Tarifario, filas: Fila[]) {
     values.forEach((val, ci) => {
       const cell = r.getCell(ci + 1);
       cell.value = val;
-      cell.font = { size: 9, color: { argb: ci === 4 ? GREEN : "FF1E293B" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: zebra ? ZEBRA : WHITE } };
+      cell.font = { size: 9, color: { argb: ci === 4 ? GREEN : TEXT_DARK }, name: "Arial" };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
       cell.alignment = {
         vertical: "middle",
-        horizontal: typeof val === "number" ? "right" : ci === 8 ? "left" : "left",
-        wrapText: ci === 8,
+        horizontal: typeof val === "number" ? "right" : "left",
+        wrapText: ci === 7,
       };
       cell.border = {
         bottom: { style: "hair", color: { argb: BORDER } },
         right:  { style: "hair", color: { argb: BORDER } },
       };
-      if (cols[ci]?.numFmt && typeof val === "number") cell.numFmt = cols[ci].numFmt!;
+      if ((ci === 3 || ci === 4 || ci === 5) && typeof val === "number") cell.numFmt = "#,##0";
+      // Borde izquierdo para primera col de grupo
+      if (ci + 1 === 10 || ci + 1 === 13 || ci + 1 === 16) {
+        cell.border = { ...cell.border, left: { style: "thin", color: { argb: BORDER } } };
+      }
     });
   });
 
   // ── Notas al pie ─────────────────────────────────────────────────────────
   if (tar.notas?.trim()) {
-    const notaRow = headerRow + filas.length + 2;
-    ws.mergeCells(notaRow, 1, notaRow, 19);
+    const notaRow = COL_ROW + activas.length + 2;
+    ws.mergeCells(notaRow, 1, notaRow, TOTAL_COLS);
     const nc = ws.getCell(notaRow, 1);
     nc.value = tar.notas.trim();
-    nc.font = { size: 8, italic: true, color: { argb: GREY_TXT } };
-    nc.alignment = { wrapText: true, vertical: "top" };
-    ws.getRow(notaRow).height = 40;
+    nc.font = { size: 8, italic: true, color: { argb: GREY_TXT }, name: "Arial" };
+    nc.alignment = { wrapText: true, vertical: "top", indent: 1 };
+    nc.border = { top: { style: "medium", color: { argb: DARK_BLUE } } };
+    ws.getRow(notaRow).height = 42;
   }
 
   // ── Pie de página ────────────────────────────────────────────────────────
@@ -309,8 +479,19 @@ async function exportarExcel(tar: Tarifario, filas: Fila[]) {
 
 // ─── PDF Export ──────────────────────────────────────────────────────────────
 
-function exportarPDF(tar: Tarifario, filas: Fila[]) {
+async function exportarPDF(tar: Tarifario, filas: Fila[]) {
   const activas = filas.filter((f) => f.naviera || f.pol || f.pod);
+
+  const logoBlobUrl = await getLogoBlobUrl();
+
+  const infoFields: [string, string | null][] = [
+    ["Cliente", tar.cliente],
+    ["Servicio", tar.servicio ?? null],
+    ["Puerto de Carga (POL)", tar.pol ?? null],
+    ["Puerto destino (POD)", tar.pod ?? null],
+    ["Producto", tar.producto ?? null],
+  ].filter(([, v]) => !!v) as [string, string][];
+
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -318,41 +499,87 @@ function exportarPDF(tar: Tarifario, filas: Fila[]) {
 <title>Tarifario — ${tar.cliente}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 9px; color: #1a1a1a; padding: 14px; }
-  .header-grid { display: grid; grid-template-columns: 120px 1fr; gap: 2px 10px; margin-bottom: 12px; }
-  .header-grid .lbl { font-weight: 700; color: #11224E; }
-  .header-grid .val { color: #333; }
-  h1 { font-size: 13px; font-weight: 700; color: #11224E; margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8px; }
-  thead tr { background: #11224E; color: #fff; }
-  thead th { padding: 4px 3px; text-align: left; font-weight: 600; white-space: nowrap; border: 1px solid #0d1b3e; }
-  thead th.num { text-align: right; }
-  tbody tr:nth-child(even) { background: #f4f7ff; }
-  tbody tr:nth-child(odd) { background: #fff; }
-  tbody td { padding: 3px 3px; border: 1px solid #dde3f0; vertical-align: top; }
-  tbody td.num { text-align: right; }
-  .sub-header { background: #e8edf8 !important; }
-  .sub-header td { font-weight: 700; color: #11224E; font-size: 7.5px; }
-  .vigencia-group { background: #eaf4ea !important; }
-  .notes { margin-top: 10px; font-size: 7.5px; color: #444; white-space: pre-wrap; line-height: 1.5; border-top: 1.5px solid #11224E; padding-top: 6px; }
-  .footer { margin-top: 14px; font-size: 7px; color: #888; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 4px; }
+  body { font-family: Arial, sans-serif; font-size: 8.5px; color: #1a1a1a; padding: 10px 14px; }
+
+  /* ── Cabecera ── */
+  .top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 16px; }
+  .info-table { border-collapse: collapse; }
+  .info-table td { padding: 2.5px 6px; font-size: 8.5px; border: 1px solid #d1d9f0; }
+  .info-table .lbl { font-weight: 700; color: #11224E; background: #e8edf8; white-space: nowrap; }
+  .info-table .val { color: #1e293b; min-width: 200px; }
+  .logo-wrap { text-align: right; flex-shrink: 0; }
+  .logo-wrap img { height: 44px; width: auto; display: block; }
+  .asli-fallback { font-size: 20px; font-weight: 900; color: #11224E; letter-spacing: -0.5px; font-style: italic; }
+
+  /* ── Tabla ── */
+  table.main { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 7.5px; }
+
+  /* fila de grupos */
+  table.main thead tr.grp th {
+    background: #11224E; color: #fff;
+    padding: 3px 3px; font-size: 7px; font-weight: 700;
+    text-align: center; border: 1px solid #0d1b3e;
+  }
+  table.main thead tr.grp th.g {
+    background: #2c4a8a;
+    border-left:  2px solid #11224E;
+    border-right: 2px solid #11224E;
+  }
+
+  /* fila de encabezados de columna */
+  table.main thead tr.hdrs th {
+    background: #11224E; color: #fff;
+    padding: 3.5px 3px; font-size: 7px; font-weight: 600;
+    text-align: center; white-space: nowrap;
+    border: 1px solid #0d1b3e;
+  }
+  table.main thead tr.hdrs th.gl { border-left: 2px solid #1d3a6e; }
+  table.main thead th.num { text-align: right; }
+
+  /* celdas de datos */
+  table.main tbody tr:nth-child(even) { background: #f4f7ff; }
+  table.main tbody tr:nth-child(odd)  { background: #fff; }
+  table.main tbody td {
+    padding: 2.5px 3px; border: 1px solid #dde3f0; vertical-align: top;
+  }
+  table.main tbody td.num  { text-align: right; }
+  table.main tbody td.neta { color: #065f46; font-weight: 600; text-align: right; }
+  table.main tbody td.gl   { border-left: 2px solid #c7d2e8; }
+
+  /* ── Notas y pie ── */
+  .notes  { margin-top: 8px; font-size: 7.5px; color: #444; white-space: pre-wrap; line-height: 1.5; border-top: 2px solid #11224E; padding-top: 5px; }
+  .footer { margin-top: 12px; font-size: 7px; color: #888; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 4px; }
+
   @page { size: A4 landscape; margin: 8mm; }
   @media print { body { padding: 0; } }
 </style>
 </head>
 <body>
-<h1>Tarifario${tar.titulo ? ` — ${tar.titulo}` : ""}</h1>
-<div class="header-grid">
-  <span class="lbl">Cliente</span><span class="val">${tar.cliente}</span>
-  ${tar.servicio ? `<span class="lbl">Servicio</span><span class="val">${tar.servicio}</span>` : ""}
-  ${tar.pol ? `<span class="lbl">Puerto de Carga (POL)</span><span class="val">${tar.pol}</span>` : ""}
-  ${tar.pod ? `<span class="lbl">Puerto destino (POD)</span><span class="val">${tar.pod}</span>` : ""}
-  ${tar.producto ? `<span class="lbl">Producto</span><span class="val">${tar.producto}</span>` : ""}
+
+<div class="top-header">
+  <table class="info-table">
+    ${infoFields.map(([lbl, val]) =>
+      `<tr><td class="lbl">${lbl}</td><td class="val">${val}</td></tr>`
+    ).join("")}
+  </table>
+  <div class="logo-wrap">
+    ${logoBlobUrl
+      ? `<img src="${logoBlobUrl}" alt="ASLI" style="height:44px;width:auto"/>`
+      : `<span class="asli-fallback">ASLI</span>`}
+  </div>
 </div>
 
-<table>
+<table class="main">
   <thead>
-    <tr>
+    <tr class="grp">
+      <th colspan="9"></th>
+      <th colspan="2" class="g">Puertos de Transbordo</th>
+      <th colspan="1"></th>
+      <th colspan="3" class="g">Días libres</th>
+      <th colspan="2" class="g">Vigencia</th>
+      <th colspan="1"></th>
+    </tr>
+    <tr class="hdrs">
       <th>Naviera</th>
       <th>POL</th>
       <th>POD</th>
@@ -360,17 +587,17 @@ function exportarPDF(tar: Tarifario, filas: Fila[]) {
       <th class="num">Neta</th>
       <th class="num">VD</th>
       <th>Gate Out</th>
-      <th style="max-width:180px">Recargos en destino (collect)</th>
+      <th style="min-width:110px">Recargos en destino (collect)</th>
       <th class="num">TT</th>
-      <th>T1</th>
+      <th class="gl">T1</th>
       <th>T2</th>
       <th>Servicio</th>
-      <th>Días libres Origen</th>
+      <th class="gl">Origen</th>
       <th>Demurrage</th>
       <th>Detention</th>
-      <th>Desde</th>
+      <th class="gl">Desde</th>
       <th>Hasta</th>
-      <th style="max-width:120px">Observaciones</th>
+      <th>Observaciones</th>
     </tr>
   </thead>
   <tbody>
@@ -379,21 +606,21 @@ function exportarPDF(tar: Tarifario, filas: Fila[]) {
       <td>${f.naviera || ""}</td>
       <td>${f.pol || ""}</td>
       <td>${f.pod || ""}</td>
-      <td class="num">${f.publica != null ? f.moneda + " " + fmtNum(f.publica) : ""}</td>
-      <td class="num">${f.neta != null ? fmtNum(f.neta) : ""}</td>
+      <td class="num">${f.publica != null ? fmtNum(f.publica) : ""}</td>
+      <td class="neta">${f.neta != null ? fmtNum(f.neta) : ""}</td>
       <td class="num">${f.vd != null ? fmtNum(f.vd) : ""}</td>
       <td>${f.gate_out || ""}</td>
-      <td style="max-width:180px;word-break:break-word">${f.recargos || ""}</td>
+      <td style="min-width:110px;word-break:break-word">${f.recargos || ""}</td>
       <td class="num">${f.tt != null ? f.tt : ""}</td>
-      <td>${f.t1 || ""}</td>
+      <td class="gl">${f.t1 || ""}</td>
       <td>${f.t2 || ""}</td>
       <td>${f.servicio || ""}</td>
-      <td>${f.dias_libres_origen || ""}</td>
+      <td class="gl">${f.dias_libres_origen || ""}</td>
       <td>${f.demurrage || ""}</td>
       <td>${f.detention || ""}</td>
-      <td>${fmtDate(f.desde)}</td>
+      <td class="gl">${fmtDate(f.desde)}</td>
       <td>${fmtDate(f.hasta)}</td>
-      <td style="max-width:120px;word-break:break-word">${f.observaciones || ""}</td>
+      <td style="word-break:break-word">${f.observaciones || ""}</td>
     </tr>`).join("")}
   </tbody>
 </table>
@@ -408,8 +635,15 @@ ${tar.notas ? `<div class="notes">${tar.notas}</div>` : ""}
 <script>window.onload = () => { window.print(); }<\/script>
 </body></html>`;
 
-  const w = window.open("", "_blank", "width=1100,height=700");
-  if (w) { w.document.write(html); w.document.close(); }
+  // Abrimos el HTML como Blob URL — resuelve CSP, about:blank y blob src issues
+  const htmlBlob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const htmlUrl  = URL.createObjectURL(htmlBlob);
+  window.open(htmlUrl, "_blank", "width=1200,height=750");
+  // Limpiamos ambos blob URLs después de que el navegador los cargue
+  setTimeout(() => {
+    URL.revokeObjectURL(htmlUrl);
+    if (logoBlobUrl) URL.revokeObjectURL(logoBlobUrl);
+  }, 60_000);
 }
 
 // ─── Fila Edit Modal ──────────────────────────────────────────────────────────
@@ -459,9 +693,22 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <h3 className="font-semibold text-neutral-800">{f.id ? "Editar fila" : "Nueva fila"}</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100">
-            <Icon icon="lucide:x" className="w-4 h-4 text-neutral-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => setF({ ...f, ...DEMO_FILA_SINGLE })}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                title="Rellenar con datos de prueba"
+              >
+                <Icon icon="lucide:flask-conical" className="w-3 h-3" />
+                Datos de prueba
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100">
+              <Icon icon="lucide:x" className="w-4 h-4 text-neutral-500" />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -1070,7 +1317,7 @@ export function TarifarioContent() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         const filasTarifario = await fetchFilas(tar.id, false);
-                        exportarPDF(tar, filasTarifario ?? []);
+                        void exportarPDF(tar, filasTarifario ?? []);
                       }}
                       className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border border-neutral-200 transition-colors"
                     >
@@ -1115,7 +1362,7 @@ export function TarifarioContent() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => exportarPDF(selected, filas)}
+                      onClick={() => void exportarPDF(selected, filas)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
                     >
                       <Icon icon="lucide:printer" className="w-3.5 h-3.5" />
@@ -1136,9 +1383,29 @@ export function TarifarioContent() {
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* ── Sección 1: Info general ── */}
               <div className="px-5 py-4 border-b border-neutral-100">
-                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-                  Información general
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    Información general
+                  </h3>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeaderForm({ ...DEMO_HEADER });
+                        setFilas(DEMO_FILAS.map((f, i) => ({
+                          ...f,
+                          id: `demo-${i}`,
+                          tarifario_id: "",
+                          orden: i,
+                        })));
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                    >
+                      <Icon icon="lucide:flask-conical" className="w-3 h-3" />
+                      Datos de prueba
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
                     <label className={labelCls}>Cliente *</label>
