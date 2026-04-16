@@ -1,0 +1,177 @@
+{
+  "naviera": "ONE - MSC - HAPAG LLOYD",
+  "servicio": "AX2 - ANDES - AN2",
+  "itinerarios": [
+    {
+      "semana": 1,
+      "nave": "Msc Orsola V.552",
+      "puertos": {
+        "San Antonio": "03-ene",
+        "Manzanillo, Mx": "20-ene",
+        "Los Angeles": "26-ene"
+      }
+    },
+    {
+      "semana": 2,
+      "nave": "Msc Valentina V.601",
+      "puertos": {
+        "San Antonio": "10-ene",
+        "Manzanillo, Mx": "27-ene",
+        "Los Angeles": "02-feb"
+      }
+    },
+    {
+      "semana": 3,
+      "nave": "Msc Candida V.602",
+      "puertos": {
+        "San Antonio": "13-ene",
+        "Manzanillo, Mx": "30-ene",
+        "Los Angeles": "05-feb"
+      }
+    },
+    {
+      "semana": 3,
+      "nave": "One Spirit V.2547",
+      "puertos": {
+        "San Antonio": "16-ene",
+        "Manzanillo, Mx": "02-feb",
+        "Los Angeles": "08-feb"
+      }
+    },
+    {
+      "semana": 4,
+      "nave": "Msc Vivienne V.604",
+      "puertos": {
+        "San Antonio": "23-ene",
+        "Manzanillo, Mx": "09-feb",
+        "Los Angeles": "15-feb"
+      }
+    },
+    {
+      "semana": 5,
+      "nave": "Seaspan Benefactor V.2549",
+      "puertos": {
+        "San Antonio": "30-ene",
+        "Manzanillo, Mx": "16-feb",
+        "Los Angeles": "22-feb"
+      }
+    },
+    {
+      "semana": 6,
+      "nave": "Blank Sailing",
+      "puertos": {
+        "San Antonio": "06-feb",
+        "Manzanillo, Mx": "23-feb",
+        "Los Angeles": "01-mar"
+      }
+    },
+    {
+      "semana": 7,
+      "nave": "Msc Elenoire V.606",
+      "puertos": {
+        "San Antonio": "11-feb",
+        "Manzanillo, Mx": "28-feb",
+        "Los Angeles": "06-mar"
+      }
+    },
+    {
+      "semana": 8,
+      "nave": "Msc Lella V.607",
+      "puertos": {
+        "San Antonio": "15-feb",
+        "Manzanillo, Mx": "04-mar",
+        "Los Angeles": "10-mar"
+      }
+    },
+    {
+      "semana": 8,
+      "nave": "One Splendour V.2552",
+      "puertos": {
+        "San Antonio": "20-feb",
+        "Manzanillo, Mx": "09-mar",
+        "Los Angeles": "15-mar"
+      }
+    },
+    {
+      "semana": 9,
+      "nave": "Msc Chiyo V.609",
+      "puertos": {
+        "San Antonio": "28-feb",
+        "Manzanillo, Mx": "18-mar",
+        "Los Angeles": "23-mar"
+      }
+    },
+    {
+      "semana": 10,
+      "nave": "Blank Sailing",
+      "puertos": {
+        "San Antonio": "07-mar",
+        "Manzanillo, Mx": "25-mar",
+        "Los Angeles": "04-abr"
+      }
+    },
+    {
+      "semana": 11,
+      "nave": "Msc Virgo V.610",
+      "puertos": {
+        "San Antonio": "12-mar",
+        "Manzanillo, Mx": "01-abr",
+        "Los Angeles": "09-abr"
+      }
+    },
+    {
+      "semana": 12,
+      "nave": "Msc Juliette V.612",
+      "puertos": {
+        "San Antonio": "19-mar",
+        "Manzanillo, Mx": "08-abr",
+        "Los Angeles": "16-abr"
+      }
+    },
+    {
+      "semana": 13,
+      "nave": "Msc Victoria V.613",
+      "puertos": {
+        "San Antonio": "26-mar",
+        "Manzanillo, Mx": "13-abr",
+        "Los Angeles": "23-abr"
+      }
+    },
+    {
+      "semana": 14,
+      "nave": "Blank Sailing",
+      "puertos": {
+        "San Antonio": "02-abr",
+        "Manzanillo, Mx": "20-abr",
+        "Los Angeles": "30-abr"
+      }
+    },
+    {
+      "semana": 15,
+      "nave": "Msc Noa Ariela V.614",
+      "puertos": {
+        "San Antonio": "09-abr",
+        "Manzanillo, Mx": "27-abr",
+        "Los Angeles": "07-may"
+      }
+    },
+    {
+      "semana": 16,
+      "nave": "Msc Orsola V.615",
+      "puertos": {
+        "San Antonio": "16-abr",
+        "Manzanillo, Mx": "04-may",
+        "Los Angeles": "14-may"
+      }
+    },
+    {
+      "semana": 17,
+      "nave": "Msc Valentina V.617",
+      "puertos": {
+        "San Antonio": "23-abr",
+        "Manzanillo, Mx": "11-may",
+        "Los Angeles": "21-may"
+      }
+    }
+  ]
+}

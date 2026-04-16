@@ -1,0 +1,24 @@
+{
+  "naviera": "HAPAG LLOYD - CMA CGM - COSCO",
+  "servicio": "NEW EUROSAL",
+  "itinerarios": [
+    { "semana": 1, "nave": "Cartagena Express V.5247", "puertos": { "San Antonio": "02-ene", "Callao": "05-ene", "Buenaventura": "17-ene", "Philadelphia": "20-ene" } },
+    { "semana": 2, "nave": "Istanbul Express V.5248", "puertos": { "San Antonio": "09-ene", "Callao": "12-ene", "Buenaventura": "24-ene", "Philadelphia": "27-ene" } },
+    { "semana": 3, "nave": "Santos Express V.5249", "puertos": { "San Antonio": "16-ene", "Callao": "19-ene", "Buenaventura": "31-ene", "Philadelphia": "03-feb" } },
+    { "semana": 4, "nave": "Cma Cgm Carl Antoine V.5250", "puertos": { "San Antonio": "23-ene", "Callao": "26-ene", "Buenaventura": "07-feb", "Philadelphia": "10-feb" } },
+    { "semana": 5, "nave": "Guayaquil Express V.5251", "puertos": { "San Antonio": "30-ene", "Callao": "02-feb", "Buenaventura": "14-feb", "Philadelphia": "17-feb" } },
+    { "semana": 6, "nave": "Cma Cgm Jacques Joseph V.5252", "puertos": { "San Antonio": "06-feb", "Callao": "09-feb", "Buenaventura": "21-feb", "Philadelphia": "24-feb" } },
+    { "semana": 7, "nave": "Callao Express V.6201", "puertos": { "San Antonio": "13-feb", "Callao": "16-feb", "Buenaventura": "28-feb", "Philadelphia": "03-mar" } },
+    { "semana": 8, "nave": "Cosco Shipping Seine V.6202", "puertos": { "San Antonio": "20-feb", "Callao": "23-feb", "Buenaventura": "07-mar", "Philadelphia": "10-mar" } },
+    { "semana": 9, "nave": "Cma Cgm Estelle V.6203", "puertos": { "San Antonio": "27-feb", "Callao": "02-mar", "Buenaventura": "14-mar", "Philadelphia": "17-mar" } },
+    { "semana": 10, "nave": "Valparaiso Express V.6204", "puertos": { "San Antonio": "06-mar", "Callao": "09-mar", "Buenaventura": "22-mar", "Philadelphia": "24-mar" } },
+    { "semana": 11, "nave": "Cartagena Express V.6205", "puertos": { "San Antonio": "13-mar", "Callao": "16-mar", "Buenaventura": "29-mar", "Philadelphia": "31-mar" } },
+    { "semana": 12, "nave": "Istanbul Express V.6206", "puertos": { "San Antonio": "20-mar", "Callao": "23-mar", "Buenaventura": "05-abr", "Philadelphia": "07-abr" } },
+    { "semana": 13, "nave": "Santos Express V.6207", "puertos": { "San Antonio": "27-mar", "Callao": "30-mar", "Buenaventura": "12-abr", "Philadelphia": "14-abr" } },
+    { "semana": 14, "nave": "Cma Cgm Carl Antonie V.6208", "puertos": { "San Antonio": "03-abr", "Callao": "06-abr", "Buenaventura": "19-abr", "Philadelphia": "21-abr" } },
+    { "semana": 15, "nave": "Guayaquil Express V.6209", "puertos": { "San Antonio": "10-abr", "Callao": "13-abr", "Buenaventura": "26-abr", "Philadelphia": "28-abr" } },
+    { "semana": 16, "nave": "Cma Cgm Jacques Joseph V.6210", "puertos": { "San Antonio": "17-abr", "Callao": "20-abr", "Buenaventura": "03-may", "Philadelphia": "05-may" } },
+    { "semana": 17, "nave": "Callao Express V.6211", "puertos": { "San Antonio": "24-abr", "Callao": "27-abr", "Buenaventura": "10-may", "Philadelphia": "12-may" } }
+  ]
+}
+

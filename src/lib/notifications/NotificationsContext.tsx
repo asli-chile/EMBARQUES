@@ -150,10 +150,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (!user || leidasRef.current.has(id)) return;
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      await supabase.from("notificaciones_leidas").upsert({
+      const { error } = await supabase.from("notificaciones_leidas").insert({
         notificacion_id: id,
         usuario_auth_id: user.id,
       });
+      if (error && error.code !== "23505") {
+        console.error("[notificaciones] error al marcar leida:", error.message);
+        return;
+      }
       leidasRef.current.add(id);
       setNotificaciones((prev) =>
         prev.map((n) => (n.id === id ? { ...n, leida: true } : n)),
@@ -170,12 +174,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
-    await supabase.from("notificaciones_leidas").upsert(
+    const { error } = await supabase.from("notificaciones_leidas").insert(
       noLeidasList.map((n) => ({
         notificacion_id: n.id,
         usuario_auth_id: user.id,
       })),
     );
+    if (error && error.code !== "23505") {
+      console.error("[notificaciones] error al marcar todas leidas:", error.message);
+      return;
+    }
     noLeidasList.forEach((n) => leidasRef.current.add(n.id));
     setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
   }, [user, notificaciones]);

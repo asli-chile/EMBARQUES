@@ -24,6 +24,7 @@ export type OperacionRow = {
   tipo_operacion: string;
   cliente: string;
   consignatario: string;
+  contrato: string;
   incoterm: string;
   forma_pago: string;
   especie: string;
@@ -40,6 +41,7 @@ export type OperacionRow = {
   tipo_unidad: string;
   naviera: string;
   nave: string;
+  viaje: string;
   pol: string;
   etd: string;
   pod: string;
@@ -115,6 +117,7 @@ type DbOperacion = {
   tipo_operacion: string;
   cliente: string;
   consignatario: string | null;
+  contrato: string | null;
   incoterm: string | null;
   forma_pago: string | null;
   especie: string | null;
@@ -228,6 +231,28 @@ function formatDateTime(value: string | null, _locale: string): string {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+function splitContenedores(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return String(value)
+    .split(/\s*\|\s*|\r?\n|[,;]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseViajeFromNave(value: string | null | undefined): string {
+  if (!value) return "";
+  const text = String(value).trim();
+  if (!text) return "";
+  const bracket = text.match(/\[([^\]]+)\]/);
+  if (bracket?.[1]) return bracket[1].trim();
+  return "";
+}
+
+function stripViajeFromNave(value: string | null | undefined): string {
+  if (!value) return "";
+  return String(value).replace(/\s*\[[^\]]+\]\s*/g, " ").trim();
+}
+
 // ─── Helpers de parseo de fecha ───────────────────────────────────────────────
 function parseDateInput(val: string): string | null {
   if (!val?.trim()) return null;
@@ -266,7 +291,10 @@ const ADDABLE_FIELDS = {
   cliente:             { table: "empresas",        label: "Empresas",           catalogKey: "empresas"       },
   pod:                 { table: "destinos",        label: "Destinos (POD)",     catalogKey: "destinos"       },
   consignatario:       { table: "consignatarios",  label: "Consignatarios",     catalogKey: "consignatarios" },
+  contrato:            { table: "contratos",       label: "Contratos",          catalogKey: "contratos"      },
 } as const;
+
+const CONTRATOS_FALLBACK = ["COPEFRUT", "ASLI", "ALMACENES", "EXITO"];
 
 // ─── Editor combinado: dropdown filtrable + texto libre ───────────────────────
 interface ComboboxEditorProps {
@@ -369,6 +397,7 @@ function createToRow(locale: string) {
       tipo_operacion: db.tipo_operacion,
       cliente: db.cliente,
       consignatario: db.consignatario ?? "",
+      contrato: db.contrato ?? "",
       incoterm: db.incoterm ?? "",
       forma_pago: db.forma_pago ?? "",
       especie: db.especie ?? "",
@@ -384,8 +413,8 @@ function createToRow(locale: string) {
       peso_neto: db.peso_neto,
       tipo_unidad: db.tipo_unidad ?? "",
       naviera: db.naviera ?? "",
-      nave: db.nave ?? "",
-      viaje: db.viaje ?? "",
+      nave: stripViajeFromNave(db.nave),
+      viaje: db.viaje ?? parseViajeFromNave(db.nave) ?? "",
       pol: db.pol ?? "",
       etd: formatDate(db.etd, locale),
       pod: db.pod ?? "",
@@ -471,6 +500,7 @@ type CatalogosState = {
   puertos_origen: string[];
   especies: string[];
   consignatarios: string[];
+  contratos: string[];
   ejecutivos: string[];
   empresas: string[];
 };
@@ -494,14 +524,15 @@ const emptyCatalogos: CatalogosState = {
   puertos_origen: [],
   especies: [],
   consignatarios: [],
+  contratos: [],
   ejecutivos: [],
   empresas: [],
 };
 
 // ─── Grupos de columnas para el panel de visibilidad ──────────────────────────
 const COLUMN_GROUPS = [
-  { label: "Identificación y Control",     fields: ["origen_registro", "prioridad", "operacion_critica", "estado_operacion", "tipo_operacion", "semana", "ingreso"] },
-  { label: "Cliente y Condiciones",        fields: ["ejecutivo", "cliente", "consignatario", "incoterm", "forma_pago", "pais"] },
+  { label: "Identificación y Control",     fields: ["estado_operacion", "tipo_operacion", "semana", "ingreso"] },
+  { label: "Cliente y Condiciones",        fields: ["ejecutivo", "cliente", "consignatario", "contrato", "incoterm", "forma_pago", "pais"] },
   { label: "Carga / Mercadería",           fields: ["especie", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto"] },
   { label: "Unidad y Contenedor",          fields: ["tipo_unidad", "contenedor", "sello", "tara"] },
   { label: "Naviera y Viaje",              fields: ["naviera", "nave", "viaje", "pol", "etd", "pod", "eta", "tt", "booking"] },
@@ -539,6 +570,8 @@ export function RegistrosContent() {
   const [showColumnPanel, setShowColumnPanel] = useState(false);
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const hiddenColumnsRef = useRef<Set<string>>(new Set());
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const supabase = useMemo(() => {
     try {
@@ -581,6 +614,12 @@ export function RegistrosContent() {
       const stored = localStorage.getItem(`registros_col_order_${user.id}`);
       if (!stored) return;
       const order = JSON.parse(stored) as string[];
+      const hasContrato = order.includes("contrato");
+      const hasLegacyHiddenFields = ["origen_registro", "prioridad", "operacion_critica"].some((field) => order.includes(field));
+      if (!hasContrato || hasLegacyHiddenFields) {
+        localStorage.removeItem(`registros_col_order_${user.id}`);
+        return;
+      }
       api.applyColumnState({
         state: order.map((colId) => ({ colId })),
         applyOrder: true,
@@ -592,6 +631,12 @@ export function RegistrosContent() {
     applyHiddenColumns(hiddenColumnsRef.current);
     applyColumnOrder();
   }, [applyHiddenColumns, applyColumnOrder]);
+
+  useEffect(() => {
+    const api = gridRef.current?.api;
+    if (!api) return;
+    api.setGridOption("quickFilterText", globalSearch);
+  }, [globalSearch, rowData]);
 
   const toggleColumn = useCallback((field: string) => {
     setHiddenColumns((prev) => {
@@ -679,6 +724,7 @@ export function RegistrosContent() {
       consignatariosRes,
       usuariosRes,
       empresasRes,
+      contratosRes,
     ] = await Promise.all([
       supabase.from("catalogos").select("categoria, valor").eq("activo", true).order("orden"),
       supabase.from("navieras").select("nombre").order("nombre"),
@@ -691,6 +737,7 @@ export function RegistrosContent() {
       supabase.from("consignatarios").select("nombre").eq("activo", true).order("nombre"),
       supabase.from("usuarios").select("nombre").in("rol", ["ejecutivo", "admin", "superadmin"]).eq("activo", true).order("nombre"),
       supabase.from("empresas").select("nombre").order("nombre"),
+      supabase.from("contratos").select("nombre").eq("activo", true).order("nombre"),
     ]);
 
     const catData = catalogosRes.data ?? [];
@@ -724,6 +771,7 @@ export function RegistrosContent() {
       puertos_origen: (puertosRes.data ?? []).map((p) => p.nombre),
       especies: (especiesRes.data ?? []).map((e) => e.nombre),
       consignatarios: (consignatariosRes.data ?? []).map((c) => c.nombre),
+      contratos: (contratosRes.data ?? []).map((c) => c.nombre),
       ejecutivos: (usuariosRes.data ?? []).map((u) => u.nombre),
       empresas: (empresasRes.data ?? []).map((e) => e.nombre),
     });
@@ -772,19 +820,24 @@ export function RegistrosContent() {
     [t.registros.yes, t.registros.no]
   );
 
+  const contenedorCellRenderer = useCallback((p: { value: string }) => {
+    const items = splitContenedores(p.value);
+    if (items.length <= 1) return p.value ?? "";
+    return (
+      <div className="w-full py-1 flex flex-col items-center justify-center leading-tight">
+        {items.map((item) => (
+          <span key={item} className="block text-[12px] text-neutral-800">
+            {item}
+          </span>
+        ))}
+      </div>
+    );
+  }, []);
+
   const leafCols = useMemo<ColDef<OperacionRow>[]>(
     () => [
       // ── 1. Identificación y Control ───────────────────────────────────────────
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left", lockPinned: true, suppressMovable: true },
-      { field: "origen_registro", headerName: t.registros.colRecordOrigin, sortable: true, width: columnWidths.origenRegistro },
-      {
-        field: "prioridad", headerName: t.registros.colPriority, sortable: true, editable: canEdit, width: columnWidths.prioridad,
-        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.prioridad] },
-      },
-      {
-        field: "operacion_critica", headerName: t.registros.colCriticalOp, sortable: true, editable: canEdit, width: columnWidths.operacionCritica,
-        cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
-      },
       {
         field: "estado_operacion", headerName: t.registros.colOperationStatus, sortable: true, editable: canEdit, width: columnWidths.estadoOperacion,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.estado_operacion },
@@ -808,6 +861,10 @@ export function RegistrosContent() {
       {
         field: "consignatario", headerName: t.registros.colConsignee, sortable: true, editable: canEdit, width: columnWidths.consignatario,
         cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.consignatarios },
+      },
+      {
+        field: "contrato", headerName: "Contrato", sortable: true, editable: canEdit, width: columnWidths.contrato,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...(catalogos.contratos.length ? catalogos.contratos : CONTRATOS_FALLBACK)] },
       },
       {
         field: "incoterm", headerName: t.registros.colIncoterm, sortable: true, editable: canEdit, width: columnWidths.incoterm,
@@ -863,7 +920,15 @@ export function RegistrosContent() {
         field: "tipo_unidad", headerName: t.registros.colUnitType, sortable: true, editable: canEdit, width: columnWidths.tipoUnidad,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: ["", ...catalogos.tipo_unidad] },
       },
-      { field: "contenedor", headerName: t.registros.colContainer, sortable: true, editable: canEdit, width: columnWidths.contenedor },
+      {
+        field: "contenedor",
+        headerName: t.registros.colContainer,
+        sortable: true,
+        editable: canEdit,
+        width: columnWidths.contenedor,
+        cellRenderer: contenedorCellRenderer,
+        autoHeight: true,
+      },
       { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
       { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
 
@@ -990,29 +1055,29 @@ export function RegistrosContent() {
         cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
     ],
-    [t.registros, booleanCellRenderer, catalogos, canEdit]
+    [t.registros, booleanCellRenderer, contenedorCellRenderer, catalogos, canEdit]
   );
 
   const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {
     const c = leafCols;
     return [
-      { headerName: "Identificación y Control",       children: c.slice(0,  8)  },
-      { headerName: "Cliente y Condiciones",           children: c.slice(8,  14) },
-      { headerName: "Carga / Mercadería",              children: c.slice(14, 24) },
-      { headerName: "Unidad y Contenedor",             children: c.slice(24, 28) },
-      { headerName: "Naviera y Viaje",                 children: c.slice(28, 37) },
-      { headerName: "Documentación",                   children: c.slice(37, 41) },
-      { headerName: "Planta y Proceso",                children: c.slice(41, 45) },
-      { headerName: "Stacking y Puerto",               children: c.slice(45, 49) },
-      { headerName: "Eventos Late / xLate",            children: c.slice(49, 54) },
-      { headerName: "Depósito y Movimientos",          children: c.slice(54, 57) },
-      { headerName: "Transporte",                      children: c.slice(57, 63) },
-      { headerName: "Costos y Logística",              children: c.slice(63, 70) },
-      { headerName: "Facturación",                     children: c.slice(70, 76) },
-      { headerName: "Márgenes",                        children: c.slice(76, 78) },
-      { headerName: "Hitos Administrativos",           children: c.slice(78, 85) },
-      { headerName: "Control y Auditoría",             children: c.slice(85, 86) },
-      { headerName: "Integraciones / Flujo",           children: c.slice(86)     },
+      { headerName: "Identificación y Control",       children: c.slice(0,  5)  },
+      { headerName: "Cliente y Condiciones",          children: c.slice(5,  12) },
+      { headerName: "Carga / Mercadería",             children: c.slice(12, 22) },
+      { headerName: "Unidad y Contenedor",            children: c.slice(22, 26) },
+      { headerName: "Naviera y Viaje",                children: c.slice(26, 35) },
+      { headerName: "Documentación",                  children: c.slice(35, 39) },
+      { headerName: "Planta y Proceso",               children: c.slice(39, 43) },
+      { headerName: "Stacking y Puerto",              children: c.slice(43, 47) },
+      { headerName: "Eventos Late / xLate",           children: c.slice(47, 52) },
+      { headerName: "Depósito y Movimientos",         children: c.slice(52, 55) },
+      { headerName: "Transporte",                     children: c.slice(55, 61) },
+      { headerName: "Costos y Logística",             children: c.slice(61, 68) },
+      { headerName: "Facturación",                    children: c.slice(68, 74) },
+      { headerName: "Márgenes",                       children: c.slice(74, 76) },
+      { headerName: "Hitos Administrativos",          children: c.slice(76, 83) },
+      { headerName: "Control y Auditoría",            children: c.slice(83, 84) },
+      { headerName: "Integraciones / Flujo",          children: c.slice(84)     },
     ];
   }, [leafCols]);
 
@@ -1189,6 +1254,12 @@ export function RegistrosContent() {
           updates.pais = destino.pais;
           e.node.setDataValue("pais", destino.pais);
         }
+      } else if (field === "nave") {
+        const viajeParseado = parseViajeFromNave(String(e.newValue ?? ""));
+        if (viajeParseado && !String(e.data.viaje ?? "").trim()) {
+          updates.viaje = viajeParseado;
+          e.node.setDataValue("viaje", viajeParseado);
+        }
       }
 
       const { error: err } = await supabase
@@ -1274,6 +1345,136 @@ export function RegistrosContent() {
       }
     );
   }, [rowData, t.registros, locale]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (rowData.length === 0 || isExportingPdf) return;
+    const api = gridRef.current?.api;
+    if (!api) return;
+
+    setIsExportingPdf(true);
+    try {
+      const selectedRows = (api.getSelectedRows() as unknown as Record<string, unknown>[]) ?? [];
+      const rowsToExport = selectedRows.length > 0
+        ? selectedRows
+        : (rowData as unknown as Record<string, unknown>[]);
+      if (rowsToExport.length === 0) return;
+
+      const head = [[
+        "N°", "BOOKING", "NAVIERA", "NAVE", "ESPECIE", "T°", "CBM", "DEPOT",
+        "POD", "POL", "ETD", "ETA", "TT", "CONTRATO",
+      ]];
+      const body = rowsToExport.map((row, idx) => ([
+        String(idx + 1),
+        String(row.booking ?? ""),
+        String(row.naviera ?? ""),
+        [row.nave, row.viaje].filter(Boolean).join(" ").trim(),
+        String(row.especie ?? ""),
+        String(row.temperatura ?? ""),
+        String(row.ventilacion ?? ""),
+        String(row.deposito ?? ""),
+        String(row.pod ?? ""),
+        String(row.pol ?? ""),
+        String(row.etd ?? ""),
+        String(row.eta ?? ""),
+        String(row.tt ?? ""),
+        String(row.contrato ?? ""),
+      ]));
+
+      const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const autoTable = (autoTableMod as unknown as { default?: Function }).default ?? (autoTableMod as unknown as Function);
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(20, 12, pageW - 40, 56, "F");
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(1);
+      doc.line(20, 68, pageW - 20, 68);
+
+      try {
+        const logoRes = await fetch(withBase("/logoasli.png"));
+        if (logoRes.ok) {
+          const logoBlob = await logoRes.blob();
+          const logoDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(String(reader.result ?? ""));
+            reader.onerror = () => reject(new Error("No se pudo leer logoasli.png"));
+            reader.readAsDataURL(logoBlob);
+          });
+          if (logoDataUrl) {
+            const { width: naturalW, height: naturalH } = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+              img.onerror = () => reject(new Error("No se pudo cargar dimensiones del logo"));
+              img.src = logoDataUrl;
+            });
+            const maxW = 128;
+            const maxH = 42;
+            const ratio = naturalW > 0 && naturalH > 0 ? naturalW / naturalH : maxW / maxH;
+            let drawW = maxW;
+            let drawH = drawW / ratio;
+            if (drawH > maxH) {
+              drawH = maxH;
+              drawW = drawH * ratio;
+            }
+            doc.addImage(logoDataUrl, "PNG", 26, 16 + (maxH - drawH) / 2, drawW, drawH);
+          }
+        }
+      } catch {
+        // continuar sin logo
+      }
+
+      doc.setTextColor(29, 78, 216);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(17);
+      doc.text("Reserva Confirmada", 170, 39);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.text(`${rowsToExport.length} booking${rowsToExport.length === 1 ? "" : "s"}`, 170, 55);
+
+      autoTable(doc, {
+        head,
+        body,
+        startY: 84,
+        theme: "grid",
+        styles: {
+          fontSize: 8.2,
+          cellPadding: 4,
+          overflow: "linebreak",
+          lineColor: [226, 232, 240],
+          lineWidth: 0.4,
+          textColor: [30, 41, 59],
+          halign: "center",
+          valign: "middle",
+        },
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: 255,
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+          lineColor: [37, 99, 235],
+        },
+        bodyStyles: { halign: "center", valign: "middle" },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 20, right: 20 },
+      });
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      doc.save(`Reserva_confirmada_${stamp}.pdf`);
+      sileo.success({ title: `PDF exportado (${rowsToExport.length} booking${rowsToExport.length === 1 ? "" : "s"})` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo exportar a PDF.";
+      setError(msg);
+      sileo.error({ title: "Error al exportar PDF", description: msg });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [rowData, isExportingPdf]);
 
   if (loading && rowData.length === 0) {
     return (
@@ -1385,6 +1586,46 @@ export function RegistrosContent() {
             <span className="sm:hidden">{t.registros.exportExcelShort}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => void handleExportPdf()}
+            disabled={rowData.length === 0 || isExportingPdf}
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Exportar Reserva Confirmada PDF"
+          >
+            <Icon icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"} width={14} height={14} className={`sm:w-4 sm:h-4 ${isExportingPdf ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">{isExportingPdf ? "Exportando..." : "Exportar PDF"}</span>
+            <span className="sm:hidden">PDF</span>
+          </button>
+
+          {/* Buscador global */}
+          <div className="relative min-w-[220px] sm:min-w-[280px] flex-1 sm:flex-none">
+            <Icon
+              icon="lucide:search"
+              width={14}
+              height={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              placeholder="Buscar: nave, booking, contenedor..."
+              className="w-full h-8 rounded-lg border border-neutral-200 bg-white pl-8 pr-8 text-xs sm:text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+            />
+            {globalSearch && (
+              <button
+                type="button"
+                onClick={() => setGlobalSearch("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+                aria-label="Limpiar búsqueda"
+                title="Limpiar búsqueda"
+              >
+                <Icon icon="lucide:x" width={13} height={13} />
+              </button>
+            )}
+          </div>
+
           {/* Contador de registros */}
           <span className="ml-auto text-xs sm:text-sm text-neutral-500 whitespace-nowrap">
             <span className="font-medium text-neutral-700">{rowData.length}</span> {t.registros.records}
@@ -1428,7 +1669,11 @@ export function RegistrosContent() {
             onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
             onGridReady={onGridReady}
             onDragStopped={onDragStopped}
-            rowHeight={30}
+            getRowHeight={(params) => {
+              const lines = splitContenedores(params.data?.contenedor).length;
+              if (lines <= 1) return 30;
+              return Math.max(30, 16 + lines * 16);
+            }}
             headerHeight={34}
           />
         </div>

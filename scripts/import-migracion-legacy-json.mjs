@@ -90,10 +90,25 @@ function isoDateTime(v) {
   return d.toISOString();
 }
 
+function normalizarContenedores(v) {
+  if (v === undefined || v === null || v === "") return null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+
+  // Permite celdas con múltiples contenedores en líneas separadas y/o separadores comunes.
+  const parts = raw
+    .split(/\r?\n|[,;|]+/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  if (!parts.length) return null;
+  return [...new Set(parts)].join(" | ");
+}
+
 /**
  * Fila del export legado → payload insert operaciones (sin id/correlativo/ref_asli).
  */
-function legacyRowToOperacion(row) {
+function legacyRowToOperacion(row, index) {
   const refLegacy = pick(row, "N°REF ASLI", "NºREF ASLI", "N° REF ASLI") ?? "";
   const wkEtd = pick(row, "WK ETD");
   const ct = pick(row, "CT");
@@ -121,10 +136,10 @@ function legacyRowToOperacion(row) {
   const temperatura = tVal !== undefined && tVal !== "" ? String(tVal) : null;
 
   const ingresoStacking = pick(row, "INGRESO STACKING", "INGRESO_STACKING");
-  const booking = pick(row, "BOOKING");
-  if (booking === undefined || booking === "") {
-    throw new Error("Fila sin BOOKING");
-  }
+  const bookingRaw = pick(row, "BOOKING");
+  const booking = bookingRaw !== undefined && bookingRaw !== null && String(bookingRaw).trim() !== ""
+    ? String(bookingRaw).trim()
+    : `SIN-BOOKING-${String(refLegacy || index + 1).replace(/\s+/g, "-")}`;
 
   return {
     ingreso: isoDateTime(pick(row, "INGRESADO")) ?? new Date().toISOString(),
@@ -154,12 +169,12 @@ function legacyRowToOperacion(row) {
       const n = parseInt(String(t), 10);
       return Number.isFinite(n) ? n : null;
     })(),
-    booking: String(booking).trim(),
+    booking,
     deposito: (() => {
       const d = pick(row, "DEPÓSITO", "DEPOSITO");
       return d != null ? String(d).trim() : null;
     })(),
-    contenedor: pick(row, "CONTENEDOR") != null ? String(pick(row, "CONTENEDOR")).trim() : null,
+    contenedor: normalizarContenedores(pick(row, "CONTENEDOR")),
     forma_pago: pick(row, "FLETE") != null ? String(pick(row, "FLETE")).trim() : null,
     ingreso_stacking: ingresoStacking != null ? isoDateTime(ingresoStacking) : null,
     observaciones: parts.length ? parts.join(" | ") : null,
@@ -196,7 +211,7 @@ async function main() {
   const omitidas = [];
   for (let i = 0; i < rows.length; i++) {
     try {
-      payloads.push(legacyRowToOperacion(rows[i]));
+      payloads.push(legacyRowToOperacion(rows[i], i));
     } catch (e) {
       omitidas.push({ index: i, error: e instanceof Error ? e.message : String(e) });
     }

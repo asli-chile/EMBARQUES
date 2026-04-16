@@ -1,0 +1,176 @@
+{
+  "naviera": "CMA CGM - ONE - COSCO",
+  "servicio": "Americas XL - FLX",
+  "itinerarios": [
+    {
+      "semana": 1,
+      "nave": "Cape Hellas V.0LI14N1MA",
+      "puertos": {
+        "San Antonio": "02-ene",
+        "Port Everglades": "17-ene",
+        "Philadelphia": "20-ene",
+        "New York": "22-ene"
+      }
+    },
+    {
+      "semana": 2,
+      "nave": "Martinique V.0LI16N1MA",
+      "puertos": {
+        "San Antonio": "09-ene",
+        "Port Everglades": "24-ene",
+        "Philadelphia": "27-ene",
+        "New York": "29-ene"
+      }
+    },
+    {
+      "semana": 3,
+      "nave": "Magdalena Schulte V.0LI18N1MA",
+      "puertos": {
+        "San Antonio": "16-ene",
+        "Port Everglades": "31-ene",
+        "Philadelphia": "03-feb",
+        "New York": "05-feb"
+      }
+    },
+    {
+      "semana": 4,
+      "nave": "Cma Cgm Beira V.0LI1AN1MA",
+      "puertos": {
+        "San Antonio": "23-ene",
+        "Port Everglades": "07-feb",
+        "Philadelphia": "10-feb",
+        "New York": "12-feb"
+      }
+    },
+    {
+      "semana": 5,
+      "nave": "Matthew Schulte V.0LIT5N1MA",
+      "puertos": {
+        "San Antonio": "30-ene",
+        "Port Everglades": "14-feb",
+        "Philadelphia": "17-feb",
+        "New York": "19-feb"
+      }
+    },
+    {
+      "semana": 6,
+      "nave": "Cma Cgm Aliaga V.0LI1EN1MA",
+      "puertos": {
+        "San Antonio": "06-feb",
+        "Port Everglades": "21-feb",
+        "Philadelphia": "24-feb",
+        "New York": "26-feb"
+      }
+    },
+    {
+      "semana": 7,
+      "nave": "Cape Hellas V.0LI1GN1MA",
+      "puertos": {
+        "San Antonio": "13-feb",
+        "Port Everglades": "28-feb",
+        "Philadelphia": "03-mar",
+        "New York": "05-mar"
+      }
+    },
+    {
+      "semana": 8,
+      "nave": "Martinique V.0LI1IN1MA",
+      "puertos": {
+        "San Antonio": "20-feb",
+        "Port Everglades": "07-mar",
+        "Philadelphia": "10-mar",
+        "New York": "12-mar"
+      }
+    },
+    {
+      "semana": 9,
+      "nave": "Cma Cgm White V.0LIT4N1MA",
+      "puertos": {
+        "San Antonio": "27-feb",
+        "Port Everglades": "14-mar",
+        "Philadelphia": "17-mar",
+        "New York": "19-mar"
+      }
+    },
+    {
+      "semana": 10,
+      "nave": "Cma Cgm Beira V.0LIT2N1MA",
+      "puertos": {
+        "San Antonio": "06-mar",
+        "Port Everglades": "21-mar",
+        "Philadelphia": "24-mar",
+        "New York": "26-mar"
+      }
+    },
+    {
+      "semana": 11,
+      "nave": "Matthew Schulte V.0LIT3N1MA",
+      "puertos": {
+        "San Antonio": "13-mar",
+        "Port Everglades": "28-mar",
+        "Philadelphia": "31-mar",
+        "New York": "02-abr"
+      }
+    },
+    {
+      "semana": 12,
+      "nave": "Cma Cgm Aliaga V.0LI1ON1MA",
+      "puertos": {
+        "San Antonio": "20-mar",
+        "Port Everglades": "04-abr",
+        "Philadelphia": "07-abr",
+        "New York": "09-abr"
+      }
+    },
+    {
+      "semana": 13,
+      "nave": "Hsl Nike V.0LI1QN1MA",
+      "puertos": {
+        "San Antonio": "27-mar",
+        "Port Everglades": "11-abr",
+        "Philadelphia": "14-abr",
+        "New York": "16-abr"
+      }
+    },
+    {
+      "semana": 14,
+      "nave": "Martinique V.0LI1SN1MA",
+      "puertos": {
+        "San Antonio": "03-abr",
+        "Port Everglades": "18-abr",
+        "Philadelphia": "21-abr",
+        "New York": "23-abr"
+      }
+    },
+    {
+      "semana": 15,
+      "nave": "Sc Montreal V.0LI1UN1MA",
+      "puertos": {
+        "San Antonio": "10-abr",
+        "Port Everglades": "25-abr",
+        "Philadelphia": "28-abr",
+        "New York": "30-abr"
+      }
+    },
+    {
+      "semana": 16,
+      "nave": "Cma Cgm Beira V.0LI1WN1MA",
+      "puertos": {
+        "San Antonio": "17-abr",
+        "Port Everglades": "02-may",
+        "Philadelphia": "05-may",
+        "New York": "07-may"
+      }
+    },
+    {
+      "semana": 17,
+      "nave": "Matthew Schulte V.0LI1YN1MA",
+      "puertos": {
+        "San Antonio": "24-abr",
+        "Port Everglades": "09-may",
+        "Philadelphia": "12-may",
+        "New York": "14-may"
+      }
+    }
+  ]
+}

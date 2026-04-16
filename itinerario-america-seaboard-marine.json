@@ -1,0 +1,23 @@
+{
+  "naviera": "SEABOARD",
+  "servicio": "Seaboard Marine",
+  "itinerarios": [
+    { "semana": 1, "nave": "Lakonia V.470", "puertos": { "San Antonio": "04-ene", "Miami": "22-ene", "Philadelphia": "24-ene", "Houston": "28-ene" } },
+    { "semana": 2, "nave": "Alioth V.26001", "puertos": { "San Antonio": "11-ene", "Miami": "29-ene", "Philadelphia": "31-ene", "Houston": "04-feb" } },
+    { "semana": 3, "nave": "Lakonia V.471", "puertos": { "San Antonio": "18-ene", "Miami": "05-feb", "Philadelphia": "07-feb", "Houston": "11-feb" } },
+    { "semana": 4, "nave": "Myd Shenzen V.26003", "puertos": { "San Antonio": "25-ene", "Miami": "12-feb", "Philadelphia": "14-feb", "Houston": "18-feb" } },
+    { "semana": 5, "nave": "Lakonia V.472", "puertos": { "San Antonio": "01-feb", "Miami": "19-feb", "Philadelphia": "21-feb", "Houston": "25-feb" } },
+    { "semana": 6, "nave": "Myd Shenzen V.26005", "puertos": { "San Antonio": "08-feb", "Miami": "26-feb", "Philadelphia": "28-feb", "Houston": "04-mar" } },
+    { "semana": 7, "nave": "Lakonia V.473", "puertos": { "San Antonio": "14-feb", "Miami": "04-mar", "Philadelphia": "06-mar", "Houston": "10-mar" } },
+    { "semana": 8, "nave": "Myd Shenzen V.26007", "puertos": { "San Antonio": "21-feb", "Miami": "11-mar", "Philadelphia": "13-mar", "Houston": "17-mar" } },
+    { "semana": 9, "nave": "Lakonia V.474", "puertos": { "San Antonio": "28-feb", "Miami": "18-mar", "Philadelphia": "20-mar", "Houston": "24-mar" } },
+    { "semana": 10, "nave": "Myd Shenzen V.26009", "puertos": { "San Antonio": "08-mar", "Miami": "25-mar", "Philadelphia": "30-mar", "Houston": "03-abr" } },
+    { "semana": 11, "nave": "Lakonia V.475", "puertos": { "San Antonio": "omite", "Miami": "omite", "Philadelphia": "omite", "Houston": "omite" } },
+    { "semana": 12, "nave": "Myd Shenzen V.26011", "puertos": { "San Antonio": "21-mar", "Miami": "09-abr", "Philadelphia": "13-abr", "Houston": "16-abr" } },
+    { "semana": 13, "nave": "Lakonia V.476", "puertos": { "San Antonio": "28-mar", "Miami": "16-abr", "Philadelphia": "20-abr", "Houston": "23-abr" } },
+    { "semana": 14, "nave": "Myd Shenzen V.26013", "puertos": { "San Antonio": "05-abr", "Miami": "22-abr", "Philadelphia": "27-abr", "Houston": "01-may" } },
+    { "semana": 15, "nave": "Lakonia V.476", "puertos": { "San Antonio": "13-abr", "Miami": "30-abr", "Philadelphia": "05-may", "Houston": "09-may" } },
+    { "semana": 16, "nave": "Myd Shenzen V.26015", "puertos": { "San Antonio": "21-abr", "Miami": "08-may", "Philadelphia": "13-may", "Houston": "17-may" } },
+    { "semana": 17, "nave": "Lakonia V.477", "puertos": { "San Antonio": "29-abr", "Miami": "16-may", "Philadelphia": "21-may", "Houston": "25-may" } }
+  ]
+}

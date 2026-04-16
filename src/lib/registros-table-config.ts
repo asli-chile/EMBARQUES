@@ -24,6 +24,7 @@ export const columnWidths = {
   tipoOperacion: 150,
   cliente: 180,
   consignatario: 160,
+  contrato: 140,
 
   // ─── COMERCIAL ─────────────────────────────────────────────────────────────
   incoterm: 110,

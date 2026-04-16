@@ -15,10 +15,6 @@ type DbItinerario = {
   semana: number | null;
   pol: string;
   etd: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
-  updated_by: string | null;
 };
 
 type DbEscala = {
@@ -30,8 +26,6 @@ type DbEscala = {
   dias_transito: number | null;
   orden: number;
   area: string | null;
-  created_at: string;
-  updated_at: string;
 };
 
 function jsonResponse(body: object, status = 200) {
@@ -41,36 +35,43 @@ function jsonResponse(body: object, status = 200) {
   });
 }
 
+/** Listado público: sin timestamps ni auditoría (menos JSON y parse más rápido en el cliente). */
 const ITINERARIOS_SELECT =
-  "id, servicio, consorcio, naviera, operador, stacking_imagen_url, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by";
+  "id, servicio, consorcio, naviera, operador, stacking_imagen_url, nave, viaje, semana, pol, etd";
 const ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE =
-  "id, servicio, consorcio, naviera, operador, nave, viaje, semana, pol, etd, created_at, updated_at, created_by, updated_by";
+  "id, servicio, consorcio, naviera, operador, nave, viaje, semana, pol, etd";
 
 export const GET: APIRoute = async () => {
   try {
     const supabase = createAnonClient();
 
-    let itinerariosData: unknown[] | null = null;
-    let errItinerarios: { message?: string; code?: string } | null = null;
+    const PAGE_SIZE = 1000;
+    const fetchItinerarios = async (selectClause: string) => {
+      const out: unknown[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("itinerarios")
+          .select(selectClause)
+          .order("etd", { ascending: true })
+          .order("servicio", { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) return { data: null, error };
+        const chunk = data ?? [];
+        out.push(...chunk);
+        if (chunk.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return { data: out, error: null };
+    };
 
-    let res = await supabase
-      .from("itinerarios")
-      .select(ITINERARIOS_SELECT)
-      .order("etd", { ascending: true })
-      .order("servicio", { ascending: true });
-
-    errItinerarios = res.error;
-    itinerariosData = res.data;
+    let { data: itinerariosData, error: errItinerarios } = await fetchItinerarios(ITINERARIOS_SELECT);
 
     // Si falla por columna inexistente (ej. migración stacking_imagen_url no aplicada), reintentar sin ella
     if (errItinerarios && (errItinerarios.code === "42703" || /column.*does not exist|no existe/i.test(errItinerarios.message ?? ""))) {
-      res = await supabase
-        .from("itinerarios")
-        .select(ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE)
-        .order("etd", { ascending: true })
-        .order("servicio", { ascending: true });
-      errItinerarios = res.error;
-      itinerariosData = res.data;
+      const fallback = await fetchItinerarios(ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE);
+      itinerariosData = fallback.data;
+      errItinerarios = fallback.error;
     }
 
     if (errItinerarios) {
@@ -91,17 +92,39 @@ export const GET: APIRoute = async () => {
     }
 
     const ids = itinerarios.map((i) => i.id);
-    const { data: escalasData, error: errEscalas } = await supabase
-      .from("itinerario_escalas")
-      .select("id, itinerario_id, puerto, puerto_nombre, eta, dias_transito, orden, area, created_at, updated_at")
-      .in("itinerario_id", ids)
-      .order("orden", { ascending: true });
+    const itinerarioIdsSet = new Set(ids);
+    /**
+     * Con muchos itinerarios, usar `.in("itinerario_id", ids)` puede exceder límites
+     * del query-string y devolver error, dejando todas las escalas vacías.
+     * Traemos escalas y filtramos en memoria para mantener respuesta consistente.
+     */
+    const escalasRows: unknown[] = [];
+    let from = 0;
+    let errEscalas: { message?: string; code?: string } | null = null;
+    while (true) {
+      const { data, error } = await supabase
+        .from("itinerario_escalas")
+        .select("id, itinerario_id, puerto, puerto_nombre, eta, dias_transito, orden, area")
+        .order("itinerario_id", { ascending: true })
+        .order("orden", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) {
+        errEscalas = error;
+        break;
+      }
+      const chunk = data ?? [];
+      escalasRows.push(...chunk);
+      if (chunk.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
 
     if (errEscalas) {
       return jsonResponse({ itinerarios: itinerarios.map((i) => ({ ...i, escalas: [] })) });
     }
 
-    const escalas = (escalasData ?? []) as DbEscala[];
+    const escalas = (escalasRows as DbEscala[]).filter((e) =>
+      itinerarioIdsSet.has(e.itinerario_id)
+    );
     const escalasPorItinerario = new Map<string, DbEscala[]>();
     for (const e of escalas) {
       const list = escalasPorItinerario.get(e.itinerario_id) ?? [];

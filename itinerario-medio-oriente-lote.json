@@ -1,0 +1,71 @@
+[
+  {
+    "naviera": "MEDITERRANEAN SHIPPING",
+    "servicio": "SAWC",
+    "itinerarios": [
+      { "semana": 1, "nave": "Msc Edna V.601", "puertos": { "Valparaiso": "02-ene", "King Abdullah": "13-feb", "Jebel Ali": "03-mar", "Ad Damman": "06-mar", "Nhava Sheva": "07-mar" } },
+      { "semana": 2, "nave": "Msc Rayshmi V.602", "puertos": { "Valparaiso": "09-ene", "King Abdullah": "20-feb", "Jebel Ali": "10-mar", "Ad Damman": "13-mar", "Nhava Sheva": "14-mar" } },
+      { "semana": 3, "nave": "Msc Samia V.603", "puertos": { "Valparaiso": "16-ene", "King Abdullah": "27-feb", "Jebel Ali": "17-feb", "Ad Damman": "20-feb", "Nhava Sheva": "02-mar" } },
+      { "semana": 4, "nave": "Msc Carole V.604", "puertos": { "Valparaiso": "24-ene", "King Abdullah": "05-mar", "Jebel Ali": "25-mar", "Ad Damman": "28-mar", "Nhava Sheva": "29-mar" } },
+      { "semana": 5, "nave": "Msc Serena V.605", "puertos": { "Valparaiso": "31-ene", "King Abdullah": "12-mar", "Jebel Ali": "01-abr", "Ad Damman": "04-abr", "Nhava Sheva": "05-abr" } },
+      { "semana": 6, "nave": "Msc Pisa V.606", "puertos": { "Valparaiso": "08-feb", "King Abdullah": "20-mar", "Jebel Ali": "09-abr", "Ad Damman": "12-abr", "Nhava Sheva": "13-abr" } },
+      { "semana": 7, "nave": "Msc Cassandre V.607", "puertos": { "Valparaiso": "13-feb", "King Abdullah": "25-mar", "Jebel Ali": "14-abr", "Ad Damman": "17-abr", "Nhava Sheva": "18-abr" } },
+      { "semana": 8, "nave": "Msc Alanya V.608", "puertos": { "Valparaiso": "21-feb", "King Abdullah": "02-abr", "Jebel Ali": "22-abr", "Ad Damman": "25-abr", "Nhava Sheva": "26-abr" } },
+      { "semana": 9, "nave": "Msc Eugenia V.609", "puertos": { "Valparaiso": "28-feb", "King Abdullah": "09-abr", "Jebel Ali": "29-abr", "Ad Damman": "02-may", "Nhava Sheva": "03-may" } },
+      { "semana": 10, "nave": "Msc Emilia V.610", "puertos": { "Valparaiso": "07-mar", "King Abdullah": "16-abr", "Jebel Ali": "06-may", "Ad Damman": "09-may", "Nhava Sheva": "10-may" } },
+      { "semana": 11, "nave": "Msc Edna V.611", "puertos": { "Valparaiso": "14-mar", "King Abdullah": "23-abr", "Jebel Ali": "13-may", "Ad Damman": "16-may", "Nhava Sheva": "17-may" } },
+      { "semana": 12, "nave": "Msc Rayshmi V.612", "puertos": { "Valparaiso": "21-mar", "King Abdullah": "30-abr", "Jebel Ali": "20-may", "Ad Damman": "23-may", "Nhava Sheva": "24-may" } },
+      { "semana": 13, "nave": "Msc Samia V.613", "puertos": { "Valparaiso": "28-mar", "King Abdullah": "07-may", "Jebel Ali": "27-may", "Ad Damman": "30-may", "Nhava Sheva": "31-may" } },
+      { "semana": 14, "nave": "Msc Carole V.614", "puertos": { "Valparaiso": "04-abr", "King Abdullah": "14-may", "Jebel Ali": "03-jun", "Ad Damman": "06-jun", "Nhava Sheva": "07-jun" } },
+      { "semana": 15, "nave": "Msc Serena V.615", "puertos": { "Valparaiso": "11-abr", "King Abdullah": "21-may", "Jebel Ali": "10-jun", "Ad Damman": "13-jun", "Nhava Sheva": "14-jun" } },
+      { "semana": 16, "nave": "Msc Pisa V.616", "puertos": { "Valparaiso": "18-abr", "King Abdullah": "28-may", "Jebel Ali": "17-jun", "Ad Damman": "20-jun", "Nhava Sheva": "21-jun" } },
+      { "semana": 17, "nave": "Msc Cassandre V.617", "puertos": { "Valparaiso": "25-abr", "King Abdullah": "04-jun", "Jebel Ali": "24-jun", "Ad Damman": "27-jun", "Nhava Sheva": "28-jun" } }
+    ]
+  },
+  {
+    "naviera": "EVERGREEN-COSCO-CMA CGM",
+    "servicio": "WSA 1",
+    "itinerarios": [
+      { "semana": 1, "nave": "Ever Legion V.64", "puertos": { "Valparaiso": "31-dic", "Surabaya": "omite", "Nhava Sheva": "16-feb", "Mundra": "18-feb" } },
+      { "semana": 2, "nave": "Ever Lucky V.81", "puertos": { "Valparaiso": "07-ene", "Surabaya": "omite", "Nhava Sheva": "23-feb", "Mundra": "25-feb" } },
+      { "semana": 3, "nave": "Ever Lucent V.69", "puertos": { "Valparaiso": "14-ene", "Surabaya": "omite", "Nhava Sheva": "02-mar", "Mundra": "04-mar" } },
+      { "semana": 4, "nave": "Ever Lambent V.73", "puertos": { "Valparaiso": "21-ene", "Surabaya": "omite", "Nhava Sheva": "09-mar", "Mundra": "11-mar" } },
+      { "semana": 5, "nave": "Ever Liberal V.68", "puertos": { "Valparaiso": "28-ene", "Surabaya": "omite", "Nhava Sheva": "16-mar", "Mundra": "18-mar" } },
+      { "semana": 6, "nave": "Ever Lunar V.78", "puertos": { "Valparaiso": "04-feb", "Surabaya": "omite", "Nhava Sheva": "09-abr", "Mundra": "08-abr" } },
+      { "semana": 7, "nave": "Blank Sailing", "puertos": { "Valparaiso": "11-feb", "Surabaya": "omite", "Nhava Sheva": "30-mar", "Mundra": "01-abr" } },
+      { "semana": 8, "nave": "Ever Fashion V.24", "puertos": { "Valparaiso": "18-feb", "Surabaya": "omite", "Nhava Sheva": "06-abr", "Mundra": "08-abr" } },
+      { "semana": 9, "nave": "Ever Lissome V.72", "puertos": { "Valparaiso": "25-feb", "Surabaya": "omite", "Nhava Sheva": "13-abr", "Mundra": "15-abr" } },
+      { "semana": 10, "nave": "Ever Loyal V.74", "puertos": { "Valparaiso": "04-mar", "Surabaya": "omite", "Nhava Sheva": "20-abr", "Mundra": "22-abr" } },
+      { "semana": 11, "nave": "Ever Front V.37", "puertos": { "Valparaiso": "11-mar", "Surabaya": "omite", "Nhava Sheva": "27-abr", "Mundra": "29-abr" } },
+      { "semana": 12, "nave": "Ever Legend V.74", "puertos": { "Valparaiso": "18-mar", "Surabaya": "05-may", "Nhava Sheva": "11-may", "Mundra": "13-may", "Surabaya_Retorno": "28-abr" } },
+      { "semana": 13, "nave": "Blank Sailing", "puertos": { "Valparaiso": "25-mar", "Surabaya": "06-may", "Nhava Sheva": "11-may", "Mundra": "13-may", "Surabaya_Retorno": "05-may" } },
+      { "semana": 14, "nave": "Ever Lucky V.82", "puertos": { "Valparaiso": "01-abr", "Surabaya": "13-may", "Nhava Sheva": "18-may", "Mundra": "20-may", "Surabaya_Retorno": "12-may" } },
+      { "semana": 15, "nave": "Ever Lambent V.69", "puertos": { "Valparaiso": "08-abr", "Surabaya": "20-may", "Nhava Sheva": "02-jun", "Mundra": "03-jun", "Surabaya_Retorno": "19-may" } },
+      { "semana": 16, "nave": "Blank Sailing", "puertos": { "Valparaiso": "15-abr", "Surabaya": "27-may", "Nhava Sheva": "01-jun", "Mundra": "03-jun", "Surabaya_Retorno": "26-may" } },
+      { "semana": 17, "nave": "Ever Liberal V.69", "puertos": { "Valparaiso": "22-abr", "Surabaya": "03-jun", "Nhava Sheva": "08-jun", "Mundra": "10-jun", "Surabaya_Retorno": "02-jun" } }
+    ]
+  },
+  {
+    "naviera": "YANG MING - WAN HAI - PIL",
+    "servicio": "SA8",
+    "itinerarios": [
+      { "semana": 1, "nave": "Kota Manzanillo V.23", "puertos": { "San Antonio": "03-ene", "Nhava Sheva": "27-feb" } },
+      { "semana": 2, "nave": "Ym Success V.185", "puertos": { "San Antonio": "10-ene", "Nhava Sheva": "06-mar" } },
+      { "semana": 3, "nave": "Ym Excellence V.152", "puertos": { "San Antonio": "17-ene", "Nhava Sheva": "13-mar" } },
+      { "semana": 4, "nave": "Kota Cahaya V.91", "puertos": { "San Antonio": "23-ene", "Nhava Sheva": "14-mar" } },
+      { "semana": 5, "nave": "Kota Cantik V.97", "puertos": { "San Antonio": "30-ene", "Nhava Sheva": "21-mar" } },
+      { "semana": 6, "nave": "Wan Hai 722 V.23", "puertos": { "San Antonio": "06-feb", "Nhava Sheva": "28-mar" } },
+      { "semana": 7, "nave": "Wan Hai 613 V.73", "puertos": { "San Antonio": "13-feb", "Nhava Sheva": "04-abr" } },
+      { "semana": 8, "nave": "Ym Enlightenment V.91", "puertos": { "San Antonio": "20-feb", "Nhava Sheva": "20-abr" } },
+      { "semana": 9, "nave": "Wan Hai V02 V.1", "puertos": { "San Antonio": "27-feb", "Nhava Sheva": "27-abr" } },
+      { "semana": 10, "nave": "Kota Salam V.90", "puertos": { "San Antonio": "06-mar", "Nhava Sheva": "01-may" } },
+      { "semana": 11, "nave": "Wan Hai 512 V.119", "puertos": { "San Antonio": "13-mar", "Nhava Sheva": "08-may" } },
+      { "semana": 12, "nave": "Kota Manzanillo V.24", "puertos": { "San Antonio": "20-mar", "Nhava Sheva": "15-may" } },
+      { "semana": 13, "nave": "Blank Sailing", "puertos": { "San Antonio": "27-mar", "Nhava Sheva": "22-may" } },
+      { "semana": 14, "nave": "Ym Success V.186", "puertos": { "San Antonio": "03-abr", "Nhava Sheva": "29-may" } },
+      { "semana": 15, "nave": "Ym Fountain V.153", "puertos": { "San Antonio": "10-abr", "Nhava Sheva": "05-jun" } },
+      { "semana": 16, "nave": "Kota Cahaya V.92", "puertos": { "San Antonio": "17-abr", "Nhava Sheva": "12-jun" } },
+      { "semana": 17, "nave": "Kota Santos V.19", "puertos": { "San Antonio": "24-abr", "Nhava Sheva": "19-jun" } }
+    ]
+  }
+]

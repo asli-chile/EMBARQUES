@@ -31,7 +31,6 @@ const AREA_LABELS: Record<string, string> = {
 const AREA_ORDER = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA"];
 
 const COMPANY_NAME = "Asesorías y Servicios Logísticos Integrales Ltda.";
-const MAX_ROWS_PER_SERVICE = 6;
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr?.trim()) return "—";
@@ -72,19 +71,10 @@ export async function generateItinerarioPDF(
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 10;
   const now = new Date();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
 
-  // ── Filtrar y agrupar: byArea[area][naviera][service] = rows ─────────────
-  const todayRows = itinerarios.filter((it) => {
-    if (!it.etd?.trim()) return false;
-    const d = new Date(it.etd.includes("T") ? it.etd : `${it.etd}T12:00:00`);
-    return !isNaN(d.getTime()) && d >= todayStart;
-  });
-
-  // Map<area, Map<naviera, Map<service, rows[]>>>
+  // ── Agrupar todo el conjunto (histórico + futuro): byArea[area][naviera][service] = rows ─
   const byArea = new Map<string, Map<string, Map<string, ItinerarioWithEscalas[]>>>();
-  for (const it of todayRows) {
+  for (const it of itinerarios) {
     const escalas = it.escalas ?? [];
     const areas = new Set<string>(escalas.map((e) => (e.area || "").trim() || "").filter(Boolean));
     if (areas.size === 0) areas.add("—");
@@ -102,12 +92,11 @@ export async function generateItinerarioPDF(
     }
   }
 
-  // Sort each service list by ETD asc, cap at MAX
   for (const navMap of byArea.values()) {
     for (const svcMap of navMap.values()) {
       for (const [k, list] of svcMap) {
         list.sort((a, b) => (a.etd ? new Date(a.etd).getTime() : Infinity) - (b.etd ? new Date(b.etd).getTime() : Infinity));
-        svcMap.set(k, list.slice(0, MAX_ROWS_PER_SERVICE));
+        svcMap.set(k, list);
       }
     }
   }
@@ -186,7 +175,7 @@ export async function generateItinerarioPDF(
     doc.setFontSize(8);
     doc.setTextColor(...TEXT_MUTED);
     doc.text(
-      locale === "es" ? "No hay itinerarios con ETD pendiente." : "No itineraries with pending ETD.",
+      locale === "es" ? "No hay itinerarios para exportar." : "No itineraries to export.",
       pageW / 2, pageH / 2, { align: "center" }
     );
   } else {

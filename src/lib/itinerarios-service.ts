@@ -48,9 +48,51 @@ export async function fetchPublicItinerarios(): Promise<ItinerarioWithEscalas[]>
     );
   }
 
-  const result = (await response.json()) as { itinerarios?: ItinerarioWithEscalas[]; success?: boolean };
+  const result = (await response.json()) as { itinerarios?: unknown[]; success?: boolean };
   const list = result.itinerarios ?? [];
-  return Array.isArray(list) ? list : [];
+  if (!Array.isArray(list)) return [];
+
+  /** La API pública omite timestamps; el tipo de dominio los exige para admin/otros flujos. */
+  const emptyMeta = {
+    created_at: "",
+    updated_at: "",
+    created_by: null as string | null,
+    updated_by: null as string | null,
+  };
+  return list.map((raw) => {
+    const row = raw as Record<string, unknown>;
+    const escalasRaw = Array.isArray(row.escalas) ? row.escalas : [];
+    const escalas = escalasRaw.map((e) => {
+      const ex = e as Record<string, unknown>;
+      return {
+        id: String(ex.id ?? ""),
+        itinerario_id: String(ex.itinerario_id ?? ""),
+        puerto: String(ex.puerto ?? ""),
+        puerto_nombre: (ex.puerto_nombre as string | null) ?? null,
+        eta: (ex.eta as string | null) ?? null,
+        dias_transito: (ex.dias_transito as number | null) ?? null,
+        orden: typeof ex.orden === "number" ? ex.orden : Number(ex.orden) || 0,
+        area: (ex.area as string | null) ?? null,
+        created_at: "",
+        updated_at: "",
+      };
+    });
+    return {
+      id: String(row.id ?? ""),
+      servicio: String(row.servicio ?? ""),
+      consorcio: (row.consorcio as string | null) ?? null,
+      naviera: (row.naviera as string | null) ?? null,
+      operador: (row.operador as string | null) ?? null,
+      stacking_imagen_url: (row.stacking_imagen_url as string | null) ?? null,
+      nave: String(row.nave ?? ""),
+      viaje: String(row.viaje ?? ""),
+      semana: (row.semana as number | null) ?? null,
+      pol: String(row.pol ?? ""),
+      etd: (row.etd as string | null) ?? null,
+      ...emptyMeta,
+      escalas,
+    } as ItinerarioWithEscalas;
+  });
 }
 
 export async function createItinerario(

@@ -159,8 +159,12 @@ export default function ItinerarioMap({
     if (hasPortPoints) {
       const features: GeoJSON.Feature[] = [];
       for (const pt of portPoints) {
-        const name = (pt.puerto_nombre?.trim() || pt.puerto?.trim() || "") as string;
-        const coords = getPortCoordinates(name);
+        const puertoNombre = (pt.puerto_nombre?.trim() || "") as string;
+        const puertoCodigo = (pt.puerto?.trim() || "") as string;
+        const name = (puertoNombre || puertoCodigo || "") as string;
+        const coords =
+          getPortCoordinates(name) ||
+          (puertoCodigo ? getPortCoordinates(puertoCodigo) : null);
         if (!coords) continue;
         const destino = (pt.puerto_nombre?.trim() || pt.puerto?.trim() || "—") as string;
         features.push({

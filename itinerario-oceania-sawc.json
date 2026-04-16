@@ -1,0 +1,23 @@
+{
+  "naviera": "MEDITERRANEAN SHIPPING",
+  "servicio": "SAWC",
+  "itinerarios": [
+    { "semana": 1, "nave": "Msc Edna V.601", "puertos": { "Valparaiso": "02-ene", "Tauranga": "18-dic", "Sydney": "23-dic", "Melbourne": "26-dic" } },
+    { "semana": 2, "nave": "Msc Rayshmi V.602", "puertos": { "Valparaiso": "09-ene", "Tauranga": "10-feb", "Sydney": "19-mar", "Melbourne": "18-feb" } },
+    { "semana": 3, "nave": "Msc Samia V.603", "puertos": { "Valparaiso": "16-ene", "Tauranga": "17-feb", "Sydney": "22-feb", "Melbourne": "24-feb" } },
+    { "semana": 4, "nave": "Msc Carole V.604", "puertos": { "Valparaiso": "24-ene", "Tauranga": "25-feb", "Sydney": "02-mar", "Melbourne": "04-mar" } },
+    { "semana": 5, "nave": "Msc Serena V.605", "puertos": { "Valparaiso": "31-ene", "Tauranga": "04-mar", "Sydney": "09-mar", "Melbourne": "11-mar" } },
+    { "semana": 6, "nave": "Msc Pisa V.606", "puertos": { "Valparaiso": "08-feb", "Tauranga": "12-mar", "Sydney": "17-mar", "Melbourne": "19-mar" } },
+    { "semana": 7, "nave": "Msc Cassandre V.607", "puertos": { "Valparaiso": "13-feb", "Tauranga": "17-mar", "Sydney": "22-mar", "Melbourne": "24-mar" } },
+    { "semana": 8, "nave": "Msc Alanya V.608", "puertos": { "Valparaiso": "21-feb", "Tauranga": "25-mar", "Sydney": "30-mar", "Melbourne": "01-abr" } },
+    { "semana": 9, "nave": "Msc Eugenia V.609", "puertos": { "Valparaiso": "28-feb", "Tauranga": "01-abr", "Sydney": "06-abr", "Melbourne": "08-abr" } },
+    { "semana": 10, "nave": "Msc Emilia V.610", "puertos": { "Valparaiso": "07-mar", "Tauranga": "08-abr", "Sydney": "13-abr", "Melbourne": "15-abr" } },
+    { "semana": 11, "nave": "Msc Edna V.611", "puertos": { "Valparaiso": "14-mar", "Tauranga": "15-abr", "Sydney": "20-abr", "Melbourne": "22-abr" } },
+    { "semana": 12, "nave": "Msc Rayshmi V.612", "puertos": { "Valparaiso": "21-mar", "Tauranga": "11-may", "Sydney": "27-abr", "Melbourne": "29-abr" } },
+    { "semana": 13, "nave": "Msc Samia V.613", "puertos": { "Valparaiso": "28-mar", "Tauranga": "18-may", "Sydney": "04-may", "Melbourne": "06-may" } },
+    { "semana": 14, "nave": "Msc Carole V.614", "puertos": { "Valparaiso": "04-abr", "Tauranga": "25-may", "Sydney": "11-may", "Melbourne": "13-may" } },
+    { "semana": 15, "nave": "Msc Serena V.615", "puertos": { "Valparaiso": "11-abr", "Tauranga": "01-jun", "Sydney": "18-may", "Melbourne": "20-may" } },
+    { "semana": 16, "nave": "Msc Pisa V.616", "puertos": { "Valparaiso": "18-abr", "Tauranga": "08-jun", "Sydney": "25-may", "Melbourne": "27-may" } },
+    { "semana": 17, "nave": "Msc Cassandre V.617", "puertos": { "Valparaiso": "25-abr", "Tauranga": "15-jun", "Sydney": "01-jun", "Melbourne": "03-jun" } }
+  ]
+}

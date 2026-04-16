@@ -190,11 +190,16 @@ function getNavierasForItinerario(
       return [s.naviera_nombre.trim()];
     }
   }
-  return [];
+  const fromRow = (it.naviera ?? "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  return fromRow.length ? [...new Set(fromRow)] : [];
 }
 
 export function ItinerarioContent() {
   const { t, locale } = useLocale();
+  const itinerarioLoadError = t.itinerarioPage?.loadError ?? "Error al cargar itinerarios.";
   const { user: authUser, isSuperadmin } = useAuth();
   const isLoggedIn = authUser != null;
 
@@ -286,7 +291,6 @@ export function ItinerarioContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [operadorUpdatingId, setOperadorUpdatingId] = useState<string | null>(null);
-  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
   const [selectedAreaFromMap, setSelectedAreaFromMap] = useState<string | null>(null);
   const [pendingScrollServicio, setPendingScrollServicio] = useState<string | null>(null);
   const [destSearch, setDestSearch] = useState("");
@@ -383,34 +387,64 @@ export function ItinerarioContent() {
     }
   }, [stackingDrafts]);
 
-  const loadItinerarios = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadItinerarios = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await fetchPublicItinerarios();
       setItinerarios(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tr.loadError);
-      setItinerarios([]);
+      const msg = e instanceof Error ? e.message : itinerarioLoadError;
+      setError(msg);
+      if (!silent) setItinerarios([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [tr.loadError]);
+  }, [itinerarioLoadError]);
 
   useEffect(() => {
     loadItinerarios();
   }, [loadItinerarios]);
 
+  /**
+   * Si hay datos pero ninguna escala trae `area`, no aparecen chips de región y el usuario
+   * no puede abrir la tabla (queda oculta hasta elegir área). Abrimos el listado completo.
+   */
   useEffect(() => {
-    if (!modalOpen && !addRowModalOpen && !isLoggedIn) return;
+    if (loading) return;
+    if (itinerarios.length === 0) return;
+    const hasAreaInEscalas = itinerarios.some((it) =>
+      (it.escalas ?? []).some((e) => String(e.area ?? "").trim() !== ""),
+    );
+    if (!hasAreaInEscalas) {
+      setSelectedAreaFromMap((prev) => (prev == null ? "ALL" : prev));
+    }
+  }, [loading, itinerarios]);
+
+  /**
+   * Catálogos admin solo al abrir modal de nuevo/editar itinerario o añadir fila.
+   * Antes: `!modalOpen && !addRowModalOpen && !isLoggedIn` implicaba ejecutar siempre que hubiera
+   * sesión (aunque los modales estuvieran cerrados) → ~300 KB y varios segundos en cada carga de página.
+   */
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (!modalOpen && !addRowModalOpen) return;
     const base = getApiUrl() || "";
+    let cancelled = false;
     Promise.all([
-      fetch(`${base}/api/admin/servicios-unicos`, { credentials: "include" }).then((r) => r.ok ? r.json() : { servicios: [] }),
-      fetch(`${base}/api/admin/consorcios`, { credentials: "include" }).then((r) => r.ok ? r.json() : { consorcios: [] }),
+      fetch(`${base}/api/admin/servicios-unicos`, { credentials: "include" }).then((r) => (r.ok ? r.json() : { servicios: [] })),
+      fetch(`${base}/api/admin/consorcios`, { credentials: "include" }).then((r) => (r.ok ? r.json() : { consorcios: [] })),
     ]).then(([s, c]) => {
+      if (cancelled) return;
       setServiciosConDetalle((s as { servicios?: ServicioConDetalle[] }).servicios ?? []);
       setConsorciosConDetalle((c as { consorcios?: ConsorcioConDetalle[] }).consorcios ?? []);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [modalOpen, addRowModalOpen, isLoggedIn]);
 
   useEffect(() => {
@@ -515,22 +549,16 @@ export function ItinerarioContent() {
     if (pdfLoading || itinerarios.length === 0) return;
     setPdfLoading(true);
     try {
-      // Filtrar por área activa (igual que las tablas en pantalla)
-      const isAreaFilter = !!selectedAreaFromMap && selectedAreaFromMap !== "ALL";
-      const filtered = isAreaFilter
-        ? itinerarios.filter((it) =>
-            (it.escalas ?? []).some(
-              (e) => ((e.area || "").trim() || "") === selectedAreaFromMap
-            )
-          )
-        : itinerarios;
-      await generateItinerarioPDF(filtered, selectedAreaFromMap, locale as "es" | "en");
+      // PDF completo: todas las regiones, fechas y filas (sin recorte por mapa ni “solo futuro”)
+      await generateItinerarioPDF(itinerarios, "ALL", locale as "es" | "en");
     } catch (err) {
-      console.error("Error generando PDF:", err);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error generando PDF:", err);
+      }
     } finally {
       setPdfLoading(false);
     }
-  }, [pdfLoading, itinerarios, selectedAreaFromMap, locale]);
+  }, [pdfLoading, itinerarios, locale]);
 
   /** Al hacer clic en un marcador del mapa: seleccionar el área y hacer scroll al servicio. */
   const handlePortClick = useCallback((port: MapPortPoint) => {
@@ -783,7 +811,7 @@ export function ItinerarioContent() {
       setOperadorUpdatingId(it.id);
       try {
         await updateItinerarioOperador(it.id, value);
-        loadItinerarios();
+        void loadItinerarios({ silent: true });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error al actualizar operador");
       } finally {
@@ -805,7 +833,11 @@ export function ItinerarioContent() {
           setConfirmDialog(null);
           setDeletingId(it.id);
           deleteItinerario(it.id)
-            .then(() => { sileo.success({ title: tr.successDeleted }); loadItinerarios(); })
+            .then(() => {
+              setItinerarios((rows) => rows.filter((r) => r.id !== it.id));
+              sileo.success({ title: tr.successDeleted });
+              return loadItinerarios({ silent: true });
+            })
             .catch((e: unknown) => setError(e instanceof Error ? e.message : tr.errorCreate))
             .finally(() => setDeletingId(null));
         },
@@ -894,7 +926,7 @@ export function ItinerarioContent() {
       });
       handleCloseAddRowModal();
       sileo.success({ title: tr.addRowSuccess });
-      loadItinerarios();
+      void loadItinerarios({ silent: true });
     } catch (e) {
       setAddRowModalError(e instanceof Error ? e.message : tr.errorCreate);
     } finally {
@@ -958,7 +990,7 @@ export function ItinerarioContent() {
         sileo.success({ title: tr.successCreated });
       }
       handleCloseModal();
-      loadItinerarios();
+      void loadItinerarios({ silent: true });
     } catch (e) {
       setModalError(e instanceof Error ? e.message : tr.errorCreate);
     } finally {
@@ -987,7 +1019,6 @@ export function ItinerarioContent() {
     });
   }, []);
 
-  const isMapOnlyView = !loading && !selectedAreaFromMap;
   const hasAreaFilter = !!selectedAreaFromMap && selectedAreaFromMap !== "ALL";
 
   const areasWithData = itinerarios.length > 0
@@ -1104,33 +1135,12 @@ export function ItinerarioContent() {
       result = result.filter((it) => getAllNavierasForIt(it).includes(filterNaviera));
     }
     if (filterSemana != null) {
-      // Calcular rangos de semana por servicio sobre TODOS los itinerarios
-      const rangosPorServicio = new Map<string, Set<number>>();
-      for (const it of itinerarios) {
-        const key = `${it.servicio ?? ""}|${it.consorcio ?? ""}`;
-        if (!rangosPorServicio.has(key)) rangosPorServicio.set(key, new Set());
-        if (it.semana != null) rangosPorServicio.get(key)!.add(it.semana);
-      }
-      // Servicios donde filterSemana es un gap (blank sailing)
-      const blankSvcKeys = new Set<string>();
-      for (const [key, semanas] of rangosPorServicio) {
-        if (!semanas.size) continue;
-        const arr = [...semanas];
-        const min = Math.min(...arr), max = Math.max(...arr);
-        if (filterSemana > min && filterSemana < max && !semanas.has(filterSemana)) {
-          blankSvcKeys.add(key);
-        }
-      }
-      result = result.filter((it) => {
-        if (it.semana === filterSemana) return true;
-        const key = `${it.servicio ?? ""}|${it.consorcio ?? ""}`;
-        if (!blankSvcKeys.has(key)) return false;
-        // Incluir la semana más cercana antes y después del gap para que se detecte el blank sailing
-        const arr = [...(rangosPorServicio.get(key) ?? [])];
-        const before = Math.max(...arr.filter((s) => s < filterSemana));
-        const after  = Math.min(...arr.filter((s) => s > filterSemana));
-        return it.semana === before || it.semana === after;
-      });
+      const endWeek = filterSemana + 3;
+      // Mantener datos de la ventana completa para evitar "blank sailing" falsos
+      // cuando sí existen viajes en semanas siguientes.
+      result = result.filter(
+        (it) => typeof it.semana === "number" && it.semana >= filterSemana && it.semana <= endWeek
+      );
     }
     return result;
   }, [itinerarios, filterSearch, filterNaviera, filterSemana, getAllNavierasForIt]);
@@ -1214,6 +1224,29 @@ export function ItinerarioContent() {
                 <div className="absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-white/[0.04] pointer-events-none" aria-hidden />
                 <div className="absolute top-0 -left-10 h-36 w-36 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
                 <div className="absolute top-1/2 right-4 h-20 w-20 rounded-full bg-white/[0.03] pointer-events-none" aria-hidden />
+
+                {!loading && itinerarios.length === 0 && (
+                  <div className="relative z-10 rounded-xl border border-white/15 bg-white/10 px-3 py-3 text-center">
+                    <p className="text-sm font-semibold text-white/90">{tr.emptyTitle}</p>
+                    <p className="mt-1 text-[11px] text-white/55 leading-relaxed">{error ?? tr.emptySubtitle}</p>
+                  </div>
+                )}
+
+                {itinerarios.length > 0 && (
+                  <div className="relative z-10">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAreaFromMap("ALL")}
+                      className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white text-brand-blue text-xs font-bold uppercase tracking-wide shadow-md hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+                    >
+                      <Icon icon="lucide:table-2" width={16} height={16} aria-hidden />
+                      {tr.viewAllAreas}
+                    </button>
+                    <p className="mt-1.5 text-[10px] text-white/45 text-center leading-snug">
+                      {tr.mapSelectHint}
+                    </p>
+                  </div>
+                )}
 
                 {/* Encabezado — solo desktop */}
                 <div className="relative hidden lg:block">
@@ -1599,18 +1632,12 @@ export function ItinerarioContent() {
           </div>
         ) : (
           <>
-            {itinerarios.length === 0 && !isMapOnlyView && (
+            {itinerarios.length === 0 && selectedAreaFromMap && (
               <div className="mt-6 bg-white rounded-2xl shadow-mac-modal border border-black/5 p-8 text-center">
                 <Icon icon="lucide:ship" width={48} height={48} className="mx-auto mb-4 text-neutral-400" />
                 <p className="text-neutral-600 font-medium">{tr.emptyTitle}</p>
                 <p className="text-sm text-neutral-500 mt-1">{tr.emptySubtitle}</p>
               </div>
-            )}
-
-            {itinerarios.length > 0 && !selectedAreaFromMap && !isMapOnlyView && (
-              <p className="text-center text-white/90 text-sm py-6 px-4">
-                {tr.mapSelectHint ?? "Selecciona una región en el mapa para ver los itinerarios."}
-              </p>
             )}
 
             {itinerarios.length > 0 && selectedAreaFromMap && (() => {
@@ -1713,10 +1740,6 @@ export function ItinerarioContent() {
                             const getEscalaForPort = (escalas: ItinerarioWithEscalasType["escalas"], portKey: string) =>
                               (escalas ?? []).find((e) => ((e.puerto_nombre || e.puerto) || "—") === portKey);
 
-                            const areaKey = `${servicioNombre}__${area || "sin-area"}`;
-                            const isExpanded = expandedAreas[areaKey] ?? false;
-                            const displayedItinerarios = isExpanded ? itinerariosEnArea : itinerariosEnArea.slice(0, 4);
-
                             // ── Blank Sailing detection ────────────────────────────────────
                             type DisplayRow =
                               | { type: "it"; data: ItinerarioWithEscalasType }
@@ -1757,20 +1780,33 @@ export function ItinerarioContent() {
                             // Orden cronológico estricto — blank sailing en su posición exacta
                             const orderedRows: DisplayRow[] = allDisplayRows;
 
-                            const displayedRows: DisplayRow[] = isExpanded
-                              ? orderedRows
-                              : (() => {
-                                  let count = 0;
-                                  const result: DisplayRow[] = [];
-                                  for (const row of orderedRows) {
-                                    result.push(row);
-                                    if (row.type === "it") {
-                                      count++;
-                                      if (count >= 4) break;
-                                    }
-                                  }
-                                  return result;
-                                })();
+                            /**
+                             * Ventana fija de 4 semanas:
+                             * - sin filtro: semana ISO actual + 3 siguientes
+                             * - con filtro: semana seleccionada + 3 siguientes
+                             * Siempre se muestran 4 filas (itinerario o blank sailing).
+                             */
+                            const startWeek = filterSemana ?? getISOWeek(new Date());
+                            const endWeek = startWeek + 3;
+                            const itinerariosByWeek = new Map<number, ItinerarioWithEscalasType[]>();
+                            for (const row of orderedRows) {
+                              if (row.type !== "it") continue;
+                              const w = row.data.semana;
+                              if (w == null) continue;
+                              const listForWeek = itinerariosByWeek.get(w) ?? [];
+                              listForWeek.push(row.data);
+                              itinerariosByWeek.set(w, listForWeek);
+                            }
+                            const displayedRows: DisplayRow[] = [];
+                            for (let week = startWeek; week <= endWeek; week++) {
+                              const listForWeek = itinerariosByWeek.get(week) ?? [];
+                              if (listForWeek.length > 0) {
+                                // Si hubiera múltiples salidas en la misma semana, usar la primera por orden cronológico.
+                                displayedRows.push({ type: "it", data: listForWeek[0] });
+                              } else {
+                                displayedRows.push({ type: "blank", semana: week });
+                              }
+                            }
 
                             return (
                               <section key={servicioNombre} id={`srv-${area}-${servicioNombre}`}>
@@ -2171,30 +2207,14 @@ export function ItinerarioContent() {
                                 })}
                               </tbody>
                             </table>
-                            {itinerariosEnArea.length > 4 && (
-                              <div className="px-4 py-2.5 border-t border-[#e8f0fb] bg-gradient-to-r from-[#f5f9ff] to-[#eef4fb] flex items-center justify-between">
-                                <span className="text-[11px] text-[#1e3a6e]/50 tabular-nums">
-                                  {isExpanded ? itinerariosEnArea.length : 4} / {itinerariosEnArea.length} salidas
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setExpandedAreas((prev) => ({
-                                      ...prev,
-                                      [areaKey]: !isExpanded,
-                                    }))
-                                  }
-                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00529b] hover:text-[#0d6cbf] transition-colors"
-                                >
-                                  <Icon icon={isExpanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={13} height={13} aria-hidden />
-                                  {isExpanded
-                                    ? tr.showLessRows?.replace("{{count}}", String(itinerariosEnArea.length)) ??
-                                      `Ver menos`
-                                    : tr.showMoreRows?.replace("{{count}}", String(itinerariosEnArea.length)) ??
-                                      `Ver todas (${itinerariosEnArea.length})`}
-                                </button>
-                              </div>
-                            )}
+                            <div className="px-4 py-2.5 border-t border-[#e8f0fb] bg-gradient-to-r from-[#f5f9ff] to-[#eef4fb] flex items-center justify-between">
+                              <span className="text-[11px] text-[#1e3a6e]/60 tabular-nums">
+                                Semanas {startWeek}–{endWeek} ({filterSemana != null ? "filtro activo" : "semana actual"})
+                              </span>
+                              <span className="text-[11px] text-[#1e3a6e]/45 tabular-nums">
+                                4 filas fijas
+                              </span>
+                            </div>
                           </div>
                                 </div>
                               </section>
