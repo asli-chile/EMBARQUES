@@ -1284,6 +1284,7 @@ export function ItinerarioContent() {
     }
     return [...set].sort((a, b) => a - b);
   }, [itinerarios]);
+  const currentIsoWeek = getISOWeek(new Date());
 
   /** Itinerarios tras aplicar filtros rápidos (search + naviera + semana) */
   const filteredItinerarios = useMemo(() => {
@@ -1774,6 +1775,7 @@ export function ItinerarioContent() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {availableSemanas.map((sem) => {
                     const active = filterSemana === sem;
+                    const isCurrentWeek = sem === currentIsoWeek;
                     return (
                       <button
                         key={sem}
@@ -1782,8 +1784,11 @@ export function ItinerarioContent() {
                         className={`inline-flex items-center justify-center w-9 h-7 rounded-full text-[10px] font-bold transition-all tabular-nums ${
                           active
                             ? "bg-white text-[#00529b] shadow-sm"
+                            : isCurrentWeek
+                            ? "bg-brand-teal/25 border border-brand-teal/60 text-white shadow-[0_0_0_1px_rgba(45,212,191,0.35)] hover:bg-brand-teal/35"
                             : "bg-white/12 border border-white/20 text-white/80 hover:bg-white/22 hover:text-white"
                         }`}
+                        title={isCurrentWeek ? "Semana actual" : undefined}
                       >
                         {sem}
                       </button>
