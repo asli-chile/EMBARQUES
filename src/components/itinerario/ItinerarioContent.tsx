@@ -1134,14 +1134,10 @@ export function ItinerarioContent() {
       // Incluye itinerarios donde la naviera participa directamente o via consorcio/servicio
       result = result.filter((it) => getAllNavierasForIt(it).includes(filterNaviera));
     }
-    if (filterSemana != null) {
-      const endWeek = filterSemana + 3;
-      // Mantener datos de la ventana completa para evitar "blank sailing" falsos
-      // cuando sí existen viajes en semanas siguientes.
-      result = result.filter(
-        (it) => typeof it.semana === "number" && it.semana >= filterSemana && it.semana <= endWeek
-      );
-    }
+    // Nota: no filtramos filas por semana en esta etapa.
+    // La semana seleccionada se aplica al render de cada servicio (ventana fija 4 semanas),
+    // para poder mostrar también servicios sin salida en esa semana como "Blank Sailing"
+    // en vez de ocultarlos por completo.
     return result;
   }, [itinerarios, filterSearch, filterNaviera, filterSemana, getAllNavierasForIt]);
 

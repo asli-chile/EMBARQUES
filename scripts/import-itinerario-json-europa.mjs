@@ -88,6 +88,46 @@ function asServiceList(raw) {
   return [];
 }
 
+function chunkArray(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function deleteImportedByServiceAndArea(supabase, servicio, area) {
+  const { data: itRows, error: itErr } = await supabase
+    .from("itinerarios")
+    .select("id")
+    .eq("servicio", servicio)
+    .is("created_by", null);
+  if (itErr) return { ok: false, message: itErr.message };
+
+  const ids = (itRows ?? []).map((r) => r.id).filter(Boolean);
+  if (ids.length === 0) return { ok: true, deleted: 0 };
+
+  const idsToDelete = new Set();
+  for (const idsChunk of chunkArray(ids, 400)) {
+    const { data: escRows, error: escErr } = await supabase
+      .from("itinerario_escalas")
+      .select("itinerario_id, area")
+      .in("itinerario_id", idsChunk);
+    if (escErr) return { ok: false, message: escErr.message };
+
+    for (const row of escRows ?? []) {
+      if (upper(row.area) === area) idsToDelete.add(row.itinerario_id);
+    }
+  }
+
+  if (idsToDelete.size === 0) return { ok: true, deleted: 0 };
+
+  for (const delChunk of chunkArray([...idsToDelete], 400)) {
+    const { error: delErr } = await supabase.from("itinerarios").delete().in("id", delChunk);
+    if (delErr) return { ok: false, message: delErr.message };
+  }
+
+  return { ok: true, deleted: idsToDelete.size };
+}
+
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const replaceService = process.argv.includes("--replace-service");
@@ -193,15 +233,12 @@ async function main() {
   if (replaceService) {
     const uniqueServices = [...new Set(rows.map((r) => r.servicio))];
     for (const servicio of uniqueServices) {
-      const { error: delErr } = await supabase
-        .from("itinerarios")
-        .delete()
-        .eq("servicio", servicio)
-        .is("created_by", null);
-      if (delErr) {
-        console.error("Error borrando servicio previo:", servicio, delErr.message);
+      const del = await deleteImportedByServiceAndArea(supabase, servicio, area);
+      if (!del.ok) {
+        console.error("Error borrando servicio previo:", servicio, del.message);
         process.exit(1);
       }
+      console.log("Reemplazo por área:", servicio, "|", area, "| eliminados:", del.deleted ?? 0);
     }
   }
 
