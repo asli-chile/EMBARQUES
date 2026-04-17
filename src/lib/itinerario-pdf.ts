@@ -4,7 +4,7 @@
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { formatDisplayDateLocal, formatIsoDateLocal } from "@/lib/calendarUtils";
+import { formatDisplayDateLocal, formatIsoDateLocal, getISOWeek } from "@/lib/calendarUtils";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { withBase } from "@/lib/basePath";
 
@@ -64,7 +64,8 @@ async function loadLogo(): Promise<{ dataUrl: string; w: number; h: number } | n
 export async function generateItinerarioPDF(
   itinerarios: ItinerarioWithEscalas[],
   selectedArea: string | null,
-  locale: "es" | "en" = "es"
+  locale: "es" | "en" = "es",
+  options?: { startWeek?: number; endWeek?: number }
 ): Promise<void> {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -72,11 +73,21 @@ export async function generateItinerarioPDF(
   const margin = 10;
   const now = new Date();
 
-  // ── Agrupar todo el conjunto (histórico + futuro): byArea[area][naviera][service] = rows ─
+  const startWeek = options?.startWeek ?? getISOWeek(now);
+  const endWeek = options?.endWeek ?? startWeek + 3;
+
+  // ── Agrupar solo lo visible (filtros + ventana de 4 semanas): byArea[area][naviera][service] = rows ─
   const byArea = new Map<string, Map<string, Map<string, ItinerarioWithEscalas[]>>>();
   for (const it of itinerarios) {
     const escalas = it.escalas ?? [];
-    const areas = new Set<string>(escalas.map((e) => (e.area || "").trim() || "").filter(Boolean));
+    const semana = it.semana;
+    if (semana == null || semana < startWeek || semana > endWeek) continue;
+    if (!(it.nave ?? "").trim() || !(it.etd ?? "").trim()) continue;
+
+    const escalasConPuerto = escalas.filter((e) => ((e.puerto_nombre || e.puerto) ?? "").trim().length > 0);
+    if (escalasConPuerto.length === 0) continue;
+
+    const areas = new Set<string>(escalasConPuerto.map((e) => (e.area || "").trim() || "").filter(Boolean));
     if (areas.size === 0) areas.add("—");
     for (const area of areas) {
       if (selectedArea && selectedArea !== "ALL" && area !== selectedArea) continue;
@@ -94,9 +105,29 @@ export async function generateItinerarioPDF(
 
   for (const navMap of byArea.values()) {
     for (const svcMap of navMap.values()) {
-      for (const [k, list] of svcMap) {
-        list.sort((a, b) => (a.etd ? new Date(a.etd).getTime() : Infinity) - (b.etd ? new Date(b.etd).getTime() : Infinity));
-        svcMap.set(k, list);
+      for (const [k, list] of [...svcMap.entries()]) {
+        const sorted = [...list].sort(
+          (a, b) => (a.etd ? new Date(a.etd).getTime() : Infinity) - (b.etd ? new Date(b.etd).getTime() : Infinity)
+        );
+        const byWeek = new Map<number, ItinerarioWithEscalas>();
+        for (const row of sorted) {
+          if (row.semana == null) continue;
+          if (row.semana < startWeek || row.semana > endWeek) continue;
+          if (!byWeek.has(row.semana)) byWeek.set(row.semana, row);
+        }
+        const compact: ItinerarioWithEscalas[] = [];
+        for (let wk = startWeek; wk <= endWeek; wk++) {
+          const row = byWeek.get(wk);
+          if (row) compact.push(row);
+        }
+        if (compact.length === 0) {
+          svcMap.delete(k);
+        } else {
+          svcMap.set(k, compact);
+        }
+      }
+      for (const [navKey, nestedSvcMap] of [...navMap.entries()]) {
+        if (nestedSvcMap.size === 0) navMap.delete(navKey);
       }
     }
   }
@@ -138,10 +169,11 @@ export async function generateItinerarioPDF(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(5.5);
     doc.setTextColor(170, 210, 255);
-    const filterLabel = selectedArea && selectedArea !== "ALL"
+    const areaLabel = selectedArea && selectedArea !== "ALL"
       ? `${AREA_LABELS[selectedArea] ?? selectedArea}`
       : locale === "es" ? "Todas las áreas" : "All areas";
-    doc.text(filterLabel, textX, 17);
+    const windowLabel = locale === "es" ? `Semanas ${startWeek}-${endWeek}` : `Weeks ${startWeek}-${endWeek}`;
+    doc.text(`${areaLabel} · ${windowLabel}`, textX, 17);
 
     // Right: date + count
     doc.setFont("helvetica", "bold");

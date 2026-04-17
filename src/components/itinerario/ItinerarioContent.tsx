@@ -300,7 +300,14 @@ export function ItinerarioContent() {
   };
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    variant?: "danger" | "warning" | "default";
+  } | null>(null);
   const [operadorUpdatingId, setOperadorUpdatingId] = useState<string | null>(null);
   const [selectedAreaFromMap, setSelectedAreaFromMap] = useState<string | null>(null);
   const [pendingScrollServicio, setPendingScrollServicio] = useState<string | null>(null);
@@ -561,21 +568,6 @@ export function ItinerarioContent() {
     setSelectedServicioId("");
     setSelectedConsorcioId(c.id);
   }, []);
-
-  const handleDownloadPDF = useCallback(async () => {
-    if (pdfLoading || itinerarios.length === 0) return;
-    setPdfLoading(true);
-    try {
-      // PDF completo: todas las regiones, fechas y filas (sin recorte por mapa ni “solo futuro”)
-      await generateItinerarioPDF(itinerarios, "ALL", locale as "es" | "en");
-    } catch (err) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error generando PDF:", err);
-      }
-    } finally {
-      setPdfLoading(false);
-    }
-  }, [pdfLoading, itinerarios, locale]);
 
   /** Al hacer clic en un marcador del mapa: seleccionar el área y hacer scroll al servicio. */
   const handlePortClick = useCallback((port: MapPortPoint) => {
@@ -846,6 +838,9 @@ export function ItinerarioContent() {
       setConfirmDialog({
         title: "Eliminar itinerario",
         message: msg,
+        confirmLabel: "Eliminar",
+        cancelLabel: "Cancelar",
+        variant: "danger",
         onConfirm: () => {
           setConfirmDialog(null);
           setDeletingId(it.id);
@@ -895,7 +890,7 @@ export function ItinerarioContent() {
     }
   }, [addRowModalOpen, addRowContext, addRowNaves.length]);
 
-  const handleSubmitAddRow = useCallback(async () => {
+  const handleSubmitAddRow = useCallback(async (options?: { saveUnknownNave?: boolean }) => {
     if (!addRowContext) return;
     const { template, area } = addRowContext;
     const nave = addRowForm.nave.trim();
@@ -907,11 +902,21 @@ export function ItinerarioContent() {
       return;
     }
     const naveExisteEnLista = addRowNaves.some((n) => n.trim().toUpperCase() === nave.toUpperCase());
-    if (!naveExisteEnLista) {
-      const shouldSave = window.confirm(
-        `La nave "${nave}" no está en la lista. ¿Quieres guardarla para usarla en futuras ocasiones?`
-      );
-      if (shouldSave) {
+    if (!naveExisteEnLista && !options?.saveUnknownNave) {
+      setConfirmDialog({
+        title: "Guardar nave nueva",
+        message: `La nave "${nave}" no está en la lista. ¿Quieres guardarla para usarla en futuras ocasiones?`,
+        confirmLabel: "Guardar nave",
+        cancelLabel: "Solo usar ahora",
+        variant: "default",
+        onConfirm: () => {
+          setConfirmDialog(null);
+          void handleSubmitAddRow({ saveUnknownNave: true });
+        },
+      });
+      return;
+    }
+    if (!naveExisteEnLista && options?.saveUnknownNave) {
         const servicioByName = serviciosConDetalle.find(
           (s) => (s.nombre ?? "").trim().toUpperCase() === (template.servicio ?? "").trim().toUpperCase()
         );
@@ -944,7 +949,6 @@ export function ItinerarioContent() {
           setAddRowModalError(e instanceof Error ? e.message : "Error al guardar la nave en el catálogo.");
           return;
         }
-      }
     }
     const escalasDelArea = (template.escalas ?? []).filter((e) => ((e.area || "").trim() || "") === area);
     if (escalasDelArea.length === 0) {
@@ -1306,6 +1310,27 @@ export function ItinerarioContent() {
   }, [itinerarios, filterSearch, filterNaviera, filterSemana, getAllNavierasForIt]);
 
   const activeFiltersCount = (filterSearch.trim() ? 1 : 0) + (filterNaviera ? 1 : 0) + (filterSemana != null ? 1 : 0);
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (pdfLoading || itinerarios.length === 0) return;
+    setPdfLoading(true);
+    try {
+      const startWeek = filterSemana ?? getISOWeek(new Date());
+      const endWeek = startWeek + 3;
+      await generateItinerarioPDF(
+        filteredItinerarios,
+        selectedAreaFromMap ?? "ALL",
+        locale as "es" | "en",
+        { startWeek, endWeek }
+      );
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error generando PDF:", err);
+      }
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [pdfLoading, itinerarios, filteredItinerarios, selectedAreaFromMap, filterSemana, locale]);
 
   const portNames = [
     ...new Set(
@@ -2210,7 +2235,7 @@ export function ItinerarioContent() {
                                   <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[58px]">
                                     {tr.colViaje}
                                   </th>
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[76px]">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[148px]">
                                     <span className="block">{tr.colPol}</span>
                                     <span className="block text-[9px] font-medium text-[#1e3a6e]/50 normal-case">{tr.colEtd}</span>
                                   </th>
@@ -2373,9 +2398,9 @@ export function ItinerarioContent() {
                                           it.viaje || "—"
                                         )}
                                       </td>
-                                      <td className="px-1.5 py-2 whitespace-nowrap text-center align-middle">
+                                      <td className="px-1.5 py-2 whitespace-nowrap text-center align-middle overflow-visible min-w-[148px]">
                                         {isInlineEditing ? (
-                                          <div className="space-y-1 min-w-[96px]">
+                                          <div className="grid grid-cols-[1fr_120px] gap-1 min-w-[148px] items-center">
                                             <input
                                               type="text"
                                               value={inlineDraft.pol}
@@ -2387,7 +2412,7 @@ export function ItinerarioContent() {
                                               type="date"
                                               value={inlineDraft.etd}
                                               onChange={(e) => handleInlineFieldChange("etd", e.target.value)}
-                                              className="w-full px-1.5 py-1 text-[10px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
+                                              className="w-[120px] min-w-[120px] px-1.5 py-1 text-[10px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
                                               aria-label={tr.colEtd}
                                             />
                                           </div>
@@ -3560,9 +3585,9 @@ export function ItinerarioContent() {
       <ConfirmDialog
         title={confirmDialog.title}
         message={confirmDialog.message}
-        confirmLabel="Eliminar"
-        cancelLabel="Cancelar"
-        variant="danger"
+        confirmLabel={confirmDialog.confirmLabel ?? "Confirmar"}
+        cancelLabel={confirmDialog.cancelLabel ?? "Cancelar"}
+        variant={confirmDialog.variant ?? "default"}
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog(null)}
       />
