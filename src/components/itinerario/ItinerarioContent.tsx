@@ -116,6 +116,12 @@ function getApiUrl(): string {
 }
 
 type EscalaForm = { puerto: string; puerto_nombre: string; eta: string; dias_transito: string; area: string };
+type InlineEditDraft = {
+  viaje: string;
+  pol: string;
+  etd: string;
+  etaByPort: Record<string, string>;
+};
 
 const initialEscala = (): EscalaForm => ({
   puerto: "",
@@ -124,6 +130,10 @@ const initialEscala = (): EscalaForm => ({
   dias_transito: "",
   area: "ASIA",
 });
+
+function getEscalaPortKey(escala: { puerto?: string | null; puerto_nombre?: string | null }): string {
+  return ((escala.puerto_nombre || escala.puerto) || "—").trim() || "—";
+}
 
 /** Servicio con detalle para rellenar itinerario (naves, destinos, puerto origen, naviera) */
 type ServicioConDetalle = {
@@ -323,6 +333,9 @@ export function ItinerarioContent() {
   const [selectByAreaMode, setSelectByAreaMode] = useState<"servicio" | "consorcio">("servicio");
   const [etdInputValue, setEtdInputValue] = useState("");
   const [etaInputValues, setEtaInputValues] = useState<string[]>([]);
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
+  const [inlineSavingId, setInlineSavingId] = useState<string | null>(null);
+  const [inlineDraft, setInlineDraft] = useState<InlineEditDraft | null>(null);
 
   const [stackingDrafts, setStackingDrafts] = useState<Record<string, StackingDraft>>({});
   const [stackingForm, setStackingForm] = useState<StackingDraft>(() => getEmptyStackingDraft());
@@ -846,7 +859,8 @@ export function ItinerarioContent() {
     [loadItinerarios, tr]
   );
 
-  const handleOpenAddRowModal = useCallback((template: ItinerarioWithEscalas, servicioNombre: string, area: string) => {
+  const handleOpenAddRowModal = useCallback((template: ItinerarioWithEscalas | undefined, servicioNombre: string, area: string) => {
+    if (!template) return;
     setAddRowContext({ template, servicioNombre, area });
     setAddRowForm({
       nave: "",
@@ -997,6 +1011,96 @@ export function ItinerarioContent() {
       setSaving(false);
     }
   }, [form, editingItinerarioId, handleCloseModal, loadItinerarios, tr]);
+
+  const handleStartInlineEdit = useCallback((it: ItinerarioWithEscalas) => {
+    const etdIso = it.etd ? (it.etd.includes("T") ? it.etd.slice(0, 10) : it.etd) : formatIsoDateLocal(new Date());
+    const etaByPort: Record<string, string> = {};
+    for (const escala of it.escalas ?? []) {
+      const key = getEscalaPortKey(escala);
+      etaByPort[key] = escala.eta ? (escala.eta.includes("T") ? escala.eta.slice(0, 10) : escala.eta) : "";
+    }
+    setInlineEditingId(it.id);
+    setInlineDraft({
+      viaje: (it.viaje ?? "").trim(),
+      pol: (it.pol ?? "").trim(),
+      etd: etdIso,
+      etaByPort,
+    });
+  }, []);
+
+  const handleInlineFieldChange = useCallback((field: "viaje" | "pol" | "etd", value: string) => {
+    setInlineDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+  }, []);
+
+  const handleInlineEtaChange = useCallback((portKey: string, value: string) => {
+    setInlineDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            etaByPort: { ...prev.etaByPort, [portKey]: value },
+          }
+        : prev
+    );
+  }, []);
+
+  const handleSaveInlineEdit = useCallback(
+    async (id: string) => {
+      if (!inlineDraft) return;
+      const target = itinerarios.find((it) => it.id === id);
+      if (!target) return;
+      const viaje = inlineDraft.viaje.trim();
+      const pol = inlineDraft.pol.trim();
+      const etd = inlineDraft.etd.trim();
+      if (!viaje || !pol || !etd) {
+        setError(tr.errorCompleteFields);
+        return;
+      }
+
+      const escalasPayload = (target.escalas ?? [])
+        .map((escala) => {
+          const key = getEscalaPortKey(escala);
+          const etaRaw = inlineDraft.etaByPort[key];
+          const eta = (etaRaw ?? (escala.eta ?? "")).trim() || null;
+          return {
+            puerto: (escala.puerto ?? "").trim(),
+            puerto_nombre: (escala.puerto_nombre ?? "").trim() || null,
+            eta,
+            dias_transito: diasTransito(etd, eta ?? "") ?? escala.dias_transito ?? null,
+            area: (escala.area ?? "ASIA").trim() || "ASIA",
+          };
+        })
+        .filter((e) => e.puerto);
+
+      if (escalasPayload.length === 0) {
+        setError(tr.errorMinOneScale);
+        return;
+      }
+
+      setInlineSavingId(id);
+      try {
+        await updateItinerario(id, {
+          servicio: (target.servicio ?? "").trim() || tr.service,
+          consorcio: (target.consorcio ?? "").trim() || null,
+          naviera: (target.naviera ?? "").trim() || null,
+          nave: (target.nave ?? "").trim(),
+          viaje,
+          semana: getISOWeek(new Date(etd.includes("T") ? etd : `${etd}T12:00:00`)),
+          pol,
+          etd: etd.includes("T") ? etd.slice(0, 10) : etd,
+          escalas: escalasPayload,
+        });
+        setInlineEditingId(null);
+        setInlineDraft(null);
+        sileo.success({ title: tr.successUpdated });
+        void loadItinerarios({ silent: true });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : tr.errorCreate);
+      } finally {
+        setInlineSavingId(null);
+      }
+    },
+    [inlineDraft, itinerarios, loadItinerarios, tr]
+  );
 
   const addEscala = useCallback(() => {
     setForm((f) => ({ ...f, escalas: [...f.escalas, initialEscala()] }));
@@ -1156,6 +1260,25 @@ export function ItinerarioContent() {
       })
     ),
   ].filter(Boolean);
+
+  const serviceConsortiumComplete = Boolean(
+    selectedServicioId || selectedConsorcioId || form.servicio.trim() || form.consorcio.trim()
+  );
+  const vesselVoyageComplete = Boolean(form.nave.trim() && form.viaje.trim());
+  const departureComplete = Boolean(form.pol.trim() && form.etd.trim());
+  const scalesComplete = form.escalas.some((e) => Boolean(e.puerto.trim()));
+
+  const getSectionClasses = (isComplete: boolean) =>
+    `rounded-xl border overflow-hidden shadow-sm transition-colors ${
+      isComplete ? "border-emerald-300/90 bg-emerald-50/30" : "border-brand-blue/15"
+    }`;
+
+  const getSectionHeaderClasses = (isComplete: boolean) =>
+    `px-5 py-3 border-b flex items-center justify-between gap-2 transition-colors ${
+      isComplete
+        ? "bg-gradient-to-r from-emerald-100 via-emerald-50 to-transparent border-emerald-200/70"
+        : "bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-brand-blue/10"
+    }`;
 
   // Layout: usar siempre toda la pantalla sin bordes (mínimo padding solo donde haga falta).
   return (
@@ -1685,6 +1808,21 @@ export function ItinerarioContent() {
                     const serviceNames = [...serviceMap.keys()].sort((a, b) =>
                       a.localeCompare(b, undefined, { sensitivity: "base" })
                     );
+                    const visibleServiceNames = serviceNames.filter((servicioNombre) => {
+                      const list = serviceMap.get(servicioNombre) ?? [];
+                      const hasValidDeparture = list.some(
+                        (it) => Boolean(it.nave?.trim()) && Boolean(it.etd?.trim())
+                      );
+                      const hasDestinationsInArea = list.some((it) =>
+                        (it.escalas ?? []).some(
+                          (e) =>
+                            (((e.area || "").trim() || "") === area) &&
+                            Boolean((e.puerto_nombre ?? e.puerto ?? "").trim())
+                        )
+                      );
+                      return hasValidDeparture && hasDestinationsInArea;
+                    });
+                    if (visibleServiceNames.length === 0) return null;
                     const gradient = AREA_GRADIENTS_UI[area] ?? "from-neutral-600 to-neutral-700";
                     const icon = AREA_ICONS_UI[area] ?? "lucide:map-pin";
                     const label = AREA_LABELS_UI[area] ?? area;
@@ -1698,13 +1836,13 @@ export function ItinerarioContent() {
                           </span>
                           <div className="flex items-baseline gap-2">
                             <h2 className="text-xs font-bold text-white tracking-tight">{label}</h2>
-                            <span className="text-[10px] text-white/60">{serviceNames.length} {serviceNames.length === 1 ? "servicio" : "servicios"}</span>
+                            <span className="text-[10px] text-white/60">{visibleServiceNames.length} {visibleServiceNames.length === 1 ? "servicio" : "servicios"}</span>
                           </div>
                         </div>
 
                         {/* ── Servicios en esta región ───────────────────────────────────── */}
                         <div className="space-y-2 pl-1.5">
-                          {serviceNames.map((servicioNombre) => {
+                          {visibleServiceNames.map((servicioNombre) => {
                             const list = serviceMap.get(servicioNombre)!;
                             const navieras = [...new Set(list.map((it) => it.naviera).filter(Boolean))] as string[];
 
@@ -1793,14 +1931,21 @@ export function ItinerarioContent() {
                               listForWeek.push(row.data);
                               itinerariosByWeek.set(w, listForWeek);
                             }
+                            const hasValidDeparture = orderedRows.some(
+                              (row) => row.type === "it" && Boolean(row.data.nave?.trim()) && Boolean(row.data.etd?.trim())
+                            );
                             const displayedRows: DisplayRow[] = [];
-                            for (let week = startWeek; week <= endWeek; week++) {
-                              const listForWeek = itinerariosByWeek.get(week) ?? [];
-                              if (listForWeek.length > 0) {
-                                // Si hubiera múltiples salidas en la misma semana, usar la primera por orden cronológico.
-                                displayedRows.push({ type: "it", data: listForWeek[0] });
-                              } else {
-                                displayedRows.push({ type: "blank", semana: week });
+                            if (hasValidDeparture) {
+                              for (let week = startWeek; week <= endWeek; week++) {
+                                const listForWeek = (itinerariosByWeek.get(week) ?? []).filter(
+                                  (it) => Boolean(it.nave?.trim()) && Boolean(it.etd?.trim())
+                                );
+                                if (listForWeek.length > 0) {
+                                  // Si hubiera múltiples salidas en la misma semana, usar la primera por orden cronológico.
+                                  displayedRows.push({ type: "it", data: listForWeek[0] });
+                                } else {
+                                  displayedRows.push({ type: "blank", semana: week });
+                                }
                               }
                             }
 
@@ -1826,6 +1971,7 @@ export function ItinerarioContent() {
                                       <button
                                         type="button"
                                         onClick={() => handleOpenAddRowModal(itinerariosEnArea[0], servicioNombre, area)}
+                                        disabled={itinerariosEnArea.length === 0}
                                         className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-white bg-white/15 border border-white/25 rounded hover:bg-white/25 focus:outline-none focus:ring-1 focus:ring-white/40 transition-colors shrink-0"
                                         aria-label={tr.addRow}
                                       >
@@ -1834,6 +1980,7 @@ export function ItinerarioContent() {
                                       </button>
                                     )}
                                   </div>
+                          {displayedRows.length > 0 && (
                           <div className="sm:hidden divide-y divide-neutral-100/80">
                             {displayedRows.map((row) => {
                               if (row.type === "blank") {
@@ -1984,7 +2131,9 @@ export function ItinerarioContent() {
                               );
                             })}
                           </div>
+                          )}
                           {/* ── Vista de tabla (sm+) ─────────────────────────── */}
+                          {displayedRows.length > 0 && (
                           <div className="w-full hidden sm:block">
                             <table className="w-full text-xs" role="table">
                               <thead>
@@ -2061,16 +2210,22 @@ export function ItinerarioContent() {
                                   const it = row.data;
                                   const escalas = it.escalas ?? [];
                                   const isEven = rowIndex % 2 === 0;
+                                  const isInlineEditing = inlineEditingId === it.id && inlineDraft != null;
+                                  const isInlineSaving = inlineSavingId === it.id;
                                   return (
                                     <tr
                                       key={it.id}
                                       className={`border-b border-[#e8f0fb]/80 last:border-0 transition-colors duration-100 ${
                                         isEven ? "bg-white" : "bg-[#f5f9ff]"
-                                      } hover:bg-[#eef4ff] group`}
+                                      } ${isInlineEditing ? "bg-amber-50/70 ring-1 ring-inset ring-amber-300/60" : "hover:bg-[#eef4ff]"} group`}
                                     >
                                       <td className="px-1.5 py-2 text-center align-middle">
                                         {it.semana != null ? (
-                                          <span className="inline-flex items-center justify-center w-7 h-5 rounded-full bg-[#00529b] text-white font-bold text-[10px] shadow-sm shadow-[#00529b]/20 tabular-nums">
+                                          <span
+                                            className={`inline-flex items-center justify-center w-7 h-5 rounded-full text-white font-bold text-[10px] shadow-sm tabular-nums ${
+                                              isInlineEditing ? "bg-amber-500 shadow-amber-500/20" : "bg-[#00529b] shadow-[#00529b]/20"
+                                            }`}
+                                          >
                                             {String(it.semana)}
                                           </span>
                                         ) : (
@@ -2115,20 +2270,68 @@ export function ItinerarioContent() {
                                           <span className="text-neutral-600 text-xs truncate block">{it.operador || "—"}</span>
                                         )}
                                       </td>
-                                      <td className="px-1.5 py-2 text-[#1e3a6e] font-semibold whitespace-nowrap text-center align-middle tabular-nums text-xs">{it.viaje || "—"}</td>
+                                      <td className="px-1.5 py-2 text-[#1e3a6e] font-semibold whitespace-nowrap text-center align-middle tabular-nums text-xs">
+                                        {isInlineEditing ? (
+                                          <input
+                                            type="text"
+                                            value={inlineDraft.viaje}
+                                            onChange={(e) => handleInlineFieldChange("viaje", e.target.value)}
+                                            className="w-full min-w-[64px] px-1.5 py-1 text-[11px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
+                                            aria-label={tr.colViaje}
+                                          />
+                                        ) : (
+                                          it.viaje || "—"
+                                        )}
+                                      </td>
                                       <td className="px-1.5 py-2 whitespace-nowrap text-center align-middle">
-                                        <span className="block font-semibold text-[#1e3a6e] text-xs">{it.pol || "—"}</span>
-                                        <span className="block text-[10px] text-neutral-400 tabular-nums">{it.etd ? formatDate(it.etd) : "—"}</span>
+                                        {isInlineEditing ? (
+                                          <div className="space-y-1 min-w-[96px]">
+                                            <input
+                                              type="text"
+                                              value={inlineDraft.pol}
+                                              onChange={(e) => handleInlineFieldChange("pol", e.target.value)}
+                                              className="w-full px-1.5 py-1 text-[11px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
+                                              aria-label={tr.colPol}
+                                            />
+                                            <input
+                                              type="date"
+                                              value={inlineDraft.etd}
+                                              onChange={(e) => handleInlineFieldChange("etd", e.target.value)}
+                                              className="w-full px-1.5 py-1 text-[10px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
+                                              aria-label={tr.colEtd}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <span className="block font-semibold text-[#1e3a6e] text-xs">{it.pol || "—"}</span>
+                                            <span className="block text-[10px] text-neutral-400 tabular-nums">{it.etd ? formatDate(it.etd) : "—"}</span>
+                                          </>
+                                        )}
                                       </td>
                                       {destinosColumnas.map((portKey) => {
                                         const e = getEscalaForPort(escalas, portKey);
+                                        const inlineEta = isInlineEditing ? inlineDraft.etaByPort[portKey] ?? (e?.eta ? (e.eta.includes("T") ? e.eta.slice(0, 10) : e.eta) : "") : "";
+                                        const inlineTransit =
+                                          isInlineEditing && e
+                                            ? diasTransito(inlineDraft.etd, inlineEta) ?? e.dias_transito
+                                            : e?.dias_transito;
                                         return (
                                           <td key={portKey} className={`px-1.5 py-2 whitespace-nowrap text-center align-middle border-x border-[#3b82f6]/8 transition-colors duration-100 ${isEven ? "bg-[#eff6ff]/60" : "bg-[#e8f1fe]/50"} group-hover:bg-[#dbeafe]/70`}>
                                             {e ? (
                                               <>
-                                                <span className="block text-[#1e3a6e] font-semibold tabular-nums text-xs">{e.eta ? formatDate(e.eta) : "—"}</span>
-                                                {e.dias_transito != null && (
-                                                  <span className="inline-block mt-px px-1.5 py-px rounded-full bg-[#1d4ed8]/10 text-[#1d4ed8] text-[9px] font-bold tabular-nums">{e.dias_transito}d</span>
+                                                {isInlineEditing ? (
+                                                  <input
+                                                    type="date"
+                                                    value={inlineEta}
+                                                    onChange={(ev) => handleInlineEtaChange(portKey, ev.target.value)}
+                                                    className="w-full min-w-[84px] px-1.5 py-1 text-[10px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
+                                                    aria-label={`ETA ${portKey}`}
+                                                  />
+                                                ) : (
+                                                  <span className="block text-[#1e3a6e] font-semibold tabular-nums text-xs">{e.eta ? formatDate(e.eta) : "—"}</span>
+                                                )}
+                                                {inlineTransit != null && (
+                                                  <span className="inline-block mt-px px-1.5 py-px rounded-full bg-[#1d4ed8]/10 text-[#1d4ed8] text-[9px] font-bold tabular-nums">{inlineTransit}d</span>
                                                 )}
                                               </>
                                             ) : (
@@ -2172,14 +2375,39 @@ export function ItinerarioContent() {
                                       {isLoggedIn && (
                                         <td className="px-1.5 py-2 text-center align-middle">
                                           <div className="flex items-center justify-center gap-1">
+                                            {isInlineEditing && (
+                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-200">
+                                                <span className="w-1 h-1 rounded-full bg-amber-500" />
+                                                Editando
+                                              </span>
+                                            )}
                                             <button
                                               type="button"
-                                              onClick={() => handleOpenEdit(it)}
-                                              className="inline-flex items-center justify-center w-7 h-7 text-brand-blue bg-brand-blue/10 rounded-lg hover:bg-brand-blue/20 focus:outline-none focus:ring-1 focus:ring-brand-blue/30 transition-colors"
-                                              aria-label={tr.editItineraryAria.replace("{{nave}}", it.nave ?? "").replace("{{viaje}}", it.viaje ?? "")}
-                                              title={tr.editItinerary}
+                                              onClick={() => {
+                                                if (isInlineEditing) {
+                                                  void handleSaveInlineEdit(it.id);
+                                                  return;
+                                                }
+                                                handleStartInlineEdit(it);
+                                              }}
+                                              disabled={isInlineSaving}
+                                              className={`inline-flex items-center justify-center w-7 h-7 rounded-lg focus:outline-none focus:ring-1 transition-colors disabled:opacity-60 ${
+                                                isInlineEditing
+                                                  ? "text-emerald-700 bg-emerald-100 hover:bg-emerald-200 focus:ring-emerald-300"
+                                                  : "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 focus:ring-brand-blue/30"
+                                              }`}
+                                              aria-label={
+                                                (isInlineEditing ? tr.saveChanges : tr.editItineraryAria)
+                                                  .replace("{{nave}}", it.nave ?? "")
+                                                  .replace("{{viaje}}", it.viaje ?? "")
+                                              }
+                                              title={isInlineEditing ? tr.saveChanges : tr.editItinerary}
                                             >
-                                              <Icon icon="lucide:pencil" width={13} height={13} aria-hidden />
+                                              {isInlineSaving ? (
+                                                <Icon icon="lucide:loader-2" width={13} height={13} className="animate-spin" aria-hidden />
+                                              ) : (
+                                                <Icon icon={isInlineEditing ? "lucide:check" : "lucide:pencil"} width={13} height={13} aria-hidden />
+                                              )}
                                             </button>
                                             <button
                                               type="button"
@@ -2212,6 +2440,12 @@ export function ItinerarioContent() {
                               </span>
                             </div>
                           </div>
+                          )}
+                          {displayedRows.length === 0 && (
+                            <div className="px-4 py-4 text-center text-xs text-neutral-500 bg-white">
+                              Sin salidas programadas con nave y fecha de zarpe.
+                            </div>
+                          )}
                                 </div>
                               </section>
                             );
@@ -2233,7 +2467,6 @@ export function ItinerarioContent() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-itinerario-title"
-          onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
         >
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl max-h-[96dvh] sm:max-h-[92dvh] flex flex-col overflow-hidden">
           {/* Hero header con gradiente */}
@@ -2277,10 +2510,25 @@ export function ItinerarioContent() {
 
               <div className="space-y-5">
                 {/* Sección: Servicio / Consorcio */}
-                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
-                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center gap-2">
-                    <Icon icon="lucide:layers" width={15} height={15} className="text-brand-blue shrink-0" />
-                    <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionServiceConsortium}</h3>
+                <section className={getSectionClasses(serviceConsortiumComplete)}>
+                  <div className={getSectionHeaderClasses(serviceConsortiumComplete)}>
+                    <div className="flex items-center gap-2">
+                      <Icon
+                        icon="lucide:layers"
+                        width={15}
+                        height={15}
+                        className={`${serviceConsortiumComplete ? "text-emerald-700" : "text-brand-blue"} shrink-0`}
+                      />
+                      <h3 className={`text-xs font-bold uppercase tracking-wider ${serviceConsortiumComplete ? "text-emerald-800" : "text-brand-blue"}`}>
+                        {tr.sectionServiceConsortium}
+                      </h3>
+                    </div>
+                    {serviceConsortiumComplete && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-semibold">
+                        <Icon icon="lucide:check-circle-2" width={12} height={12} aria-hidden />
+                        Completo
+                      </span>
+                    )}
                   </div>
                   <div className="p-5 sm:p-6 bg-white">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -2382,10 +2630,25 @@ export function ItinerarioContent() {
                 </section>
 
                 {/* Sección: Naviera, Nave, Viaje */}
-                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
-                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center gap-2">
-                    <Icon icon="lucide:ship" width={15} height={15} className="text-brand-blue shrink-0" />
-                    <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionVesselVoyage}</h3>
+                <section className={getSectionClasses(vesselVoyageComplete)}>
+                  <div className={getSectionHeaderClasses(vesselVoyageComplete)}>
+                    <div className="flex items-center gap-2">
+                      <Icon
+                        icon="lucide:ship"
+                        width={15}
+                        height={15}
+                        className={`${vesselVoyageComplete ? "text-emerald-700" : "text-brand-blue"} shrink-0`}
+                      />
+                      <h3 className={`text-xs font-bold uppercase tracking-wider ${vesselVoyageComplete ? "text-emerald-800" : "text-brand-blue"}`}>
+                        {tr.sectionVesselVoyage}
+                      </h3>
+                    </div>
+                    {vesselVoyageComplete && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-semibold">
+                        <Icon icon="lucide:check-circle-2" width={12} height={12} aria-hidden />
+                        Completo
+                      </span>
+                    )}
                   </div>
                   <div className="p-5 sm:p-6 bg-white">
                   <div className="space-y-5">
@@ -2453,10 +2716,25 @@ export function ItinerarioContent() {
                 </section>
 
                 {/* Sección: Salida (POL, ETD, Semana) */}
-                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
-                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center gap-2">
-                    <Icon icon="lucide:calendar" width={15} height={15} className="text-brand-blue shrink-0" />
-                    <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionDeparture}</h3>
+                <section className={getSectionClasses(departureComplete)}>
+                  <div className={getSectionHeaderClasses(departureComplete)}>
+                    <div className="flex items-center gap-2">
+                      <Icon
+                        icon="lucide:calendar"
+                        width={15}
+                        height={15}
+                        className={`${departureComplete ? "text-emerald-700" : "text-brand-blue"} shrink-0`}
+                      />
+                      <h3 className={`text-xs font-bold uppercase tracking-wider ${departureComplete ? "text-emerald-800" : "text-brand-blue"}`}>
+                        {tr.sectionDeparture}
+                      </h3>
+                    </div>
+                    {departureComplete && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-semibold">
+                        <Icon icon="lucide:check-circle-2" width={12} height={12} aria-hidden />
+                        Completo
+                      </span>
+                    )}
                   </div>
                   <div className="p-5 sm:p-6 bg-white">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -2535,20 +2813,35 @@ export function ItinerarioContent() {
                 </section>
 
                 {/* Sección: Escalas */}
-                <section className="rounded-xl border border-brand-blue/15 overflow-hidden shadow-sm">
-                  <div className="px-5 py-3 bg-gradient-to-r from-brand-blue/8 via-brand-blue/4 to-transparent border-b border-brand-blue/10 flex items-center justify-between gap-2">
+                <section className={getSectionClasses(scalesComplete)}>
+                  <div className={getSectionHeaderClasses(scalesComplete)}>
                     <div className="flex items-center gap-2">
-                      <Icon icon="lucide:route" width={15} height={15} className="text-brand-blue shrink-0" />
-                      <h3 className="text-xs font-bold text-brand-blue uppercase tracking-wider">{tr.sectionScales} <span className="text-red-400">*</span></h3>
+                      <Icon
+                        icon="lucide:route"
+                        width={15}
+                        height={15}
+                        className={`${scalesComplete ? "text-emerald-700" : "text-brand-blue"} shrink-0`}
+                      />
+                      <h3 className={`text-xs font-bold uppercase tracking-wider ${scalesComplete ? "text-emerald-800" : "text-brand-blue"}`}>
+                        {tr.sectionScales} <span className="text-red-400">*</span>
+                      </h3>
                     </div>
-                    <button
-                      type="button"
-                      onClick={addEscala}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
-                    >
-                      <Icon icon="lucide:plus" width={14} height={14} />
-                      {tr.addScale}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {scalesComplete && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-semibold">
+                          <Icon icon="lucide:check-circle-2" width={12} height={12} aria-hidden />
+                          Completo
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={addEscala}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                      >
+                        <Icon icon="lucide:plus" width={14} height={14} />
+                        {tr.addScale}
+                      </button>
+                    </div>
                   </div>
                   <div className="p-5 sm:p-6 bg-white">
                   <ul className="space-y-4">
