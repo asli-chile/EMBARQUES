@@ -139,6 +139,7 @@ function getEscalaPortKey(escala: { puerto?: string | null; puerto_nombre?: stri
 type ServicioConDetalle = {
   id: string;
   nombre: string;
+  naviera_id?: string | null;
   naviera_nombre?: string | null;
   puerto_origen?: string | null;
   naves?: { nave_nombre?: string }[];
@@ -327,6 +328,7 @@ export function ItinerarioContent() {
   const [saving, setSaving] = useState(false);
   const [serviciosConDetalle, setServiciosConDetalle] = useState<ServicioConDetalle[]>([]);
   const [consorciosConDetalle, setConsorciosConDetalle] = useState<ConsorcioConDetalle[]>([]);
+  const [navierasCatalog, setNavierasCatalog] = useState<{ id: string; nombre: string }[]>([]);
   const [selectedServicioId, setSelectedServicioId] = useState("");
   const [selectedConsorcioId, setSelectedConsorcioId] = useState("");
   const [selectByAreaOpen, setSelectByAreaOpen] = useState(false);
@@ -450,10 +452,12 @@ export function ItinerarioContent() {
     Promise.all([
       fetch(`${base}/api/admin/servicios-unicos`, { credentials: "include" }).then((r) => (r.ok ? r.json() : { servicios: [] })),
       fetch(`${base}/api/admin/consorcios`, { credentials: "include" }).then((r) => (r.ok ? r.json() : { consorcios: [] })),
-    ]).then(([s, c]) => {
+      fetch(`${base}/api/public/navieras`).then((r) => (r.ok ? r.json() : { navieras: [] })),
+    ]).then(([s, c, n]) => {
       if (cancelled) return;
       setServiciosConDetalle((s as { servicios?: ServicioConDetalle[] }).servicios ?? []);
       setConsorciosConDetalle((c as { consorcios?: ConsorcioConDetalle[] }).consorcios ?? []);
+      setNavierasCatalog((n as { navieras?: { id: string; nombre: string }[] }).navieras ?? []);
     });
     return () => {
       cancelled = true;
@@ -902,6 +906,46 @@ export function ItinerarioContent() {
       setAddRowModalError(tr.errorCompleteFields);
       return;
     }
+    const naveExisteEnLista = addRowNaves.some((n) => n.trim().toUpperCase() === nave.toUpperCase());
+    if (!naveExisteEnLista) {
+      const shouldSave = window.confirm(
+        `La nave "${nave}" no está en la lista. ¿Quieres guardarla para usarla en futuras ocasiones?`
+      );
+      if (shouldSave) {
+        const servicioByName = serviciosConDetalle.find(
+          (s) => (s.nombre ?? "").trim().toUpperCase() === (template.servicio ?? "").trim().toUpperCase()
+        );
+        const consorcioByName = consorciosConDetalle.find(
+          (c) => (c.nombre ?? "").trim().toUpperCase() === (template.consorcio ?? "").trim().toUpperCase()
+        );
+        const navieraNombreBase = (template.naviera ?? "").split(",")[0]?.trim() ?? "";
+        const navieraMatch = navierasCatalog.find(
+          (n) => n.nombre.trim().toUpperCase() === navieraNombreBase.toUpperCase()
+        );
+        const navieraId =
+          (servicioByName?.naviera_id ?? "").trim() ||
+          (consorcioByName?.servicios?.[0]?.servicio_unico?.naviera_id ?? "").trim() ||
+          (navieraMatch?.id ?? "").trim();
+        if (!navieraId) {
+          setAddRowModalError("No se pudo determinar la naviera para guardar la nave en el catálogo.");
+          return;
+        }
+        try {
+          const base = getApiUrl() || "";
+          const res = await fetch(`${base}/api/admin/naves`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nombre: nave, naviera_id: navieraId }),
+          });
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          if (!res.ok) throw new Error(data.error ?? "Error al guardar la nave en el catálogo.");
+        } catch (e) {
+          setAddRowModalError(e instanceof Error ? e.message : "Error al guardar la nave en el catálogo.");
+          return;
+        }
+      }
+    }
     const escalasDelArea = (template.escalas ?? []).filter((e) => ((e.area || "").trim() || "") === area);
     if (escalasDelArea.length === 0) {
       setAddRowModalError(tr.errorMinOneScale);
@@ -946,7 +990,18 @@ export function ItinerarioContent() {
     } finally {
       setAddRowSaving(false);
     }
-  }, [addRowContext, addRowForm, addRowEtdInputValue, tr, handleCloseAddRowModal, loadItinerarios]);
+  }, [
+    addRowContext,
+    addRowForm,
+    addRowEtdInputValue,
+    tr,
+    addRowNaves,
+    serviciosConDetalle,
+    consorciosConDetalle,
+    navierasCatalog,
+    handleCloseAddRowModal,
+    loadItinerarios,
+  ]);
 
 
   useEffect(() => {
@@ -1041,6 +1096,11 @@ export function ItinerarioContent() {
           }
         : prev
     );
+  }, []);
+
+  const handleCancelInlineEdit = useCallback(() => {
+    setInlineEditingId(null);
+    setInlineDraft(null);
   }, []);
 
   const handleSaveInlineEdit = useCallback(
@@ -2141,10 +2201,10 @@ export function ItinerarioContent() {
                                   <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[42px]">
                                     {tr.colSemana}
                                   </th>
-                                  <th className="text-center px-2 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[18%]">
+                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[11%]">
                                     {tr.colNave}
                                   </th>
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[14%]">
+                                  <th className="text-center px-1 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[8%]">
                                     {tr.colOperador}
                                   </th>
                                   <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[58px]">
@@ -2232,13 +2292,13 @@ export function ItinerarioContent() {
                                           <span className="text-neutral-300 text-xs">—</span>
                                         )}
                                       </td>
-                                      <td className="px-2 py-2 text-center align-middle max-w-[0] w-[18%]">
+                                      <td className="px-1.5 py-2 text-center align-middle max-w-[0] w-[11%]">
                                         <p className="font-semibold text-[#1e3a6e] text-xs truncate leading-tight">{it.nave || "—"}</p>
                                         {it.naviera ? (
                                           <p className="text-neutral-400 text-[10px] truncate mt-px">{it.naviera}</p>
                                         ) : null}
                                       </td>
-                                      <td className="px-1.5 py-2 text-center align-middle max-w-[0] w-[14%]">
+                                      <td className="px-1 py-2 text-center align-middle max-w-[0] w-[8%]">
                                         {isLoggedIn ? (
                                           (() => {
                                             const navierasOp = getNavierasForItinerario(it, serviciosConDetalle, consorciosConDetalle);
@@ -2256,7 +2316,7 @@ export function ItinerarioContent() {
                                                 value={currentValue}
                                                 onChange={(e) => handleOperadorChange(it, e.target.value)}
                                                 disabled={updating}
-                                                className="w-full px-1.5 py-1 text-xs rounded border border-neutral-200 bg-white focus:outline-none focus:ring-1 focus:ring-brand-blue/30 disabled:opacity-60"
+                                                className="w-full min-w-0 px-1 py-1 text-[11px] rounded border border-neutral-200 bg-white focus:outline-none focus:ring-1 focus:ring-brand-blue/30 disabled:opacity-60"
                                                 aria-label={tr.colOperador}
                                               >
                                                 <option value="">—</option>
@@ -2272,13 +2332,43 @@ export function ItinerarioContent() {
                                       </td>
                                       <td className="px-1.5 py-2 text-[#1e3a6e] font-semibold whitespace-nowrap text-center align-middle tabular-nums text-xs">
                                         {isInlineEditing ? (
-                                          <input
-                                            type="text"
-                                            value={inlineDraft.viaje}
-                                            onChange={(e) => handleInlineFieldChange("viaje", e.target.value)}
-                                            className="w-full min-w-[64px] px-1.5 py-1 text-[11px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
-                                            aria-label={tr.colViaje}
-                                          />
+                                          <div className="space-y-1">
+                                            <input
+                                              type="text"
+                                              value={inlineDraft.viaje}
+                                              onChange={(e) => handleInlineFieldChange("viaje", e.target.value)}
+                                              className="w-full min-w-[64px] px-1.5 py-1 text-[11px] rounded border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300/60 focus:border-amber-400"
+                                              aria-label={tr.colViaje}
+                                            />
+                                            <div className="flex items-center justify-center gap-1">
+                                              <button
+                                                type="button"
+                                                onClick={() => void handleSaveInlineEdit(it.id)}
+                                                disabled={isInlineSaving}
+                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 hover:bg-emerald-200 focus:outline-none focus:ring-1 focus:ring-emerald-300 disabled:opacity-60"
+                                                aria-label={tr.saveChanges}
+                                                title={tr.saveChanges}
+                                              >
+                                                {isInlineSaving ? (
+                                                  <Icon icon="lucide:loader-2" width={11} height={11} className="animate-spin" aria-hidden />
+                                                ) : (
+                                                  <Icon icon="lucide:check" width={11} height={11} aria-hidden />
+                                                )}
+                                                Guardar
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={handleCancelInlineEdit}
+                                                disabled={isInlineSaving}
+                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-neutral-700 bg-neutral-100 border border-neutral-200 hover:bg-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-300 disabled:opacity-60"
+                                                aria-label={tr.cancel}
+                                                title={tr.cancel}
+                                              >
+                                                <Icon icon="lucide:x" width={11} height={11} aria-hidden />
+                                                Cancelar
+                                              </button>
+                                            </div>
+                                          </div>
                                         ) : (
                                           it.viaje || "—"
                                         )}
@@ -3005,7 +3095,6 @@ export function ItinerarioContent() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="stacking-modal-title"
-          onClick={(e) => e.target === e.currentTarget && handleCloseStackingModal()}
         >
           <div
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -3341,7 +3430,6 @@ export function ItinerarioContent() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-row-modal-title"
-          onClick={(e) => e.target === e.currentTarget && handleCloseAddRowModal()}
         >
           <div className="bg-white rounded-2xl shadow-2xl border border-neutral-200 w-full max-w-md overflow-hidden">
             <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
@@ -3375,29 +3463,25 @@ export function ItinerarioContent() {
                   <label htmlFor="add-row-nave" className="block text-sm font-medium text-neutral-700 mb-1.5">
                     {tr.addRowNaveLabel} <span className="text-red-500">*</span>
                   </label>
-                  {addRowNaves.length > 0 ? (
-                    <select
-                      id="add-row-nave"
-                      value={addRowForm.nave}
-                      onChange={(e) => setAddRowForm((f) => ({ ...f, nave: e.target.value }))}
-                      className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white"
-                    >
+                  <input
+                    id="add-row-nave"
+                    type="text"
+                    list={addRowNaves.length > 0 ? "add-row-naves-list" : undefined}
+                    value={addRowForm.nave}
+                    onChange={(e) => setAddRowForm((f) => ({ ...f, nave: e.target.value }))}
+                    placeholder={tr.vesselPlaceholder}
+                    className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                  />
+                  {addRowNaves.length > 0 && (
+                    <datalist id="add-row-naves-list">
                       {addRowNaves.map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
+                        <option key={n} value={n} />
                       ))}
-                    </select>
-                  ) : (
-                    <input
-                      id="add-row-nave"
-                      type="text"
-                      value={addRowForm.nave}
-                      onChange={(e) => setAddRowForm((f) => ({ ...f, nave: e.target.value }))}
-                      placeholder={tr.vesselPlaceholder}
-                      className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
-                    />
+                    </datalist>
                   )}
+                  <p className="mt-1.5 text-[11px] text-neutral-500">
+                    Puedes elegir una nave de la lista o escribir una manualmente.
+                  </p>
                 </div>
                 <div>
                   <label htmlFor="add-row-viaje" className="block text-sm font-medium text-neutral-700 mb-1.5">
