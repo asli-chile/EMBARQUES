@@ -517,7 +517,7 @@ export function ItinerarioContent() {
               puerto_nombre: (d.puerto_nombre ?? "").trim(),
               eta: "",
               dias_transito: "",
-              area: (d.area ?? "ASIA").trim() || "ASIA",
+              area: normalizeArea(d.area ?? ""),
             }))
           : prev.escalas,
     }));
@@ -561,7 +561,7 @@ export function ItinerarioContent() {
               puerto_nombre: (d.puerto_nombre ?? "").trim(),
               eta: "",
               dias_transito: "",
-              area: (d.area ?? "ASIA").trim() || "ASIA",
+              area: normalizeArea(d.area ?? ""),
             }))
           : prev.escalas,
     }));
@@ -571,7 +571,7 @@ export function ItinerarioContent() {
 
   /** Al hacer clic en un marcador del mapa: seleccionar el área y hacer scroll al servicio. */
   const handlePortClick = useCallback((port: MapPortPoint) => {
-    const targetArea = port.area?.trim() || "ALL";
+    const targetArea = port.area?.trim() ? normalizeArea(port.area) : "ALL";
     setSelectedAreaFromMap(targetArea);
     if (port.servicio?.trim()) {
       setPendingScrollServicio(port.servicio.trim());
@@ -612,7 +612,7 @@ export function ItinerarioContent() {
             puerto_nombre: (e.puerto_nombre ?? "").trim(),
             eta: (e.eta ?? "").includes("T") ? (e.eta ?? "").slice(0, 10) : (e.eta ?? "").trim(),
             dias_transito: e.dias_transito != null ? String(e.dias_transito) : "",
-            area: (e.area ?? "ASIA").trim() || "ASIA",
+            area: normalizeArea(e.area ?? ""),
           }))
         : [initialEscala()];
     setForm({
@@ -969,7 +969,7 @@ export function ItinerarioContent() {
         puerto_nombre: (e.puerto_nombre ?? "").trim() || null,
         eta: etaStr,
         dias_transito: dias,
-        area: (e.area ?? "ASIA").trim() || "ASIA",
+        area: normalizeArea(e.area ?? ""),
       };
     });
     setAddRowSaving(true);
@@ -1034,7 +1034,7 @@ export function ItinerarioContent() {
           puerto_nombre: e.puerto_nombre.trim() || null,
           eta,
           dias_transito: calculated ?? (e.dias_transito.trim() ? parseInt(e.dias_transito, 10) : null),
-          area: e.area || "ASIA",
+          area: normalizeArea(e.area ?? ""),
         };
       })
       .filter((e) => e.puerto);
@@ -1130,7 +1130,7 @@ export function ItinerarioContent() {
             puerto_nombre: (escala.puerto_nombre ?? "").trim() || null,
             eta,
             dias_transito: diasTransito(etd, eta ?? "") ?? escala.dias_transito ?? null,
-            area: (escala.area ?? "ASIA").trim() || "ASIA",
+            area: normalizeArea(escala.area ?? ""),
           };
         })
         .filter((e) => e.puerto);
@@ -1190,12 +1190,18 @@ export function ItinerarioContent() {
   const hasAreaFilter = !!selectedAreaFromMap && selectedAreaFromMap !== "ALL";
 
   const areasWithData = itinerarios.length > 0
-    ? [...new Set(itinerarios.flatMap((it) => (it.escalas ?? []).map((e) => (e.area || "").trim()).filter(Boolean)))]
+    ? [
+        ...new Set(
+          itinerarios.flatMap((it) =>
+            (it.escalas ?? []).map((e) => normalizeArea(e.area ?? "")).filter((a) => a.length > 0),
+          ),
+        ),
+      ]
     : [];
   const itinerariosForPorts =
     hasAreaFilter && itinerarios.length > 0
       ? itinerarios.filter((it) =>
-          (it.escalas ?? []).some((e) => ((e.area || "").trim() || "") === selectedAreaFromMap)
+          (it.escalas ?? []).some((e) => normalizeArea(e.area ?? "") === selectedAreaFromMap),
         )
       : itinerarios;
 
@@ -1220,7 +1226,7 @@ export function ItinerarioContent() {
           dias_transito: tt,
           servicio,
           naviera,
-          area: (e.area ?? "").trim() || undefined,
+          area: normalizeArea(e.area ?? ""),
         });
       }
     }

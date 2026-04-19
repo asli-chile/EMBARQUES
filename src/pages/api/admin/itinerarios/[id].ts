@@ -5,6 +5,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeArea } from "@/lib/areas";
 
 export const prerender = false;
 
@@ -136,7 +137,7 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
         eta: toDateStr(ee.eta),
         dias_transito: diasTransito,
         orden: typeof ee.orden === "number" && !Number.isNaN(ee.orden) ? ee.orden : i + 1,
-        area: (ee.area as string)?.trim() || "ASIA",
+        area: normalizeArea(ee.area ?? ""),
       };
     });
 

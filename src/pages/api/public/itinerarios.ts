@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createAnonClient } from "@/lib/supabase/admin";
+import { normalizeArea } from "@/lib/areas";
 
 export const prerender = false;
 
@@ -134,7 +135,10 @@ export const GET: APIRoute = async () => {
 
     const itinerariosWithEscalas = itinerarios.map((i) => ({
       ...i,
-      escalas: escalasPorItinerario.get(i.id) ?? [],
+      escalas: (escalasPorItinerario.get(i.id) ?? []).map((e) => ({
+        ...e,
+        area: normalizeArea(e.area),
+      })),
     }));
 
     return jsonResponse({ success: true, itinerarios: itinerariosWithEscalas });

@@ -6,7 +6,11 @@ export const AREAS_CANONICAL = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "O
 
 export function normalizeArea(area: unknown): string {
   if (area == null || String(area).trim() === "") return "ASIA";
-  const t = String(area).trim().toUpperCase().replace(/\s+/g, "-");
+  const t = String(area)
+    .trim()
+    .toUpperCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-");
   if (AREAS_CANONICAL.includes(t as (typeof AREAS_CANONICAL)[number])) return t;
   // Alias legacy
   if (t === "INDIA-MEDIOORIENTE" || t === "INDIA-MEDIO-ORIENTE" || t === "INDIA-MEDIO ORIENTE") return "MEDIO-ORIENTE";

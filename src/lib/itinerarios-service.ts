@@ -3,6 +3,7 @@
  * Obtiene datos públicos y crea itinerarios (admin) desde la API.
  */
 import { getApiOriginPrefix } from "@/lib/basePath";
+import { normalizeArea } from "@/lib/areas";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 
 export type ItinerarioEscalaInput = {
@@ -72,7 +73,7 @@ export async function fetchPublicItinerarios(): Promise<ItinerarioWithEscalas[]>
         eta: (ex.eta as string | null) ?? null,
         dias_transito: (ex.dias_transito as number | null) ?? null,
         orden: typeof ex.orden === "number" ? ex.orden : Number(ex.orden) || 0,
-        area: (ex.area as string | null) ?? null,
+        area: normalizeArea(ex.area),
         created_at: "",
         updated_at: "",
       };
@@ -119,7 +120,7 @@ export async function createItinerario(
         eta: e.eta ?? null,
         dias_transito: e.dias_transito ?? null,
         orden: e.orden ?? i + 1,
-        area: e.area ?? "ASIA",
+        area: normalizeArea(e.area ?? ""),
       })),
     }),
   });
@@ -169,7 +170,7 @@ export async function updateItinerario(
         eta: e.eta ?? null,
         dias_transito: e.dias_transito ?? null,
         orden: e.orden ?? i + 1,
-        area: e.area ?? "ASIA",
+        area: normalizeArea(e.area ?? ""),
       })),
     }),
   });
