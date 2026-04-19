@@ -27,6 +27,14 @@ const IconWhatsApp = () => (
   </svg>
 )
 
+const ITINERARIO_PDF_HREF = '/embarques/api/public/itinerario-pdf'
+
+const IconDownload = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.25} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  </svg>
+)
+
 const Header = () => {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -123,9 +131,9 @@ const Header = () => {
       </div>
 
       {/* ── Main nav ── */}
-      <nav className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <nav className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-2 sm:gap-3">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-3 group shrink-0">
+        <a href="/" className="flex items-center gap-3 group shrink-0 min-w-0">
           <img
             src="/img/logoblanco.png"
             alt="ASLI"
@@ -139,7 +147,7 @@ const Header = () => {
         </a>
 
         {/* Desktop nav links */}
-        <div className="hidden min-[1100px]:flex items-center gap-1">
+        <div className="hidden min-[1100px]:flex flex-1 items-center justify-center gap-1 min-w-0">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
@@ -158,24 +166,46 @@ const Header = () => {
           ))}
         </div>
 
-        {/* Desktop CTA */}
-        <a
-          href="/contacto"
-          className="hidden min-[1100px]:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-asli-primary text-white text-[13px] font-semibold hover:bg-asli-primary/85 transition-all duration-300 shadow-lg shadow-asli-primary/20 hover:shadow-asli-primary/35 hover:-translate-y-px"
-        >
-          {t.header.requestQuote}
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </a>
+        {/* Desktop: Itinerario (destacado) + CTA cotización */}
+        <div className="hidden min-[1100px]:flex items-center gap-3 shrink-0">
+          <a
+            href={ITINERARIO_PDF_HREF}
+            title={t.header.itinerarioPdfHint}
+            className="inline-flex items-center gap-2.5 px-5 py-3 rounded-lg bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 text-white text-sm font-bold uppercase tracking-wide border border-orange-300/40 shadow-[0_8px_28px_rgba(234,88,12,0.45)] hover:shadow-[0_10px_36px_rgba(251,146,60,0.55)] hover:from-orange-400 hover:via-orange-500 hover:to-orange-600 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 ease-out"
+          >
+            <IconDownload className="w-5 h-5 shrink-0 opacity-95" />
+            <span className="whitespace-nowrap">{t.nav.itinerario}</span>
+            <span className="hidden 2xl:inline text-[11px] font-semibold normal-case tracking-normal text-white/90 border-l border-white/25 pl-2.5 ml-0.5">
+              PDF
+            </span>
+          </a>
+          <a
+            href="/contacto"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-asli-primary text-white text-sm font-semibold hover:bg-asli-primary/88 transition-all duration-300 shadow-lg shadow-asli-primary/25 hover:shadow-asli-primary/40 hover:-translate-y-px"
+          >
+            {t.header.requestQuote}
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        </div>
 
-        {/* Hamburger button */}
-        <button
-          type="button"
-          onClick={() => setOpen((p) => !p)}
-          className="flex min-[1100px]:hidden w-10 h-10 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/15 hover:border-white/30 hover:bg-white/[0.05] transition-all duration-200"
-          aria-label={open ? t.header.closeMenu : t.header.openMenu}
-        >
+        {/* Mobile: Itinerario visible + hamburguesa */}
+        <div className="flex min-[1100px]:hidden items-center gap-2 shrink-0">
+          <a
+            href={ITINERARIO_PDF_HREF}
+            title={t.header.itinerarioPdfHint}
+            className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-br from-orange-500 to-orange-700 text-white text-xs sm:text-sm font-bold uppercase tracking-wide border border-orange-300/35 shadow-[0_6px_22px_rgba(234,88,12,0.4)] active:scale-[0.98] transition-transform duration-150"
+          >
+            <IconDownload className="w-[18px] h-[18px] sm:w-5 sm:h-5 shrink-0" />
+            <span className="max-[380px]:sr-only">{t.nav.itinerario}</span>
+          </a>
+          <button
+            type="button"
+            onClick={() => setOpen((p) => !p)}
+            className="flex w-11 h-11 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/15 hover:border-white/30 hover:bg-white/[0.05] transition-all duration-200"
+            aria-label={open ? t.header.closeMenu : t.header.openMenu}
+          >
           <span
             className={`block w-5 h-[1.5px] bg-white rounded-full transition-all duration-300 origin-center ${
               open ? 'rotate-45 translate-y-[6.5px]' : ''
@@ -191,7 +221,8 @@ const Header = () => {
               open ? '-rotate-45 -translate-y-[6.5px]' : ''
             }`}
           />
-        </button>
+          </button>
+        </div>
       </nav>
 
       {/* ── Mobile menu ── */}
@@ -218,6 +249,16 @@ const Header = () => {
             ))}
           </nav>
           <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-col gap-2">
+            <a
+              href={ITINERARIO_PDF_HREF}
+              onClick={() => setOpen(false)}
+              className="w-full py-4 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 text-white text-base font-bold uppercase tracking-wide text-center shadow-[0_8px_28px_rgba(234,88,12,0.35)] border border-orange-300/30 flex items-center justify-center gap-3 hover:from-orange-400 hover:to-orange-600 transition-colors duration-200"
+              title={t.header.itinerarioPdfHint}
+            >
+              <IconDownload className="w-6 h-6 shrink-0" />
+              {t.nav.itinerario}
+              <span className="text-sm font-semibold normal-case tracking-normal text-white/85">PDF</span>
+            </a>
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2">
               {langOptions.map((option) => (
                 <button

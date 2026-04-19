@@ -1,33 +1,8 @@
 import type { APIRoute } from "astro";
 import { createAnonClient } from "@/lib/supabase/admin";
-import { normalizeArea } from "@/lib/areas";
+import { loadPublicItinerariosWithEscalas } from "@/lib/itinerarios-public-query";
 
 export const prerender = false;
-
-type DbItinerario = {
-  id: string;
-  servicio: string;
-  consorcio: string | null;
-  naviera: string | null;
-  operador: string | null;
-  stacking_imagen_url: string | null;
-  nave: string;
-  viaje: string;
-  semana: number | null;
-  pol: string;
-  etd: string | null;
-};
-
-type DbEscala = {
-  id: string;
-  itinerario_id: string;
-  puerto: string;
-  puerto_nombre: string | null;
-  eta: string | null;
-  dias_transito: number | null;
-  orden: number;
-  area: string | null;
-};
 
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -36,112 +11,17 @@ function jsonResponse(body: object, status = 200) {
   });
 }
 
-/** Listado público: sin timestamps ni auditoría (menos JSON y parse más rápido en el cliente). */
-const ITINERARIOS_SELECT =
-  "id, servicio, consorcio, naviera, operador, stacking_imagen_url, nave, viaje, semana, pol, etd";
-const ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE =
-  "id, servicio, consorcio, naviera, operador, nave, viaje, semana, pol, etd";
-
 export const GET: APIRoute = async () => {
   try {
     const supabase = createAnonClient();
-
-    const PAGE_SIZE = 1000;
-    const fetchItinerarios = async (selectClause: string) => {
-      const out: unknown[] = [];
-      let from = 0;
-      while (true) {
-        const { data, error } = await supabase
-          .from("itinerarios")
-          .select(selectClause)
-          .order("etd", { ascending: true })
-          .order("servicio", { ascending: true })
-          .range(from, from + PAGE_SIZE - 1);
-        if (error) return { data: null, error };
-        const chunk = data ?? [];
-        out.push(...chunk);
-        if (chunk.length < PAGE_SIZE) break;
-        from += PAGE_SIZE;
+    const result = await loadPublicItinerariosWithEscalas(supabase);
+    if (!result.ok) {
+      if (result.code === "TABLE_NOT_FOUND") {
+        return jsonResponse({ code: result.code, error: result.message }, result.status);
       }
-      return { data: out, error: null };
-    };
-
-    let { data: itinerariosData, error: errItinerarios } = await fetchItinerarios(ITINERARIOS_SELECT);
-
-    // Si falla por columna inexistente (ej. migración stacking_imagen_url no aplicada), reintentar sin ella
-    if (errItinerarios && (errItinerarios.code === "42703" || /column.*does not exist|no existe/i.test(errItinerarios.message ?? ""))) {
-      const fallback = await fetchItinerarios(ITINERARIOS_SELECT_WITHOUT_STACKING_IMAGE);
-      itinerariosData = fallback.data;
-      errItinerarios = fallback.error;
+      return jsonResponse({ error: result.message }, result.status);
     }
-
-    if (errItinerarios) {
-      if (errItinerarios.code === "42P01") {
-        return jsonResponse({ code: "TABLE_NOT_FOUND", error: "La tabla itinerarios no existe." }, 404);
-      }
-      return jsonResponse({ error: errItinerarios.message }, 500);
-    }
-
-    const raw = (itinerariosData ?? []) as Record<string, unknown>[];
-    const itinerarios: DbItinerario[] = raw.map((row) => ({
-      ...row,
-      stacking_imagen_url: "stacking_imagen_url" in row ? row.stacking_imagen_url : null,
-    })) as DbItinerario[];
-
-    if (itinerarios.length === 0) {
-      return jsonResponse({ success: true, itinerarios: [] });
-    }
-
-    const ids = itinerarios.map((i) => i.id);
-    const itinerarioIdsSet = new Set(ids);
-    /**
-     * Con muchos itinerarios, usar `.in("itinerario_id", ids)` puede exceder límites
-     * del query-string y devolver error, dejando todas las escalas vacías.
-     * Traemos escalas y filtramos en memoria para mantener respuesta consistente.
-     */
-    const escalasRows: unknown[] = [];
-    let from = 0;
-    let errEscalas: { message?: string; code?: string } | null = null;
-    while (true) {
-      const { data, error } = await supabase
-        .from("itinerario_escalas")
-        .select("id, itinerario_id, puerto, puerto_nombre, eta, dias_transito, orden, area")
-        .order("itinerario_id", { ascending: true })
-        .order("orden", { ascending: true })
-        .range(from, from + PAGE_SIZE - 1);
-      if (error) {
-        errEscalas = error;
-        break;
-      }
-      const chunk = data ?? [];
-      escalasRows.push(...chunk);
-      if (chunk.length < PAGE_SIZE) break;
-      from += PAGE_SIZE;
-    }
-
-    if (errEscalas) {
-      return jsonResponse({ itinerarios: itinerarios.map((i) => ({ ...i, escalas: [] })) });
-    }
-
-    const escalas = (escalasRows as DbEscala[]).filter((e) =>
-      itinerarioIdsSet.has(e.itinerario_id)
-    );
-    const escalasPorItinerario = new Map<string, DbEscala[]>();
-    for (const e of escalas) {
-      const list = escalasPorItinerario.get(e.itinerario_id) ?? [];
-      list.push(e);
-      escalasPorItinerario.set(e.itinerario_id, list);
-    }
-
-    const itinerariosWithEscalas = itinerarios.map((i) => ({
-      ...i,
-      escalas: (escalasPorItinerario.get(i.id) ?? []).map((e) => ({
-        ...e,
-        area: normalizeArea(e.area),
-      })),
-    }));
-
-    return jsonResponse({ success: true, itinerarios: itinerariosWithEscalas });
+    return jsonResponse({ success: true, itinerarios: result.itinerarios });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Error interno";
     return jsonResponse({ error: msg }, 500);

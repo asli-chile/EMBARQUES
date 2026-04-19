@@ -6,7 +6,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatDisplayDateLocal, formatIsoDateLocal, getISOWeek } from "@/lib/calendarUtils";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
-import { withBase } from "@/lib/basePath";
+import { withBase, getApiOriginPrefix } from "@/lib/basePath";
 
 const BRAND_BLUE: [number, number, number] = [0, 82, 155];
 const WHITE: [number, number, number] = [255, 255, 255];
@@ -32,6 +32,21 @@ const AREA_ORDER = ["AMERICA", "ASIA", "EUROPA", "MEDIO-ORIENTE", "OCEANIA"];
 
 const COMPANY_NAME = "Asesorías y Servicios Logísticos Integrales Ltda.";
 
+/** Lee ancho/alto del PNG (IHDR) para conservar proporción al rasterizar en el PDF. */
+function readPngIntrinsicSize(bytes: Uint8Array): { w: number; h: number } | null {
+  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (bytes.length < 28) return null;
+  for (let i = 0; i < 8; i++) {
+    if (bytes[i] !== sig[i]) return null;
+  }
+  const type = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+  if (type !== "IHDR") return null;
+  const w = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+  const h = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1 || w > 32767 || h > 32767) return null;
+  return { w, h };
+}
+
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr?.trim()) return "—";
   try {
@@ -41,32 +56,50 @@ function formatDate(dateStr: string | null | undefined): string {
 }
 
 async function loadLogo(): Promise<{ dataUrl: string; w: number; h: number } | null> {
+  const url =
+    typeof window !== "undefined"
+      ? withBase("/logoblanco.png")
+      : `${getApiOriginPrefix()}/logoblanco.png`;
   try {
-    const resp = await fetch(withBase("/logoblanco.png"));
+    const resp = await fetch(url);
     if (!resp.ok) return null;
-    const blob = await resp.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-    const dims = await new Promise<{ w: number; h: number }>((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-      img.onerror = () => resolve({ w: 1, h: 1 });
-      img.src = dataUrl;
-    });
+    if (typeof window !== "undefined" && typeof FileReader !== "undefined") {
+      const blob = await resp.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => resolve({ w: 1, h: 1 });
+        img.src = dataUrl;
+      });
+      return { dataUrl, w: dims.w, h: dims.h };
+    }
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+    let binary = "";
+    const step = 0x8000;
+    for (let i = 0; i < bytes.length; i += step) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + step) as unknown as number[]);
+    }
+    const dims = readPngIntrinsicSize(bytes);
+    if (!dims) return null;
+    const dataUrl = `data:image/png;base64,${btoa(binary)}`;
     return { dataUrl, w: dims.w, h: dims.h };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
-export async function generateItinerarioPDF(
+async function buildItinerarioPdfDocument(
   itinerarios: ItinerarioWithEscalas[],
   selectedArea: string | null,
   locale: "es" | "en" = "es",
   options?: { startWeek?: number; endWeek?: number }
-): Promise<void> {
+): Promise<{ doc: jsPDF; filename: string }> {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -153,11 +186,19 @@ export async function generateItinerarioPDF(
     doc.rect(0, HEADER_H - 1.5, pageW, 1.5, "F");
 
     let logoDisplayW = 0;
-    if (logo) {
+    if (logo && logo.w > 0 && logo.h > 0) {
       const maxH = 16;
-      const displayH = maxH;
-      logoDisplayW = displayH * (logo.w / logo.h);
-      doc.addImage(logo.dataUrl, "PNG", margin, (HEADER_H - displayH) / 2, logoDisplayW, displayH);
+      const maxW = 50;
+      const ratio = logo.w / logo.h;
+      let displayH = maxH;
+      let displayW = displayH * ratio;
+      if (displayW > maxW) {
+        displayW = maxW;
+        displayH = displayW / ratio;
+      }
+      logoDisplayW = displayW;
+      const yLogo = (HEADER_H - displayH) / 2;
+      doc.addImage(logo.dataUrl, "PNG", margin, yLogo, displayW, displayH);
     }
     const textX = margin + logoDisplayW + (logo ? 4 : 0);
 
@@ -427,5 +468,27 @@ export async function generateItinerarioPDF(
   }
 
   const areaSlug = selectedArea && selectedArea !== "ALL" ? `-${selectedArea.toLowerCase()}` : "";
-  doc.save(`itinerarios${areaSlug}-${formatIsoDateLocal(now)}.pdf`);
+  const filename = `itinerarios${areaSlug}-${formatIsoDateLocal(now)}.pdf`;
+  return { doc, filename };
+}
+
+export async function generateItinerarioPDF(
+  itinerarios: ItinerarioWithEscalas[],
+  selectedArea: string | null,
+  locale: "es" | "en" = "es",
+  options?: { startWeek?: number; endWeek?: number }
+): Promise<void> {
+  const { doc, filename } = await buildItinerarioPdfDocument(itinerarios, selectedArea, locale, options);
+  doc.save(filename);
+}
+
+export async function generateItinerarioPdfBuffer(
+  itinerarios: ItinerarioWithEscalas[],
+  selectedArea: string | null,
+  locale: "es" | "en" = "es",
+  options?: { startWeek?: number; endWeek?: number }
+): Promise<{ buffer: Uint8Array; filename: string }> {
+  const { doc, filename } = await buildItinerarioPdfDocument(itinerarios, selectedArea, locale, options);
+  const ab = doc.output("arraybuffer") as ArrayBuffer;
+  return { buffer: new Uint8Array(ab), filename };
 }

@@ -17,6 +17,7 @@ const t = {
       closeMenu: 'Cerrar menú',
       companyName: 'Asesorías y Servicios Logísticos Integrales Ltda.',
       companyTag: 'Logística y Comercio Exterior.',
+      itinerarioPdfHint: 'Descargar itinerario marítimo (PDF)',
     },
     nav: {
       inicio:       'Inicio',
@@ -254,6 +255,7 @@ const t = {
       closeMenu: 'Close menu',
       companyName: 'Integral Logistics Advisory & Services Ltd.',
       companyTag: 'Logistics & Foreign Trade.',
+      itinerarioPdfHint: 'Download shipping schedule (PDF)',
     },
     nav: {
       inicio:     'Home',
@@ -491,6 +493,7 @@ const t = {
       closeMenu: '关闭菜单',
       companyName: 'ASLI 综合物流咨询与服务有限公司',
       companyTag: '物流与国际贸易。',
+      itinerarioPdfHint: '下载航运船期表 (PDF)',
     },
     nav: {
       inicio: '首页',
