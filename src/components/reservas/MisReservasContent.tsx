@@ -158,7 +158,7 @@ type SortableHeaderProps = {
 function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className={`px-3 py-2.5 text-center whitespace-nowrap ${className ?? ""}`}>
+    <th className={`sticky top-0 z-20 bg-neutral-50 px-3 py-2.5 text-center whitespace-nowrap border-b border-neutral-200 ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
@@ -1194,13 +1194,13 @@ export function MisReservasContent() {
 
         {/* Vista Tabla */}
         {viewMode === "table" && (
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col" style={{ minHeight: 300 }}>
-            <div className="overflow-x-auto flex-1">
+          <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col h-full min-h-0" style={{ minHeight: 300 }}>
+            <div className="overflow-auto flex-1 min-h-0">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-neutral-50 border-b border-neutral-200 sticky top-0 z-10">
+                  <tr className="bg-neutral-50">
                     {!isCliente && (
-                      <th className="px-3 py-2.5 w-9 border-r border-neutral-100">
+                      <th className="sticky top-0 z-20 bg-neutral-50 px-3 py-2.5 w-9 border-r border-neutral-100 border-b border-neutral-200">
                         <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-3.5 h-3.5 rounded border-neutral-300 accent-brand-blue" />
                       </th>
                     )}
@@ -1216,8 +1216,8 @@ export function MisReservasContent() {
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{tr.colTransport}</th>
-                    <th className="px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{tr.colActions}</th>
+                    <th className="sticky top-0 z-20 bg-neutral-50 px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-200">{tr.colTransport}</th>
+                    <th className="sticky top-0 z-20 bg-neutral-50 px-3 py-2.5 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-200">{tr.colActions}</th>
                   </tr>
                 </thead>
                 <tbody>

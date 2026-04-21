@@ -19,7 +19,7 @@ export type NotificacionTipo =
   | "nueva_factura_ext";
 
 export type Notificacion = {
-  id: string;
+  id: string
   tipo: NotificacionTipo;
   titulo: string;
   mensaje: string;

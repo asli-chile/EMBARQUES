@@ -70,7 +70,7 @@ function NotificacionItem({
 }
 
 export function NotificationsBell() {
-  const { user } = useAuth();
+  const { user, isEjecutivo, isAdmin, isSuperadmin } = useAuth();
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotifications();
   const [abierto, setAbierto] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,8 +87,9 @@ export function NotificationsBell() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [abierto]);
 
-  // No mostrar si no hay sesión
-  if (!user) return null;
+  // Solo visible para ejecutivo/admin/superadmin
+  const canSeeNotificationsBell = Boolean(user) && (isEjecutivo || isAdmin || isSuperadmin);
+  if (!canSeeNotificationsBell) return null;
 
   return (
     <div ref={containerRef} className="relative flex-shrink-0">

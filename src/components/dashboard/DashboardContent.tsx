@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
-import { format, differenceInDays, addDays, subDays, formatDistanceToNow, isWithinInterval } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { withBase } from "@/lib/basePath";
+import { getPortCoordinates } from "@/lib/ports-coordinates";
+import MapLibreMap, { Marker, NavigationControl } from "react-map-gl/maplibre";
+import type { MapRef } from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 type OperacionResumen = {
   id: string;
@@ -14,6 +18,7 @@ type OperacionResumen = {
   cliente: string | null;
   naviera: string | null;
   nave: string | null;
+  pol: string | null;
   pod: string | null;
   etd: string | null;
   eta: string | null;
@@ -22,43 +27,95 @@ type OperacionResumen = {
   created_at?: string;
 };
 
-type EstadoCount = {
-  estado: string;
+type PortMarker = {
+  key: string;
+  label: string;
+  lng: number;
+  lat: number;
   count: number;
+  type: "origen" | "destino";
 };
 
-type NavieraCount = {
-  naviera: string;
-  count: number;
-};
+const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+const REGION_LABELS = ["America", "Europa", "India y Medio Oriente", "Oceania", "Asia"] as const;
+type RegionLabel = (typeof REGION_LABELS)[number];
 
-type DashboardFilters = {
-  etdDesde: string;
-  etdHasta: string;
-  estado: string;
-  cliente: string;
-  naviera: string;
-};
+function classifyRegionFromPodName(pod: string): RegionLabel | null {
+  const text = pod.toUpperCase();
 
-const ESTADOS_OPTS = [
-  "PENDIENTE",
-  "EN PROCESO",
-  "EN TRÁNSITO",
-  "ARRIBADO",
-  "COMPLETADO",
-  "CANCELADO",
-  "ROLEADO",
-] as const;
+  if (
+    text.includes("INDIA") ||
+    text.includes("NHAVA") ||
+    text.includes("MUNDRA") ||
+    text.includes("DUBAI") ||
+    text.includes("JEBEL") ||
+    text.includes("DOHA") ||
+    text.includes("KUWAIT") ||
+    text.includes("JEDDAH") ||
+    text.includes("DAMMAM") ||
+    text.includes("OMAN") ||
+    text.includes("MUSCAT") ||
+    text.includes("BANDAR")
+  ) {
+    return "India y Medio Oriente";
+  }
+  if (
+    text.includes("AUSTRALIA") ||
+    text.includes("SYDNEY") ||
+    text.includes("MELBOURNE") ||
+    text.includes("BRISBANE") ||
+    text.includes("AUCKLAND") ||
+    text.includes("WELLINGTON") ||
+    text.includes("TAURANGA") ||
+    text.includes("LYTTELTON")
+  ) {
+    return "Oceania";
+  }
+  if (
+    text.includes("ROTTERDAM") ||
+    text.includes("HAMBURG") ||
+    text.includes("HAMBURGO") ||
+    text.includes("ANTWERP") ||
+    text.includes("VALENCIA") ||
+    text.includes("BARCELONA") ||
+    text.includes("LONDON") ||
+    text.includes("SOUTHAMPTON") ||
+    text.includes("GENOVA") ||
+    text.includes("LIVORNO")
+  ) {
+    return "Europa";
+  }
+  if (
+    text.includes("SHANGHAI") ||
+    text.includes("NINGBO") ||
+    text.includes("QINGDAO") ||
+    text.includes("SHENZHEN") ||
+    text.includes("HONG KONG") ||
+    text.includes("BUSAN") ||
+    text.includes("SINGAPORE") ||
+    text.includes("YOKOHAMA") ||
+    text.includes("TOKYO") ||
+    text.includes("MANILA") ||
+    text.includes("JAKARTA")
+  ) {
+    return "Asia";
+  }
+  if (
+    text.includes("PHILADELPHIA") ||
+    text.includes("NEW YORK") ||
+    text.includes("LOS ANGELES") ||
+    text.includes("BALBOA") ||
+    text.includes("BUENAVENTURA") ||
+    text.includes("CALLAO") ||
+    text.includes("CARTAGENA") ||
+    text.includes("SAN ANTONIO") ||
+    text.includes("VALPARAISO")
+  ) {
+    return "America";
+  }
 
-const estadoColors: Record<string, { bg: string; text: string; icon: string }> = {
-  PENDIENTE: { bg: "bg-amber-100", text: "text-amber-700", icon: "typcn:time" },
-  "EN PROCESO": { bg: "bg-blue-100", text: "text-blue-700", icon: "typcn:cog" },
-  "EN TRÁNSITO": { bg: "bg-purple-100", text: "text-purple-700", icon: "typcn:plane" },
-  ARRIBADO: { bg: "bg-green-100", text: "text-green-700", icon: "typcn:location" },
-  COMPLETADO: { bg: "bg-neutral-100", text: "text-neutral-700", icon: "typcn:tick" },
-  CANCELADO: { bg: "bg-red-100", text: "text-red-700", icon: "typcn:times" },
-  ROLEADO: { bg: "bg-orange-100", text: "text-orange-700", icon: "typcn:arrow-repeat" },
-};
+  return null;
+}
 
 export function DashboardContent() {
   const { t, locale } = useLocale();
@@ -70,24 +127,8 @@ export function DashboardContent() {
   }
   const [loading, setLoading] = useState(true);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
-  const [filters, setFilters] = useState<DashboardFilters>({
-    etdDesde: "",
-    etdHasta: "",
-    estado: "",
-    cliente: "",
-    naviera: "",
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const [totalOperaciones, setTotalOperaciones] = useState(0);
-  const [estadosCounts, setEstadosCounts] = useState<EstadoCount[]>([]);
-  const [navierasCounts, setNavierasCounts] = useState<NavieraCount[]>([]);
-  const [proximosZarpes, setProximosZarpes] = useState<OperacionResumen[]>([]);
-  const [recientes, setRecientes] = useState<OperacionResumen[]>([]);
-  const [clientesOpts, setClientesOpts] = useState<string[]>([]);
-  const [navierasOpts, setNavierasOpts] = useState<string[]>([]);
-  const [thisWeekCount, setThisWeekCount] = useState(0);
-  const [thisMonthCount, setThisMonthCount] = useState(0);
-  const [activeClientsCount, setActiveClientsCount] = useState(0);
+  const [mapOperations, setMapOperations] = useState<OperacionResumen[]>([]);
+  const mapRef = useRef<MapRef | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -104,165 +145,32 @@ export function DashboardContent() {
       if (empresaNombres.length > 0) {
         q = q.in("cliente", empresaNombres);
       }
-      if (filters.etdDesde) q = q.gte("etd", filters.etdDesde);
-      if (filters.etdHasta) q = q.lte("etd", filters.etdHasta);
-      if (filters.estado) q = q.eq("estado_operacion", filters.estado);
-      if (filters.cliente) q = q.eq("cliente", filters.cliente);
-      if (filters.naviera) q = q.eq("naviera", filters.naviera);
       return q;
     },
-    [supabase, filters, empresaNombres]
+    [supabase, empresaNombres]
   );
-
-  const fetchCatalogs = useCallback(async () => {
-    if (!supabase || authLoading) return;
-    if (isCliente && empresaNombres.length === 0) {
-      setClientesOpts([]);
-      setNavierasOpts([]);
-      return;
-    }
-    let qClientes = supabase.from("operaciones").select("cliente").is("deleted_at", null).not("cliente", "is", null);
-    let qNavieras = supabase.from("operaciones").select("naviera").is("deleted_at", null).not("naviera", "is", null);
-    if (empresaNombres.length > 0) {
-      qClientes = qClientes.in("cliente", empresaNombres);
-      qNavieras = qNavieras.in("cliente", empresaNombres);
-    }
-    const [clientesRes, navierasRes] = await Promise.all([qClientes, qNavieras]);
-    const clientes = [...new Set((clientesRes.data ?? []).map((r) => r.cliente).filter(Boolean) as string[])].sort();
-    const navieras = [...new Set((navierasRes.data ?? []).map((r) => r.naviera).filter(Boolean) as string[])].sort();
-    setClientesOpts(clientes);
-    setNavierasOpts(navieras);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!supabase || authLoading) return;
     if (isCliente && empresaNombres.length === 0) {
-      setTotalOperaciones(0);
-      setEstadosCounts([]);
-      setNavierasCounts([]);
-      setProximosZarpes([]);
-      setRecientes([]);
-      setThisWeekCount(0);
-      setThisMonthCount(0);
-      setActiveClientsCount(0);
+      setMapOperations([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-
-    const today = new Date();
-    const nextWeek = addDays(today, 7);
-    const todayStr = today.toISOString().split("T")[0];
-    const nextWeekStr = nextWeek.toISOString().split("T")[0];
-
-    const [allRes, zarpesRes, recientesRes] = await Promise.all([
-      buildFilteredQuery("id, ref_asli, cliente, naviera, nave, pod, etd, eta, estado_operacion, booking, created_at").limit(2000),
-      buildFilteredQuery("id, ref_asli, cliente, naviera, nave, pod, etd, eta, estado_operacion, booking")
-        .gte("etd", todayStr)
-        .lte("etd", nextWeekStr)
-        .order("etd", { ascending: true })
-        .limit(10),
-      buildFilteredQuery("id, ref_asli, cliente, naviera, nave, pod, etd, eta, estado_operacion, booking, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10),
-    ]);
-
+    const allRes = await buildFilteredQuery(
+      "id, ref_asli, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, created_at"
+    ).limit(2000);
     const allData = (allRes.data ?? []) as OperacionResumen[];
-
-    const weekStart = subDays(today, 7);
-    const monthStart = subDays(today, 30);
-    let weekCount = 0;
-    let monthCount = 0;
-    const clientsSet = new Set<string>();
-
-    allData.forEach((op) => {
-      if (op.etd) {
-        const etdDate = new Date(op.etd);
-        if (isWithinInterval(etdDate, { start: weekStart, end: today })) weekCount++;
-        if (isWithinInterval(etdDate, { start: monthStart, end: today })) monthCount++;
-      }
-      if (op.cliente) clientsSet.add(op.cliente);
-    });
-
-    setTotalOperaciones(allData.length);
-    setThisWeekCount(weekCount);
-    setThisMonthCount(monthCount);
-    setActiveClientsCount(clientsSet.size);
-
-    const estadosMap = new Map<string, number>();
-    const navierasMap = new Map<string, number>();
-    allData.forEach((op) => {
-      const estado = op.estado_operacion || "SIN ESTADO";
-      estadosMap.set(estado, (estadosMap.get(estado) ?? 0) + 1);
-      if (op.naviera) navierasMap.set(op.naviera, (navierasMap.get(op.naviera) ?? 0) + 1);
-    });
-    setEstadosCounts(
-      Array.from(estadosMap.entries())
-        .map(([estado, count]) => ({ estado, count }))
-        .sort((a, b) => b.count - a.count)
-    );
-    setNavierasCounts(
-      Array.from(navierasMap.entries())
-        .map(([naviera, count]) => ({ naviera, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 8)
-    );
-
-    setProximosZarpes((zarpesRes.data ?? []) as OperacionResumen[]);
-    setRecientes((recientesRes.data ?? []) as OperacionResumen[]);
+    setMapOperations(allData);
 
     setLastFetchedAt(new Date());
     setLoading(false);
   }, [supabase, authLoading, isCliente, empresaNombres, buildFilteredQuery]);
 
   useEffect(() => {
-    if (!authLoading) void fetchCatalogs();
-  }, [authLoading, fetchCatalogs]);
-
-  useEffect(() => {
     if (!authLoading) void fetchDashboardData();
   }, [authLoading, fetchDashboardData]);
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "-";
-    try {
-      return format(new Date(dateStr), "dd MMM", { locale: locale === "es" ? es : undefined });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const getDaysUntil = (dateStr: string | null) => {
-    if (!dateStr) return null;
-    try {
-      const days = differenceInDays(new Date(dateStr), new Date());
-      return days;
-    } catch {
-      return null;
-    }
-  };
-
-  const getEstadoStyle = (estado: string) => {
-    return estadoColors[estado] ?? { bg: "bg-neutral-100", text: "text-neutral-700", icon: "typcn:info" };
-  };
-
-  const pendientes = estadosCounts.find((e) => e.estado === "PENDIENTE")?.count ?? 0;
-  const enProceso = estadosCounts.find((e) => e.estado === "EN PROCESO")?.count ?? 0;
-  const enTransito = estadosCounts.find((e) => e.estado === "EN TRÁNSITO")?.count ?? 0;
-  const arribados = estadosCounts.find((e) => e.estado === "ARRIBADO")?.count ?? 0;
-  const completadas = estadosCounts.find((e) => e.estado === "COMPLETADO")?.count ?? 0;
-  const cancelados = estadosCounts.find((e) => e.estado === "CANCELADO")?.count ?? 0;
-  const roleados = estadosCounts.find((e) => e.estado === "ROLEADO")?.count ?? 0;
-
-  const hasActiveFilters = filters.etdDesde || filters.etdHasta || filters.estado || filters.cliente || filters.naviera;
-
-  const handleClearFilters = () => {
-    setFilters({ etdDesde: "", etdHasta: "", estado: "", cliente: "", naviera: "" });
-  };
-
-  const handleApplyFilters = () => {
-    void fetchDashboardData();
-  };
 
   const getLastUpdatedText = () => {
     if (!lastFetchedAt) return null;
@@ -275,6 +183,132 @@ export function DashboardContent() {
       return null;
     }
   };
+
+  const portMarkers = useMemo<PortMarker[]>(() => {
+    const originsMap = new Map<string, PortMarker>();
+    const destinationsMap = new Map<string, PortMarker>();
+
+    for (const op of mapOperations) {
+      if (op.pol) {
+        const originCoords = getPortCoordinates(op.pol);
+        if (originCoords) {
+          const [lng, lat] = originCoords;
+          const key = `origen-${op.pol.toUpperCase()}`;
+          const current = originsMap.get(key);
+          if (current) {
+            current.count += 1;
+          } else {
+            originsMap.set(key, { key, label: op.pol, lng, lat, count: 1, type: "origen" });
+          }
+        }
+      }
+
+      if (op.pod) {
+        const destinationCoords = getPortCoordinates(op.pod);
+        if (destinationCoords) {
+          const [lng, lat] = destinationCoords;
+          const key = `destino-${op.pod.toUpperCase()}`;
+          const current = destinationsMap.get(key);
+          if (current) {
+            current.count += 1;
+          } else {
+            destinationsMap.set(key, { key, label: op.pod, lng, lat, count: 1, type: "destino" });
+          }
+        }
+      }
+    }
+
+    return [...originsMap.values(), ...destinationsMap.values()];
+  }, [mapOperations]);
+
+  const activeClientsCount = useMemo(() => {
+    const clients = new Set<string>();
+    for (const op of mapOperations) {
+      if (op.cliente) clients.add(op.cliente);
+    }
+    return clients.size;
+  }, [mapOperations]);
+
+  const clientsWithOperationCount = useMemo(() => {
+    const countByClient = new Map<string, number>();
+    for (const op of mapOperations) {
+      if (!op.cliente) continue;
+      countByClient.set(op.cliente, (countByClient.get(op.cliente) ?? 0) + 1);
+    }
+    return Array.from(countByClient.entries())
+      .map(([cliente, cantidad]) => ({ cliente, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad || a.cliente.localeCompare(b.cliente));
+  }, [mapOperations]);
+
+  const transportDistribution = useMemo(() => {
+    let maritima = 0;
+    let aereo = 0;
+    for (const op of mapOperations) {
+      // Regla pragmática: si tiene datos navieros, cuenta como marítima; de lo contrario, aéreo.
+      if (op.naviera || op.nave || op.pol || op.pod) maritima += 1;
+      else aereo += 1;
+    }
+    const total = maritima + aereo;
+    return { maritima, aereo, total };
+  }, [mapOperations]);
+
+  const donutProgress =
+    transportDistribution.total > 0 ? (transportDistribution.maritima / transportDistribution.total) * 100 : 0;
+
+  const regionDistribution = useMemo(() => {
+    const counts: Record<RegionLabel, number> = {
+      America: 0,
+      Europa: 0,
+      "India y Medio Oriente": 0,
+      Oceania: 0,
+      Asia: 0,
+    };
+
+    for (const op of mapOperations) {
+      if (!op.pod) continue;
+
+      let region: RegionLabel | null = null;
+      const coords = getPortCoordinates(op.pod);
+      if (coords) {
+        const [lng, lat] = coords;
+        if (lng >= -170 && lng <= -30 && lat >= -60 && lat <= 75) region = "America";
+        else if (lng >= -15 && lng <= 40 && lat >= 35 && lat <= 72) region = "Europa";
+        else if (lng >= 35 && lng <= 80 && lat >= 5 && lat <= 36) region = "India y Medio Oriente";
+        else if (lng >= 110 && lng <= 180 && lat >= -50 && lat <= 0) region = "Oceania";
+        else if (lng >= 85 && lng <= 150 && lat >= -10 && lat <= 55) region = "Asia";
+      }
+      if (!region) region = classifyRegionFromPodName(op.pod);
+      if (region) counts[region] += 1;
+    }
+
+    const items = REGION_LABELS.map((region) => ({ region, count: counts[region] }));
+    const max = Math.max(...items.map((i) => i.count), 1);
+    return { items, max };
+  }, [mapOperations]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || portMarkers.length === 0) return;
+
+    if (portMarkers.length === 1) {
+      map.flyTo({ center: [portMarkers[0].lng, portMarkers[0].lat], zoom: 2.6, duration: 900 });
+      return;
+    }
+
+    const lngs = portMarkers.map((m) => m.lng);
+    const lats = portMarkers.map((m) => m.lat);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    map.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      { padding: 68, duration: 900, maxZoom: 2.9 }
+    );
+  }, [portMarkers]);
 
   if (loading) {
     return (
@@ -309,7 +343,7 @@ export function DashboardContent() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="w-full max-w-[1700px] mx-auto px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h1 className="text-base font-bold text-neutral-900 tracking-tight leading-tight">{tr.title}</h1>
             <p className="text-[11px] text-neutral-400 mt-0.5">
@@ -339,268 +373,70 @@ export function DashboardContent() {
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 lg:p-5 w-full max-w-[1600px] mx-auto space-y-4">
-
-        {/* ── Filtros ─────────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-          <button type="button" onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center justify-between w-full text-left px-4 py-3 text-sm font-medium text-neutral-700 hover:text-brand-blue transition-colors"
-            aria-expanded={showFilters}>
-            <span className="flex items-center gap-2">
-              <Icon icon="lucide:sliders-horizontal" className="w-4 h-4 text-neutral-400" />
-              <span>{tr.filters}</span>
-              {hasActiveFilters && (
-                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-brand-blue text-white rounded-full">
-                  {[filters.etdDesde, filters.etdHasta, filters.estado, filters.cliente, filters.naviera].filter(Boolean).length}
-                </span>
-              )}
-            </span>
-            <Icon icon={showFilters ? "lucide:chevron-up" : "lucide:chevron-down"} className="w-4 h-4 text-neutral-300" />
-          </button>
-          {showFilters && (
-            <div className="px-4 pb-4 border-t border-neutral-100 pt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.dateFrom}</label>
-                <input type="date" value={filters.etdDesde}
-                  onChange={(e) => setFilters((f) => ({ ...f, etdDesde: e.target.value }))}
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.dateTo}</label>
-                <input type="date" value={filters.etdHasta}
-                  onChange={(e) => setFilters((f) => ({ ...f, etdHasta: e.target.value }))}
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.state}</label>
-                <select value={filters.estado} onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50">
-                  <option value="">{tr.allStates}</option>
-                  {ESTADOS_OPTS.map((e) => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.client}</label>
-                <select value={filters.cliente} onChange={(e) => setFilters((f) => ({ ...f, cliente: e.target.value }))}
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50">
-                  <option value="">{tr.allClients}</option>
-                  {clientesOpts.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{tr.carrier}</label>
-                <select value={filters.naviera} onChange={(e) => setFilters((f) => ({ ...f, naviera: e.target.value }))}
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue bg-neutral-50">
-                  <option value="">{tr.allCarriers}</option>
-                  {navierasOpts.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div className="flex items-end gap-2">
-                <button type="button" onClick={handleApplyFilters}
-                  className="flex-1 px-3 py-1.5 text-sm font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors">
-                  {tr.applyFilters}
-                </button>
-                {hasActiveFilters && (
-                  <button type="button" onClick={handleClearFilters}
-                    className="px-3 py-1.5 text-sm text-neutral-400 hover:text-red-500 transition-colors">
-                    {tr.clearFilters}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── KPIs fila 1: card destacada + estados activos ────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {/* Total — card destacada */}
-          <div className="col-span-2 sm:col-span-1 bg-brand-blue rounded-2xl p-4 text-white shadow-sm flex flex-col justify-between min-h-[96px]">
-            <p className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">{tr.totalOperations}</p>
-            <p className="text-4xl font-bold leading-none mt-1">{totalOperaciones}</p>
-            <p className="text-[11px] text-white/50 mt-2">{tr.activeClients}: <span className="text-white/80 font-semibold">{activeClientsCount}</span></p>
-          </div>
-
-          {/* Pendiente */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-start justify-between gap-1">
-              <div>
-                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.pending}</p>
-                <p className="text-2xl font-bold text-amber-500 mt-1">{pendientes}</p>
-              </div>
-              <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:clock" className="w-4 h-4 text-amber-500" />
-              </div>
-            </div>
-          </div>
-
-          {/* En proceso */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-start justify-between gap-1">
-              <div>
-                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.inProcess}</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{enProceso}</p>
-              </div>
-              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:settings-2" className="w-4 h-4 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* En tránsito */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-start justify-between gap-1">
-              <div>
-                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.inTransit}</p>
-                <p className="text-2xl font-bold text-purple-600 mt-1">{enTransito}</p>
-              </div>
-              <div className="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:ship" className="w-4 h-4 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Arribado */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-start justify-between gap-1">
-              <div>
-                <p className="text-[11px] text-neutral-400 font-medium truncate">{tr.arrived}</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{arribados}</p>
-              </div>
-              <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:map-pin" className="w-4 h-4 text-emerald-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── KPIs fila 2: métricas secundarias ───────────────────────────── */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 xl:grid-cols-7 gap-3">
-          {[
-            { label: tr.completed,   value: completadas,   icon: "lucide:check-circle-2", cls: "text-green-600",  bg: "bg-green-50"  },
-            { label: tr.cancelled,   value: cancelados,    icon: "lucide:x-circle",        cls: "text-red-500",   bg: "bg-red-50"    },
-            { label: tr.rolled,      value: roleados,      icon: "lucide:refresh-cw",      cls: "text-orange-500",bg: "bg-orange-50" },
-            { label: tr.thisWeek,    value: thisWeekCount, icon: "lucide:calendar",        cls: "text-brand-teal",bg: "bg-teal-50"   },
-            { label: tr.thisMonth,   value: thisMonthCount,icon: "lucide:calendar-days",   cls: "text-brand-blue",bg: "bg-blue-50"   },
-          ].map(({ label, value, icon, cls, bg }) => (
-            <div key={label} className="bg-white rounded-2xl border border-neutral-200 p-3 shadow-sm">
-              <div className={`w-7 h-7 ${bg} rounded-lg flex items-center justify-center mb-2`}>
-                <Icon icon={icon} className={`w-3.5 h-3.5 ${cls}`} />
-              </div>
-              <p className={`text-xl font-bold ${cls}`}>{value}</p>
-              <p className="text-[11px] text-neutral-400 mt-0.5 truncate leading-tight">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Listas ──────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          {/* Próximos zarpes */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-brand-blue/10 rounded-lg flex items-center justify-center">
-                  <Icon icon="lucide:anchor" className="w-3.5 h-3.5 text-brand-blue" />
-                </div>
-                <h2 className="font-semibold text-neutral-800 text-sm">{tr.upcomingDepartures}</h2>
-                {proximosZarpes.length > 0 && (
-                  <span className="text-[10px] font-bold bg-brand-blue/10 text-brand-blue px-1.5 py-0.5 rounded-full">{proximosZarpes.length}</span>
-                )}
-              </div>
-              <a href={withBase("/reservas/mis-reservas")} className="text-xs font-medium text-brand-blue hover:underline">{tr.viewAll}</a>
-            </div>
-            <div className="divide-y divide-neutral-50 overflow-auto max-h-[300px] flex-1">
-              {proximosZarpes.length === 0 ? (
-                <p className="text-neutral-400 text-sm text-center py-10">{tr.noUpcoming}</p>
+      <div className="p-3 sm:p-4 lg:p-5 w-full max-w-[1700px] 2xl:max-w-[1600px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[260px_260px_minmax(0,1fr)_540px] xl:grid-cols-[280px_280px_minmax(0,1fr)_600px] gap-4 items-start">
+          {/* KPI clientes (izquierda) */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 min-h-[286px]">
+            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Clientes</p>
+            <p className="text-2xl font-bold text-brand-blue leading-none mt-2">{activeClientsCount}</p>
+            <p className="text-xs text-neutral-500 mt-1">con operaciones</p>
+            <div className="mt-2.5 border-t border-neutral-100 pt-2 max-h-[158px] overflow-auto">
+              {clientsWithOperationCount.length === 0 ? (
+                <p className="text-xs text-neutral-400">Sin clientes con operaciones</p>
               ) : (
-                proximosZarpes.map((op) => {
-                  const daysUntil = getDaysUntil(op.etd);
-                  const urgent = daysUntil !== null && daysUntil <= 2;
-                  return (
-                    <div key={op.id}
-                      className={`flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${urgent ? "bg-red-50/50" : ""}`}>
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${urgent ? "bg-red-100" : "bg-brand-blue/10"}`}>
-                        <Icon icon="lucide:ship" className={`w-4 h-4 ${urgent ? "text-red-500" : "text-brand-blue"}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-neutral-800 truncate">{op.ref_asli || op.booking || "-"}</p>
-                        <p className="text-[11px] text-neutral-400 truncate">{op.cliente || "-"} · {op.naviera || "-"} → {op.pod || "-"}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs font-semibold text-neutral-700">{formatDate(op.etd)}</p>
-                        {daysUntil !== null && (
-                          <p className={`text-[10px] font-semibold ${urgent ? "text-red-500" : "text-neutral-400"}`}>
-                            {daysUntil === 0 ? tr.today : daysUntil === 1 ? tr.tomorrow : `${daysUntil}d`}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                <ul className="space-y-1.5">
+                  {clientsWithOperationCount.map((item) => (
+                    <li key={item.cliente} className="text-xs text-neutral-700">
+                      <span className="font-medium">{item.cliente}</span>{" "}
+                      <span className="text-neutral-500">({item.cantidad})</span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>
 
-          {/* Operaciones recientes */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-neutral-100 rounded-lg flex items-center justify-center">
-                  <Icon icon="lucide:clock" className="w-3.5 h-3.5 text-neutral-500" />
+          {/* Dona marítima vs aéreo */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 min-h-[286px]">
+            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Operaciones por vía</p>
+            <div className="mt-3 flex items-center gap-4">
+              <div
+                className="relative h-28 w-28 rounded-full shadow-inner"
+                style={{
+                  background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)`,
+                }}
+              >
+                <div className="absolute inset-[14px] rounded-full bg-white border border-neutral-100 flex items-center justify-center">
+                  <div className="text-center leading-tight">
+                    <p className="text-[10px] text-neutral-400">Marítima</p>
+                    <p className="text-sm font-bold text-neutral-800">
+                      {transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}
+                    </p>
+                  </div>
                 </div>
-                <h2 className="font-semibold text-neutral-800 text-sm">{tr.recentOperations}</h2>
               </div>
-              <a href={withBase("/registros")} className="text-xs font-medium text-brand-blue hover:underline">{tr.viewAll}</a>
+              <div className="text-xs space-y-1">
+                <p className="text-neutral-700"><span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1" />Marítima ({transportDistribution.maritima})</p>
+                <p className="text-neutral-700"><span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" />Aéreo ({transportDistribution.aereo})</p>
+              </div>
             </div>
-            <div className="divide-y divide-neutral-50 overflow-auto max-h-[300px] flex-1">
-              {recientes.length === 0 ? (
-                <p className="text-neutral-400 text-sm text-center py-10">{tr.noRecent}</p>
-              ) : (
-                recientes.map((op) => {
-                  const style = getEstadoStyle(op.estado_operacion || "");
-                  return (
-                    <div key={op.id} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors">
-                      <div className={`w-9 h-9 ${style.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                        <Icon icon={style.icon} className={`w-4 h-4 ${style.text}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-neutral-800 truncate">{op.ref_asli || op.booking || "-"}</p>
-                        <p className="text-[11px] text-neutral-400 truncate">{op.cliente || "-"} · ETD {formatDate(op.etd)}</p>
-                      </div>
-                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${style.bg} ${style.text}`}>
-                        {op.estado_operacion || "-"}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <p className="text-[11px] text-neutral-500 mt-2">Total: {transportDistribution.total}</p>
           </div>
-        </div>
 
-        {/* ── Analytics ───────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          {/* Por estado */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-              <div className="w-7 h-7 bg-brand-teal/10 rounded-lg flex items-center justify-center">
-                <Icon icon="lucide:pie-chart" className="w-3.5 h-3.5 text-brand-teal" />
-              </div>
-              <h2 className="font-semibold text-neutral-800 text-sm">{tr.byStatus}</h2>
-            </div>
-            <div className="p-4 space-y-3">
-              {estadosCounts.map((item) => {
-                const style = getEstadoStyle(item.estado);
-                const pct = totalOperaciones > 0 ? Math.round((item.count / totalOperaciones) * 100) : 0;
+          {/* Barras por región */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 min-h-[286px]">
+            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Distribucion por region</p>
+            <div className="mt-3 space-y-2.5">
+              {regionDistribution.items.map((item) => {
+                const width = (item.count / regionDistribution.max) * 100;
                 return (
-                  <div key={item.estado}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-neutral-600 font-medium">{item.estado}</span>
-                      <span className="text-neutral-500 tabular-nums">{item.count} <span className="text-neutral-300">({pct}%)</span></span>
+                  <div key={item.region}>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-neutral-700">{item.region}</span>
+                      <span className="text-neutral-500">{item.count}</span>
                     </div>
                     <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                      <div className={`h-full ${style.bg} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-brand-blue rounded-full transition-all duration-500" style={{ width: `${width}%` }} />
                     </div>
                   </div>
                 );
@@ -608,41 +444,32 @@ export function DashboardContent() {
             </div>
           </div>
 
-          {/* Top navieras */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-              <div className="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center">
-                <Icon icon="lucide:anchor" className="w-3.5 h-3.5 text-amber-600" />
-              </div>
-              <h2 className="font-semibold text-neutral-800 text-sm">{tr.topCarriers}</h2>
-            </div>
-            <div className="p-4">
-              {navierasCounts.length === 0 ? (
-                <p className="text-neutral-400 text-sm text-center py-6">{tr.noCarriers}</p>
-              ) : (
-                <div className="space-y-3">
-                  {navierasCounts.map((item, index) => {
-                    const maxCount = navierasCounts[0]?.count ?? 1;
-                    const pct = Math.round((item.count / maxCount) * 100);
-                    return (
-                      <div key={item.naviera}>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="flex items-center gap-1.5 min-w-0">
-                            <span className="w-4 h-4 bg-brand-blue/10 text-brand-blue rounded text-[10px] flex items-center justify-center font-bold flex-shrink-0">
-                              {index + 1}
-                            </span>
-                            <span className="text-neutral-600 font-medium truncate">{item.naviera}</span>
-                          </span>
-                          <span className="text-neutral-500 ml-2 flex-shrink-0 tabular-nums">{item.count}</span>
-                        </div>
-                        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-blue/40 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+          {/* Mapa */}
+          <div className="overflow-hidden min-h-[286px]">
+            <div className="relative min-h-[286px]">
+              <MapLibreMap
+                ref={mapRef}
+                initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
+                mapStyle={DASHBOARD_MAP_STYLE}
+                style={{ width: "100%", height: "286px" }}
+                dragRotate={false}
+                attributionControl={false}
+              >
+                <NavigationControl position="top-right" showCompass={false} />
+                {portMarkers.map((marker) => {
+                  const isOrigin = marker.type === "origen";
+                  return (
+                    <Marker key={marker.key} longitude={marker.lng} latitude={marker.lat} anchor="center">
+                      <div
+                        title={`${marker.label} (${marker.count})`}
+                        className={`h-3.5 w-3.5 rounded-full border border-white shadow-[0_0_0_2px_rgba(0,0,0,0.14)] ${
+                          isOrigin ? "bg-red-500" : "bg-emerald-500"
+                        }`}
+                      />
+                    </Marker>
+                  );
+                })}
+              </MapLibreMap>
             </div>
           </div>
         </div>

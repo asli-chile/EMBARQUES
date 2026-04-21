@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
-import * as XLSX from "xlsx-js-style";
+import * as XLSX from "xlsx";
 import { useLocale } from "@/lib/i18n";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -18,6 +18,15 @@ interface HeaderBanco {
   tipoCuenta: string;
   numeroCuenta: string;
 }
+
+type FormatoBanco = "auto" | "santander" | "chile" | "itau";
+
+const FORMATOS_BANCO: Array<{ value: FormatoBanco; label: string }> = [
+  { value: "auto", label: "Detectar automaticamente" },
+  { value: "santander", label: "Santander / formato actual" },
+  { value: "chile", label: "Banco de Chile" },
+  { value: "itau", label: "Banco Itau" },
+];
 
 // ── Parser de cartola bancaria ────────────────────────────────────────────────
 
@@ -99,23 +108,42 @@ function extractHeaderBanco(rows: unknown[][]): HeaderBanco {
   return { banco, tipoCuenta, numeroCuenta };
 }
 
-function parseCartola(workbook: XLSX.WorkBook): {
+function parseAmount(raw: unknown): number | null {
+  if (raw === "" || raw === null || typeof raw === "undefined") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return Math.abs(raw);
+  const normalized = String(raw)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.abs(parsed);
+}
+
+function extractPeriodoYear(rows: unknown[][]): number | null {
+  for (const row of rows) {
+    for (const cellRaw of row) {
+      const cell = String(cellRaw ?? "").trim();
+      const match = cell.match(/(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})/);
+      if (match) {
+        return Number(match[3]);
+      }
+    }
+  }
+  return null;
+}
+
+function parseCartolaSantander(rows: unknown[][], header: HeaderBanco): {
   movimientos: MovimientoNubox[];
   header: HeaderBanco;
   error?: string;
 } {
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return { movimientos: [], header: { banco: "", tipoCuenta: "", numeroCuenta: "" }, error: "Sin hojas" };
-
-  const ws = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as unknown[][];
-
-  const header = extractHeaderBanco(rows);
-
   // Buscar fila de cabecera de movimientos: contiene "MONTO" y "DESCRIPCIÓN MOVIMIENTO" y "CARGO/ABONO"
   let dataStart = -1;
   for (let i = 0; i < rows.length; i++) {
-    const cells = rows[i].map((c) => String(c ?? "").toUpperCase().trim());
+    const cells = (rows[i] ?? []).map((c) => String(c ?? "").toUpperCase().trim());
     if (cells.includes("MONTO") && cells.some((c) => c.includes("CARGO")) && cells.some((c) => c.includes("DESCRIPCIÓN") || c.includes("DESCRIPCION"))) {
       dataStart = i + 1; // La fila siguiente a la cabecera es la primera de datos
       break;
@@ -127,29 +155,29 @@ function parseCartola(workbook: XLSX.WorkBook): {
   }
 
   // Detectar índices de columnas desde la cabecera
-  const headerRow = rows[dataStart - 1].map((c) => String(c ?? "").toUpperCase().trim());
-  const iMonto       = headerRow.findIndex((c) => c === "MONTO");
-  const iDesc        = headerRow.findIndex((c) => c.includes("DESCRIPCIÓN") || c.includes("DESCRIPCION"));
-  const iFecha       = headerRow.findIndex((c) => c === "FECHA");
-  const iDoc         = headerRow.findIndex((c) => c.includes("DOCUMENTO") || c.includes("N°") || c === "N° DOCUMENTO");
-  const iCargoAbono  = headerRow.findIndex((c) => c === "CARGO/ABONO");
+  const headerRow = (rows[dataStart - 1] ?? []).map((c) => String(c ?? "").toUpperCase().trim());
+  const iMonto = headerRow.findIndex((c) => c === "MONTO");
+  const iDesc = headerRow.findIndex((c) => c.includes("DESCRIPCIÓN") || c.includes("DESCRIPCION"));
+  const iFecha = headerRow.findIndex((c) => c === "FECHA");
+  const iDoc = headerRow.findIndex((c) => c.includes("DOCUMENTO") || c.includes("N°") || c === "N° DOCUMENTO");
+  const iCargoAbono = headerRow.findIndex((c) => c === "CARGO/ABONO");
 
   const movimientos: MovimientoNubox[] = [];
 
   for (let i = dataStart; i < rows.length; i++) {
-    const row = rows[i];
-    const monto      = row[iMonto];
-    const desc       = String(row[iDesc] ?? "").trim();
-    const fechaRaw   = String(row[iFecha] ?? "").trim();
-    const nDoc       = String(row[iDoc] ?? "").trim();
+    const row = rows[i] ?? [];
+    const monto = row[iMonto];
+    const desc = String(row[iDesc] ?? "").trim();
+    const fechaRaw = String(row[iFecha] ?? "").trim();
+    const nDoc = String(row[iDoc] ?? "").trim();
     const cargoAbono = String(row[iCargoAbono] ?? "").trim().toUpperCase();
 
+    const montoNum = parseAmount(monto);
     // Parar si llegamos a sección de resumen (la fila de monto no es número)
-    if (monto === "" || isNaN(Number(monto))) break;
+    if (montoNum === null) break;
     // Ignorar si no tiene fecha (fila vacía o de totales)
     if (!fechaRaw) continue;
 
-    const montoNum = Math.abs(Number(monto));
     const fecha = parseFecha(fechaRaw);
     const esAbono = cargoAbono.startsWith("A");
     const esCargo = cargoAbono.startsWith("C");
@@ -168,6 +196,191 @@ function parseCartola(workbook: XLSX.WorkBook): {
   }
 
   return { movimientos, header };
+}
+
+function parseCartolaChile(rows: unknown[][], header: HeaderBanco): {
+  movimientos: MovimientoNubox[];
+  header: HeaderBanco;
+  error?: string;
+} {
+  let dataStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cells = (rows[i] ?? []).map((c) => String(c ?? "").toUpperCase().trim());
+    const hasFecha = cells.some((c) => c === "FECHA");
+    const hasDesc = cells.some((c) => c.includes("DESCRIP") || c.includes("DETALLE") || c.includes("GLOSA"));
+    const hasCargo = cells.some((c) => c === "CARGO" || c === "CARGOS");
+    const hasAbono = cells.some((c) => c === "ABONO" || c === "ABONOS");
+    if (hasFecha && hasDesc && hasCargo && hasAbono) {
+      dataStart = i + 1;
+      break;
+    }
+  }
+
+  if (dataStart === -1) {
+    return { movimientos: [], header, error: "format" };
+  }
+
+  const headerRow = (rows[dataStart - 1] ?? []).map((c) => String(c ?? "").toUpperCase().trim());
+  const iFecha = headerRow.findIndex((c) => c === "FECHA");
+  const iDesc = headerRow.findIndex((c) => c.includes("DESCRIP") || c.includes("DETALLE") || c.includes("GLOSA"));
+  const iDoc = headerRow.findIndex((c) => c.includes("DOCUMENTO") || c.includes("N°") || c.includes("NUMERO"));
+  const iCargo = headerRow.findIndex((c) => c === "CARGO" || c === "CARGOS");
+  const iAbono = headerRow.findIndex((c) => c === "ABONO" || c === "ABONOS");
+
+  if (iFecha < 0 || iDesc < 0 || iCargo < 0 || iAbono < 0) {
+    return { movimientos: [], header, error: "format" };
+  }
+
+  const movimientos: MovimientoNubox[] = [];
+  for (let i = dataStart; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const fechaRaw = String(row[iFecha] ?? "").trim();
+    const desc = String(row[iDesc] ?? "").trim();
+    if (!fechaRaw && !desc) continue;
+
+    const cargo = parseAmount(row[iCargo]);
+    const abono = parseAmount(row[iAbono]);
+    if (!fechaRaw || (cargo === null && abono === null)) continue;
+
+    const nDoc = iDoc >= 0 ? String(row[iDoc] ?? "").trim() : "";
+    movimientos.push({
+      fecha: parseFecha(fechaRaw),
+      descripcion: desc,
+      referencia: nDoc === "0" ? "" : nDoc,
+      abono: abono ?? "",
+      cargo: cargo ?? "",
+    });
+  }
+
+  if (movimientos.length === 0) {
+    return { movimientos: [], header, error: "empty" };
+  }
+
+  return { movimientos, header };
+}
+
+function parseCartolaItau(rows: unknown[][], header: HeaderBanco): {
+  movimientos: MovimientoNubox[];
+  header: HeaderBanco;
+  error?: string;
+} {
+  let headerIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cells = (rows[i] ?? []).map((c) => String(c ?? "").toUpperCase().trim());
+    const hasFecha = cells.some((c) => c === "FECHA");
+    const hasDesc = cells.some((c) => c.includes("DESCRIP"));
+    const hasAbono = cells.some((c) => c.includes("DEPÓSITOS") || c.includes("DEPOSITOS") || c.includes("ABONOS"));
+    const hasCargo = cells.some((c) => c.includes("GIROS") || c.includes("CARGOS"));
+    if (hasFecha && hasDesc && hasAbono && hasCargo) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  if (headerIndex === -1) {
+    return { movimientos: [], header, error: "format" };
+  }
+
+  const baseHeader = rows[headerIndex].map((c) => String(c ?? "").toUpperCase().trim());
+  const subHeader = (rows[headerIndex + 1] ?? []).map((c) => String(c ?? "").toUpperCase().trim());
+  const mergedHeader = baseHeader.map((cell, idx) => `${cell} ${subHeader[idx] ?? ""}`.trim());
+
+  const iFecha = mergedHeader.findIndex((c) => c.includes("FECHA"));
+  const iDoc = mergedHeader.findIndex((c) => c.includes("NÚMERO") || c.includes("NUMERO") || c.includes("OPERACIÓN") || c.includes("OPERACION"));
+  const iDesc = mergedHeader.findIndex((c) => c.includes("DESCRIP"));
+  const iAbono = mergedHeader.findIndex((c) => c.includes("DEPÓSITOS") || c.includes("DEPOSITOS") || c.includes("ABONOS"));
+  const iCargo = mergedHeader.findIndex((c) => c.includes("GIROS") || c.includes("CARGOS"));
+
+  if (iFecha < 0 || iDesc < 0 || iAbono < 0 || iCargo < 0) {
+    return { movimientos: [], header, error: "format" };
+  }
+
+  const year = extractPeriodoYear(rows);
+  const dataStart = headerIndex + 2;
+  const movimientos: MovimientoNubox[] = [];
+
+  for (let i = dataStart; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const fechaRaw = String(row[iFecha] ?? "").trim();
+    const desc = String(row[iDesc] ?? "").trim();
+    if (!fechaRaw && !desc) continue;
+
+    const abono = parseAmount(row[iAbono]);
+    const cargo = parseAmount(row[iCargo]);
+    if (!fechaRaw || (abono === null && cargo === null)) continue;
+
+    const fechaConAnio =
+      /^\d{1,2}\/\d{1,2}$/.test(fechaRaw) && year
+        ? `${fechaRaw}/${year}`
+        : fechaRaw;
+
+    const referenciaRaw = iDoc >= 0 ? String(row[iDoc] ?? "").trim() : "";
+    const referenciaNormalizada = /^0+$/.test(referenciaRaw) ? "" : referenciaRaw;
+
+    movimientos.push({
+      fecha: parseFecha(fechaConAnio),
+      descripcion: desc,
+      referencia: referenciaNormalizada,
+      abono: abono ?? "",
+      cargo: cargo ?? "",
+    });
+  }
+
+  if (movimientos.length === 0) {
+    return { movimientos: [], header, error: "empty" };
+  }
+  return { movimientos, header };
+}
+
+function parseCartola(workbook: XLSX.WorkBook, formato: FormatoBanco): {
+  movimientos: MovimientoNubox[];
+  header: HeaderBanco;
+  error?: string;
+} {
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) return { movimientos: [], header: { banco: "", tipoCuenta: "", numeroCuenta: "" }, error: "Sin hojas" };
+
+  const ws = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as unknown[][];
+
+  const header = extractHeaderBanco(rows);
+  const safeRun = (
+    parser: (rows: unknown[][], header: HeaderBanco) => {
+      movimientos: MovimientoNubox[];
+      header: HeaderBanco;
+      error?: string;
+    },
+  ) => {
+    try {
+      return parser(rows, header);
+    } catch {
+      return { movimientos: [], header, error: "format" as const };
+    }
+  };
+
+  if (formato === "santander") return safeRun(parseCartolaSantander);
+  if (formato === "chile") return safeRun(parseCartolaChile);
+  if (formato === "itau") return safeRun(parseCartolaItau);
+
+  const hasItauSignature = rows
+    .slice(0, 12)
+    .some((row) => row.some((cell) => /ITA[ÚU]/i.test(String(cell ?? ""))));
+
+  const parserChain: Array<(rows: unknown[][], header: HeaderBanco) => { movimientos: MovimientoNubox[]; header: HeaderBanco; error?: string }> =
+    hasItauSignature || header.banco.toUpperCase().includes("ITAU")
+      ? [parseCartolaItau, parseCartolaSantander, parseCartolaChile]
+      : header.banco.toUpperCase().includes("CHILE")
+      ? [parseCartolaChile, parseCartolaSantander, parseCartolaItau]
+      : [parseCartolaSantander, parseCartolaChile, parseCartolaItau];
+
+  const results = parserChain.map((parser) => safeRun(parser));
+  const success = results.find((result) => !result.error);
+  if (success) return success;
+
+  if (results.some((result) => result.error === "empty")) {
+    return { movimientos: [], header, error: "empty" };
+  }
+  return { movimientos: [], header, error: "format" };
 }
 
 // ── Códigos de banco Nubox ────────────────────────────────────────────────────
@@ -288,19 +501,23 @@ export function CartolasNuboxContent() {
   const [dragging, setDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [parseError, setParseError] = useState<ParseError>(null);
+  const [parseErrorDetail, setParseErrorDetail] = useState("");
   const [movimientos, setMovimientos] = useState<MovimientoNubox[] | null>(null);
   const [header, setHeader] = useState<HeaderBanco>({ banco: "", tipoCuenta: "", numeroCuenta: "" });
   const [fileName, setFileName] = useState("");
+  const [formatoBanco, setFormatoBanco] = useState<FormatoBanco>("auto");
 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const processFile = useCallback((file: File) => {
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
       setParseError("format");
+      setParseErrorDetail("Extensión no soportada. Solo se aceptan .xls y .xlsx.");
       return;
     }
     setProcessing(true);
     setParseError(null);
+    setParseErrorDetail("");
     setMovimientos(null);
 
     const reader = new FileReader();
@@ -308,29 +525,39 @@ export function CartolasNuboxContent() {
       try {
         const data = e.target?.result as ArrayBuffer;
         const wb = XLSX.read(new Uint8Array(data), { type: "array" });
-        const { movimientos: movs, header: h, error } = parseCartola(wb);
+        const { movimientos: movs, header: h, error } = parseCartola(wb, formatoBanco);
 
         if (error === "format") {
           setParseError("format");
+          setParseErrorDetail(`No se pudo reconocer el layout del archivo para el formato "${formatoBanco}".`);
         } else if (error === "empty") {
           setParseError("empty");
+          setParseErrorDetail("El archivo se leyó correctamente, pero no se encontraron movimientos válidos.");
+        } else if (error) {
+          setParseError("read");
+          setParseErrorDetail(String(error));
         } else {
           setMovimientos(movs);
           setHeader({ ...h, banco: detectarCodigoBanco(h.banco) });
           setFileName(file.name);
         }
-      } catch {
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("[CartolasNubox] Error leyendo archivo", err);
+        }
         setParseError("read");
+        setParseErrorDetail(err instanceof Error ? err.message : "Error inesperado al procesar el archivo.");
       } finally {
         setProcessing(false);
       }
     };
     reader.onerror = () => {
       setParseError("read");
+      setParseErrorDetail("FileReader no pudo cargar el archivo.");
       setProcessing(false);
     };
     reader.readAsArrayBuffer(file);
-  }, []);
+  }, [formatoBanco]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -366,6 +593,7 @@ export function CartolasNuboxContent() {
   const reset = useCallback(() => {
     setMovimientos(null);
     setParseError(null);
+    setParseErrorDetail("");
     setFileName("");
     setHeader({ banco: "", tipoCuenta: "", numeroCuenta: "" });
   }, []);
@@ -444,6 +672,12 @@ export function CartolasNuboxContent() {
                 </div>
               ))}
             </div>
+            <p className="mt-3 text-xs text-neutral-500">
+              Formato usado al parsear:{" "}
+              <span className="font-semibold text-neutral-700">
+                {FORMATOS_BANCO.find((f) => f.value === formatoBanco)?.label ?? "Detectar automaticamente"}
+              </span>
+            </p>
           </div>
 
           {/* Preview tabla */}
@@ -531,6 +765,26 @@ export function CartolasNuboxContent() {
         </div>
 
         {/* Dropzone */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+          <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
+            Formato del banco
+          </label>
+          <select
+            value={formatoBanco}
+            onChange={(e) => setFormatoBanco(e.target.value as FormatoBanco)}
+            className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all text-sm cursor-pointer"
+          >
+            {FORMATOS_BANCO.map((format) => (
+              <option key={format.value} value={format.value}>
+                {format.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-neutral-500">
+            Usa "Detectar automaticamente" para intentar distintos formatos, o elige uno especifico para forzar ese layout.
+          </p>
+        </div>
+
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
@@ -580,6 +834,9 @@ export function CartolasNuboxContent() {
                 ? tr.errorNoMovements
                 : tr.errorRead}
             </p>
+            {parseErrorDetail ? (
+              <p className="text-xs text-red-700/90 mt-1">{parseErrorDetail}</p>
+            ) : null}
           </div>
         )}
 
