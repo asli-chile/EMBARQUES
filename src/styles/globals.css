@@ -64,6 +64,20 @@ html {
 /* Línea vertical entre celdas (columnas) */
 .ag-theme-balham .ag-cell {
   border-right: 1px solid #D5D5D5;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Forzar contenido interno en una sola línea (sin wraps por spans/divs internos) */
+.ag-theme-balham .ag-cell .ag-cell-value {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ag-theme-balham .ag-cell .ag-cell-value * {
+  white-space: nowrap !important;
 }
 
 /* Texto cabecera: negrita y algo más compacto */

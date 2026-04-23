@@ -949,6 +949,25 @@ await supabase.from("operaciones")
 </div>
 ```
 
+### Dashboard — límites de resolución (oficial)
+
+Archivo: `src/components/dashboard/DashboardContent.tsx`
+
+El dashboard principal usa estos cortes de ancho para escalar layout y tamaños:
+
+| Ancho de pantalla | Comportamiento |
+|-------------------|----------------|
+| `< 1180px` | Layout apilado/responsive (1-2 columnas según espacio) |
+| `>= 1180px` | Fila de 4 bloques con grilla fija: `280 / 280 / flexible / 700` |
+| `>= 1440px` | Fila de 4 bloques más amplia: `300 / 300 / flexible / 760` |
+| `>= 2133px` | Modo grande de componentes: aumenta tipografía, altos, paddings y mapa |
+| `>= 2200px` | Modo escala máxima: `scale(2)` del bloque + reserva de alto para evitar recorte |
+
+Notas:
+- Los bloques en orden son: **Clientes → Dona → Regiones → Mapa**.
+- Para `>= 2200px` se usa contenedor con altura reservada para evitar que el contenido escalado se corte.
+- Si se cambia cualquiera de estos límites en código, actualizar esta tabla en la misma tarea.
+
 ---
 
 ## 13. Variables de Entorno

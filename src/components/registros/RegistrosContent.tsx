@@ -17,6 +17,7 @@ export type OperacionRow = {
   id: string;
   correlativo: number;
   ref_asli: string;
+  temporada: string;
   ingreso: string;
   semana: number | null;
   ejecutivo: string;
@@ -38,6 +39,7 @@ export type OperacionRow = {
   pallets: number | null;
   peso_bruto: number | null;
   peso_neto: number | null;
+  segundas: string;
   tipo_unidad: string;
   naviera: string;
   nave: string;
@@ -110,6 +112,7 @@ type DbOperacion = {
   id: string;
   correlativo: number;
   ref_asli: string | null;
+  temporada: string | null;
   ingreso: string | null;
   semana: number | null;
   ejecutivo: string;
@@ -131,6 +134,7 @@ type DbOperacion = {
   pallets: number | null;
   peso_bruto: number | null;
   peso_neto: number | null;
+  segundas: string | null;
   tipo_unidad: string | null;
   naviera: string | null;
   nave: string | null;
@@ -251,6 +255,13 @@ function parseViajeFromNave(value: string | null | undefined): string {
 function stripViajeFromNave(value: string | null | undefined): string {
   if (!value) return "";
   return String(value).replace(/\s*\[[^\]]+\]\s*/g, " ").trim();
+}
+
+function normalizeExportText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 // ─── Helpers de parseo de fecha ───────────────────────────────────────────────
@@ -390,6 +401,7 @@ function createToRow(locale: string) {
       id: db.id,
       correlativo: db.correlativo,
       ref_asli: db.ref_asli ?? `A${String(db.correlativo).padStart(5, "0")}`,
+      temporada: db.temporada ?? "",
       ingreso: formatDateTime(db.ingreso, locale),
       semana: isoWeekFromDate(db.etd),
       ejecutivo: db.ejecutivo,
@@ -411,6 +423,7 @@ function createToRow(locale: string) {
       pallets: db.pallets,
       peso_bruto: db.peso_bruto,
       peso_neto: db.peso_neto,
+      segundas: db.segundas ?? "",
       tipo_unidad: db.tipo_unidad ?? "",
       naviera: db.naviera ?? "",
       nave: stripViajeFromNave(db.nave),
@@ -531,9 +544,9 @@ const emptyCatalogos: CatalogosState = {
 
 // ─── Grupos de columnas para el panel de visibilidad ──────────────────────────
 const COLUMN_GROUPS = [
-  { label: "Identificación y Control",     fields: ["estado_operacion", "tipo_operacion", "semana", "ingreso"] },
+  { label: "Identificación y Control",     fields: ["temporada", "estado_operacion", "tipo_operacion", "semana", "ingreso"] },
   { label: "Cliente y Condiciones",        fields: ["ejecutivo", "cliente", "consignatario", "contrato", "incoterm", "forma_pago", "pais"] },
-  { label: "Carga / Mercadería",           fields: ["especie", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto"] },
+  { label: "Carga / Mercadería",           fields: ["especie", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto", "segundas"] },
   { label: "Unidad y Contenedor",          fields: ["tipo_unidad", "contenedor", "sello", "tara"] },
   { label: "Naviera y Viaje",              fields: ["naviera", "nave", "viaje", "pol", "etd", "pod", "eta", "tt", "booking"] },
   { label: "Documentación",               fields: ["aga", "dus", "sps", "numero_guia_despacho"] },
@@ -570,8 +583,10 @@ export function RegistrosContent() {
   const [showColumnPanel, setShowColumnPanel] = useState(false);
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const hiddenColumnsRef = useRef<Set<string>>(new Set());
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [globalSearch, setGlobalSearch] = useState("");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   const supabase = useMemo(() => {
     try {
@@ -815,6 +830,19 @@ export function RegistrosContent() {
     else setRowData([]);
   }, [authLoading, fetchOperaciones]);
 
+  useEffect(() => {
+    if (!showActionsMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!actionsMenuRef.current) return;
+      const target = event.target;
+      if (target instanceof Node && !actionsMenuRef.current.contains(target)) {
+        setShowActionsMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showActionsMenu]);
+
   const booleanCellRenderer = useCallback(
     (p: { value: boolean }) => (p.value ? t.registros.yes : t.registros.no),
     [t.registros.yes, t.registros.no]
@@ -823,21 +851,14 @@ export function RegistrosContent() {
   const contenedorCellRenderer = useCallback((p: { value: string }) => {
     const items = splitContenedores(p.value);
     if (items.length <= 1) return p.value ?? "";
-    return (
-      <div className="w-full py-1 flex flex-col items-center justify-center leading-tight">
-        {items.map((item) => (
-          <span key={item} className="block text-[12px] text-neutral-800">
-            {item}
-          </span>
-        ))}
-      </div>
-    );
+    return items.join(" | ");
   }, []);
 
   const leafCols = useMemo<ColDef<OperacionRow>[]>(
     () => [
       // ── 1. Identificación y Control ───────────────────────────────────────────
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left", lockPinned: true, suppressMovable: true },
+      { field: "temporada", headerName: "Temporada", sortable: true, editable: canEdit, width: 120 },
       {
         field: "estado_operacion", headerName: t.registros.colOperationStatus, sortable: true, editable: canEdit, width: columnWidths.estadoOperacion,
         cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.estado_operacion },
@@ -914,6 +935,7 @@ export function RegistrosContent() {
       { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: canEdit, width: columnWidths.pallets },
       { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: canEdit, width: columnWidths.pesoBruto },
       { field: "peso_neto", headerName: t.registros.colNetWeight, sortable: true, editable: canEdit, width: columnWidths.pesoNeto },
+      { field: "segundas", headerName: "Segundas", sortable: true, editable: canEdit, width: 110 },
 
       // ── 4. Unidad y Contenedor ────────────────────────────────────────────────
       {
@@ -927,7 +949,6 @@ export function RegistrosContent() {
         editable: canEdit,
         width: columnWidths.contenedor,
         cellRenderer: contenedorCellRenderer,
-        autoHeight: true,
       },
       { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
       { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
@@ -1061,23 +1082,23 @@ export function RegistrosContent() {
   const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {
     const c = leafCols;
     return [
-      { headerName: "Identificación y Control",       children: c.slice(0,  5)  },
-      { headerName: "Cliente y Condiciones",          children: c.slice(5,  12) },
-      { headerName: "Carga / Mercadería",             children: c.slice(12, 22) },
-      { headerName: "Unidad y Contenedor",            children: c.slice(22, 26) },
-      { headerName: "Naviera y Viaje",                children: c.slice(26, 35) },
-      { headerName: "Documentación",                  children: c.slice(35, 39) },
-      { headerName: "Planta y Proceso",               children: c.slice(39, 43) },
-      { headerName: "Stacking y Puerto",              children: c.slice(43, 47) },
-      { headerName: "Eventos Late / xLate",           children: c.slice(47, 52) },
-      { headerName: "Depósito y Movimientos",         children: c.slice(52, 55) },
-      { headerName: "Transporte",                     children: c.slice(55, 61) },
-      { headerName: "Costos y Logística",             children: c.slice(61, 68) },
-      { headerName: "Facturación",                    children: c.slice(68, 74) },
-      { headerName: "Márgenes",                       children: c.slice(74, 76) },
-      { headerName: "Hitos Administrativos",          children: c.slice(76, 83) },
-      { headerName: "Control y Auditoría",            children: c.slice(83, 84) },
-      { headerName: "Integraciones / Flujo",          children: c.slice(84)     },
+      { headerName: "Identificación y Control",       children: c.slice(0,  6)  },
+      { headerName: "Cliente y Condiciones",          children: c.slice(6,  13) },
+      { headerName: "Carga / Mercadería",             children: c.slice(13, 24) },
+      { headerName: "Unidad y Contenedor",            children: c.slice(24, 28) },
+      { headerName: "Naviera y Viaje",                children: c.slice(28, 37) },
+      { headerName: "Documentación",                  children: c.slice(37, 41) },
+      { headerName: "Planta y Proceso",               children: c.slice(41, 45) },
+      { headerName: "Stacking y Puerto",              children: c.slice(45, 49) },
+      { headerName: "Eventos Late / xLate",           children: c.slice(49, 54) },
+      { headerName: "Depósito y Movimientos",         children: c.slice(54, 57) },
+      { headerName: "Transporte",                     children: c.slice(57, 63) },
+      { headerName: "Costos y Logística",             children: c.slice(63, 70) },
+      { headerName: "Facturación",                    children: c.slice(70, 76) },
+      { headerName: "Márgenes",                       children: c.slice(76, 78) },
+      { headerName: "Hitos Administrativos",          children: c.slice(78, 85) },
+      { headerName: "Control y Auditoría",            children: c.slice(85, 86) },
+      { headerName: "Integraciones / Flujo",          children: c.slice(86)     },
     ];
   }, [leafCols]);
 
@@ -1120,6 +1141,9 @@ export function RegistrosContent() {
         fontFamily: "'Calibri', 'Segoe UI', system-ui, sans-serif",
         paddingLeft: "6px",
         paddingRight: "6px",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1306,10 +1330,22 @@ export function RegistrosContent() {
     setAddNewModal(null);
   }, [addNewModal, supabase, fetchCatalogos]);
 
+  const getDisplayedRows = useCallback((): Record<string, unknown>[] => {
+    const api = gridRef.current?.api;
+    if (!api) return [];
+    const displayedRows: Record<string, unknown>[] = [];
+    api.forEachNodeAfterFilterAndSort((node) => {
+      if (node.data) displayedRows.push(node.data as Record<string, unknown>);
+    });
+    return displayedRows;
+  }, []);
+
   const handleExportExcel = useCallback(async () => {
     if (rowData.length === 0) return;
     const api = gridRef.current?.api;
     if (!api) return;
+    const displayedRows = getDisplayedRows();
+    if (displayedRows.length === 0) return;
 
     const displayed = api.getAllDisplayedColumns();
     const exportColumns: { field: string; header: string }[] = [];
@@ -1321,6 +1357,12 @@ export function RegistrosContent() {
       const header = def.headerName != null ? String(def.headerName) : field;
       exportColumns.push({ field, header });
     }
+    if (!exportColumns.some((col) => col.field === "cliente")) {
+      exportColumns.splice(0, 0, {
+        field: "cliente",
+        header: t.registros.colClient,
+      });
+    }
     if (exportColumns.length === 0) return;
 
     const tr = t.registros;
@@ -1330,10 +1372,18 @@ export function RegistrosContent() {
       year: "numeric",
     });
     const colsWord = locale === "en" ? "columns" : "columnas";
-    const subtitle = `${exportColumns.length} ${colsWord} · ${rowData.length} ${tr.records} · ${fecha}`;
+    const subtitle = `${exportColumns.length} ${colsWord} · ${displayedRows.length} ${tr.records} · ${fecha}`;
     const fileStamp = new Date().toISOString().slice(0, 10);
     await exportRegistrosSimpleExcel(
-      rowData as unknown as Record<string, unknown>[],
+      displayedRows.map((row) => {
+        const normalized: Record<string, unknown> = { ...row };
+        for (const col of exportColumns) {
+          if (typeof normalized[col.field] === "string") {
+            normalized[col.field] = normalizeExportText(normalized[col.field]);
+          }
+        }
+        return normalized;
+      }),
       exportColumns,
       {
         sheetTitle: tr.exportExcelClientTitle,
@@ -1344,7 +1394,7 @@ export function RegistrosContent() {
         noLabel: tr.no,
       }
     );
-  }, [rowData, t.registros, locale]);
+  }, [rowData.length, t.registros, locale, getDisplayedRows]);
 
   const handleExportPdf = useCallback(async () => {
     if (rowData.length === 0 || isExportingPdf) return;
@@ -1353,31 +1403,29 @@ export function RegistrosContent() {
 
     setIsExportingPdf(true);
     try {
-      const selectedRows = (api.getSelectedRows() as unknown as Record<string, unknown>[]) ?? [];
-      const rowsToExport = selectedRows.length > 0
-        ? selectedRows
-        : (rowData as unknown as Record<string, unknown>[]);
+      const rowsToExport = getDisplayedRows();
       if (rowsToExport.length === 0) return;
 
       const head = [[
-        "N°", "BOOKING", "NAVIERA", "NAVE", "ESPECIE", "T°", "CBM", "DEPOT",
+        "N°", "CLIENTE", "BOOKING", "NAVIERA", "NAVE", "ESPECIE", "T°", "CBM", "DEPOT",
         "POD", "POL", "ETD", "ETA", "TT", "CONTRATO",
       ]];
       const body = rowsToExport.map((row, idx) => ([
         String(idx + 1),
-        String(row.booking ?? ""),
-        String(row.naviera ?? ""),
-        [row.nave, row.viaje].filter(Boolean).join(" ").trim(),
-        String(row.especie ?? ""),
-        String(row.temperatura ?? ""),
-        String(row.ventilacion ?? ""),
-        String(row.deposito ?? ""),
-        String(row.pod ?? ""),
-        String(row.pol ?? ""),
-        String(row.etd ?? ""),
-        String(row.eta ?? ""),
-        String(row.tt ?? ""),
-        String(row.contrato ?? ""),
+        normalizeExportText(row.cliente),
+        normalizeExportText(row.booking),
+        normalizeExportText(row.naviera),
+        normalizeExportText([row.nave, row.viaje].filter(Boolean).join(" ")),
+        normalizeExportText(row.especie),
+        normalizeExportText(row.temperatura),
+        normalizeExportText(row.ventilacion),
+        normalizeExportText(row.deposito),
+        normalizeExportText(row.pod),
+        normalizeExportText(row.pol),
+        normalizeExportText(row.etd),
+        normalizeExportText(row.eta),
+        normalizeExportText(row.tt),
+        normalizeExportText(row.contrato),
       ]));
 
       const [{ default: jsPDF }, autoTableMod] = await Promise.all([
@@ -1441,6 +1489,7 @@ export function RegistrosContent() {
         body,
         startY: 84,
         theme: "grid",
+        rowPageBreak: "avoid",
         styles: {
           fontSize: 8.2,
           cellPadding: 4,
@@ -1474,7 +1523,7 @@ export function RegistrosContent() {
     } finally {
       setIsExportingPdf(false);
     }
-  }, [rowData, isExportingPdf]);
+  }, [rowData.length, isExportingPdf, getDisplayedRows]);
 
   if (loading && rowData.length === 0) {
     return (
@@ -1539,64 +1588,92 @@ export function RegistrosContent() {
           )}
           
           {/* Botón Actualizar */}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-          >
-            <Icon icon="typcn:refresh" width={14} height={14} className="sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{t.registros.refresh}</span>
-          </button>
+          <div className="relative" ref={actionsMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowActionsMenu((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 ${
+                showActionsMenu
+                  ? "text-brand-blue bg-brand-blue/10 ring-1 ring-brand-blue/20"
+                  : "text-neutral-700 bg-neutral-100 hover:bg-neutral-200"
+              }`}
+            >
+              <Icon icon="lucide:menu" width={14} height={14} className="sm:w-4 sm:h-4" />
+              <span>Acciones</span>
+              <Icon icon={showActionsMenu ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} />
+            </button>
 
-          {/* Botón Papelera */}
-          <a
-            href={withBase("/reservas/papelera")}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-red-50 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
-            title="Papelera"
-          >
-            <Icon icon="lucide:trash-2" width={14} height={14} className="sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Papelera</span>
-          </a>
+            {showActionsMenu && (
+              <div className="absolute left-0 mt-1.5 z-30 w-60 rounded-xl border border-neutral-200 bg-white shadow-xl p-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRefresh();
+                    setShowActionsMenu(false);
+                  }}
+                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-neutral-700 hover:bg-neutral-100 transition-colors text-left"
+                >
+                  <Icon icon="typcn:refresh" width={14} height={14} />
+                  <span>{t.registros.refresh}</span>
+                </button>
 
-          {/* Botón Columnas */}
-          <button
-            type="button"
-            onClick={() => setShowColumnPanel(true)}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 ${
-              hiddenColumns.size > 0
-                ? "text-brand-blue bg-brand-blue/10 hover:bg-brand-blue/20 ring-1 ring-brand-blue/30"
-                : "text-neutral-700 bg-neutral-100 hover:bg-neutral-200"
-            }`}
-          >
-            <Icon icon="lucide:columns" width={14} height={14} className="sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Columnas{hiddenColumns.size > 0 ? ` (${hiddenColumns.size} oculta${hiddenColumns.size > 1 ? "s" : ""})` : ""}</span>
-            <span className="sm:hidden">Cols{hiddenColumns.size > 0 ? ` (${hiddenColumns.size})` : ""}</span>
-          </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowColumnPanel(true);
+                    setShowActionsMenu(false);
+                  }}
+                  className={`w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm transition-colors text-left ${
+                    hiddenColumns.size > 0
+                      ? "text-brand-blue bg-brand-blue/5 hover:bg-brand-blue/10"
+                      : "text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                >
+                  <Icon icon="lucide:columns" width={14} height={14} />
+                  <span>Columnas{hiddenColumns.size > 0 ? ` (${hiddenColumns.size})` : ""}</span>
+                </button>
 
-          {/* Botón Exportar Excel */}
-          <button
-            type="button"
-            onClick={() => void handleExportExcel()}
-            disabled={rowData.length === 0}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-            title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
-          >
-            <Icon icon="lucide:table-2" width={14} height={14} className="sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{t.registros.exportExcelButton}</span>
-            <span className="sm:hidden">{t.registros.exportExcelShort}</span>
-          </button>
+                <a
+                  href={withBase("/reservas/papelera")}
+                  onClick={() => setShowActionsMenu(false)}
+                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                >
+                  <Icon icon="lucide:trash-2" width={14} height={14} />
+                  <span>Papelera</span>
+                </a>
 
-          <button
-            type="button"
-            onClick={() => void handleExportPdf()}
-            disabled={rowData.length === 0 || isExportingPdf}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Exportar Reserva Confirmada PDF"
-          >
-            <Icon icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"} width={14} height={14} className={`sm:w-4 sm:h-4 ${isExportingPdf ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">{isExportingPdf ? "Exportando..." : "Exportar PDF"}</span>
-            <span className="sm:hidden">PDF</span>
-          </button>
+                <div className="my-1 h-px bg-neutral-200" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleExportExcel();
+                    setShowActionsMenu(false);
+                  }}
+                  disabled={rowData.length === 0}
+                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
+                >
+                  <Icon icon="lucide:table-2" width={14} height={14} />
+                  <span>{t.registros.exportExcelButton}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleExportPdf();
+                    setShowActionsMenu(false);
+                  }}
+                  disabled={rowData.length === 0 || isExportingPdf}
+                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-rose-700 hover:bg-rose-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Exportar Reserva Confirmada PDF"
+                >
+                  <Icon icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"} width={14} height={14} className={isExportingPdf ? "animate-spin" : ""} />
+                  <span>{isExportingPdf ? "Exportando..." : "Exportar PDF"}</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Buscador global */}
           <div className="relative min-w-[220px] sm:min-w-[280px] flex-1 sm:flex-none">
@@ -1659,7 +1736,7 @@ export function RegistrosContent() {
               suppressHeaderMenuButton: true,
               suppressHeaderFilterButton: true,
             }}
-            rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true, enableClickSelection: false }}
+            rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true, selectAll: "filtered", enableClickSelection: false }}
             singleClickEdit
             stopEditingWhenCellsLoseFocus
             animateRows
@@ -1669,11 +1746,6 @@ export function RegistrosContent() {
             onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
             onGridReady={onGridReady}
             onDragStopped={onDragStopped}
-            getRowHeight={(params) => {
-              const lines = splitContenedores(params.data?.contenedor).length;
-              if (lines <= 1) return 30;
-              return Math.max(30, 16 + lines * 16);
-            }}
             headerHeight={34}
           />
         </div>

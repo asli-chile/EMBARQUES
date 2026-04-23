@@ -24,6 +24,7 @@ type OperacionResumen = {
   eta: string | null;
   estado_operacion: string | null;
   booking: string | null;
+  especie: string | null;
   created_at?: string;
 };
 
@@ -36,7 +37,7 @@ type PortMarker = {
   type: "origen" | "destino";
 };
 
-const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const REGION_LABELS = ["America", "Europa", "India y Medio Oriente", "Oceania", "Asia"] as const;
 type RegionLabel = (typeof REGION_LABELS)[number];
 
@@ -159,7 +160,7 @@ export function DashboardContent() {
     }
     setLoading(true);
     const allRes = await buildFilteredQuery(
-      "id, ref_asli, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, created_at"
+      "id, ref_asli, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, especie, created_at"
     ).limit(2000);
     const allData = (allRes.data ?? []) as OperacionResumen[];
     setMapOperations(allData);
@@ -286,6 +287,89 @@ export function DashboardContent() {
     return { items, max };
   }, [mapOperations]);
 
+  const speciesStats = useMemo(() => {
+    const countBySpecies = new Map<string, number>();
+    for (const op of mapOperations) {
+      const name = (op.especie ?? "").trim();
+      if (!name) continue;
+      countBySpecies.set(name, (countBySpecies.get(name) ?? 0) + 1);
+    }
+    const ranked = Array.from(countBySpecies.entries())
+      .map(([especie, cantidad]) => ({ especie, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad || a.especie.localeCompare(b.especie));
+    const distinct = ranked.length;
+    const top = ranked[0] ?? null;
+    return { distinct, top, ranked };
+  }, [mapOperations]);
+
+  /** POD (destino) con más operaciones por cada especie. */
+  const speciesTopPodByEspecie = useMemo(() => {
+    const bySpecies = new Map<string, Map<string, number>>();
+    for (const op of mapOperations) {
+      const esp = (op.especie ?? "").trim();
+      const pod = (op.pod ?? "").trim();
+      if (!esp || !pod) continue;
+      let inner = bySpecies.get(esp);
+      if (!inner) {
+        inner = new Map();
+        bySpecies.set(esp, inner);
+      }
+      inner.set(pod, (inner.get(pod) ?? 0) + 1);
+    }
+    const leaders = new Map<string, { pod: string; cantidad: number }>();
+    for (const [esp, podCounts] of bySpecies) {
+      let bestPod = "";
+      let bestCount = 0;
+      for (const [pod, c] of podCounts) {
+        if (c > bestCount || (c === bestCount && pod.localeCompare(bestPod, "es") < 0)) {
+          bestCount = c;
+          bestPod = pod;
+        }
+      }
+      if (bestPod) leaders.set(esp, { pod: bestPod, cantidad: bestCount });
+    }
+    return leaders;
+  }, [mapOperations]);
+
+  const speciesWithPodLeaderCount = useMemo(() => {
+    let n = 0;
+    for (const { especie } of speciesStats.ranked) {
+      if (speciesTopPodByEspecie.has(especie)) n += 1;
+    }
+    return n;
+  }, [speciesStats.ranked, speciesTopPodByEspecie]);
+
+  const speciesFunnelItems = useMemo(() => speciesStats.ranked.slice(0, 8), [speciesStats.ranked]);
+  const speciesFunnelMax = useMemo(
+    () => Math.max(...speciesFunnelItems.map((item) => item.cantidad), 1),
+    [speciesFunnelItems]
+  );
+  const speciesLeaderByEspecie = useMemo(
+    () =>
+      speciesStats.ranked
+        .map((item) => {
+          const leader = speciesTopPodByEspecie.get(item.especie);
+          if (!leader) return null;
+          return {
+            especie: item.especie,
+            totalEspecie: item.cantidad,
+            pod: leader.pod,
+            podCantidad: leader.cantidad,
+          };
+        })
+        .filter(
+          (
+            item
+          ): item is { especie: string; totalEspecie: number; pod: string; podCantidad: number } => item !== null
+        ),
+    [speciesStats.ranked, speciesTopPodByEspecie]
+  );
+  const speciesLeaderPodItems = useMemo(() => speciesLeaderByEspecie.slice(0, 8), [speciesLeaderByEspecie]);
+  const speciesLeaderPodItemsMax = useMemo(
+    () => Math.max(...speciesLeaderPodItems.map((item) => item.podCantidad), 1),
+    [speciesLeaderPodItems]
+  );
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || portMarkers.length === 0) return;
@@ -312,26 +396,31 @@ export function DashboardContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
-        <div className="bg-white border-b border-neutral-200 h-14" />
+      <main className="relative flex-1 min-h-0 overflow-auto bg-[#060B17]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+          <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+        </div>
+        <div className="relative bg-[#0A1328]/90 border-b border-cyan-400/20 h-14" />
         <div className="p-4 sm:p-5 w-full max-w-[1600px] mx-auto space-y-4 animate-pulse">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={`bg-white rounded-2xl border border-neutral-200 h-24 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`} />
+              <div key={i} className={`bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-24 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`} />
             ))}
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-neutral-200 h-20" />
+              <div key={i} className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-20" />
             ))}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-neutral-200 h-72" />
-            <div className="bg-white rounded-2xl border border-neutral-200 h-72" />
+            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-72" />
+            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-72" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-neutral-200 h-60" />
-            <div className="bg-white rounded-2xl border border-neutral-200 h-60" />
+            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-60" />
+            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-60" />
           </div>
         </div>
       </main>
@@ -339,33 +428,38 @@ export function DashboardContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
+    <main className="relative flex-1 min-h-0 overflow-auto bg-[#060B17]">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+      </div>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="w-full max-w-[1700px] mx-auto px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="sticky top-0 z-10 bg-[#0A1328]/90 border-b border-cyan-400/20 backdrop-blur">
+        <div className="w-full px-4 sm:px-5 lg:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-base font-bold text-neutral-900 tracking-tight leading-tight">{tr.title}</h1>
-            <p className="text-[11px] text-neutral-400 mt-0.5">
+            <h1 className="text-base font-bold text-cyan-100 tracking-tight leading-tight">{tr.title}</h1>
+            <p className="text-[11px] text-cyan-300/60 mt-0.5">
               {format(new Date(), "EEEE d MMM yyyy", { locale: locale === "es" ? es : undefined })}
               {lastFetchedAt && getLastUpdatedText() && (
-                <> · <span className="text-neutral-300">actualizado {getLastUpdatedText()}</span></>
+                <> · <span className="text-cyan-300/40">actualizado {getLastUpdatedText()}</span></>
               )}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <a href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors shadow-sm">
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors shadow-[0_0_18px_rgba(34,211,238,0.25)]">
               <Icon icon="lucide:plus" className="w-3.5 h-3.5" />
               {t.sidebar.crearReserva}
             </a>
-            <a href={withBase("/registros")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+            <a href={withBase("/reservas/mis-reservas")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors">
               <Icon icon="lucide:list" className="w-3.5 h-3.5" />
-              {t.sidebar.registros}
+              {t.sidebar.misReservas}
             </a>
             <button onClick={() => void fetchDashboardData()}
-              className="p-1.5 text-neutral-400 hover:text-brand-blue bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+              className="p-1.5 text-cyan-200/70 hover:text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors"
               title={tr.refresh}>
               <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
             </button>
@@ -373,22 +467,24 @@ export function DashboardContent() {
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 lg:p-5 w-full max-w-[1700px] 2xl:max-w-[1600px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[260px_260px_minmax(0,1fr)_540px] xl:grid-cols-[280px_280px_minmax(0,1fr)_600px] gap-4 items-start">
+      <div className="p-3 sm:p-4 lg:p-5 w-full overflow-x-auto min-[2200px]:overflow-visible">
+        <div className="min-[2200px]:h-[720px]">
+          <div className="min-[2200px]:w-1/2 min-[2200px]:scale-[2] min-[2200px]:origin-top-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 min-[1180px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] min-[1440px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2.3fr)] min-[2200px]:grid-cols-[380px_380px_minmax(0,1fr)_980px] gap-4 min-[2200px]:gap-6 items-start">
           {/* KPI clientes (izquierda) */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 min-h-[286px]">
-            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Clientes</p>
-            <p className="text-2xl font-bold text-brand-blue leading-none mt-2">{activeClientsCount}</p>
-            <p className="text-xs text-neutral-500 mt-1">con operaciones</p>
-            <div className="mt-2.5 border-t border-neutral-100 pt-2 max-h-[158px] overflow-auto">
+          <div className="bg-[#0D1830]/80 rounded-2xl border border-cyan-300/20 shadow-[0_0_30px_rgba(56,189,248,0.12)] p-3.5 min-[2133px]:p-6 h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] flex flex-col backdrop-blur-sm">
+            <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Clientes con operaciones</p>
+            <p className="text-2xl min-[2133px]:text-[52px] font-bold text-cyan-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(103,232,249,0.4)]">{activeClientsCount}</p>
+            <p className="text-sm min-[2133px]:text-lg text-cyan-100/60 mt-1">con operaciones</p>
+            <div className="mt-2 border-t border-cyan-300/15 pt-1.5 min-[2133px]:mt-3 min-[2133px]:pt-3 flex-1 overflow-auto">
               {clientsWithOperationCount.length === 0 ? (
-                <p className="text-xs text-neutral-400">Sin clientes con operaciones</p>
+                <p className="text-sm min-[2133px]:text-lg text-cyan-100/45">Sin clientes con operaciones</p>
               ) : (
                 <ul className="space-y-1.5">
                   {clientsWithOperationCount.map((item) => (
-                    <li key={item.cliente} className="text-xs text-neutral-700">
+                    <li key={item.cliente} className="text-sm min-[2133px]:text-lg text-cyan-50/90">
                       <span className="font-medium">{item.cliente}</span>{" "}
-                      <span className="text-neutral-500">({item.cantidad})</span>
+                      <span className="text-cyan-200/60">({item.cantidad})</span>
                     </li>
                   ))}
                 </ul>
@@ -397,46 +493,46 @@ export function DashboardContent() {
           </div>
 
           {/* Dona marítima vs aéreo */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 min-h-[286px]">
-            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Operaciones por vía</p>
-            <div className="mt-3 flex items-center gap-4">
+          <div className="bg-[#0D1830]/80 rounded-2xl border border-cyan-300/20 shadow-[0_0_30px_rgba(56,189,248,0.12)] p-3.5 min-[2133px]:p-6 h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] backdrop-blur-sm">
+            <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Operaciones por vía</p>
+            <div className="mt-3 min-[2133px]:mt-4 flex items-center gap-4 min-[2133px]:gap-6">
               <div
-                className="relative h-28 w-28 rounded-full shadow-inner"
+                className="relative h-28 w-28 min-[2133px]:h-44 min-[2133px]:w-44 rounded-full shadow-inner"
                 style={{
                   background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)`,
                 }}
               >
-                <div className="absolute inset-[14px] rounded-full bg-white border border-neutral-100 flex items-center justify-center">
+                <div className="absolute inset-[14px] min-[2133px]:inset-[24px] rounded-full bg-[#0D1830] border border-cyan-300/20 flex items-center justify-center">
                   <div className="text-center leading-tight">
-                    <p className="text-[10px] text-neutral-400">Marítima</p>
-                    <p className="text-sm font-bold text-neutral-800">
+                    <p className="text-xs min-[2133px]:text-base text-cyan-200/60">Marítima</p>
+                    <p className="text-base min-[2133px]:text-2xl font-bold text-cyan-100">
                       {transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="text-xs space-y-1">
-                <p className="text-neutral-700"><span className="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1" />Marítima ({transportDistribution.maritima})</p>
-                <p className="text-neutral-700"><span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" />Aéreo ({transportDistribution.aereo})</p>
+              <div className="text-sm min-[2133px]:text-lg space-y-1.5 min-[2133px]:space-y-2">
+                <p className="text-cyan-100/90"><span className="inline-block w-2 h-2 rounded-full bg-cyan-400 mr-1" />Marítima ({transportDistribution.maritima})</p>
+                <p className="text-cyan-100/90"><span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1" />Aéreo ({transportDistribution.aereo})</p>
               </div>
             </div>
-            <p className="text-[11px] text-neutral-500 mt-2">Total: {transportDistribution.total}</p>
+            <p className="text-[13px] min-[2133px]:text-base text-cyan-100/60 mt-2 min-[2133px]:mt-3">Total: {transportDistribution.total}</p>
           </div>
 
           {/* Barras por región */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 min-h-[286px]">
-            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Distribucion por region</p>
-            <div className="mt-3 space-y-2.5">
+          <div className="bg-[#0D1830]/80 rounded-2xl border border-cyan-300/20 shadow-[0_0_30px_rgba(56,189,248,0.12)] p-3.5 min-[2133px]:p-6 h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] backdrop-blur-sm">
+            <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Distribución por región</p>
+            <div className="mt-3 min-[2133px]:mt-4 space-y-2.5 min-[2133px]:space-y-3">
               {regionDistribution.items.map((item) => {
                 const width = (item.count / regionDistribution.max) * 100;
                 return (
                   <div key={item.region}>
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-neutral-700">{item.region}</span>
-                      <span className="text-neutral-500">{item.count}</span>
+                    <div className="flex items-center justify-between text-[13px] min-[2133px]:text-lg mb-1 min-[2133px]:mb-1.5">
+                      <span className="text-cyan-50/90">{item.region}</span>
+                      <span className="text-cyan-200/60">{item.count}</span>
                     </div>
-                    <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand-blue rounded-full transition-all duration-500" style={{ width: `${width}%` }} />
+                    <div className="h-2 min-[2133px]:h-4 bg-cyan-950/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-cyan-400 rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(34,211,238,0.8)]" style={{ width: `${width}%` }} />
                     </div>
                   </div>
                 );
@@ -445,13 +541,13 @@ export function DashboardContent() {
           </div>
 
           {/* Mapa */}
-          <div className="overflow-hidden min-h-[286px]">
-            <div className="relative min-h-[286px]">
+          <div className="overflow-hidden h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] rounded-2xl border border-cyan-300/20 shadow-[0_0_35px_rgba(56,189,248,0.16)] bg-[#0D1830]/70 backdrop-blur-sm">
+            <div className="relative h-full">
               <MapLibreMap
                 ref={mapRef}
                 initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
                 mapStyle={DASHBOARD_MAP_STYLE}
-                style={{ width: "100%", height: "286px" }}
+                style={{ width: "100%", height: "100%" }}
                 dragRotate={false}
                 attributionControl={false}
               >
@@ -472,6 +568,106 @@ export function DashboardContent() {
               </MapLibreMap>
             </div>
           </div>
+          </div>
+
+          {/* KPI especies + destino por especie — fila inferior */}
+          <div className="mt-4 min-[1180px]:mt-5 grid grid-cols-1 min-[1180px]:grid-cols-2 gap-4 min-[1180px]:gap-5">
+            <div className="bg-[#0D1830]/80 rounded-2xl border border-fuchsia-400/25 shadow-[0_0_30px_rgba(232,121,249,0.12)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1180px]:flex min-[1180px]:flex-row min-[1180px]:items-stretch min-[1180px]:gap-6">
+              <div className="min-[1180px]:w-44 min-[1440px]:w-48 shrink-0">
+                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Operaciones por especie</p>
+                <p className="text-2xl min-[2133px]:text-5xl font-bold text-fuchsia-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(232,121,249,0.35)]">
+                  {speciesStats.distinct}
+                </p>
+                <p className="text-sm min-[2133px]:text-base text-cyan-100/60 mt-1">especies distintas</p>
+                {speciesStats.top && (
+                  <p className="text-xs min-[2133px]:text-sm text-fuchsia-200/80 mt-2 min-[1180px]:line-clamp-none" title={speciesStats.top.especie}>
+                    Líder: <span className="font-semibold">{speciesStats.top.especie}</span> ({speciesStats.top.cantidad})
+                  </p>
+                )}
+              </div>
+              <div className="mt-3 min-[1180px]:mt-0 w-full min-[1180px]:flex-1 border-t border-cyan-300/15 min-[1180px]:border-t-0 min-[1180px]:border-l min-[1180px]:border-cyan-300/15 min-[1180px]:pl-6 pt-3 min-[1180px]:pt-0 min-[1180px]:flex min-[1180px]:flex-col">
+                {speciesStats.ranked.length === 0 ? (
+                  <p className="text-sm text-cyan-100/45">Sin especie registrada</p>
+                ) : (
+                  <div className="h-[240px] min-[1180px]:h-full w-full overflow-auto pr-1">
+                    <div className="space-y-1.5 w-full">
+                      {speciesFunnelItems.map((item, index) => {
+                        const widthPercent = (item.cantidad / speciesFunnelMax) * 100;
+                        return (
+                          <div key={item.especie} className="space-y-0.5 w-full" title={`${item.especie}: ${item.cantidad}`}>
+                            <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
+                              <span className="text-cyan-100/85 font-medium truncate">
+                                {index + 1}. {item.especie}
+                              </span>
+                              <span className="text-fuchsia-200/85 tabular-nums shrink-0">{item.cantidad}</span>
+                            </div>
+                            <div className="h-3.5 min-[1440px]:h-4.5 bg-fuchsia-950/35 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-fuchsia-400 rounded-full shadow-[0_0_12px_rgba(232,121,249,0.75)] transition-all duration-500"
+                                style={{ width: `${Math.max(widthPercent, 8)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[#0D1830]/80 rounded-2xl border border-emerald-400/25 shadow-[0_0_30px_rgba(52,211,153,0.12)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1180px]:flex min-[1180px]:flex-row min-[1180px]:items-stretch min-[1180px]:gap-6">
+              <div className="min-[1180px]:w-44 min-[1440px]:w-48 shrink-0">
+                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Destino más usado por especie</p>
+                <p className="text-2xl min-[2133px]:text-5xl font-bold text-emerald-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(52,211,153,0.35)]">
+                  {speciesWithPodLeaderCount}
+                </p>
+                <p className="text-sm min-[2133px]:text-base text-cyan-100/60 mt-1">de {speciesStats.distinct} con POD líder</p>
+                {speciesLeaderPodItems[0] && (
+                  <p className="text-xs min-[2133px]:text-sm text-emerald-200/80 mt-2 min-[1180px]:line-clamp-none" title={speciesLeaderPodItems[0].pod}>
+                    Líder: <span className="font-semibold">{speciesLeaderPodItems[0].pod}</span> ({speciesLeaderPodItems[0].podCantidad})
+                  </p>
+                )}
+                <div className="mt-2 space-y-1 max-h-[110px] overflow-auto pr-1">
+                  {speciesLeaderPodItems.slice(0, 4).map((item, idx) => (
+                    <p
+                      key={`left-mini-${item.especie}`}
+                      className="text-[11px] text-cyan-100/85 truncate"
+                      title={`${item.especie} -> ${item.pod} (${item.podCantidad})`}
+                    >
+                      {idx + 1}. <span className="font-semibold text-cyan-50">{item.especie}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 min-[1180px]:mt-0 w-full min-[1180px]:flex-1 border-t border-cyan-300/15 min-[1180px]:border-t-0 min-[1180px]:border-l min-[1180px]:border-cyan-300/15 min-[1180px]:pl-6 pt-3 min-[1180px]:pt-0 min-[1180px]:flex min-[1180px]:flex-col">
+                {speciesLeaderByEspecie.length === 0 ? (
+                  <p className="text-sm text-cyan-100/45">Sin especie registrada</p>
+                ) : (
+                  <div className="h-[240px] min-[1180px]:h-full w-full overflow-auto pr-1">
+                    {speciesLeaderPodItems.map((item, idx) => (
+                      <div key={`species-destino-${item.especie}`} className="space-y-0.5 w-full" title={`${item.especie} -> ${item.pod} (${item.podCantidad})`}>
+                        <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
+                          <span className="truncate">
+                            {idx + 1}. <span className="font-semibold text-cyan-50">{item.especie}</span> - <span className="text-emerald-200/90">{item.pod}</span>
+                          </span>
+                          <span className="text-emerald-200/90 tabular-nums shrink-0">{item.podCantidad}</span>
+                        </div>
+                        <div className="h-3.5 min-[1440px]:h-4.5 w-full bg-emerald-950/35 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.75)] transition-all duration-500"
+                            style={{ width: `${Math.max((item.podCantidad / speciesLeaderPodItemsMax) * 100, 8)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
     </main>

@@ -587,8 +587,8 @@ export function MisReservasContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [successTransport, setSuccessTransport] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sortField, setSortField] = useState<SortField | null>("ref_asli");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
     typeof window !== "undefined" && window.innerWidth >= 768 ? "table" : "cards"
