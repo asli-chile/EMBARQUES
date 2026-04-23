@@ -25,6 +25,7 @@ type OperacionResumen = {
   estado_operacion: string | null;
   booking: string | null;
   especie: string | null;
+  segundas: string | null;
   created_at?: string;
 };
 
@@ -160,7 +161,7 @@ export function DashboardContent() {
     }
     setLoading(true);
     const allRes = await buildFilteredQuery(
-      "id, ref_asli, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, especie, created_at"
+      "id, ref_asli, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, especie, segundas, created_at"
     ).limit(2000);
     const allData = (allRes.data ?? []) as OperacionResumen[];
     setMapOperations(allData);
@@ -300,6 +301,26 @@ export function DashboardContent() {
     const distinct = ranked.length;
     const top = ranked[0] ?? null;
     return { distinct, top, ranked };
+  }, [mapOperations]);
+
+  const topNavieras = useMemo(() => {
+    const byNaviera = new Map<string, number>();
+    for (const op of mapOperations) {
+      const name = (op.naviera ?? "").trim();
+      if (!name) continue;
+      byNaviera.set(name, (byNaviera.get(name) ?? 0) + 1);
+    }
+    const ranked = Array.from(byNaviera.entries())
+      .map(([naviera, cantidad]) => ({ naviera, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad || a.naviera.localeCompare(b.naviera, "es"));
+    const total = ranked.reduce((acc, item) => acc + item.cantidad, 0);
+    return {
+      ranked,
+      total,
+      top: ranked[0] ?? null,
+      topItems: ranked.slice(0, 8),
+      max: Math.max(...ranked.map((item) => item.cantidad), 1),
+    };
   }, [mapOperations]);
 
   /** POD (destino) con más operaciones por cada especie. */
@@ -571,10 +592,56 @@ export function DashboardContent() {
           </div>
 
           {/* KPI especies + destino por especie — fila inferior */}
-          <div className="mt-4 min-[1180px]:mt-5 grid grid-cols-1 min-[1180px]:grid-cols-2 gap-4 min-[1180px]:gap-5">
-            <div className="bg-[#0D1830]/80 rounded-2xl border border-fuchsia-400/25 shadow-[0_0_30px_rgba(232,121,249,0.12)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1180px]:flex min-[1180px]:flex-row min-[1180px]:items-stretch min-[1180px]:gap-6">
-              <div className="min-[1180px]:w-44 min-[1440px]:w-48 shrink-0">
-                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Operaciones por especie</p>
+          <div className="mt-4 grid grid-cols-3 gap-4 items-stretch">
+            <div className="min-w-0 overflow-hidden bg-gradient-to-br from-[#0F1E3A]/92 via-[#0B1731]/88 to-[#081226]/92 rounded-2xl border border-cyan-300/25 shadow-[0_0_36px_rgba(56,189,248,0.14)] p-4 min-[1440px]:p-5 backdrop-blur-sm h-[280px] min-[1536px]:flex min-[1536px]:flex-row min-[1536px]:items-stretch min-[1536px]:gap-6">
+              <div className="min-[1536px]:w-48 shrink-0">
+                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-200/75 uppercase tracking-[0.16em]">
+                  Top navieras
+                </p>
+                <p className="text-2xl min-[2133px]:text-5xl font-bold text-cyan-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(103,232,249,0.4)]">
+                  {topNavieras.ranked.length}
+                </p>
+                <p className="text-sm min-[2133px]:text-base text-cyan-100/60 mt-1">con operaciones</p>
+                {topNavieras.top && (
+                  <p className="text-xs min-[2133px]:text-sm text-cyan-100/80 mt-2 min-[1180px]:line-clamp-none" title={topNavieras.top.naviera}>
+                    Líder: <span className="font-semibold">{topNavieras.top.naviera}</span> ({topNavieras.top.cantidad})
+                  </p>
+                )}
+              </div>
+              <div className="mt-3 min-[1536px]:mt-0 w-full min-[1536px]:flex-1 min-h-0 border-t border-cyan-300/15 min-[1536px]:border-t-0 min-[1536px]:border-l min-[1536px]:border-cyan-300/15 min-[1536px]:pl-6 pt-3 min-[1536px]:pt-0 min-[1536px]:flex min-[1536px]:flex-col">
+                {topNavieras.ranked.length === 0 ? (
+                  <p className="text-sm text-cyan-100/45">Sin navieras registradas</p>
+                ) : (
+                  <div className="h-[160px] min-[1536px]:h-full min-[1536px]:min-h-0 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-cyan-300/15 bg-black/10 p-2 pr-3 [scrollbar-gutter:stable]">
+                    <div className="space-y-2 w-full">
+                      {topNavieras.topItems.map((item, idx) => {
+                        const widthPercent = (item.cantidad / topNavieras.max) * 100;
+                        return (
+                          <div key={`naviera-${item.naviera}`} className="space-y-0.5 w-full" title={`${item.naviera}: ${item.cantidad}`}>
+                            <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
+                              <span className="text-cyan-100/85 font-medium truncate">
+                                {idx + 1}. {item.naviera}
+                              </span>
+                              <span className="text-cyan-100 tabular-nums shrink-0 font-semibold">{item.cantidad}</span>
+                            </div>
+                            <div className="h-3.5 min-[1440px]:h-4.5 bg-cyan-950/45 rounded-full overflow-hidden ring-1 ring-cyan-300/15">
+                              <div
+                                className="h-full bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.75)] transition-all duration-500"
+                                style={{ width: `${Math.max(widthPercent, 8)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="min-w-0 overflow-hidden bg-gradient-to-br from-[#231236]/92 via-[#150E2B]/88 to-[#0B0A1F]/92 rounded-2xl border border-fuchsia-400/25 shadow-[0_0_36px_rgba(232,121,249,0.14)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1536px]:flex min-[1536px]:flex-row min-[1536px]:items-stretch min-[1536px]:gap-6">
+              <div className="min-[1536px]:w-48 shrink-0">
+                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-fuchsia-200/75 uppercase tracking-[0.16em]">Operaciones por especie</p>
                 <p className="text-2xl min-[2133px]:text-5xl font-bold text-fuchsia-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(232,121,249,0.35)]">
                   {speciesStats.distinct}
                 </p>
@@ -585,12 +652,12 @@ export function DashboardContent() {
                   </p>
                 )}
               </div>
-              <div className="mt-3 min-[1180px]:mt-0 w-full min-[1180px]:flex-1 border-t border-cyan-300/15 min-[1180px]:border-t-0 min-[1180px]:border-l min-[1180px]:border-cyan-300/15 min-[1180px]:pl-6 pt-3 min-[1180px]:pt-0 min-[1180px]:flex min-[1180px]:flex-col">
+              <div className="mt-3 min-[1536px]:mt-0 w-full min-[1536px]:flex-1 min-h-0 border-t border-cyan-300/15 min-[1536px]:border-t-0 min-[1536px]:border-l min-[1536px]:border-cyan-300/15 min-[1536px]:pl-6 pt-3 min-[1536px]:pt-0 min-[1536px]:flex min-[1536px]:flex-col">
                 {speciesStats.ranked.length === 0 ? (
                   <p className="text-sm text-cyan-100/45">Sin especie registrada</p>
                 ) : (
-                  <div className="h-[240px] min-[1180px]:h-full w-full overflow-auto pr-1">
-                    <div className="space-y-1.5 w-full">
+                  <div className="h-[160px] min-[1536px]:h-full min-[1536px]:min-h-0 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-fuchsia-300/15 bg-black/10 p-2 pr-3 [scrollbar-gutter:stable]">
+                    <div className="space-y-2 w-full">
                       {speciesFunnelItems.map((item, index) => {
                         const widthPercent = (item.cantidad / speciesFunnelMax) * 100;
                         return (
@@ -601,7 +668,7 @@ export function DashboardContent() {
                               </span>
                               <span className="text-fuchsia-200/85 tabular-nums shrink-0">{item.cantidad}</span>
                             </div>
-                            <div className="h-3.5 min-[1440px]:h-4.5 bg-fuchsia-950/35 rounded-full overflow-hidden">
+                            <div className="h-3.5 min-[1440px]:h-4.5 bg-fuchsia-950/40 rounded-full overflow-hidden ring-1 ring-fuchsia-300/15">
                               <div
                                 className="h-full bg-fuchsia-400 rounded-full shadow-[0_0_12px_rgba(232,121,249,0.75)] transition-all duration-500"
                                 style={{ width: `${Math.max(widthPercent, 8)}%` }}
@@ -616,9 +683,9 @@ export function DashboardContent() {
               </div>
             </div>
 
-            <div className="bg-[#0D1830]/80 rounded-2xl border border-emerald-400/25 shadow-[0_0_30px_rgba(52,211,153,0.12)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1180px]:flex min-[1180px]:flex-row min-[1180px]:items-stretch min-[1180px]:gap-6">
-              <div className="min-[1180px]:w-44 min-[1440px]:w-48 shrink-0">
-                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Destino más usado por especie</p>
+            <div className="min-w-0 overflow-hidden bg-gradient-to-br from-[#122A24]/92 via-[#0D1F1C]/88 to-[#081513]/92 rounded-2xl border border-emerald-400/25 shadow-[0_0_36px_rgba(52,211,153,0.14)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1536px]:flex min-[1536px]:flex-row min-[1536px]:items-stretch min-[1536px]:gap-6">
+              <div className="min-[1536px]:w-48 shrink-0">
+                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-emerald-200/75 uppercase tracking-[0.16em]">Destino más usado por especie</p>
                 <p className="text-2xl min-[2133px]:text-5xl font-bold text-emerald-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(52,211,153,0.35)]">
                   {speciesWithPodLeaderCount}
                 </p>
@@ -641,11 +708,11 @@ export function DashboardContent() {
                 </div>
               </div>
 
-              <div className="mt-3 min-[1180px]:mt-0 w-full min-[1180px]:flex-1 border-t border-cyan-300/15 min-[1180px]:border-t-0 min-[1180px]:border-l min-[1180px]:border-cyan-300/15 min-[1180px]:pl-6 pt-3 min-[1180px]:pt-0 min-[1180px]:flex min-[1180px]:flex-col">
+              <div className="mt-3 min-[1536px]:mt-0 w-full min-[1536px]:flex-1 min-h-0 border-t border-cyan-300/15 min-[1536px]:border-t-0 min-[1536px]:border-l min-[1536px]:border-cyan-300/15 min-[1536px]:pl-6 pt-3 min-[1536px]:pt-0 min-[1536px]:flex min-[1536px]:flex-col">
                 {speciesLeaderByEspecie.length === 0 ? (
                   <p className="text-sm text-cyan-100/45">Sin especie registrada</p>
                 ) : (
-                  <div className="h-[240px] min-[1180px]:h-full w-full overflow-auto pr-1">
+                  <div className="h-[160px] min-[1536px]:h-full min-[1536px]:min-h-0 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-emerald-300/15 bg-black/10 p-2 pr-3 [scrollbar-gutter:stable]">
                     {speciesLeaderPodItems.map((item, idx) => (
                       <div key={`species-destino-${item.especie}`} className="space-y-0.5 w-full" title={`${item.especie} -> ${item.pod} (${item.podCantidad})`}>
                         <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
@@ -654,7 +721,7 @@ export function DashboardContent() {
                           </span>
                           <span className="text-emerald-200/90 tabular-nums shrink-0">{item.podCantidad}</span>
                         </div>
-                        <div className="h-3.5 min-[1440px]:h-4.5 w-full bg-emerald-950/35 rounded-full overflow-hidden">
+                        <div className="h-3.5 min-[1440px]:h-4.5 w-full bg-emerald-950/45 rounded-full overflow-hidden ring-1 ring-emerald-300/15">
                           <div
                             className="h-full bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.75)] transition-all duration-500"
                             style={{ width: `${Math.max((item.podCantidad / speciesLeaderPodItemsMax) * 100, 8)}%` }}
