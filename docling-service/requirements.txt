@@ -1,0 +1,5 @@
+docling
+fastapi
+python-multipart
+requests
+uvicorn[standard]

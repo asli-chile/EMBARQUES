@@ -55,6 +55,18 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
 4. **Opcional (crear cuentas como admin):** Añadir `SUPABASE_SERVICE_ROLE_KEY` (Dashboard → Settings → API → service_role).
 5. Rutas de auth: `/auth/login` y `/auth/registro`. Si Supabase no está configurado, el `AuthWidget` usa datos de ejemplo.
 
+### OCR de stacking con Docling (opcional, recomendado)
+
+1. Levantar el microservicio:
+   - `cd docling-service`
+   - `python -m venv .venv`
+   - `.venv\Scripts\activate`
+   - `pip install -r requirements.txt`
+   - `uvicorn main:app --reload --host 0.0.0.0 --port 8000`
+2. Configurar en `.env`:
+   - `DOCLING_SERVICE_URL=http://localhost:8000`
+3. El frontend usa `/api/ocr/stacking` (con sesión) y procesa OCR siempre con Docling.
+
 ### Roles y control de acceso
 
 - **admin**: Ve todo y puede crear cuentas en Configuración → Usuarios.

@@ -57,7 +57,7 @@ la operación  camión/chofer   factura TRA     proforma e
 | Grid de datos | ag-grid-community / ag-grid-react | 35.1 |
 | Iconos | @iconify/react (lucide: + typcn:) | 5.0.2 |
 | Fechas | date-fns + locale es | 4.1.0 |
-| OCR | tesseract.js | 5.1.0 |
+| OCR | Docling (microservicio Python) | — |
 | ZIP | jszip | 3.10.1 |
 | Edge functions | Deno (en Supabase) | — |
 
@@ -371,7 +371,7 @@ Horarios de líneas navieras en mapa interactivo (MapLibre GL).
 
 **Archivo:** `StackingContent.tsx`
 
-Coordinación de bodega: timeline de contenedores, OCR para documentos (`tesseract.js`), borradores locales.
+Coordinación de bodega: timeline de contenedores, OCR para documentos vía Docling, borradores locales.
 
 **Campos en operaciones:** `inicio_stacking`, `fin_stacking`, `ingreso_stacking`
 

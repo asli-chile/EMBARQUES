@@ -10,6 +10,9 @@
     "import:migracion-legacy": "node --env-file=.env scripts/import-migracion-legacy-json.mjs",
     "import:migracion-legacy:dry": "node --env-file=.env scripts/import-migracion-legacy-json.mjs --dry-run",
     "dev": "astro dev",
+    "docling:dev": "python -m uvicorn main:app --app-dir docling-service --reload --host 0.0.0.0 --port 8000",
+    "docling:docker:build": "docker build -t embarques-docling ./docling-service",
+    "docling:docker:run": "docker run --rm -p 8000:8000 embarques-docling",
     "clean:vite": "node scripts/clean-vite-cache.mjs",
     "dev:clean": "npm run clean:vite && astro dev",
     "dev:android": "astro dev --host",
@@ -44,7 +47,6 @@
     "react-dom": "^19.2.4",
     "react-map-gl": "^8.1.0",
     "sileo": "^0.1.5",
-    "tesseract.js": "^5.1.0",
     "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0"
   },

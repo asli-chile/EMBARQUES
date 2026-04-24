@@ -792,7 +792,11 @@ export function ItinerarioContent() {
 
   const handleExtractStackingFromImage = useCallback(async () => {
     const url = stackingImageUrl ?? stackingModalItinerario?.stacking_imagen_url ?? null;
-    if (!url || !stackingModalItinerario) return;
+    if (!stackingModalItinerario) return;
+    if (!url) {
+      setStackingExtractError("Primero debes cargar o seleccionar una imagen oficial de stacking.");
+      return;
+    }
     setStackingExtractError(null);
     setStackingOcrLoading(true);
     try {
@@ -3184,8 +3188,22 @@ export function ItinerarioContent() {
               <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-neutral-200 bg-neutral-50/50 overflow-hidden shadow-sm">
                 <div className="flex flex-shrink-0 items-center justify-between gap-3 flex-wrap px-4 py-3 border-b border-neutral-200 bg-white">
                   <span className="text-sm font-medium text-neutral-700">{tr.stackingOfficialTitle}</span>
-                  {isSuperadmin && (
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExtractStackingFromImage}
+                      disabled={stackingOcrLoading || stackingImageUploading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-blue/30 text-brand-blue bg-white hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                    >
+                      {stackingOcrLoading ? (
+                        <Icon icon="lucide:loader-2" width={14} height={14} className="animate-spin" aria-hidden />
+                      ) : (
+                        <Icon icon="lucide:sparkles" width={14} height={14} aria-hidden />
+                      )}
+                      {stackingOcrLoading ? tr.stackingExtracting : tr.stackingExtractFromImage}
+                    </button>
+                    {isSuperadmin && (
+                      <>
                       <button
                         type="button"
                         onClick={handleUploadStackingImageClick}
@@ -3213,9 +3231,15 @@ export function ItinerarioContent() {
                         className="hidden"
                         onChange={handleUploadStackingImageChange}
                       />
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
+                {stackingExtractError && (
+                  <div className="flex-shrink-0 px-4 py-2 bg-red-50 border-b border-red-100" role="alert">
+                    <p className="text-xs text-red-700">{stackingExtractError}</p>
+                  </div>
+                )}
                 {stackingImageUploading && (
                   <div className="flex-shrink-0 px-4 py-2 bg-brand-blue/5 border-b border-brand-blue/10" role="status" aria-live="polite">
                     <p className="text-xs text-brand-blue flex items-center gap-2">
