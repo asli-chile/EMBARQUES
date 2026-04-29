@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import os
 from tempfile import NamedTemporaryFile
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
 from docling.document_converter import DocumentConverter
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, HttpUrl
 
 app = FastAPI(title="Docling OCR Service", version="1.0.0")
 converter = DocumentConverter()
+DOCLING_API_KEY = (os.getenv("DOCLING_API_KEY") or "").strip()
 
 
 class ExtractStackingRequest(BaseModel):
@@ -43,7 +45,13 @@ def health() -> dict[str, str]:
 
 
 @app.post("/extract-stacking")
-def extract_stacking(payload: ExtractStackingRequest) -> dict[str, Any]:
+def extract_stacking(
+    payload: ExtractStackingRequest,
+    x_docling_api_key: str | None = Header(default=None),
+) -> dict[str, Any]:
+    if DOCLING_API_KEY and x_docling_api_key != DOCLING_API_KEY:
+        raise HTTPException(status_code=401, detail="API key inválida para Docling")
+
     source_url = str(payload.image_url)
     _validate_source_suffix(source_url)
 

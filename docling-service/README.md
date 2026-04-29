@@ -40,6 +40,12 @@ Nota: el contenedor ya soporta puerto dinámico de Railway usando `PORT`.
 - `GET /health` -> health check
 - `POST /extract-stacking` -> extrae texto y markdown
 
+## Seguridad (recomendado para producción)
+
+- Definir variable de entorno `DOCLING_API_KEY` en el servicio Docling.
+- En el ERP (Vercel), usar la misma clave en `DOCLING_API_KEY`.
+- El endpoint `/extract-stacking` valida el header `x-docling-api-key` cuando la variable está definida.
+
 Body:
 
 ```json

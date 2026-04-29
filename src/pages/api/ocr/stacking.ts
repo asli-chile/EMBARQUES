@@ -32,6 +32,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const serviceUrl = serviceUrlRaw.replace(/\/+$/, "");
+  const doclingApiKey = (import.meta.env.DOCLING_API_KEY ?? "").trim();
   const body = (await request.json().catch(() => null)) as { imageUrl?: unknown } | null;
   const imageUrl = typeof body?.imageUrl === "string" ? body.imageUrl.trim() : "";
 
@@ -40,9 +41,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (doclingApiKey) {
+      headers["x-docling-api-key"] = doclingApiKey;
+    }
+
     const upstream = await fetch(`${serviceUrl}/extract-stacking`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ image_url: imageUrl }),
       signal: AbortSignal.timeout(DOCLING_TIMEOUT_MS),
     });

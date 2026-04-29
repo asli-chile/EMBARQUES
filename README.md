@@ -65,6 +65,7 @@ Abrir [http://localhost:4321](http://localhost:4321). La raíz redirige automát
    - `uvicorn main:app --reload --host 0.0.0.0 --port 8000`
 2. Configurar en `.env`:
    - `DOCLING_SERVICE_URL=http://localhost:8000`
+   - `DOCLING_API_KEY=<misma_clave_que_en_docling-service>`
 3. El frontend usa `/api/ocr/stacking` (con sesión) y procesa OCR siempre con Docling.
 
 ### Roles y control de acceso
