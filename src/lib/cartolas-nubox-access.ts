@@ -8,8 +8,17 @@ export const CARTOLAS_NUBOX_ALLOWED_EMAILS = [
   "stefanie.cordova@asli.cl",
 ] as const;
 
+/** Correos que ven «Cartolas a Nubox» entre las primeras opciones del menú lateral (justo debajo de Dashboard). */
+export const CARTOLAS_NUBOX_SIDEBAR_PRIORITY_EMAILS = ["stefanie.cordova@asli.cl"] as const;
+
 export function canAccessCartolasNubox(email: string | null | undefined): boolean {
   const e = (email ?? "").trim().toLowerCase();
   if (!e) return false;
   return CARTOLAS_NUBOX_ALLOWED_EMAILS.some((a) => a.toLowerCase() === e);
+}
+
+export function isCartolasNuboxSidebarPriority(email: string | null | undefined): boolean {
+  const e = (email ?? "").trim().toLowerCase();
+  if (!e) return false;
+  return CARTOLAS_NUBOX_SIDEBAR_PRIORITY_EMAILS.some((a) => a.toLowerCase() === e);
 }

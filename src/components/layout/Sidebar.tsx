@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, type RefObject, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
+import { useSidebarScrollIndicators } from "@/hooks/useSidebarScrollIndicators";
 
 const AUTO_COLLAPSE_MS = 2000;
 const HOVER_OPEN_DELAY_MS = 1000;
@@ -14,6 +15,47 @@ type SidebarProps = {
 };
 
 type SidebarItem = (typeof siteConfig.sidebarItems)[number] & { superadminOnly?: boolean; ejecutivoAndAbove?: boolean };
+
+type SidebarNavScrollProps = {
+  widthClass: string;
+  scrollRef: RefObject<HTMLElement | null>;
+  showTopFade: boolean;
+  showBottomFade: boolean;
+  children: ReactNode;
+};
+
+function SidebarNavScroll({
+  widthClass,
+  scrollRef,
+  showTopFade,
+  showBottomFade,
+  children,
+}: SidebarNavScrollProps) {
+  return (
+    <div className={`relative flex-1 min-h-0 flex flex-col ${widthClass}`}>
+      {showTopFade && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-3.5 bg-gradient-to-b from-neutral-700/95 to-transparent transition-opacity duration-200 ease-out"
+          aria-hidden
+        />
+      )}
+      <aside
+        ref={scrollRef}
+        className="sidebar-nav-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-4 pb-3 px-2"
+        role="navigation"
+        aria-label="Menú de módulos"
+      >
+        {children}
+      </aside>
+      {showBottomFade && (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-3.5 bg-gradient-to-t from-neutral-700/95 to-transparent transition-opacity duration-200 ease-out"
+          aria-hidden
+        />
+      )}
+    </div>
+  );
+}
 
 export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
@@ -27,6 +69,13 @@ export function Sidebar({ pathname }: SidebarProps) {
     () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail) as SidebarItem[],
     [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
   );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const scrollSyncKey = useMemo(
+    () => `${visibleItems.length}-${expandedId ?? ""}`,
+    [visibleItems.length, expandedId]
+  );
+  const mobileScroll = useSidebarScrollIndicators(scrollSyncKey);
+  const desktopScroll = useSidebarScrollIndicators(scrollSyncKey);
   const [isMouseInside, setIsMouseInside] = useState(false);
 
   useEffect(() => {
@@ -41,7 +90,6 @@ export function Sidebar({ pathname }: SidebarProps) {
       setIsOpen(true);
     }
   }, []);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Auto-expand sección padre cuando pathname coincide con un hijo
   useEffect(() => {
@@ -255,13 +303,14 @@ export function Sidebar({ pathname }: SidebarProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <aside
-          className="w-full pt-4 pb-3 px-2 flex-1 min-h-0 overflow-y-auto"
-          role="navigation"
-          aria-label="Menú de módulos"
+        <SidebarNavScroll
+          widthClass="w-full"
+          scrollRef={mobileScroll.scrollRef}
+          showTopFade={mobileScroll.showTopFade}
+          showBottomFade={mobileScroll.showBottomFade}
         >
           {navItems}
-        </aside>
+        </SidebarNavScroll>
       </div>
 
       {/* Mobile: tab centrado en el borde del sidebar */}
@@ -301,13 +350,14 @@ export function Sidebar({ pathname }: SidebarProps) {
             isOpen ? "w-[11.75rem]" : "w-0"
           }`}
         >
-          <aside
-            className="w-[11.75rem] min-w-[11.75rem] pt-4 pb-3 px-2 flex-1 min-h-0 overflow-y-auto"
-            role="navigation"
-            aria-label="Menú de módulos"
+          <SidebarNavScroll
+            widthClass="w-[11.75rem] min-w-[11.75rem]"
+            scrollRef={desktopScroll.scrollRef}
+            showTopFade={desktopScroll.showTopFade}
+            showBottomFade={desktopScroll.showBottomFade}
           >
             {navItems}
-          </aside>
+          </SidebarNavScroll>
         </div>
 
         {/* Botón toggle — centrado en el borde derecho */}
