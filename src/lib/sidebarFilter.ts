@@ -22,12 +22,14 @@ function prioritizeCartolasNuboxAfterDashboard(items: SidebarItem[]): SidebarIte
 export function getVisibleSidebarItems(
   isSuperadmin: boolean,
   canAccessEjecutivoAndAbove: boolean,
-  userEmail: string
+  userEmail: string,
+  isLoggedIn: boolean = false
 ): SidebarItem[] {
   const normalized = userEmail.trim().toLowerCase();
 
   const itemAllowed = (item: SidebarItem): boolean => {
     if ("superadminOnly" in item && item.superadminOnly && !isSuperadmin) return false;
+    if ("ejecutivoAndAbove" in item && item.ejecutivoAndAbove && !isLoggedIn) return false;
     const allow = item.allowedEmails;
     if (allow && allow.length > 0) {
       if (!normalized || !allow.some((a) => a.toLowerCase() === normalized)) return false;

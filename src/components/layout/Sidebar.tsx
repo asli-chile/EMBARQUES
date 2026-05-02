@@ -64,10 +64,11 @@ export function Sidebar({ pathname }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
+  const isLoggedIn = !!user;
 
   const visibleItems = useMemo(
-    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail) as SidebarItem[],
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
+    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn) as SidebarItem[],
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn]
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const scrollSyncKey = useMemo(

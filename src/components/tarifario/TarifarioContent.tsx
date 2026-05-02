@@ -863,8 +863,10 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TarifarioContent() {
-  const { user, profile, empresaNombres } = useAuth();
+  const { user, profile, isLoading, empresaNombres } = useAuth();
   const canEdit = !!profile?.rol && ["superadmin", "admin", "ejecutivo"].includes(profile.rol);
+  
+  const hasAccess = !isLoading && user && canEdit;
 
   const supabase = useMemo(() => { try { return createClient(); } catch { return null; } }, []);
 
@@ -1175,6 +1177,27 @@ export function TarifarioContent() {
   const comboClsEditor =
     "w-full pl-2.5 pr-8 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white";
   const labelCls = "block text-xs font-medium text-neutral-500 mb-1";
+
+  // ─── Access Check ─────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <Icon icon="lucide:lock" className="w-16 h-16 text-neutral-300 mb-4" />
+        <h2 className="text-xl font-semibold text-neutral-700 mb-2">Acceso Restringido</h2>
+        <p className="text-neutral-500 max-w-md">
+          Esta sección está disponible solo para usuarios con rol Ejecutivo, Admin o Superadmin.
+        </p>
+      </div>
+    );
+  }
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
