@@ -336,6 +336,18 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         box-shadow: inset 0 0 0 2px var(--accent);
       }
 
+      tbody td input.total-readonly {
+        font-weight: 700;
+        background: var(--header-bg);
+        color: var(--ink);
+        cursor: default;
+      }
+
+      tbody td input.total-readonly:focus {
+        background: var(--header-bg);
+        box-shadow: none;
+      }
+
       tbody td textarea {
         resize: none;
         white-space: normal;
@@ -732,7 +744,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>26-28</th>
               <th>28-30</th>
               <th>30-32</th>
-              <th>+32</th>
+              <th>+34</th>
               <th>Blanda</th>
               <th>Pitting</th>
               <th>Doble</th>
@@ -796,15 +808,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { key: "kilosBrutoLote", kind: "number", step: "0.01" }
       ];
 
+      const CALIBRE_KEYS = ["cPre", "c22", "c24", "c26", "c28", "c30", "c32"];
+
       const numberFields = [
-        "total",
-        "cPre",
-        "c22",
-        "c24",
-        "c26",
-        "c28",
-        "c30",
-        "c32",
+        ...CALIBRE_KEYS,
         "blanda",
         "pitting",
         "doble",
@@ -815,6 +822,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         "zumo",
         "segunda"
       ];
+
+      function sumCalibres(row) {
+        return CALIBRE_KEYS.reduce((acc, k) => acc + asNumber(row[k]), 0);
+      }
 
       const fieldToColumn = {
         fecha: "fecha",
@@ -968,7 +979,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           asNumber(row.c26) * 27 +
           asNumber(row.c28) * 29 +
           asNumber(row.c30) * 31 +
-          asNumber(row.c32) * 33;
+          asNumber(row.c32) * 35;
         const calibreCount =
           asNumber(row.cPre) +
           asNumber(row.c22) +
@@ -1137,9 +1148,29 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             tr.appendChild(td);
           });
 
+          row.total = sumCalibres(row);
+          const totalTd = document.createElement("td");
+          const totalInput = document.createElement("input");
+          totalInput.type = "number";
+          totalInput.className = "total-readonly";
+          totalInput.readOnly = true;
+          totalInput.tabIndex = -1;
+          totalInput.value = String(row.total);
+          totalTd.appendChild(totalInput);
+          tr.appendChild(totalTd);
+
           numberFields.forEach((field) => {
             const td = document.createElement("td");
-            td.appendChild(createNumberInput(row, index, field));
+            const input = createNumberInput(row, index, field);
+            if (CALIBRE_KEYS.includes(field)) {
+              input.addEventListener("input", () => {
+                const newTotal = sumCalibres(rows[index]);
+                rows[index].total = newTotal;
+                totalInput.value = String(newTotal);
+                scheduleUpdate(index, "total", newTotal);
+              });
+            }
+            td.appendChild(input);
             tr.appendChild(td);
           });
 
@@ -1203,7 +1234,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       function exportExcel() {
         const headers = [
           "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
-          "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+32",
+          "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+34",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color",
           "Zumo (desecho)", "Segunda (comercial)",
           "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"

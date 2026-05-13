@@ -269,6 +269,18 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
       }
 
+      .input[readonly] {
+        background: var(--header-bg);
+        color: var(--ink);
+        font-weight: 700;
+        cursor: default;
+      }
+
+      .input[readonly]:focus {
+        border-color: var(--border-strong);
+        box-shadow: none;
+      }
+
       .input[type="number"] { text-align: right; }
 
       textarea.input {
@@ -765,7 +777,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { id: "c26", label: "26-28" },
         { id: "c28", label: "28-30" },
         { id: "c30", label: "30-32" },
-        { id: "c32", label: "+32" }
+        { id: "c32", label: "+34" }
       ];
 
       const defectos = [
@@ -784,11 +796,15 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       ];
 
       function blankMuestra() {
-        const base = { total: 100, observaciones: "", fotosDefectos: [] };
+        const base = { total: 0, observaciones: "", fotosDefectos: [] };
         for (const c of calibres) base[c.id] = 0;
         for (const d of defectos) base[d.id] = 0;
         for (const k of clasificacion) base[k.id] = 0;
         return base;
+      }
+
+      function sumCalibres(m) {
+        return calibres.reduce((acc, c) => acc + asNumber(m[c.id]), 0);
       }
 
       const MAX_DIM = 1600;
@@ -1034,18 +1050,28 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const body = document.createElement("div");
         body.className = "muestra-body";
 
+        muestra.total = sumCalibres(muestra);
+
         const top = document.createElement("div");
         top.className = "muestra-row top";
-        top.appendChild(createNumberField("Total frutos", muestra.total, (v) => {
-          muestra.total = v;
-          updateStats(stats, muestra);
-          updateSummary();
-        }));
+        const totalWrap = document.createElement("div");
+        totalWrap.className = "field";
+        const totalLbl = document.createElement("label");
+        totalLbl.textContent = "Total frutos (suma calibres)";
+        const totalInput = document.createElement("input");
+        totalInput.type = "number";
+        totalInput.className = "input";
+        totalInput.readOnly = true;
+        totalInput.tabIndex = -1;
+        totalInput.value = String(muestra.total);
+        totalWrap.appendChild(totalLbl);
+        totalWrap.appendChild(totalInput);
+        top.appendChild(totalWrap);
         body.appendChild(top);
 
         const labelCal = document.createElement("div");
         labelCal.className = "section-label";
-        labelCal.textContent = "Calibres (P/C = precalibre < 22 mm)";
+        labelCal.textContent = "Calibres (P/C = precalibre < 22 mm) — el total se calcula sumándolos";
         body.appendChild(labelCal);
 
         const calRow = document.createElement("div");
@@ -1053,6 +1079,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         for (const c of calibres) {
           calRow.appendChild(createNumberField(c.label, muestra[c.id], (v) => {
             muestra[c.id] = v;
+            muestra.total = sumCalibres(muestra);
+            totalInput.value = String(muestra.total);
             updateStats(stats, muestra);
             updateSummary();
           }));
