@@ -9,8 +9,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
-    <title>Fruitstone 2026 — EMBARQUES</title>
+    <link rel="icon" type="image/png" href={withBase("/img/logo-la-torre-stone-fruit.png")} />
+    <title>Fruitstone 2026 — La Torre Stone Fruits</title>
     <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script is:inline define:vars={{ SUPA_URL, SUPA_KEY }}>
       window._supaUrl = SUPA_URL;
@@ -81,24 +81,31 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .brand {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         padding-right: 14px;
         border-right: 1px solid var(--border);
       }
 
       .brand img {
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
+        height: 40px;
+        width: auto;
+        max-width: 110px;
         object-fit: contain;
+        display: block;
+      }
+
+      .brand-meta {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.05;
       }
 
       .brand-title {
         font-family: Georgia, "Times New Roman", serif;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
         letter-spacing: -0.02em;
-        color: var(--accent);
+        color: var(--ink);
         line-height: 1;
       }
 
@@ -108,7 +115,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         color: var(--muted);
         text-transform: uppercase;
         font-weight: 700;
-        margin-top: 2px;
+        margin-top: 3px;
       }
 
       .toolbar-search {
@@ -605,8 +612,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           padding: 8px 10px;
           gap: 8px;
         }
-        .brand { padding-right: 10px; }
-        .brand-title { font-size: 15px; }
+        .brand { padding-right: 10px; gap: 8px; }
+        .brand img { height: 32px; max-width: 90px; }
+        .brand-title { font-size: 14px; }
+        .brand-sub { font-size: 9.5px; letter-spacing: 0.14em; }
         .toolbar-search { max-width: 100%; }
         .legend { font-size: 11px; padding: 8px 12px; }
       }
@@ -616,8 +625,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
     <div class="app">
       <header class="toolbar">
         <div class="brand">
-          <img src={withBase("/logoasli.png")} alt="ASLI" width="28" height="28" />
-          <div>
+          <img src={withBase("/img/logo-la-torre-stone-fruit.png")} alt="La Torre Stone Fruits" />
+          <div class="brand-meta">
             <div class="brand-title">Fruitstone 2026</div>
             <div class="brand-sub">Muestras · cereza</div>
           </div>
