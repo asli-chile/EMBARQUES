@@ -400,7 +400,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       .muestra-row.clasificacion {
-        grid-template-columns: repeat(2, minmax(0, 260px));
+        grid-template-columns: repeat(3, minmax(0, 220px));
       }
 
       .section-label {
@@ -804,8 +804,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return SEGUNDA_KEYS.reduce((acc, k) => acc + asNumber(m[k]), 0);
       }
 
+      function sumPrimera(m) {
+        return Math.max(0, asNumber(m.total) - sumZumo(m) - sumSegunda(m));
+      }
+
       function blankMuestra() {
-        const base = { total: 0, zumo: 0, segunda: 0, observaciones: "", fotosDefectos: [] };
+        const base = { total: 0, primera: 0, segunda: 0, zumo: 0, observaciones: "", fotosDefectos: [] };
         for (const c of calibres) base[c.id] = 0;
         for (const d of defectos) base[d.id] = 0;
         return base;
@@ -1060,6 +1064,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         muestra.total = sumCalibres(muestra);
 
+        let primeraInput, segundaInput, zumoInput;
+
+        const refreshClasificacion = () => {
+          muestra.zumo = sumZumo(muestra);
+          muestra.segunda = sumSegunda(muestra);
+          muestra.primera = sumPrimera(muestra);
+          if (primeraInput) primeraInput.value = String(muestra.primera);
+          if (segundaInput) segundaInput.value = String(muestra.segunda);
+          if (zumoInput) zumoInput.value = String(muestra.zumo);
+        };
+
         const top = document.createElement("div");
         top.className = "muestra-row top";
         const totalWrap = document.createElement("div");
@@ -1089,6 +1104,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             muestra[c.id] = v;
             muestra.total = sumCalibres(muestra);
             totalInput.value = String(muestra.total);
+            refreshClasificacion();
             updateStats(stats, muestra);
             updateSummary();
           }));
@@ -1100,17 +1116,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         labelDef.textContent = "Defectos";
         body.appendChild(labelDef);
 
-        let zumoInput, segundaInput;
-
         const defRow = document.createElement("div");
         defRow.className = "muestra-row defectos";
         for (const d of defectos) {
           defRow.appendChild(createNumberField(d.label, muestra[d.id], (v) => {
             muestra[d.id] = v;
-            muestra.zumo = sumZumo(muestra);
-            muestra.segunda = sumSegunda(muestra);
-            if (zumoInput) zumoInput.value = String(muestra.zumo);
-            if (segundaInput) segundaInput.value = String(muestra.segunda);
+            refreshClasificacion();
             updateStats(stats, muestra);
             updateSummary();
           }));
@@ -1119,42 +1130,43 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         const labelClas = document.createElement("div");
         labelClas.className = "section-label";
-        labelClas.textContent = "Clasificación (calculada desde defectos)";
+        labelClas.textContent = "Clasificación (Exportable = Primera + Segunda)";
         body.appendChild(labelClas);
 
-        muestra.zumo = sumZumo(muestra);
-        muestra.segunda = sumSegunda(muestra);
+        refreshClasificacion();
 
         const clasRow = document.createElement("div");
         clasRow.className = "muestra-row clasificacion";
 
-        const zumoWrap = document.createElement("div");
-        zumoWrap.className = "field";
-        const zumoLbl = document.createElement("label");
-        zumoLbl.textContent = "Zumo · Desecho";
-        zumoInput = document.createElement("input");
-        zumoInput.type = "number";
-        zumoInput.className = "input";
-        zumoInput.readOnly = true;
-        zumoInput.tabIndex = -1;
-        zumoInput.value = String(muestra.zumo);
-        zumoWrap.appendChild(zumoLbl);
-        zumoWrap.appendChild(zumoInput);
-        clasRow.appendChild(zumoWrap);
+        const buildClasField = (labelText) => {
+          const wrap = document.createElement("div");
+          wrap.className = "field";
+          const lbl = document.createElement("label");
+          lbl.textContent = labelText;
+          const input = document.createElement("input");
+          input.type = "number";
+          input.className = "input";
+          input.readOnly = true;
+          input.tabIndex = -1;
+          wrap.appendChild(lbl);
+          wrap.appendChild(input);
+          return { wrap, input };
+        };
 
-        const segundaWrap = document.createElement("div");
-        segundaWrap.className = "field";
-        const segundaLbl = document.createElement("label");
-        segundaLbl.textContent = "Segunda · Comercial";
-        segundaInput = document.createElement("input");
-        segundaInput.type = "number";
-        segundaInput.className = "input";
-        segundaInput.readOnly = true;
-        segundaInput.tabIndex = -1;
+        const primera = buildClasField("Primera · Premium");
+        primeraInput = primera.input;
+        primeraInput.value = String(muestra.primera);
+        clasRow.appendChild(primera.wrap);
+
+        const segunda = buildClasField("Segunda · Comercial");
+        segundaInput = segunda.input;
         segundaInput.value = String(muestra.segunda);
-        segundaWrap.appendChild(segundaLbl);
-        segundaWrap.appendChild(segundaInput);
-        clasRow.appendChild(segundaWrap);
+        clasRow.appendChild(segunda.wrap);
+
+        const zumo = buildClasField("Zumo · Desecho");
+        zumoInput = zumo.input;
+        zumoInput.value = String(muestra.zumo);
+        clasRow.appendChild(zumo.wrap);
 
         body.appendChild(clasRow);
 
@@ -1358,8 +1370,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           media_luna: asNumber(muestra.mediaLuna),
           sin_pedicelo: asNumber(muestra.sinPedicelo),
           negro: asNumber(muestra.negro),
-          zumo: sumZumo(muestra),
+          primera: sumPrimera(muestra),
           segunda: sumSegunda(muestra),
+          zumo: sumZumo(muestra),
           observaciones: String(muestra.observaciones ?? "").trim() || null,
           fotos_defectos: Array.isArray(muestra.fotosDefectos) ? muestra.fotosDefectos.slice() : []
         };

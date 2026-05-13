@@ -711,6 +711,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <col class="col-defecto" />
             <col class="col-clasif" />
             <col class="col-clasif" />
+            <col class="col-clasif" />
             <col class="col-calc" />
             <col class="col-calc" />
             <col class="col-calc" />
@@ -726,7 +727,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Total</th>
               <th colspan="7">Calibres (mm)</th>
               <th colspan="10">Defectos</th>
-              <th colspan="2">Clasificación (calc.)</th>
+              <th colspan="3">Clasificación (calc.)</th>
               <th colspan="3">Cálculos</th>
               <th>Estado</th>
               <th>Observaciones</th>
@@ -758,8 +759,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>M. luna</th>
               <th>S. pedic.</th>
               <th>Negro</th>
-              <th>Zumo</th>
+              <th>Primera</th>
               <th>Segunda</th>
+              <th>Zumo</th>
               <th>% Def.</th>
               <th>% Exp.</th>
               <th>Prom.</th>
@@ -781,9 +783,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       <footer class="legend">
         <span><strong>P/C</strong> (precalibre) = fruta menor a 22 mm</span>
         <span class="sep"></span>
-        <span><strong>Exportable</strong> = calibres 26+</span>
+        <span><strong>Exportable</strong> = Primera + Segunda = Total − Zumo</span>
         <span class="sep"></span>
-        <span><strong>Comercial</strong> = calibres 24+</span>
+        <span><strong>Zumo</strong> = pudrición + falta color + partida + negro</span>
+        <span class="sep"></span>
+        <span><strong>Segunda</strong> = blanda + pitting + doble</span>
         <span class="sep"></span>
         <span><strong>OK</strong> ≤ 5% defectos · <strong>Alerta</strong> 5–10% · <strong>Crítico</strong> &gt; 10% o con pudrición</span>
       </footer>
@@ -844,6 +848,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return SEGUNDA_KEYS.reduce((acc, k) => acc + asNumber(row[k]), 0);
       }
 
+      function sumPrimera(row) {
+        return Math.max(0, asNumber(row.total) - sumZumo(row) - sumSegunda(row));
+      }
+
       const fieldToColumn = {
         fecha: "fecha",
         lote: "lote",
@@ -869,8 +877,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         mediaLuna: "media_luna",
         sinPedicelo: "sin_pedicelo",
         negro: "negro",
-        zumo: "zumo",
+        primera: "primera",
         segunda: "segunda",
+        zumo: "zumo",
         observaciones: "observaciones"
       };
 
@@ -908,8 +917,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           mediaLuna: r.media_luna ?? 0,
           sinPedicelo: r.sin_pedicelo ?? 0,
           negro: r.negro ?? 0,
-          zumo: r.zumo ?? 0,
+          primera: r.primera ?? 0,
           segunda: r.segunda ?? 0,
+          zumo: r.zumo ?? 0,
           observaciones: r.observaciones ?? "",
           etiquetaPallet: r.etiqueta_pallet ?? "",
           fotosDefectos: Array.isArray(r.fotos_defectos) ? r.fotos_defectos : []
@@ -987,7 +997,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       function calculate(row) {
         const total = asNumber(row.total);
         const defectos = DEFECTO_KEYS.reduce((acc, k) => acc + asNumber(row[k]), 0);
-        const exportable = asNumber(row.c26) + asNumber(row.c28) + asNumber(row.c30) + asNumber(row.c32);
+        const zumo = sumZumo(row);
+        const exportable = Math.max(0, total - zumo);
         const calibreTotal =
           asNumber(row.cPre) * 21 +
           asNumber(row.c22) * 23 +
@@ -1177,8 +1188,25 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
           row.zumo = sumZumo(row);
           row.segunda = sumSegunda(row);
+          row.primera = sumPrimera(row);
 
-          let zumoInput, segundaInput;
+          let primeraInput, segundaInput, zumoInput;
+
+          const refreshClasif = () => {
+            const r = rows[index];
+            const newZumo = sumZumo(r);
+            const newSegunda = sumSegunda(r);
+            const newPrimera = sumPrimera(r);
+            r.zumo = newZumo;
+            r.segunda = newSegunda;
+            r.primera = newPrimera;
+            if (primeraInput) primeraInput.value = String(newPrimera);
+            if (segundaInput) segundaInput.value = String(newSegunda);
+            if (zumoInput) zumoInput.value = String(newZumo);
+            scheduleUpdate(index, "primera", newPrimera);
+            scheduleUpdate(index, "segunda", newSegunda);
+            scheduleUpdate(index, "zumo", newZumo);
+          };
 
           numberFields.forEach((field) => {
             const td = document.createElement("td");
@@ -1189,43 +1217,39 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 rows[index].total = newTotal;
                 totalInput.value = String(newTotal);
                 scheduleUpdate(index, "total", newTotal);
+                refreshClasif();
               });
             }
             if (DEFECTO_KEYS.includes(field)) {
-              input.addEventListener("input", () => {
-                const newZumo = sumZumo(rows[index]);
-                const newSegunda = sumSegunda(rows[index]);
-                rows[index].zumo = newZumo;
-                rows[index].segunda = newSegunda;
-                if (zumoInput) zumoInput.value = String(newZumo);
-                if (segundaInput) segundaInput.value = String(newSegunda);
-                scheduleUpdate(index, "zumo", newZumo);
-                scheduleUpdate(index, "segunda", newSegunda);
-              });
+              input.addEventListener("input", refreshClasif);
             }
             td.appendChild(input);
             tr.appendChild(td);
           });
 
-          const zumoTd = document.createElement("td");
-          zumoInput = document.createElement("input");
-          zumoInput.type = "number";
-          zumoInput.className = "total-readonly";
-          zumoInput.readOnly = true;
-          zumoInput.tabIndex = -1;
-          zumoInput.value = String(row.zumo);
-          zumoTd.appendChild(zumoInput);
-          tr.appendChild(zumoTd);
+          const buildClasifCell = (initialValue) => {
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+            input.type = "number";
+            input.className = "total-readonly";
+            input.readOnly = true;
+            input.tabIndex = -1;
+            input.value = String(initialValue);
+            td.appendChild(input);
+            return { td, input };
+          };
 
-          const segundaTd = document.createElement("td");
-          segundaInput = document.createElement("input");
-          segundaInput.type = "number";
-          segundaInput.className = "total-readonly";
-          segundaInput.readOnly = true;
-          segundaInput.tabIndex = -1;
-          segundaInput.value = String(row.segunda);
-          segundaTd.appendChild(segundaInput);
-          tr.appendChild(segundaTd);
+          const primeraCell = buildClasifCell(row.primera);
+          primeraInput = primeraCell.input;
+          tr.appendChild(primeraCell.td);
+
+          const segundaCell = buildClasifCell(row.segunda);
+          segundaInput = segundaCell.input;
+          tr.appendChild(segundaCell.td);
+
+          const zumoCell = buildClasifCell(row.zumo);
+          zumoInput = zumoCell.input;
+          tr.appendChild(zumoCell.td);
 
           tr.appendChild(createCalcCell(formatPct(calc.defectPct)));
           tr.appendChild(createCalcCell(formatPct(calc.exportablePct)));
@@ -1289,7 +1313,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+34",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color", "Media luna", "Sin pedicelo", "Negro",
-          "Zumo (desecho)", "Segunda (comercial)",
+          "Primera (premium)", "Segunda (comercial)", "Zumo (desecho)",
           "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"
         ];
 
@@ -1299,7 +1323,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           asNumber(row.mediaLuna), asNumber(row.sinPedicelo), asNumber(row.negro),
-          asNumber(row.zumo), asNumber(row.segunda),
+          asNumber(row.primera), asNumber(row.segunda), asNumber(row.zumo),
           formatPct(calc.defectPct), formatPct(calc.exportablePct),
           calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }),
           calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK",
