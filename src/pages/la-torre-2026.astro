@@ -347,7 +347,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .col-lote { width: 76px; }
       .col-productor { width: 150px; }
       .col-variedad { width: 110px; }
-      .col-embalaje { width: 84px; }
+      .col-cajas { width: 72px; }
+      .col-kilos-bruto { width: 96px; }
       .col-caja { width: 64px; }
       .col-muestra { width: 64px; }
       .col-total { width: 80px; }
@@ -677,7 +678,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <col class="col-lote" />
             <col class="col-productor" />
             <col class="col-variedad" />
-            <col class="col-embalaje" />
+            <col class="col-cajas" />
+            <col class="col-kilos-bruto" />
             <col class="col-caja" />
             <col class="col-muestra" />
             <col class="col-total" />
@@ -706,7 +708,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           </colgroup>
           <thead>
             <tr class="group-row">
-              <th colspan="7">Identificación</th>
+              <th colspan="8">Identificación</th>
               <th>Total</th>
               <th colspan="7">Calibres (mm)</th>
               <th colspan="7">Defectos</th>
@@ -721,7 +723,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Lote</th>
               <th>Productor</th>
               <th>Variedad</th>
-              <th>Embalaje</th>
+              <th>Cajas</th>
+              <th>Kilos bruto</th>
               <th>Caja</th>
               <th>N°</th>
               <th>Frutos</th>
@@ -784,7 +787,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         ? window.supabase.createClient(window._supaUrl, window._supaKey)
         : null;
 
-      const textFields = ["fecha", "lote", "productor", "variedad", "embalaje", "caja"];
+      const idColumns = [
+        { key: "fecha", kind: "text", type: "date" },
+        { key: "lote", kind: "text", type: "text" },
+        { key: "productor", kind: "text", type: "text" },
+        { key: "variedad", kind: "text", type: "text" },
+        { key: "cantidadCajas", kind: "number", step: "1" },
+        { key: "kilosBrutoLote", kind: "number", step: "0.01" },
+        { key: "caja", kind: "text", type: "text" }
+      ];
+
       const numberFields = [
         "muestra",
         "total",
@@ -809,7 +821,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         lote: "lote",
         productor: "productor",
         variedad: "variedad",
-        embalaje: "embalaje",
+        cantidadCajas: "cantidad_cajas",
+        kilosBrutoLote: "kilos_bruto_lote",
         caja: "caja",
         muestra: "muestra",
         total: "total",
@@ -844,7 +857,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           lote: r.lote ?? "",
           productor: r.productor ?? "",
           variedad: r.variedad ?? "",
-          embalaje: r.embalaje ?? "",
+          cantidadCajas: r.cantidad_cajas ?? 0,
+          kilosBrutoLote: r.kilos_bruto_lote ?? 0,
           caja: r.caja ?? "",
           muestra: r.muestra ?? 0,
           total: r.total ?? 0,
@@ -977,7 +991,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return rows
           .map((row, index) => ({ row, index, calc: calculate(row) }))
           .filter(({ row, calc }) => {
-            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.embalaje} ${row.caja} ${row.observaciones}`.toLowerCase();
+            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.caja} ${row.observaciones}`.toLowerCase();
             const matchSearch = !search || haystack.includes(search);
             const matchStatus = status === "todos" || calc.estado === status;
             return matchSearch && matchStatus;
@@ -996,11 +1010,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return input;
       }
 
-      function createNumberInput(row, index, field) {
+      function createNumberInput(row, index, field, step = "1") {
         const input = document.createElement("input");
         input.type = "number";
         input.min = "0";
-        input.step = "1";
+        input.step = step;
         input.value = asNumber(row[field]);
         input.addEventListener("input", () => {
           const v = asNumber(input.value);
@@ -1113,9 +1127,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         items.forEach(({ row, index, calc }) => {
           const tr = document.createElement("tr");
 
-          textFields.forEach((field) => {
+          idColumns.forEach((col) => {
             const td = document.createElement("td");
-            td.appendChild(createTextInput(row, index, field, field === "fecha" ? "date" : "text"));
+            if (col.kind === "number") {
+              td.appendChild(createNumberInput(row, index, col.key, col.step));
+            } else {
+              td.appendChild(createTextInput(row, index, col.key, col.type));
+            }
             tr.appendChild(td);
           });
 
@@ -1184,14 +1202,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       function exportExcel() {
         const headers = [
-          "Fecha", "Lote", "Productor", "Variedad", "Embalaje", "Caja", "Muestra N°",
+          "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto", "Caja", "Muestra N°",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+32",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Color Bajo",
           "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"
         ];
 
         const data = visibleRows().map(({ row, calc }) => [
-          row.fecha, row.lote, row.productor, row.variedad, row.embalaje, row.caja, row.muestra,
+          row.fecha, row.lote, row.productor, row.variedad,
+          asNumber(row.cantidadCajas), asNumber(row.kilosBrutoLote),
+          row.caja, row.muestra,
           row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           formatPct(calc.defectPct), formatPct(calc.exportablePct),
@@ -1223,7 +1243,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `fruitstone-2026-muestras-${new Date().toISOString().slice(0, 10)}.xls`;
+        link.download = `la-torre-2026-muestras-${new Date().toISOString().slice(0, 10)}.xls`;
         document.body.appendChild(link);
         link.click();
         link.remove();

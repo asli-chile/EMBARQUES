@@ -282,7 +282,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       .lote-grid {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 12px;
       }
 
@@ -726,13 +726,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 </datalist>
               </div>
               <div class="field">
-                <label for="lote-embalaje">Embalaje</label>
-                <input class="input" id="lote-embalaje" list="embalajes" type="text" placeholder="5kg" autocomplete="off" />
-                <datalist id="embalajes">
-                  <option value="2.5kg"></option>
-                  <option value="5kg"></option>
-                  <option value="10kg"></option>
-                </datalist>
+                <label for="lote-cajas">Cantidad de cajas</label>
+                <input class="input" id="lote-cajas" type="number" min="0" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="lote-kilos-bruto">Kilos bruto lote</label>
+                <input class="input" id="lote-kilos-bruto" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" autocomplete="off" />
               </div>
             </div>
 
@@ -928,7 +927,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         lote: "",
         productor: "",
         variedad: "",
-        embalaje: "",
+        cantidadCajas: null,
+        kilosBrutoLote: null,
         etiquetaPallet: ""
       };
 
@@ -937,14 +937,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         try {
           const { data } = await supa
             .from(TABLE)
-            .select("productor,variedad,embalaje")
+            .select("productor,variedad")
             .order("created_at", { ascending: false })
             .limit(1);
           if (data && data.length) {
             const last = data[0];
             if (!lote.productor) loteProductor.value = lote.productor = last.productor ?? "";
             if (!lote.variedad) loteVariedad.value = lote.variedad = last.variedad ?? "";
-            if (!lote.embalaje) loteEmbalaje.value = lote.embalaje = last.embalaje ?? "";
           }
         } catch {}
       }
@@ -953,15 +952,24 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const loteLote = document.getElementById("lote-lote");
       const loteProductor = document.getElementById("lote-productor");
       const loteVariedad = document.getElementById("lote-variedad");
-      const loteEmbalaje = document.getElementById("lote-embalaje");
+      const loteCajas = document.getElementById("lote-cajas");
+      const loteKilosBruto = document.getElementById("lote-kilos-bruto");
 
       loteFecha.value = lote.fecha;
+
+      function parseOptionalNumber(value) {
+        const trimmed = String(value ?? "").trim();
+        if (!trimmed) return null;
+        const n = Number(trimmed);
+        return Number.isFinite(n) ? n : null;
+      }
 
       loteFecha.addEventListener("input", () => { lote.fecha = loteFecha.value; });
       loteLote.addEventListener("input", () => { lote.lote = loteLote.value; });
       loteProductor.addEventListener("input", () => { lote.productor = loteProductor.value; });
       loteVariedad.addEventListener("input", () => { lote.variedad = loteVariedad.value; });
-      loteEmbalaje.addEventListener("input", () => { lote.embalaje = loteEmbalaje.value; });
+      loteCajas.addEventListener("input", () => { lote.cantidadCajas = parseOptionalNumber(loteCajas.value); });
+      loteKilosBruto.addEventListener("input", () => { lote.kilosBrutoLote = parseOptionalNumber(loteKilosBruto.value); });
 
       const palletArea = document.getElementById("pallet-area");
       const palletInput = document.getElementById("pallet-input");
@@ -1342,7 +1350,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           lote: lote.lote.trim(),
           productor: lote.productor.trim() || null,
           variedad: lote.variedad.trim() || null,
-          embalaje: lote.embalaje.trim() || null,
+          cantidad_cajas: lote.cantidadCajas ?? null,
+          kilos_bruto_lote: lote.kilosBrutoLote ?? null,
           etiqueta_pallet: lote.etiquetaPallet || null,
           caja: String(m.caja ?? "").trim() || null,
           muestra: asNumber(m.muestra),
