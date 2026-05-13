@@ -352,6 +352,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .col-total { width: 80px; }
       .col-calibre { width: 64px; }
       .col-defecto { width: 70px; }
+      .col-clasif { width: 78px; }
       .col-calc { width: 84px; }
       .col-estado { width: 88px; }
       .col-obs { width: 220px; }
@@ -693,6 +694,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <col class="col-defecto" />
             <col class="col-defecto" />
             <col class="col-defecto" />
+            <col class="col-clasif" />
+            <col class="col-clasif" />
             <col class="col-calc" />
             <col class="col-calc" />
             <col class="col-calc" />
@@ -708,6 +711,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Total</th>
               <th colspan="7">Calibres (mm)</th>
               <th colspan="7">Defectos</th>
+              <th colspan="2">Clasificación</th>
               <th colspan="3">Cálculos</th>
               <th>Estado</th>
               <th>Observaciones</th>
@@ -735,7 +739,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Deshid.</th>
               <th>Partida</th>
               <th>Pudric.</th>
-              <th>C. bajo</th>
+              <th>F. color</th>
+              <th>Zumo</th>
+              <th>Segunda</th>
               <th>% Def.</th>
               <th>% Exp.</th>
               <th>Prom.</th>
@@ -805,7 +811,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         "deshidratada",
         "partida",
         "pudricion",
-        "colorBajo"
+        "colorBajo",
+        "zumo",
+        "segunda"
       ];
 
       const fieldToColumn = {
@@ -830,6 +838,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         partida: "partida",
         pudricion: "pudricion",
         colorBajo: "color_bajo",
+        zumo: "zumo",
+        segunda: "segunda",
         observaciones: "observaciones"
       };
 
@@ -864,6 +874,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           partida: r.partida ?? 0,
           pudricion: r.pudricion ?? 0,
           colorBajo: r.color_bajo ?? 0,
+          zumo: r.zumo ?? 0,
+          segunda: r.segunda ?? 0,
           observaciones: r.observaciones ?? "",
           etiquetaPallet: r.etiqueta_pallet ?? "",
           fotosDefectos: Array.isArray(r.fotos_defectos) ? r.fotos_defectos : []
@@ -1192,7 +1204,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const headers = [
           "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+32",
-          "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Color Bajo",
+          "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color",
+          "Zumo (desecho)", "Segunda (comercial)",
           "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"
         ];
 
@@ -1201,6 +1214,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           asNumber(row.cantidadCajas), asNumber(row.kilosBrutoLote),
           row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
+          asNumber(row.zumo), asNumber(row.segunda),
           formatPct(calc.defectPct), formatPct(calc.exportablePct),
           calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }),
           calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK",
