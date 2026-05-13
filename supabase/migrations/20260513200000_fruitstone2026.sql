@@ -22,8 +22,6 @@ CREATE TABLE IF NOT EXISTS public.fruitstone2026_muestras (
   variedad        TEXT,
   cantidad_cajas  INTEGER,
   kilos_bruto_lote NUMERIC(10,2),
-  caja            TEXT,
-  muestra         INTEGER     NOT NULL DEFAULT 1,
   total           INTEGER     NOT NULL DEFAULT 0,
   c_pre           INTEGER     NOT NULL DEFAULT 0,
   c22             INTEGER     NOT NULL DEFAULT 0,

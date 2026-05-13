@@ -376,7 +376,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       .muestra-row.top {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 240px);
       }
 
       .muestra-row.calibres {
@@ -405,45 +405,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         height: 12px;
         background: var(--accent);
         border-radius: 2px;
-      }
-
-      .remove-muestra {
-        height: 28px;
-        padding: 0 10px;
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--muted);
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
-      }
-
-      .remove-muestra:hover {
-        background: #fee2e2;
-        color: var(--danger);
-        border-color: #fecaca;
-      }
-
-      .add-muestra {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        height: 44px;
-        border: 1.5px dashed var(--border-strong);
-        border-radius: 10px;
-        background: transparent;
-        color: var(--muted);
-        font-weight: 700;
-        font-size: 13px;
-        transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
-      }
-
-      .add-muestra:hover {
-        border-color: var(--accent);
-        color: var(--accent);
-        background: var(--accent-soft);
       }
 
       /* ── Footer sticky con acciones ─────────────────────────────── */
@@ -648,7 +609,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         .lote-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .muestra-row.calibres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .muestra-row.defectos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .muestra-row.top { grid-template-columns: 1fr 1fr; }
+        .muestra-row.top { grid-template-columns: minmax(0, 220px); }
       }
 
       @media (max-width: 600px) {
@@ -687,7 +648,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       <main class="form-wrap">
         <div class="page-title">
           <h1>Nuevo lote</h1>
-          <small id="muestras-counter">0 muestras</small>
+          <small id="muestras-counter"></small>
         </div>
 
         <section class="card" aria-labelledby="lote-title">
@@ -757,22 +718,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           <div class="card-head">
             <div class="card-title">
               <span class="num">2</span>
-              <span id="muestras-title">Muestras</span>
+              <span id="muestras-title">Muestra</span>
             </div>
           </div>
           <div class="card-body">
             <div class="muestras-list" id="muestras-list"></div>
-            <button class="add-muestra" type="button" id="add-muestra" style="margin-top: 12px;">
-              <span>+</span> Agregar otra muestra
-            </button>
           </div>
         </section>
       </main>
 
       <footer class="footer-actions">
         <div class="summary">
-          <span><strong id="sum-muestras">0</strong> muestras</span>
-          <span class="sep"></span>
           <span><strong id="sum-frutos">0</strong> frutos</span>
           <span class="sep"></span>
           <span><strong id="sum-defectos">0%</strong> defectos</span>
@@ -817,8 +773,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { id: "colorBajo", label: "Color bajo" }
       ];
 
-      function blankMuestra(num) {
-        const base = { caja: "", muestra: num, total: 100, observaciones: "", fotosDefectos: [] };
+      function blankMuestra() {
+        const base = { total: 100, observaciones: "", fotosDefectos: [] };
         for (const c of calibres) base[c.id] = 0;
         for (const d of defectos) base[d.id] = 0;
         return base;
@@ -921,7 +877,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return { total, sumDef, sumExp, sumCal, defectPct, exportablePct, estado };
       }
 
-      const muestras = [blankMuestra(1)];
+      const muestra = blankMuestra();
       const lote = {
         fecha: new Date().toISOString().slice(0, 10),
         lote: "",
@@ -1023,7 +979,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const muestrasList = document.getElementById("muestras-list");
       const counterEl = document.getElementById("muestras-counter");
       const feedbackEl = document.getElementById("feedback");
-      const sumMuestrasEl = document.getElementById("sum-muestras");
       const sumFrutosEl = document.getElementById("sum-frutos");
       const sumDefectosEl = document.getElementById("sum-defectos");
       const sumExportableEl = document.getElementById("sum-exportable");
@@ -1045,23 +1000,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return wrap;
       }
 
-      function createTextField(label, value, placeholder, onChange) {
-        const wrap = document.createElement("div");
-        wrap.className = "field";
-        const lbl = document.createElement("label");
-        lbl.textContent = label;
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "input";
-        input.value = value ?? "";
-        if (placeholder) input.placeholder = placeholder;
-        input.addEventListener("input", () => onChange(input.value));
-        wrap.appendChild(lbl);
-        wrap.appendChild(input);
-        return wrap;
-      }
-
-      function renderMuestraCard(muestra, index) {
+      function renderMuestra(muestra) {
         const card = document.createElement("article");
         card.className = "muestra-card";
 
@@ -1070,10 +1009,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         const tag = document.createElement("span");
         tag.className = "muestra-tag";
-        const num = document.createElement("span");
-        num.className = "num";
-        num.textContent = String(muestra.muestra ?? index + 1);
-        tag.appendChild(num);
         const labelTxt = document.createElement("span");
         labelTxt.textContent = "Muestra";
         tag.appendChild(labelTxt);
@@ -1082,31 +1017,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         stats.className = "muestra-stats";
         stats.dataset.role = "stats";
 
-        const removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "remove-muestra";
-        removeBtn.textContent = "Eliminar";
-        removeBtn.addEventListener("click", () => {
-          muestras.splice(index, 1);
-          if (!muestras.length) muestras.push(blankMuestra(1));
-          renumber();
-          render();
-        });
-
         head.appendChild(tag);
         head.appendChild(stats);
-        head.appendChild(removeBtn);
 
         const body = document.createElement("div");
         body.className = "muestra-body";
 
         const top = document.createElement("div");
         top.className = "muestra-row top";
-        top.appendChild(createTextField("Caja", muestra.caja, "Ej. 12", (v) => { muestra.caja = v; }));
-        top.appendChild(createNumberField("N° Muestra", muestra.muestra, (v) => {
-          muestra.muestra = v;
-          num.textContent = String(v);
-        }));
         top.appendChild(createNumberField("Total frutos", muestra.total, (v) => {
           muestra.total = v;
           updateStats(stats, muestra);
@@ -1229,7 +1147,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           for (const file of files) {
             try {
               const blob = await compressImage(file);
-              const prefix = `${lote.lote}-m${muestra.muestra ?? "0"}`;
+              const prefix = lote.lote;
               const url = await uploadImage(blob, "defectos", prefix);
               muestra.fotosDefectos.push(url);
             } catch (e) {
@@ -1279,48 +1197,23 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       function render() {
         muestrasList.replaceChildren();
-        muestras.forEach((m, i) => {
-          muestrasList.appendChild(renderMuestraCard(m, i));
-        });
+        muestrasList.appendChild(renderMuestra(muestra));
         updateSummary();
       }
 
-      function renumber() {
-        muestras.forEach((m, i) => {
-          m.muestra = i + 1;
-        });
-      }
-
       function updateSummary() {
-        let totals = { samples: muestras.length, fruits: 0, defects: 0, exportable: 0 };
-        for (const m of muestras) {
-          const calc = calcular(m);
-          totals.fruits += calc.total;
-          totals.defects += calc.sumDef;
-          totals.exportable += calc.sumExp;
-        }
-        counterEl.textContent = `${totals.samples} ${totals.samples === 1 ? "muestra" : "muestras"}`;
-        sumMuestrasEl.textContent = String(totals.samples);
-        sumFrutosEl.textContent = totals.fruits.toLocaleString("es-CL");
-        sumDefectosEl.textContent = formatPct(pct(totals.defects, totals.fruits));
-        sumExportableEl.textContent = formatPct(pct(totals.exportable, totals.fruits));
+        const calc = calcular(muestra);
+        counterEl.textContent = "";
+        sumFrutosEl.textContent = calc.total.toLocaleString("es-CL");
+        sumDefectosEl.textContent = formatPct(calc.defectPct);
+        sumExportableEl.textContent = formatPct(calc.exportablePct);
       }
-
-      document.getElementById("add-muestra").addEventListener("click", () => {
-        muestras.push(blankMuestra(muestras.length + 1));
-        render();
-      });
 
       function validar() {
         if (!lote.lote.trim()) return "Falta indicar el código del lote.";
         if (!lote.productor.trim()) return "Falta indicar el productor.";
         if (!lote.variedad.trim()) return "Falta indicar la variedad.";
-        if (!muestras.length) return "Agrega al menos una muestra.";
-        for (let i = 0; i < muestras.length; i++) {
-          if (asNumber(muestras[i].total) <= 0) {
-            return `La muestra N° ${muestras[i].muestra || i + 1} debe tener total de frutos.`;
-          }
-        }
+        if (asNumber(muestra.total) <= 0) return "La muestra debe tener total de frutos.";
         return "";
       }
 
@@ -1345,7 +1238,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         guardando = true;
         feedbackEl.textContent = "Guardando...";
 
-        const rows = muestras.map((m) => ({
+        const row = {
           fecha: lote.fecha || null,
           lote: lote.lote.trim(),
           productor: lote.productor.trim() || null,
@@ -1353,28 +1246,26 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           cantidad_cajas: lote.cantidadCajas ?? null,
           kilos_bruto_lote: lote.kilosBrutoLote ?? null,
           etiqueta_pallet: lote.etiquetaPallet || null,
-          caja: String(m.caja ?? "").trim() || null,
-          muestra: asNumber(m.muestra),
-          total: asNumber(m.total),
-          c_pre: asNumber(m.cPre),
-          c22: asNumber(m.c22),
-          c24: asNumber(m.c24),
-          c26: asNumber(m.c26),
-          c28: asNumber(m.c28),
-          c30: asNumber(m.c30),
-          c32: asNumber(m.c32),
-          blanda: asNumber(m.blanda),
-          pitting: asNumber(m.pitting),
-          doble: asNumber(m.doble),
-          deshidratada: asNumber(m.deshidratada),
-          partida: asNumber(m.partida),
-          pudricion: asNumber(m.pudricion),
-          color_bajo: asNumber(m.colorBajo),
-          observaciones: String(m.observaciones ?? "").trim() || null,
-          fotos_defectos: Array.isArray(m.fotosDefectos) ? m.fotosDefectos.slice() : []
-        }));
+          total: asNumber(muestra.total),
+          c_pre: asNumber(muestra.cPre),
+          c22: asNumber(muestra.c22),
+          c24: asNumber(muestra.c24),
+          c26: asNumber(muestra.c26),
+          c28: asNumber(muestra.c28),
+          c30: asNumber(muestra.c30),
+          c32: asNumber(muestra.c32),
+          blanda: asNumber(muestra.blanda),
+          pitting: asNumber(muestra.pitting),
+          doble: asNumber(muestra.doble),
+          deshidratada: asNumber(muestra.deshidratada),
+          partida: asNumber(muestra.partida),
+          pudricion: asNumber(muestra.pudricion),
+          color_bajo: asNumber(muestra.colorBajo),
+          observaciones: String(muestra.observaciones ?? "").trim() || null,
+          fotos_defectos: Array.isArray(muestra.fotosDefectos) ? muestra.fotosDefectos.slice() : []
+        };
 
-        const { error } = await supa.from(TABLE).insert(rows);
+        const { error } = await supa.from(TABLE).insert(row);
         if (error) {
           guardando = false;
           feedbackEl.classList.remove("ok");

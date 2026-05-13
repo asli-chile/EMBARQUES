@@ -349,8 +349,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .col-variedad { width: 110px; }
       .col-cajas { width: 72px; }
       .col-kilos-bruto { width: 96px; }
-      .col-caja { width: 64px; }
-      .col-muestra { width: 64px; }
       .col-total { width: 80px; }
       .col-calibre { width: 64px; }
       .col-defecto { width: 70px; }
@@ -680,8 +678,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <col class="col-variedad" />
             <col class="col-cajas" />
             <col class="col-kilos-bruto" />
-            <col class="col-caja" />
-            <col class="col-muestra" />
             <col class="col-total" />
             <col class="col-calibre" />
             <col class="col-calibre" />
@@ -708,7 +704,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           </colgroup>
           <thead>
             <tr class="group-row">
-              <th colspan="8">Identificación</th>
+              <th colspan="6">Identificación</th>
               <th>Total</th>
               <th colspan="7">Calibres (mm)</th>
               <th colspan="7">Defectos</th>
@@ -725,8 +721,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Variedad</th>
               <th>Cajas</th>
               <th>Kilos bruto</th>
-              <th>Caja</th>
-              <th>N°</th>
               <th>Frutos</th>
               <th>P/C</th>
               <th>22-24</th>
@@ -793,12 +787,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { key: "productor", kind: "text", type: "text" },
         { key: "variedad", kind: "text", type: "text" },
         { key: "cantidadCajas", kind: "number", step: "1" },
-        { key: "kilosBrutoLote", kind: "number", step: "0.01" },
-        { key: "caja", kind: "text", type: "text" }
+        { key: "kilosBrutoLote", kind: "number", step: "0.01" }
       ];
 
       const numberFields = [
-        "muestra",
         "total",
         "cPre",
         "c22",
@@ -823,8 +815,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         variedad: "variedad",
         cantidadCajas: "cantidad_cajas",
         kilosBrutoLote: "kilos_bruto_lote",
-        caja: "caja",
-        muestra: "muestra",
         total: "total",
         cPre: "c_pre",
         c22: "c22",
@@ -859,8 +849,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           variedad: r.variedad ?? "",
           cantidadCajas: r.cantidad_cajas ?? 0,
           kilosBrutoLote: r.kilos_bruto_lote ?? 0,
-          caja: r.caja ?? "",
-          muestra: r.muestra ?? 0,
           total: r.total ?? 0,
           cPre: r.c_pre ?? 0,
           c22: r.c22 ?? 0,
@@ -991,7 +979,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return rows
           .map((row, index) => ({ row, index, calc: calculate(row) }))
           .filter(({ row, calc }) => {
-            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.caja} ${row.observaciones}`.toLowerCase();
+            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.observaciones}`.toLowerCase();
             const matchSearch = !search || haystack.includes(search);
             const matchStatus = status === "todos" || calc.estado === status;
             return matchSearch && matchStatus;
@@ -1102,7 +1090,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             thumb.appendChild(count);
           }
           thumb.addEventListener("click", () => {
-            openLightbox(fotos, 0, `Defectos · Lote ${row.lote || "—"} · Muestra ${row.muestra || ""}`);
+            openLightbox(fotos, 0, `Defectos · Lote ${row.lote || "—"}`);
           });
           td.appendChild(thumb);
         } else {
@@ -1202,7 +1190,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       function exportExcel() {
         const headers = [
-          "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto", "Caja", "Muestra N°",
+          "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+32",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Color Bajo",
           "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"
@@ -1211,7 +1199,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const data = visibleRows().map(({ row, calc }) => [
           row.fecha, row.lote, row.productor, row.variedad,
           asNumber(row.cantidadCajas), asNumber(row.kilosBrutoLote),
-          row.caja, row.muestra,
           row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           formatPct(calc.defectPct), formatPct(calc.exportablePct),
