@@ -476,6 +476,159 @@ const returnUrl = withBase("/fruitstone2026");
 
       .feedback.ok { color: var(--ok); }
 
+      /* ── Upload de imágenes ─────────────────────────────────────── */
+      .image-drop {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 110px;
+        border: 1.5px dashed var(--border-strong);
+        border-radius: 10px;
+        background: var(--header-bg);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        padding: 14px;
+        transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+      }
+
+      .image-drop:hover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .image-drop .icon-big {
+        font-size: 20px;
+        line-height: 1;
+        margin-bottom: 2px;
+      }
+
+      .image-drop .hint {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+
+      .image-drop input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .pallet-area {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .pallet-area.has-image {
+        grid-template-columns: 160px 1fr;
+      }
+
+      .image-preview {
+        position: relative;
+        width: 100%;
+        min-height: 110px;
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        overflow: hidden;
+        background: white;
+        display: none;
+      }
+
+      .pallet-area.has-image .image-preview {
+        display: block;
+      }
+
+      .image-preview img {
+        width: 100%;
+        height: 100%;
+        max-height: 160px;
+        object-fit: cover;
+        display: block;
+      }
+
+      .image-preview .remove {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 24px;
+        height: 24px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.65);
+        color: white;
+        font-size: 14px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 140ms ease;
+      }
+
+      .image-preview .remove:hover {
+        background: var(--danger);
+      }
+
+      .image-gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .image-gallery .image-drop {
+        width: 110px;
+        min-height: 110px;
+        flex-shrink: 0;
+        padding: 8px;
+        font-size: 11px;
+      }
+
+      .gallery-thumb {
+        position: relative;
+        width: 110px;
+        height: 110px;
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        overflow: hidden;
+        background: white;
+      }
+
+      .gallery-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .gallery-thumb .remove {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.65);
+        color: white;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .gallery-thumb .remove:hover {
+        background: var(--danger);
+      }
+
       /* ── Responsive ─────────────────────────────────────────────── */
       @media (max-width: 980px) {
         .lote-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -564,6 +717,22 @@ const returnUrl = withBase("/fruitstone2026");
                 </datalist>
               </div>
             </div>
+
+            <div class="field" style="margin-top: 14px;">
+              <label>Etiqueta del pallet (foto)</label>
+              <div class="pallet-area" id="pallet-area">
+                <div class="image-preview" id="pallet-preview">
+                  <img id="pallet-img" alt="Etiqueta del pallet" />
+                  <button type="button" class="remove" id="pallet-remove" aria-label="Quitar etiqueta">×</button>
+                </div>
+                <label class="image-drop" for="pallet-input">
+                  <span class="icon-big">+</span>
+                  <span>Subir foto de la etiqueta</span>
+                  <span class="hint">Toca para tomar foto o elegir archivo</span>
+                  <input type="file" id="pallet-input" accept="image/*" capture="environment" />
+                </label>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -628,10 +797,53 @@ const returnUrl = withBase("/fruitstone2026");
       ];
 
       function blankMuestra(num) {
-        const base = { caja: "", muestra: num, total: 100, observaciones: "" };
+        const base = { caja: "", muestra: num, total: 100, observaciones: "", fotosDefectos: [] };
         for (const c of calibres) base[c.id] = 0;
         for (const d of defectos) base[d.id] = 0;
         return base;
+      }
+
+      const MAX_DIM = 1280;
+      const QUALITY = 0.78;
+
+      function compressImage(file) {
+        return new Promise((resolve, reject) => {
+          if (!file || !file.type.startsWith("image/")) {
+            reject(new Error("Archivo no es una imagen"));
+            return;
+          }
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error);
+          reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error("No se pudo leer la imagen"));
+            img.onload = () => {
+              let { width, height } = img;
+              if (width > MAX_DIM || height > MAX_DIM) {
+                if (width >= height) {
+                  height = Math.round((MAX_DIM / width) * height);
+                  width = MAX_DIM;
+                } else {
+                  width = Math.round((MAX_DIM / height) * width);
+                  height = MAX_DIM;
+                }
+              }
+              const canvas = document.createElement("canvas");
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                reject(new Error("No se pudo crear canvas"));
+                return;
+              }
+              ctx.drawImage(img, 0, 0, width, height);
+              const dataUrl = canvas.toDataURL("image/jpeg", QUALITY);
+              resolve(dataUrl);
+            };
+            img.src = String(reader.result);
+          };
+          reader.readAsDataURL(file);
+        });
       }
 
       function asNumber(value) {
@@ -684,7 +896,8 @@ const returnUrl = withBase("/fruitstone2026");
         lote: "",
         productor: "",
         variedad: "",
-        embalaje: ""
+        embalaje: "",
+        etiquetaPallet: ""
       };
 
       const stored = loadStored();
@@ -711,6 +924,39 @@ const returnUrl = withBase("/fruitstone2026");
       loteProductor.addEventListener("input", () => { lote.productor = loteProductor.value; });
       loteVariedad.addEventListener("input", () => { lote.variedad = loteVariedad.value; });
       loteEmbalaje.addEventListener("input", () => { lote.embalaje = loteEmbalaje.value; });
+
+      const palletArea = document.getElementById("pallet-area");
+      const palletInput = document.getElementById("pallet-input");
+      const palletImg = document.getElementById("pallet-img");
+      const palletRemove = document.getElementById("pallet-remove");
+
+      function renderPalletPreview() {
+        if (lote.etiquetaPallet) {
+          palletImg.src = lote.etiquetaPallet;
+          palletArea.classList.add("has-image");
+        } else {
+          palletImg.removeAttribute("src");
+          palletArea.classList.remove("has-image");
+        }
+      }
+
+      palletInput.addEventListener("change", async () => {
+        const file = palletInput.files?.[0];
+        if (!file) return;
+        try {
+          lote.etiquetaPallet = await compressImage(file);
+          renderPalletPreview();
+        } catch (e) {
+          feedbackEl.classList.remove("ok");
+          feedbackEl.textContent = "No se pudo procesar la imagen.";
+        }
+        palletInput.value = "";
+      });
+
+      palletRemove.addEventListener("click", () => {
+        lote.etiquetaPallet = "";
+        renderPalletPreview();
+      });
 
       const muestrasList = document.getElementById("muestras-list");
       const counterEl = document.getElementById("muestras-counter");
@@ -851,12 +1097,85 @@ const returnUrl = withBase("/fruitstone2026");
         obsWrap.appendChild(obs);
         body.appendChild(obsWrap);
 
+        const fotosLabel = document.createElement("div");
+        fotosLabel.className = "section-label";
+        fotosLabel.textContent = "Fotos de defectos";
+        body.appendChild(fotosLabel);
+
+        if (!Array.isArray(muestra.fotosDefectos)) muestra.fotosDefectos = [];
+        const fotosWrap = renderFotosDefectos(muestra);
+        body.appendChild(fotosWrap);
+
         card.appendChild(head);
         card.appendChild(body);
 
         updateStats(stats, muestra);
 
         return card;
+      }
+
+      function renderFotosDefectos(muestra) {
+        const wrap = document.createElement("div");
+        wrap.className = "image-gallery";
+
+        muestra.fotosDefectos.forEach((src, i) => {
+          const thumb = document.createElement("div");
+          thumb.className = "gallery-thumb";
+          const img = document.createElement("img");
+          img.src = src;
+          img.alt = `Defecto ${i + 1}`;
+          thumb.appendChild(img);
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "remove";
+          removeBtn.setAttribute("aria-label", "Quitar foto");
+          removeBtn.textContent = "×";
+          removeBtn.addEventListener("click", () => {
+            muestra.fotosDefectos.splice(i, 1);
+            const newWrap = renderFotosDefectos(muestra);
+            wrap.replaceWith(newWrap);
+          });
+          thumb.appendChild(removeBtn);
+          wrap.appendChild(thumb);
+        });
+
+        const drop = document.createElement("label");
+        drop.className = "image-drop";
+        const iconBig = document.createElement("span");
+        iconBig.className = "icon-big";
+        iconBig.textContent = "+";
+        const txt = document.createElement("span");
+        txt.textContent = "Agregar foto";
+        const hint = document.createElement("span");
+        hint.className = "hint";
+        hint.textContent = "Cámara o archivo";
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = "image/*";
+        fileInput.multiple = true;
+        fileInput.setAttribute("capture", "environment");
+        fileInput.addEventListener("change", async () => {
+          const files = Array.from(fileInput.files ?? []);
+          for (const file of files) {
+            try {
+              const dataUrl = await compressImage(file);
+              muestra.fotosDefectos.push(dataUrl);
+            } catch {
+              feedbackEl.classList.remove("ok");
+              feedbackEl.textContent = "No se pudo procesar una de las imágenes.";
+            }
+          }
+          const newWrap = renderFotosDefectos(muestra);
+          wrap.replaceWith(newWrap);
+          fileInput.value = "";
+        });
+        drop.appendChild(iconBig);
+        drop.appendChild(txt);
+        drop.appendChild(hint);
+        drop.appendChild(fileInput);
+        wrap.appendChild(drop);
+
+        return wrap;
       }
 
       function updateStats(stats, muestra) {
@@ -945,6 +1264,7 @@ const returnUrl = withBase("/fruitstone2026");
             productor: lote.productor.trim(),
             variedad: lote.variedad.trim(),
             embalaje: lote.embalaje.trim(),
+            etiquetaPallet: lote.etiquetaPallet || "",
             caja: String(m.caja ?? "").trim(),
             muestra: asNumber(m.muestra),
             total: asNumber(m.total),
@@ -962,10 +1282,17 @@ const returnUrl = withBase("/fruitstone2026");
             partida: asNumber(m.partida),
             pudricion: asNumber(m.pudricion),
             colorBajo: asNumber(m.colorBajo),
-            observaciones: String(m.observaciones ?? "").trim()
+            observaciones: String(m.observaciones ?? "").trim(),
+            fotosDefectos: Array.isArray(m.fotosDefectos) ? m.fotosDefectos.slice() : []
           });
         });
-        saveStored(stored);
+        try {
+          saveStored(stored);
+        } catch (e) {
+          feedbackEl.classList.remove("ok");
+          feedbackEl.textContent = "El navegador agotó espacio para guardar fotos. Reduce la cantidad o tamaño de imágenes.";
+          return;
+        }
         feedbackEl.classList.add("ok");
         feedbackEl.textContent = "Guardado";
         setTimeout(() => { window.location.href = returnUrl; }, 250);
@@ -974,6 +1301,7 @@ const returnUrl = withBase("/fruitstone2026");
       document.getElementById("save-btn").addEventListener("click", guardar);
       document.getElementById("save-btn-footer").addEventListener("click", guardar);
 
+      renderPalletPreview();
       render();
     </script>
   </body>

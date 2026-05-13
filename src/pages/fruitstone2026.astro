@@ -342,7 +342,140 @@ import { withBase } from "@/lib/basePath";
       .col-calc { width: 84px; }
       .col-estado { width: 88px; }
       .col-obs { width: 220px; }
+      .col-img { width: 80px; }
       .col-accion { width: 60px; }
+
+      .img-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+      }
+
+      .img-thumb {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--header-bg);
+        cursor: pointer;
+        transition: transform 140ms ease, border-color 140ms ease;
+      }
+
+      .img-thumb:hover {
+        transform: scale(1.05);
+        border-color: var(--accent);
+      }
+
+      .img-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .img-thumb .count {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        background: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 999px;
+      }
+
+      .img-empty {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0.6;
+      }
+
+      /* ── Lightbox ─────────────────────────────────────────────────── */
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: rgba(15, 13, 12, 0.88);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        backdrop-filter: blur(6px);
+      }
+
+      .lightbox.open {
+        display: flex;
+      }
+
+      .lightbox-img {
+        max-width: 92vw;
+        max-height: 78vh;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        background: white;
+      }
+
+      .lightbox-info {
+        margin-top: 14px;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      }
+
+      .lightbox-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 38px;
+        height: 38px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: white;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 140ms ease;
+      }
+
+      .lightbox-close:hover {
+        background: var(--danger);
+      }
+
+      .lightbox-nav {
+        display: flex;
+        gap: 14px;
+        margin-top: 12px;
+      }
+
+      .lightbox-nav button {
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .lightbox-nav button:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .lightbox-nav button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
 
       .cell-calc {
         display: block;
@@ -551,6 +684,8 @@ import { withBase } from "@/lib/basePath";
             <col class="col-calc" />
             <col class="col-estado" />
             <col class="col-obs" />
+            <col class="col-img" />
+            <col class="col-img" />
             <col class="col-accion" />
           </colgroup>
           <thead>
@@ -562,6 +697,7 @@ import { withBase } from "@/lib/basePath";
               <th colspan="3">Cálculos</th>
               <th>Estado</th>
               <th>Observaciones</th>
+              <th colspan="2">Imágenes</th>
               <th></th>
             </tr>
             <tr class="head-row">
@@ -592,6 +728,8 @@ import { withBase } from "@/lib/basePath";
               <th>Prom.</th>
               <th>Estado</th>
               <th>Observaciones</th>
+              <th>Etiqueta</th>
+              <th>Defectos</th>
               <th></th>
             </tr>
           </thead>
@@ -612,6 +750,16 @@ import { withBase } from "@/lib/basePath";
         <span class="sep"></span>
         <span><strong>OK</strong> ≤ 5% defectos · <strong>Alerta</strong> 5–10% · <strong>Crítico</strong> &gt; 10% o con pudrición</span>
       </footer>
+    </div>
+
+    <div class="lightbox" id="lightbox" aria-hidden="true">
+      <button class="lightbox-close" type="button" id="lightbox-close" aria-label="Cerrar">×</button>
+      <img class="lightbox-img" id="lightbox-img" alt="" />
+      <div class="lightbox-info" id="lightbox-info"></div>
+      <div class="lightbox-nav">
+        <button type="button" id="lightbox-prev">← Anterior</button>
+        <button type="button" id="lightbox-next">Siguiente →</button>
+      </div>
     </div>
 
     <script is:inline>
@@ -781,6 +929,61 @@ import { withBase } from "@/lib/basePath";
         return td;
       }
 
+      function createEtiquetaCell(row) {
+        const td = document.createElement("td");
+        td.className = "img-cell";
+        if (row.etiquetaPallet) {
+          const thumb = document.createElement("div");
+          thumb.className = "img-thumb";
+          thumb.title = `Etiqueta del lote ${row.lote || ""}`;
+          const img = document.createElement("img");
+          img.src = row.etiquetaPallet;
+          img.alt = "Etiqueta del pallet";
+          thumb.appendChild(img);
+          thumb.addEventListener("click", () => {
+            openLightbox([row.etiquetaPallet], 0, `Etiqueta · Lote ${row.lote || "—"}`);
+          });
+          td.appendChild(thumb);
+        } else {
+          const empty = document.createElement("span");
+          empty.className = "img-empty";
+          empty.textContent = "—";
+          td.appendChild(empty);
+        }
+        return td;
+      }
+
+      function createFotosCell(row) {
+        const td = document.createElement("td");
+        td.className = "img-cell";
+        const fotos = Array.isArray(row.fotosDefectos) ? row.fotosDefectos : [];
+        if (fotos.length) {
+          const thumb = document.createElement("div");
+          thumb.className = "img-thumb";
+          thumb.title = `${fotos.length} foto${fotos.length === 1 ? "" : "s"} de defectos`;
+          const img = document.createElement("img");
+          img.src = fotos[0];
+          img.alt = "Foto de defectos";
+          thumb.appendChild(img);
+          if (fotos.length > 1) {
+            const count = document.createElement("span");
+            count.className = "count";
+            count.textContent = `+${fotos.length - 1}`;
+            thumb.appendChild(count);
+          }
+          thumb.addEventListener("click", () => {
+            openLightbox(fotos, 0, `Defectos · Lote ${row.lote || "—"} · Muestra ${row.muestra || ""}`);
+          });
+          td.appendChild(thumb);
+        } else {
+          const empty = document.createElement("span");
+          empty.className = "img-empty";
+          empty.textContent = "—";
+          td.appendChild(empty);
+        }
+        return td;
+      }
+
       function render() {
         tbody.replaceChildren();
         const items = visibleRows();
@@ -821,6 +1024,9 @@ import { withBase } from "@/lib/basePath";
           });
           notesTd.appendChild(notes);
           tr.appendChild(notesTd);
+
+          tr.appendChild(createEtiquetaCell(row));
+          tr.appendChild(createFotosCell(row));
 
           const actionTd = document.createElement("td");
           const removeButton = document.createElement("button");
@@ -912,6 +1118,55 @@ import { withBase } from "@/lib/basePath";
       document.getElementById("export-excel").addEventListener("click", exportExcel);
       searchInput.addEventListener("input", render);
       statusFilter.addEventListener("change", render);
+
+      const lightbox = document.getElementById("lightbox");
+      const lightboxImg = document.getElementById("lightbox-img");
+      const lightboxInfo = document.getElementById("lightbox-info");
+      const lightboxPrev = document.getElementById("lightbox-prev");
+      const lightboxNext = document.getElementById("lightbox-next");
+      let lightboxImages = [];
+      let lightboxIndex = 0;
+      let lightboxLabel = "";
+
+      function openLightbox(images, startIndex, label) {
+        lightboxImages = images;
+        lightboxIndex = startIndex;
+        lightboxLabel = label;
+        showLightboxAt(startIndex);
+        lightbox.classList.add("open");
+        lightbox.setAttribute("aria-hidden", "false");
+      }
+
+      function showLightboxAt(i) {
+        if (!lightboxImages.length) return;
+        const idx = (i + lightboxImages.length) % lightboxImages.length;
+        lightboxIndex = idx;
+        lightboxImg.src = lightboxImages[idx];
+        const counter = lightboxImages.length > 1 ? ` · ${idx + 1}/${lightboxImages.length}` : "";
+        lightboxInfo.textContent = `${lightboxLabel}${counter}`;
+        lightboxPrev.disabled = lightboxImages.length <= 1;
+        lightboxNext.disabled = lightboxImages.length <= 1;
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove("open");
+        lightbox.setAttribute("aria-hidden", "true");
+        lightboxImg.removeAttribute("src");
+        lightboxImages = [];
+      }
+
+      document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+      lightbox.addEventListener("click", (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+      lightboxPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
+      lightboxNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
+      document.addEventListener("keydown", (e) => {
+        if (!lightbox.classList.contains("open")) return;
+        if (e.key === "Escape") closeLightbox();
+        if (e.key === "ArrowLeft") showLightboxAt(lightboxIndex - 1);
+        if (e.key === "ArrowRight") showLightboxAt(lightboxIndex + 1);
+      });
 
       render();
     </script>
