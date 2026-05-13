@@ -1,5 +1,7 @@
 ---
 import { withBase } from "@/lib/basePath";
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 ---
 
 <!DOCTYPE html>
@@ -9,6 +11,11 @@ import { withBase } from "@/lib/basePath";
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
     <title>Fruitstone 2026 — EMBARQUES</title>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script is:inline define:vars={{ SUPA_URL, SUPA_KEY }}>
+      window._supaUrl = SUPA_URL;
+      window._supaKey = SUPA_KEY;
+    </script>
     <style is:global>
       *, *::before, *::after {
         box-sizing: border-box;
@@ -763,6 +770,11 @@ import { withBase } from "@/lib/basePath";
     </div>
 
     <script is:inline>
+      const TABLE = "fruitstone2026_muestras";
+      const supa = window.supabase && window._supaUrl && window._supaKey
+        ? window.supabase.createClient(window._supaUrl, window._supaKey)
+        : null;
+
       const textFields = ["fecha", "lote", "productor", "variedad", "embalaje", "caja"];
       const numberFields = [
         "muestra",
@@ -783,28 +795,122 @@ import { withBase } from "@/lib/basePath";
         "colorBajo"
       ];
 
-      const storageKey = "fruitstone2026.samples.v2";
-      window.localStorage.removeItem("fruitstone2026.samples");
-      let rows = loadRows();
+      const fieldToColumn = {
+        fecha: "fecha",
+        lote: "lote",
+        productor: "productor",
+        variedad: "variedad",
+        embalaje: "embalaje",
+        caja: "caja",
+        muestra: "muestra",
+        total: "total",
+        cPre: "c_pre",
+        c22: "c22",
+        c24: "c24",
+        c26: "c26",
+        c28: "c28",
+        c30: "c30",
+        c32: "c32",
+        blanda: "blanda",
+        pitting: "pitting",
+        doble: "doble",
+        deshidratada: "deshidratada",
+        partida: "partida",
+        pudricion: "pudricion",
+        colorBajo: "color_bajo",
+        observaciones: "observaciones"
+      };
+
+      let rows = [];
 
       const tbody = document.getElementById("samples-body");
       const emptyState = document.getElementById("empty-state");
       const searchInput = document.getElementById("search-input");
       const statusFilter = document.getElementById("status-filter");
 
-      function loadRows() {
-        const raw = window.localStorage.getItem(storageKey);
-        if (!raw) return [];
-        try {
-          const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
+      function rowFromDb(r) {
+        return {
+          id: r.id,
+          fecha: r.fecha ?? "",
+          lote: r.lote ?? "",
+          productor: r.productor ?? "",
+          variedad: r.variedad ?? "",
+          embalaje: r.embalaje ?? "",
+          caja: r.caja ?? "",
+          muestra: r.muestra ?? 0,
+          total: r.total ?? 0,
+          cPre: r.c_pre ?? 0,
+          c22: r.c22 ?? 0,
+          c24: r.c24 ?? 0,
+          c26: r.c26 ?? 0,
+          c28: r.c28 ?? 0,
+          c30: r.c30 ?? 0,
+          c32: r.c32 ?? 0,
+          blanda: r.blanda ?? 0,
+          pitting: r.pitting ?? 0,
+          doble: r.doble ?? 0,
+          deshidratada: r.deshidratada ?? 0,
+          partida: r.partida ?? 0,
+          pudricion: r.pudricion ?? 0,
+          colorBajo: r.color_bajo ?? 0,
+          observaciones: r.observaciones ?? "",
+          etiquetaPallet: r.etiqueta_pallet ?? "",
+          fotosDefectos: Array.isArray(r.fotos_defectos) ? r.fotos_defectos : []
+        };
       }
 
-      function saveRows() {
-        window.localStorage.setItem(storageKey, JSON.stringify(rows));
+      async function loadRows() {
+        if (!supa) return;
+        const { data, error } = await supa
+          .from(TABLE)
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.error("Error cargando muestras:", error);
+          return;
+        }
+        rows = (data ?? []).map(rowFromDb);
+        render();
+      }
+
+      const pendingPatches = new Map();
+      const debounceTimers = new Map();
+
+      function scheduleUpdate(rowIndex, field, value) {
+        const row = rows[rowIndex];
+        if (!row || !row.id || !supa) return;
+        const column = fieldToColumn[field];
+        if (!column) return;
+        const patch = pendingPatches.get(row.id) ?? {};
+        patch[column] = value;
+        pendingPatches.set(row.id, patch);
+
+        const existing = debounceTimers.get(row.id);
+        if (existing) clearTimeout(existing);
+        debounceTimers.set(row.id, setTimeout(() => flushUpdate(row.id), 600));
+      }
+
+      async function flushUpdate(id) {
+        const patch = pendingPatches.get(id);
+        if (!patch) return;
+        pendingPatches.delete(id);
+        debounceTimers.delete(id);
+        const { error } = await supa.from(TABLE).update(patch).eq("id", id);
+        if (error) console.error("Error actualizando muestra:", error);
+      }
+
+      async function deleteRow(rowIndex) {
+        const row = rows[rowIndex];
+        if (!row || !supa) return;
+        if (row.id) {
+          const { error } = await supa.from(TABLE).delete().eq("id", row.id);
+          if (error) {
+            console.error("Error eliminando muestra:", error);
+            return;
+          }
+        }
+        rows.splice(rowIndex, 1);
+        render();
       }
 
       function asNumber(value) {
@@ -875,7 +981,7 @@ import { withBase } from "@/lib/basePath";
         input.value = row[field] ?? "";
         input.addEventListener("input", () => {
           rows[index][field] = input.value;
-          saveRows();
+          scheduleUpdate(index, field, input.value);
           updateMetrics();
         });
         return input;
@@ -888,8 +994,9 @@ import { withBase } from "@/lib/basePath";
         input.step = "1";
         input.value = asNumber(row[field]);
         input.addEventListener("input", () => {
-          rows[index][field] = asNumber(input.value);
-          saveRows();
+          const v = asNumber(input.value);
+          rows[index][field] = v;
+          scheduleUpdate(index, field, v);
           renderCalcCells(input, index);
           updateMetrics();
         });
@@ -1020,7 +1127,7 @@ import { withBase } from "@/lib/basePath";
           notes.value = row.observaciones ?? "";
           notes.addEventListener("input", () => {
             rows[index].observaciones = notes.value;
-            saveRows();
+            scheduleUpdate(index, "observaciones", notes.value);
           });
           notesTd.appendChild(notes);
           tr.appendChild(notesTd);
@@ -1036,9 +1143,8 @@ import { withBase } from "@/lib/basePath";
           removeButton.setAttribute("aria-label", "Eliminar muestra");
           removeButton.textContent = "×";
           removeButton.addEventListener("click", () => {
-            rows.splice(index, 1);
-            saveRows();
-            render();
+            if (!confirm("¿Eliminar esta muestra?")) return;
+            deleteRow(index);
           });
           actionTd.appendChild(removeButton);
           tr.appendChild(actionTd);
@@ -1168,7 +1274,16 @@ import { withBase } from "@/lib/basePath";
         if (e.key === "ArrowRight") showLightboxAt(lightboxIndex + 1);
       });
 
-      render();
+      window.addEventListener("focus", () => {
+        if (pendingPatches.size === 0) loadRows();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && pendingPatches.size === 0) {
+          loadRows();
+        }
+      });
+
+      loadRows();
     </script>
   </body>
 </html>

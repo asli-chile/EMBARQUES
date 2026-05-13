@@ -1,6 +1,8 @@
 ---
 import { withBase } from "@/lib/basePath";
 const returnUrl = withBase("/fruitstone2026");
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 ---
 
 <!DOCTYPE html>
@@ -10,6 +12,11 @@ const returnUrl = withBase("/fruitstone2026");
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
     <title>Nuevo lote — Fruitstone 2026</title>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script is:inline define:vars={{ SUPA_URL, SUPA_KEY }}>
+      window._supaUrl = SUPA_URL;
+      window._supaKey = SUPA_KEY;
+    </script>
     <style is:global>
       *, *::before, *::after {
         box-sizing: border-box;
@@ -772,9 +779,13 @@ const returnUrl = withBase("/fruitstone2026");
     </div>
 
     <script is:inline>
-      const storageKey = "fruitstone2026.samples.v2";
-      window.localStorage.removeItem("fruitstone2026.samples");
       const returnUrl = document.body.dataset.returnUrl;
+      const BUCKET = "fruitstone2026";
+      const TABLE = "fruitstone2026_muestras";
+
+      const supa = window.supabase && window._supaUrl && window._supaKey
+        ? window.supabase.createClient(window._supaUrl, window._supaKey)
+        : null;
 
       const calibres = [
         { id: "cPre", label: "P/C" },
@@ -803,8 +814,8 @@ const returnUrl = withBase("/fruitstone2026");
         return base;
       }
 
-      const MAX_DIM = 1280;
-      const QUALITY = 0.78;
+      const MAX_DIM = 1600;
+      const QUALITY = 0.82;
 
       function compressImage(file) {
         return new Promise((resolve, reject) => {
@@ -837,13 +848,38 @@ const returnUrl = withBase("/fruitstone2026");
                 return;
               }
               ctx.drawImage(img, 0, 0, width, height);
-              const dataUrl = canvas.toDataURL("image/jpeg", QUALITY);
-              resolve(dataUrl);
+              canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("No se pudo comprimir la imagen"));
+              }, "image/jpeg", QUALITY);
             };
             img.src = String(reader.result);
           };
           reader.readAsDataURL(file);
         });
+      }
+
+      function sanitizePath(str) {
+        return String(str || "sin-lote")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9-]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40) || "sin-lote";
+      }
+
+      async function uploadImage(blob, folder, prefix) {
+        if (!supa) throw new Error("Supabase no está disponible.");
+        const rand = Math.random().toString(36).slice(2, 8);
+        const path = `${folder}/${sanitizePath(prefix)}-${Date.now()}-${rand}.jpg`;
+        const { error } = await supa.storage.from(BUCKET).upload(path, blob, {
+          contentType: "image/jpeg",
+          upsert: false
+        });
+        if (error) throw error;
+        const { data } = supa.storage.from(BUCKET).getPublicUrl(path);
+        return data.publicUrl;
       }
 
       function asNumber(value) {
@@ -875,21 +911,6 @@ const returnUrl = withBase("/fruitstone2026");
         return { total, sumDef, sumExp, sumCal, defectPct, exportablePct, estado };
       }
 
-      function loadStored() {
-        const raw = window.localStorage.getItem(storageKey);
-        if (!raw) return [];
-        try {
-          const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }
-
-      function saveStored(arr) {
-        window.localStorage.setItem(storageKey, JSON.stringify(arr));
-      }
-
       const muestras = [blankMuestra(1)];
       const lote = {
         fecha: new Date().toISOString().slice(0, 10),
@@ -900,12 +921,21 @@ const returnUrl = withBase("/fruitstone2026");
         etiquetaPallet: ""
       };
 
-      const stored = loadStored();
-      if (stored.length) {
-        const last = stored[stored.length - 1];
-        lote.productor = last.productor ?? "";
-        lote.variedad = last.variedad ?? "";
-        lote.embalaje = last.embalaje ?? "";
+      async function prefillFromLastSample() {
+        if (!supa) return;
+        try {
+          const { data } = await supa
+            .from(TABLE)
+            .select("productor,variedad,embalaje")
+            .order("created_at", { ascending: false })
+            .limit(1);
+          if (data && data.length) {
+            const last = data[0];
+            if (!lote.productor) loteProductor.value = lote.productor = last.productor ?? "";
+            if (!lote.variedad) loteVariedad.value = lote.variedad = last.variedad ?? "";
+            if (!lote.embalaje) loteEmbalaje.value = lote.embalaje = last.embalaje ?? "";
+          }
+        } catch {}
       }
 
       const loteFecha = document.getElementById("lote-fecha");
@@ -915,9 +945,6 @@ const returnUrl = withBase("/fruitstone2026");
       const loteEmbalaje = document.getElementById("lote-embalaje");
 
       loteFecha.value = lote.fecha;
-      loteProductor.value = lote.productor;
-      loteVariedad.value = lote.variedad;
-      loteEmbalaje.value = lote.embalaje;
 
       loteFecha.addEventListener("input", () => { lote.fecha = loteFecha.value; });
       loteLote.addEventListener("input", () => { lote.lote = loteLote.value; });
@@ -940,17 +967,33 @@ const returnUrl = withBase("/fruitstone2026");
         }
       }
 
+      let palletUploading = false;
+
       palletInput.addEventListener("change", async () => {
         const file = palletInput.files?.[0];
         if (!file) return;
+        if (!supa) {
+          feedbackEl.classList.remove("ok");
+          feedbackEl.textContent = "No hay conexión con Supabase.";
+          palletInput.value = "";
+          return;
+        }
+        palletUploading = true;
+        feedbackEl.classList.remove("ok");
+        feedbackEl.textContent = "Subiendo etiqueta...";
         try {
-          lote.etiquetaPallet = await compressImage(file);
+          const blob = await compressImage(file);
+          const url = await uploadImage(blob, "etiquetas", lote.lote);
+          lote.etiquetaPallet = url;
           renderPalletPreview();
+          feedbackEl.textContent = "";
         } catch (e) {
           feedbackEl.classList.remove("ok");
-          feedbackEl.textContent = "No se pudo procesar la imagen.";
+          feedbackEl.textContent = "No se pudo subir la imagen: " + (e?.message ?? "");
+        } finally {
+          palletUploading = false;
+          palletInput.value = "";
         }
-        palletInput.value = "";
       });
 
       palletRemove.addEventListener("click", () => {
@@ -1156,14 +1199,27 @@ const returnUrl = withBase("/fruitstone2026");
         fileInput.setAttribute("capture", "environment");
         fileInput.addEventListener("change", async () => {
           const files = Array.from(fileInput.files ?? []);
+          if (!supa) {
+            feedbackEl.classList.remove("ok");
+            feedbackEl.textContent = "No hay conexión con Supabase.";
+            fileInput.value = "";
+            return;
+          }
+          feedbackEl.classList.remove("ok");
+          feedbackEl.textContent = `Subiendo ${files.length} foto${files.length === 1 ? "" : "s"}...`;
           for (const file of files) {
             try {
-              const dataUrl = await compressImage(file);
-              muestra.fotosDefectos.push(dataUrl);
-            } catch {
+              const blob = await compressImage(file);
+              const prefix = `${lote.lote}-m${muestra.muestra ?? "0"}`;
+              const url = await uploadImage(blob, "defectos", prefix);
+              muestra.fotosDefectos.push(url);
+            } catch (e) {
               feedbackEl.classList.remove("ok");
-              feedbackEl.textContent = "No se pudo procesar una de las imágenes.";
+              feedbackEl.textContent = "No se pudo subir una imagen: " + (e?.message ?? "");
             }
+          }
+          if (!feedbackEl.textContent.startsWith("No se pudo")) {
+            feedbackEl.textContent = "";
           }
           const newWrap = renderFotosDefectos(muestra);
           wrap.replaceWith(newWrap);
@@ -1249,53 +1305,65 @@ const returnUrl = withBase("/fruitstone2026");
         return "";
       }
 
-      function guardar() {
+      let guardando = false;
+
+      async function guardar() {
+        if (guardando) return;
         const err = validar();
         feedbackEl.classList.remove("ok");
         if (err) {
           feedbackEl.textContent = err;
           return;
         }
-        const stored = loadStored();
-        muestras.forEach((m) => {
-          stored.push({
-            fecha: lote.fecha,
-            lote: lote.lote.trim(),
-            productor: lote.productor.trim(),
-            variedad: lote.variedad.trim(),
-            embalaje: lote.embalaje.trim(),
-            etiquetaPallet: lote.etiquetaPallet || "",
-            caja: String(m.caja ?? "").trim(),
-            muestra: asNumber(m.muestra),
-            total: asNumber(m.total),
-            cPre: asNumber(m.cPre),
-            c22: asNumber(m.c22),
-            c24: asNumber(m.c24),
-            c26: asNumber(m.c26),
-            c28: asNumber(m.c28),
-            c30: asNumber(m.c30),
-            c32: asNumber(m.c32),
-            blanda: asNumber(m.blanda),
-            pitting: asNumber(m.pitting),
-            doble: asNumber(m.doble),
-            deshidratada: asNumber(m.deshidratada),
-            partida: asNumber(m.partida),
-            pudricion: asNumber(m.pudricion),
-            colorBajo: asNumber(m.colorBajo),
-            observaciones: String(m.observaciones ?? "").trim(),
-            fotosDefectos: Array.isArray(m.fotosDefectos) ? m.fotosDefectos.slice() : []
-          });
-        });
-        try {
-          saveStored(stored);
-        } catch (e) {
+        if (!supa) {
+          feedbackEl.textContent = "No hay conexión con Supabase.";
+          return;
+        }
+        if (palletUploading) {
+          feedbackEl.textContent = "Espera a que termine de subir la etiqueta del pallet.";
+          return;
+        }
+        guardando = true;
+        feedbackEl.textContent = "Guardando...";
+
+        const rows = muestras.map((m) => ({
+          fecha: lote.fecha || null,
+          lote: lote.lote.trim(),
+          productor: lote.productor.trim() || null,
+          variedad: lote.variedad.trim() || null,
+          embalaje: lote.embalaje.trim() || null,
+          etiqueta_pallet: lote.etiquetaPallet || null,
+          caja: String(m.caja ?? "").trim() || null,
+          muestra: asNumber(m.muestra),
+          total: asNumber(m.total),
+          c_pre: asNumber(m.cPre),
+          c22: asNumber(m.c22),
+          c24: asNumber(m.c24),
+          c26: asNumber(m.c26),
+          c28: asNumber(m.c28),
+          c30: asNumber(m.c30),
+          c32: asNumber(m.c32),
+          blanda: asNumber(m.blanda),
+          pitting: asNumber(m.pitting),
+          doble: asNumber(m.doble),
+          deshidratada: asNumber(m.deshidratada),
+          partida: asNumber(m.partida),
+          pudricion: asNumber(m.pudricion),
+          color_bajo: asNumber(m.colorBajo),
+          observaciones: String(m.observaciones ?? "").trim() || null,
+          fotos_defectos: Array.isArray(m.fotosDefectos) ? m.fotosDefectos.slice() : []
+        }));
+
+        const { error } = await supa.from(TABLE).insert(rows);
+        if (error) {
+          guardando = false;
           feedbackEl.classList.remove("ok");
-          feedbackEl.textContent = "El navegador agotó espacio para guardar fotos. Reduce la cantidad o tamaño de imágenes.";
+          feedbackEl.textContent = "No se pudo guardar: " + error.message;
           return;
         }
         feedbackEl.classList.add("ok");
         feedbackEl.textContent = "Guardado";
-        setTimeout(() => { window.location.href = returnUrl; }, 250);
+        setTimeout(() => { window.location.href = returnUrl; }, 300);
       }
 
       document.getElementById("save-btn").addEventListener("click", guardar);
@@ -1303,6 +1371,7 @@ const returnUrl = withBase("/fruitstone2026");
 
       renderPalletPreview();
       render();
+      prefillFromLastSample();
     </script>
   </body>
 </html>
