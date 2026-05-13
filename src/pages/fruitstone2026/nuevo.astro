@@ -366,7 +366,7 @@ const returnUrl = withBase("/fruitstone2026");
       }
 
       .muestra-row.calibres {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
       }
 
       .muestra-row.defectos {
@@ -608,6 +608,7 @@ const returnUrl = withBase("/fruitstone2026");
       const returnUrl = document.body.dataset.returnUrl;
 
       const calibres = [
+        { id: "cPre", label: "P/C" },
         { id: "c22", label: "22-24" },
         { id: "c24", label: "24-26" },
         { id: "c26", label: "26-28" },
@@ -807,7 +808,7 @@ const returnUrl = withBase("/fruitstone2026");
 
         const labelCal = document.createElement("div");
         labelCal.className = "section-label";
-        labelCal.textContent = "Calibres";
+        labelCal.textContent = "Calibres (P/C = precalibre < 22 mm)";
         body.appendChild(labelCal);
 
         const calRow = document.createElement("div");
@@ -947,6 +948,7 @@ const returnUrl = withBase("/fruitstone2026");
             caja: String(m.caja ?? "").trim(),
             muestra: asNumber(m.muestra),
             total: asNumber(m.total),
+            cPre: asNumber(m.cPre),
             c22: asNumber(m.c22),
             c24: asNumber(m.c24),
             c26: asNumber(m.c26),
