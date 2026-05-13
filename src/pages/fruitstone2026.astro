@@ -1,0 +1,910 @@
+---
+import { withBase } from "@/lib/basePath";
+---
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
+    <title>Fruitstone 2026 — EMBARQUES</title>
+    <style is:global>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #f5f5f4;
+        --surface: #ffffff;
+        --border: #e7e5e4;
+        --border-strong: #d6d3d1;
+        --ink: #1c1917;
+        --muted: #78716c;
+        --accent: #9f1239;
+        --accent-soft: #fff1f2;
+        --accent-strong: #be123c;
+        --header-bg: #fafaf9;
+        --row-hover: #fff7f7;
+        --row-alt: #fafafa;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --danger: #dc2626;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100dvh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Aptos", "Inter", "Segoe UI", system-ui, sans-serif;
+        font-size: 13px;
+        overflow: hidden;
+      }
+
+      button, input, select, textarea {
+        font: inherit;
+        color: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        width: 100%;
+      }
+
+      /* ── Toolbar superior (compacto, una línea) ─────────────────────── */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-right: 14px;
+        border-right: 1px solid var(--border);
+      }
+
+      .brand img {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        object-fit: contain;
+      }
+
+      .brand-title {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--accent);
+        line-height: 1;
+      }
+
+      .brand-sub {
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-top: 2px;
+      }
+
+      .toolbar-search {
+        flex: 1 1 220px;
+        min-width: 180px;
+        max-width: 360px;
+      }
+
+      .toolbar-spacer {
+        flex: 1;
+      }
+
+      .control {
+        height: 32px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        padding: 0 10px;
+        outline: none;
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+        font-size: 13px;
+      }
+
+      .control:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 12.5px;
+        text-decoration: none;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      }
+
+      .btn:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+        color: white;
+      }
+
+      .btn .icon {
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      /* ── Franja de KPIs (mini) ──────────────────────────────────────── */
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .kpi {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        padding: 10px 16px;
+        border-right: 1px solid var(--border);
+        min-width: 0;
+      }
+
+      .kpi:last-child {
+        border-right: 0;
+      }
+
+      .kpi-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .kpi-value {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .kpi-value.accent {
+        color: var(--accent);
+      }
+
+      /* ── Tabla (ocupa todo el espacio disponible) ───────────────────── */
+      .table-wrap {
+        flex: 1;
+        overflow: auto;
+        background: var(--surface);
+      }
+
+      table {
+        width: 100%;
+        min-width: 1900px;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+      }
+
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--header-bg);
+        color: var(--ink);
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 2px solid var(--border-strong);
+        border-right: 1px solid var(--border);
+        white-space: nowrap;
+        user-select: none;
+      }
+
+      thead th:last-child {
+        border-right: 0;
+      }
+
+      thead .group-row th {
+        z-index: 4;
+        background: #f3f0ec;
+        font-size: 10px;
+        font-weight: 900;
+        color: var(--accent);
+        border-bottom: 1px solid var(--border);
+        text-align: center;
+        padding: 6px 8px;
+        letter-spacing: 0.14em;
+      }
+
+      thead .head-row th {
+        top: 28px;
+      }
+
+      tbody td {
+        padding: 0;
+        border-bottom: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        font-size: 12.5px;
+        font-variant-numeric: tabular-nums;
+        vertical-align: middle;
+        white-space: nowrap;
+      }
+
+      tbody td:last-child {
+        border-right: 0;
+      }
+
+      tbody tr:nth-child(even) td {
+        background: var(--row-alt);
+      }
+
+      tbody tr:hover td {
+        background: var(--row-hover);
+      }
+
+      tbody td input,
+      tbody td textarea {
+        width: 100%;
+        height: 100%;
+        min-height: 34px;
+        border: 0;
+        background: transparent;
+        padding: 6px 8px;
+        outline: none;
+        font-size: 12.5px;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      tbody td input[type="number"] {
+        text-align: right;
+        -moz-appearance: textfield;
+      }
+
+      tbody td input[type="number"]::-webkit-outer-spin-button,
+      tbody td input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      tbody td input:focus,
+      tbody td textarea:focus {
+        background: white;
+        box-shadow: inset 0 0 0 2px var(--accent);
+      }
+
+      tbody td textarea {
+        resize: none;
+        white-space: normal;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .col-fecha { width: 110px; }
+      .col-lote { width: 76px; }
+      .col-productor { width: 150px; }
+      .col-variedad { width: 110px; }
+      .col-embalaje { width: 84px; }
+      .col-caja { width: 64px; }
+      .col-muestra { width: 64px; }
+      .col-total { width: 80px; }
+      .col-calibre { width: 64px; }
+      .col-defecto { width: 70px; }
+      .col-calc { width: 84px; }
+      .col-estado { width: 88px; }
+      .col-obs { width: 220px; }
+      .col-accion { width: 60px; }
+
+      .cell-calc {
+        display: block;
+        padding: 8px;
+        text-align: right;
+        font-weight: 700;
+        color: var(--ink);
+        background: #fafafa;
+      }
+
+      tbody tr:nth-child(even) .cell-calc {
+        background: #f4f4f3;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        margin: 6px 8px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        width: calc(100% - 16px);
+      }
+
+      .status::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .status-ok { background: #dcfce7; color: var(--ok); }
+      .status-warn { background: #fef3c7; color: var(--warn); }
+      .status-danger { background: #fee2e2; color: var(--danger); }
+
+      .icon-btn {
+        width: 28px;
+        height: 28px;
+        margin: 4px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 14px;
+        transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+      }
+
+      .icon-btn:hover {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: var(--danger);
+      }
+
+      /* ── Footer de leyenda (mini) ───────────────────────────────────── */
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: center;
+        padding: 8px 16px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+
+      .legend strong {
+        color: var(--ink);
+        font-weight: 800;
+      }
+
+      .legend .sep {
+        width: 1px;
+        height: 14px;
+        background: var(--border);
+      }
+
+      /* ── Empty state ────────────────────────────────────────────────── */
+      .empty {
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .empty strong {
+        display: block;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--ink);
+        font-size: 18px;
+        margin-bottom: 6px;
+      }
+
+      /* ── Responsive ─────────────────────────────────────────────────── */
+      @media (max-width: 900px) {
+        .kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .kpi:nth-child(2) {
+          border-right: 0;
+        }
+        .kpi {
+          border-bottom: 1px solid var(--border);
+        }
+        .kpi:nth-last-child(-n+2) {
+          border-bottom: 0;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .toolbar {
+          padding: 8px 10px;
+          gap: 8px;
+        }
+        .brand { padding-right: 10px; }
+        .brand-title { font-size: 15px; }
+        .toolbar-search { max-width: 100%; }
+        .legend { font-size: 11px; padding: 8px 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="toolbar">
+        <div class="brand">
+          <img src={withBase("/logoasli.png")} alt="ASLI" width="28" height="28" />
+          <div>
+            <div class="brand-title">Fruitstone 2026</div>
+            <div class="brand-sub">Muestras · cereza</div>
+          </div>
+        </div>
+
+        <input class="control toolbar-search" id="search-input" type="search" placeholder="Buscar lote, productor, variedad..." />
+
+        <select class="control" id="status-filter" aria-label="Filtrar por estado">
+          <option value="todos">Todos</option>
+          <option value="ok">OK</option>
+          <option value="alerta">Alerta</option>
+          <option value="critico">Crítico</option>
+        </select>
+
+        <div class="toolbar-spacer"></div>
+
+        <button class="btn" id="export-excel" type="button">
+          <span class="icon">⇩</span> Excel
+        </button>
+        <a class="btn btn-primary" href={withBase("/fruitstone2026/nuevo")}>
+          <span class="icon">+</span> Nuevo lote
+        </a>
+      </header>
+
+      <section class="kpis" aria-label="Resumen">
+        <div class="kpi">
+          <span class="kpi-label">Muestras</span>
+          <span class="kpi-value" id="metric-samples">0</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Frutos</span>
+          <span class="kpi-value" id="metric-fruits">0</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">% Exportable</span>
+          <span class="kpi-value accent" id="metric-exportable">0%</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">% Defectos</span>
+          <span class="kpi-value accent" id="metric-defects">0%</span>
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <table id="samples-table">
+          <colgroup>
+            <col class="col-fecha" />
+            <col class="col-lote" />
+            <col class="col-productor" />
+            <col class="col-variedad" />
+            <col class="col-embalaje" />
+            <col class="col-caja" />
+            <col class="col-muestra" />
+            <col class="col-total" />
+            <col class="col-calibre" />
+            <col class="col-calibre" />
+            <col class="col-calibre" />
+            <col class="col-calibre" />
+            <col class="col-calibre" />
+            <col class="col-calibre" />
+            <col class="col-defecto" />
+            <col class="col-defecto" />
+            <col class="col-defecto" />
+            <col class="col-defecto" />
+            <col class="col-defecto" />
+            <col class="col-defecto" />
+            <col class="col-defecto" />
+            <col class="col-calc" />
+            <col class="col-calc" />
+            <col class="col-calc" />
+            <col class="col-estado" />
+            <col class="col-obs" />
+            <col class="col-accion" />
+          </colgroup>
+          <thead>
+            <tr class="group-row">
+              <th colspan="7">Identificación</th>
+              <th>Total</th>
+              <th colspan="6">Calibres (mm)</th>
+              <th colspan="7">Defectos</th>
+              <th colspan="3">Cálculos</th>
+              <th>Estado</th>
+              <th>Observaciones</th>
+              <th></th>
+            </tr>
+            <tr class="head-row">
+              <th>Fecha</th>
+              <th>Lote</th>
+              <th>Productor</th>
+              <th>Variedad</th>
+              <th>Embalaje</th>
+              <th>Caja</th>
+              <th>N°</th>
+              <th>Frutos</th>
+              <th>22-24</th>
+              <th>24-26</th>
+              <th>26-28</th>
+              <th>28-30</th>
+              <th>30-32</th>
+              <th>+32</th>
+              <th>Blanda</th>
+              <th>Pitting</th>
+              <th>Doble</th>
+              <th>Deshid.</th>
+              <th>Partida</th>
+              <th>Pudric.</th>
+              <th>C. bajo</th>
+              <th>% Def.</th>
+              <th>% Exp.</th>
+              <th>Prom.</th>
+              <th>Estado</th>
+              <th>Observaciones</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="samples-body"></tbody>
+        </table>
+        <div class="empty" id="empty-state" hidden>
+          <strong>Sin muestras que mostrar</strong>
+          Ajusta los filtros o agrega una nueva muestra.
+        </div>
+      </div>
+
+      <footer class="legend">
+        <span><strong>Exportable</strong> = calibres 26+</span>
+        <span class="sep"></span>
+        <span><strong>Comercial</strong> = calibres 24+</span>
+        <span class="sep"></span>
+        <span><strong>OK</strong> ≤ 5% defectos · <strong>Alerta</strong> 5–10% · <strong>Crítico</strong> &gt; 10% o con pudrición</span>
+      </footer>
+    </div>
+
+    <script is:inline>
+      const textFields = ["fecha", "lote", "productor", "variedad", "embalaje", "caja"];
+      const numberFields = [
+        "muestra",
+        "total",
+        "c22",
+        "c24",
+        "c26",
+        "c28",
+        "c30",
+        "c32",
+        "blanda",
+        "pitting",
+        "doble",
+        "deshidratada",
+        "partida",
+        "pudricion",
+        "colorBajo"
+      ];
+
+      const storageKey = "fruitstone2026.samples.v2";
+      window.localStorage.removeItem("fruitstone2026.samples");
+      let rows = loadRows();
+
+      const tbody = document.getElementById("samples-body");
+      const emptyState = document.getElementById("empty-state");
+      const searchInput = document.getElementById("search-input");
+      const statusFilter = document.getElementById("status-filter");
+
+      function loadRows() {
+        const raw = window.localStorage.getItem(storageKey);
+        if (!raw) return [];
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveRows() {
+        window.localStorage.setItem(storageKey, JSON.stringify(rows));
+      }
+
+      function asNumber(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function pct(value, total) {
+        if (!total) return 0;
+        return (value / total) * 100;
+      }
+
+      function formatPct(value) {
+        return `${value.toLocaleString("es-CL", { maximumFractionDigits: 1 })}%`;
+      }
+
+      function calculate(row) {
+        const total = asNumber(row.total);
+        const defectos =
+          asNumber(row.blanda) +
+          asNumber(row.pitting) +
+          asNumber(row.doble) +
+          asNumber(row.deshidratada) +
+          asNumber(row.partida) +
+          asNumber(row.pudricion) +
+          asNumber(row.colorBajo);
+        const exportable = asNumber(row.c26) + asNumber(row.c28) + asNumber(row.c30) + asNumber(row.c32);
+        const calibreTotal =
+          asNumber(row.c22) * 23 +
+          asNumber(row.c24) * 25 +
+          asNumber(row.c26) * 27 +
+          asNumber(row.c28) * 29 +
+          asNumber(row.c30) * 31 +
+          asNumber(row.c32) * 33;
+        const calibreCount =
+          asNumber(row.c22) +
+          asNumber(row.c24) +
+          asNumber(row.c26) +
+          asNumber(row.c28) +
+          asNumber(row.c30) +
+          asNumber(row.c32);
+        const defectPct = pct(defectos, total);
+        const exportablePct = pct(exportable, total);
+        const promedioCalibre = calibreCount ? calibreTotal / calibreCount : 0;
+        const estado = asNumber(row.pudricion) > 0 || defectPct > 10 ? "critico" : defectPct > 5 ? "alerta" : "ok";
+
+        return { defectos, defectPct, exportable, exportablePct, promedioCalibre, estado };
+      }
+
+      function visibleRows() {
+        const search = searchInput.value.trim().toLowerCase();
+        const status = statusFilter.value;
+        return rows
+          .map((row, index) => ({ row, index, calc: calculate(row) }))
+          .filter(({ row, calc }) => {
+            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.embalaje} ${row.caja} ${row.observaciones}`.toLowerCase();
+            const matchSearch = !search || haystack.includes(search);
+            const matchStatus = status === "todos" || calc.estado === status;
+            return matchSearch && matchStatus;
+          });
+      }
+
+      function createTextInput(row, index, field, type = "text") {
+        const input = document.createElement("input");
+        input.type = type;
+        input.value = row[field] ?? "";
+        input.addEventListener("input", () => {
+          rows[index][field] = input.value;
+          saveRows();
+          updateMetrics();
+        });
+        return input;
+      }
+
+      function createNumberInput(row, index, field) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = "0";
+        input.step = "1";
+        input.value = asNumber(row[field]);
+        input.addEventListener("input", () => {
+          rows[index][field] = asNumber(input.value);
+          saveRows();
+          renderCalcCells(input, index);
+          updateMetrics();
+        });
+        return input;
+      }
+
+      function renderCalcCells(originInput, index) {
+        const tr = originInput.closest("tr");
+        if (!tr) return;
+        const calc = calculate(rows[index]);
+        const cells = tr.querySelectorAll(".cell-calc");
+        if (cells[0]) cells[0].textContent = formatPct(calc.defectPct);
+        if (cells[1]) cells[1].textContent = formatPct(calc.exportablePct);
+        if (cells[2]) cells[2].textContent = calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 });
+        const statusEl = tr.querySelector(".status");
+        if (statusEl) {
+          statusEl.className = `status status-${calc.estado === "critico" ? "danger" : calc.estado === "alerta" ? "warn" : "ok"}`;
+          statusEl.textContent = calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK";
+        }
+      }
+
+      function createCalcCell(value) {
+        const td = document.createElement("td");
+        const span = document.createElement("span");
+        span.className = "cell-calc";
+        span.textContent = value;
+        td.appendChild(span);
+        return td;
+      }
+
+      function createStatusCell(status) {
+        const td = document.createElement("td");
+        const span = document.createElement("span");
+        span.className = `status status-${status === "critico" ? "danger" : status === "alerta" ? "warn" : "ok"}`;
+        span.textContent = status === "critico" ? "Crítico" : status === "alerta" ? "Alerta" : "OK";
+        td.appendChild(span);
+        return td;
+      }
+
+      function render() {
+        tbody.replaceChildren();
+        const items = visibleRows();
+
+        if (!items.length) {
+          emptyState.hidden = false;
+        } else {
+          emptyState.hidden = true;
+        }
+
+        items.forEach(({ row, index, calc }) => {
+          const tr = document.createElement("tr");
+
+          textFields.forEach((field) => {
+            const td = document.createElement("td");
+            td.appendChild(createTextInput(row, index, field, field === "fecha" ? "date" : "text"));
+            tr.appendChild(td);
+          });
+
+          numberFields.forEach((field) => {
+            const td = document.createElement("td");
+            td.appendChild(createNumberInput(row, index, field));
+            tr.appendChild(td);
+          });
+
+          tr.appendChild(createCalcCell(formatPct(calc.defectPct)));
+          tr.appendChild(createCalcCell(formatPct(calc.exportablePct)));
+          tr.appendChild(createCalcCell(calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 })));
+          tr.appendChild(createStatusCell(calc.estado));
+
+          const notesTd = document.createElement("td");
+          const notes = document.createElement("textarea");
+          notes.rows = 1;
+          notes.value = row.observaciones ?? "";
+          notes.addEventListener("input", () => {
+            rows[index].observaciones = notes.value;
+            saveRows();
+          });
+          notesTd.appendChild(notes);
+          tr.appendChild(notesTd);
+
+          const actionTd = document.createElement("td");
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className = "icon-btn";
+          removeButton.title = "Eliminar muestra";
+          removeButton.setAttribute("aria-label", "Eliminar muestra");
+          removeButton.textContent = "×";
+          removeButton.addEventListener("click", () => {
+            rows.splice(index, 1);
+            saveRows();
+            render();
+          });
+          actionTd.appendChild(removeButton);
+          tr.appendChild(actionTd);
+
+          tbody.appendChild(tr);
+        });
+        updateMetrics();
+      }
+
+      function updateMetrics() {
+        const items = visibleRows();
+        const totals = items.reduce(
+          (acc, { row, calc }) => {
+            acc.samples += 1;
+            acc.fruits += asNumber(row.total);
+            acc.exportable += calc.exportable;
+            acc.defects += calc.defectos;
+            return acc;
+          },
+          { samples: 0, fruits: 0, exportable: 0, defects: 0 }
+        );
+
+        document.getElementById("metric-samples").textContent = String(totals.samples);
+        document.getElementById("metric-fruits").textContent = totals.fruits.toLocaleString("es-CL");
+        document.getElementById("metric-exportable").textContent = formatPct(pct(totals.exportable, totals.fruits));
+        document.getElementById("metric-defects").textContent = formatPct(pct(totals.defects, totals.fruits));
+      }
+
+      function exportExcel() {
+        const headers = [
+          "Fecha", "Lote", "Productor", "Variedad", "Embalaje", "Caja", "Muestra N°",
+          "Total Frutos", "22-24", "24-26", "26-28", "28-30", "30-32", "+32",
+          "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Color Bajo",
+          "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"
+        ];
+
+        const data = visibleRows().map(({ row, calc }) => [
+          row.fecha, row.lote, row.productor, row.variedad, row.embalaje, row.caja, row.muestra,
+          row.total, row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
+          row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
+          formatPct(calc.defectPct), formatPct(calc.exportablePct),
+          calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }),
+          calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK",
+          row.observaciones
+        ]);
+
+        const escape = (cell) =>
+          String(cell ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+
+        const htmlRows = [headers, ...data]
+          .map((cells, rowIndex) => {
+            const tag = rowIndex === 0 ? "th" : "td";
+            return `<tr>${cells.map((cell) => `<${tag}>${escape(cell)}</${tag}>`).join("")}</tr>`;
+          })
+          .join("");
+
+        const html = `<html><head><meta charset="UTF-8"><style>
+          table { border-collapse: collapse; font-family: Aptos, Arial, sans-serif; }
+          th { background: #9f1239; color: white; font-weight: 700; }
+          th, td { border: 1px solid #d6d3d1; padding: 8px 10px; }
+        </style></head><body><table>${htmlRows}</table></body></html>`;
+
+        const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `fruitstone-2026-muestras-${new Date().toISOString().slice(0, 10)}.xls`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      document.getElementById("export-excel").addEventListener("click", exportExcel);
+      searchInput.addEventListener("input", render);
+      statusFilter.addEventListener("change", render);
+
+      render();
+    </script>
+  </body>
+</html>

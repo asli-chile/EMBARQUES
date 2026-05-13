@@ -1,0 +1,978 @@
+---
+import { withBase } from "@/lib/basePath";
+const returnUrl = withBase("/fruitstone2026");
+---
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
+    <title>Nuevo lote — Fruitstone 2026</title>
+    <style is:global>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #f5f5f4;
+        --surface: #ffffff;
+        --border: #e7e5e4;
+        --border-strong: #d6d3d1;
+        --ink: #1c1917;
+        --muted: #78716c;
+        --accent: #9f1239;
+        --accent-soft: #fff1f2;
+        --accent-strong: #be123c;
+        --header-bg: #fafaf9;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --danger: #dc2626;
+      }
+
+      html, body {
+        width: 100%;
+        min-height: 100dvh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Aptos", "Inter", "Segoe UI", system-ui, sans-serif;
+        font-size: 13px;
+      }
+
+      body { overflow-x: hidden; }
+
+      button, input, select, textarea {
+        font: inherit;
+        color: inherit;
+      }
+
+      button { cursor: pointer; }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+        width: 100%;
+      }
+
+      /* ── Toolbar ────────────────────────────────────────────────── */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-right: 14px;
+        border-right: 1px solid var(--border);
+      }
+
+      .brand img {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        object-fit: contain;
+      }
+
+      .brand-title {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--accent);
+        line-height: 1;
+      }
+
+      .brand-sub {
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-top: 2px;
+      }
+
+      .toolbar-spacer { flex: 1; }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 12.5px;
+        text-decoration: none;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      }
+
+      .btn:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+        color: white;
+      }
+
+      .btn .icon { font-size: 14px; line-height: 1; }
+
+      /* ── Layout principal ───────────────────────────────────────── */
+      .form-wrap {
+        width: min(1380px, 100%);
+        margin: 0 auto;
+        padding: 18px 16px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .page-title {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        margin: 4px 2px 0;
+      }
+
+      .page-title h1 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(24px, 3vw, 32px);
+        letter-spacing: -0.03em;
+        color: var(--ink);
+        line-height: 1;
+      }
+
+      .page-title small {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .card-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 12.5px;
+        color: var(--accent);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .card-title .num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 7px;
+        background: var(--accent);
+        color: white;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .card-body {
+        padding: 14px 16px;
+      }
+
+      /* ── Inputs ─────────────────────────────────────────────────── */
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .field label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .input {
+        height: 34px;
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        padding: 0 10px;
+        outline: none;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+      }
+
+      .input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
+      }
+
+      .input[type="number"] { text-align: right; }
+
+      textarea.input {
+        height: auto;
+        min-height: 60px;
+        padding: 8px 10px;
+        resize: vertical;
+        font-family: inherit;
+        line-height: 1.4;
+      }
+
+      .lote-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      /* ── Lista de muestras ──────────────────────────────────────── */
+      .muestras-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .muestra-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .muestra-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 14px;
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .muestra-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 12px;
+        color: var(--ink);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .muestra-tag .num {
+        min-width: 24px;
+        height: 24px;
+        padding: 0 8px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        border: 1px solid rgba(159, 18, 57, 0.2);
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11.5px;
+      }
+
+      .muestra-stats {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .muestra-stats strong {
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+
+      .muestra-stats .status {
+        margin-left: 4px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .status-ok { background: #dcfce7; color: var(--ok); }
+      .status-warn { background: #fef3c7; color: var(--warn); }
+      .status-danger { background: #fee2e2; color: var(--danger); }
+
+      .muestra-body {
+        padding: 14px;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr;
+      }
+
+      .muestra-row {
+        display: grid;
+        gap: 10px;
+      }
+
+      .muestra-row.top {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .muestra-row.calibres {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .muestra-row.defectos {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+      }
+
+      .section-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: -4px;
+      }
+
+      .section-label::before {
+        content: "";
+        width: 4px;
+        height: 12px;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+
+      .remove-muestra {
+        height: 28px;
+        padding: 0 10px;
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--muted);
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+      }
+
+      .remove-muestra:hover {
+        background: #fee2e2;
+        color: var(--danger);
+        border-color: #fecaca;
+      }
+
+      .add-muestra {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 44px;
+        border: 1.5px dashed var(--border-strong);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 13px;
+        transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+      }
+
+      .add-muestra:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      /* ── Footer sticky con acciones ─────────────────────────────── */
+      .footer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        flex-wrap: wrap;
+      }
+
+      .summary {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+      .summary strong {
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+      }
+
+      .summary .sep { width: 1px; height: 14px; background: var(--border); }
+
+      .footer-buttons {
+        display: flex;
+        gap: 8px;
+      }
+
+      .feedback {
+        font-size: 12px;
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      .feedback.ok { color: var(--ok); }
+
+      /* ── Responsive ─────────────────────────────────────────────── */
+      @media (max-width: 980px) {
+        .lote-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .muestra-row.calibres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .muestra-row.defectos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .muestra-row.top { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 600px) {
+        .lote-grid { grid-template-columns: 1fr 1fr; }
+        .muestra-row.calibres { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .muestra-row.defectos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .muestra-row.top { grid-template-columns: 1fr; }
+        .muestra-stats { gap: 8px; font-size: 11.5px; }
+      }
+    </style>
+  </head>
+  <body data-return-url={returnUrl}>
+    <div class="app">
+      <header class="toolbar">
+        <div class="brand">
+          <img src={withBase("/logoasli.png")} alt="ASLI" width="28" height="28" />
+          <div>
+            <div class="brand-title">Fruitstone 2026</div>
+            <div class="brand-sub">Nuevo lote</div>
+          </div>
+        </div>
+        <a class="btn" href={returnUrl}>
+          <span class="icon">←</span> Volver
+        </a>
+        <div class="toolbar-spacer"></div>
+        <span class="feedback" id="feedback"></span>
+        <button class="btn btn-primary" type="button" id="save-btn">
+          <span class="icon">✓</span> Guardar lote
+        </button>
+      </header>
+
+      <main class="form-wrap">
+        <div class="page-title">
+          <h1>Nuevo lote</h1>
+          <small id="muestras-counter">0 muestras</small>
+        </div>
+
+        <section class="card" aria-labelledby="lote-title">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="num">1</span>
+              <span id="lote-title">Datos del lote</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="lote-grid">
+              <div class="field">
+                <label for="lote-fecha">Fecha</label>
+                <input class="input" id="lote-fecha" type="date" />
+              </div>
+              <div class="field">
+                <label for="lote-lote">Lote</label>
+                <input class="input" id="lote-lote" type="text" placeholder="L001" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="lote-productor">Productor</label>
+                <input class="input" id="lote-productor" type="text" placeholder="Huerto Norte" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="lote-variedad">Variedad</label>
+                <input class="input" id="lote-variedad" list="variedades" type="text" placeholder="Santina" autocomplete="off" />
+                <datalist id="variedades">
+                  <option value="Santina"></option>
+                  <option value="Lapins"></option>
+                  <option value="Bing"></option>
+                  <option value="Kordia"></option>
+                  <option value="Sweetheart"></option>
+                  <option value="Regina"></option>
+                  <option value="Skeena"></option>
+                  <option value="Royal Dawn"></option>
+                </datalist>
+              </div>
+              <div class="field">
+                <label for="lote-embalaje">Embalaje</label>
+                <input class="input" id="lote-embalaje" list="embalajes" type="text" placeholder="5kg" autocomplete="off" />
+                <datalist id="embalajes">
+                  <option value="2.5kg"></option>
+                  <option value="5kg"></option>
+                  <option value="10kg"></option>
+                </datalist>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="muestras-title">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="num">2</span>
+              <span id="muestras-title">Muestras</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="muestras-list" id="muestras-list"></div>
+            <button class="add-muestra" type="button" id="add-muestra" style="margin-top: 12px;">
+              <span>+</span> Agregar otra muestra
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer-actions">
+        <div class="summary">
+          <span><strong id="sum-muestras">0</strong> muestras</span>
+          <span class="sep"></span>
+          <span><strong id="sum-frutos">0</strong> frutos</span>
+          <span class="sep"></span>
+          <span><strong id="sum-defectos">0%</strong> defectos</span>
+          <span class="sep"></span>
+          <span><strong id="sum-exportable">0%</strong> exportable</span>
+        </div>
+        <div class="footer-buttons">
+          <a class="btn" href={returnUrl}>Cancelar</a>
+          <button class="btn btn-primary" type="button" id="save-btn-footer">
+            <span class="icon">✓</span> Guardar lote
+          </button>
+        </div>
+      </footer>
+    </div>
+
+    <script is:inline>
+      const storageKey = "fruitstone2026.samples.v2";
+      window.localStorage.removeItem("fruitstone2026.samples");
+      const returnUrl = document.body.dataset.returnUrl;
+
+      const calibres = [
+        { id: "c22", label: "22-24" },
+        { id: "c24", label: "24-26" },
+        { id: "c26", label: "26-28" },
+        { id: "c28", label: "28-30" },
+        { id: "c30", label: "30-32" },
+        { id: "c32", label: "+32" }
+      ];
+
+      const defectos = [
+        { id: "blanda", label: "Blanda" },
+        { id: "pitting", label: "Pitting" },
+        { id: "doble", label: "Doble" },
+        { id: "deshidratada", label: "Deshidratada" },
+        { id: "partida", label: "Partida" },
+        { id: "pudricion", label: "Pudrición" },
+        { id: "colorBajo", label: "Color bajo" }
+      ];
+
+      function blankMuestra(num) {
+        const base = { caja: "", muestra: num, total: 100, observaciones: "" };
+        for (const c of calibres) base[c.id] = 0;
+        for (const d of defectos) base[d.id] = 0;
+        return base;
+      }
+
+      function asNumber(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function pct(value, total) {
+        if (!total) return 0;
+        return (value / total) * 100;
+      }
+
+      function formatPct(value) {
+        return `${value.toLocaleString("es-CL", { maximumFractionDigits: 1 })}%`;
+      }
+
+      function calcular(m) {
+        const total = asNumber(m.total);
+        const sumDef = defectos.reduce((acc, d) => acc + asNumber(m[d.id]), 0);
+        const sumExp = asNumber(m.c26) + asNumber(m.c28) + asNumber(m.c30) + asNumber(m.c32);
+        const sumCal = calibres.reduce((acc, c) => acc + asNumber(m[c.id]), 0);
+        const defectPct = pct(sumDef, total);
+        const exportablePct = pct(sumExp, total);
+        const estado = asNumber(m.pudricion) > 0 || defectPct > 10
+          ? "critico"
+          : defectPct > 5
+            ? "alerta"
+            : "ok";
+        return { total, sumDef, sumExp, sumCal, defectPct, exportablePct, estado };
+      }
+
+      function loadStored() {
+        const raw = window.localStorage.getItem(storageKey);
+        if (!raw) return [];
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveStored(arr) {
+        window.localStorage.setItem(storageKey, JSON.stringify(arr));
+      }
+
+      const muestras = [blankMuestra(1)];
+      const lote = {
+        fecha: new Date().toISOString().slice(0, 10),
+        lote: "",
+        productor: "",
+        variedad: "",
+        embalaje: ""
+      };
+
+      const stored = loadStored();
+      if (stored.length) {
+        const last = stored[stored.length - 1];
+        lote.productor = last.productor ?? "";
+        lote.variedad = last.variedad ?? "";
+        lote.embalaje = last.embalaje ?? "";
+      }
+
+      const loteFecha = document.getElementById("lote-fecha");
+      const loteLote = document.getElementById("lote-lote");
+      const loteProductor = document.getElementById("lote-productor");
+      const loteVariedad = document.getElementById("lote-variedad");
+      const loteEmbalaje = document.getElementById("lote-embalaje");
+
+      loteFecha.value = lote.fecha;
+      loteProductor.value = lote.productor;
+      loteVariedad.value = lote.variedad;
+      loteEmbalaje.value = lote.embalaje;
+
+      loteFecha.addEventListener("input", () => { lote.fecha = loteFecha.value; });
+      loteLote.addEventListener("input", () => { lote.lote = loteLote.value; });
+      loteProductor.addEventListener("input", () => { lote.productor = loteProductor.value; });
+      loteVariedad.addEventListener("input", () => { lote.variedad = loteVariedad.value; });
+      loteEmbalaje.addEventListener("input", () => { lote.embalaje = loteEmbalaje.value; });
+
+      const muestrasList = document.getElementById("muestras-list");
+      const counterEl = document.getElementById("muestras-counter");
+      const feedbackEl = document.getElementById("feedback");
+      const sumMuestrasEl = document.getElementById("sum-muestras");
+      const sumFrutosEl = document.getElementById("sum-frutos");
+      const sumDefectosEl = document.getElementById("sum-defectos");
+      const sumExportableEl = document.getElementById("sum-exportable");
+
+      function createNumberField(label, value, onChange) {
+        const wrap = document.createElement("div");
+        wrap.className = "field";
+        const lbl = document.createElement("label");
+        lbl.textContent = label;
+        const input = document.createElement("input");
+        input.type = "number";
+        input.className = "input";
+        input.min = "0";
+        input.step = "1";
+        input.value = String(value);
+        input.addEventListener("input", () => onChange(asNumber(input.value)));
+        wrap.appendChild(lbl);
+        wrap.appendChild(input);
+        return wrap;
+      }
+
+      function createTextField(label, value, placeholder, onChange) {
+        const wrap = document.createElement("div");
+        wrap.className = "field";
+        const lbl = document.createElement("label");
+        lbl.textContent = label;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "input";
+        input.value = value ?? "";
+        if (placeholder) input.placeholder = placeholder;
+        input.addEventListener("input", () => onChange(input.value));
+        wrap.appendChild(lbl);
+        wrap.appendChild(input);
+        return wrap;
+      }
+
+      function renderMuestraCard(muestra, index) {
+        const card = document.createElement("article");
+        card.className = "muestra-card";
+
+        const head = document.createElement("div");
+        head.className = "muestra-head";
+
+        const tag = document.createElement("span");
+        tag.className = "muestra-tag";
+        const num = document.createElement("span");
+        num.className = "num";
+        num.textContent = String(muestra.muestra ?? index + 1);
+        tag.appendChild(num);
+        const labelTxt = document.createElement("span");
+        labelTxt.textContent = "Muestra";
+        tag.appendChild(labelTxt);
+
+        const stats = document.createElement("div");
+        stats.className = "muestra-stats";
+        stats.dataset.role = "stats";
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "remove-muestra";
+        removeBtn.textContent = "Eliminar";
+        removeBtn.addEventListener("click", () => {
+          muestras.splice(index, 1);
+          if (!muestras.length) muestras.push(blankMuestra(1));
+          renumber();
+          render();
+        });
+
+        head.appendChild(tag);
+        head.appendChild(stats);
+        head.appendChild(removeBtn);
+
+        const body = document.createElement("div");
+        body.className = "muestra-body";
+
+        const top = document.createElement("div");
+        top.className = "muestra-row top";
+        top.appendChild(createTextField("Caja", muestra.caja, "Ej. 12", (v) => { muestra.caja = v; }));
+        top.appendChild(createNumberField("N° Muestra", muestra.muestra, (v) => {
+          muestra.muestra = v;
+          num.textContent = String(v);
+        }));
+        top.appendChild(createNumberField("Total frutos", muestra.total, (v) => {
+          muestra.total = v;
+          updateStats(stats, muestra);
+          updateSummary();
+        }));
+        body.appendChild(top);
+
+        const labelCal = document.createElement("div");
+        labelCal.className = "section-label";
+        labelCal.textContent = "Calibres";
+        body.appendChild(labelCal);
+
+        const calRow = document.createElement("div");
+        calRow.className = "muestra-row calibres";
+        for (const c of calibres) {
+          calRow.appendChild(createNumberField(c.label, muestra[c.id], (v) => {
+            muestra[c.id] = v;
+            updateStats(stats, muestra);
+            updateSummary();
+          }));
+        }
+        body.appendChild(calRow);
+
+        const labelDef = document.createElement("div");
+        labelDef.className = "section-label";
+        labelDef.textContent = "Defectos";
+        body.appendChild(labelDef);
+
+        const defRow = document.createElement("div");
+        defRow.className = "muestra-row defectos";
+        for (const d of defectos) {
+          defRow.appendChild(createNumberField(d.label, muestra[d.id], (v) => {
+            muestra[d.id] = v;
+            updateStats(stats, muestra);
+            updateSummary();
+          }));
+        }
+        body.appendChild(defRow);
+
+        const obsWrap = document.createElement("div");
+        obsWrap.className = "field";
+        const obsLabel = document.createElement("label");
+        obsLabel.textContent = "Observaciones";
+        const obs = document.createElement("textarea");
+        obs.className = "input";
+        obs.placeholder = "Notas sobre color, firmeza, tamaño general, etc.";
+        obs.value = muestra.observaciones ?? "";
+        obs.addEventListener("input", () => { muestra.observaciones = obs.value; });
+        obsWrap.appendChild(obsLabel);
+        obsWrap.appendChild(obs);
+        body.appendChild(obsWrap);
+
+        card.appendChild(head);
+        card.appendChild(body);
+
+        updateStats(stats, muestra);
+
+        return card;
+      }
+
+      function updateStats(stats, muestra) {
+        const calc = calcular(muestra);
+        const statusClass = `status-${calc.estado === "critico" ? "danger" : calc.estado === "alerta" ? "warn" : "ok"}`;
+        const statusLabel = calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK";
+
+        stats.replaceChildren();
+        stats.appendChild(textPair("Calibres", `${calc.sumCal}/${calc.total}`));
+        stats.appendChild(textPair("% Defectos", formatPct(calc.defectPct)));
+        stats.appendChild(textPair("% Exportable", formatPct(calc.exportablePct)));
+        const status = document.createElement("span");
+        status.className = `status ${statusClass}`;
+        status.textContent = statusLabel;
+        stats.appendChild(status);
+      }
+
+      function textPair(label, value) {
+        const wrap = document.createElement("span");
+        wrap.append(`${label}: `);
+        const strong = document.createElement("strong");
+        strong.textContent = value;
+        wrap.appendChild(strong);
+        return wrap;
+      }
+
+      function render() {
+        muestrasList.replaceChildren();
+        muestras.forEach((m, i) => {
+          muestrasList.appendChild(renderMuestraCard(m, i));
+        });
+        updateSummary();
+      }
+
+      function renumber() {
+        muestras.forEach((m, i) => {
+          m.muestra = i + 1;
+        });
+      }
+
+      function updateSummary() {
+        let totals = { samples: muestras.length, fruits: 0, defects: 0, exportable: 0 };
+        for (const m of muestras) {
+          const calc = calcular(m);
+          totals.fruits += calc.total;
+          totals.defects += calc.sumDef;
+          totals.exportable += calc.sumExp;
+        }
+        counterEl.textContent = `${totals.samples} ${totals.samples === 1 ? "muestra" : "muestras"}`;
+        sumMuestrasEl.textContent = String(totals.samples);
+        sumFrutosEl.textContent = totals.fruits.toLocaleString("es-CL");
+        sumDefectosEl.textContent = formatPct(pct(totals.defects, totals.fruits));
+        sumExportableEl.textContent = formatPct(pct(totals.exportable, totals.fruits));
+      }
+
+      document.getElementById("add-muestra").addEventListener("click", () => {
+        muestras.push(blankMuestra(muestras.length + 1));
+        render();
+      });
+
+      function validar() {
+        if (!lote.lote.trim()) return "Falta indicar el código del lote.";
+        if (!lote.productor.trim()) return "Falta indicar el productor.";
+        if (!lote.variedad.trim()) return "Falta indicar la variedad.";
+        if (!muestras.length) return "Agrega al menos una muestra.";
+        for (let i = 0; i < muestras.length; i++) {
+          if (asNumber(muestras[i].total) <= 0) {
+            return `La muestra N° ${muestras[i].muestra || i + 1} debe tener total de frutos.`;
+          }
+        }
+        return "";
+      }
+
+      function guardar() {
+        const err = validar();
+        feedbackEl.classList.remove("ok");
+        if (err) {
+          feedbackEl.textContent = err;
+          return;
+        }
+        const stored = loadStored();
+        muestras.forEach((m) => {
+          stored.push({
+            fecha: lote.fecha,
+            lote: lote.lote.trim(),
+            productor: lote.productor.trim(),
+            variedad: lote.variedad.trim(),
+            embalaje: lote.embalaje.trim(),
+            caja: String(m.caja ?? "").trim(),
+            muestra: asNumber(m.muestra),
+            total: asNumber(m.total),
+            c22: asNumber(m.c22),
+            c24: asNumber(m.c24),
+            c26: asNumber(m.c26),
+            c28: asNumber(m.c28),
+            c30: asNumber(m.c30),
+            c32: asNumber(m.c32),
+            blanda: asNumber(m.blanda),
+            pitting: asNumber(m.pitting),
+            doble: asNumber(m.doble),
+            deshidratada: asNumber(m.deshidratada),
+            partida: asNumber(m.partida),
+            pudricion: asNumber(m.pudricion),
+            colorBajo: asNumber(m.colorBajo),
+            observaciones: String(m.observaciones ?? "").trim()
+          });
+        });
+        saveStored(stored);
+        feedbackEl.classList.add("ok");
+        feedbackEl.textContent = "Guardado";
+        setTimeout(() => { window.location.href = returnUrl; }, 250);
+      }
+
+      document.getElementById("save-btn").addEventListener("click", guardar);
+      document.getElementById("save-btn-footer").addEventListener("click", guardar);
+
+      render();
+    </script>
+  </body>
+</html>
