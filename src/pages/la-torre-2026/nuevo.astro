@@ -396,7 +396,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       .muestra-row.defectos {
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
       }
 
       .muestra-row.clasificacion {
@@ -788,19 +788,26 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { id: "partida", label: "Partida" },
         { id: "pudricion", label: "Pudrición" },
         { id: "colorBajo", label: "Falta color" },
-        { id: "mediaLuna", label: "Media luna" }
+        { id: "mediaLuna", label: "Media luna" },
+        { id: "sinPedicelo", label: "Sin pedicelo" },
+        { id: "negro", label: "Negro" }
       ];
 
-      const clasificacion = [
-        { id: "zumo", label: "Zumo · Desecho" },
-        { id: "segunda", label: "Segunda · Comercial" }
-      ];
+      const ZUMO_KEYS = ["pudricion", "colorBajo", "partida", "negro"];
+      const SEGUNDA_KEYS = ["blanda", "pitting", "doble"];
+
+      function sumZumo(m) {
+        return ZUMO_KEYS.reduce((acc, k) => acc + asNumber(m[k]), 0);
+      }
+
+      function sumSegunda(m) {
+        return SEGUNDA_KEYS.reduce((acc, k) => acc + asNumber(m[k]), 0);
+      }
 
       function blankMuestra() {
-        const base = { total: 0, observaciones: "", fotosDefectos: [] };
+        const base = { total: 0, zumo: 0, segunda: 0, observaciones: "", fotosDefectos: [] };
         for (const c of calibres) base[c.id] = 0;
         for (const d of defectos) base[d.id] = 0;
-        for (const k of clasificacion) base[k.id] = 0;
         return base;
       }
 
@@ -1093,11 +1100,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         labelDef.textContent = "Defectos";
         body.appendChild(labelDef);
 
+        let zumoInput, segundaInput;
+
         const defRow = document.createElement("div");
         defRow.className = "muestra-row defectos";
         for (const d of defectos) {
           defRow.appendChild(createNumberField(d.label, muestra[d.id], (v) => {
             muestra[d.id] = v;
+            muestra.zumo = sumZumo(muestra);
+            muestra.segunda = sumSegunda(muestra);
+            if (zumoInput) zumoInput.value = String(muestra.zumo);
+            if (segundaInput) segundaInput.value = String(muestra.segunda);
             updateStats(stats, muestra);
             updateSummary();
           }));
@@ -1106,16 +1119,43 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         const labelClas = document.createElement("div");
         labelClas.className = "section-label";
-        labelClas.textContent = "Clasificación";
+        labelClas.textContent = "Clasificación (calculada desde defectos)";
         body.appendChild(labelClas);
+
+        muestra.zumo = sumZumo(muestra);
+        muestra.segunda = sumSegunda(muestra);
 
         const clasRow = document.createElement("div");
         clasRow.className = "muestra-row clasificacion";
-        for (const k of clasificacion) {
-          clasRow.appendChild(createNumberField(k.label, muestra[k.id], (v) => {
-            muestra[k.id] = v;
-          }));
-        }
+
+        const zumoWrap = document.createElement("div");
+        zumoWrap.className = "field";
+        const zumoLbl = document.createElement("label");
+        zumoLbl.textContent = "Zumo · Desecho";
+        zumoInput = document.createElement("input");
+        zumoInput.type = "number";
+        zumoInput.className = "input";
+        zumoInput.readOnly = true;
+        zumoInput.tabIndex = -1;
+        zumoInput.value = String(muestra.zumo);
+        zumoWrap.appendChild(zumoLbl);
+        zumoWrap.appendChild(zumoInput);
+        clasRow.appendChild(zumoWrap);
+
+        const segundaWrap = document.createElement("div");
+        segundaWrap.className = "field";
+        const segundaLbl = document.createElement("label");
+        segundaLbl.textContent = "Segunda · Comercial";
+        segundaInput = document.createElement("input");
+        segundaInput.type = "number";
+        segundaInput.className = "input";
+        segundaInput.readOnly = true;
+        segundaInput.tabIndex = -1;
+        segundaInput.value = String(muestra.segunda);
+        segundaWrap.appendChild(segundaLbl);
+        segundaWrap.appendChild(segundaInput);
+        clasRow.appendChild(segundaWrap);
+
         body.appendChild(clasRow);
 
         const obsWrap = document.createElement("div");
@@ -1316,8 +1356,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           pudricion: asNumber(muestra.pudricion),
           color_bajo: asNumber(muestra.colorBajo),
           media_luna: asNumber(muestra.mediaLuna),
-          zumo: asNumber(muestra.zumo),
-          segunda: asNumber(muestra.segunda),
+          sin_pedicelo: asNumber(muestra.sinPedicelo),
+          negro: asNumber(muestra.negro),
+          zumo: sumZumo(muestra),
+          segunda: sumSegunda(muestra),
           observaciones: String(muestra.observaciones ?? "").trim() || null,
           fotos_defectos: Array.isArray(muestra.fotosDefectos) ? muestra.fotosDefectos.slice() : []
         };
