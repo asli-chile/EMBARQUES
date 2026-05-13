@@ -396,7 +396,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       .muestra-row.defectos {
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-template-columns: repeat(8, minmax(0, 1fr));
       }
 
       .muestra-row.clasificacion {
@@ -624,7 +624,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       @media (max-width: 980px) {
         .lote-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .muestra-row.calibres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .muestra-row.defectos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .muestra-row.defectos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .muestra-row.top { grid-template-columns: minmax(0, 220px); }
       }
 
@@ -787,7 +787,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { id: "deshidratada", label: "Deshidratada" },
         { id: "partida", label: "Partida" },
         { id: "pudricion", label: "Pudrición" },
-        { id: "colorBajo", label: "Falta color" }
+        { id: "colorBajo", label: "Falta color" },
+        { id: "mediaLuna", label: "Media luna" }
       ];
 
       const clasificacion = [
@@ -1314,6 +1315,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           partida: asNumber(muestra.partida),
           pudricion: asNumber(muestra.pudricion),
           color_bajo: asNumber(muestra.colorBajo),
+          media_luna: asNumber(muestra.mediaLuna),
           zumo: asNumber(muestra.zumo),
           segunda: asNumber(muestra.segunda),
           observaciones: String(muestra.observaciones ?? "").trim() || null,

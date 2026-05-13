@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.fruitstone2026_muestras (
   partida         INTEGER     NOT NULL DEFAULT 0,
   pudricion       INTEGER     NOT NULL DEFAULT 0,
   color_bajo      INTEGER     NOT NULL DEFAULT 0,
+  media_luna      INTEGER     NOT NULL DEFAULT 0,
   zumo            INTEGER     NOT NULL DEFAULT 0,
   segunda         INTEGER     NOT NULL DEFAULT 0,
   observaciones   TEXT,
