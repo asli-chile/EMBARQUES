@@ -227,6 +227,102 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         color: var(--accent);
       }
 
+      /* ── Resumen en cámara (por lote + variedad) ───────────────────── */
+      .content-stack {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .camara-panel {
+        flex-shrink: 0;
+        max-height: 220px;
+        overflow: auto;
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--border-strong);
+      }
+
+      .camara-panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--header-bg);
+      }
+
+      .camara-panel-head h2 {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .camara-panel-meta {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .camara-table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .camara-table th,
+      .camara-table td {
+        padding: 8px 10px;
+        text-align: center;
+        border-bottom: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        font-size: 12px;
+      }
+
+      .camara-table th {
+        background: #f3f0ec;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+
+      .camara-table th:last-child,
+      .camara-table td:last-child {
+        border-right: 0;
+      }
+
+      .camara-table tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .camara-table td.camara-banda {
+        white-space: normal;
+        word-break: break-word;
+        text-align: center;
+        max-width: 280px;
+      }
+
+      .camara-table td.camara-lote {
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .camara-empty {
+        padding: 12px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
       /* ── Tabla (ocupa todo el espacio disponible) ───────────────────── */
       .table-wrap {
         flex: 1;
@@ -677,6 +773,30 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         </div>
       </section>
 
+      <div class="content-stack">
+        <section class="camara-panel" aria-labelledby="camara-resumen-title">
+          <div class="camara-panel-head">
+            <h2 id="camara-resumen-title">Resumen en cámara</h2>
+            <span class="camara-panel-meta" id="camara-panel-meta"></span>
+          </div>
+          <table class="camara-table">
+            <thead>
+              <tr>
+                <th style="width: 10%;">Lote</th>
+                <th style="width: 12%;">Variedad</th>
+                <th style="width: 18%;">Productor</th>
+                <th style="width: 28%;">Banda (posición)</th>
+                <th style="width: 9%;">Cajas</th>
+                <th style="width: 10%;">Kilos bruto</th>
+                <th style="width: 8%;">Frutos</th>
+                <th style="width: 5%;">Proc.</th>
+              </tr>
+            </thead>
+            <tbody id="camara-resumen-body"></tbody>
+          </table>
+          <p class="camara-empty" id="camara-empty" hidden>No hay muestras con lote indicado aún.</p>
+        </section>
+
       <div class="table-wrap">
         <table id="samples-table">
           <colgroup>
@@ -777,6 +897,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           <strong>Sin muestras que mostrar</strong>
           Ajusta los filtros o agrega una nueva muestra.
         </div>
+      </div>
       </div>
 
     </div>
@@ -1026,6 +1147,120 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           });
       }
 
+      function buildCamaraGroups() {
+        const map = new Map();
+        for (const row of rows) {
+          const lote = String(row.lote ?? "").trim();
+          if (!lote) continue;
+          const variedad = String(row.variedad ?? "").trim();
+          const key = `${lote.toLowerCase()}\0${variedad.toLowerCase()}`;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(row);
+        }
+        const out = [];
+        for (const [, arr] of map) {
+          const bandasSet = new Set();
+          const productores = new Set();
+          let cajas = 0;
+          let kilos = 0;
+          let frutos = 0;
+          let procN = 0;
+          const lote = String(arr[0].lote ?? "").trim();
+          const variedad = String(arr[0].variedad ?? "").trim();
+          for (const row of arr) {
+            const b = String(row.bandasCamara ?? "").trim();
+            if (b) bandasSet.add(b);
+            if (row.cantidadCajas != null && Number.isFinite(Number(row.cantidadCajas))) {
+              cajas += Number(row.cantidadCajas);
+            }
+            if (row.kilosBrutoLote != null && Number.isFinite(Number(row.kilosBrutoLote))) {
+              kilos += Number(row.kilosBrutoLote);
+            }
+            frutos += asNumber(row.total);
+            if (row.procesado) procN += 1;
+            const p = String(row.productor ?? "").trim();
+            if (p) productores.add(p);
+          }
+          let productor = "";
+          if (productores.size > 1) productor = [...productores].sort((a, b) => a.localeCompare(b, "es")).join(" · ");
+          else if (productores.size === 1) productor = [...productores][0];
+
+          const n = arr.length;
+          let procLabel = "No";
+          if (procN === n && n > 0) procLabel = "Sí";
+          else if (procN > 0) procLabel = "Parcial";
+
+          out.push({
+            lote,
+            variedad,
+            productor,
+            bandaText: bandasSet.size
+              ? [...bandasSet].sort((a, b) => a.localeCompare(b, "es", { numeric: true })).join(" · ")
+              : "—",
+            cajas,
+            kilos,
+            frutos,
+            procLabel,
+            n
+          });
+        }
+        out.sort((a, b) => {
+          const c = a.lote.localeCompare(b.lote, "es", { numeric: true });
+          if (c !== 0) return c;
+          return a.variedad.localeCompare(b.variedad, "es");
+        });
+        return out;
+      }
+
+      function renderCamaraResumen() {
+        const body = document.getElementById("camara-resumen-body");
+        const empty = document.getElementById("camara-empty");
+        const meta = document.getElementById("camara-panel-meta");
+        if (!body || !empty || !meta) return;
+        const groups = buildCamaraGroups();
+        body.replaceChildren();
+        if (!groups.length) {
+          empty.hidden = false;
+          empty.textContent =
+            rows.length === 0
+              ? "Aún no hay muestras cargadas."
+              : "Ningún registro tiene código de lote; agrupa por lote y variedad cuando informes el lote.";
+          meta.textContent = "";
+          return;
+        }
+        empty.hidden = true;
+        meta.textContent = `${groups.length} grupo${groups.length === 1 ? "" : "s"} (lote + variedad)`;
+
+        for (const g of groups) {
+          const tr = document.createElement("tr");
+          const cells = [
+            { text: g.lote, className: "camara-lote" },
+            { text: g.variedad || "—", className: "" },
+            { text: g.productor || "—", className: "" },
+            { text: g.bandaText, className: "camara-banda" },
+            {
+              text: g.cajas ? g.cajas.toLocaleString("es-CL") : "—",
+              className: ""
+            },
+            {
+              text: g.kilos
+                ? g.kilos.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+                : "—",
+              className: ""
+            },
+            { text: g.frutos ? g.frutos.toLocaleString("es-CL") : "0", className: "" },
+            { text: g.procLabel, className: "" }
+          ];
+          for (const c of cells) {
+            const td = document.createElement("td");
+            if (c.className) td.className = c.className;
+            td.textContent = c.text;
+            tr.appendChild(td);
+          }
+          body.appendChild(tr);
+        }
+      }
+
       function createTextInput(row, index, field, type = "text") {
         const input = document.createElement("input");
         input.type = type;
@@ -1113,7 +1348,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           scheduleUpdate(index, field, rounded);
           updateMetrics();
         };
-
         input.addEventListener("blur", commit);
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
@@ -1236,6 +1470,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           cb.addEventListener("change", () => {
             rows[index].procesado = cb.checked;
             scheduleUpdate(index, "procesado", cb.checked);
+            updateMetrics();
           });
           checkWrap.appendChild(cb);
           checkTd.appendChild(checkWrap);
@@ -1250,6 +1485,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           bandaInput.addEventListener("input", () => {
             rows[index].bandasCamara = bandaInput.value;
             scheduleUpdate(index, "bandasCamara", bandaInput.value);
+            updateMetrics();
           });
           bandaTd.appendChild(bandaInput);
           tr.appendChild(bandaTd);
@@ -1399,6 +1635,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         document.getElementById("metric-fruits").textContent = totals.fruits.toLocaleString("es-CL");
         document.getElementById("metric-exportable").textContent = formatPct(pct(totals.exportable, totals.fruits));
         document.getElementById("metric-defects").textContent = formatPct(pct(totals.defects, totals.fruits));
+        renderCamaraResumen();
       }
 
       function exportExcel() {
