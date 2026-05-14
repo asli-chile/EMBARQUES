@@ -59,11 +59,18 @@
     return null;
   }
 
+  /**
+   * Formato histórico banda(posición): banda = columna B1…B12; posición = profundidad P desde el fondo (1 = fondo).
+   * Interno: b = profundidad (fila P), p = banda (columna B), igual que parseBpHText.
+   */
   function parseLegacyBandas(str) {
     if (!str || typeof str !== "string") return null;
-    var m = str.match(/(\d+)\s*\(\s*(\d+)\s*\)/);
+    var m = str.trim().match(/^(\d+)\s*\(\s*(\d+)\s*\)\s*$/);
     if (!m) return null;
-    return { b: Number(m[1]), p: Number(m[2]), h: 1 };
+    var band = Number(m[1]);
+    var depth = Number(m[2]);
+    if (!Number.isFinite(band) || !Number.isFinite(depth) || band < 1 || depth < 1) return null;
+    return { b: depth, p: band, h: 1 };
   }
 
   function parseBpHText(str) {
@@ -254,16 +261,72 @@
     return !!occupantAt(slotMap, b - 1, p, 1, excludeId);
   }
 
-  function canSelect(slotMap, b, p, h, excludeId) {
+  /** P(n) requiere P(n-1) en la misma banda: mapa otra fila, otra celda del mismo borrador, o el mismo intento de selección (trial). */
+  function hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraft) {
+    if (b <= 1) return true;
+    if (occupantAt(slotMap, b - 1, p, 1, excludeId)) return true;
+    if (fullDraft && fullDraft.length) {
+      var targetB = b - 1;
+      for (var i = 0; i < fullDraft.length; i++) {
+        var d = fullDraft[i];
+        var db = Number(d.b);
+        var dp = Number(d.p);
+        var dh = d.h != null ? Number(d.h) : 1;
+        if (db === targetB && dp === p && dh === 1) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * fullDraftForDepth: si viene, la regla de profundidad también cuenta celdas del borrador (selección múltiple / clic en curso).
+   */
+  function canSelect(slotMap, b, p, h, excludeId, fullDraftForDepth) {
     if (!isCellInLayout(b, p)) return false;
     if (!isFree(slotMap, b, p, h, excludeId)) return false;
-    if (!hasDepthSupport(slotMap, b, p, excludeId)) return false;
+    var depthOk =
+      fullDraftForDepth && fullDraftForDepth.length
+        ? hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraftForDepth)
+        : hasDepthSupport(slotMap, b, p, excludeId);
+    if (!depthOk) return false;
     if (CONFIG.heights <= 1) return true;
     if (h === 1) return true;
     if (h === 2) {
-      return !!occupantAt(slotMap, b, p, 1, excludeId);
+      if (occupantAt(slotMap, b, p, 1, excludeId)) return true;
+      if (fullDraftForDepth && fullDraftForDepth.length) {
+        for (var j = 0; j < fullDraftForDepth.length; j++) {
+          var e = fullDraftForDepth[j];
+          if (Number(e.b) === b && Number(e.p) === p && Number(e.h != null ? e.h : 1) === 1) return true;
+        }
+      }
+      return false;
     }
     return false;
+  }
+
+  /** Códigos: layout | ocupada | profundidad | h2 | null = ok */
+  function whyCannotSelect(slotMap, b, p, h, excludeId, fullDraftForDepth) {
+    if (!isCellInLayout(b, p)) return "layout";
+    if (!isFree(slotMap, b, p, h, excludeId)) return "ocupada";
+    var depthOk =
+      fullDraftForDepth && fullDraftForDepth.length
+        ? hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraftForDepth)
+        : hasDepthSupport(slotMap, b, p, excludeId);
+    if (!depthOk) return "profundidad";
+    if (CONFIG.heights > 1 && h > 1) {
+      var h1 = !!occupantAt(slotMap, b, p, 1, excludeId);
+      if (!h1 && fullDraftForDepth && fullDraftForDepth.length) {
+        for (var jj = 0; jj < fullDraftForDepth.length; jj++) {
+          var ee = fullDraftForDepth[jj];
+          if (Number(ee.b) === b && Number(ee.p) === p && Number(ee.h != null ? ee.h : 1) === 1) {
+            h1 = true;
+            break;
+          }
+        }
+      }
+      if (!h1) return "h2";
+    }
+    return null;
   }
 
   function slotListIncludes(list, c) {
@@ -289,9 +352,33 @@
         if (t !== j) others.push(draft[t]);
       }
       var sm = buildSlotMapForPick(rows, excludeId, others);
-      if (!canSelect(sm, cand.b, cand.p, cand.h, null)) return false;
+      if (!canSelect(sm, cand.b, cand.p, cand.h, null, draft)) return false;
     }
     return true;
+  }
+
+  /** Si el borrador no es válido, devuelve { code, b, p, h }; si no, null. */
+  function explainDraftInvalidity(rows, excludeId, draft) {
+    if (!draft || !draft.length) return { code: "vacio", b: 0, p: 0, h: 1 };
+    var seen = {};
+    for (var i = 0; i < draft.length; i++) {
+      var k = keyOf(draft[i]);
+      if (seen[k]) return { code: "dup", b: draft[i].b, p: draft[i].p, h: draft[i].h };
+      seen[k] = true;
+    }
+    for (var j = 0; j < draft.length; j++) {
+      var cand = draft[j];
+      var others = [];
+      for (var t = 0; t < draft.length; t++) {
+        if (t !== j) others.push(draft[t]);
+      }
+      var sm = buildSlotMapForPick(rows, excludeId, others);
+      if (!canSelect(sm, cand.b, cand.p, cand.h, null, draft)) {
+        var code = whyCannotSelect(sm, cand.b, cand.p, cand.h, null, draft) || "desconocido";
+        return { code: code, b: cand.b, p: cand.p, h: cand.h };
+      }
+    }
+    return null;
   }
 
   function labelRow(r) {
@@ -397,8 +484,21 @@
             excludeId != null &&
             idsEqual(occ.id, excludeId) &&
             inSel;
+          var trialDraft =
+            mode === "pick" && multiSelect && selection && selection.length
+              ? selection
+                  .map(function (s) {
+                    return { b: Number(s.b), p: Number(s.p), h: s.h != null ? Number(s.h) : 1 };
+                  })
+                  .concat([{ b: b, p: pos, h: h }])
+              : null;
           var freePick =
-            !outsideB1 && mode === "pick" && canSelect(slotMap, b, pos, h, excludeId) && !(occ && !occGhost && !occSelfPick);
+            !outsideB1 &&
+            mode === "pick" &&
+            (multiSelect
+              ? canSelect(slotMap, b, pos, h, excludeId, trialDraft)
+              : canSelect(slotMap, b, pos, h, excludeId)) &&
+            !(occ && !occGhost && !occSelfPick);
 
           var slotEl =
             mode === "pick"
@@ -481,9 +581,17 @@
             slotEl.appendChild(u5);
           } else {
             slotEl.classList.add("lt-fridge-slot--empty");
+            var draftForAir =
+              mode === "pick" && multiSelect && selection && selection.length
+                ? selection.map(function (s) {
+                    return { b: Number(s.b), p: Number(s.p), h: s.h != null ? Number(s.h) : 1 };
+                  })
+                : null;
             var airGap =
               isFree(slotMap, b, pos, h, excludeId) &&
-              !hasDepthSupport(slotMap, b, pos, excludeId);
+              !(draftForAir && draftForAir.length
+                ? hasDepthSupportWithDraft(slotMap, b, pos, excludeId, draftForAir)
+                : hasDepthSupport(slotMap, b, pos, excludeId));
             if (airGap || (mode === "pick" && !freePick)) {
               if (airGap || mode === "pick") {
                 slotEl.classList.add("lt-fridge-slot--blocked");
@@ -492,7 +600,15 @@
               var bx = document.createElement("span");
               bx.className = "lt-slot-blocked-label";
               if (airGap) {
-                bx.textContent = "P-1";
+                bx.textContent = "P" + (b - 1);
+                bx.title =
+                  "En la banda B" +
+                  pos +
+                  " hay que ocupar P" +
+                  (b - 1) +
+                  " (más al fondo) antes de usar P" +
+                  b +
+                  ".";
               } else if (CONFIG.heights > 1 && h === 2) {
                 bx.textContent = "H2";
               } else {
@@ -532,7 +648,12 @@
                   options.onSlotClick({ b: bb, p: pp, h: hh, toggle: true });
                   return;
                 }
-                if (!canSelect(slotMap, bb, pp, hh, excludeId)) return;
+                var trial2 = selection
+                  .map(function (s) {
+                    return { b: Number(s.b), p: Number(s.p), h: s.h != null ? Number(s.h) : 1 };
+                  })
+                  .concat([{ b: bb, p: pp, h: hh }]);
+                if (!canSelect(slotMap, bb, pp, hh, excludeId, trial2)) return;
                 options.onSlotClick({ b: bb, p: pp, h: hh, toggle: false });
                 return;
               }
@@ -573,6 +694,8 @@
     buildSlotMap: buildSlotMap,
     buildSlotMapForPick: buildSlotMapForPick,
     canSelect: canSelect,
+    whyCannotSelect: whyCannotSelect,
+    explainDraftInvalidity: explainDraftInvalidity,
     validateDraftSlots: validateDraftSlots,
     slotsEqual: slotsEqual,
     slotListIncludes: slotListIncludes,

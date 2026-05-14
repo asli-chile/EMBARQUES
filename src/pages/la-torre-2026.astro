@@ -666,6 +666,30 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         color: var(--ink);
       }
 
+      .la-torre-notice {
+        margin: 0 20px 12px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid rgb(251 191 36);
+        background: rgb(254 252 232);
+        color: rgb(120 53 15);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      .camara-modal-error {
+        margin: 8px 16px 0;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid rgb(248 113 113);
+        background: rgb(254 242 242);
+        color: rgb(153 27 27);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
       .camara-modal-map-root {
         padding: 10px 16px 14px;
         overflow-x: auto;
@@ -1238,6 +1262,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         </a>
       </header>
 
+      <div id="la-torre-notice" class="la-torre-notice" hidden role="alert"></div>
+
       <section class="kpis" aria-label="Resumen">
         <div class="kpi">
           <span class="kpi-label">Muestras</span>
@@ -1438,6 +1464,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           <button type="button" class="camara-modal-close" id="camara-modal-close" aria-label="Cerrar">×</button>
         </header>
         <p id="camara-modal-draft" class="camara-modal-draft"></p>
+        <div id="camara-modal-error" class="camara-modal-error" hidden role="alert"></div>
         <div id="camara-modal-map-root" class="camara-modal-map-root"></div>
         <footer class="camara-modal-footer">
           <button type="button" class="btn" id="camara-modal-cancel">Cancelar</button>
@@ -1656,7 +1683,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       const pendingPatches = new Map();
       const debounceTimers = new Map();
-      const UPDATE_DEBOUNCE_MS = 350;
+      const UPDATE_DEBOUNCE_MS = 250;
 
       function takePendingSnapshotAndClearTimers() {
         const entries = Array.from(pendingPatches.entries());
@@ -1691,19 +1718,32 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         }
       }
 
+      /**
+       * Persiste todos los cambios pendientes (p. ej. cámara + otros campos en cola).
+       * @returns {{ ok: true, empty?: boolean, skippedNoClient?: boolean } | { ok: false, error: { message?: string } }}
+       */
       async function flushAllPendingPatches() {
-        if (!supa) return;
+        if (!supa) return { ok: true, skippedNoClient: true };
         const entries = takePendingSnapshotAndClearTimers();
-        if (!entries) return;
+        if (!entries) return { ok: true, empty: true };
         sendPatchesKeepalive(entries);
         const results = await Promise.all(
           entries.map(([id, patch]) => supa.from(TABLE).update(patch).eq("id", id))
         );
-        for (const r of results) {
-          if (r.error && typeof process !== "undefined" && process.env.NODE_ENV === "development") {
-            console.error("Error actualizando muestra:", r.error);
+        const failed = results.find((r) => r.error);
+        if (failed && failed.error) {
+          if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+            console.error("Error actualizando muestra:", failed.error);
           }
+          for (let ri = 0; ri < entries.length; ri++) {
+            const id = entries[ri][0];
+            const patch = entries[ri][1];
+            const cur = pendingPatches.get(id) ?? {};
+            pendingPatches.set(id, Object.assign({}, cur, patch));
+          }
+          return { ok: false, error: failed.error };
         }
+        return { ok: true, count: entries.length };
       }
 
       function scheduleUpdate(rowIndex, field, value) {
@@ -2319,6 +2359,70 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           }));
       }
 
+      function setCamaraModalError(msg) {
+        const el = document.getElementById("camara-modal-error");
+        if (!el) return;
+        if (!msg) {
+          el.textContent = "";
+          el.hidden = true;
+          return;
+        }
+        el.textContent = msg;
+        el.hidden = false;
+      }
+
+      let laTorreNoticeTimer = 0;
+      function showLaTorreNotice(msg) {
+        const el = document.getElementById("la-torre-notice");
+        if (!el) return;
+        el.textContent = msg;
+        el.hidden = false;
+        if (laTorreNoticeTimer) window.clearTimeout(laTorreNoticeTimer);
+        laTorreNoticeTimer = window.setTimeout(() => {
+          el.hidden = true;
+          el.textContent = "";
+          laTorreNoticeTimer = 0;
+        }, 8000);
+      }
+
+      /** @param {{ code: string; b: number; p: number; h?: number } | null} det */
+      function formatCamaraInvalidity(det, M) {
+        if (!det) return "La selección ya no es válida. Revise ocupación y profundidad en el mapa.";
+        const b = Number(det.b);
+        const p = Number(det.p);
+        const h = Number(det.h != null ? det.h : 1);
+        const sk = M.slotKey(b, p, h);
+        switch (det.code) {
+          case "vacio":
+            return "Seleccione al menos una celda en el mapa.";
+          case "dup":
+            return "Hay celdas repetidas en la selección (" + sk + "). Pulse de nuevo una celda elegida para quitarla.";
+          case "layout":
+            return "La celda " + sk + " queda fuera del plano de cámara.";
+          case "ocupada":
+            return "La celda " + sk + " está ocupada por otro lote. Quite la selección que la solape o elija otra coordenada.";
+          case "profundidad": {
+            if (b <= 1) {
+              return "En la banda B" + p + " no puede usarse " + sk + " sin cumplir la regla de profundidad (fondo → puerta).";
+            }
+            const need = M.slotKey(b - 1, p, 1);
+            return (
+              "En la banda B" +
+              p +
+              " debe ocuparse antes " +
+              need +
+              " (más al fondo) antes de elegir " +
+              sk +
+              "."
+            );
+          }
+          case "h2":
+            return "Para altura H2 en " + sk + " debe haber un pallet en H1 en esa misma posición de planta.";
+          default:
+            return "No se puede usar la celda " + sk + ".";
+        }
+      }
+
       function renderFridgeMap() {
         const root = document.getElementById("fridge-map-root");
         if (!root || !window.LaTorreCamaraMap) return;
@@ -2349,15 +2453,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               camaraModalDraftSlots = camaraModalDraftSlots.filter(
                 (s) => !M.slotsEqual(s, { b: c.b, p: c.p, h: c.h })
               );
+              setCamaraModalError("");
             } else {
               const next = camaraModalDraftSlots.concat([{ b: c.b, p: c.p, h: c.h }]);
               if (!M.validateDraftSlots(buildMapRowsPayload(), excludeId, next)) {
-                window.alert(
-                  "No se puede añadir esa celda (ocupada por otro lote o falta soporte en profundidad en esa banda)."
-                );
+                const det = M.explainDraftInvalidity(buildMapRowsPayload(), excludeId, next);
+                setCamaraModalError(formatCamaraInvalidity(det, M));
                 return;
               }
               camaraModalDraftSlots = next;
+              setCamaraModalError("");
             }
             const draftEl = document.getElementById("camara-modal-draft");
             if (draftEl) {
@@ -2378,13 +2483,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const row = rows[rowIndex];
         if (!row || !window.LaTorreCamaraMap) return;
         if (row.procesado) {
-          window.alert("No se puede cambiar la posición en cámara mientras la muestra esté marcada como procesada.");
+          showLaTorreNotice(
+            "No se puede cambiar la posición en cámara mientras la muestra esté marcada como procesada."
+          );
           return;
         }
         if (row.id == null) {
-          window.alert("La muestra aún no tiene id de base de datos; recargue la página.");
+          showLaTorreNotice("La muestra aún no tiene id de base de datos; recargue la página.");
           return;
         }
+        setCamaraModalError("");
         camaraModalRowId = row.id;
         camaraModalDraftSlots = (window.LaTorreCamaraMap.parseAllSlotsFromRow(row) || []).map((s) => ({
           b: s.b,
@@ -2415,6 +2523,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       function closeCamaraModal() {
+        setCamaraModalError("");
         camaraModalRowId = null;
         camaraModalDraftSlots = [];
         const modal = document.getElementById("camara-modal");
@@ -2424,11 +2533,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         }
       }
 
-      function confirmCamaraModal() {
+      async function confirmCamaraModal() {
         if (camaraModalRowId == null || !camaraModalDraftSlots.length || !window.LaTorreCamaraMap) return;
         const idx = rowIndexById(camaraModalRowId);
         if (idx < 0) {
-          window.alert("No se encontró la muestra en la tabla (quizá se reordenó o actualizó). Cierre y vuelva a abrir desde la fila correcta.");
+          showLaTorreNotice(
+            "No se encontró la muestra en la tabla (quizá se reordenó o actualizó). Cierre el modal y vuelva a abrir desde la fila correcta."
+          );
           closeCamaraModal();
           return;
         }
@@ -2436,11 +2547,21 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const M = window.LaTorreCamaraMap;
         const slots = camaraModalDraftSlots.map((s) => ({ b: s.b, p: s.p, h: s.h }));
         if (!M.validateDraftSlots(buildMapRowsPayload(), row.id, slots)) {
-          window.alert("La selección ya no es válida (ocupación o reglas de profundidad). Revise el mapa.");
+          const det = M.explainDraftInvalidity(buildMapRowsPayload(), row.id, slots);
+          setCamaraModalError(formatCamaraInvalidity(det, M));
           renderCamaraModalMap();
           return;
         }
         const enc = M.encodeSlotsText(slots);
+        const prev = {
+          camaraBanda: row.camaraBanda,
+          camaraPosicion: row.camaraPosicion,
+          camaraAltura: row.camaraAltura,
+          bandasCamara: row.bandasCamara
+        };
+        const confirmBtn = document.getElementById("camara-modal-confirm");
+        if (confirmBtn) confirmBtn.disabled = true;
+
         if (slots.length === 1) {
           const c = slots[0];
           row.camaraBanda = c.b;
@@ -2461,6 +2582,29 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           scheduleUpdate(idx, "camaraAltura", null);
           scheduleUpdate(idx, "bandasCamara", enc);
         }
+
+        const flush = await flushAllPendingPatches();
+        if (!flush.ok) {
+          row.camaraBanda = prev.camaraBanda;
+          row.camaraPosicion = prev.camaraPosicion;
+          row.camaraAltura = prev.camaraAltura;
+          row.bandasCamara = prev.bandasCamara;
+          pendingPatches.delete(row.id);
+          const t = debounceTimers.get(row.id);
+          if (t) clearTimeout(t);
+          debounceTimers.delete(row.id);
+          const msg = flush.error?.message || String(flush.error ?? "");
+          showLaTorreNotice(
+            msg
+              ? "No se pudo guardar la posición en el servidor: " + msg
+              : "No se pudo guardar la posición en el servidor. Compruebe la conexión o que la migración SQL de cámara esté aplicada en Supabase."
+          );
+          if (confirmBtn) confirmBtn.disabled = false;
+          renderCamaraModalMap();
+          render();
+          return;
+        }
+
         closeCamaraModal();
         render();
       }
@@ -2561,7 +2705,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       document.getElementById("camara-modal-close")?.addEventListener("click", closeCamaraModal);
       document.getElementById("camara-modal-cancel")?.addEventListener("click", closeCamaraModal);
       document.getElementById("camara-modal-backdrop")?.addEventListener("click", closeCamaraModal);
-      document.getElementById("camara-modal-confirm")?.addEventListener("click", confirmCamaraModal);
+      document.getElementById("camara-modal-confirm")?.addEventListener("click", () => {
+        void confirmCamaraModal();
+      });
       searchInput.addEventListener("input", render);
       statusFilter.addEventListener("change", render);
 
