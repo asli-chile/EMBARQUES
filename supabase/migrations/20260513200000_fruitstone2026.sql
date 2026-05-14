@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.fruitstone2026_muestras (
   productor       TEXT,
   variedad        TEXT,
   procesado       BOOLEAN     NOT NULL DEFAULT false,
-  bandas_camara   TEXT,
+  bandas_camara   TEXT, -- formato banda(posición), ej. 1(1); posición desde fondo hacia afuera; varios con +
   cantidad_cajas  INTEGER,
   kilos_bruto_lote NUMERIC(10,2),
   total           INTEGER     NOT NULL DEFAULT 0,

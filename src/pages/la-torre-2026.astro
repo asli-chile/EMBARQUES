@@ -733,7 +733,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             </tr>
             <tr class="head-row">
               <th title="Marcar cuando el lote ya fue procesado">✓</th>
-              <th title="Banda(s) en cámara; varias posiciones ej. 1+2 o A, B">Banda</th>
+              <th title="Formato banda(posición): ej. 1(1) = banda 1, posición 1 desde el fondo hacia afuera. Varios: 1(1)+2(3)">Banda</th>
               <th>Fecha</th>
               <th>Lote</th>
               <th>Productor</th>
@@ -1245,8 +1245,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           const bandaInput = document.createElement("input");
           bandaInput.type = "text";
           bandaInput.value = row.bandasCamara ?? "";
-          bandaInput.placeholder = "Ej: 1+3";
-          bandaInput.title = "Banda(s) en cámara; varias posiciones con + o coma";
+          bandaInput.placeholder = "1(1)+2(3)";
+          bandaInput.title = "banda(posición): número = banda; entre paréntesis = posición en esa banda desde el fondo hacia afuera. Varios tramos con +.";
           bandaInput.addEventListener("input", () => {
             rows[index].bandasCamara = bandaInput.value;
             scheduleUpdate(index, "bandasCamara", bandaInput.value);
@@ -1403,7 +1403,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       function exportExcel() {
         const headers = [
-          "Procesado", "Banda(s) cámara", "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
+          "Procesado", "Banda cámara (ej. 1(1))", "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+34",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color", "Media luna", "Sin pedicelo", "Negro",
           "Primera (premium)", "Segunda (comercial)", "Zumo (desecho)",

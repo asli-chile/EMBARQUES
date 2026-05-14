@@ -2,7 +2,9 @@
 -- LA TORRE 2026 — Procesado, bandas en cámara
 --
 --   • procesado      → casilla “ya procesado” en la tabla
---   • bandas_camara  → posición(es) del lote en cámara (texto libre, ej. "1+3")
+--   • bandas_camara  → posición en cámara, formato banda(posición):
+--                      ej. 1(1) = banda 1, posición 1 contando desde el fondo
+--                      hacia afuera. Varios tramos: 1(1)+2(3)
 --
 -- Aplicar en Supabase SQL Editor (idempotente).
 -- ============================================================================
