@@ -520,10 +520,28 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .col-kilos-bruto { width: 96px; }
       .col-kilos-neto { width: 96px; }
       .col-total { width: 80px; }
-      .col-calibre { width: 64px; }
+      .col-calibre { width: 78px; }
       .col-defecto { width: 70px; }
       .col-clasif { width: 78px; }
-      .col-calc { width: 84px; }
+      .col-calc { width: 108px; }
+
+      .calibre-cell-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .calibre-sub {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .col-obs { width: 220px; }
       .col-img { width: 80px; }
       .col-accion { width: 60px; }
@@ -808,6 +826,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         padding: 8px;
         text-align: center;
         font-weight: 700;
+        font-size: 11px;
+        line-height: 1.25;
+        white-space: normal;
         color: var(--ink);
         background: #fafafa;
       }
@@ -1403,13 +1424,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Kilos bruto</th>
               <th>Kilos neto</th>
               <th>Frutos</th>
-              <th>P/C</th>
-              <th>22-24</th>
-              <th>24-26</th>
-              <th>26-28</th>
-              <th>28-30</th>
-              <th>30-32</th>
-              <th>+34</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">P/C</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">22-24</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">24-26</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">26-28</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">28-30</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">30-32</th>
+              <th title="Frutos en ese calibre; debajo % del total y kg neto del lote (proporcional)">+34</th>
               <th>Blanda</th>
               <th>Pitting</th>
               <th>Doble</th>
@@ -1423,8 +1444,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>Primera</th>
               <th>Segunda</th>
               <th>Zumo</th>
-              <th>% Def.</th>
-              <th>% Exp.</th>
+              <th title="% sobre total de frutos y kg neto del lote atribuidos (proporcional a frutos defectuosos)">% Def.</th>
+              <th title="% sobre total de frutos y kg neto del lote atribuidos (frutos no zumo)">% Exp.</th>
               <th>Prom.</th>
               <th>Observaciones</th>
               <th>Etiqueta</th>
@@ -1799,6 +1820,51 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return `${value.toLocaleString("es-CL", { maximumFractionDigits: 1 })}%`;
       }
 
+      /** Kg neto del lote atribuibles a `shareNumerator` frutos (misma muestra). */
+      function kgNetoShare(row, shareNumerator) {
+        const total = asNumber(row.total);
+        const net = row.kilosNetoLote != null && Number.isFinite(Number(row.kilosNetoLote)) ? Number(row.kilosNetoLote) : null;
+        if (total <= 0 || net == null) return null;
+        return (asNumber(shareNumerator) / total) * net;
+      }
+
+      function formatPctWithKgNet(pctVal, row, shareNumerator) {
+        const pctStr = formatPct(pctVal);
+        const kg = kgNetoShare(row, shareNumerator);
+        if (kg == null) return `${pctStr} (— kg)`;
+        return `${pctStr} (${kg.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg)`;
+      }
+
+      function calibreSubLabel(row, fieldKey) {
+        const total = asNumber(row.total);
+        const n = asNumber(row[fieldKey]);
+        if (total <= 0) return "—";
+        const p = pct(n, total);
+        const kg = kgNetoShare(row, n);
+        const pctStr = formatPct(p);
+        if (kg == null) return `${pctStr} (— kg)`;
+        return `${pctStr} (${kg.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg)`;
+      }
+
+      function refreshRowCalcAndCalibre(rowIndex) {
+        const tr = document.querySelector(`#samples-body tr[data-row-index="${rowIndex}"]`);
+        if (!tr) return;
+        const row = rows[rowIndex];
+        if (!row) return;
+        const calc = calculate(row);
+        const cells = tr.querySelectorAll(".cell-calc");
+        if (cells[0]) cells[0].textContent = formatPctWithKgNet(calc.defectPct, row, calc.defectos);
+        if (cells[1]) cells[1].textContent = formatPctWithKgNet(calc.exportablePct, row, calc.exportable);
+        if (cells[2]) cells[2].textContent = calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 });
+        tr.querySelectorAll("input[data-calibre]").forEach((inp) => {
+          const key = inp.getAttribute("data-calibre");
+          const sub = inp.nextElementSibling;
+          if (key && sub && sub.classList.contains("calibre-sub")) {
+            sub.textContent = calibreSubLabel(row, key);
+          }
+        });
+      }
+
       function calculate(row) {
         const total = asNumber(row.total);
         const defectos = DEFECTO_KEYS.reduce((acc, k) => acc + asNumber(row[k]), 0);
@@ -1990,11 +2056,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         input.min = "0";
         input.step = step;
         input.value = asNumber(row[field]);
+        if (CALIBRE_KEYS.includes(field)) {
+          input.setAttribute("data-calibre", field);
+        }
         input.addEventListener("input", () => {
           const v = asNumber(input.value);
           rows[index][field] = v;
           scheduleUpdate(index, field, v);
-          renderCalcCells(input, index);
+          if (!CALIBRE_KEYS.includes(field)) {
+            renderCalcCells(input, index);
+          }
           updateMetrics();
         });
         return input;
@@ -2046,6 +2117,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             input.value = "";
             scheduleUpdate(index, field, null);
             updateMetrics();
+            if (field === "kilosNetoLote") refreshRowCalcAndCalibre(index);
             return;
           }
           const sum = sumFromPlusExpression(trimmed);
@@ -2058,6 +2130,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           input.value = fmt(rounded);
           scheduleUpdate(index, field, rounded);
           updateMetrics();
+          if (field === "kilosNetoLote") refreshRowCalcAndCalibre(index);
         };
         input.addEventListener("blur", commit);
         input.addEventListener("keydown", (e) => {
@@ -2071,13 +2144,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       function renderCalcCells(originInput, index) {
-        const tr = originInput.closest("tr");
-        if (!tr) return;
-        const calc = calculate(rows[index]);
-        const cells = tr.querySelectorAll(".cell-calc");
-        if (cells[0]) cells[0].textContent = formatPct(calc.defectPct);
-        if (cells[1]) cells[1].textContent = formatPct(calc.exportablePct);
-        if (cells[2]) cells[2].textContent = calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 });
+        refreshRowCalcAndCalibre(index);
       }
 
       function createCalcCell(value) {
@@ -2156,6 +2223,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         items.forEach(({ row, index, calc }) => {
           const tr = document.createElement("tr");
+          tr.dataset.rowIndex = String(index);
 
           const checkTd = document.createElement("td");
           const checkWrap = document.createElement("div");
@@ -2240,12 +2308,21 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             scheduleUpdate(index, "primera", newPrimera);
             scheduleUpdate(index, "segunda", newSegunda);
             scheduleUpdate(index, "zumo", newZumo);
+            refreshRowCalcAndCalibre(index);
           };
 
           numberFields.forEach((field) => {
             const td = document.createElement("td");
-            const input = createNumberInput(row, index, field);
             if (CALIBRE_KEYS.includes(field)) {
+              const wrap = document.createElement("div");
+              wrap.className = "calibre-cell-wrap";
+              const input = createNumberInput(row, index, field);
+              const sub = document.createElement("span");
+              sub.className = "calibre-sub";
+              sub.textContent = calibreSubLabel(row, field);
+              wrap.appendChild(input);
+              wrap.appendChild(sub);
+              td.appendChild(wrap);
               input.addEventListener("input", () => {
                 const newTotal = sumCalibres(rows[index]);
                 rows[index].total = newTotal;
@@ -2253,11 +2330,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 scheduleUpdate(index, "total", newTotal);
                 refreshClasif();
               });
+            } else {
+              const input = createNumberInput(row, index, field);
+              if (DEFECTO_KEYS.includes(field)) {
+                input.addEventListener("input", refreshClasif);
+              }
+              td.appendChild(input);
             }
-            if (DEFECTO_KEYS.includes(field)) {
-              input.addEventListener("input", refreshClasif);
-            }
-            td.appendChild(input);
             tr.appendChild(td);
           });
 
@@ -2285,8 +2364,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           zumoInput = zumoCell.input;
           tr.appendChild(zumoCell.td);
 
-          tr.appendChild(createCalcCell(formatPct(calc.defectPct)));
-          tr.appendChild(createCalcCell(formatPct(calc.exportablePct)));
+          tr.appendChild(createCalcCell(formatPctWithKgNet(calc.defectPct, row, calc.defectos)));
+          tr.appendChild(createCalcCell(formatPctWithKgNet(calc.exportablePct, row, calc.exportable)));
           tr.appendChild(createCalcCell(calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 })));
 
           const notesTd = document.createElement("td");
@@ -2337,8 +2416,32 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         document.getElementById("metric-samples").textContent = String(totals.samples);
         document.getElementById("metric-fruits").textContent = totals.fruits.toLocaleString("es-CL");
-        document.getElementById("metric-exportable").textContent = formatPct(pct(totals.exportable, totals.fruits));
-        document.getElementById("metric-defects").textContent = formatPct(pct(totals.defects, totals.fruits));
+        let kgExpSum = 0;
+        let kgDefSum = 0;
+        let kgExpN = 0;
+        let kgDefN = 0;
+        for (const { row, calc } of items) {
+          const ke = kgNetoShare(row, calc.exportable);
+          const kd = kgNetoShare(row, calc.defectos);
+          if (ke != null) {
+            kgExpSum += ke;
+            kgExpN += 1;
+          }
+          if (kd != null) {
+            kgDefSum += kd;
+            kgDefN += 1;
+          }
+        }
+        const expPctStr = formatPct(pct(totals.exportable, totals.fruits));
+        const defPctStr = formatPct(pct(totals.defects, totals.fruits));
+        document.getElementById("metric-exportable").textContent =
+          kgExpN > 0
+            ? `${expPctStr} (${kgExpSum.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg)`
+            : `${expPctStr} (— kg)`;
+        document.getElementById("metric-defects").textContent =
+          kgDefN > 0
+            ? `${defPctStr} (${kgDefSum.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg)`
+            : `${defPctStr} (— kg)`;
         renderCamaraResumen();
         renderFridgeMap();
       }
@@ -2640,7 +2743,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+34",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color", "Media luna", "Sin pedicelo", "Negro",
           "Primera (premium)", "Segunda (comercial)", "Zumo (desecho)",
-          "% Defectos", "% Exportable", "Promedio Calibre", "Observaciones"
+          "% Defectos (kg neto)", "% Exportable (kg neto)", "Promedio Calibre", "Observaciones"
         ];
 
         const data = visibleRows().map(({ row, calc }) => [
@@ -2650,11 +2753,19 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           row.cantidadCajas != null ? row.cantidadCajas : "",
           row.kilosBrutoLote != null ? row.kilosBrutoLote : "",
           row.kilosNetoLote != null ? row.kilosNetoLote : "",
-          row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
+          row.total,
+          `${asNumber(row.cPre)} — ${calibreSubLabel(row, "cPre")}`,
+          `${asNumber(row.c22)} — ${calibreSubLabel(row, "c22")}`,
+          `${asNumber(row.c24)} — ${calibreSubLabel(row, "c24")}`,
+          `${asNumber(row.c26)} — ${calibreSubLabel(row, "c26")}`,
+          `${asNumber(row.c28)} — ${calibreSubLabel(row, "c28")}`,
+          `${asNumber(row.c30)} — ${calibreSubLabel(row, "c30")}`,
+          `${asNumber(row.c32)} — ${calibreSubLabel(row, "c32")}`,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           asNumber(row.mediaLuna), asNumber(row.sinPedicelo), asNumber(row.negro),
           asNumber(row.primera), asNumber(row.segunda), asNumber(row.zumo),
-          formatPct(calc.defectPct), formatPct(calc.exportablePct),
+          formatPctWithKgNet(calc.defectPct, row, calc.defectos),
+          formatPctWithKgNet(calc.exportablePct, row, calc.exportable),
           calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }),
           row.observaciones
         ]);
