@@ -1051,7 +1051,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <div id="camara-map-expandable" class="camara-map-expandable">
                 <p class="camara-map-hint">
                   <strong>12 bandas horizontales</strong> (B1…B12). <strong>Profundidad</strong> en filas P1 (fondo) → P2, P3… hacia la cara de acceso; la <strong>puerta está al final de la banda B1</strong> (frente a la última posición permitida en B1).
-                  En <strong>B1 solo hay 3 posiciones</strong> en profundidad (P1–P3); el resto de bandas puede alargarse más. No se permiten huecos: en cada B hay que llenar P(n-1) antes de P(n). Puede <strong>elegir varias celdas</strong> si el mismo lote está repartido en más de un lugar; pulse de nuevo una celda elegida para quitarla. Luego «Confirmar ubicación».
+                  En <strong>B1 solo hay 3 posiciones</strong> en profundidad (P1–P3); el resto de bandas admite más filas P. Puede colocar el lote en <strong>cualquier celda libre</strong> del plano. Puede <strong>elegir varias celdas</strong> si el mismo lote está repartido en más de un lugar; pulse de nuevo una celda elegida para quitarla. Luego «Confirmar ubicación».
                 </p>
                 <div id="camara-map-nuevo-root" aria-live="polite"></div>
                 <div class="camara-draft-row" id="camara-draft-label">Selección pendiente: —</div>
@@ -1336,7 +1336,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 if (feedbackEl) {
                   feedbackEl.classList.remove("ok");
                   feedbackEl.textContent =
-                    "No se puede añadir esa celda (ocupada o falta soporte en profundidad en esa banda).";
+                    "No se puede añadir esa celda (ocupada, fuera del plano o celda duplicada en la selección).";
                 }
                 return;
               }
@@ -1538,7 +1538,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           if (!M.validateDraftSlots(occupancyRows, null, slots)) {
             if (feedbackEl) {
               feedbackEl.classList.remove("ok");
-              feedbackEl.textContent = "La selección ya no es válida (ocupación o reglas de profundidad). Actualizamos el mapa.";
+              feedbackEl.textContent = "La selección ya no es válida (ocupación o plano). Actualizamos el mapa.";
             }
             fetchCamaraOccupancy();
             return;

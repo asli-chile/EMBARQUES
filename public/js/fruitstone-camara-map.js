@@ -2,6 +2,7 @@
  * Mapa de cámara frigorífica — LA TORRE 2026 (Fruitstone)
  *
  * 12 bandas horizontales (B), profundidad P (P1 fondo). B1 máx. 3 P.
+ * Ubicación: cualquier celda libre del plano (CONFIG.requireDepthLine = false).
  * Varios huecos por lote: bandas_camara = "B2-P1+B5-P3" (separador +).
  * BD: una celda → camara_banda / camara_posicion / camara_altura rellenos;
  * varias celdas → esos campos NULL y solo bandas_camara con +.
@@ -16,7 +17,9 @@
     firstBandMaxDepth: 3,
     minVerticalSlots: 4,
     maxVerticalSlots: 32,
-    heights: 1
+    heights: 1,
+    /** Si true: en cada banda B hay que ocupar P(n-1) antes de P(n) (sin “huecos” hacia el fondo). */
+    requireDepthLine: false
   };
 
   var GHOST_ID = "__draft__";
@@ -284,11 +287,13 @@
   function canSelect(slotMap, b, p, h, excludeId, fullDraftForDepth) {
     if (!isCellInLayout(b, p)) return false;
     if (!isFree(slotMap, b, p, h, excludeId)) return false;
-    var depthOk =
-      fullDraftForDepth && fullDraftForDepth.length
-        ? hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraftForDepth)
-        : hasDepthSupport(slotMap, b, p, excludeId);
-    if (!depthOk) return false;
+    if (CONFIG.requireDepthLine) {
+      var depthOk =
+        fullDraftForDepth && fullDraftForDepth.length
+          ? hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraftForDepth)
+          : hasDepthSupport(slotMap, b, p, excludeId);
+      if (!depthOk) return false;
+    }
     if (CONFIG.heights <= 1) return true;
     if (h === 1) return true;
     if (h === 2) {
@@ -308,11 +313,13 @@
   function whyCannotSelect(slotMap, b, p, h, excludeId, fullDraftForDepth) {
     if (!isCellInLayout(b, p)) return "layout";
     if (!isFree(slotMap, b, p, h, excludeId)) return "ocupada";
-    var depthOk =
-      fullDraftForDepth && fullDraftForDepth.length
-        ? hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraftForDepth)
-        : hasDepthSupport(slotMap, b, p, excludeId);
-    if (!depthOk) return "profundidad";
+    if (CONFIG.requireDepthLine) {
+      var depthOk =
+        fullDraftForDepth && fullDraftForDepth.length
+          ? hasDepthSupportWithDraft(slotMap, b, p, excludeId, fullDraftForDepth)
+          : hasDepthSupport(slotMap, b, p, excludeId);
+      if (!depthOk) return "profundidad";
+    }
     if (CONFIG.heights > 1 && h > 1) {
       var h1 = !!occupantAt(slotMap, b, p, 1, excludeId);
       if (!h1 && fullDraftForDepth && fullDraftForDepth.length) {
@@ -418,15 +425,24 @@
 
     var head = document.createElement("div");
     head.className = "lt-fridge-legend";
+    var depthRule =
+      CONFIG.requireDepthLine
+        ? "Profundidad: P1 fondo → puerta al final de B1 (P" +
+          CONFIG.firstBandMaxDepth +
+          " en B1). P(n) solo si hay pallet en P(n-1) en la misma B"
+        : "Ubicación: cualquier celda libre del plano (P1 fondo → cara acceso). B1: máx. " +
+          CONFIG.firstBandMaxDepth +
+          " filas en P; resto de bandas hasta P" +
+          CONFIG.maxVerticalSlots;
     var leg =
       '<span class="lt-leg lt-leg-free">Libre</span>' +
       '<span class="lt-leg lt-leg-occ">Ocupado</span>' +
-      '<span class="lt-leg lt-leg-depth">Profundidad: P1 fondo → puerta al final de B1 (P' +
-      CONFIG.firstBandMaxDepth +
-      " en B1). P(n) solo si hay pallet en P(n-1) en la misma B</span>" +
+      '<span class="lt-leg lt-leg-depth">' +
+      depthRule +
+      "</span>" +
       '<span class="lt-leg lt-leg-b1">B1: máx. ' +
       CONFIG.firstBandMaxDepth +
-      " posiciones</span>";
+      " posiciones en P</span>";
     if (mode === "pick" && multiSelect) {
       leg += '<span class="lt-leg lt-leg-multi">Selección múltiple: pulse varias celdas; pulse de nuevo una elegida para quitarla</span>';
     }
@@ -588,6 +604,7 @@
                   })
                 : null;
             var airGap =
+              CONFIG.requireDepthLine &&
               isFree(slotMap, b, pos, h, excludeId) &&
               !(draftForAir && draftForAir.length
                 ? hasDepthSupportWithDraft(slotMap, b, pos, excludeId, draftForAir)
@@ -676,9 +693,9 @@
     foot.textContent =
       "Varias posiciones: texto B-P+B-P en base de datos. B1: " +
       CONFIG.firstBandMaxDepth +
-      " posiciones. Mapa P1…P" +
+      " filas P. Mapa P1…P" +
       rowCount +
-      ".";
+      (CONFIG.requireDepthLine ? ". Regla: sin huecos en profundidad por banda." : ". Cualquier celda libre del plano.");
     root.appendChild(foot);
 
     container.appendChild(root);

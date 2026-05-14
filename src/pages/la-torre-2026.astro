@@ -2182,7 +2182,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           bandaInput.placeholder = row.procesado ? "Procesado" : "Clic → mapa…";
           bandaInput.title = row.procesado
             ? "No se puede editar en cámara mientras esté procesado."
-            : "Clic: mapa B1…B12; B1 máx. 3 posiciones en P (puerta al final de B1). P1 fondo; sin huecos en profundidad.";
+            : "Clic: mapa B1…B12; B1 máx. 3 posiciones en P (puerta al final de B1). P1 fondo; puede elegir cualquier celda libre.";
           bandaInput.disabled = !!row.procesado;
           bandaInput.addEventListener("click", () => {
             if (row.procesado) return;
@@ -2387,7 +2387,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       /** @param {{ code: string; b: number; p: number; h?: number } | null} det */
       function formatCamaraInvalidity(det, M) {
-        if (!det) return "La selección ya no es válida. Revise ocupación y profundidad en el mapa.";
+        if (!det) return "La selección ya no es válida. Revise celdas ocupadas o duplicadas en el mapa.";
         const b = Number(det.b);
         const p = Number(det.p);
         const h = Number(det.h != null ? det.h : 1);
@@ -2510,7 +2510,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             ? "Actual: " +
               M.encodeSlotsText(camaraModalDraftSlots) +
               " · Pulse celdas para añadir o quitar; «Guardar posición» aplica."
-            : "Sin posición en mapa. B1: solo P1–P3. Puerta al final de B1. Sin huecos en profundidad por banda. Puede elegir varias celdas si el lote está en más de un sitio.";
+            : "Sin posición en mapa. B1: solo P1–P3. Puerta al final de B1. Elija cualquier celda libre; varias si el lote está en más de un sitio.";
         }
         const confirmBtn = document.getElementById("camara-modal-confirm");
         if (confirmBtn) confirmBtn.disabled = camaraModalDraftSlots.length === 0;
