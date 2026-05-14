@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS public.fruitstone2026_muestras (
   lote            TEXT        NOT NULL,
   productor       TEXT,
   variedad        TEXT,
+  procesado       BOOLEAN     NOT NULL DEFAULT false,
+  bandas_camara   TEXT,
   cantidad_cajas  INTEGER,
   kilos_bruto_lote NUMERIC(10,2),
   total           INTEGER     NOT NULL DEFAULT 0,

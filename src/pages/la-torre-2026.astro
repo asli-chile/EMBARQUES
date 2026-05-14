@@ -336,6 +336,24 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         box-shadow: inset 0 0 0 2px var(--accent);
       }
 
+      tbody td input.input-sum {
+        font-variant-numeric: tabular-nums;
+      }
+
+      tbody td .cell-check {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+      }
+
+      tbody td .cell-check input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
       tbody td input.total-readonly {
         font-weight: 700;
         background: var(--header-bg);
@@ -355,6 +373,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         line-height: 1.4;
       }
 
+      .col-check { width: 44px; }
+      .col-banda { width: 120px; }
       .col-fecha { width: 110px; }
       .col-lote { width: 76px; }
       .col-productor { width: 150px; }
@@ -564,30 +584,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         color: var(--danger);
       }
 
-      /* ── Footer de leyenda (mini) ───────────────────────────────────── */
-      .legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        align-items: center;
-        padding: 8px 16px;
-        background: var(--surface);
-        border-top: 1px solid var(--border);
-        font-size: 11.5px;
-        color: var(--muted);
-      }
-
-      .legend strong {
-        color: var(--ink);
-        font-weight: 800;
-      }
-
-      .legend .sep {
-        width: 1px;
-        height: 14px;
-        background: var(--border);
-      }
-
       /* ── Empty state ────────────────────────────────────────────────── */
       .empty {
         padding: 60px 20px;
@@ -629,7 +625,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         .brand-title { font-size: 14px; }
         .brand-sub { font-size: 9.5px; letter-spacing: 0.14em; }
         .toolbar-search { max-width: 100%; }
-        .legend { font-size: 11px; padding: 8px 12px; }
       }
     </style>
   </head>
@@ -685,6 +680,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       <div class="table-wrap">
         <table id="samples-table">
           <colgroup>
+            <col class="col-check" />
+            <col class="col-banda" />
             <col class="col-fecha" />
             <col class="col-lote" />
             <col class="col-productor" />
@@ -723,7 +720,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           </colgroup>
           <thead>
             <tr class="group-row">
-              <th colspan="6">Identificación</th>
+              <th colspan="8">Identificación</th>
               <th>Total</th>
               <th colspan="7">Calibres (mm)</th>
               <th colspan="10">Defectos</th>
@@ -735,6 +732,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th></th>
             </tr>
             <tr class="head-row">
+              <th title="Marcar cuando el lote ya fue procesado">✓</th>
+              <th title="Banda(s) en cámara; varias posiciones ej. 1+2 o A, B">Banda</th>
               <th>Fecha</th>
               <th>Lote</th>
               <th>Productor</th>
@@ -780,17 +779,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         </div>
       </div>
 
-      <footer class="legend">
-        <span><strong>P/C</strong> (precalibre) = fruta menor a 22 mm</span>
-        <span class="sep"></span>
-        <span><strong>Exportable</strong> = Primera + Segunda = Total − Zumo</span>
-        <span class="sep"></span>
-        <span><strong>Zumo</strong> = pudrición + falta color + partida + negro</span>
-        <span class="sep"></span>
-        <span><strong>Segunda</strong> = blanda + pitting + doble</span>
-        <span class="sep"></span>
-        <span><strong>OK</strong> ≤ 5% defectos · <strong>Alerta</strong> 5–10% · <strong>Crítico</strong> &gt; 10% o con pudrición</span>
-      </footer>
     </div>
 
     <div class="lightbox" id="lightbox" aria-hidden="true">
@@ -813,9 +801,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { key: "fecha", kind: "text", type: "date" },
         { key: "lote", kind: "text", type: "text" },
         { key: "productor", kind: "text", type: "text" },
-        { key: "variedad", kind: "text", type: "text" },
-        { key: "cantidadCajas", kind: "number", step: "1" },
-        { key: "kilosBrutoLote", kind: "number", step: "0.01" }
+        { key: "variedad", kind: "text", type: "text" }
       ];
 
       const CALIBRE_KEYS = ["cPre", "c22", "c24", "c26", "c28", "c30", "c32"];
@@ -853,6 +839,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       const fieldToColumn = {
+        procesado: "procesado",
+        bandasCamara: "bandas_camara",
         fecha: "fecha",
         lote: "lote",
         productor: "productor",
@@ -893,12 +881,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       function rowFromDb(r) {
         return {
           id: r.id,
+          procesado: r.procesado === true,
+          bandasCamara: r.bandas_camara ?? "",
           fecha: r.fecha ?? "",
           lote: r.lote ?? "",
           productor: r.productor ?? "",
           variedad: r.variedad ?? "",
-          cantidadCajas: r.cantidad_cajas ?? 0,
-          kilosBrutoLote: r.kilos_bruto_lote ?? 0,
+          cantidadCajas: r.cantidad_cajas != null ? Number(r.cantidad_cajas) : null,
+          kilosBrutoLote: r.kilos_bruto_lote != null ? Number(r.kilos_bruto_lote) : null,
           total: r.total ?? 0,
           cPre: r.c_pre ?? 0,
           c22: r.c22 ?? 0,
@@ -1029,7 +1019,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return rows
           .map((row, index) => ({ row, index, calc: calculate(row) }))
           .filter(({ row, calc }) => {
-            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.observaciones}`.toLowerCase();
+            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.bandasCamara ?? ""} ${row.observaciones}`.toLowerCase();
             const matchSearch = !search || haystack.includes(search);
             const matchStatus = status === "todos" || calc.estado === status;
             return matchSearch && matchStatus;
@@ -1060,6 +1050,77 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           scheduleUpdate(index, field, v);
           renderCalcCells(input, index);
           updateMetrics();
+        });
+        return input;
+      }
+
+      function sumFromPlusExpression(raw) {
+        const s = String(raw ?? "").trim();
+        if (!s) return null;
+        const parts = s.split("+").map((p) => p.trim().replace(",", ".")).filter(Boolean);
+        if (!parts.length) return null;
+        let sum = 0;
+        let any = false;
+        for (const p of parts) {
+          const n = Number(p);
+          if (Number.isFinite(n)) {
+            sum += n;
+            any = true;
+          }
+        }
+        return any ? sum : null;
+      }
+
+      function createSumParseInput(row, index, field, decimals) {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.inputMode = "decimal";
+        input.className = "input-sum";
+        input.placeholder = decimals === 0 ? "25+50" : "1200+800";
+        input.title = "Varios pallets: escribe sumas con + (ej. 25+50). Enter o salir de la celda para guardar el total.";
+
+        const fmt = (n) =>
+          decimals === 0
+            ? String(Math.round(n))
+            : (Math.round(n * 100) / 100).toLocaleString("es-CL", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+              });
+
+        const syncDisplay = () => {
+          const v = row[field];
+          input.value = v != null && Number.isFinite(Number(v)) ? fmt(Number(v)) : "";
+        };
+        syncDisplay();
+
+        const commit = () => {
+          const trimmed = String(input.value).trim();
+          if (!trimmed) {
+            rows[index][field] = null;
+            input.value = "";
+            scheduleUpdate(index, field, null);
+            updateMetrics();
+            return;
+          }
+          const sum = sumFromPlusExpression(trimmed);
+          if (sum == null) {
+            syncDisplay();
+            return;
+          }
+          const rounded = decimals === 0 ? Math.round(sum) : Math.round(sum * 100) / 100;
+          rows[index][field] = rounded;
+          input.value = fmt(rounded);
+          scheduleUpdate(index, field, rounded);
+          updateMetrics();
+        };
+
+        input.addEventListener("blur", commit);
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+            input.blur();
+          }
         });
         return input;
       }
@@ -1165,15 +1226,47 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         items.forEach(({ row, index, calc }) => {
           const tr = document.createElement("tr");
 
+          const checkTd = document.createElement("td");
+          const checkWrap = document.createElement("div");
+          checkWrap.className = "cell-check";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = !!row.procesado;
+          cb.title = "Marcar cuando ya está procesado";
+          cb.addEventListener("change", () => {
+            rows[index].procesado = cb.checked;
+            scheduleUpdate(index, "procesado", cb.checked);
+          });
+          checkWrap.appendChild(cb);
+          checkTd.appendChild(checkWrap);
+          tr.appendChild(checkTd);
+
+          const bandaTd = document.createElement("td");
+          const bandaInput = document.createElement("input");
+          bandaInput.type = "text";
+          bandaInput.value = row.bandasCamara ?? "";
+          bandaInput.placeholder = "Ej: 1+3";
+          bandaInput.title = "Banda(s) en cámara; varias posiciones con + o coma";
+          bandaInput.addEventListener("input", () => {
+            rows[index].bandasCamara = bandaInput.value;
+            scheduleUpdate(index, "bandasCamara", bandaInput.value);
+          });
+          bandaTd.appendChild(bandaInput);
+          tr.appendChild(bandaTd);
+
           idColumns.forEach((col) => {
             const td = document.createElement("td");
-            if (col.kind === "number") {
-              td.appendChild(createNumberInput(row, index, col.key, col.step));
-            } else {
-              td.appendChild(createTextInput(row, index, col.key, col.type));
-            }
+            td.appendChild(createTextInput(row, index, col.key, col.type));
             tr.appendChild(td);
           });
+
+          const cajasTd = document.createElement("td");
+          cajasTd.appendChild(createSumParseInput(row, index, "cantidadCajas", 0));
+          tr.appendChild(cajasTd);
+
+          const kilosTd = document.createElement("td");
+          kilosTd.appendChild(createSumParseInput(row, index, "kilosBrutoLote", 2));
+          tr.appendChild(kilosTd);
 
           row.total = sumCalibres(row);
           const totalTd = document.createElement("td");
@@ -1310,7 +1403,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       function exportExcel() {
         const headers = [
-          "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
+          "Procesado", "Banda(s) cámara", "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+34",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color", "Media luna", "Sin pedicelo", "Negro",
           "Primera (premium)", "Segunda (comercial)", "Zumo (desecho)",
@@ -1318,8 +1411,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         ];
 
         const data = visibleRows().map(({ row, calc }) => [
+          row.procesado ? "Sí" : "No",
+          row.bandasCamara ?? "",
           row.fecha, row.lote, row.productor, row.variedad,
-          asNumber(row.cantidadCajas), asNumber(row.kilosBrutoLote),
+          row.cantidadCajas != null ? row.cantidadCajas : "",
+          row.kilosBrutoLote != null ? row.kilosBrutoLote : "",
           row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           asNumber(row.mediaLuna), asNumber(row.sinPedicelo), asNumber(row.negro),

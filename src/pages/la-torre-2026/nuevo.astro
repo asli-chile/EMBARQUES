@@ -705,12 +705,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               </div>
               <div class="field">
                 <label for="lote-cajas">Cantidad de cajas</label>
-                <input class="input" id="lote-cajas" type="number" min="0" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                <input class="input" id="lote-cajas" type="text" inputmode="decimal" placeholder="25+50" autocomplete="off" title="Varios pallets: suma con + (ej. 25+50). Enter o salir para calcular." />
               </div>
               <div class="field">
                 <label for="lote-kilos-bruto">Kilos bruto lote</label>
-                <input class="input" id="lote-kilos-bruto" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" autocomplete="off" />
+                <input class="input" id="lote-kilos-bruto" type="text" inputmode="decimal" placeholder="1200+800" autocomplete="off" title="Varios pallets: suma con +. Enter o salir para calcular." />
               </div>
+            </div>
+
+            <div class="field" style="margin-top: 12px;">
+              <label for="lote-bandas">Banda(s) en cámara</label>
+              <input class="input" id="lote-bandas" type="text" placeholder="Ej: 1+3 o norte, sur" autocomplete="off" title="Posición del lote en cámara; puede haber más de una." />
             </div>
 
             <div class="field" style="margin-top: 14px;">
@@ -904,16 +909,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       function calcular(m) {
         const total = asNumber(m.total);
         const sumDef = defectos.reduce((acc, d) => acc + asNumber(m[d.id]), 0);
-        const sumExp = asNumber(m.c26) + asNumber(m.c28) + asNumber(m.c30) + asNumber(m.c32);
+        const zumo = sumZumo(m);
+        const exportable = Math.max(0, total - zumo);
         const sumCal = calibres.reduce((acc, c) => acc + asNumber(m[c.id]), 0);
         const defectPct = pct(sumDef, total);
-        const exportablePct = pct(sumExp, total);
+        const exportablePct = pct(exportable, total);
         const estado = asNumber(m.pudricion) > 0 || defectPct > 10
           ? "critico"
           : defectPct > 5
             ? "alerta"
             : "ok";
-        return { total, sumDef, sumExp, sumCal, defectPct, exportablePct, estado };
+        return { total, sumDef, exportable, sumCal, defectPct, exportablePct, estado };
       }
 
       const muestra = blankMuestra();
@@ -922,6 +928,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         lote: "",
         productor: "",
         variedad: "",
+        bandasCamara: "",
         cantidadCajas: null,
         kilosBrutoLote: null,
         etiquetaPallet: ""
@@ -949,22 +956,76 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const loteVariedad = document.getElementById("lote-variedad");
       const loteCajas = document.getElementById("lote-cajas");
       const loteKilosBruto = document.getElementById("lote-kilos-bruto");
+      const loteBandas = document.getElementById("lote-bandas");
 
       loteFecha.value = lote.fecha;
 
-      function parseOptionalNumber(value) {
-        const trimmed = String(value ?? "").trim();
-        if (!trimmed) return null;
-        const n = Number(trimmed);
-        return Number.isFinite(n) ? n : null;
+      function sumFromPlusExpression(raw) {
+        const s = String(raw ?? "").trim();
+        if (!s) return null;
+        const parts = s.split("+").map((p) => p.trim().replace(",", ".")).filter(Boolean);
+        if (!parts.length) return null;
+        let sum = 0;
+        let any = false;
+        for (const p of parts) {
+          const n = Number(p);
+          if (Number.isFinite(n)) {
+            sum += n;
+            any = true;
+          }
+        }
+        return any ? sum : null;
+      }
+
+      function commitCajasKilos() {
+        const cTrim = loteCajas.value.trim();
+        if (!cTrim) {
+          lote.cantidadCajas = null;
+          loteCajas.value = "";
+        } else {
+          const sum = sumFromPlusExpression(cTrim);
+          if (sum != null) {
+            lote.cantidadCajas = Math.round(sum);
+            loteCajas.value = String(lote.cantidadCajas);
+          }
+        }
+        const kTrim = loteKilosBruto.value.trim();
+        if (!kTrim) {
+          lote.kilosBrutoLote = null;
+          loteKilosBruto.value = "";
+        } else {
+          const sum = sumFromPlusExpression(kTrim);
+          if (sum != null) {
+            lote.kilosBrutoLote = Math.round(sum * 100) / 100;
+            loteKilosBruto.value = lote.kilosBrutoLote.toLocaleString("es-CL", {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            });
+          }
+        }
       }
 
       loteFecha.addEventListener("input", () => { lote.fecha = loteFecha.value; });
       loteLote.addEventListener("input", () => { lote.lote = loteLote.value; });
       loteProductor.addEventListener("input", () => { lote.productor = loteProductor.value; });
       loteVariedad.addEventListener("input", () => { lote.variedad = loteVariedad.value; });
-      loteCajas.addEventListener("input", () => { lote.cantidadCajas = parseOptionalNumber(loteCajas.value); });
-      loteKilosBruto.addEventListener("input", () => { lote.kilosBrutoLote = parseOptionalNumber(loteKilosBruto.value); });
+      loteBandas.addEventListener("input", () => { lote.bandasCamara = loteBandas.value; });
+      loteCajas.addEventListener("blur", commitCajasKilos);
+      loteKilosBruto.addEventListener("blur", commitCajasKilos);
+      loteCajas.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitCajasKilos();
+          loteCajas.blur();
+        }
+      });
+      loteKilosBruto.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitCajasKilos();
+          loteKilosBruto.blur();
+        }
+      });
 
       const palletArea = document.getElementById("pallet-area");
       const palletInput = document.getElementById("pallet-input");
@@ -1344,11 +1405,15 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         guardando = true;
         feedbackEl.textContent = "Guardando...";
 
+        commitCajasKilos();
+
         const row = {
           fecha: lote.fecha || null,
           lote: lote.lote.trim(),
           productor: lote.productor.trim() || null,
           variedad: lote.variedad.trim() || null,
+          procesado: false,
+          bandas_camara: String(lote.bandasCamara ?? "").trim() || null,
           cantidad_cajas: lote.cantidadCajas ?? null,
           kilos_bruto_lote: lote.kilosBrutoLote ?? null,
           etiqueta_pallet: lote.etiquetaPallet || null,
