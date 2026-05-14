@@ -227,7 +227,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         color: var(--accent);
       }
 
-      /* ── Resumen en cámara (por lote + variedad) ───────────────────── */
+      /* ── Resumen en cámara (por lote + variedad + productor) ───────── */
       .content-stack {
         flex: 1;
         display: flex;
@@ -304,11 +304,31 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         background: rgba(255, 255, 255, 0.6);
       }
 
+      .camara-table th.camara-col-banda,
+      .camara-table td.camara-banda {
+        width: 14%;
+        max-width: 7.5rem;
+        padding-left: 5px;
+        padding-right: 5px;
+        font-size: 11px;
+        line-height: 1.25;
+        letter-spacing: 0;
+        text-transform: none;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .camara-table th.camara-col-banda {
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
       .camara-table td.camara-banda {
         white-space: normal;
         word-break: break-word;
         text-align: center;
-        max-width: 280px;
+        font-weight: 600;
       }
 
       .camara-table td.camara-lote {
@@ -332,7 +352,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       table {
         width: 100%;
-        min-width: 1900px;
+        min-width: 1910px;
         border-collapse: separate;
         border-spacing: 0;
         table-layout: fixed;
@@ -472,17 +492,38 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .col-check { width: 44px; }
       .col-banda { width: 120px; }
       .col-fecha { width: 110px; }
+
+      .head-row th.th-sort-fecha {
+        cursor: pointer;
+        user-select: none;
+        transition: background 140ms ease, color 140ms ease;
+      }
+
+      .head-row th.th-sort-fecha:hover {
+        background: #e8e4df;
+        color: var(--accent);
+      }
+
+      .fecha-sort-ind {
+        display: inline-block;
+        margin-left: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--accent);
+        letter-spacing: 0;
+      }
+
       .col-lote { width: 76px; }
       .col-productor { width: 150px; }
       .col-variedad { width: 110px; }
       .col-cajas { width: 72px; }
       .col-kilos-bruto { width: 96px; }
+      .col-kilos-neto { width: 96px; }
       .col-total { width: 80px; }
       .col-calibre { width: 64px; }
       .col-defecto { width: 70px; }
       .col-clasif { width: 78px; }
       .col-calc { width: 84px; }
-      .col-estado { width: 88px; }
       .col-obs { width: 220px; }
       .col-img { width: 80px; }
       .col-accion { width: 60px; }
@@ -534,6 +575,125 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         font-size: 11px;
         font-weight: 700;
         opacity: 0.6;
+      }
+
+      /* ── Modal mapa cámara (edición desde tabla) ─────────────────── */
+      .camara-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 110;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .camara-modal.open {
+        display: flex;
+      }
+
+      .camara-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 13, 12, 0.55);
+        backdrop-filter: blur(4px);
+      }
+
+      .camara-modal-dialog {
+        position: relative;
+        z-index: 1;
+        width: min(980px, 100%);
+        max-height: min(92vh, 900px);
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
+        border-radius: 14px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .camara-modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .camara-modal-header h2 {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .camara-modal-sub {
+        margin-top: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .camara-modal-close {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      }
+
+      .camara-modal-close:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .camara-modal-draft {
+        padding: 8px 16px 0;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .camara-modal-map-root {
+        padding: 10px 16px 14px;
+        overflow-x: auto;
+      }
+
+      .camara-modal-footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 12px 16px 14px;
+        border-top: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      tbody td input.input-banda-map {
+        cursor: pointer;
+        background: #fafaf9;
+      }
+
+      tbody td input.input-banda-map:hover:not(:disabled) {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      tbody td input.input-banda-map:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
       }
 
       /* ── Lightbox ─────────────────────────────────────────────────── */
@@ -632,33 +792,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         background: #f4f4f3;
       }
 
-      .status {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        margin: 6px 8px;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 10.5px;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        width: calc(100% - 16px);
-      }
-
-      .status::before {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 999px;
-        background: currentColor;
-      }
-
-      .status-ok { background: #dcfce7; color: var(--ok); }
-      .status-warn { background: #fef3c7; color: var(--warn); }
-      .status-danger { background: #fee2e2; color: var(--danger); }
-
       .icon-btn {
         width: 28px;
         height: 28px;
@@ -722,6 +855,354 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         .brand-sub { font-size: 9.5px; letter-spacing: 0.14em; }
         .toolbar-search { max-width: 100%; }
       }
+
+      /* ── Mapa de cámara frigorífica ───────────────────────────────── */
+      .fridge-map-panel {
+        flex-shrink: 0;
+        max-height: min(380px, 42vh);
+        overflow: auto;
+        background: linear-gradient(180deg, #fafaf9 0%, #f5f2ef 100%);
+        border-bottom: 1px solid var(--border-strong);
+      }
+
+      .fridge-map-panel.is-collapsed {
+        max-height: none;
+        overflow: visible;
+      }
+
+      .fridge-map-panel.is-collapsed #fridge-map-root,
+      .fridge-map-panel.is-collapsed .map-print-stamp {
+        display: none !important;
+      }
+
+      .fridge-map-panel.is-collapsed .fridge-map-meta {
+        display: none;
+      }
+
+      .fridge-map-collapsed-note {
+        display: none;
+        margin: 0;
+        padding: 0 16px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .fridge-map-panel.is-collapsed .fridge-map-collapsed-note {
+        display: block;
+      }
+
+      .fridge-map-head {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: rgba(250, 250, 249, 0.96);
+      }
+
+      .fridge-map-head-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .fridge-map-toggle {
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .fridge-map-head h2 {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .fridge-map-meta {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        width: 100%;
+        line-height: 1.35;
+      }
+
+      .map-print-stamp {
+        display: none;
+      }
+
+      #fridge-map-root {
+        padding: 10px 16px 12px;
+      }
+
+      .lt-fridge-root {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .lt-fridge-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        margin-bottom: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .lt-leg {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .lt-leg::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        border: 1px solid var(--border-strong);
+      }
+
+      .lt-leg-free::before {
+        background: #f5f5f4;
+      }
+
+      .lt-leg-occ::before {
+        background: #e0e7ff;
+        border-color: #6366f1;
+      }
+
+      .lt-leg-dbl::before {
+        background: linear-gradient(180deg, #c7d2fe 50%, #a5b4fc 50%);
+        border-color: #4338ca;
+      }
+
+      .lt-leg-depth::before {
+        background: #e0f2fe;
+        border-color: #0284c7;
+      }
+
+      .lt-leg-b1::before {
+        background: #fce7f3;
+        border-color: #db2777;
+      }
+
+      .lt-leg-multi::before {
+        background: #dbeafe;
+        border-color: #1d4ed8;
+      }
+
+      .lt-fridge-slot--ghost {
+        background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+        border-color: #3b82f6;
+      }
+
+      .lt-fridge-slot--draft-toggle {
+        outline: 2px dashed #1d4ed8;
+        outline-offset: 1px;
+      }
+
+      .lt-fridge-colhead--b1 {
+        color: #9d174d;
+      }
+
+      .lt-fridge-slot--na {
+        background: #f4f4f5;
+        opacity: 0.75;
+      }
+
+      .lt-fridge-grid {
+        display: grid;
+        gap: 3px;
+        align-items: stretch;
+      }
+
+      .lt-fridge-corner,
+      .lt-fridge-colhead,
+      .lt-fridge-rowhead {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 4px 2px;
+        text-align: center;
+        line-height: 1.15;
+      }
+
+      .lt-fridge-rowhead {
+        justify-content: flex-end;
+        padding-right: 6px;
+      }
+
+      .lt-fridge-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 72px;
+      }
+
+      .lt-fridge-cell--double {
+        outline: 2px solid #4338ca;
+        outline-offset: 1px;
+        border-radius: 2px;
+      }
+
+      .lt-fridge-slot {
+        flex: 1;
+        min-height: 32px;
+        border: 1px solid var(--border-strong);
+        border-radius: 2px;
+        background: #fafaf9;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        padding: 3px 4px;
+        text-align: center;
+        transition: background 140ms ease, border-color 140ms ease;
+      }
+
+      button.lt-fridge-slot {
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .lt-fridge-slot--empty {
+        background: #f5f5f4;
+      }
+
+      .lt-fridge-slot--blocked {
+        background: #e7e5e4;
+        color: var(--muted);
+        cursor: not-allowed;
+        opacity: 0.75;
+      }
+
+      .lt-fridge-slot--occupied {
+        background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+        border-color: #818cf8;
+        color: var(--ink);
+      }
+
+      .lt-fridge-slot--picked {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(159, 18, 57, 0.12);
+      }
+
+      .lt-slot-coord {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        color: #4338ca;
+      }
+
+      .lt-slot-fruit {
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.1;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .lt-slot-lote {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .lt-slot-prod {
+        font-size: 8px;
+        color: var(--muted);
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .lt-slot-free-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: #a8a29e;
+      }
+
+      .lt-slot-blocked-label {
+        font-size: 9px;
+        font-weight: 800;
+        color: #78716c;
+      }
+
+      .lt-fridge-foot {
+        margin-top: 10px;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      @media print {
+        @page {
+          size: landscape;
+          margin: 10mm;
+        }
+
+        body.printing-fridge-map .toolbar,
+        body.printing-fridge-map .kpis,
+        body.printing-fridge-map .content-stack,
+        body.printing-fridge-map .lightbox {
+          display: none !important;
+        }
+
+        body.printing-fridge-map #camara-modal {
+          display: none !important;
+        }
+
+        body.printing-fridge-map #fridge-map-panel {
+          display: block !important;
+          position: relative;
+          width: 100%;
+          max-height: none;
+          overflow: visible;
+          background: white;
+          border: 0;
+          page-break-inside: avoid;
+        }
+
+        body.printing-fridge-map .map-print-stamp {
+          display: block !important;
+          margin: 0 16px 10px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #1c1917;
+        }
+
+        .lt-fridge-slot--picked {
+          box-shadow: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -749,6 +1230,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         <button class="btn" id="export-excel" type="button">
           <span class="icon">⇩</span> Excel
         </button>
+        <button class="btn" id="btn-print-fridge-map" type="button" title="Imprimir solo el mapa de cámara (horizontal)">
+          Imprimir mapa
+        </button>
         <a class="btn btn-primary" href={withBase("/la-torre-2026/nuevo")}>
           <span class="icon">+</span> Nuevo lote
         </a>
@@ -773,6 +1257,29 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         </div>
       </section>
 
+      <section class="fridge-map-panel" id="fridge-map-panel" aria-labelledby="fridge-map-title">
+        <div class="fridge-map-head">
+          <div class="fridge-map-head-row">
+            <h2 id="fridge-map-title">Mapa de cámara frigorífica</h2>
+            <button
+              type="button"
+              class="btn fridge-map-toggle"
+              id="btn-toggle-fridge-map"
+              aria-expanded="true"
+              aria-controls="fridge-map-root"
+            >
+              Minimizar mapa
+            </button>
+          </div>
+          <span class="fridge-map-meta">Vista superior · Solo pallets en cámara (no procesados). Coordenadas B–P–H.</span>
+        </div>
+        <p class="fridge-map-collapsed-note" id="fridge-map-collapsed-note">
+          Mapa oculto para ganar espacio en pantalla. Pulse «Mostrar mapa» arriba para ver el plano de nuevo.
+        </p>
+        <div class="map-print-stamp" id="map-print-stamp" aria-hidden="true"></div>
+        <div id="fridge-map-root"></div>
+      </section>
+
       <div class="content-stack">
         <section class="camara-panel" aria-labelledby="camara-resumen-title">
           <div class="camara-panel-head">
@@ -783,13 +1290,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <thead>
               <tr>
                 <th style="width: 10%;">Lote</th>
-                <th style="width: 12%;">Variedad</th>
-                <th style="width: 18%;">Productor</th>
-                <th style="width: 28%;">Banda (posición)</th>
-                <th style="width: 9%;">Cajas</th>
-                <th style="width: 10%;">Kilos bruto</th>
-                <th style="width: 8%;">Frutos</th>
-                <th style="width: 5%;">Proc.</th>
+                <th style="width: 14%;">Variedad</th>
+                <th style="width: 22%;">Productor</th>
+                <th class="camara-col-banda" title="Coordenada en cámara (B horizontal, P profundidad). B1: máx. 3 posiciones; puerta al final de B1">Banda</th>
+                <th style="width: 11%;">Total cajas</th>
+                <th style="width: 11%;">Total kg bruto</th>
+                <th style="width: 11%;">Total kg neto</th>
+                <th style="width: 9%;">Frutos</th>
+                <th style="width: 7%;">Proc.</th>
               </tr>
             </thead>
             <tbody id="camara-resumen-body"></tbody>
@@ -808,6 +1316,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <col class="col-variedad" />
             <col class="col-cajas" />
             <col class="col-kilos-bruto" />
+            <col class="col-kilos-neto" />
             <col class="col-total" />
             <col class="col-calibre" />
             <col class="col-calibre" />
@@ -832,7 +1341,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             <col class="col-calc" />
             <col class="col-calc" />
             <col class="col-calc" />
-            <col class="col-estado" />
             <col class="col-obs" />
             <col class="col-img" />
             <col class="col-img" />
@@ -840,26 +1348,34 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           </colgroup>
           <thead>
             <tr class="group-row">
-              <th colspan="8">Identificación</th>
+              <th colspan="9">Identificación</th>
               <th>Total</th>
               <th colspan="7">Calibres (mm)</th>
               <th colspan="10">Defectos</th>
               <th colspan="3">Clasificación (calc.)</th>
               <th colspan="3">Cálculos</th>
-              <th>Estado</th>
               <th>Observaciones</th>
               <th colspan="2">Imágenes</th>
               <th></th>
             </tr>
             <tr class="head-row">
               <th title="Marcar cuando el lote ya fue procesado">✓</th>
-              <th title="Formato banda(posición): ej. 1(1) = banda 1, posición 1 desde el fondo hacia afuera. Varios: 1(1)+2(3)">Banda</th>
-              <th>Fecha</th>
+              <th title="Clic: B1 solo 3 posiciones en P; puerta al final de B1. B2–B12 más profundidad. P1 fondo → cara acceso">Banda</th>
+              <th
+                class="th-sort-fecha"
+                id="th-sort-fecha"
+                scope="col"
+                role="button"
+                tabindex="0"
+              >
+                Fecha<span id="fecha-sort-indicator" class="fecha-sort-ind" aria-hidden="true"></span>
+              </th>
               <th>Lote</th>
               <th>Productor</th>
               <th>Variedad</th>
               <th>Cajas</th>
               <th>Kilos bruto</th>
+              <th>Kilos neto</th>
               <th>Frutos</th>
               <th>P/C</th>
               <th>22-24</th>
@@ -884,7 +1400,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>% Def.</th>
               <th>% Exp.</th>
               <th>Prom.</th>
-              <th>Estado</th>
               <th>Observaciones</th>
               <th>Etiqueta</th>
               <th>Defectos</th>
@@ -912,6 +1427,26 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       </div>
     </div>
 
+    <div id="camara-modal" class="camara-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="camara-modal-title">
+      <div class="camara-modal-backdrop" id="camara-modal-backdrop"></div>
+      <div class="camara-modal-dialog">
+        <header class="camara-modal-header">
+          <div>
+            <h2 id="camara-modal-title">Posición en cámara</h2>
+            <p id="camara-modal-subtitle" class="camara-modal-sub"></p>
+          </div>
+          <button type="button" class="camara-modal-close" id="camara-modal-close" aria-label="Cerrar">×</button>
+        </header>
+        <p id="camara-modal-draft" class="camara-modal-draft"></p>
+        <div id="camara-modal-map-root" class="camara-modal-map-root"></div>
+        <footer class="camara-modal-footer">
+          <button type="button" class="btn" id="camara-modal-cancel">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="camara-modal-confirm" disabled>Guardar posición</button>
+        </footer>
+      </div>
+    </div>
+
+    <script is:inline src={withBase("/js/fruitstone-camara-map.js")}></script>
     <script is:inline>
       const TABLE = "fruitstone2026_muestras";
       const supa = window.supabase && window._supaUrl && window._supaKey
@@ -962,12 +1497,16 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const fieldToColumn = {
         procesado: "procesado",
         bandasCamara: "bandas_camara",
+        camaraBanda: "camara_banda",
+        camaraPosicion: "camara_posicion",
+        camaraAltura: "camara_altura",
         fecha: "fecha",
         lote: "lote",
         productor: "productor",
         variedad: "variedad",
         cantidadCajas: "cantidad_cajas",
         kilosBrutoLote: "kilos_bruto_lote",
+        kilosNetoLote: "kilos_neto_lote",
         total: "total",
         cPre: "c_pre",
         c22: "c22",
@@ -993,6 +1532,63 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       };
 
       let rows = [];
+      /** @type {"ingreso" | "fecha"} */
+      let tableSortMode = "ingreso";
+
+      function rowIndexById(id) {
+        if (id == null) return -1;
+        const sid = String(id);
+        return rows.findIndex((r) => String(r.id) === sid);
+      }
+
+      function compareIngresoOrder(a, b) {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (ta !== tb) return ta - tb;
+        return (Number(a.id) || 0) - (Number(b.id) || 0);
+      }
+
+      function fechaMuestraSortKey(fechaVal) {
+        const raw = String(fechaVal ?? "").trim();
+        if (!raw) return Number.MAX_SAFE_INTEGER;
+        const t = Date.parse(raw);
+        return Number.isFinite(t) ? t : Number.MAX_SAFE_INTEGER;
+      }
+
+      function applyTableSort() {
+        if (tableSortMode === "fecha") {
+          rows.sort((a, b) => {
+            const d = fechaMuestraSortKey(a.fecha) - fechaMuestraSortKey(b.fecha);
+            if (d !== 0) return d;
+            return compareIngresoOrder(a, b);
+          });
+        } else {
+          rows.sort(compareIngresoOrder);
+        }
+      }
+
+      function syncFechaSortHeader() {
+        const th = document.getElementById("th-sort-fecha");
+        const ind = document.getElementById("fecha-sort-indicator");
+        if (!th) return;
+        if (tableSortMode === "fecha") {
+          th.title = "Orden: fecha de muestra (más antigua primero). Clic para volver al orden de ingreso.";
+          th.setAttribute("aria-sort", "ascending");
+          if (ind) ind.textContent = "↑";
+        } else {
+          th.title =
+            "Orden: como se ingresaron (arriba = lo guardado antes). Clic para ordenar por fecha de muestra, más antigua primero.";
+          th.removeAttribute("aria-sort");
+          if (ind) ind.textContent = "";
+        }
+      }
+
+      function handleFechaSortHeaderToggle() {
+        tableSortMode = tableSortMode === "fecha" ? "ingreso" : "fecha";
+        applyTableSort();
+        syncFechaSortHeader();
+        render();
+      }
 
       const tbody = document.getElementById("samples-body");
       const emptyState = document.getElementById("empty-state");
@@ -1002,14 +1598,19 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       function rowFromDb(r) {
         return {
           id: r.id,
+          createdAt: r.created_at ?? null,
           procesado: r.procesado === true,
           bandasCamara: r.bandas_camara ?? "",
+          camaraBanda: r.camara_banda != null ? Number(r.camara_banda) : null,
+          camaraPosicion: r.camara_posicion != null ? Number(r.camara_posicion) : null,
+          camaraAltura: r.camara_altura != null ? Number(r.camara_altura) : null,
           fecha: r.fecha ?? "",
           lote: r.lote ?? "",
           productor: r.productor ?? "",
           variedad: r.variedad ?? "",
           cantidadCajas: r.cantidad_cajas != null ? Number(r.cantidad_cajas) : null,
           kilosBrutoLote: r.kilos_bruto_lote != null ? Number(r.kilos_bruto_lote) : null,
+          kilosNetoLote: r.kilos_neto_lote != null ? Number(r.kilos_neto_lote) : null,
           total: r.total ?? 0,
           cPre: r.c_pre ?? 0,
           c22: r.c22 ?? 0,
@@ -1042,17 +1643,68 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const { data, error } = await supa
           .from(TABLE)
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: true });
         if (error) {
           console.error("Error cargando muestras:", error);
           return;
         }
         rows = (data ?? []).map(rowFromDb);
+        applyTableSort();
+        syncFechaSortHeader();
         render();
       }
 
       const pendingPatches = new Map();
       const debounceTimers = new Map();
+      const UPDATE_DEBOUNCE_MS = 350;
+
+      function takePendingSnapshotAndClearTimers() {
+        const entries = Array.from(pendingPatches.entries());
+        if (!entries.length) return null;
+        for (const [id] of entries) {
+          const t = debounceTimers.get(id);
+          if (t) clearTimeout(t);
+          debounceTimers.delete(id);
+        }
+        pendingPatches.clear();
+        return entries;
+      }
+
+      /** Envío síncrono a la API REST de Supabase (soporta keepalive al cerrar/recargar pestaña). */
+      function sendPatchesKeepalive(entries) {
+        const base = typeof window !== "undefined" ? window._supaUrl : "";
+        const key = typeof window !== "undefined" ? window._supaKey : "";
+        if (!base || !key || !entries || !entries.length) return;
+        for (const [id, patch] of entries) {
+          const url = `${base}/rest/v1/${TABLE}?id=eq.${encodeURIComponent(String(id))}`;
+          fetch(url, {
+            method: "PATCH",
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify(patch),
+            keepalive: true,
+          }).catch(() => {});
+        }
+      }
+
+      async function flushAllPendingPatches() {
+        if (!supa) return;
+        const entries = takePendingSnapshotAndClearTimers();
+        if (!entries) return;
+        sendPatchesKeepalive(entries);
+        const results = await Promise.all(
+          entries.map(([id, patch]) => supa.from(TABLE).update(patch).eq("id", id))
+        );
+        for (const r of results) {
+          if (r.error && typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+            console.error("Error actualizando muestra:", r.error);
+          }
+        }
+      }
 
       function scheduleUpdate(rowIndex, field, value) {
         const row = rows[rowIndex];
@@ -1065,16 +1717,18 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         const existing = debounceTimers.get(row.id);
         if (existing) clearTimeout(existing);
-        debounceTimers.set(row.id, setTimeout(() => flushUpdate(row.id), 600));
+        debounceTimers.set(row.id, setTimeout(() => flushUpdate(row.id), UPDATE_DEBOUNCE_MS));
       }
 
       async function flushUpdate(id) {
         const patch = pendingPatches.get(id);
-        if (!patch) return;
+        if (!patch || !supa) return;
         pendingPatches.delete(id);
         debounceTimers.delete(id);
         const { error } = await supa.from(TABLE).update(patch).eq("id", id);
-        if (error) console.error("Error actualizando muestra:", error);
+        if (error && typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+          console.error("Error actualizando muestra:", error);
+        }
       }
 
       async function deleteRow(rowIndex) {
@@ -1140,7 +1794,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return rows
           .map((row, index) => ({ row, index, calc: calculate(row) }))
           .filter(({ row, calc }) => {
-            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.bandasCamara ?? ""} ${row.observaciones}`.toLowerCase();
+            const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.bandasCamara ?? ""} ${row.kilosBrutoLote ?? ""} ${row.kilosNetoLote ?? ""} ${row.observaciones}`.toLowerCase();
             const matchSearch = !search || haystack.includes(search);
             const matchStatus = status === "todos" || calc.estado === status;
             return matchSearch && matchStatus;
@@ -1153,20 +1807,22 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           const lote = String(row.lote ?? "").trim();
           if (!lote) continue;
           const variedad = String(row.variedad ?? "").trim();
-          const key = `${lote.toLowerCase()}\0${variedad.toLowerCase()}`;
+          const productor = String(row.productor ?? "").trim();
+          const key = `${lote.toLowerCase()}\0${variedad.toLowerCase()}\0${productor.toLowerCase()}`;
           if (!map.has(key)) map.set(key, []);
           map.get(key).push(row);
         }
         const out = [];
         for (const [, arr] of map) {
           const bandasSet = new Set();
-          const productores = new Set();
           let cajas = 0;
           let kilos = 0;
+          let kilosNeto = 0;
           let frutos = 0;
           let procN = 0;
           const lote = String(arr[0].lote ?? "").trim();
           const variedad = String(arr[0].variedad ?? "").trim();
+          const productor = String(arr[0].productor ?? "").trim();
           for (const row of arr) {
             const b = String(row.bandasCamara ?? "").trim();
             if (b) bandasSet.add(b);
@@ -1176,14 +1832,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             if (row.kilosBrutoLote != null && Number.isFinite(Number(row.kilosBrutoLote))) {
               kilos += Number(row.kilosBrutoLote);
             }
+            if (row.kilosNetoLote != null && Number.isFinite(Number(row.kilosNetoLote))) {
+              kilosNeto += Number(row.kilosNetoLote);
+            }
             frutos += asNumber(row.total);
             if (row.procesado) procN += 1;
-            const p = String(row.productor ?? "").trim();
-            if (p) productores.add(p);
           }
-          let productor = "";
-          if (productores.size > 1) productor = [...productores].sort((a, b) => a.localeCompare(b, "es")).join(" · ");
-          else if (productores.size === 1) productor = [...productores][0];
 
           const n = arr.length;
           let procLabel = "No";
@@ -1199,6 +1853,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               : "—",
             cajas,
             kilos,
+            kilosNeto,
             frutos,
             procLabel,
             n
@@ -1207,7 +1862,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         out.sort((a, b) => {
           const c = a.lote.localeCompare(b.lote, "es", { numeric: true });
           if (c !== 0) return c;
-          return a.variedad.localeCompare(b.variedad, "es");
+          const v = a.variedad.localeCompare(b.variedad, "es");
+          if (v !== 0) return v;
+          return a.productor.localeCompare(b.productor, "es");
         });
         return out;
       }
@@ -1224,12 +1881,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           empty.textContent =
             rows.length === 0
               ? "Aún no hay muestras cargadas."
-              : "Ningún registro tiene código de lote; agrupa por lote y variedad cuando informes el lote.";
+              : "Ningún registro tiene código de lote; informa el lote para ver totales por lote, variedad y productor.";
           meta.textContent = "";
           return;
         }
         empty.hidden = true;
-        meta.textContent = `${groups.length} grupo${groups.length === 1 ? "" : "s"} (lote + variedad)`;
+        meta.textContent = `${groups.length} grupo${groups.length === 1 ? "" : "s"} (lote + variedad + productor)`;
 
         for (const g of groups) {
           const tr = document.createElement("tr");
@@ -1245,6 +1902,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             {
               text: g.kilos
                 ? g.kilos.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+                : "—",
+              className: ""
+            },
+            {
+              text: g.kilosNeto
+                ? g.kilosNeto.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
                 : "—",
               className: ""
             },
@@ -1270,6 +1933,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           scheduleUpdate(index, field, input.value);
           updateMetrics();
         });
+        if (field === "fecha") {
+          input.addEventListener("blur", () => {
+            if (tableSortMode === "fecha") {
+              applyTableSort();
+              render();
+            }
+          });
+        }
         return input;
       }
 
@@ -1367,11 +2038,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         if (cells[0]) cells[0].textContent = formatPct(calc.defectPct);
         if (cells[1]) cells[1].textContent = formatPct(calc.exportablePct);
         if (cells[2]) cells[2].textContent = calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 });
-        const statusEl = tr.querySelector(".status");
-        if (statusEl) {
-          statusEl.className = `status status-${calc.estado === "critico" ? "danger" : calc.estado === "alerta" ? "warn" : "ok"}`;
-          statusEl.textContent = calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK";
-        }
       }
 
       function createCalcCell(value) {
@@ -1379,15 +2045,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const span = document.createElement("span");
         span.className = "cell-calc";
         span.textContent = value;
-        td.appendChild(span);
-        return td;
-      }
-
-      function createStatusCell(status) {
-        const td = document.createElement("td");
-        const span = document.createElement("span");
-        span.className = `status status-${status === "critico" ? "danger" : status === "alerta" ? "warn" : "ok"}`;
-        span.textContent = status === "critico" ? "Crítico" : status === "alerta" ? "Alerta" : "OK";
         td.appendChild(span);
         return td;
       }
@@ -1479,13 +2136,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           const bandaTd = document.createElement("td");
           const bandaInput = document.createElement("input");
           bandaInput.type = "text";
+          bandaInput.className = "input-banda-map";
+          bandaInput.readOnly = true;
           bandaInput.value = row.bandasCamara ?? "";
-          bandaInput.placeholder = "1(1)+2(3)";
-          bandaInput.title = "banda(posición): número = banda; entre paréntesis = posición en esa banda desde el fondo hacia afuera. Varios tramos con +.";
-          bandaInput.addEventListener("input", () => {
-            rows[index].bandasCamara = bandaInput.value;
-            scheduleUpdate(index, "bandasCamara", bandaInput.value);
-            updateMetrics();
+          bandaInput.placeholder = row.procesado ? "Procesado" : "Clic → mapa…";
+          bandaInput.title = row.procesado
+            ? "No se puede editar en cámara mientras esté procesado."
+            : "Clic: mapa B1…B12; B1 máx. 3 posiciones en P (puerta al final de B1). P1 fondo; sin huecos en profundidad.";
+          bandaInput.disabled = !!row.procesado;
+          bandaInput.addEventListener("click", () => {
+            if (row.procesado) return;
+            openCamaraModal(index);
           });
           bandaTd.appendChild(bandaInput);
           tr.appendChild(bandaTd);
@@ -1503,6 +2164,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           const kilosTd = document.createElement("td");
           kilosTd.appendChild(createSumParseInput(row, index, "kilosBrutoLote", 2));
           tr.appendChild(kilosTd);
+
+          const kilosNetoTd = document.createElement("td");
+          kilosNetoTd.appendChild(createSumParseInput(row, index, "kilosNetoLote", 2));
+          tr.appendChild(kilosNetoTd);
 
           row.total = sumCalibres(row);
           const totalTd = document.createElement("td");
@@ -1583,7 +2248,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           tr.appendChild(createCalcCell(formatPct(calc.defectPct)));
           tr.appendChild(createCalcCell(formatPct(calc.exportablePct)));
           tr.appendChild(createCalcCell(calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 })));
-          tr.appendChild(createStatusCell(calc.estado));
 
           const notesTd = document.createElement("td");
           const notes = document.createElement("textarea");
@@ -1636,15 +2300,203 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         document.getElementById("metric-exportable").textContent = formatPct(pct(totals.exportable, totals.fruits));
         document.getElementById("metric-defects").textContent = formatPct(pct(totals.defects, totals.fruits));
         renderCamaraResumen();
+        renderFridgeMap();
+      }
+
+      function buildMapRowsPayload() {
+        return rows
+          .filter((r) => !r.procesado)
+          .map((r) => ({
+            id: r.id,
+            procesado: false,
+            lote: r.lote,
+            variedad: r.variedad,
+            productor: r.productor,
+            camara_banda: r.camaraBanda,
+            camara_posicion: r.camaraPosicion,
+            camara_altura: r.camaraAltura,
+            bandas_camara: r.bandasCamara
+          }));
+      }
+
+      function renderFridgeMap() {
+        const root = document.getElementById("fridge-map-root");
+        if (!root || !window.LaTorreCamaraMap) return;
+        window.LaTorreCamaraMap.render(root, buildMapRowsPayload(), { mode: "view" });
+      }
+
+      /** Id de muestra (`rows[].id`) cuyo mapa está abierto; no usar índice (cambia al ordenar la tabla). */
+      let camaraModalRowId = null;
+      /** @type {{ b: number; p: number; h: number }[]} */
+      let camaraModalDraftSlots = [];
+
+      function renderCamaraModalMap() {
+        const root = document.getElementById("camara-modal-map-root");
+        if (!root || !window.LaTorreCamaraMap || camaraModalRowId == null) return;
+        const idx = rowIndexById(camaraModalRowId);
+        const row = idx >= 0 ? rows[idx] : null;
+        if (!row) return;
+        const excludeId = row.id;
+        const M = window.LaTorreCamaraMap;
+        M.render(root, buildMapRowsPayload(), {
+          mode: "pick",
+          excludeId,
+          multiSelect: true,
+          selection: camaraModalDraftSlots,
+          editingDraftSlots: camaraModalDraftSlots,
+          onSlotClick: (c) => {
+            if (c.toggle) {
+              camaraModalDraftSlots = camaraModalDraftSlots.filter(
+                (s) => !M.slotsEqual(s, { b: c.b, p: c.p, h: c.h })
+              );
+            } else {
+              const next = camaraModalDraftSlots.concat([{ b: c.b, p: c.p, h: c.h }]);
+              if (!M.validateDraftSlots(buildMapRowsPayload(), excludeId, next)) {
+                window.alert(
+                  "No se puede añadir esa celda (ocupada por otro lote o falta soporte en profundidad en esa banda)."
+                );
+                return;
+              }
+              camaraModalDraftSlots = next;
+            }
+            const draftEl = document.getElementById("camara-modal-draft");
+            if (draftEl) {
+              draftEl.textContent = camaraModalDraftSlots.length
+                ? "Selección: " +
+                  M.encodeSlotsText(camaraModalDraftSlots) +
+                  " · Pulse «Guardar posición» para aplicar."
+                : "Sin celdas seleccionadas. Elija al menos una posición (varias si el lote está repartido).";
+            }
+            const confirmBtn = document.getElementById("camara-modal-confirm");
+            if (confirmBtn) confirmBtn.disabled = camaraModalDraftSlots.length === 0;
+            renderCamaraModalMap();
+          }
+        });
+      }
+
+      function openCamaraModal(rowIndex) {
+        const row = rows[rowIndex];
+        if (!row || !window.LaTorreCamaraMap) return;
+        if (row.procesado) {
+          window.alert("No se puede cambiar la posición en cámara mientras la muestra esté marcada como procesada.");
+          return;
+        }
+        if (row.id == null) {
+          window.alert("La muestra aún no tiene id de base de datos; recargue la página.");
+          return;
+        }
+        camaraModalRowId = row.id;
+        camaraModalDraftSlots = (window.LaTorreCamaraMap.parseAllSlotsFromRow(row) || []).map((s) => ({
+          b: s.b,
+          p: s.p,
+          h: s.h
+        }));
+        const sub = document.getElementById("camara-modal-subtitle");
+        if (sub) {
+          sub.textContent = [row.lote && `Lote ${row.lote}`, row.variedad, row.productor].filter(Boolean).join(" · ");
+        }
+        const draftEl = document.getElementById("camara-modal-draft");
+        const M = window.LaTorreCamaraMap;
+        if (draftEl) {
+          draftEl.textContent = camaraModalDraftSlots.length
+            ? "Actual: " +
+              M.encodeSlotsText(camaraModalDraftSlots) +
+              " · Pulse celdas para añadir o quitar; «Guardar posición» aplica."
+            : "Sin posición en mapa. B1: solo P1–P3. Puerta al final de B1. Sin huecos en profundidad por banda. Puede elegir varias celdas si el lote está en más de un sitio.";
+        }
+        const confirmBtn = document.getElementById("camara-modal-confirm");
+        if (confirmBtn) confirmBtn.disabled = camaraModalDraftSlots.length === 0;
+        const modal = document.getElementById("camara-modal");
+        if (modal) {
+          modal.classList.add("open");
+          modal.setAttribute("aria-hidden", "false");
+        }
+        renderCamaraModalMap();
+      }
+
+      function closeCamaraModal() {
+        camaraModalRowId = null;
+        camaraModalDraftSlots = [];
+        const modal = document.getElementById("camara-modal");
+        if (modal) {
+          modal.classList.remove("open");
+          modal.setAttribute("aria-hidden", "true");
+        }
+      }
+
+      function confirmCamaraModal() {
+        if (camaraModalRowId == null || !camaraModalDraftSlots.length || !window.LaTorreCamaraMap) return;
+        const idx = rowIndexById(camaraModalRowId);
+        if (idx < 0) {
+          window.alert("No se encontró la muestra en la tabla (quizá se reordenó o actualizó). Cierre y vuelva a abrir desde la fila correcta.");
+          closeCamaraModal();
+          return;
+        }
+        const row = rows[idx];
+        const M = window.LaTorreCamaraMap;
+        const slots = camaraModalDraftSlots.map((s) => ({ b: s.b, p: s.p, h: s.h }));
+        if (!M.validateDraftSlots(buildMapRowsPayload(), row.id, slots)) {
+          window.alert("La selección ya no es válida (ocupación o reglas de profundidad). Revise el mapa.");
+          renderCamaraModalMap();
+          return;
+        }
+        const enc = M.encodeSlotsText(slots);
+        if (slots.length === 1) {
+          const c = slots[0];
+          row.camaraBanda = c.b;
+          row.camaraPosicion = c.p;
+          row.camaraAltura = c.h;
+          row.bandasCamara = enc;
+          scheduleUpdate(idx, "camaraBanda", c.b);
+          scheduleUpdate(idx, "camaraPosicion", c.p);
+          scheduleUpdate(idx, "camaraAltura", c.h);
+          scheduleUpdate(idx, "bandasCamara", enc);
+        } else {
+          row.camaraBanda = null;
+          row.camaraPosicion = null;
+          row.camaraAltura = null;
+          row.bandasCamara = enc;
+          scheduleUpdate(idx, "camaraBanda", null);
+          scheduleUpdate(idx, "camaraPosicion", null);
+          scheduleUpdate(idx, "camaraAltura", null);
+          scheduleUpdate(idx, "bandasCamara", enc);
+        }
+        closeCamaraModal();
+        render();
+      }
+
+      function printFridgeMap() {
+        const stamp = document.getElementById("map-print-stamp");
+        const fridgePanel = document.getElementById("fridge-map-panel");
+        const wasCollapsed = fridgePanel?.classList.contains("is-collapsed") ?? false;
+        if (wasCollapsed) fridgePanel.classList.remove("is-collapsed");
+        if (stamp) {
+          stamp.textContent =
+            "Impreso: " +
+            new Date().toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) +
+            " · Solo pallets en cámara (no procesados)";
+        }
+        renderFridgeMap();
+        const onAfter = () => {
+          document.body.classList.remove("printing-fridge-map");
+          if (stamp) stamp.textContent = "";
+          if (wasCollapsed) fridgePanel?.classList.add("is-collapsed");
+          window.removeEventListener("afterprint", onAfter);
+        };
+        document.body.classList.add("printing-fridge-map");
+        window.addEventListener("afterprint", onAfter);
+        requestAnimationFrame(() => {
+          window.print();
+        });
       }
 
       function exportExcel() {
         const headers = [
-          "Procesado", "Banda cámara (ej. 1(1))", "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto",
+          "Procesado", "Banda cámara (ej. 1(1))", "Fecha", "Lote", "Productor", "Variedad", "Cajas", "Kilos bruto", "Kilos neto",
           "Total Frutos", "P/C", "22-24", "24-26", "26-28", "28-30", "30-32", "+34",
           "Blanda", "Pitting", "Doble", "Deshidratada", "Partida", "Pudrición", "Falta de color", "Media luna", "Sin pedicelo", "Negro",
           "Primera (premium)", "Segunda (comercial)", "Zumo (desecho)",
-          "% Defectos", "% Exportable", "Promedio Calibre", "Estado", "Observaciones"
+          "% Defectos", "% Exportable", "Promedio Calibre", "Observaciones"
         ];
 
         const data = visibleRows().map(({ row, calc }) => [
@@ -1653,13 +2505,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           row.fecha, row.lote, row.productor, row.variedad,
           row.cantidadCajas != null ? row.cantidadCajas : "",
           row.kilosBrutoLote != null ? row.kilosBrutoLote : "",
+          row.kilosNetoLote != null ? row.kilosNetoLote : "",
           row.total, asNumber(row.cPre), row.c22, row.c24, row.c26, row.c28, row.c30, row.c32,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           asNumber(row.mediaLuna), asNumber(row.sinPedicelo), asNumber(row.negro),
           asNumber(row.primera), asNumber(row.segunda), asNumber(row.zumo),
           formatPct(calc.defectPct), formatPct(calc.exportablePct),
           calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }),
-          calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK",
           row.observaciones
         ]);
 
@@ -1694,6 +2546,22 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       document.getElementById("export-excel").addEventListener("click", exportExcel);
+      const printMapBtn = document.getElementById("btn-print-fridge-map");
+      if (printMapBtn) printMapBtn.addEventListener("click", printFridgeMap);
+      const fridgePanel = document.getElementById("fridge-map-panel");
+      const toggleFridgeBtn = document.getElementById("btn-toggle-fridge-map");
+      if (toggleFridgeBtn && fridgePanel) {
+        toggleFridgeBtn.addEventListener("click", () => {
+          const collapsed = fridgePanel.classList.toggle("is-collapsed");
+          toggleFridgeBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+          toggleFridgeBtn.textContent = collapsed ? "Mostrar mapa" : "Minimizar mapa";
+          if (!collapsed) renderFridgeMap();
+        });
+      }
+      document.getElementById("camara-modal-close")?.addEventListener("click", closeCamaraModal);
+      document.getElementById("camara-modal-cancel")?.addEventListener("click", closeCamaraModal);
+      document.getElementById("camara-modal-backdrop")?.addEventListener("click", closeCamaraModal);
+      document.getElementById("camara-modal-confirm")?.addEventListener("click", confirmCamaraModal);
       searchInput.addEventListener("input", render);
       statusFilter.addEventListener("change", render);
 
@@ -1740,6 +2608,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       lightboxPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
       lightboxNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
       document.addEventListener("keydown", (e) => {
+        const camModal = document.getElementById("camara-modal");
+        if (camModal && camModal.classList.contains("open")) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeCamaraModal();
+          }
+          return;
+        }
         if (!lightbox.classList.contains("open")) return;
         if (e.key === "Escape") closeLightbox();
         if (e.key === "ArrowLeft") showLightboxAt(lightboxIndex - 1);
@@ -1747,14 +2623,36 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       });
 
       window.addEventListener("focus", () => {
-        if (pendingPatches.size === 0) loadRows();
+        void flushAllPendingPatches();
       });
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible" && pendingPatches.size === 0) {
-          loadRows();
+        if (document.visibilityState === "hidden") {
+          void flushAllPendingPatches();
+          return;
         }
+        void (async () => {
+          await flushAllPendingPatches();
+          if (pendingPatches.size === 0) loadRows();
+        })();
+      });
+      window.addEventListener("pagehide", () => {
+        void flushAllPendingPatches();
+      });
+      window.addEventListener("beforeunload", () => {
+        void flushAllPendingPatches();
       });
 
+      const fechaSortTh = document.getElementById("th-sort-fecha");
+      if (fechaSortTh) {
+        fechaSortTh.addEventListener("click", handleFechaSortHeaderToggle);
+        fechaSortTh.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleFechaSortHeaderToggle();
+          }
+        });
+      }
+      syncFechaSortHeader();
       loadRows();
     </script>
   </body>

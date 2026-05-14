@@ -17,6 +17,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       window._supaUrl = SUPA_URL;
       window._supaKey = SUPA_KEY;
     </script>
+    <script is:inline src={withBase("/js/fruitstone-camara-map.js")}></script>
     <style is:global>
       *, *::before, *::after {
         box-sizing: border-box;
@@ -295,6 +296,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .lote-grid {
         display: grid;
         grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .lote-kilos-strip {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
       }
 
@@ -623,6 +631,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       /* ── Responsive ─────────────────────────────────────────────── */
       @media (max-width: 980px) {
         .lote-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .lote-kilos-strip { grid-template-columns: 1fr; }
         .muestra-row.calibres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .muestra-row.defectos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .muestra-row.top { grid-template-columns: minmax(0, 220px); }
@@ -630,6 +639,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
       @media (max-width: 600px) {
         .lote-grid { grid-template-columns: 1fr 1fr; }
+        .lote-kilos-strip { grid-template-columns: 1fr; }
         .muestra-row.calibres { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .muestra-row.defectos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .muestra-row.clasificacion { grid-template-columns: 1fr; }
@@ -639,6 +649,309 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         .brand img { height: 32px; max-width: 90px; }
         .brand-title { font-size: 14px; }
         .brand-sub { font-size: 9.5px; letter-spacing: 0.14em; }
+      }
+
+      /* ── Mapa cámara (nuevo lote) — mismo lenguaje visual que tabla principal ─ */
+      .camara-map-block {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      .camara-map-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      .camara-map-block.is-collapsed .camara-map-toolbar {
+        margin-bottom: 4px;
+      }
+
+      .camara-map-block.is-collapsed .camara-map-expandable {
+        display: none;
+      }
+
+      .camara-map-collapsed-note {
+        display: none;
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .camara-map-block.is-collapsed .camara-map-collapsed-note {
+        display: block;
+      }
+
+      .camara-map-toggle {
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .camara-map-block .block-title {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0;
+      }
+
+      .camara-map-hint {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 12px;
+        line-height: 1.45;
+      }
+
+      #camara-map-nuevo-root {
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .camara-draft-row {
+        margin-top: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .camara-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .camara-confirmed {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ok);
+      }
+
+      .lt-fridge-root {
+        max-width: 1400px;
+      }
+
+      .lt-fridge-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        margin-bottom: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .lt-leg {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .lt-leg::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        border: 1px solid var(--border-strong);
+      }
+
+      .lt-leg-free::before {
+        background: #f5f5f4;
+      }
+
+      .lt-leg-occ::before {
+        background: #e0e7ff;
+        border-color: #6366f1;
+      }
+
+      .lt-leg-dbl::before {
+        background: linear-gradient(180deg, #c7d2fe 50%, #a5b4fc 50%);
+        border-color: #4338ca;
+      }
+
+      .lt-leg-depth::before {
+        background: #e0f2fe;
+        border-color: #0284c7;
+      }
+
+      .lt-leg-b1::before {
+        background: #fce7f3;
+        border-color: #db2777;
+      }
+
+      .lt-leg-multi::before {
+        background: #dbeafe;
+        border-color: #1d4ed8;
+      }
+
+      .lt-fridge-slot--ghost {
+        background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+        border-color: #3b82f6;
+      }
+
+      .lt-fridge-slot--draft-toggle {
+        outline: 2px dashed #1d4ed8;
+        outline-offset: 1px;
+      }
+
+      .lt-fridge-colhead--b1 {
+        color: #9d174d;
+      }
+
+      .lt-fridge-slot--na {
+        background: #f4f4f5;
+        opacity: 0.75;
+      }
+
+      .lt-fridge-grid {
+        display: grid;
+        gap: 3px;
+        align-items: stretch;
+      }
+
+      .lt-fridge-corner,
+      .lt-fridge-colhead,
+      .lt-fridge-rowhead {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 4px 2px;
+        text-align: center;
+        line-height: 1.15;
+      }
+
+      .lt-fridge-rowhead {
+        justify-content: flex-end;
+        padding-right: 6px;
+      }
+
+      .lt-fridge-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 72px;
+      }
+
+      .lt-fridge-cell--double {
+        outline: 2px solid #4338ca;
+        outline-offset: 1px;
+        border-radius: 2px;
+      }
+
+      .lt-fridge-slot {
+        flex: 1;
+        min-height: 32px;
+        border: 1px solid var(--border-strong);
+        border-radius: 2px;
+        background: #fafaf9;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        padding: 3px 4px;
+        text-align: center;
+        transition: background 140ms ease, border-color 140ms ease;
+      }
+
+      button.lt-fridge-slot {
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .lt-fridge-slot--empty {
+        background: #f5f5f4;
+      }
+
+      .lt-fridge-slot--blocked {
+        background: #e7e5e4;
+        color: var(--muted);
+        cursor: not-allowed;
+        opacity: 0.75;
+      }
+
+      .lt-fridge-slot--occupied {
+        background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+        border-color: #818cf8;
+        color: var(--ink);
+      }
+
+      .lt-fridge-slot--picked {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(159, 18, 57, 0.12);
+      }
+
+      .lt-slot-coord {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        color: #4338ca;
+      }
+
+      .lt-slot-fruit {
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.1;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .lt-slot-lote {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .lt-slot-prod {
+        font-size: 8px;
+        color: var(--muted);
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .lt-slot-free-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: #a8a29e;
+      }
+
+      .lt-slot-blocked-label {
+        font-size: 9px;
+        font-weight: 800;
+        color: #78716c;
+      }
+
+      .lt-fridge-foot {
+        margin-top: 10px;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
       }
     </style>
   </head>
@@ -703,19 +1016,56 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                   <option value="Royal Dawn"></option>
                 </datalist>
               </div>
-              <div class="field">
-                <label for="lote-cajas">Cantidad de cajas</label>
-                <input class="input" id="lote-cajas" type="text" inputmode="decimal" placeholder="25+50" autocomplete="off" title="Varios pallets: suma con + (ej. 25+50). Enter o salir para calcular." />
-              </div>
-              <div class="field">
-                <label for="lote-kilos-bruto">Kilos bruto lote</label>
-                <input class="input" id="lote-kilos-bruto" type="text" inputmode="decimal" placeholder="1200+800" autocomplete="off" title="Varios pallets: suma con +. Enter o salir para calcular." />
+              <div class="lote-kilos-strip">
+                <div class="field">
+                  <label for="lote-cajas">Cantidad de cajas</label>
+                  <input class="input" id="lote-cajas" type="text" inputmode="decimal" placeholder="25+50" autocomplete="off" title="Varios pallets: suma con + (ej. 25+50). Enter o salir para calcular." />
+                </div>
+                <div class="field">
+                  <label for="lote-kilos-bruto">Kilos bruto lote</label>
+                  <input class="input" id="lote-kilos-bruto" type="text" inputmode="decimal" placeholder="1200+800" autocomplete="off" title="Varios pallets: suma con +. Enter o salir para calcular." />
+                </div>
+                <div class="field">
+                  <label for="lote-kilos-neto">Kilos neto lote</label>
+                  <input class="input" id="lote-kilos-neto" type="text" inputmode="decimal" placeholder="1100+750" autocomplete="off" title="Varios pallets: suma con +. Enter o salir para calcular." />
+                </div>
               </div>
             </div>
 
-            <div class="field" style="margin-top: 12px;">
-              <label for="lote-bandas">Banda en cámara — formato banda(posición)</label>
-              <input class="input" id="lote-bandas" type="text" placeholder="Ej: 1(1) o 2(1)+2(3)" autocomplete="off" title="banda(posición): el número antes del paréntesis es la banda; entre paréntesis, la posición en esa banda contando desde el fondo hacia afuera. Varios tramos con +." />
+            <div class="camara-map-block" id="camara-map-block">
+              <div class="camara-map-toolbar">
+                <div class="block-title">Ubicación en cámara frigorífica</div>
+                <button
+                  type="button"
+                  class="btn camara-map-toggle"
+                  id="btn-toggle-camara-map"
+                  aria-expanded="true"
+                  aria-controls="camara-map-expandable"
+                >
+                  Minimizar mapa
+                </button>
+              </div>
+              <p class="camara-map-collapsed-note" id="camara-map-collapsed-note">
+                Plano oculto para ganar espacio. Las coordenadas confirmadas siguen abajo. Pulse «Mostrar mapa» para seguir eligiendo celdas.
+              </p>
+              <div id="camara-map-expandable" class="camara-map-expandable">
+                <p class="camara-map-hint">
+                  <strong>12 bandas horizontales</strong> (B1…B12). <strong>Profundidad</strong> en filas P1 (fondo) → P2, P3… hacia la cara de acceso; la <strong>puerta está al final de la banda B1</strong> (frente a la última posición permitida en B1).
+                  En <strong>B1 solo hay 3 posiciones</strong> en profundidad (P1–P3); el resto de bandas puede alargarse más. No se permiten huecos: en cada B hay que llenar P(n-1) antes de P(n). Puede <strong>elegir varias celdas</strong> si el mismo lote está repartido en más de un lugar; pulse de nuevo una celda elegida para quitarla. Luego «Confirmar ubicación».
+                </p>
+                <div id="camara-map-nuevo-root" aria-live="polite"></div>
+                <div class="camara-draft-row" id="camara-draft-label">Selección pendiente: —</div>
+                <div class="camara-actions">
+                  <button type="button" class="btn btn-primary" id="camara-confirm-btn" disabled>
+                    Confirmar ubicación
+                  </button>
+                  <span class="camara-confirmed" id="camara-confirmed-label"></span>
+                </div>
+              </div>
+              <div class="field" style="margin-top: 12px;">
+                <label for="lote-bandas">Coordenadas B-P (se rellenan al confirmar; varias con +)</label>
+                <input class="input" id="lote-bandas" type="text" readonly placeholder="Ej: B5-P2 o B2-P1+B8-P2" autocomplete="off" />
+              </div>
             </div>
 
             <div class="field" style="margin-top: 14px;">
@@ -929,10 +1279,84 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         productor: "",
         variedad: "",
         bandasCamara: "",
+        camaraBanda: null,
+        camaraPosicion: null,
+        camaraAltura: null,
         cantidadCajas: null,
         kilosBrutoLote: null,
+        kilosNetoLote: null,
         etiquetaPallet: ""
       };
+
+      /** @type {{ b: number; p: number; h: number }[]} */
+      let camaraDraftSlots = [];
+      let occupancyRows = [];
+
+      async function fetchCamaraOccupancy() {
+        if (!supa) return;
+        const { data, error } = await supa
+          .from(TABLE)
+          .select("id,procesado,camara_banda,camara_posicion,camara_altura,bandas_camara,lote,variedad,productor")
+          .eq("procesado", false);
+        if (error) return;
+        occupancyRows = (data ?? []).map((r) => ({
+          id: r.id,
+          procesado: false,
+          lote: r.lote,
+          variedad: r.variedad,
+          productor: r.productor,
+          camara_banda: r.camara_banda,
+          camara_posicion: r.camara_posicion,
+          camara_altura: r.camara_altura,
+          bandas_camara: r.bandas_camara
+        }));
+        refreshCamaraMapNuevo();
+      }
+
+      function refreshCamaraMapNuevo() {
+        const root = document.getElementById("camara-map-nuevo-root");
+        if (!root || !window.LaTorreCamaraMap) return;
+        const draftLabel = document.getElementById("camara-draft-label");
+        const confirmBtn = document.getElementById("camara-confirm-btn");
+        const M = window.LaTorreCamaraMap;
+        M.render(root, occupancyRows, {
+          mode: "pick",
+          excludeId: null,
+          multiSelect: true,
+          selection: camaraDraftSlots,
+          editingDraftSlots: camaraDraftSlots,
+          onSlotClick: (c) => {
+            if (c.toggle) {
+              camaraDraftSlots = camaraDraftSlots.filter(
+                (s) => !M.slotsEqual(s, { b: c.b, p: c.p, h: c.h })
+              );
+            } else {
+              const next = camaraDraftSlots.concat([{ b: c.b, p: c.p, h: c.h }]);
+              if (!M.validateDraftSlots(occupancyRows, null, next)) {
+                if (feedbackEl) {
+                  feedbackEl.classList.remove("ok");
+                  feedbackEl.textContent =
+                    "No se puede añadir esa celda (ocupada o falta soporte en profundidad en esa banda).";
+                }
+                return;
+              }
+              camaraDraftSlots = next;
+            }
+            if (draftLabel) {
+              draftLabel.textContent = camaraDraftSlots.length
+                ? "Selección pendiente: " + M.encodeSlotsText(camaraDraftSlots)
+                : "Selección pendiente: — (pulse celdas libres; pulse de nuevo una elegida para quitarla)";
+            }
+            if (confirmBtn) confirmBtn.disabled = camaraDraftSlots.length === 0;
+            refreshCamaraMapNuevo();
+          }
+        });
+        if (draftLabel && camaraDraftSlots.length === 0) {
+          draftLabel.textContent =
+            "Selección pendiente: — (pulse celdas libres; varias si el lote está en más de un sitio)";
+        }
+        if (confirmBtn) confirmBtn.disabled = camaraDraftSlots.length === 0;
+      }
 
       async function prefillFromLastSample() {
         if (!supa) return;
@@ -956,6 +1380,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const loteVariedad = document.getElementById("lote-variedad");
       const loteCajas = document.getElementById("lote-cajas");
       const loteKilosBruto = document.getElementById("lote-kilos-bruto");
+      const loteKilosNeto = document.getElementById("lote-kilos-neto");
       const loteBandas = document.getElementById("lote-bandas");
 
       loteFecha.value = lote.fecha;
@@ -1003,15 +1428,29 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             });
           }
         }
+        const nTrim = loteKilosNeto.value.trim();
+        if (!nTrim) {
+          lote.kilosNetoLote = null;
+          loteKilosNeto.value = "";
+        } else {
+          const sumN = sumFromPlusExpression(nTrim);
+          if (sumN != null) {
+            lote.kilosNetoLote = Math.round(sumN * 100) / 100;
+            loteKilosNeto.value = lote.kilosNetoLote.toLocaleString("es-CL", {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            });
+          }
+        }
       }
 
       loteFecha.addEventListener("input", () => { lote.fecha = loteFecha.value; });
       loteLote.addEventListener("input", () => { lote.lote = loteLote.value; });
       loteProductor.addEventListener("input", () => { lote.productor = loteProductor.value; });
       loteVariedad.addEventListener("input", () => { lote.variedad = loteVariedad.value; });
-      loteBandas.addEventListener("input", () => { lote.bandasCamara = loteBandas.value; });
       loteCajas.addEventListener("blur", commitCajasKilos);
       loteKilosBruto.addEventListener("blur", commitCajasKilos);
+      loteKilosNeto.addEventListener("blur", commitCajasKilos);
       loteCajas.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -1024,6 +1463,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           e.preventDefault();
           commitCajasKilos();
           loteKilosBruto.blur();
+        }
+      });
+      loteKilosNeto.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitCajasKilos();
+          loteKilosNeto.blur();
         }
       });
 
@@ -1082,6 +1528,62 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const sumFrutosEl = document.getElementById("sum-frutos");
       const sumDefectosEl = document.getElementById("sum-defectos");
       const sumExportableEl = document.getElementById("sum-exportable");
+
+      const camaraConfirmBtn = document.getElementById("camara-confirm-btn");
+      if (camaraConfirmBtn) {
+        camaraConfirmBtn.addEventListener("click", () => {
+          if (!camaraDraftSlots.length || !window.LaTorreCamaraMap) return;
+          const M = window.LaTorreCamaraMap;
+          const slots = camaraDraftSlots.map((s) => ({ b: s.b, p: s.p, h: s.h }));
+          if (!M.validateDraftSlots(occupancyRows, null, slots)) {
+            if (feedbackEl) {
+              feedbackEl.classList.remove("ok");
+              feedbackEl.textContent = "La selección ya no es válida (ocupación o reglas de profundidad). Actualizamos el mapa.";
+            }
+            fetchCamaraOccupancy();
+            return;
+          }
+          const enc = M.encodeSlotsText(slots);
+          if (slots.length === 1) {
+            const c = slots[0];
+            lote.camaraBanda = c.b;
+            lote.camaraPosicion = c.p;
+            lote.camaraAltura = c.h;
+          } else {
+            lote.camaraBanda = null;
+            lote.camaraPosicion = null;
+            lote.camaraAltura = null;
+          }
+          lote.bandasCamara = enc;
+          const bandInput = document.getElementById("lote-bandas");
+          if (bandInput) bandInput.value = lote.bandasCamara;
+          const conf = document.getElementById("camara-confirmed-label");
+          if (conf) conf.textContent = "Ubicación confirmada: " + lote.bandasCamara;
+          camaraDraftSlots = [];
+          camaraConfirmBtn.disabled = true;
+          refreshCamaraMapNuevo();
+          if (feedbackEl) {
+            feedbackEl.classList.remove("ok");
+            feedbackEl.textContent = "";
+          }
+        });
+      }
+
+      fetchCamaraOccupancy();
+      setInterval(() => {
+        if (document.visibilityState === "visible") fetchCamaraOccupancy();
+      }, 25000);
+
+      const camaraMapBlock = document.getElementById("camara-map-block");
+      const toggleCamaraMapBtn = document.getElementById("btn-toggle-camara-map");
+      if (toggleCamaraMapBtn && camaraMapBlock) {
+        toggleCamaraMapBtn.addEventListener("click", () => {
+          const collapsed = camaraMapBlock.classList.toggle("is-collapsed");
+          toggleCamaraMapBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+          toggleCamaraMapBtn.textContent = collapsed ? "Mostrar mapa" : "Minimizar mapa";
+          if (!collapsed) refreshCamaraMapNuevo();
+        });
+      }
 
       function createNumberField(label, value, onChange) {
         const wrap = document.createElement("div");
@@ -1380,6 +1882,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         if (!lote.lote.trim()) return "Falta indicar el código del lote.";
         if (!lote.productor.trim()) return "Falta indicar el productor.";
         if (!lote.variedad.trim()) return "Falta indicar la variedad.";
+        if (!String(lote.bandasCamara ?? "").trim()) {
+          return "Seleccione una o más celdas en el mapa y pulse «Confirmar ubicación».";
+        }
         if (asNumber(muestra.total) <= 0) return "La muestra debe tener total de frutos.";
         return "";
       }
@@ -1413,9 +1918,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           productor: lote.productor.trim() || null,
           variedad: lote.variedad.trim() || null,
           procesado: false,
+          camara_banda: lote.camaraBanda,
+          camara_posicion: lote.camaraPosicion,
+          camara_altura: lote.camaraAltura,
           bandas_camara: String(lote.bandasCamara ?? "").trim() || null,
           cantidad_cajas: lote.cantidadCajas ?? null,
           kilos_bruto_lote: lote.kilosBrutoLote ?? null,
+          kilos_neto_lote: lote.kilosNetoLote ?? null,
           etiqueta_pallet: lote.etiquetaPallet || null,
           total: asNumber(muestra.total),
           c_pre: asNumber(muestra.cPre),
@@ -1446,7 +1955,17 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         if (error) {
           guardando = false;
           feedbackEl.classList.remove("ok");
-          feedbackEl.textContent = "No se pudo guardar: " + error.message;
+          const msg = error.message || "";
+          if (error.code === "23505" || msg.includes("duplicate key") || msg.includes("camara_slot")) {
+            feedbackEl.textContent =
+              "Esa posición en cámara ya está ocupada. Actualice el mapa, elija otra celda y confirme de nuevo.";
+            fetchCamaraOccupancy();
+          } else if (msg.includes("camara_banda") || msg.includes("schema cache")) {
+            feedbackEl.textContent =
+              "Falta aplicar la migración SQL en Supabase (columnas camara_banda / camara_posicion / camara_altura). Revise la documentación del proyecto.";
+          } else {
+            feedbackEl.textContent = "No se pudo guardar: " + msg;
+          }
           return;
         }
         feedbackEl.classList.add("ok");
