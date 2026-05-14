@@ -1552,7 +1552,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           } else {
             lote.camaraBanda = null;
             lote.camaraPosicion = null;
-            lote.camaraAltura = null;
+            lote.camaraAltura = 1;
           }
           lote.bandasCamara = enc;
           const bandInput = document.getElementById("lote-bandas");
@@ -1912,15 +1912,25 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         commitCajasKilos();
 
+        const camaraBanda =
+          lote.camaraBanda != null && Number.isFinite(Number(lote.camaraBanda)) ? Number(lote.camaraBanda) : null;
+        const camaraPosicion =
+          lote.camaraPosicion != null && Number.isFinite(Number(lote.camaraPosicion)) ? Number(lote.camaraPosicion) : null;
+        const hasStructSlot = camaraBanda != null && camaraPosicion != null;
+        const camaraAltura =
+          hasStructSlot && lote.camaraAltura != null && Number.isFinite(Number(lote.camaraAltura))
+            ? Number(lote.camaraAltura)
+            : 1;
+
         const row = {
           fecha: lote.fecha || null,
           lote: lote.lote.trim(),
           productor: lote.productor.trim() || null,
           variedad: lote.variedad.trim() || null,
           procesado: false,
-          camara_banda: lote.camaraBanda,
-          camara_posicion: lote.camaraPosicion,
-          camara_altura: lote.camaraAltura,
+          camara_banda: hasStructSlot ? camaraBanda : null,
+          camara_posicion: hasStructSlot ? camaraPosicion : null,
+          camara_altura: camaraAltura,
           bandas_camara: String(lote.bandasCamara ?? "").trim() || null,
           cantidad_cajas: lote.cantidadCajas ?? null,
           kilos_bruto_lote: lote.kilosBrutoLote ?? null,

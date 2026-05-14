@@ -2693,11 +2693,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         } else {
           row.camaraBanda = null;
           row.camaraPosicion = null;
-          row.camaraAltura = null;
+          /** Sin coordenada estructurada: BD puede tener NOT NULL en camara_altura; 1 es convención (solo bandas_camara). */
+          row.camaraAltura = 1;
           row.bandasCamara = enc;
           scheduleUpdate(idx, "camaraBanda", null);
           scheduleUpdate(idx, "camaraPosicion", null);
-          scheduleUpdate(idx, "camaraAltura", null);
+          scheduleUpdate(idx, "camaraAltura", 1);
           scheduleUpdate(idx, "bandasCamara", enc);
         }
 
