@@ -16,7 +16,7 @@ ALTER TABLE public.fruitstone2026_muestras
   ADD COLUMN IF NOT EXISTS camara_posicion SMALLINT;
 
 ALTER TABLE public.fruitstone2026_muestras
-  ADD COLUMN IF NOT EXISTS camara_altura SMALLINT NOT NULL DEFAULT 1;
+  ADD COLUMN IF NOT EXISTS camara_altura SMALLINT DEFAULT 1;
 
 COMMENT ON COLUMN public.fruitstone2026_muestras.camara_banda IS
   'Banda horizontal (1 = fondo de cámara hacia la puerta). NULL = sin posición en mapa.';
