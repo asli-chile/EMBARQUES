@@ -103,12 +103,27 @@
     );
   }
 
+  /** Altura de celda; si falta (p. ej. JSON parcial) se asume 1 para coincidir con el mapa de una sola capa. */
+  function normSlotH(h) {
+    if (h == null || h === "") return 1;
+    var n = Number(h);
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  }
+
   function keyOf(c) {
-    return c.b + "," + c.p + "," + c.h;
+    var hb = Number(c.b);
+    var hp = Number(c.p);
+    var hh = normSlotH(c.h);
+    return hb + "," + hp + "," + hh;
   }
 
   function slotsEqual(a, b) {
-    return a && b && a.b === b.b && a.p === b.p && a.h === b.h;
+    if (!a || !b) return false;
+    return (
+      Number(a.b) === Number(b.b) &&
+      Number(a.p) === Number(b.p) &&
+      normSlotH(a.h) === normSlotH(b.h)
+    );
   }
 
   /** Todas las celdas B-P del registro (texto con + y/o columnas estructuradas). */
@@ -116,11 +131,13 @@
     var seen = {};
     var out = [];
     function add(c) {
-      if (!c || !inGridBounds(c)) return;
-      var k = keyOf(c);
+      if (!c) return;
+      var norm = { b: Number(c.b), p: Number(c.p), h: normSlotH(c.h) };
+      if (!inGridBounds(norm)) return;
+      var k = keyOf(norm);
       if (seen[k]) return;
       seen[k] = true;
-      out.push({ b: c.b, p: c.p, h: c.h });
+      out.push(norm);
     }
     var text = String(row.bandas_camara || row.bandasCamara || "").trim();
     if (text.indexOf("+") >= 0) {
@@ -136,6 +153,8 @@
     if (text) {
       var c1 = parseBpHText(text) || parseLegacyBandas(text);
       add(c1);
+      // Si bandas_camara ya definió la celda, no mezclar con columnas estructuradas (pueden quedar desfasadas en BD).
+      if (out.length > 0) return out;
     }
     add(parseStructured(row));
     return out;
@@ -399,9 +418,10 @@
 
   function slotInSelection(selection, b, p, h) {
     if (!selection || !selection.length) return false;
+    var hh = normSlotH(h);
     for (var i = 0; i < selection.length; i++) {
       var s = selection[i];
-      if (Number(s.b) === b && Number(s.p) === p && Number(s.h) === h) return true;
+      if (Number(s.b) === b && Number(s.p) === p && normSlotH(s.h) === hh) return true;
     }
     return false;
   }

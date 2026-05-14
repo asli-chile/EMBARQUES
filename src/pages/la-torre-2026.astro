@@ -717,10 +717,144 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
+        align-items: center;
         gap: 10px;
         padding: 12px 16px 14px;
         border-top: 1px solid var(--border);
         background: var(--header-bg);
+      }
+
+      #camara-modal-clear-selection {
+        margin-right: auto;
+      }
+
+      /* ── Vista pantalla completa: kg por calibre (no modal centrado) ─ */
+      .kg-calibre-full {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        box-sizing: border-box;
+        display: none;
+        flex-direction: column;
+        width: 100vw;
+        max-width: 100vw;
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: var(--surface);
+      }
+
+      .kg-calibre-full.open {
+        display: flex;
+      }
+
+      .kg-calibre-full-head {
+        flex-shrink: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .kg-calibre-full-head h2 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .kg-calibre-full-sub {
+        margin: 4px 0 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .kg-calibre-hint {
+        flex-shrink: 0;
+        margin: 0;
+        padding: 10px 18px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.45;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .kg-calibre-full-scroll {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 18px 18px;
+        overflow: auto;
+      }
+
+      .kg-calibre-full-foot {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px 14px;
+        border-top: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .kg-calibre-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .kg-calibre-table th,
+      .kg-calibre-table td {
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .kg-calibre-table th:first-child,
+      .kg-calibre-table td:first-child,
+      .kg-calibre-table th:nth-child(2),
+      .kg-calibre-table td:nth-child(2) {
+        text-align: left;
+        white-space: normal;
+        min-width: 7rem;
+      }
+
+      .kg-calibre-table thead th {
+        background: var(--header-bg);
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: var(--accent);
+      }
+
+      .kg-calibre-table tbody tr:nth-child(even) {
+        background: var(--row-alt);
+      }
+
+      .kg-calibre-table tfoot td {
+        font-weight: 800;
+        background: #e7e5e4;
+        color: var(--ink);
+      }
+
+      .kg-calibre-empty-msg {
+        margin: 0;
+        padding: 16px 4px 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.45;
       }
 
       tbody td input.input-banda-map {
@@ -1225,6 +1359,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           display: none !important;
         }
 
+        body.printing-fridge-map #kg-calibre-modal {
+          display: none !important;
+        }
+
         body.printing-fridge-map #fridge-map-panel {
           display: block !important;
           position: relative;
@@ -1278,6 +1416,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         <button class="btn" id="btn-print-fridge-map" type="button" title="Imprimir solo el mapa de cámara (horizontal)">
           Imprimir mapa
         </button>
+        <button class="btn" id="btn-kg-calibre-disponible" type="button" title="Abre vista a pantalla completa: kg neto por calibre (variedad + productor, no procesados)">
+          Kg por calibre
+        </button>
         <a class="btn btn-primary" href={withBase("/la-torre-2026/nuevo")}>
           <span class="icon">+</span> Nuevo lote
         </a>
@@ -1304,7 +1445,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         </div>
       </section>
 
-      <section class="fridge-map-panel" id="fridge-map-panel" aria-labelledby="fridge-map-title">
+      <section class="fridge-map-panel is-collapsed" id="fridge-map-panel" aria-labelledby="fridge-map-title">
         <div class="fridge-map-head">
           <div class="fridge-map-head-row">
             <h2 id="fridge-map-title">Mapa de cámara frigorífica</h2>
@@ -1312,10 +1453,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               type="button"
               class="btn fridge-map-toggle"
               id="btn-toggle-fridge-map"
-              aria-expanded="true"
+              aria-expanded="false"
               aria-controls="fridge-map-root"
             >
-              Minimizar mapa
+              Mostrar mapa
             </button>
           </div>
           <span class="fridge-map-meta">Vista superior · Solo pallets en cámara (no procesados). Coordenadas B–P–H.</span>
@@ -1488,10 +1629,28 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         <div id="camara-modal-error" class="camara-modal-error" hidden role="alert"></div>
         <div id="camara-modal-map-root" class="camara-modal-map-root"></div>
         <footer class="camara-modal-footer">
+          <button type="button" class="btn" id="camara-modal-clear-selection">Vaciar selección</button>
           <button type="button" class="btn" id="camara-modal-cancel">Cancelar</button>
           <button type="button" class="btn btn-primary" id="camara-modal-confirm" disabled>Guardar posición</button>
         </footer>
       </div>
+    </div>
+
+    <div id="kg-calibre-modal" class="kg-calibre-full" aria-hidden="true" role="region" aria-labelledby="kg-calibre-modal-title">
+      <header class="kg-calibre-full-head">
+        <div>
+          <h2 id="kg-calibre-modal-title">Kg neto por calibre (disponible)</h2>
+          <p class="kg-calibre-full-sub">Vista pantalla completa · Agrupado por variedad y productor · Solo muestras no procesadas</p>
+        </div>
+        <button type="button" class="camara-modal-close" id="kg-calibre-modal-close" aria-label="Cerrar">×</button>
+      </header>
+      <p class="kg-calibre-hint">
+        Para cada muestra, los kg por calibre se calculan igual que en la tabla principal: kg neto del lote × (frutos en ese calibre ÷ total de frutos de la muestra). Aquí se suman esas cantidades entre todos los lotes de la misma combinación variedad + productor.
+      </p>
+      <div class="kg-calibre-full-scroll" id="kg-calibre-modal-body"></div>
+      <footer class="kg-calibre-full-foot">
+        <button type="button" class="btn btn-primary" id="kg-calibre-modal-cerrar">Cerrar</button>
+      </footer>
     </div>
 
     <script is:inline src={withBase("/js/fruitstone-camara-map.js")}></script>
@@ -1509,6 +1668,15 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       ];
 
       const CALIBRE_KEYS = ["cPre", "c22", "c24", "c26", "c28", "c30", "c32"];
+      const CALIBRE_AGG_LABELS = [
+        { key: "cPre", label: "P/C" },
+        { key: "c22", label: "22-24" },
+        { key: "c24", label: "24-26" },
+        { key: "c26", label: "26-28" },
+        { key: "c28", label: "28-30" },
+        { key: "c30", label: "30-32" },
+        { key: "c32", label: "+34" }
+      ];
       const DEFECTO_KEYS = [
         "blanda",
         "pitting",
@@ -1718,12 +1886,44 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return entries;
       }
 
+      /**
+       * Normaliza columnas de cámara antes de PATCH: si la BD tiene NOT NULL en
+       * `camara_altura`, sin posición en mapa debe persistirse como 1, nunca null.
+       */
+      function normalizeFruitstoneCamaraPatch(patch) {
+        if (!patch || typeof patch !== "object") return patch;
+        const keys = Object.keys(patch);
+        const touches =
+          keys.includes("camara_banda") ||
+          keys.includes("camara_posicion") ||
+          keys.includes("camara_altura") ||
+          keys.includes("bandas_camara");
+        if (!touches) return patch;
+        const b = patch["camara_banda"];
+        const p = patch["camara_posicion"];
+        const rawBt = patch["bandas_camara"];
+        const hasStruct = b != null && p != null;
+        const hasTxt = rawBt != null && String(rawBt).trim() !== "";
+        if (!hasStruct && !hasTxt) {
+          patch["camara_banda"] = null;
+          patch["camara_posicion"] = null;
+          patch["camara_altura"] = 1;
+          patch["bandas_camara"] = null;
+          return patch;
+        }
+        if (!hasStruct && (patch["camara_altura"] == null || patch["camara_altura"] === "")) {
+          patch["camara_altura"] = 1;
+        }
+        return patch;
+      }
+
       /** Envío síncrono a la API REST de Supabase (soporta keepalive al cerrar/recargar pestaña). */
       function sendPatchesKeepalive(entries) {
         const base = typeof window !== "undefined" ? window._supaUrl : "";
         const key = typeof window !== "undefined" ? window._supaKey : "";
         if (!base || !key || !entries || !entries.length) return;
         for (const [id, patch] of entries) {
+          normalizeFruitstoneCamaraPatch(patch);
           const url = `${base}/rest/v1/${TABLE}?id=eq.${encodeURIComponent(String(id))}`;
           fetch(url, {
             method: "PATCH",
@@ -1749,7 +1949,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         if (!entries) return { ok: true, empty: true };
         sendPatchesKeepalive(entries);
         const results = await Promise.all(
-          entries.map(([id, patch]) => supa.from(TABLE).update(patch).eq("id", id))
+          entries.map(([id, patch]) => {
+            normalizeFruitstoneCamaraPatch(patch);
+            return supa.from(TABLE).update(patch).eq("id", id);
+          })
         );
         const failed = results.find((r) => r.error);
         if (failed && failed.error) {
@@ -1786,6 +1989,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         if (!patch || !supa) return;
         pendingPatches.delete(id);
         debounceTimers.delete(id);
+        normalizeFruitstoneCamaraPatch(patch);
         const { error } = await supa.from(TABLE).update(patch).eq("id", id);
         if (error && typeof process !== "undefined" && process.env.NODE_ENV === "development") {
           console.error("Error actualizando muestra:", error);
@@ -1826,6 +2030,133 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const net = row.kilosNetoLote != null && Number.isFinite(Number(row.kilosNetoLote)) ? Number(row.kilosNetoLote) : null;
         if (total <= 0 || net == null) return null;
         return (asNumber(shareNumerator) / total) * net;
+      }
+
+      function fmtKgDisponibleCell(n) {
+        if (n == null || !Number.isFinite(n) || n <= 0) return "—";
+        return n.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+
+      /**
+       * Agrupa muestras no procesadas (con total de frutos > 0) por variedad + productor
+       * y acumula kg neto por calibre (misma lógica que kgNetoShare por muestra).
+       */
+      function buildKgDisponibleAgrupado() {
+        const map = new Map();
+        for (const row of rows) {
+          if (row.procesado) continue;
+          if (asNumber(row.total) <= 0) continue;
+          const variedad = String(row.variedad ?? "").trim() || "—";
+          const productor = String(row.productor ?? "").trim() || "—";
+          const key = variedad + "\t" + productor;
+          let g = map.get(key);
+          if (!g) {
+            g = {
+              variedad,
+              productor,
+              muestras: 0,
+              kgNetoTotal: 0,
+              porCalibre: {}
+            };
+            for (const ck of CALIBRE_KEYS) g.porCalibre[ck] = 0;
+            map.set(key, g);
+          }
+          g.muestras += 1;
+          const netRaw = row.kilosNetoLote != null && Number.isFinite(Number(row.kilosNetoLote)) ? Number(row.kilosNetoLote) : 0;
+          g.kgNetoTotal += netRaw;
+          for (const ck of CALIBRE_KEYS) {
+            const kg = kgNetoShare(row, row[ck]);
+            if (kg != null) g.porCalibre[ck] += kg;
+          }
+        }
+        const list = Array.from(map.values());
+        list.sort((a, b) => {
+          const v = a.variedad.localeCompare(b.variedad, "es");
+          if (v !== 0) return v;
+          return a.productor.localeCompare(b.productor, "es");
+        });
+        return list;
+      }
+
+      function renderKgCalibreModalContent() {
+        const body = document.getElementById("kg-calibre-modal-body");
+        if (!body) return;
+        const grupos = buildKgDisponibleAgrupado();
+        if (!grupos.length) {
+          body.innerHTML =
+            '<p class="kg-calibre-empty-msg">No hay muestras disponibles (no procesadas, con total de frutos mayor que cero). Cargue datos o desmarque «procesado» en muestras con clasificación.</p>';
+          return;
+        }
+        const tot = {
+          muestras: 0,
+          kgNetoTotal: 0,
+          porCalibre: {}
+        };
+        for (const ck of CALIBRE_KEYS) tot.porCalibre[ck] = 0;
+        for (const g of grupos) {
+          tot.muestras += g.muestras;
+          tot.kgNetoTotal += g.kgNetoTotal;
+          for (const ck of CALIBRE_KEYS) tot.porCalibre[ck] += g.porCalibre[ck];
+        }
+        const thCalibres = CALIBRE_AGG_LABELS.map((c) => "<th>" + c.label + " (kg)</th>").join("");
+        let rowsHtml = "";
+        for (const g of grupos) {
+          const celdas = CALIBRE_KEYS.map((ck) => "<td>" + fmtKgDisponibleCell(g.porCalibre[ck]) + "</td>").join("");
+          rowsHtml +=
+            "<tr><td>" +
+            escapeHtml(g.variedad) +
+            "</td><td>" +
+            escapeHtml(g.productor) +
+            "</td><td>" +
+            g.muestras +
+            "</td><td>" +
+            fmtKgDisponibleCell(g.kgNetoTotal) +
+            "</td>" +
+            celdas +
+            "</tr>";
+        }
+        const footCalibres = CALIBRE_KEYS.map((ck) => "<td>" + fmtKgDisponibleCell(tot.porCalibre[ck]) + "</td>").join("");
+        body.innerHTML =
+          '<table class="kg-calibre-table"><thead><tr>' +
+          "<th>Variedad</th><th>Productor</th><th>Muestras</th><th>Kg neto total</th>" +
+          thCalibres +
+          "</tr></thead><tbody>" +
+          rowsHtml +
+          "</tbody><tfoot><tr><td colspan=\"2\">Total</td><td>" +
+          tot.muestras +
+          "</td><td>" +
+          fmtKgDisponibleCell(tot.kgNetoTotal) +
+          "</td>" +
+          footCalibres +
+          "</tr></tfoot></table>";
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      let kgCalibrePrevBodyOverflow = "";
+
+      function openKgCalibreModal() {
+        renderKgCalibreModalContent();
+        const modal = document.getElementById("kg-calibre-modal");
+        if (!modal || modal.classList.contains("open")) return;
+        kgCalibrePrevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeKgCalibreModal() {
+        const modal = document.getElementById("kg-calibre-modal");
+        if (!modal || !modal.classList.contains("open")) return;
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = kgCalibrePrevBodyOverflow;
       }
 
       function formatPctWithKgNet(pctVal, row, shareNumerator) {
@@ -2542,9 +2873,35 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       function renderFridgeMap() {
+        const panel = document.getElementById("fridge-map-panel");
+        if (panel && panel.classList.contains("is-collapsed")) return;
         const root = document.getElementById("fridge-map-root");
         if (!root || !window.LaTorreCamaraMap) return;
         window.LaTorreCamaraMap.render(root, buildMapRowsPayload(), { mode: "view" });
+      }
+
+      /** Al abrir el modal: había al menos una celda en mapa / texto bandas (sirve para habilitar «Guardar» al vaciar todo). */
+      let camaraModalInitialHadPosition = false;
+
+      function syncCamaraModalConfirmEnabled() {
+        const confirmBtn = document.getElementById("camara-modal-confirm");
+        if (!confirmBtn) return;
+        const canSaveEmpty = camaraModalInitialHadPosition && camaraModalDraftSlots.length === 0;
+        confirmBtn.disabled = camaraModalDraftSlots.length === 0 && !canSaveEmpty;
+      }
+
+      function clearCamaraModalSelection() {
+        camaraModalDraftSlots = [];
+        setCamaraModalError("");
+        const draftEl = document.getElementById("camara-modal-draft");
+        const M = window.LaTorreCamaraMap;
+        if (draftEl && M) {
+          draftEl.textContent = camaraModalInitialHadPosition
+            ? "Selección vacía. Pulse «Guardar posición» para quitar la ubicación en cámara de esta muestra, o elija celdas de nuevo."
+            : "Sin celdas seleccionadas. Elija al menos una posición (varias si el lote está repartido).";
+        }
+        syncCamaraModalConfirmEnabled();
+        renderCamaraModalMap();
       }
 
       /** Id de muestra (`rows[].id`) cuyo mapa está abierto; no usar índice (cambia al ordenar la tabla). */
@@ -2588,10 +2945,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 ? "Selección: " +
                   M.encodeSlotsText(camaraModalDraftSlots) +
                   " · Pulse «Guardar posición» para aplicar."
-                : "Sin celdas seleccionadas. Elija al menos una posición (varias si el lote está repartido).";
+                : camaraModalInitialHadPosition
+                  ? "Selección vacía. Pulse «Guardar posición» para quitar la ubicación en cámara, o elija celdas de nuevo."
+                  : "Sin celdas seleccionadas. Elija al menos una posición (varias si el lote está repartido).";
             }
-            const confirmBtn = document.getElementById("camara-modal-confirm");
-            if (confirmBtn) confirmBtn.disabled = camaraModalDraftSlots.length === 0;
+            syncCamaraModalConfirmEnabled();
             renderCamaraModalMap();
           }
         });
@@ -2617,6 +2975,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           p: s.p,
           h: s.h
         }));
+        camaraModalInitialHadPosition = camaraModalDraftSlots.length > 0;
         const sub = document.getElementById("camara-modal-subtitle");
         if (sub) {
           sub.textContent = [row.lote && `Lote ${row.lote}`, row.variedad, row.productor].filter(Boolean).join(" · ");
@@ -2631,7 +2990,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             : "Sin posición en mapa. B1: solo P1–P3. Puerta al final de B1. Elija cualquier celda libre; varias si el lote está en más de un sitio.";
         }
         const confirmBtn = document.getElementById("camara-modal-confirm");
-        if (confirmBtn) confirmBtn.disabled = camaraModalDraftSlots.length === 0;
+        syncCamaraModalConfirmEnabled();
         const modal = document.getElementById("camara-modal");
         if (modal) {
           modal.classList.add("open");
@@ -2652,7 +3011,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       async function confirmCamaraModal() {
-        if (camaraModalRowId == null || !camaraModalDraftSlots.length || !window.LaTorreCamaraMap) return;
+        if (camaraModalRowId == null || !window.LaTorreCamaraMap) return;
         const idx = rowIndexById(camaraModalRowId);
         if (idx < 0) {
           showLaTorreNotice(
@@ -2663,14 +3022,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         }
         const row = rows[idx];
         const M = window.LaTorreCamaraMap;
-        const slots = camaraModalDraftSlots.map((s) => ({ b: s.b, p: s.p, h: s.h }));
-        if (!M.validateDraftSlots(buildMapRowsPayload(), row.id, slots)) {
-          const det = M.explainDraftInvalidity(buildMapRowsPayload(), row.id, slots);
-          setCamaraModalError(formatCamaraInvalidity(det, M));
-          renderCamaraModalMap();
-          return;
-        }
-        const enc = M.encodeSlotsText(slots);
+
         const prev = {
           camaraBanda: row.camaraBanda,
           camaraPosicion: row.camaraPosicion,
@@ -2680,26 +3032,62 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         const confirmBtn = document.getElementById("camara-modal-confirm");
         if (confirmBtn) confirmBtn.disabled = true;
 
-        if (slots.length === 1) {
-          const c = slots[0];
-          row.camaraBanda = c.b;
-          row.camaraPosicion = c.p;
-          row.camaraAltura = c.h;
-          row.bandasCamara = enc;
-          scheduleUpdate(idx, "camaraBanda", c.b);
-          scheduleUpdate(idx, "camaraPosicion", c.p);
-          scheduleUpdate(idx, "camaraAltura", c.h);
-          scheduleUpdate(idx, "bandasCamara", enc);
-        } else {
+        if (!camaraModalDraftSlots.length) {
+          if (!camaraModalInitialHadPosition) {
+            if (confirmBtn) confirmBtn.disabled = false;
+            closeCamaraModal();
+            render();
+            return;
+          }
+          if (
+            !confirm(
+              "¿Quitar por completo la posición en cámara de esta muestra? Se actualizará la base de datos."
+            )
+          ) {
+            if (confirmBtn) syncCamaraModalConfirmEnabled();
+            return;
+          }
           row.camaraBanda = null;
           row.camaraPosicion = null;
-          /** Sin coordenada estructurada: BD puede tener NOT NULL en camara_altura; 1 es convención (solo bandas_camara). */
           row.camaraAltura = 1;
-          row.bandasCamara = enc;
+          row.bandasCamara = "";
           scheduleUpdate(idx, "camaraBanda", null);
           scheduleUpdate(idx, "camaraPosicion", null);
           scheduleUpdate(idx, "camaraAltura", 1);
-          scheduleUpdate(idx, "bandasCamara", enc);
+          scheduleUpdate(idx, "bandasCamara", null);
+        } else {
+          const slots = camaraModalDraftSlots.map((s) => ({ b: s.b, p: s.p, h: s.h }));
+          if (!M.validateDraftSlots(buildMapRowsPayload(), row.id, slots)) {
+            const det = M.explainDraftInvalidity(buildMapRowsPayload(), row.id, slots);
+            setCamaraModalError(formatCamaraInvalidity(det, M));
+            if (confirmBtn) confirmBtn.disabled = false;
+            renderCamaraModalMap();
+            return;
+          }
+          const enc = M.encodeSlotsText(slots);
+          if (slots.length === 1) {
+            const c = slots[0];
+            const hN = Number(c.h);
+            const hSlot = Number.isFinite(hN) && hN >= 1 ? hN : 1;
+            row.camaraBanda = c.b;
+            row.camaraPosicion = c.p;
+            row.camaraAltura = hSlot;
+            row.bandasCamara = enc;
+            scheduleUpdate(idx, "camaraBanda", c.b);
+            scheduleUpdate(idx, "camaraPosicion", c.p);
+            scheduleUpdate(idx, "camaraAltura", hSlot);
+            scheduleUpdate(idx, "bandasCamara", enc);
+          } else {
+            row.camaraBanda = null;
+            row.camaraPosicion = null;
+            /** Sin coordenada estructurada: BD puede tener NOT NULL en camara_altura; 1 es convención (solo bandas_camara). */
+            row.camaraAltura = 1;
+            row.bandasCamara = enc;
+            scheduleUpdate(idx, "camaraBanda", null);
+            scheduleUpdate(idx, "camaraPosicion", null);
+            scheduleUpdate(idx, "camaraAltura", 1);
+            scheduleUpdate(idx, "bandasCamara", enc);
+          }
         }
 
         const flush = await flushAllPendingPatches();
@@ -2831,9 +3219,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           if (!collapsed) renderFridgeMap();
         });
       }
+      document.getElementById("btn-kg-calibre-disponible")?.addEventListener("click", openKgCalibreModal);
+      document.getElementById("kg-calibre-modal-close")?.addEventListener("click", closeKgCalibreModal);
+      document.getElementById("kg-calibre-modal-cerrar")?.addEventListener("click", closeKgCalibreModal);
       document.getElementById("camara-modal-close")?.addEventListener("click", closeCamaraModal);
       document.getElementById("camara-modal-cancel")?.addEventListener("click", closeCamaraModal);
       document.getElementById("camara-modal-backdrop")?.addEventListener("click", closeCamaraModal);
+      document.getElementById("camara-modal-clear-selection")?.addEventListener("click", clearCamaraModalSelection);
       document.getElementById("camara-modal-confirm")?.addEventListener("click", () => {
         void confirmCamaraModal();
       });
@@ -2883,6 +3275,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       lightboxPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
       lightboxNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
       document.addEventListener("keydown", (e) => {
+        const kgModal = document.getElementById("kg-calibre-modal");
+        if (kgModal && kgModal.classList.contains("open")) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeKgCalibreModal();
+          }
+          return;
+        }
         const camModal = document.getElementById("camara-modal");
         if (camModal && camModal.classList.contains("open")) {
           if (e.key === "Escape") {

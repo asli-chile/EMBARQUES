@@ -732,6 +732,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         margin-top: 10px;
       }
 
+      #camara-clear-selection-btn {
+        margin-right: auto;
+      }
+
       .camara-confirmed {
         font-size: 12px;
         font-weight: 700;
@@ -1056,6 +1060,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 <div id="camara-map-nuevo-root" aria-live="polite"></div>
                 <div class="camara-draft-row" id="camara-draft-label">Selección pendiente: —</div>
                 <div class="camara-actions">
+                  <button type="button" class="btn" id="camara-clear-selection-btn">
+                    Vaciar selección
+                  </button>
                   <button type="button" class="btn btn-primary" id="camara-confirm-btn" disabled>
                     Confirmar ubicación
                   </button>
@@ -1313,6 +1320,31 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         refreshCamaraMapNuevo();
       }
 
+      function clearCamaraNuevoSelection() {
+        camaraDraftSlots = [];
+        lote.bandasCamara = "";
+        lote.camaraBanda = null;
+        lote.camaraPosicion = null;
+        lote.camaraAltura = null;
+        const bandInput = document.getElementById("lote-bandas");
+        if (bandInput) bandInput.value = "";
+        const conf = document.getElementById("camara-confirmed-label");
+        if (conf) conf.textContent = "";
+        const draftLabel = document.getElementById("camara-draft-label");
+        if (draftLabel) {
+          draftLabel.textContent =
+            "Selección pendiente: — (pulse celdas libres; varias si el lote está en más de un sitio)";
+        }
+        const confirmBtn = document.getElementById("camara-confirm-btn");
+        if (confirmBtn) confirmBtn.disabled = true;
+        const fb = document.getElementById("feedback");
+        if (fb) {
+          fb.classList.remove("ok");
+          fb.textContent = "";
+        }
+        refreshCamaraMapNuevo();
+      }
+
       function refreshCamaraMapNuevo() {
         const root = document.getElementById("camara-map-nuevo-root");
         if (!root || !window.LaTorreCamaraMap) return;
@@ -1567,6 +1599,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             feedbackEl.textContent = "";
           }
         });
+      }
+
+      const camaraClearBtn = document.getElementById("camara-clear-selection-btn");
+      if (camaraClearBtn) {
+        camaraClearBtn.addEventListener("click", clearCamaraNuevoSelection);
       }
 
       fetchCamaraOccupancy();
