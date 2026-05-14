@@ -522,7 +522,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       .col-total { width: 80px; }
       .col-calibre { width: 78px; }
       .col-defecto { width: 70px; }
-      .col-clasif { width: 78px; }
+      .col-clasif { width: 88px; }
       .col-calc { width: 108px; }
 
       .calibre-cell-wrap {
@@ -1441,9 +1441,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               <th>M. luna</th>
               <th>S. pedic.</th>
               <th>Negro</th>
-              <th>Primera</th>
-              <th>Segunda</th>
-              <th>Zumo</th>
+              <th title="Frutos; debajo % del total y kg neto del lote (proporcional)">Primera</th>
+              <th title="Frutos; debajo % del total y kg neto del lote (proporcional)">Segunda</th>
+              <th title="Frutos; debajo % del total y kg neto del lote (proporcional)">Zumo</th>
               <th title="% sobre total de frutos y kg neto del lote atribuidos (proporcional a frutos defectuosos)">% Def.</th>
               <th title="% sobre total de frutos y kg neto del lote atribuidos (frutos no zumo)">% Exp.</th>
               <th>Prom.</th>
@@ -1858,6 +1858,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         if (cells[2]) cells[2].textContent = calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 });
         tr.querySelectorAll("input[data-calibre]").forEach((inp) => {
           const key = inp.getAttribute("data-calibre");
+          const sub = inp.nextElementSibling;
+          if (key && sub && sub.classList.contains("calibre-sub")) {
+            sub.textContent = calibreSubLabel(row, key);
+          }
+        });
+        tr.querySelectorAll("input[data-clasif]").forEach((inp) => {
+          const key = inp.getAttribute("data-clasif");
           const sub = inp.nextElementSibling;
           if (key && sub && sub.classList.contains("calibre-sub")) {
             sub.textContent = calibreSubLabel(row, key);
@@ -2340,27 +2347,35 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             tr.appendChild(td);
           });
 
-          const buildClasifCell = (initialValue) => {
+          const buildClasifCell = (fieldKey, initialValue) => {
             const td = document.createElement("td");
+            const wrap = document.createElement("div");
+            wrap.className = "calibre-cell-wrap";
             const input = document.createElement("input");
             input.type = "number";
             input.className = "total-readonly";
             input.readOnly = true;
             input.tabIndex = -1;
+            input.setAttribute("data-clasif", fieldKey);
             input.value = String(initialValue);
-            td.appendChild(input);
-            return { td, input };
+            const sub = document.createElement("span");
+            sub.className = "calibre-sub";
+            sub.textContent = calibreSubLabel(row, fieldKey);
+            wrap.appendChild(input);
+            wrap.appendChild(sub);
+            td.appendChild(wrap);
+            return { td, input, sub };
           };
 
-          const primeraCell = buildClasifCell(row.primera);
+          const primeraCell = buildClasifCell("primera", row.primera);
           primeraInput = primeraCell.input;
           tr.appendChild(primeraCell.td);
 
-          const segundaCell = buildClasifCell(row.segunda);
+          const segundaCell = buildClasifCell("segunda", row.segunda);
           segundaInput = segundaCell.input;
           tr.appendChild(segundaCell.td);
 
-          const zumoCell = buildClasifCell(row.zumo);
+          const zumoCell = buildClasifCell("zumo", row.zumo);
           zumoInput = zumoCell.input;
           tr.appendChild(zumoCell.td);
 
@@ -2763,7 +2778,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           `${asNumber(row.c32)} — ${calibreSubLabel(row, "c32")}`,
           row.blanda, row.pitting, row.doble, row.deshidratada, row.partida, row.pudricion, row.colorBajo,
           asNumber(row.mediaLuna), asNumber(row.sinPedicelo), asNumber(row.negro),
-          asNumber(row.primera), asNumber(row.segunda), asNumber(row.zumo),
+          `${asNumber(row.primera)} — ${calibreSubLabel(row, "primera")}`,
+          `${asNumber(row.segunda)} — ${calibreSubLabel(row, "segunda")}`,
+          `${asNumber(row.zumo)} — ${calibreSubLabel(row, "zumo")}`,
           formatPctWithKgNet(calc.defectPct, row, calc.defectos),
           formatPctWithKgNet(calc.exportablePct, row, calc.exportable),
           calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }),
