@@ -1155,8 +1155,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         { id: "negro", label: "Negro" }
       ];
 
-      const ZUMO_KEYS = ["pudricion", "colorBajo", "partida", "negro"];
-      const SEGUNDA_KEYS = ["blanda", "pitting", "doble"];
+      const ZUMO_KEYS = ["pudricion", "colorBajo", "negro"];
+      const SEGUNDA_KEYS = ["blanda", "pitting", "doble", "partida"];
 
       function sumZumo(m) {
         return ZUMO_KEYS.reduce((acc, k) => acc + asNumber(m[k]), 0);

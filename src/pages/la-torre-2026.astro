@@ -227,47 +227,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         color: var(--accent);
       }
 
-      /* ── Resumen en cámara (por lote + variedad + productor) ───────── */
       .content-stack {
         flex: 1;
         display: flex;
         flex-direction: column;
         min-height: 0;
-      }
-
-      .camara-panel {
-        flex-shrink: 0;
-        max-height: 220px;
-        overflow: auto;
-        background: var(--header-bg);
-        border-bottom: 1px solid var(--border-strong);
-      }
-
-      .camara-panel-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 8px 16px;
-        border-bottom: 1px solid var(--border);
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background: var(--header-bg);
-      }
-
-      .camara-panel-head h2 {
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--accent);
-      }
-
-      .camara-panel-meta {
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--muted);
       }
 
       .camara-table {
@@ -803,6 +767,263 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         padding: 12px 18px 14px;
         border-top: 1px solid var(--border);
         background: var(--header-bg);
+      }
+
+      /* ── Vista pantalla completa: resumen en cámara ─ */
+      .camara-resumen-full {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        box-sizing: border-box;
+        display: none;
+        flex-direction: column;
+        width: 100vw;
+        max-width: 100vw;
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: var(--surface);
+      }
+
+      .camara-resumen-full.open {
+        display: flex;
+      }
+
+      .camara-resumen-full-head {
+        flex-shrink: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .camara-resumen-full-head h2 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .camara-resumen-full-sub {
+        margin: 4px 0 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .camara-resumen-full-meta {
+        flex-shrink: 0;
+        margin: 0;
+        padding: 8px 18px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .camara-resumen-full-scroll {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 18px 18px;
+        overflow: auto;
+      }
+
+      .camara-resumen-full-foot {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px 14px;
+        border-top: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .camara-resumen-full .camara-table {
+        min-width: 900px;
+      }
+
+      /* ── Franja lotes procesados (toolbar) ─ */
+      .lotes-procesados-strip {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        background: #fafaf9;
+      }
+
+      .lotes-strip-label {
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .lotes-strip-hint {
+        flex: 1 1 200px;
+        margin: 0;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+        min-width: 0;
+      }
+
+      .lotes-chips-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .lote-chip {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+        cursor: pointer;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      }
+
+      .lote-chip:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .btn-badge {
+        font-weight: 800;
+        opacity: 0.85;
+      }
+
+      .lotes-procesados-full {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        box-sizing: border-box;
+        display: none;
+        flex-direction: column;
+        width: 100vw;
+        max-width: 100vw;
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: var(--surface);
+      }
+
+      .lotes-procesados-full.open {
+        display: flex;
+      }
+
+      .lotes-procesados-full-head {
+        flex-shrink: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .lotes-procesados-full-head h2 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .lotes-procesados-full-sub {
+        margin: 4px 0 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .lotes-procesados-full-meta {
+        flex-shrink: 0;
+        margin: 0;
+        padding: 8px 18px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .lotes-procesados-full-scroll {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 18px 18px;
+        overflow: auto;
+      }
+
+      .lotes-procesados-full-foot {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px 14px;
+        border-top: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .lotes-procesados-table {
+        width: 100%;
+        min-width: 880px;
+        border-collapse: collapse;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .lotes-procesados-table th,
+      .lotes-procesados-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      .lotes-procesados-table th {
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: var(--header-bg);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+
+      .lotes-procesados-table tr.is-highlight td {
+        background: var(--accent-soft);
+      }
+
+      .lotes-procesados-empty {
+        margin: 12px 0 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
       }
 
       .kg-calibre-table {
@@ -1363,6 +1584,11 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           display: none !important;
         }
 
+        body.printing-fridge-map #lotes-procesados-page,
+        body.printing-fridge-map #camara-resumen-page {
+          display: none !important;
+        }
+
         body.printing-fridge-map #fridge-map-panel {
           display: block !important;
           position: relative;
@@ -1416,6 +1642,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         <button class="btn" id="btn-print-fridge-map" type="button" title="Imprimir solo el mapa de cámara (horizontal)">
           Imprimir mapa
         </button>
+        <button class="btn" id="btn-lotes-procesados" type="button" title="Lotes marcados como procesados en días anteriores">
+          Lotes procesados<span class="btn-badge" id="lotes-procesados-count" hidden></span>
+        </button>
+        <button class="btn" id="btn-camara-resumen" type="button" title="Resumen en cámara por lote, variedad y productor">
+          Resumen
+        </button>
         <button class="btn" id="btn-kg-calibre-disponible" type="button" title="Abre vista a pantalla completa: kg neto por calibre (variedad + productor, no procesados)">
           Kg por calibre
         </button>
@@ -1423,6 +1655,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           <span class="icon">+</span> Nuevo lote
         </a>
       </header>
+
+      <section class="lotes-procesados-strip" id="lotes-procesados-strip" hidden aria-label="Lotes procesados en días anteriores">
+        <span class="lotes-strip-label">Lotes procesados</span>
+        <p class="lotes-strip-hint" id="lotes-procesados-strip-hint"></p>
+        <div id="lotes-procesados-chips" class="lotes-chips-wrap"></div>
+        <button type="button" class="btn" id="btn-lotes-procesados-strip">Ver listado</button>
+      </section>
 
       <div id="la-torre-notice" class="la-torre-notice" hidden role="alert"></div>
 
@@ -1469,30 +1708,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       </section>
 
       <div class="content-stack">
-        <section class="camara-panel" aria-labelledby="camara-resumen-title">
-          <div class="camara-panel-head">
-            <h2 id="camara-resumen-title">Resumen en cámara</h2>
-            <span class="camara-panel-meta" id="camara-panel-meta"></span>
-          </div>
-          <table class="camara-table">
-            <thead>
-              <tr>
-                <th style="width: 10%;">Lote</th>
-                <th style="width: 14%;">Variedad</th>
-                <th style="width: 22%;">Productor</th>
-                <th class="camara-col-banda" title="Coordenada en cámara (B horizontal, P profundidad). B1: máx. 3 posiciones; puerta al final de B1">Banda</th>
-                <th style="width: 11%;">Total cajas</th>
-                <th style="width: 11%;">Total kg bruto</th>
-                <th style="width: 11%;">Total kg neto</th>
-                <th style="width: 9%;">Frutos</th>
-                <th style="width: 7%;">Proc.</th>
-              </tr>
-            </thead>
-            <tbody id="camara-resumen-body"></tbody>
-          </table>
-          <p class="camara-empty" id="camara-empty" hidden>No hay muestras con lote indicado aún.</p>
-        </section>
-
       <div class="table-wrap">
         <table id="samples-table">
           <colgroup>
@@ -1636,6 +1851,72 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       </div>
     </div>
 
+    <div id="lotes-procesados-page" class="lotes-procesados-full" aria-hidden="true" role="region" aria-labelledby="lotes-procesados-page-title">
+      <header class="lotes-procesados-full-head">
+        <div>
+          <h2 id="lotes-procesados-page-title">Lotes procesados</h2>
+          <p class="lotes-procesados-full-sub">Marcados como procesados en días anteriores · Los de hoy pasan aquí al día siguiente</p>
+        </div>
+        <button type="button" class="camara-modal-close" id="lotes-procesados-page-close" aria-label="Cerrar">×</button>
+      </header>
+      <p class="lotes-procesados-full-meta" id="lotes-procesados-full-meta"></p>
+      <div class="lotes-procesados-full-scroll">
+        <table class="lotes-procesados-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Lote</th>
+              <th>Productor</th>
+              <th>Variedad</th>
+              <th>Banda</th>
+              <th>Cajas</th>
+              <th>Kg neto</th>
+              <th>Frutos</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="lotes-procesados-full-body"></tbody>
+        </table>
+        <p class="lotes-procesados-empty" id="lotes-procesados-full-empty" hidden>No hay lotes procesados de días anteriores.</p>
+      </div>
+      <footer class="lotes-procesados-full-foot">
+        <button type="button" class="btn btn-primary" id="lotes-procesados-page-cerrar">Cerrar</button>
+      </footer>
+    </div>
+
+    <div id="camara-resumen-page" class="camara-resumen-full" aria-hidden="true" role="region" aria-labelledby="camara-resumen-page-title">
+      <header class="camara-resumen-full-head">
+        <div>
+          <h2 id="camara-resumen-page-title">Resumen en cámara</h2>
+          <p class="camara-resumen-full-sub">Totales por lote, variedad y productor</p>
+        </div>
+        <button type="button" class="camara-modal-close" id="camara-resumen-page-close" aria-label="Cerrar">×</button>
+      </header>
+      <p class="camara-resumen-full-meta" id="camara-resumen-full-meta"></p>
+      <div class="camara-resumen-full-scroll">
+        <table class="camara-table">
+          <thead>
+            <tr>
+              <th style="width: 10%;">Lote</th>
+              <th style="width: 14%;">Variedad</th>
+              <th style="width: 22%;">Productor</th>
+              <th class="camara-col-banda" title="Coordenada en cámara (B horizontal, P profundidad). B1: máx. 3 posiciones; puerta al final de B1">Banda</th>
+              <th style="width: 11%;">Total cajas</th>
+              <th style="width: 11%;">Total kg bruto</th>
+              <th style="width: 11%;">Total kg neto</th>
+              <th style="width: 9%;">Frutos</th>
+              <th style="width: 7%;">Proc.</th>
+            </tr>
+          </thead>
+          <tbody id="camara-resumen-full-body"></tbody>
+        </table>
+        <p class="camara-empty" id="camara-resumen-full-empty" hidden>No hay muestras con lote indicado aún.</p>
+      </div>
+      <footer class="camara-resumen-full-foot">
+        <button type="button" class="btn btn-primary" id="camara-resumen-page-cerrar">Cerrar</button>
+      </footer>
+    </div>
+
     <div id="kg-calibre-modal" class="kg-calibre-full" aria-hidden="true" role="region" aria-labelledby="kg-calibre-modal-title">
       <header class="kg-calibre-full-head">
         <div>
@@ -1689,8 +1970,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         "sinPedicelo",
         "negro"
       ];
-      const ZUMO_KEYS = ["pudricion", "colorBajo", "partida", "negro"];
-      const SEGUNDA_KEYS = ["blanda", "pitting", "doble"];
+      const ZUMO_KEYS = ["pudricion", "colorBajo", "negro"];
+      const SEGUNDA_KEYS = ["blanda", "pitting", "doble", "partida"];
 
       const numberFields = [...CALIBRE_KEYS, ...DEFECTO_KEYS];
 
@@ -1803,6 +2084,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         tableSortMode = tableSortMode === "fecha" ? "ingreso" : "fecha";
         applyTableSort();
         syncFechaSortHeader();
+        renderLotesProcesadosStrip();
         render();
       }
 
@@ -1812,7 +2094,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const statusFilter = document.getElementById("status-filter");
 
       function rowFromDb(r) {
-        return {
+        const row = {
           id: r.id,
           createdAt: r.created_at ?? null,
           procesado: r.procesado === true,
@@ -1852,6 +2134,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           etiquetaPallet: r.etiqueta_pallet ?? "",
           fotosDefectos: Array.isArray(r.fotos_defectos) ? r.fotos_defectos : []
         };
+        row.zumo = sumZumo(row);
+        row.segunda = sumSegunda(row);
+        row.primera = sumPrimera(row);
+        return row;
       }
 
       async function loadRows() {
@@ -1867,6 +2153,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         rows = (data ?? []).map(rowFromDb);
         applyTableSort();
         syncFechaSortHeader();
+        renderLotesProcesadosStrip();
         render();
       }
 
@@ -2139,6 +2426,222 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           .replace(/"/g, "&quot;");
       }
 
+
+
+      function localTodayKey() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + day;
+      }
+
+      function fechaToDateKey(fechaVal) {
+        const raw = String(fechaVal ?? "").trim();
+        if (!raw) return "";
+        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+        const parsed = Date.parse(raw);
+        if (!Number.isFinite(parsed)) return "";
+        const d = new Date(parsed);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + day;
+      }
+
+      function formatFechaDisplay(fechaVal) {
+        const key = fechaToDateKey(fechaVal);
+        if (!key) return "—";
+        const parts = key.split("-");
+        return parts[2] + "/" + parts[1] + "/" + parts[0];
+      }
+
+      function isLoteProcesadoArchivado(row) {
+        if (!row.procesado) return false;
+        const fk = fechaToDateKey(row.fecha);
+        if (!fk) return false;
+        return fk < localTodayKey();
+      }
+
+      function getProcesadosArchivadosItems() {
+        return rows
+          .map((row, index) => ({ row, index, calc: calculate(row) }))
+          .filter(({ row }) => isLoteProcesadoArchivado(row))
+          .sort((a, b) => {
+            const d = fechaToDateKey(a.row.fecha).localeCompare(fechaToDateKey(b.row.fecha));
+            if (d !== 0) return d;
+            return String(a.row.lote ?? "").localeCompare(String(b.row.lote ?? ""), "es");
+          });
+      }
+
+      let lotesProcesadosHighlightIndex = null;
+      let lotesProcesadosPrevBodyOverflow = "";
+
+      function renderLotesProcesadosStrip() {
+        const strip = document.getElementById("lotes-procesados-strip");
+        const chipsWrap = document.getElementById("lotes-procesados-chips");
+        const hint = document.getElementById("lotes-procesados-strip-hint");
+        const countBadge = document.getElementById("lotes-procesados-count");
+        const items = getProcesadosArchivadosItems();
+
+        if (countBadge) {
+          if (items.length) {
+            countBadge.textContent = " (" + items.length + ")";
+            countBadge.hidden = false;
+          } else {
+            countBadge.textContent = "";
+            countBadge.hidden = true;
+          }
+        }
+
+        if (!strip || !chipsWrap) return;
+
+        if (!items.length) {
+          strip.hidden = true;
+          chipsWrap.replaceChildren();
+          if (hint) hint.textContent = "";
+          return;
+        }
+
+        strip.hidden = false;
+        if (hint) {
+          hint.textContent =
+            "Los marcados hoy siguen en la tabla de trabajo hasta mañana; aquí aparecen los de fechas anteriores.";
+        }
+
+        chipsWrap.replaceChildren();
+        for (const { row, index } of items) {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "lote-chip";
+          const lote = String(row.lote || "—").trim();
+          chip.textContent = lote + " · " + formatFechaDisplay(row.fecha);
+          const prod = String(row.productor ?? "").trim();
+          const var_ = String(row.variedad ?? "").trim();
+          chip.title = [prod, var_].filter(Boolean).join(" · ") || lote;
+          chip.addEventListener("click", () => openLotesProcesadosPage(index));
+          chipsWrap.appendChild(chip);
+        }
+      }
+
+      function renderLotesProcesadosPage() {
+        const body = document.getElementById("lotes-procesados-full-body");
+        const empty = document.getElementById("lotes-procesados-full-empty");
+        const meta = document.getElementById("lotes-procesados-full-meta");
+        if (!body || !empty || !meta) return;
+
+        const items = getProcesadosArchivadosItems();
+        body.replaceChildren();
+
+        if (!items.length) {
+          empty.hidden = false;
+          meta.textContent = "";
+          return;
+        }
+
+        empty.hidden = true;
+        meta.textContent =
+          items.length +
+          " muestra" +
+          (items.length === 1 ? "" : "s") +
+          " procesada" +
+          (items.length === 1 ? "" : "s") +
+          " (fecha anterior a hoy)";
+
+        for (const { row, index } of items) {
+          const tr = document.createElement("tr");
+          if (lotesProcesadosHighlightIndex === index) tr.classList.add("is-highlight");
+
+          const addCell = (text, className) => {
+            const td = document.createElement("td");
+            if (className) td.className = className;
+            td.textContent = text;
+            tr.appendChild(td);
+          };
+
+          addCell(formatFechaDisplay(row.fecha));
+          addCell(String(row.lote ?? "—").trim() || "—", "camara-lote");
+          addCell(String(row.productor ?? "—").trim() || "—");
+          addCell(String(row.variedad ?? "—").trim() || "—");
+          addCell(String(row.bandasCamara ?? "—").trim() || "—");
+          addCell(
+            row.cantidadCajas != null
+              ? Number(row.cantidadCajas).toLocaleString("es-CL")
+              : "—"
+          );
+          addCell(
+            row.kilosNetoLote != null
+              ? Number(row.kilosNetoLote).toLocaleString("es-CL", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2
+                })
+              : "—"
+          );
+          addCell(asNumber(row.total).toLocaleString("es-CL"));
+
+          const actionTd = document.createElement("td");
+          const reactivarBtn = document.createElement("button");
+          reactivarBtn.type = "button";
+          reactivarBtn.className = "btn";
+          reactivarBtn.textContent = "Reactivar";
+          reactivarBtn.title = "Volver a la tabla de trabajo (desmarcar procesado)";
+          reactivarBtn.addEventListener("click", () => {
+            rows[index].procesado = false;
+            scheduleUpdate(index, "procesado", false);
+            lotesProcesadosHighlightIndex = null;
+            renderLotesProcesadosPage();
+            renderLotesProcesadosStrip();
+            render();
+          });
+          actionTd.appendChild(reactivarBtn);
+          tr.appendChild(actionTd);
+
+          body.appendChild(tr);
+        }
+      }
+
+      function openLotesProcesadosPage(highlightIndex) {
+        lotesProcesadosHighlightIndex =
+          highlightIndex != null && highlightIndex >= 0 ? highlightIndex : null;
+        renderLotesProcesadosPage();
+        const page = document.getElementById("lotes-procesados-page");
+        if (!page) return;
+        if (page.classList.contains("open")) return;
+        lotesProcesadosPrevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        page.classList.add("open");
+        page.setAttribute("aria-hidden", "false");
+      }
+
+      function closeLotesProcesadosPage() {
+        const page = document.getElementById("lotes-procesados-page");
+        if (!page || !page.classList.contains("open")) return;
+        page.classList.remove("open");
+        page.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = lotesProcesadosPrevBodyOverflow;
+        lotesProcesadosHighlightIndex = null;
+      }
+
+      let camaraResumenPrevBodyOverflow = "";
+
+      function openCamaraResumenPage() {
+        renderCamaraResumen();
+        const page = document.getElementById("camara-resumen-page");
+        if (!page || page.classList.contains("open")) return;
+        camaraResumenPrevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        page.classList.add("open");
+        page.setAttribute("aria-hidden", "false");
+      }
+
+      function closeCamaraResumenPage() {
+        const page = document.getElementById("camara-resumen-page");
+        if (!page || !page.classList.contains("open")) return;
+        page.classList.remove("open");
+        page.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = camaraResumenPrevBodyOverflow;
+      }
+
       let kgCalibrePrevBodyOverflow = "";
 
       function openKgCalibreModal() {
@@ -2238,6 +2741,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         return rows
           .map((row, index) => ({ row, index, calc: calculate(row) }))
           .filter(({ row, calc }) => {
+            if (row.procesado) return false;
             const haystack = `${row.fecha} ${row.lote} ${row.productor} ${row.variedad} ${row.bandasCamara ?? ""} ${row.kilosBrutoLote ?? ""} ${row.kilosNetoLote ?? ""} ${row.observaciones}`.toLowerCase();
             const matchSearch = !search || haystack.includes(search);
             const matchStatus = status === "todos" || calc.estado === status;
@@ -2314,9 +2818,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       }
 
       function renderCamaraResumen() {
-        const body = document.getElementById("camara-resumen-body");
-        const empty = document.getElementById("camara-empty");
-        const meta = document.getElementById("camara-panel-meta");
+        const body = document.getElementById("camara-resumen-full-body");
+        const empty = document.getElementById("camara-resumen-full-empty");
+        const meta = document.getElementById("camara-resumen-full-meta");
         if (!body || !empty || !meta) return;
         const groups = buildCamaraGroups();
         body.replaceChildren();
@@ -2573,7 +3077,8 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           cb.addEventListener("change", () => {
             rows[index].procesado = cb.checked;
             scheduleUpdate(index, "procesado", cb.checked);
-            updateMetrics();
+            renderLotesProcesadosStrip();
+            render();
           });
           checkWrap.appendChild(cb);
           checkTd.appendChild(checkWrap);
@@ -2788,7 +3293,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           kgDefN > 0
             ? `${defPctStr} (${kgDefSum.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg)`
             : `${defPctStr} (— kg)`;
-        renderCamaraResumen();
+        renderLotesProcesadosStrip();
         renderFridgeMap();
       }
 
@@ -3219,6 +3724,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           if (!collapsed) renderFridgeMap();
         });
       }
+      document.getElementById("btn-lotes-procesados")?.addEventListener("click", () => openLotesProcesadosPage());
+      document.getElementById("btn-lotes-procesados-strip")?.addEventListener("click", () => openLotesProcesadosPage());
+      document.getElementById("lotes-procesados-page-close")?.addEventListener("click", closeLotesProcesadosPage);
+      document.getElementById("lotes-procesados-page-cerrar")?.addEventListener("click", closeLotesProcesadosPage);
+      document.getElementById("btn-camara-resumen")?.addEventListener("click", openCamaraResumenPage);
+      document.getElementById("camara-resumen-page-close")?.addEventListener("click", closeCamaraResumenPage);
+      document.getElementById("camara-resumen-page-cerrar")?.addEventListener("click", closeCamaraResumenPage);
       document.getElementById("btn-kg-calibre-disponible")?.addEventListener("click", openKgCalibreModal);
       document.getElementById("kg-calibre-modal-close")?.addEventListener("click", closeKgCalibreModal);
       document.getElementById("kg-calibre-modal-cerrar")?.addEventListener("click", closeKgCalibreModal);
@@ -3275,6 +3787,22 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       lightboxPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
       lightboxNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
       document.addEventListener("keydown", (e) => {
+        const lotesProcPage = document.getElementById("lotes-procesados-page");
+        if (lotesProcPage && lotesProcPage.classList.contains("open")) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeLotesProcesadosPage();
+          }
+          return;
+        }
+        const resumenPage = document.getElementById("camara-resumen-page");
+        if (resumenPage && resumenPage.classList.contains("open")) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeCamaraResumenPage();
+          }
+          return;
+        }
         const kgModal = document.getElementById("kg-calibre-modal");
         if (kgModal && kgModal.classList.contains("open")) {
           if (e.key === "Escape") {
