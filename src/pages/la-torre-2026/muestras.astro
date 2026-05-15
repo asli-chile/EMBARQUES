@@ -10,7 +10,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/png" href={withBase("/img/logo-la-torre-stone-fruit.png")} />
-    <title>LA TORRE 2026</title>
+    <title>Muestras — La Torre Stone Fruits</title>
     <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script is:inline define:vars={{ SUPA_URL, SUPA_KEY }}>
       window._supaUrl = SUPA_URL;
@@ -86,12 +86,38 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         border-right: 1px solid var(--border);
       }
 
-      .brand img {
+      .brand-logos-pair {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+
+      .brand-logo-latorre,
+      .brand-logo-operman {
         height: 40px;
         width: auto;
         max-width: 110px;
         object-fit: contain;
         display: block;
+      }
+
+      .brand-cobrand-x {
+        height: 28px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+        flex-shrink: 0;
+        user-select: none;
+      }
+
+      .brand-tagline {
+        margin: 3px 0 0;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+        letter-spacing: 0.02em;
       }
 
       .brand-meta {
@@ -849,64 +875,6 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         min-width: 900px;
       }
 
-      /* ── Franja lotes procesados (toolbar) ─ */
-      .lotes-procesados-strip {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px 12px;
-        padding: 8px 16px;
-        border-bottom: 1px solid var(--border);
-        background: #fafaf9;
-      }
-
-      .lotes-strip-label {
-        font-size: 10.5px;
-        font-weight: 800;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--muted);
-        white-space: nowrap;
-      }
-
-      .lotes-strip-hint {
-        flex: 1 1 200px;
-        margin: 0;
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--muted);
-        line-height: 1.35;
-        min-width: 0;
-      }
-
-      .lotes-chips-wrap {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-      }
-
-      .lote-chip {
-        display: inline-flex;
-        align-items: center;
-        height: 28px;
-        padding: 0 10px;
-        border: 1px solid var(--border-strong);
-        border-radius: 6px;
-        background: var(--surface);
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--ink);
-        cursor: pointer;
-        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
-      }
-
-      .lote-chip:hover {
-        background: var(--accent-soft);
-        border-color: var(--accent);
-        color: var(--accent);
-      }
-
       .btn-badge {
         font-weight: 800;
         opacity: 0.85;
@@ -1024,6 +992,347 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         font-size: 13px;
         font-weight: 600;
         color: var(--muted);
+      }
+
+      .lotes-procesados-actions,
+      .sample-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 120px;
+      }
+
+      .sample-row-actions .btn-ver-detalle {
+        font-size: 11px;
+        padding: 0 8px;
+        height: 28px;
+        white-space: nowrap;
+      }
+
+      /* ── Vista detalle muestra (pantalla completa) ─ */
+      .muestra-detalle-full {
+        position: fixed;
+        inset: 0;
+        z-index: 2100;
+        box-sizing: border-box;
+        display: none;
+        flex-direction: column;
+        width: 100vw;
+        max-width: 100vw;
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: var(--surface);
+      }
+
+      .muestra-detalle-full.open {
+        display: flex;
+      }
+
+      .muestra-detalle-full-head {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+      }
+
+      .muestra-detalle-cobrand {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 16px;
+      }
+
+      .muestra-detalle-logos-pair {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .muestra-detalle-logo-latorre,
+      .muestra-detalle-logo-operman {
+        height: 44px;
+        width: auto;
+        max-width: 180px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .muestra-detalle-cobrand-x {
+        height: 32px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+        flex-shrink: 0;
+        user-select: none;
+      }
+
+      .muestra-detalle-cobrand-tagline {
+        flex: 1 1 100%;
+        margin: 0;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .muestra-detalle-head-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        width: 100%;
+      }
+
+      .muestra-detalle-full-head h2 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--ink);
+        line-height: 1.1;
+      }
+
+      .muestra-detalle-full-sub {
+        margin: 6px 0 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .muestra-detalle-kpis {
+        flex-shrink: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 18px 12px;
+        border-bottom: 1px solid var(--border);
+        background: #fafaf9;
+      }
+
+      .muestra-detalle-kpi {
+        flex: 1 1 120px;
+        min-width: 100px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+      }
+
+      .muestra-detalle-kpi-label {
+        display: block;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+
+      .muestra-detalle-kpi-value {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+
+      .muestra-detalle-kpi-value.accent {
+        color: var(--accent);
+      }
+
+      .muestra-detalle-estado {
+        flex-shrink: 0;
+        margin-left: auto;
+        align-self: center;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .muestra-detalle-estado.ok {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+      }
+
+      .muestra-detalle-estado.alerta {
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+      }
+
+      .muestra-detalle-estado.critico {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+
+      .muestra-detalle-grid {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        overflow: hidden;
+      }
+
+      @media (max-width: 900px) {
+        .muestra-detalle-grid {
+          grid-template-columns: 1fr;
+          overflow: auto;
+        }
+      }
+
+      .detalle-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 16px 18px 20px;
+        overflow: auto;
+      }
+
+      .detalle-panel:first-child {
+        border-right: 1px solid var(--border);
+      }
+
+      @media (max-width: 900px) {
+        .detalle-panel:first-child {
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+      }
+
+      .detalle-panel-title {
+        margin: 0 0 4px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .detalle-panel-hint {
+        margin: 0 0 14px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .detalle-bar-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .detalle-bar-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .detalle-bar-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .detalle-bar-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .detalle-bar-values {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .detalle-bar-track {
+        height: 10px;
+        border-radius: 4px;
+        background: #f5f5f4;
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .detalle-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: var(--accent);
+        transition: width 280ms ease-out;
+        min-width: 2px;
+      }
+
+      .detalle-bar-fill.defecto {
+        background: #dc2626;
+      }
+
+      .detalle-bar-fill.clasif-primera {
+        background: #059669;
+      }
+
+      .detalle-bar-fill.clasif-segunda {
+        background: #d97706;
+      }
+
+      .detalle-bar-fill.clasif-zumo {
+        background: #7c3aed;
+      }
+
+      .detalle-totales-block {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+      }
+
+      .detalle-totales-block h3 {
+        margin: 0 0 10px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .detalle-total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 6px 0;
+        font-size: 13px;
+        font-weight: 600;
+        border-bottom: 1px solid #f5f5f4;
+      }
+
+      .detalle-total-row strong {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .muestra-detalle-full-foot {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        padding: 12px 18px 14px;
+        border-top: 1px solid var(--border);
+        background: var(--header-bg);
       }
 
       .kg-calibre-table {
@@ -1584,6 +1893,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           display: none !important;
         }
 
+        body.printing-fridge-map #muestra-detalle-page,
         body.printing-fridge-map #lotes-procesados-page,
         body.printing-fridge-map #camara-resumen-page {
           display: none !important;
@@ -1617,11 +1927,34 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
   <body>
     <div class="app">
       <header class="toolbar">
-        <div class="brand">
-          <img src={withBase("/img/logo-la-torre-stone-fruit.png")} alt="La Torre Stone Fruits" />
+        <div class="brand" aria-label="La Torre Stone Fruits en conjunto con OPERMAN">
+          <div class="brand-logos-pair">
+            <img
+              class="brand-logo-latorre"
+              src={withBase("/img/logo-la-torre-stone-fruit.png")}
+              alt="La Torre Stone Fruits"
+              width="110"
+              height="40"
+            />
+            <img
+              class="brand-cobrand-x"
+              src={withBase("/img/x.svg")}
+              alt=""
+              width="28"
+              height="28"
+              aria-hidden="true"
+            />
+            <img
+              class="brand-logo-operman"
+              src={withBase("/img/operman.svg")}
+              alt="OPERMAN"
+              width="90"
+              height="40"
+            />
+          </div>
           <div class="brand-meta">
-            <div class="brand-title">LA TORRE 2026</div>
-            <div class="brand-sub">Muestras · cereza</div>
+            <div class="brand-title">La Torre Stone Fruits</div>
+            <p class="brand-tagline">Muestreo de cereza · trabajo en conjunto con OPERMAN</p>
           </div>
         </div>
 
@@ -1636,6 +1969,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
         <div class="toolbar-spacer"></div>
 
+        <a class="btn" href={withBase("/la-torre-2026")} title="Volver al menú principal">Inicio</a>
         <button class="btn" id="export-excel" type="button">
           <span class="icon">⇩</span> Excel
         </button>
@@ -1656,12 +1990,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         </a>
       </header>
 
-      <section class="lotes-procesados-strip" id="lotes-procesados-strip" hidden aria-label="Lotes procesados en días anteriores">
-        <span class="lotes-strip-label">Lotes procesados</span>
-        <p class="lotes-strip-hint" id="lotes-procesados-strip-hint"></p>
-        <div id="lotes-procesados-chips" class="lotes-chips-wrap"></div>
-        <button type="button" class="btn" id="btn-lotes-procesados-strip">Ver listado</button>
-      </section>
+      
 
       <div id="la-torre-notice" class="la-torre-notice" hidden role="alert"></div>
 
@@ -1884,6 +2213,50 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       </footer>
     </div>
 
+    <div id="muestra-detalle-page" class="muestra-detalle-full" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="muestra-detalle-title">
+      <header class="muestra-detalle-full-head">
+        <div class="muestra-detalle-cobrand" aria-label="La Torre Stone Fruits en conjunto con OPERMAN">
+          <div class="muestra-detalle-logos-pair">
+            <img
+              class="muestra-detalle-logo-latorre"
+              src={withBase("/img/logo-la-torre-stone-fruit.png")}
+              alt="La Torre Stone Fruits"
+              width="160"
+              height="44"
+            />
+            <img
+              class="muestra-detalle-cobrand-x"
+              src={withBase("/img/x.svg")}
+              alt=""
+              width="32"
+              height="32"
+              aria-hidden="true"
+            />
+            <img
+              class="muestra-detalle-logo-operman"
+              src={withBase("/img/operman.svg")}
+              alt="OPERMAN"
+              width="120"
+              height="44"
+            />
+          </div>
+          <p class="muestra-detalle-cobrand-tagline">Muestreo de cereza · trabajo en conjunto con OPERMAN</p>
+        </div>
+        <div class="muestra-detalle-head-row">
+          <div>
+            <h2 id="muestra-detalle-title">Detalle de muestra</h2>
+            <p class="muestra-detalle-full-sub" id="muestra-detalle-sub"></p>
+          </div>
+          <button type="button" class="camara-modal-close" id="muestra-detalle-close" aria-label="Cerrar">×</button>
+        </div>
+      </header>
+      <div class="muestra-detalle-kpis" id="muestra-detalle-kpis"></div>
+      <div class="muestra-detalle-grid" id="muestra-detalle-grid"></div>
+      <footer class="muestra-detalle-full-foot">
+        <button type="button" class="btn btn-primary" id="muestra-detalle-cerrar">Cerrar</button>
+      </footer>
+    </div>
+
     <div id="camara-resumen-page" class="camara-resumen-full" aria-hidden="true" role="region" aria-labelledby="camara-resumen-page-title">
       <header class="camara-resumen-full-head">
         <div>
@@ -2084,7 +2457,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         tableSortMode = tableSortMode === "fecha" ? "ingreso" : "fecha";
         applyTableSort();
         syncFechaSortHeader();
-        renderLotesProcesadosStrip();
+        updateLotesProcesadosCount();
         render();
       }
 
@@ -2153,7 +2526,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         rows = (data ?? []).map(rowFromDb);
         applyTableSort();
         syncFechaSortHeader();
-        renderLotesProcesadosStrip();
+        updateLotesProcesadosCount();
         render();
       }
 
@@ -2474,53 +2847,240 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           });
       }
 
+
+      const DEFECTO_LABELS = {
+        blanda: "Blanda",
+        pitting: "Pitting",
+        doble: "Doble",
+        deshidratada: "Deshidratada",
+        partida: "Partida",
+        pudricion: "Pudrición",
+        colorBajo: "Falta color",
+        mediaLuna: "Media luna",
+        sinPedicelo: "Sin pedicelo",
+        negro: "Negro"
+      };
+
+      function defectoLabelConClasificacion(fieldKey) {
+        const base = DEFECTO_LABELS[fieldKey] || fieldKey;
+        if (ZUMO_KEYS.includes(fieldKey)) return base + " (Zumo)";
+        if (SEGUNDA_KEYS.includes(fieldKey)) return base + " (Segunda)";
+        return base;
+      }
+
+      let muestraDetallePrevBodyOverflow = "";
+
+      function detalleBarRow(parent, label, count, total, kg, fillClass) {
+        const pct = total > 0 ? (count / total) * 100 : 0;
+        const w = Math.min(100, Math.max(0, pct));
+        const rowEl = document.createElement("div");
+        rowEl.className = "detalle-bar-row";
+        const head = document.createElement("div");
+        head.className = "detalle-bar-head";
+        const lbl = document.createElement("span");
+        lbl.className = "detalle-bar-label";
+        lbl.textContent = label;
+        const vals = document.createElement("span");
+        vals.className = "detalle-bar-values";
+        vals.textContent =
+          formatPct(pct) +
+          " · " +
+          (kg != null && Number.isFinite(kg)
+            ? kg.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " kg"
+            : "— kg");
+        head.appendChild(lbl);
+        head.appendChild(vals);
+        const track = document.createElement("div");
+        track.className = "detalle-bar-track";
+        const fill = document.createElement("div");
+        fill.className = fillClass ? "detalle-bar-fill " + fillClass : "detalle-bar-fill";
+        fill.style.width = w + "%";
+        track.appendChild(fill);
+        rowEl.appendChild(head);
+        rowEl.appendChild(track);
+        parent.appendChild(rowEl);
+      }
+
+      function renderMuestraDetalleContent(rowIndex) {
+        const row = rows[rowIndex];
+        if (!row) return;
+        const calc = calculate(row);
+        const total = asNumber(row.total);
+        const primera = sumPrimera(row);
+        const segunda = sumSegunda(row);
+        const zumo = sumZumo(row);
+
+        const sub = document.getElementById("muestra-detalle-sub");
+        const kpis = document.getElementById("muestra-detalle-kpis");
+        const grid = document.getElementById("muestra-detalle-grid");
+        const titleEl = document.getElementById("muestra-detalle-title");
+        if (!sub || !kpis || !grid) return;
+
+        const lote = String(row.lote ?? "—").trim() || "—";
+        const productor = String(row.productor ?? "—").trim() || "—";
+        const variedad = String(row.variedad ?? "—").trim() || "—";
+        if (titleEl) titleEl.textContent = "Lote " + lote;
+        sub.textContent =
+          formatFechaDisplay(row.fecha) +
+          " · " +
+          productor +
+          " · " +
+          variedad +
+          (row.bandasCamara ? " · Banda " + String(row.bandasCamara).trim() : "");
+
+        const estadoLabel =
+          calc.estado === "critico" ? "Crítico" : calc.estado === "alerta" ? "Alerta" : "OK";
+        const kgNeto =
+          row.kilosNetoLote != null && Number.isFinite(Number(row.kilosNetoLote))
+            ? Number(row.kilosNetoLote)
+            : null;
+
+        kpis.replaceChildren();
+        const kpiFrutos = document.createElement("div");
+        kpiFrutos.className = "muestra-detalle-kpi";
+        kpiFrutos.innerHTML =
+          '<span class="muestra-detalle-kpi-label">Frutos</span><span class="muestra-detalle-kpi-value accent">' +
+          total.toLocaleString("es-CL") +
+          "</span>";
+        const kpiKg = document.createElement("div");
+        kpiKg.className = "muestra-detalle-kpi";
+        kpiKg.innerHTML =
+          '<span class="muestra-detalle-kpi-label">Kg neto lote</span><span class="muestra-detalle-kpi-value">' +
+          (kgNeto != null
+            ? kgNeto.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+            : "—") +
+          "</span>";
+        const kpiCajas = document.createElement("div");
+        kpiCajas.className = "muestra-detalle-kpi";
+        kpiCajas.innerHTML =
+          '<span class="muestra-detalle-kpi-label">Cajas</span><span class="muestra-detalle-kpi-value">' +
+          (row.cantidadCajas != null ? Number(row.cantidadCajas).toLocaleString("es-CL") : "—") +
+          "</span>";
+        const estadoSpan = document.createElement("span");
+        estadoSpan.className = "muestra-detalle-estado " + calc.estado;
+        estadoSpan.textContent = estadoLabel;
+        kpis.append(kpiFrutos, kpiKg, kpiCajas, estadoSpan);
+
+        grid.replaceChildren();
+
+        const panelCalibres = document.createElement("section");
+        panelCalibres.className = "detalle-panel";
+        panelCalibres.setAttribute("aria-label", "Calibres");
+        const hCal = document.createElement("h2");
+        hCal.className = "detalle-panel-title";
+        hCal.textContent = "Calibres";
+        const hintCal = document.createElement("p");
+        hintCal.className = "detalle-panel-hint";
+        hintCal.textContent = "% del total de la muestra · kg neto proporcional del lote";
+        const listCal = document.createElement("div");
+        listCal.className = "detalle-bar-list";
+        for (let i = 0; i < CALIBRE_AGG_LABELS.length; i++) {
+          const ck = CALIBRE_AGG_LABELS[i].key;
+          detalleBarRow(
+            listCal,
+            CALIBRE_AGG_LABELS[i].label,
+            asNumber(row[ck]),
+            total,
+            kgNetoShare(row, row[ck]),
+            ""
+          );
+        }
+        panelCalibres.append(hCal, hintCal, listCal);
+
+        const panelDef = document.createElement("section");
+        panelDef.className = "detalle-panel";
+        panelDef.setAttribute("aria-label", "Defectos y totales");
+        const hDef = document.createElement("h2");
+        hDef.className = "detalle-panel-title";
+        hDef.textContent = "Defectos";
+        const hintDef = document.createElement("p");
+        hintDef.className = "detalle-panel-hint";
+        hintDef.textContent =
+          "Cada barra: % del total de la muestra y kg neto del lote · Entre paréntesis: clasificación (Segunda o Zumo)";
+        const listDef = document.createElement("div");
+        listDef.className = "detalle-bar-list";
+        let hasDef = false;
+        for (const dk of DEFECTO_KEYS) {
+          const n = asNumber(row[dk]);
+          if (n <= 0) continue;
+          hasDef = true;
+          detalleBarRow(listDef, defectoLabelConClasificacion(dk), n, total, kgNetoShare(row, n), "defecto");
+        }
+        if (!hasDef) {
+          const emptyDef = document.createElement("p");
+          emptyDef.className = "detalle-panel-hint";
+          emptyDef.textContent = "Sin defectos registrados.";
+          listDef.appendChild(emptyDef);
+        }
+
+        const blockClasif = document.createElement("div");
+        blockClasif.className = "detalle-totales-block";
+        const hClasif = document.createElement("h3");
+        hClasif.textContent = "Clasificación";
+        const listClasif = document.createElement("div");
+        listClasif.className = "detalle-bar-list";
+        detalleBarRow(listClasif, "Primera", primera, total, kgNetoShare(row, primera), "clasif-primera");
+        detalleBarRow(listClasif, "Segunda", segunda, total, kgNetoShare(row, segunda), "clasif-segunda");
+        detalleBarRow(listClasif, "Zumo", zumo, total, kgNetoShare(row, zumo), "clasif-zumo");
+        blockClasif.append(hClasif, listClasif);
+
+        const blockRes = document.createElement("div");
+        blockRes.className = "detalle-totales-block";
+        const hRes = document.createElement("h3");
+        hRes.textContent = "Resumen";
+        blockRes.appendChild(hRes);
+        const addTotalRow = (label, value) => {
+          const r = document.createElement("div");
+          r.className = "detalle-total-row";
+          const s = document.createElement("span");
+          s.textContent = label;
+          const strong = document.createElement("strong");
+          strong.textContent = value;
+          r.append(s, strong);
+          blockRes.appendChild(r);
+        };
+        addTotalRow("% Defectos", formatPctWithKgNet(calc.defectPct, row, calc.defectos));
+        addTotalRow("% Exportable", formatPctWithKgNet(calc.exportablePct, row, calc.exportable));
+        addTotalRow(
+          "Promedio calibre",
+          calc.promedioCalibre.toLocaleString("es-CL", { maximumFractionDigits: 1 }) + " mm"
+        );
+
+        panelDef.append(hDef, hintDef, listDef, blockClasif, blockRes);
+        grid.append(panelCalibres, panelDef);
+      }
+
+      function openMuestraDetallePage(rowIndex) {
+        renderMuestraDetalleContent(rowIndex);
+        const page = document.getElementById("muestra-detalle-page");
+        if (!page) return;
+        if (page.classList.contains("open")) return;
+        muestraDetallePrevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        page.classList.add("open");
+        page.setAttribute("aria-hidden", "false");
+      }
+
+      function closeMuestraDetallePage() {
+        const page = document.getElementById("muestra-detalle-page");
+        if (!page || !page.classList.contains("open")) return;
+        page.classList.remove("open");
+        page.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = muestraDetallePrevBodyOverflow;
+      }
       let lotesProcesadosHighlightIndex = null;
       let lotesProcesadosPrevBodyOverflow = "";
 
-      function renderLotesProcesadosStrip() {
-        const strip = document.getElementById("lotes-procesados-strip");
-        const chipsWrap = document.getElementById("lotes-procesados-chips");
-        const hint = document.getElementById("lotes-procesados-strip-hint");
+      function updateLotesProcesadosCount() {
         const countBadge = document.getElementById("lotes-procesados-count");
         const items = getProcesadosArchivadosItems();
-
-        if (countBadge) {
-          if (items.length) {
-            countBadge.textContent = " (" + items.length + ")";
-            countBadge.hidden = false;
-          } else {
-            countBadge.textContent = "";
-            countBadge.hidden = true;
-          }
-        }
-
-        if (!strip || !chipsWrap) return;
-
-        if (!items.length) {
-          strip.hidden = true;
-          chipsWrap.replaceChildren();
-          if (hint) hint.textContent = "";
-          return;
-        }
-
-        strip.hidden = false;
-        if (hint) {
-          hint.textContent =
-            "Los marcados hoy siguen en la tabla de trabajo hasta mañana; aquí aparecen los de fechas anteriores.";
-        }
-
-        chipsWrap.replaceChildren();
-        for (const { row, index } of items) {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = "lote-chip";
-          const lote = String(row.lote || "—").trim();
-          chip.textContent = lote + " · " + formatFechaDisplay(row.fecha);
-          const prod = String(row.productor ?? "").trim();
-          const var_ = String(row.variedad ?? "").trim();
-          chip.title = [prod, var_].filter(Boolean).join(" · ") || lote;
-          chip.addEventListener("click", () => openLotesProcesadosPage(index));
-          chipsWrap.appendChild(chip);
+        if (!countBadge) return;
+        if (items.length) {
+          countBadge.textContent = " (" + items.length + ")";
+          countBadge.hidden = false;
+        } else {
+          countBadge.textContent = "";
+          countBadge.hidden = true;
         }
       }
 
@@ -2580,6 +3140,12 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           addCell(asNumber(row.total).toLocaleString("es-CL"));
 
           const actionTd = document.createElement("td");
+          actionTd.className = "lotes-procesados-actions";
+          const detalleBtn = document.createElement("button");
+          detalleBtn.type = "button";
+          detalleBtn.className = "btn btn-primary";
+          detalleBtn.textContent = "Ver detalles";
+          detalleBtn.addEventListener("click", () => openMuestraDetallePage(index));
           const reactivarBtn = document.createElement("button");
           reactivarBtn.type = "button";
           reactivarBtn.className = "btn";
@@ -2590,9 +3156,10 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             scheduleUpdate(index, "procesado", false);
             lotesProcesadosHighlightIndex = null;
             renderLotesProcesadosPage();
-            renderLotesProcesadosStrip();
+            updateLotesProcesadosCount();
             render();
           });
+          actionTd.appendChild(detalleBtn);
           actionTd.appendChild(reactivarBtn);
           tr.appendChild(actionTd);
 
@@ -3077,7 +3644,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           cb.addEventListener("change", () => {
             rows[index].procesado = cb.checked;
             scheduleUpdate(index, "procesado", cb.checked);
-            renderLotesProcesadosStrip();
+            updateLotesProcesadosCount();
             render();
           });
           checkWrap.appendChild(cb);
@@ -3234,6 +3801,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           tr.appendChild(createFotosCell(row));
 
           const actionTd = document.createElement("td");
+          actionTd.className = "sample-row-actions";
+          const detalleBtn = document.createElement("button");
+          detalleBtn.type = "button";
+          detalleBtn.className = "btn btn-primary btn-ver-detalle";
+          detalleBtn.textContent = "Ver detalles";
+          detalleBtn.title = "Vista pantalla completa: calibres, defectos y totales";
+          detalleBtn.addEventListener("click", () => openMuestraDetallePage(index));
           const removeButton = document.createElement("button");
           removeButton.type = "button";
           removeButton.className = "icon-btn";
@@ -3244,6 +3818,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             if (!confirm("¿Eliminar esta muestra?")) return;
             deleteRow(index);
           });
+          actionTd.appendChild(detalleBtn);
           actionTd.appendChild(removeButton);
           tr.appendChild(actionTd);
 
@@ -3293,7 +3868,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           kgDefN > 0
             ? `${defPctStr} (${kgDefSum.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg)`
             : `${defPctStr} (— kg)`;
-        renderLotesProcesadosStrip();
+        updateLotesProcesadosCount();
         renderFridgeMap();
       }
 
@@ -3724,8 +4299,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           if (!collapsed) renderFridgeMap();
         });
       }
+      document.getElementById("muestra-detalle-close")?.addEventListener("click", closeMuestraDetallePage);
+      document.getElementById("muestra-detalle-cerrar")?.addEventListener("click", closeMuestraDetallePage);
       document.getElementById("btn-lotes-procesados")?.addEventListener("click", () => openLotesProcesadosPage());
-      document.getElementById("btn-lotes-procesados-strip")?.addEventListener("click", () => openLotesProcesadosPage());
       document.getElementById("lotes-procesados-page-close")?.addEventListener("click", closeLotesProcesadosPage);
       document.getElementById("lotes-procesados-page-cerrar")?.addEventListener("click", closeLotesProcesadosPage);
       document.getElementById("btn-camara-resumen")?.addEventListener("click", openCamaraResumenPage);
@@ -3787,6 +4363,14 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       lightboxPrev.addEventListener("click", () => showLightboxAt(lightboxIndex - 1));
       lightboxNext.addEventListener("click", () => showLightboxAt(lightboxIndex + 1));
       document.addEventListener("keydown", (e) => {
+        const detallePage = document.getElementById("muestra-detalle-page");
+        if (detallePage && detallePage.classList.contains("open")) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeMuestraDetallePage();
+          }
+          return;
+        }
         const lotesProcPage = document.getElementById("lotes-procesados-page");
         if (lotesProcPage && lotesProcPage.classList.contains("open")) {
           if (e.key === "Escape") {
@@ -3856,6 +4440,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
         });
       }
       syncFechaSortHeader();
+
       loadRows();
     </script>
   </body>
