@@ -313,6 +313,12 @@ interface ComboboxEditorProps {
   value: string;
   values: string[];
   stopEditing: (cancel?: boolean) => void;
+  allowAddNew?: boolean;
+}
+
+function normalizeComboboxValue(value: string, allowAddNew?: boolean) {
+  const trimmed = value.trim();
+  return allowAddNew ? trimmed.toUpperCase() : trimmed;
 }
 
 const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
@@ -320,7 +326,9 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
   ref: Ref<{ getValue: () => string; isPopup: () => boolean }>
 ) {
   const [inputVal, setInputVal] = useState<string>(props.value ?? "");
+  const [highlight, setHighlight] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const committedRef = useRef<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = inputVal.toLowerCase();
@@ -328,10 +336,18 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
     return props.values.filter((v) => v.toLowerCase().includes(q)).slice(0, 100);
   }, [inputVal, props.values]);
 
+  const trimmedInput = inputVal.trim();
+  const exactMatch = useMemo(
+    () => props.values.some((v) => v.toUpperCase() === trimmedInput.toUpperCase()),
+    [trimmedInput, props.values]
+  );
+  const hasAdd = !!props.allowAddNew && !!trimmedInput && !exactMatch;
+  const totalItems = filtered.length + (hasAdd ? 1 : 0);
+
   // isPopup:true → AG Grid renderiza el editor fuera de la celda,
   // evitando que el overflow:hidden de la grilla corte el desplegable.
   useImperativeHandle(ref, () => ({
-    getValue: () => inputVal,
+    getValue: () => committedRef.current ?? normalizeComboboxValue(inputVal, props.allowAddNew),
     isPopup: () => true,
   }));
 
@@ -340,9 +356,52 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
     inputRef.current?.select();
   }, []);
 
-  const choose = (v: string) => {
-    setInputVal(v);
+  const commit = (value: string) => {
+    const finalValue = normalizeComboboxValue(value, props.allowAddNew);
+    committedRef.current = finalValue;
+    setInputVal(finalValue);
     setTimeout(() => props.stopEditing(), 0);
+  };
+
+  const choose = (v: string) => {
+    commit(v);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      if (totalItems === 0) return;
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % totalItems);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      if (totalItems === 0) return;
+      e.preventDefault();
+      setHighlight((h) => (h - 1 + totalItems) % totalItems);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlight >= 0 && highlight < filtered.length) {
+        choose(filtered[highlight]);
+      } else if (hasAdd && (highlight === filtered.length || highlight < 0)) {
+        commit(trimmedInput);
+      } else if (trimmedInput) {
+        commit(trimmedInput);
+      } else {
+        props.stopEditing(true);
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      props.stopEditing(true);
+      return;
+    }
+    if (e.key === "Tab") {
+      if (trimmedInput) commit(trimmedInput);
+      else props.stopEditing();
+    }
   };
 
   return (
@@ -351,7 +410,7 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
         background: "white",
         border: "2px solid #107C41",
         boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-        minWidth: 180,
+        minWidth: 220,
         fontFamily: "'Calibri', 'Segoe UI', sans-serif",
         fontSize: 13,
       }}
@@ -359,12 +418,11 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
       <input
         ref={inputRef}
         value={inputVal}
-        onChange={(e) => setInputVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { props.stopEditing(); e.preventDefault(); }
-          if (e.key === "Escape") { props.stopEditing(true); }
-          if (e.key === "Tab") { props.stopEditing(); }
+        onChange={(e) => {
+          setInputVal(props.allowAddNew ? e.target.value.toUpperCase() : e.target.value);
+          setHighlight(-1);
         }}
+        onKeyDown={handleKeyDown}
         style={{
           width: "100%", padding: "4px 8px",
           border: "none", borderBottom: "1px solid #D5D5D5",
@@ -374,22 +432,42 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
         }}
         placeholder="Buscar o escribir..."
       />
-      {filtered.length > 0 && (
+      {(filtered.length > 0 || hasAdd) && (
         <div style={{ maxHeight: 220, overflowY: "auto" }}>
-          {filtered.map((v) => (
+          {filtered.map((v, idx) => (
             <div
               key={v}
               onMouseDown={() => choose(v)}
               style={{
                 padding: "4px 10px", cursor: "pointer",
                 borderBottom: "1px solid #f0f0f0", whiteSpace: "nowrap",
+                background: highlight === idx ? "#BDD7EE" : "white",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#BDD7EE")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
             >
               {v}
             </div>
           ))}
+          {hasAdd && (
+            <div
+              onMouseDown={() => commit(trimmedInput)}
+              style={{
+                padding: "5px 10px", cursor: "pointer",
+                borderTop: "1px solid #e8e8e8",
+                whiteSpace: "nowrap",
+                fontWeight: 600,
+                fontSize: 12,
+                color: "#107C41",
+                background: highlight === filtered.length ? "#E2F0D9" : "#F6FBF4",
+              }}
+            >
+              + Agregar «{trimmedInput.toUpperCase()}» al catálogo
+            </div>
+          )}
+        </div>
+      )}
+      {filtered.length === 0 && !hasAdd && !!trimmedInput && (
+        <div style={{ padding: "6px 10px", fontSize: 12, color: "#888" }}>
+          Sin coincidencias. Presiona Enter para usar el valor escrito.
         </div>
       )}
     </div>
@@ -878,11 +956,11 @@ export function RegistrosContent() {
       },
       {
         field: "cliente", headerName: t.registros.colClient, sortable: true, editable: canEdit, width: columnWidths.cliente,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.empresas },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.empresas, allowAddNew: true },
       },
       {
         field: "consignatario", headerName: t.registros.colConsignee, sortable: true, editable: canEdit, width: columnWidths.consignatario,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.consignatarios },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.consignatarios, allowAddNew: true },
       },
       {
         field: "contrato", headerName: "Contrato", sortable: true, editable: canEdit, width: columnWidths.contrato,
@@ -904,7 +982,7 @@ export function RegistrosContent() {
       // ── 3. Carga / Mercadería ─────────────────────────────────────────────────
       {
         field: "especie", headerName: t.registros.colSpecies, sortable: true, editable: canEdit, width: columnWidths.especie,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.especies },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.especies, allowAddNew: true },
       },
       { field: "temperatura", headerName: t.registros.colTemperature, sortable: true, editable: canEdit, width: columnWidths.temperatura },
       {
@@ -957,7 +1035,7 @@ export function RegistrosContent() {
       // ── 5. Naviera y Viaje ────────────────────────────────────────────────────
       {
         field: "naviera", headerName: t.registros.colCarrier, sortable: true, editable: canEdit, width: columnWidths.naviera,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.navieras },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.navieras, allowAddNew: true },
       },
       {
         field: "nave", headerName: t.registros.colVessel, sortable: true, editable: canEdit, width: columnWidths.nave,
@@ -974,12 +1052,12 @@ export function RegistrosContent() {
       { field: "viaje", headerName: t.registros.colViaje, sortable: true, editable: canEdit, width: columnWidths.viaje },
       {
         field: "pol", headerName: t.registros.colPOL, sortable: true, editable: canEdit, width: columnWidths.pol,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.puertos_origen },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.puertos_origen, allowAddNew: true },
       },
       { field: "etd", headerName: t.registros.colETD, sortable: true, editable: canEdit, width: columnWidths.etd },
       {
         field: "pod", headerName: t.registros.colPOD, sortable: true, editable: canEdit, width: columnWidths.pod,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.destinos.map((d) => d.nombre) },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.destinos.map((d) => d.nombre), allowAddNew: true },
       },
       { field: "eta", headerName: t.registros.colETA, sortable: true, editable: canEdit, width: columnWidths.eta },
       { field: "tt", headerName: t.registros.colTransitDays, sortable: true, editable: canEdit, width: columnWidths.tt },
@@ -994,7 +1072,7 @@ export function RegistrosContent() {
       // ── 7. Planta y Proceso ───────────────────────────────────────────────────
       {
         field: "planta_presentacion", headerName: t.registros.colPresentationPlant, sortable: true, editable: canEdit, width: columnWidths.plantaPresentacion,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.plantas },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.plantas, allowAddNew: true },
       },
       { field: "citacion", headerName: t.registros.colCitation, sortable: true, editable: canEdit, width: columnWidths.citacion },
       { field: "llegada_planta", headerName: t.registros.colPlantArrival, sortable: true, editable: canEdit, width: columnWidths.llegadaPlanta },
@@ -1016,7 +1094,7 @@ export function RegistrosContent() {
       // ── 10. Depósito y Movimientos ────────────────────────────────────────────
       {
         field: "deposito", headerName: t.registros.colWarehouse, sortable: true, editable: canEdit, width: columnWidths.deposito,
-        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.depositos },
+        cellEditor: ComboboxCellEditor, cellEditorPopup: true, cellEditorParams: { values: catalogos.depositos, allowAddNew: true },
       },
       { field: "agendamiento_retiro", headerName: t.registros.colPickupSchedule, sortable: true, editable: canEdit, width: columnWidths.agendamientoRetiro },
       { field: "devolucion_unidad", headerName: t.registros.colUnitReturn, sortable: true, editable: canEdit, width: columnWidths.devolucionUnidad },
@@ -1274,7 +1352,10 @@ export function RegistrosContent() {
       const updates: Record<string, unknown> = { [field]: dbValue };
 
       if (field === "pod" && e.newValue) {
-        const destino = catalogos.destinos.find((d) => d.nombre === e.newValue);
+        const podNombre = String(e.newValue).trim().toUpperCase();
+        dbValue = podNombre;
+        e.node.setDataValue("pod", podNombre);
+        const destino = catalogos.destinos.find((d) => d.nombre.toUpperCase() === podNombre);
         if (destino?.pais) {
           updates.pais = destino.pais;
           e.node.setDataValue("pais", destino.pais);
@@ -1302,8 +1383,11 @@ export function RegistrosContent() {
         } else {
           existing = (catalogos[info.catalogKey as keyof CatalogosState] as string[]) ?? [];
         }
-        if (!existing.includes(String(e.newValue))) {
-          setAddNewModal({ field, newValue: String(e.newValue), table: info.table, label: info.label });
+        const newValueNorm = String(e.newValue).trim();
+        const exists = existing.some((v) => v.toUpperCase() === newValueNorm.toUpperCase());
+        if (!exists) {
+          const catalogValue = field === "pod" ? newValueNorm.toUpperCase() : newValueNorm;
+          setAddNewModal({ field, newValue: catalogValue, table: info.table, label: info.label });
         }
       }
     },
