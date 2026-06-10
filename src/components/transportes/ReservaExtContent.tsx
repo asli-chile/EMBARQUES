@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
+import { ComboboxInput } from "@/components/ui/ComboboxInput";
+import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { format } from "date-fns";
 import { sileo } from "sileo";
 
@@ -213,6 +215,8 @@ export function ReservaExtContent() {
   const [empresaTransporteInput, setEmpresaTransporteInput] = useState<string>("");
   const [choferInput, setChoferInput] = useState<string>("");
   const [equipoInput, setEquipoInput] = useState<string>("");
+  const [podInput, setPodInput] = useState("");
+  const [addingDestino, setAddingDestino] = useState(false);
 
   const [bookingDocUrl, setBookingDocUrl] = useState<string | null>(null);
   // Instructivo
@@ -282,6 +286,10 @@ export function ReservaExtContent() {
       setEquipoInput(formData.patente_camion);
     }
   }, [formData.transporte, formData.chofer, formData.patente_camion, empresaTransporteInput, choferInput, equipoInput]);
+
+  useEffect(() => {
+    setPodInput(formData.pod ?? "");
+  }, [formData.pod]);
 
   // Al seleccionar/deseleccionar una reserva, resetear estado del instructivo y cargar el existente
   useEffect(() => {
@@ -427,6 +435,22 @@ export function ReservaExtContent() {
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
+  };
+
+  const handleAddDestino = async (text: string) => {
+    if (!text.trim()) return;
+    setAddingDestino(true);
+    setError(null);
+    try {
+      const data = await saveDestinoToCatalog({ nombre: text.trim().toUpperCase() });
+      const nuevo = { id: data.id, nombre: data.nombre };
+      setDestinos((prev) => [...prev, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setFormData((prev) => ({ ...prev, pod: data.nombre }));
+      setPodInput(data.nombre);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al agregar el destino");
+    }
+    setAddingDestino(false);
   };
 
   const handleEmpresaTransporteChange = async (id: string) => {
@@ -1251,19 +1275,27 @@ export function ReservaExtContent() {
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <label className={labelClass}>{tr.podLabel}</label>
-                          <select
-                            value={formData.pod}
-                            onChange={(e) => handleChange("pod", e.target.value)}
-                            className={inputClass}
-                          >
-                            <option value="">{tr.selectDestino}</option>
-                            {destinos.map((d) => (
-                              <option key={d.id} value={d.nombre}>{d.nombre}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <ComboboxInput
+                          id="pod"
+                          label={tr.podLabel}
+                          labelClass={labelClass}
+                          inputClass={inputClass}
+                          value={podInput}
+                          options={destinos}
+                          onSelect={(opt) => {
+                            setPodInput(opt.nombre);
+                            handleChange("pod", opt.nombre);
+                          }}
+                          onChange={(val) => {
+                            setPodInput(val);
+                            handleChange("pod", "");
+                          }}
+                          onAddNew={handleAddDestino}
+                          addNewLabel={(text) => `${tr.addNewDestino} "${text}"`}
+                          addingNew={addingDestino}
+                          placeholder={tr.searchDestino}
+                          disabled={loading}
+                        />
                         {renderInput(tr.etdLabel, "etd", "date")}
                         <div>
                           <label className={labelClass}>{tr.warehouse}</label>

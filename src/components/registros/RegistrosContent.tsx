@@ -10,6 +10,7 @@ import { columnWidths } from "@/lib/registros-table-config";
 import { exportRegistrosSimpleExcel } from "@/lib/registros-export-simple-excel";
 import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
+import { saveDestinoToCatalog } from "@/lib/destinos-service";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -1312,20 +1313,24 @@ export function RegistrosContent() {
   const handleConfirmAddNew = useCallback(async () => {
     if (!addNewModal || !supabase) return;
     const { table, newValue, label } = addNewModal;
-    let insertData: Record<string, unknown>;
-    if (table === "destinos") {
-      insertData = { nombre: newValue, pais: "", activo: true };
-    } else if (table === "navieras") {
-      insertData = { nombre: newValue };
-    } else {
-      insertData = { nombre: newValue, activo: true };
-    }
-    const { error: err } = await supabase.from(table).insert(insertData);
-    if (err) {
-      setError(`Error al agregar a ${label}: ${err.message}`);
-    } else {
+    try {
+      if (table === "destinos") {
+        await saveDestinoToCatalog({ nombre: newValue });
+      } else {
+        let insertData: Record<string, unknown>;
+        if (table === "navieras") {
+          insertData = { nombre: newValue };
+        } else {
+          insertData = { nombre: newValue, activo: true };
+        }
+        const { error: err } = await supabase.from(table).insert(insertData);
+        if (err) throw new Error(err.message);
+      }
       await fetchCatalogos();
       sileo.success({ title: `"${newValue}" agregado correctamente a ${label}` });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      setError(`Error al agregar a ${label}: ${msg}`);
     }
     setAddNewModal(null);
   }, [addNewModal, supabase, fetchCatalogos]);

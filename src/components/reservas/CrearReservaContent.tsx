@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
 import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
 import { withBase } from "@/lib/basePath";
+import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useAuth } from "@/lib/auth/AuthContext";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
@@ -173,6 +174,10 @@ export function CrearReservaContent() {
   // Estados para el combobox de especie
   const [especieInput, setEspecieInput] = useState("");
   const [addingEspecie, setAddingEspecie] = useState(false);
+
+  // Estados para el combobox de destino (POD)
+  const [podInput, setPodInput] = useState("");
+  const [addingDestino, setAddingDestino] = useState(false);
 
   const [showPreview, setShowPreview] = useState(false);
   const [copias, setCopias] = useState(1);
@@ -636,6 +641,12 @@ export function CrearReservaContent() {
     setEspecieInput(nombre);
   }, [formData.especie, especies]);
 
+  // Sincronizar podInput cuando cambia el valor del form
+  useEffect(() => {
+    const nombre = destinos.find((d) => d.id === formData.pod)?.nombre ?? "";
+    setPodInput(nombre);
+  }, [formData.pod, destinos]);
+
   const handleAddPlanta = async (text: string) => {
     if (!supabase || !text.trim()) return;
     setAddingPlanta(true);
@@ -672,6 +683,24 @@ export function CrearReservaContent() {
       console.error("Error adding especie:", insertError);
     }
     setAddingEspecie(false);
+  };
+
+  const handleAddDestino = async (text: string) => {
+    if (!text.trim()) return;
+    setAddingDestino(true);
+    try {
+      const data = await saveDestinoToCatalog({ nombre: text.trim().toUpperCase() });
+      const nuevo = { id: data.id, nombre: data.nombre };
+      setDestinos((prev) => [...prev, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setFormData((prev) => ({ ...prev, pod: data.id }));
+      setPodInput(data.nombre);
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error adding destino:", err);
+      }
+      setError(err instanceof Error ? err.message : "Error al agregar el destino");
+    }
+    setAddingDestino(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1823,7 +1852,28 @@ export function CrearReservaContent() {
           )}
         </div>
         {renderSelect("pol", puertosOrigen, tr.pol, true)}
-        {renderSelect("pod", destinos, tr.pod, true)}
+        <ComboboxInput
+          id="pod"
+          label={tr.pod}
+          labelExtra={reqMark}
+          labelClass={labelClass}
+          inputClass={inputClass}
+          value={podInput}
+          options={destinos}
+          onSelect={(opt) => {
+            setPodInput(opt.nombre);
+            setFormData((prev) => ({ ...prev, pod: opt.id }));
+          }}
+          onChange={(val) => {
+            setPodInput(val);
+            setFormData((prev) => ({ ...prev, pod: "" }));
+          }}
+          onAddNew={handleAddDestino}
+          addNewLabel={(text) => `${tr.addNewDestino} "${text}"`}
+          addingNew={addingDestino}
+          placeholder={tr.searchDestino}
+          disabled={loadingCatalogos}
+        />
         <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-3 gap-3">
           <div>
             <label htmlFor="etd" className={labelClass}>{tr.etd}{reqMark}</label>
