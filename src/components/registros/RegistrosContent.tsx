@@ -1,4 +1,4 @@
-import { type Ref, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, SELECTION_COLUMN_ID } from "ag-grid-community";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
@@ -308,11 +308,12 @@ const ADDABLE_FIELDS = {
 
 const CONTRATOS_FALLBACK = ["COPEFRUT", "ASLI", "ALMACENES", "EXITO"];
 
-// ─── Editor combinado: dropdown filtrable + texto libre ───────────────────────
+// ─── Editor combinado: dropdown filtrable + texto libre (AG Grid v35 controlado) ─
 interface ComboboxEditorProps {
-  value: string;
+  value: string | null | undefined;
+  onValueChange: (value: string) => void;
+  stopEditing: (suppressNavigateAfterEdit?: boolean) => void;
   values: string[];
-  stopEditing: (cancel?: boolean) => void;
   allowAddNew?: boolean;
 }
 
@@ -321,91 +322,106 @@ function normalizeComboboxValue(value: string, allowAddNew?: boolean) {
   return allowAddNew ? trimmed.toUpperCase() : trimmed;
 }
 
-const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
-  props: ComboboxEditorProps,
-  ref: Ref<{ getValue: () => string; isPopup: () => boolean }>
-) {
-  const [inputVal, setInputVal] = useState<string>(props.value ?? "");
+function ComboboxCellEditor({
+  value,
+  onValueChange,
+  stopEditing,
+  values,
+  allowAddNew,
+}: ComboboxEditorProps) {
+  const [inputVal, setInputVal] = useState<string>(String(value ?? ""));
   const [highlight, setHighlight] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const committedRef = useRef<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = inputVal.toLowerCase();
-    if (!q) return props.values.slice(0, 100);
-    return props.values.filter((v) => v.toLowerCase().includes(q)).slice(0, 100);
-  }, [inputVal, props.values]);
+    if (!q) return values.slice(0, 100);
+    return values.filter((v) => v.toLowerCase().includes(q)).slice(0, 100);
+  }, [inputVal, values]);
 
   const trimmedInput = inputVal.trim();
   const exactMatch = useMemo(
-    () => props.values.some((v) => v.toUpperCase() === trimmedInput.toUpperCase()),
-    [trimmedInput, props.values]
+    () => values.some((v) => v.toUpperCase() === trimmedInput.toUpperCase()),
+    [trimmedInput, values]
   );
-  const hasAdd = !!props.allowAddNew && !!trimmedInput && !exactMatch;
+  const hasAdd = !!allowAddNew && !!trimmedInput && !exactMatch;
   const totalItems = filtered.length + (hasAdd ? 1 : 0);
-
-  // isPopup:true → AG Grid renderiza el editor fuera de la celda,
-  // evitando que el overflow:hidden de la grilla corte el desplegable.
-  useImperativeHandle(ref, () => ({
-    getValue: () => committedRef.current ?? normalizeComboboxValue(inputVal, props.allowAddNew),
-    isPopup: () => true,
-  }));
 
   useEffect(() => {
     inputRef.current?.focus();
     inputRef.current?.select();
   }, []);
 
-  const commit = (value: string) => {
-    const finalValue = normalizeComboboxValue(value, props.allowAddNew);
-    committedRef.current = finalValue;
-    setInputVal(finalValue);
-    setTimeout(() => props.stopEditing(), 0);
+  const commit = useCallback(
+    (raw: string) => {
+      const finalValue = normalizeComboboxValue(raw, allowAddNew);
+      if (!finalValue) {
+        stopEditing(true);
+        return;
+      }
+      onValueChange(finalValue);
+      setInputVal(finalValue);
+      stopEditing();
+    },
+    [allowAddNew, onValueChange, stopEditing]
+  );
+
+  const handlePick = (e: React.MouseEvent, picked: string) => {
+    e.preventDefault();
+    commit(picked);
   };
 
-  const choose = (v: string) => {
-    commit(v);
+  const syncValue = (raw: string) => {
+    const normalized = normalizeComboboxValue(raw, allowAddNew);
+    onValueChange(normalized || raw);
+    return normalized || raw;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
       if (totalItems === 0) return;
       e.preventDefault();
+      e.stopPropagation();
       setHighlight((h) => (h + 1) % totalItems);
       return;
     }
     if (e.key === "ArrowUp") {
       if (totalItems === 0) return;
       e.preventDefault();
+      e.stopPropagation();
       setHighlight((h) => (h - 1 + totalItems) % totalItems);
       return;
     }
     if (e.key === "Enter") {
       e.preventDefault();
+      e.stopPropagation();
       if (highlight >= 0 && highlight < filtered.length) {
-        choose(filtered[highlight]);
+        commit(filtered[highlight]);
       } else if (hasAdd && (highlight === filtered.length || highlight < 0)) {
         commit(trimmedInput);
       } else if (trimmedInput) {
         commit(trimmedInput);
       } else {
-        props.stopEditing(true);
+        stopEditing(true);
       }
       return;
     }
     if (e.key === "Escape") {
       e.preventDefault();
-      props.stopEditing(true);
+      e.stopPropagation();
+      stopEditing(true);
       return;
     }
     if (e.key === "Tab") {
       if (trimmedInput) commit(trimmedInput);
-      else props.stopEditing();
+      else stopEditing();
     }
   };
 
   return (
     <div
+      className="ag-custom-component-popup"
+      onMouseDown={(e) => e.preventDefault()}
       style={{
         background: "white",
         border: "2px solid #107C41",
@@ -419,8 +435,10 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
         ref={inputRef}
         value={inputVal}
         onChange={(e) => {
-          setInputVal(props.allowAddNew ? e.target.value.toUpperCase() : e.target.value);
+          const next = allowAddNew ? e.target.value.toUpperCase() : e.target.value;
+          setInputVal(next);
           setHighlight(-1);
+          syncValue(next);
         }}
         onKeyDown={handleKeyDown}
         style={{
@@ -437,7 +455,7 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
           {filtered.map((v, idx) => (
             <div
               key={v}
-              onMouseDown={() => choose(v)}
+              onMouseDown={(e) => handlePick(e, v)}
               style={{
                 padding: "4px 10px", cursor: "pointer",
                 borderBottom: "1px solid #f0f0f0", whiteSpace: "nowrap",
@@ -449,7 +467,7 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
           ))}
           {hasAdd && (
             <div
-              onMouseDown={() => commit(trimmedInput)}
+              onMouseDown={(e) => handlePick(e, trimmedInput)}
               style={{
                 padding: "5px 10px", cursor: "pointer",
                 borderTop: "1px solid #e8e8e8",
@@ -472,7 +490,7 @@ const ComboboxCellEditor = forwardRef(function ComboboxCellEditor(
       )}
     </div>
   );
-});
+}
 
 function createToRow(locale: string) {
   return function toRow(db: DbOperacion): OperacionRow {
