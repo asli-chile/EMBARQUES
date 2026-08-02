@@ -1,12 +1,10 @@
 /**
- * API admin servicios únicos (GET lista; POST crea, solo superadmin)
- * Requiere tablas: servicios_unicos, servicios_unicos_naves, servicios_unicos_destinos, navieras
+ * API admin servicios únicos (GET lista staff; POST crea, solo superadmin)
  */
 import type { APIRoute } from "astro";
+import { requireStaff } from "@/lib/auth/requireStaff";
 import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 import { normalizeArea } from "@/lib/areas";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const prerender = false;
 
@@ -18,27 +16,10 @@ function json(data: unknown, status = 200) {
 }
 
 export const GET: APIRoute = async ({ cookies }) => {
-  let supabase: ReturnType<typeof createClient>;
   try {
-    supabase = createClient(cookies);
-  } catch (envErr) {
-    const msg = envErr instanceof Error ? envErr.message : "Configuración de Supabase faltante";
-    return json({ error: msg }, 503);
-  }
-
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autenticado" }, 401);
-
-    let db: ReturnType<typeof createClient>;
-    try {
-      db = createAdminClient();
-    } catch {
-      db = supabase;
-    }
+    const auth = await requireStaff(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin: db } = auth;
 
     const { data: servicios, error: err } = await db
       .from("servicios_unicos")
@@ -106,21 +87,7 @@ export const GET: APIRoute = async ({ cookies }) => {
 };
 
 export const POST: APIRoute = async ({ cookies, request }) => {
-  let supabase: ReturnType<typeof createClient>;
   try {
-    supabase = createClient(cookies);
-  } catch (envErr) {
-    const msg = envErr instanceof Error ? envErr.message : "Configuración de Supabase faltante";
-    return json({ error: msg }, 503);
-  }
-
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autenticado" }, 401);
-
     const auth = await requireSuperadmin(cookies);
     if (!auth.authorized) return json({ error: auth.error }, auth.status);
 

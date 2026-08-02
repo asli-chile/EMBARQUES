@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
-type Cliente = { id: string; nombre_cliente: string };
+type Cliente = { id: string; nombre: string };
 
 type Consignatario = {
   id: string;
@@ -80,14 +80,14 @@ export function ConsignatariosContent() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [{ data: cls }, { data: cons }] = await Promise.all([
-      supabase.from("clientes").select("id, nombre_cliente").order("nombre_cliente"),
+    const [{ data: emp }, { data: cons }] = await Promise.all([
+      supabase.from("empresas").select("id, nombre").order("nombre"),
       supabase.from("consignatarios").select("*").order("nombre"),
     ]);
-    setClientes(cls ?? []);
+    setClientes((emp ?? []).map((e) => ({ id: e.id as string, nombre: e.nombre as string })));
     setConsignatarios(cons ?? []);
     setLoading(false);
-  }, []);
+  }, [supabase]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -275,7 +275,7 @@ export function ConsignatariosContent() {
             >
               <option value="all">{tr.allClients}</option>
               {clientes.map((c) => (
-                <option key={c.id} value={c.nombre_cliente}>{c.nombre_cliente}</option>
+                <option key={c.id} value={c.nombre}>{c.nombre}</option>
               ))}
             </select>
             <label className="flex items-center gap-1.5 text-xs text-neutral-600 cursor-pointer px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 transition-colors shrink-0">
@@ -480,7 +480,7 @@ export function ConsignatariosContent() {
                     >
                       <option value="">{tr.selectCliente}</option>
                       {clientes.map((c) => (
-                        <option key={c.id} value={c.nombre_cliente}>{c.nombre_cliente}</option>
+                        <option key={c.id} value={c.nombre}>{c.nombre}</option>
                       ))}
                     </select>
                   </div>

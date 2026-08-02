@@ -124,9 +124,6 @@ export function DashboardContent() {
   const { isExternalUser, isLoading: authLoading, isCliente, empresaNombres } = useAuth();
   const tr = t.dashboard;
 
-  if (!authLoading && isExternalUser) {
-    return <DashboardVisitorContent />;
-  }
   const [loading, setLoading] = useState(true);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [mapOperations, setMapOperations] = useState<OperacionResumen[]>([]);
@@ -415,6 +412,10 @@ export function DashboardContent() {
     );
   }, [portMarkers]);
 
+  if (!authLoading && isExternalUser) {
+    return <DashboardVisitorContent />;
+  }
+
   if (loading) {
     return (
       <main className="relative flex-1 min-h-0 overflow-auto bg-[#060B17]">
@@ -472,7 +473,7 @@ export function DashboardContent() {
             <a href={withBase("/reservas/crear")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors shadow-[0_0_18px_rgba(34,211,238,0.25)]">
               <Icon icon="lucide:plus" className="w-3.5 h-3.5" />
-              {t.sidebar.crearReserva}
+              {isCliente ? t.sidebar.solicitarReserva : t.sidebar.crearReserva}
             </a>
             <a href={withBase("/reservas/mis-reservas")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors">

@@ -1417,7 +1417,9 @@ export function RegistrosContent() {
     const { table, newValue, label } = addNewModal;
     try {
       if (table === "destinos") {
-        await saveDestinoToCatalog({ nombre: newValue });
+        const nombre = newValue.trim();
+        if (!nombre) throw new Error("Nombre del destino requerido");
+        await saveDestinoToCatalog({ nombre });
       } else {
         let insertData: Record<string, unknown>;
         if (table === "navieras") {

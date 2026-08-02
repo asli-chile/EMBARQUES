@@ -2,9 +2,8 @@
  * API admin de itinerarios (GET con auth; POST crea itinerario, solo superadmin)
  */
 import type { APIRoute } from "astro";
+import { requireStaff } from "@/lib/auth/requireStaff";
 import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeArea } from "@/lib/areas";
 
 export const prerender = false;
@@ -18,14 +17,10 @@ function json(data: unknown, status = 200) {
 
 export const GET: APIRoute = async ({ cookies }) => {
   try {
-    const supabase = createClient(cookies);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autorizado" }, 401);
+    const auth = await requireStaff(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin } = auth;
 
-    const admin = createAdminClient();
     const { data: itinerarios, error: err } = await admin
       .from("itinerarios")
       .select("*, escalas:itinerario_escalas(*)")
@@ -102,20 +97,9 @@ export const GET: APIRoute = async ({ cookies }) => {
 
 export const POST: APIRoute = async ({ cookies, request }) => {
   try {
-    let supabase: ReturnType<typeof createClient>;
-    try {
-      supabase = createClient(cookies);
-    } catch {
-      return json({ error: "Configuración de Supabase faltante" }, 503);
-    }
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autorizado" }, 401);
-
     const auth = await requireSuperadmin(cookies);
     if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin, userId } = auth;
 
     let body: Record<string, unknown>;
     try {
@@ -138,8 +122,6 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     if (!escalasList?.length) {
       return json({ error: "Debe incluir al menos una escala" }, 400);
     }
-
-    const admin = auth.admin;
 
     const etdStr = (() => {
       if (typeof etd === "number" && !Number.isNaN(etd)) {
@@ -173,8 +155,8 @@ export const POST: APIRoute = async ({ cookies, request }) => {
               ? parseInt(String(semana).trim(), 10) || null
               : null,
         servicio_id: (servicio_id as string) || null,
-        created_by: user.id,
-        updated_by: user.id,
+        created_by: userId,
+        updated_by: userId,
       })
       .select()
       .single();

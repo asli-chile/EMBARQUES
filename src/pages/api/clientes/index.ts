@@ -1,6 +1,5 @@
-import type { APIRoute, AstroCookies } from "astro";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { APIRoute } from "astro";
+import { requireAdminOrSuperadmin } from "@/lib/auth/requireAdminOrSuperadmin";
 
 type DbCliente = {
   id: string;
@@ -12,36 +11,6 @@ type DbCliente = {
   empresa_nombre?: string;
 };
 
-async function requireSuperadmin(cookies: AstroCookies) {
-  const supabase = createClient(cookies);
-  const {
-    data: { user },
-    error: sessionError,
-  } = await supabase.auth.getUser();
-  if (sessionError || !user) {
-    return { authorized: false as const, status: 401, error: "Inicia sesión" };
-  }
-  const { data: perfil, error } = await supabase
-    .from("usuarios")
-    .select("rol, activo")
-    .eq("auth_id", user.id)
-    .eq("activo", true)
-    .single();
-  if (error || !perfil) {
-    return { authorized: false as const, status: 403, error: "Perfil no encontrado o inactivo" };
-  }
-  const rol = (perfil.rol ?? "") as string;
-  if (trim(rol) !== "superadmin") {
-    return { authorized: false as const, status: 403, error: "Solo superadmin" };
-  }
-  const admin = createAdminClient();
-  return { authorized: true as const, admin };
-}
-
-function trim(s: string): string {
-  return s.replace(/^\s+|\s+$/g, "");
-}
-
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -50,7 +19,7 @@ function jsonResponse(body: object, status = 200) {
 }
 
 export const GET: APIRoute = async ({ cookies }) => {
-  const auth = await requireSuperadmin(cookies);
+  const auth = await requireAdminOrSuperadmin(cookies);
   if (!auth.authorized) {
     return jsonResponse({ error: auth.error }, auth.status);
   }
@@ -85,7 +54,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (!request.headers.get("content-type")?.includes("application/json")) {
     return jsonResponse({ error: "Content-Type: application/json" }, 400);
   }
-  const auth = await requireSuperadmin(cookies);
+  const auth = await requireAdminOrSuperadmin(cookies);
   if (!auth.authorized) {
     return jsonResponse({ error: auth.error }, auth.status);
   }
@@ -109,7 +78,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
   if (!request.headers.get("content-type")?.includes("application/json")) {
     return jsonResponse({ error: "Content-Type: application/json" }, 400);
   }
-  const auth = await requireSuperadmin(cookies);
+  const auth = await requireAdminOrSuperadmin(cookies);
   if (!auth.authorized) {
     return jsonResponse({ error: auth.error }, auth.status);
   }
@@ -136,7 +105,7 @@ export const DELETE: APIRoute = async ({ request, cookies }) => {
   if (!request.headers.get("content-type")?.includes("application/json")) {
     return jsonResponse({ error: "Content-Type: application/json" }, 400);
   }
-  const auth = await requireSuperadmin(cookies);
+  const auth = await requireAdminOrSuperadmin(cookies);
   if (!auth.authorized) {
     return jsonResponse({ error: auth.error }, auth.status);
   }

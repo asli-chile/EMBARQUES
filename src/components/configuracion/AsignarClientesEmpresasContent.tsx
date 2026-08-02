@@ -25,7 +25,7 @@ function Avatar({ name, assigned }: { name: string; assigned: boolean }) {
 }
 
 export function AsignarClientesEmpresasContent() {
-  const { isSuperadmin, profile, isLoading: authLoading } = useAuth();
+  const { isSuperadmin, isAdmin, profile, isLoading: authLoading } = useAuth();
   const { t } = useLocale();
   const tr = t.asignarClientes;
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -202,7 +202,7 @@ export function AsignarClientesEmpresasContent() {
       </main>
     );
   }
-  if (!isSuperadmin) {
+  if (!isSuperadmin && !isAdmin) {
     return (
       <main className="flex-1 min-h-0 bg-neutral-100 p-6" role="main">
         <p className="text-neutral-600">{tr.superadminOnly}</p>

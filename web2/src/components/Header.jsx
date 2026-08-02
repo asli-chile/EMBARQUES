@@ -119,13 +119,6 @@ const Header = () => {
                 </button>
               ))}
             </div>
-
-            <a
-              href="/embarques"
-              className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1 rounded-full bg-asli-primary/15 border border-asli-primary/25 text-asli-primary hover:bg-asli-primary hover:text-white hover:border-asli-primary transition-all duration-300"
-            >
-              {t.header.clientAccess}
-            </a>
           </div>
         </div>
       </div>
@@ -273,13 +266,6 @@ const Header = () => {
                 </button>
               ))}
             </div>
-            <a
-              href="/embarques"
-              onClick={() => setOpen(false)}
-              className="w-full py-3 rounded-xl border border-asli-primary/35 bg-asli-primary/10 text-asli-primary text-sm font-semibold text-center hover:bg-asli-primary/20 transition-colors"
-            >
-              {t.header.clientAccess}
-            </a>
             <a
               href="/contacto"
               className="w-full py-3 rounded-xl bg-asli-primary text-white text-sm font-semibold text-center hover:bg-asli-primary/90 transition-colors"

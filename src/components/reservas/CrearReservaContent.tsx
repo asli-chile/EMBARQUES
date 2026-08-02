@@ -133,7 +133,9 @@ const SECTION_ORDER: SectionKey[] = [
 export function CrearReservaContent() {
   const { t } = useLocale();
   const tr = t.crearReserva;
-  const { user, profile, empresaNombres, isSuperadmin } = useAuth();
+  const { user, profile, empresaNombres, isSuperadmin, isCliente } = useAuth();
+  const pageTitle = isCliente ? tr.titleCliente : tr.title;
+  const pageSubtitle = isCliente ? tr.subtitleCliente : tr.subtitle;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -2008,8 +2010,8 @@ export function CrearReservaContent() {
                 <Icon icon="typcn:plus" width={22} height={22} className="text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold leading-tight truncate">{tr.title}</h1>
-                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+                <h1 className="text-lg font-bold leading-tight truncate">{pageTitle}</h1>
+                <p className="text-xs text-white/70 mt-0.5">{pageSubtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">

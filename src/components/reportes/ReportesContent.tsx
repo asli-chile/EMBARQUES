@@ -68,7 +68,10 @@ const ESTADO_BAR: Record<string, string> = {
 
 export function ReportesContent() {
   const { t, locale } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, empresaNombres, isLoading: authLoading, isSuperadmin, isAdmin, isEjecutivo, profile } = useAuth();
+
+  const canViewReportes =
+    isSuperadmin || isAdmin || isEjecutivo || profile?.rol === "operador";
 
   const tr = t.reportesPage;
 
@@ -223,6 +226,24 @@ export function ReportesContent() {
   };
 
   // ── Loading skeleton ────────────────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0">
+        <p className="text-neutral-500 px-4">Cargando…</p>
+      </main>
+    );
+  }
+
+  if (isCliente || !canViewReportes) {
+    return (
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0 flex items-center justify-center" role="main">
+        <p className="text-neutral-600 text-sm px-4 text-center">
+          No tienes acceso al módulo de Reportes. Solo personal interno puede ver estos datos.
+        </p>
+      </main>
+    );
+  }
+
   if (loading && !rows.length) {
     return (
       <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">

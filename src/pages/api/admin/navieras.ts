@@ -1,9 +1,9 @@
 /**
- * API admin: listar navieras (para desplegables en servicios únicos)
+ * API admin: listar navieras (para desplegables en servicios únicos).
+ * GET: solo staff.
  */
 import type { APIRoute } from "astro";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireStaff } from "@/lib/auth/requireStaff";
 
 export const prerender = false;
 
@@ -16,19 +16,9 @@ function json(data: unknown, status = 200) {
 
 export const GET: APIRoute = async ({ cookies }) => {
   try {
-    const supabase = createClient(cookies);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autenticado" }, 401);
-
-    let client: ReturnType<typeof createClient>;
-    try {
-      client = createAdminClient();
-    } catch {
-      client = supabase;
-    }
+    const auth = await requireStaff(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin: client } = auth;
 
     const { data: navieras, error } = await client
       .from("navieras")

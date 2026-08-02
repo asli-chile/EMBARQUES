@@ -33,6 +33,8 @@ export const siteConfig = {
         { labelKey: "reservaAsli", id: "reserva-asli", href: "/transportes/reserva-asli" },
         { labelKey: "reservaExt", id: "reserva-ext", href: "/transportes/reserva-ext" },
         { labelKey: "facturacion", id: "facturacion", href: "/transportes/facturacion" },
+        { labelKey: "facturasTransporte", id: "facturas-transporte", href: "/transportes/facturas" },
+        { labelKey: "papeleraTransportes", id: "papelera-transportes", href: "/transportes/papelera" },
       ],
     },
     {
@@ -45,8 +47,8 @@ export const siteConfig = {
       ],
     },
     { labelKey: "tarifario", id: "tarifario", href: "/tarifario", ejecutivoAndAbove: true },
-    { labelKey: "reportes", id: "reportes", href: "/reportes" },
-    { labelKey: "finanzas", id: "finanzas", href: "/finanzas" },
+    { labelKey: "reportes", id: "reportes", href: "/reportes", ejecutivoAndAbove: true },
+    { labelKey: "finanzas", id: "finanzas", href: "/finanzas", ejecutivoAndAbove: true },
     {
       labelKey: "cartolasNubox",
       id: "cartolas-nubox",
@@ -57,7 +59,7 @@ export const siteConfig = {
     {
       labelKey: "configuracion",
       id: "configuracion",
-      superadminOnly: true,
+      adminAndAbove: true,
       children: [
         { labelKey: "usuarios", id: "usuarios", href: "/configuracion/usuarios" },
         { labelKey: "clientes", id: "clientes", href: "/configuracion/clientes" },

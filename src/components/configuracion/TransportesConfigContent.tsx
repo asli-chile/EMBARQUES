@@ -51,7 +51,7 @@ type CostoExtra = {
 };
 
 export function TransportesConfigContent() {
-  const { isSuperadmin, profile, isLoading: authLoading } = useAuth();
+  const { isSuperadmin, isAdmin, profile, isLoading: authLoading } = useAuth();
   const { t } = useLocale();
   const tr = t.transportesConfig;
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -508,7 +508,7 @@ export function TransportesConfigContent() {
     );
   }
 
-  if (!isSuperadmin) {
+  if (!isSuperadmin && !isAdmin) {
     return (
       <main className="flex-1 min-h-0 bg-neutral-100 p-6 flex items-center justify-center" role="main">
         <p className="text-neutral-600">

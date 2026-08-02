@@ -1,11 +1,9 @@
 /**
  * API admin: actualizar o eliminar un consorcio por ID.
- * PUT body: { nombre, servicios_ids: string[] }
- * DELETE: elimina el consorcio y sus relaciones (CASCADE).
+ * PUT/DELETE: solo superadmin.
  */
 import type { APIRoute } from "astro";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 
 export const prerender = false;
 
@@ -20,30 +18,10 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
   const id = params.id;
   if (!id) return json({ error: "ID de consorcio requerido" }, 400);
 
-  let supabase: ReturnType<typeof createClient>;
   try {
-    supabase = createClient(cookies);
-  } catch (envErr) {
-    const msg = envErr instanceof Error ? envErr.message : "Configuración de Supabase faltante";
-    return json({ error: msg }, 503);
-  }
-
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autenticado" }, 401);
-
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json(
-        { error: "Configure SUPABASE_SERVICE_ROLE_KEY para editar consorcios." },
-        503
-      );
-    }
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin } = auth;
 
     const body = (await request.json()) as Record<string, unknown>;
     const nombre = (body.nombre as string)?.trim();
@@ -83,30 +61,10 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
   const id = params.id;
   if (!id) return json({ error: "ID de consorcio requerido" }, 400);
 
-  let supabase: ReturnType<typeof createClient>;
   try {
-    supabase = createClient(cookies);
-  } catch (envErr) {
-    const msg = envErr instanceof Error ? envErr.message : "Configuración de Supabase faltante";
-    return json({ error: msg }, 503);
-  }
-
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autenticado" }, 401);
-
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json(
-        { error: "Configure SUPABASE_SERVICE_ROLE_KEY para eliminar consorcios." },
-        503
-      );
-    }
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin } = auth;
 
     const { error: deleteErr } = await admin.from("consorcios").delete().eq("id", id);
 

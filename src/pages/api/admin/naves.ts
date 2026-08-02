@@ -1,10 +1,9 @@
 /**
  * API admin: crear nave en el catálogo y asignarla a una naviera.
- * POST body: { nombre: string, naviera_id: string }
+ * POST: solo superadmin.
  */
 import type { APIRoute } from "astro";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 
 export const prerender = false;
 
@@ -17,28 +16,15 @@ function json(data: unknown, status = 200) {
 
 export const POST: APIRoute = async ({ cookies, request }) => {
   try {
-    const supabase = createClient(cookies);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autenticado" }, 401);
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin } = auth;
 
     const body = (await request.json()) as Record<string, unknown>;
     const nombre = (body.nombre as string)?.trim();
     const navieraId = body.naviera_id as string;
     if (!nombre) return json({ error: "Nombre de la nave requerido" }, 400);
     if (!navieraId) return json({ error: "Naviera requerida para asignar la nave" }, 400);
-
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json(
-        { error: "Configure SUPABASE_SERVICE_ROLE_KEY para crear naves en el catálogo." },
-        503
-      );
-    }
 
     const { data: existing } = await admin
       .from("naves")

@@ -4,7 +4,7 @@ import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { withBase } from "@/lib/basePath";
-import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
+import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
 
 // Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
 const PINNED_NAV = [
@@ -66,7 +66,7 @@ type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
-  const { user, profile, isExternalUser, empresaNombres, isSuperadmin, isAdmin, isEjecutivo } = useAuth();
+  const { user, profile, isExternalUser, empresaNombres, isSuperadmin, isAdmin, isEjecutivo, isCliente } = useAuth();
   const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
@@ -81,10 +81,12 @@ export function NavBanner({ pathname }: NavBannerProps) {
   const isLoggedIn = !!user;
 
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
+  const sidebarLabels = t.sidebar as Record<string, string>;
+  const labelFor = (labelKey: string) => resolveSidebarLabel(labelKey, sidebarLabels, isCliente);
 
   const visibleSidebarItems = useMemo(
-    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail) as SidebarItem[],
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
+    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin) as SidebarItem[],
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin]
   );
 
   // Auto-expandir sección activa al abrir drawer
@@ -136,7 +138,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
               <Icon icon={meta.icon} width={17} height={17} className={active ? "text-white" : "text-neutral-400"} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold leading-tight">{t.sidebar[item.labelKey]}</p>
+              <p className="text-sm font-semibold leading-tight">{labelFor(item.labelKey)}</p>
               {meta.desc && <p className="text-[11px] text-neutral-400 mt-0.5 leading-snug">{meta.desc}</p>}
             </div>
           </>
@@ -185,7 +187,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                         >
                           <Icon icon={childMeta.icon} width={14} height={14} className="shrink-0 opacity-70" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold leading-tight">{t.sidebar[child.labelKey]}</p>
+                            <p className="text-xs font-semibold leading-tight">{labelFor(child.labelKey)}</p>
                             {childMeta.desc && <p className="text-[10px] text-neutral-500 mt-0.5">{childMeta.desc}</p>}
                           </div>
                           <Icon icon={isSubExpanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={12} height={12} className="ml-auto shrink-0 opacity-40" />
@@ -203,7 +205,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                                   }`}
                                 >
                                   <Icon icon={sub.icon} width={12} height={12} className="shrink-0 opacity-70" />
-                                  <p className="text-[11px] font-semibold leading-tight">{t.sidebar[sub.labelKey]}</p>
+                                  <p className="text-[11px] font-semibold leading-tight">{labelFor(sub.labelKey)}</p>
                                   {isSubActive && <Icon icon="lucide:check" width={11} height={11} className="text-brand-olive ml-auto shrink-0" />}
                                 </a>
                               );
@@ -226,7 +228,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                     >
                       <Icon icon={childMeta.icon} width={14} height={14} className="shrink-0 opacity-70" />
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-tight">{t.sidebar[child.labelKey]}</p>
+                        <p className="text-xs font-semibold leading-tight">{labelFor(child.labelKey)}</p>
                         {childMeta.desc && <p className="text-[10px] text-neutral-500 mt-0.5">{childMeta.desc}</p>}
                       </div>
                       {isChildActive && <Icon icon="lucide:check" width={12} height={12} className="text-brand-olive ml-auto shrink-0" />}

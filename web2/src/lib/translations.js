@@ -10,7 +10,6 @@ const t = {
     },
     header: {
       taglineTop: 'Coordinamos operaciones logísticas desde origen',
-      clientAccess: 'Acceso clientes',
       requestQuote: 'Solicitar cotización',
       whatsappWrite: 'Escribir por WhatsApp',
       openMenu: 'Abrir menú',
@@ -27,7 +26,6 @@ const t = {
       equipo:       'Equipo',
       tracking:     'Tracking',
       itinerario:   'Itinerario',
-      acceder:      'Acceder',
     },
     hero: {
       eyebrow:   'Logística y Comercio Exterior · Curicó, Chile',
@@ -36,7 +34,6 @@ const t = {
       line3:     'en cada paso.',
       sub:       'Asesorías y Servicios Logísticos Integrales. Fundada en 2021 para acompañar a exportadores chilenos con el mismo estándar de las grandes.',
       cta1:      'Nuestros Servicios',
-      cta2:      'Acceder a la App',
       cta3:      'Contáctanos',
       stat1l:    'Fundada en Curicó',
       stat2l:    'Servicios logísticos',
@@ -248,7 +245,6 @@ const t = {
     },
     header: {
       taglineTop: 'We coordinate logistics operations from origin',
-      clientAccess: 'Client access',
       requestQuote: 'Request a quote',
       whatsappWrite: 'Chat on WhatsApp',
       openMenu: 'Open menu',
@@ -265,7 +261,6 @@ const t = {
       equipo:     'Team',
       tracking:   'Tracking',
       itinerario: 'Schedule',
-      acceder:    'Sign In',
     },
     hero: {
       eyebrow:  'Logistics & Foreign Trade · Curicó, Chile',
@@ -274,7 +269,6 @@ const t = {
       line3:    'every step of the way.',
       sub:      'Integral Logistics Advisory & Services. Founded in 2021 to support Chilean exporters with the same standards as the big players.',
       cta1:     'Our Services',
-      cta2:     'Sign In to App',
       cta3:     'Contact Us',
       stat1l:   'Founded in Curicó',
       stat2l:   'Logistics services',
@@ -486,7 +480,6 @@ const t = {
     },
     header: {
       taglineTop: '我们从起点协调全程物流运营',
-      clientAccess: '客户入口',
       requestQuote: '申请报价',
       whatsappWrite: '通过 WhatsApp 联系',
       openMenu: '打开菜单',
@@ -503,7 +496,6 @@ const t = {
       equipo: '团队',
       tracking: '追踪',
       itinerario: '船期',
-      acceder: '登录',
     },
     hero: {
       eyebrow: '物流与国际贸易 · 智利库里科',
@@ -512,7 +504,6 @@ const t = {
       line3: '全程同行。',
       sub: '综合物流咨询与服务。公司成立于 2021 年，为智利出口商提供与大型企业同等标准的服务。',
       cta1: '我们的服务',
-      cta2: '进入系统',
       cta3: '联系我们',
       stat1l: '成立于库里科',
       stat2l: '物流服务',

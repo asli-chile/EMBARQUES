@@ -33,7 +33,10 @@ type ResumenCliente = {
 
 export function FinanzasContent() {
   const { t, locale } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isLoading: authLoading, isSuperadmin, isAdmin, isEjecutivo, profile, empresaNombres } = useAuth();
+
+  const canViewFinanzas =
+    isSuperadmin || isAdmin || isEjecutivo || profile?.rol === "operador";
 
   const tr =
     (t as { finanzasPage?: Record<string, string> }).finanzasPage ??
@@ -256,6 +259,24 @@ export function FinanzasContent() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  if (authLoading) {
+    return (
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0">
+        <p className="text-neutral-500 px-4">Cargando…</p>
+      </main>
+    );
+  }
+
+  if (isCliente || !canViewFinanzas) {
+    return (
+      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0 flex items-center justify-center" role="main">
+        <p className="text-neutral-600 text-sm px-4 text-center">
+          No tienes acceso al módulo de Finanzas. Solo personal interno puede ver facturación y márgenes.
+        </p>
+      </main>
+    );
+  }
 
   if (loading && !rows.length) {
     return (

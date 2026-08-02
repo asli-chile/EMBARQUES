@@ -3,7 +3,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
+import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
 import { useSidebarScrollIndicators } from "@/hooks/useSidebarScrollIndicators";
 
 const AUTO_COLLAPSE_MS = 2000;
@@ -59,16 +59,22 @@ function SidebarNavScroll({
 
 export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
-  const { isSuperadmin, isAdmin, isEjecutivo, user, profile } = useAuth();
+  const { isSuperadmin, isAdmin, isEjecutivo, isCliente, user, profile } = useAuth();
   const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
   const [isOpen, setIsOpen] = useState(false);
 
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
   const isLoggedIn = !!user;
 
+  const sidebarLabels = t.sidebar as Record<string, string>;
+  const labelFor = useCallback(
+    (labelKey: string) => resolveSidebarLabel(labelKey, sidebarLabels, isCliente),
+    [sidebarLabels, isCliente]
+  );
+
   const visibleItems = useMemo(
-    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn) as SidebarItem[],
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn]
+    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin) as SidebarItem[],
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin]
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const scrollSyncKey = useMemo(
@@ -233,7 +239,7 @@ export function Sidebar({ pathname }: SidebarProps) {
                 className={linkClasses}
                 aria-current={isActive ? "page" : undefined}
               >
-                {t.sidebar[item.labelKey]}
+                {labelFor(item.labelKey)}
               </a>
             ) : (
               <button
@@ -243,7 +249,7 @@ export function Sidebar({ pathname }: SidebarProps) {
                 aria-expanded={hasChildren ? isExpanded : undefined}
                 aria-current={isParentActive ? "true" : undefined}
               >
-                {t.sidebar[item.labelKey]}
+                {labelFor(item.labelKey)}
                 {hasChildren && (
                   <Icon
                     icon={
@@ -275,7 +281,7 @@ export function Sidebar({ pathname }: SidebarProps) {
                       className={childClasses}
                       aria-current={isChildActive ? "page" : undefined}
                     >
-                      {t.sidebar[child.labelKey]}
+                      {labelFor(child.labelKey)}
                     </a>
                   );
                 })}

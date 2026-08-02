@@ -15,13 +15,6 @@ const Hero = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleAccederApp = () => {
-    if (typeof window === 'undefined') return
-    // Misma ruta en local y producción: el proxy de Next (web2) envía a Astro según
-    // NEXT_PUBLIC_EMBARQUES_BASE_URL en .env.local (p. ej. http://localhost:4321/embarques).
-    window.location.href = '/auth'
-  }
-
   return (
     <section
       id="inicio"
@@ -140,15 +133,6 @@ const Hero = () => {
               <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </button>
-            <button
-              onClick={handleAccederApp}
-              className="group inline-flex items-center justify-center gap-3 px-7 py-4 rounded-full bg-asli-accent text-white font-semibold hover:bg-asli-accent/90 transition-all duration-300 shadow-lg shadow-asli-accent/20 w-full sm:w-auto"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              {t.hero.cta2}
             </button>
             <button
               onClick={() => handleScroll('contacto')}

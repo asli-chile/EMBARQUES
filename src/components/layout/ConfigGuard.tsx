@@ -2,20 +2,21 @@ import { useAuth } from "@/lib/auth/AuthContext";
 
 type ConfigGuardProps = {
   children: React.ReactNode;
-  /** Mensaje cuando el usuario no es superadmin. Por defecto: mensaje de Configuración. */
+  /** Mensaje cuando el usuario no tiene acceso. */
   forbiddenMessage?: string;
+  /** Si true, permite también rol admin (además de superadmin). Default true. */
+  allowAdmin?: boolean;
 };
 
 /**
- * Solo permite acceso al superadmin.
- * Los demás roles ven mensaje de sin acceso.
- * Uso: Configuración y gestión de itinerarios (servicios/consorcios).
+ * Permite acceso a superadmin y, por defecto, también a admin.
+ * Uso: Configuración (usuarios, clientes, consignatarios, etc.).
  */
-export function ConfigGuard({ children, forbiddenMessage }: ConfigGuardProps) {
-  const { profile, isSuperadmin, isLoading } = useAuth();
+export function ConfigGuard({ children, forbiddenMessage, allowAdmin = true }: ConfigGuardProps) {
+  const { profile, isSuperadmin, isAdmin, isLoading } = useAuth();
   const message =
     forbiddenMessage ??
-    "No tienes acceso a Configuración. Solo el superadmin puede gestionarla.";
+    "No tienes acceso a Configuración. Solo administradores pueden gestionarla.";
 
   if (isLoading) {
     return (
@@ -33,7 +34,8 @@ export function ConfigGuard({ children, forbiddenMessage }: ConfigGuardProps) {
     );
   }
 
-  if (!isSuperadmin) {
+  const allowed = isSuperadmin || (allowAdmin && isAdmin);
+  if (!allowed) {
     return (
       <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6 flex items-center justify-center" role="main">
         <p className="text-neutral-600">{message}</p>

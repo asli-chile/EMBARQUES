@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLocale } from "@/lib/i18n";
 import { stripBasePathname, withBase } from "@/lib/basePath";
-import { getVisibleSidebarItems } from "@/lib/sidebarFilter";
+import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 type SidebarLink = { href: string; labelKey: string };
@@ -35,12 +35,14 @@ type VisitorSidebarQuickAccessProps = {
  */
 export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAccessProps) {
   const { t } = useLocale();
-  const { isSuperadmin, isAdmin, isEjecutivo, user, profile } = useAuth();
+  const { isSuperadmin, isAdmin, isEjecutivo, isCliente, user, profile } = useAuth();
   const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
+  const sidebarLabels = t.sidebar as Record<string, string>;
+  const labelFor = (labelKey: string) => resolveSidebarLabel(labelKey, sidebarLabels, isCliente);
   const links = useMemo(
-    () => linksFromVisibleSidebar(getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail)),
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail]
+    () => linksFromVisibleSidebar(getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, !!user, isAdmin)),
+    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, user, isAdmin]
   );
 
   const baseBtnClass =
@@ -61,11 +63,11 @@ export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAc
               hover:bg-brand-blue hover:text-white hover:border-brand-blue`;
         return isCurrent ? (
           <span key={link.href} className={btnClass} aria-current="page">
-            {t.sidebar[link.labelKey]}
+            {labelFor(link.labelKey)}
           </span>
         ) : (
           <a key={link.href} href={withBase(link.href)} className={btnClass}>
-            {t.sidebar[link.labelKey]}
+            {labelFor(link.labelKey)}
           </a>
         );
       })}

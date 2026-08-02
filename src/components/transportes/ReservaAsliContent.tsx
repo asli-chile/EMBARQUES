@@ -1072,24 +1072,25 @@ export function ReservaAsliContent() {
                       <div className="px-4 py-3 flex items-center justify-between gap-3">
                         <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Estado de la Operación</span>
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                          selectedOperacion.estado_operacion === "abierta"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : selectedOperacion.estado_operacion === "cerrada"
-                              ? "bg-neutral-100 text-neutral-600 border-neutral-200"
-                              : selectedOperacion.estado_operacion === "cancelada"
-                                ? "bg-red-50 text-red-700 border-red-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
+                          ["CANCELADO", "CANCELADA", "canceLADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : ["CONFIRMADA", "CONFIRMADO", "ARRIBADO", "COMPLETADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : ["PENDIENTE", "SOLICITUD", "ROLEADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-neutral-100 text-neutral-600 border-neutral-200"
                         }`}>
                           <Icon
                             icon={
-                              selectedOperacion.estado_operacion === "abierta" ? "lucide:check-circle" :
-                              selectedOperacion.estado_operacion === "cerrada" ? "lucide:lock" :
-                              selectedOperacion.estado_operacion === "cancelada" ? "lucide:x-circle" :
-                              "lucide:clock"
+                              ["CANCELADO", "CANCELADA", "canceLADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                                ? "lucide:x-circle"
+                                : ["CONFIRMADA", "CONFIRMADO", "ARRIBADO", "COMPLETADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                                  ? "lucide:check-circle"
+                                  : "lucide:clock"
                             }
                             width={13} height={13}
                           />
-                          {selectedOperacion.estado_operacion.charAt(0).toUpperCase() + selectedOperacion.estado_operacion.slice(1)}
+                          {selectedOperacion.estado_operacion}
                         </span>
                       </div>
                     </div>

@@ -177,13 +177,13 @@ export function AppShell({ children, pathname }: AppShellProps) {
         <LazyStackingContent />
       </Sus>
     ) : pathname === "/itinerario/servicios" ? (
-      <ConfigGuard forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
+      <ConfigGuard allowAdmin={false} forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
         <Sus>
           <LazyServiciosUnicosContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/itinerario/consorcios" ? (
-      <ConfigGuard forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
+      <ConfigGuard allowAdmin={false} forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
         <Sus>
           <LazyConsorciosContent />
         </Sus>

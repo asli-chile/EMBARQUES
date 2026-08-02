@@ -1,10 +1,9 @@
 /**
- * API admin: actualizar un itinerario por ID.
- * PUT body: mismo que POST (servicio, consorcio, naviera, nave, viaje, semana, pol, etd, servicio_id, escalas).
+ * API admin: actualizar/eliminar un itinerario por ID.
+ * PUT/PATCH/DELETE: solo superadmin.
  */
 import type { APIRoute } from "astro";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 import { normalizeArea } from "@/lib/areas";
 
 export const prerender = false;
@@ -31,17 +30,9 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
   if (!id) return json({ error: "ID de itinerario requerido" }, 400);
 
   try {
-    let supabase: ReturnType<typeof createClient>;
-    try {
-      supabase = createClient(cookies);
-    } catch {
-      return json({ error: "Configuración de Supabase faltante" }, 503);
-    }
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autorizado" }, 401);
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin, userId } = auth;
 
     let body: Record<string, unknown>;
     try {
@@ -79,13 +70,6 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
     })();
     if (!etdStr) return json({ error: "Fecha ETD inválida (use YYYY-MM-DD)" }, 400);
 
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para actualizar itinerarios." }, 503);
-    }
-
     const { error: updateErr } = await admin
       .from("itinerarios")
       .update({
@@ -104,7 +88,7 @@ export const PUT: APIRoute = async ({ cookies, params, request }) => {
               ? parseInt(String(semana).trim(), 10) || null
               : null,
         servicio_id: (servicio_id as string) || null,
-        updated_by: user.id,
+        updated_by: userId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -170,17 +154,9 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
   if (!id) return json({ error: "ID de itinerario requerido" }, 400);
 
   try {
-    let supabase: ReturnType<typeof createClient>;
-    try {
-      supabase = createClient(cookies);
-    } catch {
-      return json({ error: "Configuración de Supabase faltante" }, 503);
-    }
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autorizado" }, 401);
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin, userId } = auth;
 
     let body: Record<string, unknown>;
     try {
@@ -197,14 +173,8 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
         ? stackingImagenUrlRaw.trim() || null
         : null;
 
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para actualizar itinerarios." }, 503);
-    }
     const updatePayload: Record<string, unknown> = {
-      updated_by: user.id,
+      updated_by: userId,
       updated_at: new Date().toISOString(),
     };
 
@@ -215,7 +185,6 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
       updatePayload.stacking_imagen_url = stackingImagenUrl;
     }
 
-    // Si se va a tocar stacking_imagen_url, obtener nave/viaje del itinerario base
     let nave: string | null = null;
     let viaje: string | null = null;
     if ("stacking_imagen_url" in body) {
@@ -242,11 +211,10 @@ export const PATCH: APIRoute = async ({ cookies, params, request }) => {
       return json({ error: msg, code }, 400);
     }
 
-    // Si hay nave+viaje y se actualizó stacking_imagen_url, sincronizar con otros itinerarios de la misma nave/viaje
     if (nave && viaje && "stacking_imagen_url" in body) {
       const bulkPayload: Record<string, unknown> = {
         stacking_imagen_url: stackingImagenUrl,
-        updated_by: user.id,
+        updated_by: userId,
         updated_at: new Date().toISOString(),
       };
       const { error: bulkErr } = await admin
@@ -283,24 +251,9 @@ export const DELETE: APIRoute = async ({ cookies, params }) => {
   if (!id) return json({ error: "ID de itinerario requerido" }, 400);
 
   try {
-    let supabase: ReturnType<typeof createClient>;
-    try {
-      supabase = createClient(cookies);
-    } catch {
-      return json({ error: "Configuración de Supabase faltante" }, 503);
-    }
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) return json({ error: "No autorizado" }, 401);
-
-    let admin: ReturnType<typeof createAdminClient>;
-    try {
-      admin = createAdminClient();
-    } catch {
-      return json({ error: "Configure SUPABASE_SERVICE_ROLE_KEY para eliminar itinerarios." }, 503);
-    }
+    const auth = await requireSuperadmin(cookies);
+    if (!auth.authorized) return json({ error: auth.error }, auth.status);
+    const { admin } = auth;
 
     await admin.from("itinerario_escalas").delete().eq("itinerario_id", id);
     const { error: deleteErr } = await admin.from("itinerarios").delete().eq("id", id);
