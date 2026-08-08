@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
----
+import { withBase } from "@/lib/basePath";
 
-<BaseLayout title="Facturación - EMBARQUES" />
+return Astro.redirect(withBase("/inicio"), 302);
+---

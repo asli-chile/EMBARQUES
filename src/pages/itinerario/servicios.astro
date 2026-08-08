@@ -1,10 +1,5 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
----
+import { withBase } from "@/lib/basePath";
 
-<BaseLayout
-  title="Servicios por naviera - EMBARQUES"
-  description="Gestión de servicios únicos por naviera para itinerarios."
->
-  <main class="flex-1 min-h-0 overflow-auto" role="main" />
-</BaseLayout>
+return Astro.redirect(withBase("/inicio"), 302);
+---

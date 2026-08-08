@@ -1220,11 +1220,11 @@ export function CrearReservaContent() {
   };
 
   const inputClass =
-    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-white text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-50";
+    "w-full px-4 py-3.5 rounded-lg border border-brand-blue/20 bg-[#EEF3FA] text-lg text-brand-blue placeholder:text-brand-blue/40 shadow-[inset_0_1px_2px_rgba(17,34,78,0.06)] hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100";
 
   const selectClass = inputClass;
 
-  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5";
+  const labelClass = "block text-base font-semibold text-brand-blue mb-2";
 
   const reqMark = <span className="ml-0.5 text-red-500 font-bold" aria-hidden="true">*</span>;
 
@@ -1387,12 +1387,12 @@ export function CrearReservaContent() {
     const especieNombre = getDisplayValue(formData.especie, especies);
 
     const estadoColors: Record<string, { bg: string; text: string; dot: string }> = {
-      PENDIENTE:   { bg: "bg-amber-50",    text: "text-amber-700",   dot: "bg-amber-400" },
-      ABIERTA:     { bg: "bg-brand-blue/10", text: "text-brand-blue", dot: "bg-brand-blue" },
-      CERRADA:     { bg: "bg-neutral-100", text: "text-neutral-600",  dot: "bg-neutral-400" },
-      CANCELADA:   { bg: "bg-red-50",      text: "text-red-600",     dot: "bg-red-400" },
+      PENDIENTE:   { bg: "bg-amber-400/20", text: "text-amber-200",   dot: "bg-amber-300" },
+      ABIERTA:     { bg: "bg-sky-400/20",   text: "text-sky-100",     dot: "bg-sky-300" },
+      CERRADA:     { bg: "bg-white/15",     text: "text-white/80",    dot: "bg-white/60" },
+      CANCELADA:   { bg: "bg-red-400/20",   text: "text-red-200",     dot: "bg-red-300" },
     };
-    const esCfg = estadoColors[formData.estado_operacion ?? ""] ?? { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400" };
+    const esCfg = estadoColors[formData.estado_operacion ?? ""] ?? { bg: "bg-amber-400/20", text: "text-amber-200", dot: "bg-amber-300" };
 
     const sections = [
       {
@@ -1452,27 +1452,27 @@ export function CrearReservaContent() {
     ];
 
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-        <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[94dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal shrink-0" />
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-brand-blue/40 backdrop-blur-sm p-0 sm:p-4">
+        <div className="bg-[#E8F0FA] rounded-t-2xl sm:rounded-lg shadow-mac-modal border border-brand-blue/15 w-full sm:max-w-2xl max-h-[94dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-brand-blue via-brand-teal to-brand-dark-teal shrink-0" />
 
           {/* Header */}
-          <div className="px-5 pt-4 pb-3 shrink-0 flex items-center justify-between gap-3 border-b border-neutral-100">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center shrink-0">
-                <Icon icon="typcn:eye" width={17} height={17} className="text-white" />
+          <div className="px-5 pt-4 pb-3.5 shrink-0 flex items-center justify-between gap-3 border-b border-brand-blue/10 bg-gradient-to-r from-brand-blue to-brand-dark-teal text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+                <Icon icon="lucide:eye" width={20} height={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900 leading-tight">{tr.previewTitle}</h3>
-                <p className="text-[11px] text-neutral-400 mt-0.5">{tr.previewHint}</p>
+                <h3 className="text-xl font-bold leading-tight tracking-tight">{tr.previewTitle}</h3>
+                <p className="text-base text-white/80 mt-1">{tr.previewHint}</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setShowPreview(false)}
-              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="p-2 text-white/70 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
             >
-              <Icon icon="lucide:x" width={17} height={17} />
+              <Icon icon="lucide:x" width={20} height={20} />
             </button>
           </div>
 
@@ -1481,62 +1481,59 @@ export function CrearReservaContent() {
 
             {/* Hero card */}
             <div className="px-5 pt-4 pb-3">
-              <div className="rounded-2xl bg-gradient-to-br from-brand-blue/6 to-brand-teal/6 border border-brand-blue/15 p-4">
-                {/* Nombre cliente + estado */}
+              <div className="rounded-lg bg-gradient-to-br from-brand-blue via-[#16305f] to-brand-dark-teal text-white border border-brand-blue/30 p-4 shadow-[0_12px_28px_rgba(17,34,78,0.25)]">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
-                    <p className="text-base font-bold text-neutral-900 leading-tight truncate">
+                    <p className="text-2xl font-bold leading-tight truncate tracking-tight">
                       {clienteNombre !== "-" ? clienteNombre : tr.noClient}
                     </p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
+                    <p className="text-lg text-sky-100/80 mt-1.5">
                       {[especieNombre !== "-" ? especieNombre : null, formData.tipo_unidad || null]
                         .filter(Boolean).join(" · ") || tr.noCargoData}
                     </p>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${esCfg.bg} ${esCfg.text}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${esCfg.dot} shrink-0`} />
+                  <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-bold shrink-0 border border-white/10 ${esCfg.bg} ${esCfg.text}`}>
+                    <span className={`w-2.5 h-2.5 rounded-full ${esCfg.dot} shrink-0`} />
                     {formData.estado_operacion || "PENDIENTE"}
                   </span>
                 </div>
 
-                <div className="h-px bg-brand-blue/10 mb-3" />
+                <div className="h-px bg-white/15 mb-3" />
 
-                {/* Naviera · Nave + Ruta */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none mb-0.5">{tr.navieraNaveLabel}</p>
-                    <p className="text-sm font-semibold text-neutral-800 truncate">
+                    <p className="text-sm font-semibold text-sky-200/80 mb-1">{tr.navieraNaveLabel}</p>
+                    <p className="text-lg font-semibold text-white truncate">
                       {[navieraNombre !== "-" ? navieraNombre : null, naveNombre !== "-" ? naveNombre : null].filter(Boolean).join(" · ") || "—"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-mono text-xs font-bold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-lg shadow-sm">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-base font-bold text-white bg-white/15 border border-white/20 px-3 py-1.5 rounded-lg">
                       {polNombre !== "-" ? polNombre : "—"}
                     </span>
-                    <Icon icon="lucide:arrow-right" width={11} height={11} className="text-neutral-300 shrink-0" />
-                    <span className="font-mono text-xs font-bold text-neutral-700 bg-white border border-neutral-200 px-2 py-0.5 rounded-lg shadow-sm">
+                    <Icon icon="lucide:arrow-right" width={16} height={16} className="text-sky-200/70 shrink-0" />
+                    <span className="font-mono text-base font-bold text-white bg-white/15 border border-white/20 px-3 py-1.5 rounded-lg">
                       {podNombre !== "-" ? podNombre : "—"}
                     </span>
                   </div>
                 </div>
 
-                {/* Fechas + TT */}
                 {(formData.etd || formData.eta || transitTime !== null) && (
-                  <div className="flex items-center gap-4 mt-2.5 pt-2.5 border-t border-brand-blue/10">
+                  <div className="flex items-center gap-5 mt-3.5 pt-3.5 border-t border-white/15">
                     {formData.etd && (
                       <div>
-                        <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none">ETD</p>
-                        <p className="text-xs font-bold text-neutral-800 mt-0.5">{formatDateDisplay(formData.etd)}</p>
+                        <p className="text-sm font-semibold text-sky-200/80">ETD</p>
+                        <p className="text-lg font-bold text-white mt-1">{formatDateDisplay(formData.etd)}</p>
                       </div>
                     )}
                     {formData.eta && (
                       <div>
-                        <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none">ETA</p>
-                        <p className="text-xs font-bold text-neutral-800 mt-0.5">{formatDateDisplay(formData.eta)}</p>
+                        <p className="text-sm font-semibold text-sky-200/80">ETA</p>
+                        <p className="text-lg font-bold text-white mt-1">{formatDateDisplay(formData.eta)}</p>
                       </div>
                     )}
                     {transitTime !== null && (
-                      <span className="ml-auto px-2.5 py-0.5 rounded-full bg-brand-blue text-white text-[11px] font-bold shrink-0">
+                      <span className="ml-auto px-3.5 py-2 rounded-lg bg-brand-teal text-white text-base font-bold shrink-0 shadow-sm">
                         {transitTime}d {tr.transitDays}
                       </span>
                     )}
@@ -1546,23 +1543,25 @@ export function CrearReservaContent() {
             </div>
 
             {/* Secciones de detalle */}
-            <div className="px-5 pb-4 space-y-2">
+            <div className="px-5 pb-4 space-y-3">
               {sections.map((section, sIdx) => {
                 const visibles = section.items.filter((i) => i.value && i.value !== "-");
                 if (visibles.length === 0) return null;
                 return (
-                  <div key={sIdx} className="rounded-xl border border-neutral-100 overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-neutral-50/80">
-                      <Icon icon={section.icon} width={13} height={13} className="text-brand-blue/70 shrink-0" />
-                      <span className="text-[10px] font-bold text-brand-blue/80 uppercase tracking-wider">{section.title}</span>
+                  <div key={sIdx} className="rounded-lg border border-brand-blue/15 bg-[#F4F8FC] overflow-hidden shadow-sm">
+                    <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-brand-blue/10 to-transparent border-b border-brand-blue/10">
+                      <span className="w-9 h-9 rounded-lg bg-brand-blue flex items-center justify-center shrink-0">
+                        <Icon icon={section.icon} width={17} height={17} className="text-white" />
+                      </span>
+                      <span className="text-base font-bold text-brand-blue">{section.title}</span>
                     </div>
-                    <div className={`px-4 pt-2.5 pb-3 grid gap-x-5 gap-y-2.5 ${
+                    <div className={`px-4 pt-3.5 pb-4 grid gap-x-5 gap-y-4 ${
                       section.cols === 1 ? "grid-cols-1" : section.cols === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
                     }`}>
                       {visibles.map((item, iIdx) => (
                         <div key={iIdx} className={"wide" in item && item.wide ? "col-span-full" : ""}>
-                          <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-none">{item.label}</p>
-                          <p className="text-sm font-semibold text-neutral-800 mt-0.5 leading-snug">{item.value}</p>
+                          <p className="text-sm font-semibold text-brand-blue/65 mb-1">{item.label}</p>
+                          <p className="text-lg font-semibold text-brand-blue leading-snug">{item.value}</p>
                         </div>
                       ))}
                     </div>
@@ -1573,37 +1572,38 @@ export function CrearReservaContent() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-5 py-4 border-t border-neutral-100 bg-white"
-               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
-            {/* Selector de copias */}
-            <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-              <Icon icon="typcn:document-add" width={16} height={16} className="text-neutral-400 shrink-0" />
-              <span className="text-sm text-neutral-600 flex-1">{tr.copiesLabel}</span>
+          <div
+            className="shrink-0 px-5 py-4 border-t border-brand-blue/15 bg-[#DCE6F4]/95 backdrop-blur-md"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
+          >
+            <div className="flex items-center gap-3 mb-3.5 p-3.5 rounded-lg bg-[#F4F8FC] border border-brand-blue/15">
+              <Icon icon="typcn:document-add" width={18} height={18} className="text-brand-blue shrink-0" />
+              <span className="text-lg text-brand-blue/85 flex-1 font-medium">{tr.copiesLabel}</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setCopias((c) => Math.max(1, c - 1))}
-                  className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 transition-colors font-bold text-lg leading-none"
+                  className="w-10 h-10 rounded-lg bg-white border border-brand-blue/20 flex items-center justify-center text-brand-blue hover:bg-brand-blue/5 transition-colors font-bold text-xl leading-none"
                 >−</button>
                 <input
                   type="number"
                   min={1}
                   value={copias}
                   onChange={(e) => setCopias(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-14 text-center font-bold text-neutral-800 text-sm border border-neutral-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue"
+                  className="w-16 text-center font-bold text-brand-blue text-lg border border-brand-blue/20 bg-white rounded-lg py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
                 />
                 <button
                   type="button"
                   onClick={() => setCopias((c) => c + 1)}
-                  className="w-7 h-7 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 transition-colors font-bold text-lg leading-none"
+                  className="w-10 h-10 rounded-lg bg-white border border-brand-blue/20 flex items-center justify-center text-brand-blue hover:bg-brand-blue/5 transition-colors font-bold text-xl leading-none"
                 >+</button>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowPreview(false)}
-                className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors shrink-0"
+                className="px-5 py-3.5 text-lg font-semibold text-brand-blue bg-[#F4F8FC] border border-brand-blue/20 hover:bg-white rounded-lg transition-colors shrink-0"
               >
                 {tr.btnEdit}
               </button>
@@ -1611,12 +1611,12 @@ export function CrearReservaContent() {
                 type="button"
                 onClick={() => { setShowPreview(false); void handleConfirmSubmit(); }}
                 disabled={submitting}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/25 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 rounded-lg text-lg font-semibold bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-[0_10px_24px_rgba(17,34,78,0.3)] hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? (
-                  <><Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />{tr.guardando}</>
+                  <><Icon icon="typcn:refresh" width={18} height={18} className="animate-spin" />{tr.guardando}</>
                 ) : (
-                  <><Icon icon="typcn:input-checked" width={16} height={16} />
+                  <><Icon icon="lucide:check" width={18} height={18} />
                   {copias > 1 ? `${tr.saveMultiple} (${copias})` : tr.guardar}</>
                 )}
               </button>
@@ -1631,10 +1631,10 @@ export function CrearReservaContent() {
 
   if (loadingCatalogos) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-50 p-4" role="main">
+      <main className="relative flex-1 min-h-0 overflow-auto bg-[#E4EBF6] p-4" role="main">
         <div className="w-full flex items-center justify-center min-h-[300px]">
-          <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-white border border-neutral-200 shadow-md text-neutral-600 font-medium">
-            <Icon icon="typcn:refresh" width={24} height={24} className="animate-spin text-brand-blue" />
+          <div className="flex items-center gap-3 px-5 py-4 rounded-lg bg-[#F4F7FC] border border-brand-blue/15 shadow-mac-modal text-brand-blue text-base font-medium">
+            <Icon icon="typcn:refresh" width={24} height={24} className="animate-spin text-brand-teal" />
             <span>{tr.loading}</span>
           </div>
         </div>
@@ -1909,7 +1909,7 @@ export function CrearReservaContent() {
           </div>
           <div>
             <label className={labelClass}>{tr.ttDays}</label>
-            <div className="rounded-lg border border-neutral-300 bg-brand-blue/5 px-4 py-2.5 flex items-center justify-center font-bold text-brand-blue text-lg">
+            <div className="rounded-lg border border-brand-blue/25 bg-gradient-to-br from-brand-blue/10 to-brand-teal/10 px-4 py-3.5 flex items-center justify-center font-bold text-brand-blue text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
               {transitTime !== null ? transitTime : "-"}
             </div>
           </div>
@@ -1950,7 +1950,7 @@ export function CrearReservaContent() {
     deposito: (
       <>
         {renderSelect("deposito", depositos, tr.deposito)}
-        <p className="sm:col-span-2 lg:col-span-3 text-[11px] text-neutral-500 leading-snug rounded-lg border border-brand-blue/15 bg-brand-blue/[0.04] px-3 py-2">
+        <p className="sm:col-span-2 lg:col-span-3 text-base text-brand-blue/75 leading-snug rounded-lg border border-brand-blue/20 bg-brand-blue/5 px-3.5 py-3">
           <Icon icon="lucide:info" className="inline-block align-middle mr-1 text-brand-blue" width={14} height={14} aria-hidden />
           {tr.depositoStackingAutoHint}
         </p>
@@ -1988,30 +1988,51 @@ export function CrearReservaContent() {
   const isLastStep = currentStep === SECTION_ORDER.length - 1;
   const completedCount = Object.values(sectionValidation).filter(Boolean).length;
 
+  const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100);
+
   return (
-    <main className="flex-1 min-h-0 flex flex-col bg-neutral-50" role="main">
+    <main className="relative flex-1 min-h-0 flex flex-col bg-[#D9E3F2]" role="main">
+      {/* Atmósfera azul de marca */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -top-28 -right-16 h-80 w-80 rounded-full bg-brand-blue/20 blur-3xl" />
+        <div className="absolute top-1/4 -left-20 h-96 w-96 rounded-full bg-brand-dark-teal/25 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-brand-teal/20 blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.45]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(17,34,78,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(17,34,78,0.06) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+      </div>
 
       {/* Marco verde cuando el paso está completo */}
       <div
         className={`fixed inset-0 z-40 pointer-events-none rounded-none transition-all duration-500 ${
           sectionValidation[activeKey]
-            ? "ring-8 ring-inset ring-emerald-500 opacity-100"
+            ? "ring-8 ring-inset ring-emerald-500/80 opacity-100"
             : "ring-0 opacity-0"
         }`}
       />
 
-      <div ref={mainRef} className="flex-1 overflow-auto">
+      <div ref={mainRef} className="relative flex-1 overflow-auto">
 
-        {/* Hero gradient header */}
-        <div className="bg-gradient-to-br from-brand-blue via-brand-blue/90 to-cyan-700 text-white px-4 sm:px-6 pt-5 pb-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="typcn:plus" width={22} height={22} className="text-white" />
+        {/* Hero */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-6 pt-6 pb-10">
+          <div className="absolute inset-0 opacity-40 pointer-events-none" aria-hidden>
+            <div className="absolute -top-10 right-8 h-48 w-48 rounded-full bg-brand-teal/40 blur-2xl" />
+            <div className="absolute bottom-0 left-1/4 h-32 w-72 bg-sky-400/25 blur-3xl" />
+          </div>
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+                <Icon icon="lucide:ship" width={24} height={24} className="text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold leading-tight truncate">{pageTitle}</h1>
-                <p className="text-xs text-white/70 mt-0.5">{pageSubtitle}</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-sky-200/85 mb-1">ASLI · Operaciones</p>
+                <h1 className="text-3xl sm:text-4xl font-bold leading-tight truncate tracking-tight">{pageTitle}</h1>
+                <p className="text-lg text-white/80 mt-1.5">{pageSubtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -2019,62 +2040,78 @@ export function CrearReservaContent() {
                 <button
                   type="button"
                   onClick={loadDatosDePrueba}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold bg-white/10 hover:bg-white/20 border border-white/25 text-white transition-colors"
                   title={tr.loadTestData}
                 >
-                  <Icon icon="typcn:flash" width={13} height={13} />
+                  <Icon icon="typcn:flash" width={14} height={14} />
                   {tr.testDataBtn}
                 </button>
               )}
-              <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
-                <Icon icon="lucide:check-circle" width={13} height={13} className="text-white/80" />
-                <span className="text-xs font-bold">{completedCount}/{SECTION_ORDER.length}</span>
+              <div className="flex flex-col items-end gap-1.5 min-w-[5rem]">
+                <div className="flex items-center gap-1.5 bg-white/15 border border-white/25 rounded-lg px-3 py-2">
+                  <Icon icon="lucide:check-circle-2" width={16} height={16} className="text-sky-200" />
+                  <span className="text-base font-bold tabular-nums">{completedCount}/{SECTION_ORDER.length}</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-white/15 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-sky-300 to-brand-teal transition-all duration-500 ease-out"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Horizontal Stepper */}
-        <div className="px-4 sm:px-6 pt-4 pb-0">
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-4 py-4">
+        {/* Stepper */}
+        <div className="relative px-4 sm:px-6 -mt-5 pb-0 z-10">
+          <div className="rounded-lg border border-brand-blue/20 bg-[#F0F5FC]/95 backdrop-blur-md shadow-mac-modal px-3 sm:px-5 py-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-base font-semibold text-brand-blue/80">Progreso del formulario</p>
+              <p className="text-base font-bold text-brand-teal tabular-nums">{progressPct}%</p>
+            </div>
+            <div className="h-2 rounded-full bg-brand-blue/10 overflow-hidden mb-4">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-brand-blue via-brand-teal to-sky-400 transition-all duration-500 ease-out"
+                style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.35)) / SECTION_ORDER.length) * 100, 8)}%` }}
+              />
+            </div>
             <div className="overflow-x-auto">
-              <div className="flex items-start justify-between min-w-[520px]">
+              <div className="flex items-start justify-between min-w-[560px] gap-1">
                 {SECTION_ORDER.map((key, idx) => {
                   const isActive = idx === currentStep;
                   const isComplete = sectionValidation[key];
                   const isPast = idx < currentStep;
                   return (
-                    <div key={key} className="flex items-start flex-1">
-                      {/* Step */}
-                      <div className="flex flex-col items-center flex-1">
+                    <div key={key} className="flex items-start flex-1 min-w-0">
+                      <div className="flex flex-col items-center flex-1 min-w-0">
                         <button
                           type="button"
                           onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all font-bold text-xs border-2 ${
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 font-bold text-sm border ${
                             isActive
-                              ? "bg-brand-blue border-brand-blue text-white shadow-md shadow-brand-blue/30 scale-110"
+                              ? "bg-brand-blue border-brand-blue text-white shadow-[0_8px_20px_rgba(17,34,78,0.4)] scale-105"
                               : isComplete
-                                ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-200"
-                                : "bg-white border-neutral-200 text-neutral-400"
+                                ? "bg-brand-teal border-brand-teal text-white shadow-sm"
+                                : "bg-[#E4EBF6] border-brand-blue/25 text-brand-blue/60 hover:border-brand-blue/50 hover:bg-white"
                           }`}
                         >
                           {isComplete
-                            ? <Icon icon="lucide:check" width={14} height={14} />
-                            : <span>{idx + 1}</span>
+                            ? <Icon icon="lucide:check" width={16} height={16} />
+                            : <Icon icon={sectionIcons[key]} width={16} height={16} className={isActive ? "text-white" : "opacity-90"} />
                           }
                         </button>
-                        <span className={`text-[9px] font-semibold mt-1.5 text-center leading-tight max-w-[52px] uppercase tracking-wide ${
-                          isActive ? "text-brand-blue" : isComplete ? "text-emerald-600" : "text-neutral-400"
+                        <span className={`text-base font-semibold mt-2 text-center leading-tight max-w-[90px] ${
+                          isActive ? "text-brand-blue" : isComplete ? "text-brand-teal" : "text-brand-blue/60"
                         }`}>
                           {sectionTitles[key]}
                         </span>
                       </div>
-                      {/* Connector */}
                       {idx < SECTION_ORDER.length - 1 && (
-                        <div className={`h-0.5 w-full max-w-[40px] mt-4 mx-0 rounded-full transition-all ${
-                          idx < currentStep ? "bg-emerald-400" : "bg-neutral-150"
-                        }`}
-                        style={{ backgroundColor: idx < currentStep ? undefined : "#e5e7eb" }}
+                        <div
+                          className={`h-0.5 flex-1 max-w-[36px] mt-5 mx-0.5 rounded-full transition-colors duration-300 ${
+                            idx < currentStep || (idx === currentStep && isComplete) ? "bg-brand-teal" : "bg-brand-blue/15"
+                          }`}
                         />
                       )}
                     </div>
@@ -2126,35 +2163,54 @@ export function CrearReservaContent() {
         )}
 
         {/* Step content card */}
-        <div className="px-4 sm:px-6 pt-4 pb-4">
-          <div className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-colors ${
-            sectionValidation[activeKey] ? "border-emerald-400 shadow-emerald-100" : "border-neutral-200"
+        <div className="relative px-4 sm:px-6 pt-4 pb-5">
+          <div className={`rounded-lg border overflow-hidden shadow-mac-modal transition-all duration-300 ${
+            sectionValidation[activeKey]
+              ? "border-brand-teal/50 bg-[#F4F8FC]"
+              : "border-brand-blue/20 bg-[#F4F8FC]"
           }`}>
+            <div className={`h-[3px] ${
+              sectionValidation[activeKey]
+                ? "bg-gradient-to-r from-brand-teal to-sky-400"
+                : "bg-gradient-to-r from-brand-blue via-brand-teal to-brand-dark-teal"
+            }`} />
             {/* Section header */}
-            <div className={`px-5 py-3.5 border-b flex items-center justify-between gap-3 transition-colors ${
-              sectionValidation[activeKey] ? "border-emerald-100 bg-emerald-50/40" : "border-neutral-100 bg-neutral-50/50"
+            <div className={`px-5 py-4 border-b flex items-center justify-between gap-3 transition-colors ${
+              sectionValidation[activeKey]
+                ? "border-brand-teal/20 bg-gradient-to-r from-brand-teal/10 to-[#F4F8FC]"
+                : "border-brand-blue/10 bg-gradient-to-r from-brand-blue/10 to-[#F4F8FC]"
             }`}>
               <div className="flex items-center gap-3">
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${sectionValidation[activeKey] ? "bg-emerald-500" : "bg-brand-blue"}`}>
-                  <Icon icon={sectionValidation[activeKey] ? "lucide:check" : sectionIcons[activeKey]} width={16} height={16} className="text-white" />
+                <span className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${
+                  sectionValidation[activeKey]
+                    ? "bg-brand-teal"
+                    : "bg-gradient-to-br from-brand-blue to-brand-dark-teal"
+                }`}>
+                  <Icon icon={sectionValidation[activeKey] ? "lucide:check" : sectionIcons[activeKey]} width={20} height={20} className="text-white" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-bold text-neutral-900 leading-tight">{sectionTitles[activeKey]}</h2>
-                  <p className="text-xs text-neutral-400 mt-0.5">{tr.stepLabel} {currentStep + 1} {tr.stepOf} {SECTION_ORDER.length}</p>
+                  <h2 className="text-xl font-bold text-brand-blue leading-tight tracking-tight">{sectionTitles[activeKey]}</h2>
+                  <p className="text-base text-brand-blue/65 mt-1">{tr.stepLabel} {currentStep + 1} {tr.stepOf} {SECTION_ORDER.length}</p>
                 </div>
               </div>
               {sectionValidation[activeKey] && (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5 shrink-0">
-                  <Icon icon="lucide:check" width={11} height={11} />{tr.complete}
+                <span className="inline-flex items-center gap-1.5 text-base font-semibold text-brand-dark-teal bg-brand-teal/15 border border-brand-teal/30 rounded-lg px-3.5 py-1.5 shrink-0">
+                  <Icon icon="lucide:check" width={16} height={16} />{tr.complete}
                 </span>
               )}
             </div>
 
             {/* Fields */}
-            <form id="reserva-form" onSubmit={handleSubmit} autoComplete="off" className="px-5 pt-5 pb-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <form
+              id="reserva-form"
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              key={activeKey}
+              className="px-5 pt-5 pb-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 animate-fade-in-up"
+            >
               {sectionFieldsMap[activeKey]}
             </form>
-            <p className="px-5 pb-4 text-[11px] text-neutral-400">
+            <p className="px-5 pb-4 text-base text-brand-blue/55">
               <span className="text-red-500 font-bold">*</span> Campo obligatorio
             </p>
           </div>
@@ -2164,14 +2220,14 @@ export function CrearReservaContent() {
 
       {/* Barra de acciones */}
       <div
-        className="shrink-0 border-t border-neutral-100 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-3"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+        className="relative shrink-0 border-t border-brand-blue/15 bg-[#E8F0FA]/95 backdrop-blur-md shadow-[0_-10px_30px_rgba(17,34,78,0.1)] px-4 sm:px-6 py-3.5"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 14px)" }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => { setFormData(initialFormData); setClienteInput(""); setCurrentStep(0); }}
-            className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-neutral-500 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+            className="shrink-0 px-4 py-3.5 rounded-lg text-lg font-medium text-brand-blue/75 bg-[#D9E3F2] border border-brand-blue/15 hover:bg-[#CDD8EC] transition-colors"
           >
             {tr.limpiar}
           </button>
@@ -2179,9 +2235,9 @@ export function CrearReservaContent() {
             <button
               type="button"
               onClick={() => setCurrentStep((s) => s - 1)}
-              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+              className="shrink-0 inline-flex items-center gap-1.5 px-5 py-3.5 rounded-lg text-lg font-semibold text-brand-blue bg-[#F4F8FC] border border-brand-blue/25 hover:bg-white transition-colors"
             >
-              <Icon icon="lucide:arrow-left" width={15} height={15} />
+              <Icon icon="lucide:arrow-left" width={20} height={20} />
               {tr.btnPrev}
             </button>
           )}
@@ -2189,22 +2245,22 @@ export function CrearReservaContent() {
             <button
               type="button"
               onClick={() => setCurrentStep((s) => s + 1)}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all"
+              className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 rounded-lg text-lg font-semibold bg-gradient-to-r from-brand-blue to-brand-dark-teal text-white shadow-[0_10px_24px_rgba(17,34,78,0.32)] hover:brightness-110 active:scale-[0.99] transition-all"
             >
               {tr.btnNext}
-              <Icon icon="lucide:arrow-right" width={15} height={15} />
+              <Icon icon="lucide:arrow-right" width={20} height={20} />
             </button>
           ) : (
             <button
               type="submit"
               form="reserva-form"
               disabled={submitting}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-brand-blue text-white shadow-md shadow-brand-blue/20 hover:bg-brand-blue/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 rounded-lg text-lg font-semibold bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-[0_10px_24px_rgba(17,34,78,0.32)] hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (
-                <><Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" />{tr.guardando}</>
+                <><Icon icon="lucide:loader-2" width={18} height={18} className="animate-spin" />{tr.guardando}</>
               ) : (
-                <><Icon icon="lucide:eye" width={16} height={16} />{tr.btnReview}</>
+                <><Icon icon="lucide:eye" width={18} height={18} />{tr.btnReview}</>
               )}
             </button>
           )}

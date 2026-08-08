@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale } from "@/lib/i18n";
 import type { StackingData } from "@/types/stacking";
 import { fetchPublicItinerarios } from "@/lib/itinerarios-service";
-import { withBase } from "@/lib/basePath";
 import type { ItinerarioWithEscalas } from "@/types/itinerarios";
 import { formatDisplayDateLocal } from "@/lib/calendarUtils";
 import { Icon } from "@iconify/react";
@@ -600,15 +599,6 @@ export function StackingContent({ data = null }: StackingContentProps) {
                                   <p className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(closeUrgency)}`}>{daysToClose}</p>
                                   <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wide">{sp.stackingDaysLabel ?? "cierre est."}</p>
                                 </div>
-                              )}
-                              {isSuperadmin && (
-                                <a
-                                  href={`${withBase("/itinerario")}?stackingItId=${encodeURIComponent(selected.id)}`}
-                                  className="inline-flex items-center gap-1 rounded-xl bg-brand-blue text-white px-2.5 py-1.5 text-xs font-semibold shadow-sm shadow-brand-blue/20 hover:bg-brand-blue/90 transition-colors"
-                                >
-                                  <Icon icon="lucide:pencil" width={12} height={12} aria-hidden />
-                                  {sp.editStacking ?? "Editar"}
-                                </a>
                               )}
                             </div>
                           </div>

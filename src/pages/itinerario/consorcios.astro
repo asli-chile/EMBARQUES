@@ -1,10 +1,5 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
----
+import { withBase } from "@/lib/basePath";
 
-<BaseLayout
-  title="Consorcios - EMBARQUES"
-  description="Gestión de consorcios de servicios para itinerarios."
->
-  <main class="flex-1 min-h-0 overflow-auto" role="main" />
-</BaseLayout>
+return Astro.redirect(withBase("/inicio"), 302);
+---

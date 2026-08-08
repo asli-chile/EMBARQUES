@@ -109,13 +109,13 @@ export const shadows = {
 
 export const layout = {
   header: {
-    height: 50,
-    heightClass: "h-[50px] min-h-[50px]",
+    height: 60,
+    heightClass: "h-[60px] min-h-[60px]",
     bg: "bg-white",
   },
   navBanner: {
-    height: 40,
-    heightClass: "h-[40px] min-h-[40px]",
+    height: 56,
+    heightClass: "h-[56px] min-h-[56px]",
     bg: "bg-neutral-600",
     shadow: "shadow-md",
   },

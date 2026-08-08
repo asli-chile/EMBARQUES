@@ -212,7 +212,7 @@ export function Sidebar({ pathname }: SidebarProps) {
 
   // Nav items JSX – shared between mobile drawer and desktop sidebar
   const navItems = (
-    <nav className="flex flex-col gap-1.5">
+    <nav className="flex flex-col gap-2">
       {visibleItems.map((item) => {
         const hasChildren = "children" in item && item.children?.length;
         const hasHref = "href" in item && item.href;
@@ -223,7 +223,7 @@ export function Sidebar({ pathname }: SidebarProps) {
           item.children!.some((c) => c.href && pathname === c.href);
 
         const linkBaseClasses =
-          "flex items-center justify-between w-full text-left text-sm px-3 py-2 rounded-lg border border-transparent transition-all duration-200";
+          "flex items-center justify-between w-full text-left text-base font-medium px-3.5 py-2.5 rounded-lg border border-transparent transition-all duration-200";
         const linkClasses = isActive
           ? `${linkBaseClasses} text-white bg-white/15 border-white/20`
           : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-white/10`;
@@ -232,7 +232,7 @@ export function Sidebar({ pathname }: SidebarProps) {
           : `${linkBaseClasses} text-neutral-200 hover:text-white hover:bg-white/10`;
 
         return (
-          <div key={item.id} className="flex flex-col gap-1">
+          <div key={item.id} className="flex flex-col gap-1.5">
             {hasHref ? (
               <a
                 href={item.href!}
@@ -257,20 +257,20 @@ export function Sidebar({ pathname }: SidebarProps) {
                         ? "typcn:arrow-sorted-up"
                         : "typcn:arrow-sorted-down"
                     }
-                    width={12}
-                    height={12}
+                    width={16}
+                    height={16}
                     className="flex-shrink-0 opacity-80"
                   />
                 )}
               </button>
             )}
             {hasChildren && isExpanded && (
-              <div className="flex flex-col gap-1 pl-3 ml-1 border-l-2 border-white/20">
+              <div className="flex flex-col gap-1.5 pl-3.5 ml-1 border-l-2 border-white/20">
                 {item.children!.map((child) => {
                   const childHref = child.href ?? "#";
                   const isChildActive = pathname === childHref;
                   const childBaseClasses =
-                    "text-sm px-3 py-1.5 rounded-lg border border-transparent transition-all duration-200";
+                    "block text-base px-3.5 py-2 rounded-lg border border-transparent transition-all duration-200";
                   const childClasses = isChildActive
                     ? `${childBaseClasses} text-white bg-brand-olive/20 border-brand-olive/40`
                     : `${childBaseClasses} text-neutral-300 hover:text-white hover:bg-white/10`;
@@ -306,7 +306,7 @@ export function Sidebar({ pathname }: SidebarProps) {
 
       {/* Mobile: fixed drawer that slides in from left */}
       <div
-        className={`md:hidden fixed left-0 top-[94px] bottom-0 z-50 w-56 bg-neutral-700/97 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/40 flex flex-col transition-transform duration-300 ease-out ${
+        className={`md:hidden fixed left-0 top-[116px] bottom-0 z-50 w-64 bg-neutral-700/97 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/40 flex flex-col transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -342,7 +342,7 @@ export function Sidebar({ pathname }: SidebarProps) {
       <div
         ref={sidebarRef}
         className={`hidden md:block relative flex-shrink-0 overflow-visible bg-neutral-700/95 z-10 transition-[width] duration-300 ease-out ${
-          isOpen ? "w-[11.75rem]" : "w-3"
+          isOpen ? "w-[14.5rem]" : "w-3"
         }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -354,11 +354,11 @@ export function Sidebar({ pathname }: SidebarProps) {
         {/* Panel del sidebar */}
         <div
           className={`absolute inset-y-0 left-0 flex flex-col overflow-hidden bg-neutral-700/95 backdrop-blur-md border-r border-white/10 shadow-xl shadow-black/20 transition-[width] duration-300 ease-out ${
-            isOpen ? "w-[11.75rem]" : "w-0"
+            isOpen ? "w-[14.5rem]" : "w-0"
           }`}
         >
           <SidebarNavScroll
-            widthClass="w-[11.75rem] min-w-[11.75rem]"
+            widthClass="w-[14.5rem] min-w-[14.5rem]"
             scrollRef={desktopScroll.scrollRef}
             showTopFade={desktopScroll.showTopFade}
             showBottomFade={desktopScroll.showBottomFade}

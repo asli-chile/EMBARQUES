@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Operacion = {
@@ -15,9 +14,11 @@ type Operacion = {
   cliente: string;
   naviera: string;
   booking: string;
+  contenedor: string | null;
   pod: string;
   etd: string | null;
   booking_doc_url: string | null;
+  created_at: string | null;
 };
 
 type Documento = {
@@ -50,6 +51,9 @@ type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 /** Tipos visibles para clientes (vista simplificada) */
 const CLIENTE_TIPOS: TipoDocumento[] = ["SOLICITUD_RESERVA", "FULLSET"];
 
+const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
+
 const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: string }> = {
   SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-emerald-600 bg-emerald-50" },
   BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-blue-600 bg-blue-50" },
@@ -63,6 +67,10 @@ const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: str
   DUS:                     { label: "DUS",                           icon: "lucide:landmark",       color: "text-indigo-600 bg-indigo-50" },
   FULLSET:                 { label: "Fullset",                       icon: "lucide:layers",         color: "text-neutral-600 bg-neutral-100" },
 };
+
+function opRef(op: Operacion) {
+  return op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
+}
 
 export function MisDocumentosContent() {
   const { t, locale } = useLocale();
@@ -78,24 +86,20 @@ export function MisDocumentosContent() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
-  // Panel activo en mobile
-  const [mobilePanel, setMobilePanel] = useState<"select" | "docs">("select");
+  const [pageSize, setPageSize] = useState<PageSize>(10);
+  const [page, setPage] = useState(1);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
   }, []);
 
-  // ── Refs siempre frescos (el canal Realtime los lee sin recrearse) ──────────
   const selectedOperacionRef = useRef<string>("");
   useEffect(() => { selectedOperacionRef.current = selectedOperacion; }, [selectedOperacion]);
 
-  // Ref que apunta a la función más reciente de recargar conteos
   const reloadCountsRef = useRef<((ops: Operacion[]) => Promise<void>) | null>(null);
-  // Ref que apunta a la función más reciente de recargar documentos
   const reloadDocsRef = useRef<(() => Promise<void>) | null>(null);
 
-  // ── Recalcula docCounts a partir de una lista de operaciones ────────────────
   const reloadCounts = useCallback(async (ops: Operacion[]) => {
     if (!supabase || ops.length === 0) return;
     const ids = ops.map((o) => o.id);
@@ -106,7 +110,6 @@ export function MisDocumentosContent() {
 
     const docsByOperacion = new Map<string, { count: number; hasBookingDoc: boolean }>();
     (docsData ?? []).forEach((d: { operacion_id: string; tipo: string }) => {
-      // Para clientes: contar solo tipos visibles
       if (isCliente && !CLIENTE_TIPOS.includes(d.tipo as TipoDocumento)) return;
       const current = docsByOperacion.get(d.operacion_id) ?? { count: 0, hasBookingDoc: false };
       current.count += 1;
@@ -123,27 +126,23 @@ export function MisDocumentosContent() {
     setDocCounts(counts);
   }, [supabase, isCliente]);
 
-  // Mantener ref siempre actualizada
   useEffect(() => { reloadCountsRef.current = reloadCounts; }, [reloadCounts]);
 
-  // ── Fetch principal de operaciones ─────────────────────────────────────────
   const fetchOperaciones = useCallback(async () => {
     if (!supabase || authLoading) return;
     setLoading(true);
     let q = supabase
       .from("operaciones")
-      .select("id, ref_asli, correlativo, cliente, naviera, booking, pod, etd, booking_doc_url")
+      .select("id, ref_asli, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at")
       .is("deleted_at", null);
     if (empresaNombres.length > 0) q = q.in("cliente", empresaNombres);
     const { data } = await q.order("created_at", { ascending: false });
     const ops: Operacion[] = data ?? [];
     setOperaciones(ops);
     setLoading(false);
-    // Cargar conteos con la lista fresca (no espera al re-render)
     await reloadCounts(ops);
-  }, [supabase, authLoading, isCliente, empresaNombres, reloadCounts]);
+  }, [supabase, authLoading, empresaNombres, reloadCounts]);
 
-  // ── Fetch documentos de la operación seleccionada ──────────────────────────
   const fetchDocumentos = useCallback(async () => {
     if (!supabase || !selectedOperacion) return;
     const { data, error: fetchError } = await supabase
@@ -154,7 +153,6 @@ export function MisDocumentosContent() {
     if (fetchError) { setDocumentos([]); return; }
     const docs = data ?? [];
     setDocumentos(docs);
-    // Actualizar el conteo puntual de esta operación
     setDocCounts((prev) => {
       const next = new Map(prev);
       const op = operaciones.find((o) => o.id === selectedOperacion);
@@ -178,11 +176,9 @@ export function MisDocumentosContent() {
     else setDocumentos([]);
   }, [selectedOperacion, fetchDocumentos]);
 
-  // Ref de operaciones para el canal (no cambia la identidad del canal al cambiar ops)
   const operacionesRef = useRef<Operacion[]>([]);
   useEffect(() => { operacionesRef.current = operaciones; }, [operaciones]);
 
-  // ── Canal Realtime: se crea una vez, usa refs para datos siempre frescos ───
   useEffect(() => {
     if (!supabase) return;
     const channel = supabase
@@ -205,7 +201,6 @@ export function MisDocumentosContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
-  // ── Visibilitychange: al volver a la pestaña, refrescar conteos ────────────
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible") {
@@ -227,23 +222,50 @@ export function MisDocumentosContent() {
     if (!searchTerm.trim()) return operaciones;
     const search = searchTerm.toLowerCase();
     return operaciones.filter((op) => {
-      const ref = op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
+      const ref = opRef(op);
       return (
         ref.toLowerCase().includes(search) ||
         (op.cliente ?? "").toLowerCase().includes(search) ||
         (op.booking ?? "").toLowerCase().includes(search) ||
-        (op.naviera ?? "").toLowerCase().includes(search)
+        (op.contenedor ?? "").toLowerCase().includes(search) ||
+        (op.naviera ?? "").toLowerCase().includes(search) ||
+        (op.pod ?? "").toLowerCase().includes(search)
       );
     });
   }, [operaciones, searchTerm]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, pageSize]);
+
+  // Deep-link desde Registros: /documentos/mis-documentos?op=<uuid>
+  useEffect(() => {
+    if (operaciones.length === 0 || typeof window === "undefined") return;
+    const opId = new URLSearchParams(window.location.search).get("op");
+    if (!opId) return;
+    const idx = operaciones.findIndex((o) => o.id === opId);
+    if (idx < 0) return;
+    setSelectedOperacion(opId);
+    setPage(Math.floor(idx / pageSize) + 1);
+  }, [operaciones, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOperaciones.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+
+  const pagedOperaciones = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredOperaciones.slice(start, start + pageSize);
+  }, [filteredOperaciones, safePage, pageSize]);
+
+  const rangeFrom = filteredOperaciones.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeTo = Math.min(safePage * pageSize, filteredOperaciones.length);
 
   const documentosPorTipo = useMemo(() => {
     const map = new Map<TipoDocumento, Documento | null>();
     visibleTipos.forEach((tipo) => {
       let doc = documentos.find((d) => d.tipo === tipo) || null;
-      // Si es BOOKING y no hay doc en tabla, usar booking_doc_url de la operación
       if (!doc && tipo === "BOOKING" && operacionActual && operacionActual.booking_doc_url) {
-        const ref = operacionActual.ref_asli || `A${String(operacionActual.correlativo).padStart(5, "0")}`;
+        const ref = opRef(operacionActual);
         const bookingUrl: string = operacionActual.booking_doc_url;
         doc = {
           id: `__booking_url__${operacionActual.id}`,
@@ -296,7 +318,7 @@ export function MisDocumentosContent() {
     setError(null);
 
     const operacion = operaciones.find((op) => op.id === selectedOperacion);
-    const ref = operacion?.ref_asli || `A${String(operacion?.correlativo).padStart(5, "0")}`;
+    const ref = operacion ? opRef(operacion) : "DOC";
     const ext = file.name.split(".").pop();
     const fileName = `${ref}_${tipo}_${Date.now()}.${ext}`;
     const filePath = `documentos/${selectedOperacion}/${fileName}`;
@@ -306,7 +328,9 @@ export function MisDocumentosContent() {
 
     const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(filePath);
     const existingDoc = documentosPorTipo.get(tipo);
-    if (existingDoc) await supabase.from("documentos").delete().eq("id", existingDoc.id);
+    if (existingDoc && !existingDoc.id.startsWith("__booking_url__")) {
+      await supabase.from("documentos").delete().eq("id", existingDoc.id);
+    }
 
     const { error: dbError } = await supabase.from("documentos").insert({
       operacion_id: selectedOperacion,
@@ -345,13 +369,17 @@ export function MisDocumentosContent() {
 
   const handleSelectOperacion = (id: string) => {
     setSelectedOperacion(id);
-    setMobilePanel("docs");
+  };
+
+  const handlePageSizeChange = (value: PageSize) => {
+    setPageSize(value);
+    setPage(1);
   };
 
   if (loading) {
     return (
       <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-lg border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
@@ -359,281 +387,436 @@ export function MisDocumentosContent() {
     );
   }
 
+  const hasSelection = !!selectedOperacion && !!operacionActual;
   const progressPct = Math.round((docsCompletados / visibleTipos.length) * 100);
+  const totalTipos = visibleTipos.length;
+
+  const docsBadge = (opId: string) => {
+    const count = docCounts.get(opId) ?? 0;
+    const completo = count >= totalTipos;
+    const pct = Math.min(100, Math.round((count / totalTipos) * 100));
+    return (
+      <span
+        className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-sm border tabular-nums ${
+          completo
+            ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+            : count > 0
+              ? "text-brand-blue bg-brand-blue/10 border-brand-blue/20"
+              : "text-neutral-500 bg-neutral-100 border-neutral-200"
+        }`}
+      >
+        {count}/{totalTipos}
+        <span className="opacity-70 font-semibold">({pct}%)</span>
+      </span>
+    );
+  };
+
+  const paginationBar = (
+    <div className={`border-t border-neutral-100 flex flex-col gap-2 bg-neutral-50/80 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
+      <div className={`flex flex-wrap items-center gap-2 text-xs text-neutral-600 ${hasSelection ? "justify-center" : ""}`}>
+        {!hasSelection && <span className="font-semibold text-neutral-500">{tr.rowsPerPage}</span>}
+        <div className="inline-flex rounded-lg border border-neutral-200 overflow-hidden bg-white">
+          {PAGE_SIZE_OPTIONS.map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => handlePageSizeChange(size)}
+              className={`font-bold transition-colors ${
+                hasSelection ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-xs"
+              } ${
+                pageSize === size
+                  ? "bg-brand-blue text-white"
+                  : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+        {!hasSelection && (
+          <span className="text-neutral-400 tabular-nums">
+            {tr.showingRange
+              .replace("{from}", String(rangeFrom))
+              .replace("{to}", String(rangeTo))
+              .replace("{total}", String(filteredOperaciones.length))}
+          </span>
+        )}
+      </div>
+
+      <div className={`flex items-center gap-1 ${hasSelection ? "justify-center" : "gap-2"}`}>
+        <button
+          type="button"
+          disabled={safePage <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          className="inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          title={tr.prevPage}
+        >
+          <Icon icon="lucide:chevron-left" width={14} height={14} />
+          {!hasSelection && tr.prevPage}
+        </button>
+        <span className="text-[11px] font-bold text-neutral-600 tabular-nums px-1.5">
+          {hasSelection
+            ? `${safePage}/${totalPages}`
+            : tr.pageOf.replace("{page}", String(safePage)).replace("{pages}", String(totalPages))}
+        </span>
+        <button
+          type="button"
+          disabled={safePage >= totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          className="inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          title={tr.nextPage}
+        >
+          {!hasSelection && tr.nextPage}
+          <Icon icon="lucide:chevron-right" width={14} height={14} />
+        </button>
+      </div>
+    </div>
+  );
+
+  const docsPanel = hasSelection && operacionActual ? (
+    <div className="space-y-3">
+      <div className={`rounded-lg overflow-hidden shadow-sm border-2 ${progressPct === 100 ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50" : "border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 to-sky-50"}`}>
+        <div className="px-4 py-3 flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${progressPct === 100 ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
+            <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={20} height={20} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-neutral-800 truncate">
+              {opRef(operacionActual)} — {operacionActual.cliente}
+            </p>
+            <p className="text-[11px] text-neutral-500 truncate">
+              {operacionActual.naviera}{operacionActual.booking ? ` · ${operacionActual.booking}` : ""}{operacionActual.pod ? ` · ${operacionActual.pod}` : ""}
+            </p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex-1 h-2 bg-white/70 rounded-sm overflow-hidden border border-neutral-200">
+                <div className="h-full rounded-sm transition-all duration-500"
+                  style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#11224E,#007A7B)" }} />
+              </div>
+              <span className={`text-[11px] font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
+                {docsCompletados}/{visibleTipos.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedOperacion("")}
+            className="shrink-0 p-2 text-neutral-400 hover:text-neutral-700 hover:bg-white/70 rounded-lg transition-colors"
+            title={tr.closeSelection}
+          >
+            <Icon icon="lucide:x" width={16} height={16} />
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs font-medium flex items-center gap-2">
+          <Icon icon="lucide:alert-circle" className="w-3.5 h-3.5 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <div className={`grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-2`}>
+        {visibleTipos.map((tipo) => {
+          const doc = documentosPorTipo.get(tipo);
+          const isUploading = uploading === tipo;
+          const meta = TIPO_META[tipo];
+          const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
+          const tipoLabel = tr.tipoLabels[tipo as keyof typeof tr.tipoLabels] ?? meta.label;
+
+          return (
+            <div key={tipo} className={`bg-white rounded-lg border-2 shadow-sm overflow-hidden transition-all ${
+              doc ? "border-emerald-300" : "border-neutral-200"
+            }`}>
+              <div className={`h-1.5 ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-neutral-200 to-neutral-100"}`} />
+              <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
+                <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : meta.color.split(" ")[1]}`}>
+                  <Icon icon={doc ? "lucide:check" : meta.icon} className={`w-4.5 h-4.5 ${doc ? "text-emerald-600" : meta.color.split(" ")[0]}`} width={18} height={18} />
+                </span>
+                <h3 className="text-sm font-bold text-neutral-700 leading-tight flex-1 min-w-0">{tipoLabel}</h3>
+              </div>
+              <div className="p-3">
+                {doc ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-neutral-50 border border-neutral-100">
+                      <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}
+                        className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-500" : "text-green-600"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={() => handlePreview(doc)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-brand-blue bg-brand-blue/8 rounded-lg hover:bg-brand-blue/15 transition-colors">
+                        <Icon icon="lucide:eye" className="w-4 h-4" />{tr.preview}
+                      </button>
+                      <button type="button" onClick={() => handleDownload(doc)}
+                        className="inline-flex items-center justify-center w-9 h-9 text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
+                        <Icon icon="lucide:download" className="w-4 h-4" />
+                      </button>
+                      {!isCliente && !isSyntheticBooking && (
+                        <label className="inline-flex items-center justify-center w-9 h-9 text-neutral-500 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200" title={tr.replace}>
+                          <Icon icon="lucide:refresh-cw" className="w-4 h-4" />
+                          <input type="file" accept=".pdf,.xls,.xlsx" className="hidden"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
+                        </label>
+                      )}
+                      {!isCliente && !isSyntheticBooking && (
+                        <button type="button" onClick={() => handleDelete(doc)}
+                          className="inline-flex items-center justify-center w-9 h-9 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200" title={tr.deleteDocument}>
+                          <Icon icon="lucide:trash-2" className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : isCliente ? (
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-neutral-200">
+                    <Icon icon="lucide:file-x" className="w-5 h-5 text-neutral-300" />
+                    <p className="text-sm text-neutral-400">{tr.noDocument}</p>
+                  </div>
+                ) : (
+                  <label className={`flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed cursor-pointer transition-all ${
+                    isUploading ? "border-brand-blue bg-brand-blue/5" : "border-neutral-200 hover:border-brand-blue/50 hover:bg-brand-blue/[0.03]"
+                  }`}>
+                    {isUploading ? (
+                      <><Icon icon="lucide:loader-2" className="w-5 h-5 text-brand-blue animate-spin flex-shrink-0" />
+                      <span className="text-sm font-semibold text-brand-blue">{tr.uploading}</span></>
+                    ) : (
+                      <><Icon icon="lucide:upload" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-600">{tr.uploadFile}</p>
+                        <p className="text-xs text-neutral-400">{tr.fileTypesHint}</p>
+                      </div></>
+                    )}
+                    <input type="file" accept=".pdf,.xls,.xlsx" className="hidden" disabled={isUploading}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
+                  </label>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100">
+    <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col bg-neutral-100">
 
-      {/* Hero */}
-      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-indigo-700 text-white px-4 sm:px-6 pt-5 pb-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:folder-open" width={22} height={22} className="text-white" />
+      <div className="flex-shrink-0 w-full bg-gradient-to-br from-brand-blue via-brand-blue/90 to-brand-dark-teal text-white px-3 sm:px-4 py-3">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:folder-open" width={18} height={18} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
-              <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+              <h1 className="text-base sm:text-lg font-bold leading-tight">{tr.title}</h1>
+              <p className="text-[11px] text-white/70 mt-0.5 truncate">{tr.subtitle}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {selectedOperacion && (
-              <div className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 ${progressPct === 100 ? "bg-emerald-400/30" : "bg-white/15"}`}>
-                <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:gauge"} width={13} height={13} className={progressPct === 100 ? "text-emerald-200" : "text-white/80"} />
-                <span className="text-xs font-bold">{docsCompletados}/{visibleTipos.length}</span>
-              </div>
-            )}
-            <button type="button" onClick={() => void fetchOperaciones()}
-              className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white" title={tr.updateTooltip}>
-              <Icon icon="lucide:refresh-cw" width={16} height={16} />
-            </button>
-          </div>
-        </div>
-        {/* Tabs mobile */}
-        <div className="lg:hidden flex bg-white/15 rounded-xl p-0.5 gap-0.5 mt-3">
-          <button type="button" onClick={() => setMobilePanel("select")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${mobilePanel === "select" ? "bg-white text-brand-blue shadow-sm" : "text-white/80 hover:text-white"}`}>
-            <Icon icon="lucide:list" width={13} height={13} />
-            {tr.tabOperations}
-          </button>
-          <button type="button" onClick={() => setMobilePanel("docs")} disabled={!selectedOperacion}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 ${mobilePanel === "docs" ? "bg-white text-brand-blue shadow-sm" : "text-white/80 hover:text-white"}`}>
-            <Icon icon="lucide:files" width={13} height={13} />
-            {tr.tabDocuments}
-            {selectedOperacion && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />}
+          <button type="button" onClick={() => void fetchOperaciones()}
+            className="p-2 bg-white/15 hover:bg-white/25 rounded-lg transition-colors text-white" title={tr.updateTooltip}>
+            <Icon icon="lucide:refresh-cw" width={16} height={16} />
           </button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-auto p-2 sm:p-3">
-        <div className="flex flex-col lg:flex-row gap-3 h-full">
+      <div className="flex-1 min-h-0 w-full overflow-hidden p-2 sm:p-2.5">
+        <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0 w-full">
 
-          {/* Panel izquierdo — lista de operaciones */}
-          <div className={`w-full lg:w-64 xl:w-72 lg:flex-shrink-0 ${mobilePanel !== "select" ? "hidden lg:block" : ""}`}>
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-              <div className="px-3 py-2 border-b border-neutral-100 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{tr.selectOperation}</span>
-                {operaciones.length > 0 && (
-                  <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded-full">
-                    {filteredOperaciones.length}
-                  </span>
+          {/* Columna operaciones */}
+          <div
+            className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
+              hasSelection
+                ? "hidden lg:flex lg:w-[200px] xl:w-[220px] lg:shrink-0"
+                : "w-full flex-1"
+            }`}
+          >
+            <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden flex flex-col min-h-0 h-full w-full">
+              <div className={`border-b border-neutral-100 flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
+                <Icon icon="lucide:history" width={hasSelection ? 14 : 16} height={hasSelection ? 14 : 16} className="text-brand-blue shrink-0" />
+                <div className="min-w-0 flex-1 basis-[8rem]">
+                  <p className={`font-bold text-neutral-800 ${hasSelection ? "text-xs" : "text-sm"}`}>{tr.recentMovements}</p>
+                  {!hasSelection && (
+                    <p className="text-[11px] text-neutral-400 truncate hidden sm:block">{tr.selectOperationPrompt}</p>
+                  )}
+                </div>
+                {!hasSelection && (
+                  <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl order-last sm:order-none">
+                    <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder={tr.searchPlaceholder}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-8 pr-2.5 py-2 border border-neutral-200 bg-neutral-50 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue focus:bg-white transition-colors"
+                    />
+                  </div>
+                )}
+                {hasSelection && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOperacion("")}
+                    className="shrink-0 p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors"
+                    title={tr.expandOperations}
+                  >
+                    <Icon icon="lucide:panel-left-open" width={14} height={14} />
+                  </button>
                 )}
               </div>
-              <div className="p-2">
-                <div className="relative mb-2">
-                  <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3 h-3 pointer-events-none" />
-                  <input type="text" placeholder={tr.searchPlaceholder} value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-7 pr-2 py-1.5 border border-neutral-200 bg-neutral-50 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all" />
-                </div>
-                {filteredOperaciones.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Icon icon="lucide:folder" width={20} height={20} className="text-neutral-300 mx-auto mb-1" />
-                    <p className="text-neutral-400 text-xs">{tr.noOperations}</p>
+
+              <div className="flex-1 min-h-0 overflow-auto w-full">
+                {/* Lista compacta (selección activa): solo Ref + Booking */}
+                {hasSelection ? (
+                  <div className="divide-y divide-neutral-100">
+                    {pagedOperaciones.length === 0 ? (
+                      <div className="py-8 px-3 text-center text-neutral-400 text-xs">{tr.noOperations}</div>
+                    ) : (
+                      pagedOperaciones.map((op) => {
+                        const isActive = selectedOperacion === op.id;
+                        return (
+                          <button
+                            key={op.id}
+                            type="button"
+                            onClick={() => handleSelectOperacion(op.id)}
+                            className={`w-full text-left px-2.5 py-2.5 transition-colors ${
+                              isActive
+                                ? "bg-brand-blue/8 border-l-2 border-l-brand-blue"
+                                : "hover:bg-neutral-50 border-l-2 border-l-transparent"
+                            }`}
+                          >
+                            <p className={`text-xs font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                              {opRef(op)}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 truncate mt-0.5">
+                              {op.booking || "—"}
+                            </p>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 ) : (
-                  <div className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-1 pr-0.5">
-                    {filteredOperaciones.map((op) => {
-                      const isActive = selectedOperacion === op.id;
-                      const ref = op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
-                      const count = docCounts.get(op.id) ?? 0;
-                      const total = visibleTipos.length;
-                      const completo = count >= total;
-                      const opProgressPct = Math.min(100, Math.round((count / total) * 100));
-                      return (
-                        <button key={op.id} type="button" onClick={() => handleSelectOperacion(op.id)}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg border transition-all ${
-                            isActive ? "border-brand-blue bg-brand-blue/5 ring-1 ring-brand-blue/20"
-                              : "border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
-                          }`}>
-                          <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <p className={`font-bold text-[11px] ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>{ref}</p>
-                            <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md shrink-0 border ${
-                                completo
-                                  ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                                  : count > 0
-                                    ? "text-brand-blue bg-brand-blue/10 border-brand-blue/20"
-                                    : "text-neutral-500 bg-neutral-100 border-neutral-200"
-                              }`}
-                            >
-                              <span>{count}/{total}</span>
-                              <span className="opacity-80">({opProgressPct}%)</span>
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-neutral-500 truncate">{op.cliente}</p>
-                          <p className="text-[10px] text-neutral-400 truncate">{op.naviera}{op.booking ? ` · ${op.booking}` : ""}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    {/* Cards móvil sin selección */}
+                    <div className="md:hidden divide-y divide-neutral-100">
+                      {pagedOperaciones.length === 0 ? (
+                        <div className="py-12 px-4 text-center">
+                          <Icon icon="lucide:folder" width={28} height={28} className="text-neutral-300 mx-auto mb-2" />
+                          <p className="text-neutral-400 text-sm">{tr.noOperations}</p>
+                        </div>
+                      ) : (
+                        pagedOperaciones.map((op) => (
+                          <button
+                            key={op.id}
+                            type="button"
+                            onClick={() => handleSelectOperacion(op.id)}
+                            className="w-full text-left p-3.5 transition-colors bg-white hover:bg-neutral-50"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="text-sm font-bold text-neutral-800">{opRef(op)}</p>
+                              {docsBadge(op.id)}
+                            </div>
+                            <p className="text-xs text-neutral-600 truncate">{op.cliente || "-"}</p>
+                            <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+                              {op.naviera || "-"}
+                              {op.booking ? ` · ${op.booking}` : ""}
+                              {op.contenedor ? ` · ${op.contenedor}` : ""}
+                              {op.pod ? ` · ${op.pod}` : ""}
+                            </p>
+                            <p className="text-[11px] text-neutral-400 mt-1">{tr.colDate}: {formatDate(op.created_at)}</p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Tabla completa desktop — ancho completo */}
+                    <div className="hidden md:block w-full overflow-x-auto">
+                      <table className="w-full table-fixed text-left text-sm">
+                        <colgroup>
+                          <col className="w-[8%]" />
+                          <col className="w-[15%]" />
+                          <col className="w-[12%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[13%]" />
+                          <col className="w-[11%]" />
+                          <col className="w-[10%]" />
+                          <col className="w-[9%]" />
+                          <col className="w-[8%]" />
+                        </colgroup>
+                        <thead>
+                          <tr className="bg-neutral-50 border-b border-neutral-200 text-[11px] uppercase tracking-wider text-neutral-500">
+                            <th className="px-3 py-2.5 font-bold">{tr.colRef}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colCliente}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colNaviera}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colBooking}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colContenedor}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colPod}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colEtd}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colDocs}</th>
+                            <th className="px-3 py-2.5 font-bold">{tr.colDate}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100">
+                          {pagedOperaciones.length === 0 ? (
+                            <tr>
+                              <td colSpan={9} className="px-4 py-12 text-center text-neutral-400">
+                                {tr.noOperations}
+                              </td>
+                            </tr>
+                          ) : (
+                            pagedOperaciones.map((op) => (
+                              <tr
+                                key={op.id}
+                                onClick={() => handleSelectOperacion(op.id)}
+                                className="cursor-pointer transition-colors hover:bg-neutral-50"
+                              >
+                                <td className="px-3 py-2.5 font-bold truncate text-neutral-800">{opRef(op)}</td>
+                                <td className="px-3 py-2.5 text-neutral-700 truncate">{op.cliente || "-"}</td>
+                                <td className="px-3 py-2.5 text-neutral-600 truncate">{op.naviera || "-"}</td>
+                                <td className="px-3 py-2.5 text-neutral-600 truncate">{op.booking || "-"}</td>
+                                <td className="px-3 py-2.5 text-neutral-600 truncate font-mono text-xs">{op.contenedor || "-"}</td>
+                                <td className="px-3 py-2.5 text-neutral-600 truncate">{op.pod || "-"}</td>
+                                <td className="px-3 py-2.5 text-neutral-600 truncate">{formatDate(op.etd)}</td>
+                                <td className="px-3 py-2.5">{docsBadge(op.id)}</td>
+                                <td className="px-3 py-2.5 text-neutral-500 truncate">{formatDate(op.created_at)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
+
+              <div className="shrink-0">{paginationBar}</div>
             </div>
           </div>
 
-          {/* Panel derecho — documentos */}
-          <div className={`flex-1 min-w-0 ${mobilePanel !== "docs" ? "hidden lg:block" : ""}`}>
-            {selectedOperacion ? (
-              <div className="space-y-3">
-
-                {/* Banner operación seleccionada + progreso */}
-                {operacionActual && (
-                  <div className={`rounded-2xl overflow-hidden shadow-sm border-2 ${progressPct === 100 ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50" : "border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 to-sky-50"}`}>
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${progressPct === 100 ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
-                        <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={20} height={20} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-neutral-800 truncate">
-                          {operacionActual.ref_asli || `A${String(operacionActual.correlativo).padStart(5, "0")}`} — {operacionActual.cliente}
-                        </p>
-                        <p className="text-[11px] text-neutral-500 truncate">
-                          {operacionActual.naviera}{operacionActual.booking ? ` · ${operacionActual.booking}` : ""}{operacionActual.pod ? ` · ${operacionActual.pod}` : ""}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 h-2 bg-white/70 rounded-full overflow-hidden border border-neutral-200">
-                            <div className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#1d4ed8,#0ea5e9)" }} />
-                          </div>
-                          <span className={`text-[11px] font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
-                            {docsCompletados}/{visibleTipos.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
-                          </span>
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => setMobilePanel("select")}
-                        className="lg:hidden shrink-0 p-2 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors">
-                        <Icon icon="lucide:list" width={15} height={15} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium flex items-center gap-2">
-                    <Icon icon="lucide:alert-circle" className="w-3.5 h-3.5 flex-shrink-0" />
-                    {error}
-                  </div>
-                )}
-
-                {/* Grid de documentos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {visibleTipos.map((tipo) => {
-                    const doc = documentosPorTipo.get(tipo);
-                    const isUploading = uploading === tipo;
-                    const meta = TIPO_META[tipo];
-                    const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
-
-                    return (
-                      <div key={tipo} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-all ${
-                        doc ? "border-emerald-300" : "border-neutral-200"
-                      }`}>
-                        <div className={`h-1.5 ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-neutral-200 to-neutral-100"}`} />
-                        {/* Card header */}
-                        <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
-                          <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : meta.color.split(" ")[1]}`}>
-                            <Icon icon={doc ? "lucide:check" : meta.icon} className={`w-4.5 h-4.5 ${doc ? "text-emerald-600" : meta.color.split(" ")[0]}`} width={18} height={18} />
-                          </span>
-                          <h3 className="text-sm font-bold text-neutral-700 leading-tight flex-1 min-w-0">{tr.tipoLabels[tipo]}</h3>
-                        </div>
-                        {/* Card body */}
-                        <div className="p-3">
-                          {doc ? (
-                            <div className="space-y-2.5">
-                              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100">
-                                <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}
-                                  className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-500" : "text-green-600"}`} />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
-                                  <p className="text-xs text-neutral-400 mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <button type="button" onClick={() => handlePreview(doc)}
-                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-brand-blue bg-brand-blue/8 rounded-xl hover:bg-brand-blue/15 transition-colors">
-                                  <Icon icon="lucide:eye" className="w-4 h-4" />{tr.preview}
-                                </button>
-                                <button type="button" onClick={() => handleDownload(doc)}
-                                  className="inline-flex items-center justify-center w-9 h-9 text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
-                                  <Icon icon="lucide:download" className="w-4 h-4" />
-                                </button>
-                                {!isCliente && !isSyntheticBooking && (
-                                  <label className="inline-flex items-center justify-center w-9 h-9 text-neutral-500 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200" title={tr.replace}>
-                                    <Icon icon="lucide:refresh-cw" className="w-4 h-4" />
-                                    <input type="file" accept=".pdf,.xls,.xlsx" className="hidden"
-                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
-                                  </label>
-                                )}
-                                {!isCliente && !isSyntheticBooking && (
-                                  <button type="button" onClick={() => handleDelete(doc)}
-                                    className="inline-flex items-center justify-center w-9 h-9 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors border border-red-200" title={tr.deleteDocument}>
-                                    <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ) : isCliente ? (
-                            <div className="flex items-center gap-3 px-3 py-3 rounded-xl border border-dashed border-neutral-200">
-                              <Icon icon="lucide:file-x" className="w-5 h-5 text-neutral-300" />
-                              <p className="text-sm text-neutral-400">{tr.noDocument}</p>
-                            </div>
-                          ) : (
-                            <label className={`flex items-center gap-3 px-3 py-3 rounded-xl border border-dashed cursor-pointer transition-all ${
-                              isUploading ? "border-brand-blue bg-brand-blue/5" : "border-neutral-200 hover:border-brand-blue/50 hover:bg-brand-blue/3"
-                            }`}>
-                              {isUploading ? (
-                                <><Icon icon="lucide:loader-2" className="w-5 h-5 text-brand-blue animate-spin flex-shrink-0" />
-                                <span className="text-sm font-semibold text-brand-blue">{tr.uploading}</span></>
-                              ) : (
-                                <><Icon icon="lucide:upload" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
-                                <div>
-                                  <p className="text-sm font-semibold text-neutral-600">{tr.uploadFile}</p>
-                                  <p className="text-xs text-neutral-400">{tr.fileTypesHint}</p>
-                                </div></>
-                              )}
-                              <input type="file" accept=".pdf,.xls,.xlsx" className="hidden" disabled={isUploading}
-                                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl border border-neutral-200 shadow-sm">
-                <div className="py-12 px-6 text-center">
-                  <Icon icon="lucide:folder-open" width={32} height={32} className="text-neutral-300 mx-auto mb-3" />
-                  <p className="text-neutral-700 font-semibold text-sm mb-1">{tr.selectOperation}</p>
-                  <p className="text-neutral-400 text-xs">{tr.selectOperationPrompt}</p>
-                  <button type="button" onClick={() => setMobilePanel("select")}
-                    className="lg:hidden mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors">
-                    <Icon icon="lucide:list" width={12} height={12} />{tr.viewOperations}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Columna documentos — solo visible con selección */}
+          {hasSelection && (
+            <div className="flex-1 min-w-0 min-h-0 overflow-auto w-full">
+              {docsPanel}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modal preview */}
       {previewDoc && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={closePreview}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full h-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
+            className="bg-white rounded-2xl shadow-mac-modal w-full h-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
             <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 flex-shrink-0 gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                <span className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                   <Icon
                     icon={isPdf(previewDoc.mime_type) ? "lucide:file-text" : "lucide:file-spreadsheet"}
                     className={`w-4 h-4 ${isPdf(previewDoc.mime_type) ? "text-red-500" : "text-green-600"}`}
@@ -650,7 +833,7 @@ export function MisDocumentosContent() {
                 <button
                   type="button"
                   onClick={() => handleDownload(previewDoc)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
                 >
                   <Icon icon="lucide:download" className="w-3.5 h-3.5" />
                   {tr.download}
@@ -658,7 +841,7 @@ export function MisDocumentosContent() {
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors"
+                  className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                 >
                   <Icon icon="lucide:x" className="w-4 h-4" />
                 </button>
@@ -673,7 +856,7 @@ export function MisDocumentosContent() {
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <span className="w-16 h-16 rounded-2xl bg-neutral-200 flex items-center justify-center">
+                  <span className="w-16 h-16 rounded-lg bg-neutral-200 flex items-center justify-center">
                     <Icon icon="lucide:file-spreadsheet" className="w-8 h-8 text-neutral-400" />
                   </span>
                   <p className="text-neutral-600 font-medium">{tr.excelPreviewNotAvailable}</p>
@@ -681,7 +864,7 @@ export function MisDocumentosContent() {
                   <button
                     type="button"
                     onClick={() => handleDownload(previewDoc)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
                   >
                     <Icon icon="lucide:download" className="w-4 h-4" />
                     {tr.downloadFile}

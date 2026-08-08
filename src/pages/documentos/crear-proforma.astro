@@ -1,8 +1,5 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
-import { CrearProformaContent } from "@/components/documentos/CrearProformaContent";
----
+import { withBase } from "@/lib/basePath";
 
-<BaseLayout title="Crear Proforma - ASLI">
-  <CrearProformaContent client:load />
-</BaseLayout>
+return Astro.redirect(withBase("/inicio"), 302);
+---

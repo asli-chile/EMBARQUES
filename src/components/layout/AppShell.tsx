@@ -1,7 +1,6 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
 import { ConfigGuard } from "./ConfigGuard";
-import { CartolasNuboxGuard } from "./CartolasNuboxGuard";
 import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -28,26 +27,8 @@ const LazySobreNosotrosContent = lazy(() =>
 const LazyTrackingContent = lazy(() =>
   import("@/components/tracking/TrackingContent").then((m) => ({ default: m.TrackingContent })),
 );
-const LazyItinerarioContent = lazy(() =>
-  import("@/components/itinerario/ItinerarioContent").then((m) => ({ default: m.ItinerarioContent })),
-);
-const LazyServiciosUnicosContent = lazy(() =>
-  import("@/components/itinerario/ServiciosUnicosContent").then((m) => ({ default: m.ServiciosUnicosContent })),
-);
-const LazyStackingContent = lazy(() =>
-  import("@/components/stacking/StackingContent").then((m) => ({ default: m.StackingContent })),
-);
-const LazyConsorciosContent = lazy(() =>
-  import("@/components/itinerario/ConsorciosContent").then((m) => ({ default: m.ConsorciosContent })),
-);
 const LazyRegistrosContent = lazy(() =>
   import("@/components/registros").then((m) => ({ default: m.RegistrosContent })),
-);
-const LazyReportesContent = lazy(() =>
-  import("@/components/reportes").then((m) => ({ default: m.ReportesContent })),
-);
-const LazyFinanzasContent = lazy(() =>
-  import("@/components/finanzas").then((m) => ({ default: m.FinanzasContent })),
 );
 const LazyClientesContent = lazy(() =>
   import("@/components/clientes").then((m) => ({ default: m.ClientesContent })),
@@ -85,14 +66,8 @@ const LazyReservaAsliContent = lazy(() =>
 const LazyReservaExtContent = lazy(() =>
   import("@/components/transportes").then((m) => ({ default: m.ReservaExtContent })),
 );
-const LazyFacturacionContent = lazy(() =>
-  import("@/components/transportes").then((m) => ({ default: m.FacturacionContent })),
-);
 const LazyPapeleraTransportesContent = lazy(() =>
   import("@/components/transportes").then((m) => ({ default: m.PapeleraTransportesContent })),
-);
-const LazyFacturasTransporteContent = lazy(() =>
-  import("@/components/transportes/FacturasTransporteContent").then((m) => ({ default: m.FacturasTransporteContent })),
 );
 const LazyFormatosDocumentosContent = lazy(() =>
   import("@/components/configuracion/FormatosDocumentosContent").then((m) => ({ default: m.FormatosDocumentosContent })),
@@ -100,19 +75,6 @@ const LazyFormatosDocumentosContent = lazy(() =>
 const LazyMisDocumentosContent = lazy(() =>
   import("@/components/documentos").then((m) => ({ default: m.MisDocumentosContent })),
 );
-const LazyCrearInstructivoContent = lazy(() =>
-  import("@/components/documentos").then((m) => ({ default: m.CrearInstructivoContent })),
-);
-const LazyCrearProformaContent = lazy(() =>
-  import("@/components/documentos").then((m) => ({ default: m.CrearProformaContent })),
-);
-const LazyCartolasNuboxContent = lazy(() =>
-  import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
-);
-const LazyTarifarioContent = lazy(() =>
-  import("@/components/tarifario/TarifarioContent").then((m) => ({ default: m.TarifarioContent })),
-);
-
 function RouteFallback() {
   return <ModuleRouteLoader />;
 }
@@ -168,54 +130,12 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <Sus>
         <LazyTrackingContent />
       </Sus>
-    ) : pathname === "/itinerario" ? (
-      <Sus>
-        <LazyItinerarioContent />
-      </Sus>
-    ) : pathname === "/stacking" ? (
-      <Sus>
-        <LazyStackingContent />
-      </Sus>
-    ) : pathname === "/itinerario/servicios" ? (
-      <ConfigGuard allowAdmin={false} forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
-        <Sus>
-          <LazyServiciosUnicosContent />
-        </Sus>
-      </ConfigGuard>
-    ) : pathname === "/itinerario/consorcios" ? (
-      <ConfigGuard allowAdmin={false} forbiddenMessage="No tienes acceso a la gestión de servicios y consorcios. Solo el superadmin puede acceder.">
-        <Sus>
-          <LazyConsorciosContent />
-        </Sus>
-      </ConfigGuard>
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros">
         <Sus>
           <LazyRegistrosContent />
         </Sus>
       </ModuleWithVisitorInfo>
-    ) : pathname === "/reportes" ? (
-      <ModuleWithVisitorInfo moduleKey="reportes">
-        <Sus>
-          <LazyReportesContent />
-        </Sus>
-      </ModuleWithVisitorInfo>
-    ) : pathname === "/finanzas" ? (
-      <ModuleWithVisitorInfo moduleKey="finanzas">
-        <Sus>
-          <LazyFinanzasContent />
-        </Sus>
-      </ModuleWithVisitorInfo>
-    ) : pathname === "/tarifario" ? (
-      <Sus>
-        <LazyTarifarioContent />
-      </Sus>
-    ) : pathname === "/cartolas-nubox" ? (
-      <CartolasNuboxGuard>
-        <Sus>
-          <LazyCartolasNuboxContent />
-        </Sus>
-      </CartolasNuboxGuard>
     ) : pathname === "/configuracion/clientes" ? (
       <ConfigGuard>
         <Sus>
@@ -282,36 +202,14 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyReservaExtContent />
         </Sus>
       </ModuleWithVisitorInfo>
-    ) : pathname === "/transportes/facturacion" ? (
-      <ModuleWithVisitorInfo moduleKey="facturacion">
-        <Sus>
-          <LazyFacturacionContent />
-        </Sus>
-      </ModuleWithVisitorInfo>
     ) : pathname === "/transportes/papelera" ? (
       <Sus>
         <LazyPapeleraTransportesContent />
-      </Sus>
-    ) : pathname === "/transportes/facturas" ? (
-      <Sus>
-        <LazyFacturasTransporteContent />
       </Sus>
     ) : pathname === "/documentos/mis-documentos" ? (
       <ModuleWithVisitorInfo moduleKey="misDocumentos">
         <Sus>
           <LazyMisDocumentosContent />
-        </Sus>
-      </ModuleWithVisitorInfo>
-    ) : pathname === "/documentos/crear-instructivo" ? (
-      <ModuleWithVisitorInfo moduleKey="crearInstructivo">
-        <Sus>
-          <LazyCrearInstructivoContent />
-        </Sus>
-      </ModuleWithVisitorInfo>
-    ) : pathname === "/documentos/crear-proforma" ? (
-      <ModuleWithVisitorInfo moduleKey="crearProforma">
-        <Sus>
-          <LazyCrearProformaContent />
         </Sus>
       </ModuleWithVisitorInfo>
     ) : (

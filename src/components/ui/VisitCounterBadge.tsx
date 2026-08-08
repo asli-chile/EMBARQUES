@@ -76,12 +76,12 @@ export function VisitCounterBadge() {
       <button
         type="button"
         onClick={() => { fetchTotal(); setOpen((v) => !v); }}
-        className="flex items-center gap-1.5 h-10 px-2.5 text-neutral-500 hover:bg-neutral-200/80 rounded-full transition-all duration-200 text-xs font-medium"
+        className="flex items-center gap-1.5 h-11 px-3 text-neutral-600 hover:bg-neutral-200/80 rounded-full transition-all duration-200 text-base font-semibold"
         title="Total de visitas a la página"
         aria-label="Contador de visitas"
       >
-        <Icon icon="lucide:eye" width={16} height={16} />
-        <span className="tabular-nums">
+        <Icon icon="lucide:eye" width={20} height={20} />
+        <span className="tabular-nums text-lg">
           {total === null ? "–" : total.toLocaleString("es-CL")}
         </span>
       </button>

@@ -124,13 +124,13 @@ export function OnlineUsersButton() {
       <button
         type="button"
         onClick={() => { fetchSessions(); setOpen((v) => !v); }}
-        className="relative flex items-center justify-center w-10 h-10 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
+        className="relative flex items-center justify-center w-11 h-11 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
         aria-label={`Ver usuarios en línea (${total})`}
         title="Usuarios en línea"
       >
-        <Icon icon="lucide:users" width={20} height={20} />
+        <Icon icon="lucide:users" width={24} height={24} />
         {total > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 min-w-[16px] px-0.5 items-center justify-center rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none pointer-events-none">
+          <span className="absolute top-0.5 right-0.5 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold leading-none pointer-events-none">
             {total}
           </span>
         )}

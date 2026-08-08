@@ -8,20 +8,20 @@ import { HeaderTitle } from "./HeaderTitle";
 export function Header() {
   return (
     <header
-      className="sticky top-0 z-50 h-[50px] min-h-[50px] bg-white flex items-center px-4 flex-shrink-0 gap-2"
+      className="sticky top-0 z-50 h-[60px] min-h-[60px] bg-white flex items-center px-4 flex-shrink-0 gap-3"
       role="banner"
     >
       {/* Logo — mobile: tamaño reducido, desktop: tamaño completo */}
       <a
         href={marketingHomeUrl}
-        className="h-7 md:h-[46px] w-auto flex items-center flex-shrink-0"
+        className="h-9 md:h-[50px] w-auto flex items-center flex-shrink-0"
         aria-label="Ir al inicio del sitio web"
       >
         <img
           src={siteConfig.logo}
           alt={siteConfig.companyTitle}
-          width={150}
-          height={40}
+          width={160}
+          height={44}
           className="h-full w-auto object-contain object-left"
           loading="eager"
           decoding="async"

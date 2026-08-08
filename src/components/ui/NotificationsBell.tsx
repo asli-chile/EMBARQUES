@@ -98,11 +98,11 @@ export function NotificationsBell() {
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-label="Notificaciones"
-        className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-neutral-100 transition-colors"
+        className="relative flex items-center justify-center w-11 h-11 rounded-full hover:bg-neutral-100 transition-colors"
       >
-        <Icon icon="lucide:bell" className="w-[18px] h-[18px] text-neutral-500" />
+        <Icon icon="lucide:bell" className="w-6 h-6 text-neutral-600" />
         {noLeidas > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-sm font-bold flex items-center justify-center leading-none">
             {noLeidas > 99 ? "99+" : noLeidas}
           </span>
         )}

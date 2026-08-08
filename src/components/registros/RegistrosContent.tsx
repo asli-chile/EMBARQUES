@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, SELECTION_COLUMN_ID } from "ag-grid-community";
-import type { ColDef, ColGroupDef } from "ag-grid-community";
+import type { ColDef, ColGroupDef, CellContextMenuEvent } from "ag-grid-community";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -684,6 +684,12 @@ export function RegistrosContent() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    operacionId: string;
+    refLabel: string;
+  } | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -743,6 +749,50 @@ export function RegistrosContent() {
     applyHiddenColumns(hiddenColumnsRef.current);
     applyColumnOrder();
   }, [applyHiddenColumns, applyColumnOrder]);
+
+  const handleCellContextMenu = useCallback((params: CellContextMenuEvent<OperacionRow>) => {
+    const nativeEvent = params.event;
+    if (nativeEvent) {
+      nativeEvent.preventDefault();
+      nativeEvent.stopPropagation();
+    }
+    const data = params.node?.data;
+    if (!data?.id) return;
+    const mouse = nativeEvent as MouseEvent | undefined;
+    const x = mouse?.clientX ?? 0;
+    const y = mouse?.clientY ?? 0;
+    const refLabel = data.ref_asli || `A${String(data.correlativo ?? 0).padStart(5, "0")}`;
+    setCtxMenu({ x, y, operacionId: data.id, refLabel });
+  }, []);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    // next tick so the opening right-click doesn't immediately close
+    const t = window.setTimeout(() => {
+      window.addEventListener("click", close);
+      window.addEventListener("contextmenu", close);
+      window.addEventListener("scroll", close, true);
+      window.addEventListener("keydown", onKey);
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("click", close);
+      window.removeEventListener("contextmenu", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [ctxMenu]);
+
+  const handleCtxAddDocuments = useCallback(() => {
+    if (!ctxMenu) return;
+    const url = `${withBase("/documentos/mis-documentos")}?op=${encodeURIComponent(ctxMenu.operacionId)}`;
+    setCtxMenu(null);
+    window.location.assign(url);
+  }, [ctxMenu]);
 
   useEffect(() => {
     const api = gridRef.current?.api;
@@ -1852,6 +1902,9 @@ export function RegistrosContent() {
             domLayout="normal"
             getRowId={(params) => params.data.id}
             onCellValueChanged={handleCellValueChanged}
+            onCellContextMenu={handleCellContextMenu}
+            suppressContextMenu
+            preventDefaultOnContextMenu
             onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
             onGridReady={onGridReady}
             onDragStopped={onDragStopped}
@@ -1859,6 +1912,35 @@ export function RegistrosContent() {
           />
         </div>
       </div>
+
+      {ctxMenu && (() => {
+        const menuW = 240;
+        const menuH = 88;
+        const left = Math.max(8, Math.min(ctxMenu.x, window.innerWidth - menuW - 8));
+        const top = Math.max(8, Math.min(ctxMenu.y, window.innerHeight - menuH - 8));
+        return (
+          <div
+            role="menu"
+            className="fixed z-[80] min-w-[220px] rounded-lg border border-neutral-200 bg-white shadow-lg py-1"
+            style={{ left, top }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 truncate">
+              {ctxMenu.refLabel}
+            </p>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleCtxAddDocuments}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-neutral-800 hover:bg-brand-blue/8 hover:text-brand-blue transition-colors"
+            >
+              <Icon icon="lucide:folder-plus" width={16} height={16} className="shrink-0 text-brand-blue" />
+              {t.registros.contextAddDocuments}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Panel: visibilidad de columnas */}
       {showColumnPanel && (

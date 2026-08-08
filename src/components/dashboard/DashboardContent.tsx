@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, addDays, startOfDay, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { withBase } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
@@ -15,6 +15,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 type OperacionResumen = {
   id: string;
   ref_asli: string | null;
+  correlativo: number | null;
   cliente: string | null;
   naviera: string | null;
   nave: string | null;
@@ -26,6 +27,15 @@ type OperacionResumen = {
   booking: string | null;
   especie: string | null;
   segundas: string | null;
+  contenedor: string | null;
+  booking_doc_url: string | null;
+  enviado_transporte: boolean | null;
+  transporte: string | null;
+  corte_documental: string | null;
+  fin_stacking: string | null;
+  operacion_critica: boolean | null;
+  prioridad: string | null;
+  numero_factura_asli: string | null;
   created_at?: string;
 };
 
@@ -41,6 +51,28 @@ type PortMarker = {
 const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const REGION_LABELS = ["America", "Europa", "India y Medio Oriente", "Oceania", "Asia"] as const;
 type RegionLabel = (typeof REGION_LABELS)[number];
+
+const CLOSED_ESTADOS = new Set(["CANCELADO", "ARRIBADO", "ARRIBADA", "COMPLETADO", "COMPLETADA"]);
+
+function normEstado(value: string | null | undefined): string {
+  return (value ?? "").trim().toUpperCase();
+}
+
+function parseOpDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  try {
+    const d = parseISO(value.length === 10 ? `${value}T12:00:00` : value);
+    return isValid(d) ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+function opRefLabel(op: OperacionResumen): string {
+  if (op.ref_asli) return op.ref_asli;
+  if (op.correlativo != null) return `A${String(op.correlativo).padStart(5, "0")}`;
+  return "—";
+}
 
 function classifyRegionFromPodName(pod: string): RegionLabel | null {
   const text = pod.toUpperCase();
@@ -158,7 +190,7 @@ export function DashboardContent() {
     }
     setLoading(true);
     const allRes = await buildFilteredQuery(
-      "id, ref_asli, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, especie, segundas, created_at"
+      "id, ref_asli, correlativo, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, especie, segundas, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli, created_at"
     ).limit(2000);
     const allData = (allRes.data ?? []) as OperacionResumen[];
     setMapOperations(allData);
@@ -226,6 +258,137 @@ export function DashboardContent() {
       if (op.cliente) clients.add(op.cliente);
     }
     return clients.size;
+  }, [mapOperations]);
+
+  const operationalKpis = useMemo(() => {
+    const today = startOfDay(new Date());
+    const in7 = addDays(today, 7);
+    const in3 = addDays(today, 3);
+
+    let total = 0;
+    let active = 0;
+    let pending = 0;
+    let confirmed = 0;
+    let cancelled = 0;
+    let arrived = 0;
+    let rolled = 0;
+    let etdNext7 = 0;
+    let etdToday = 0;
+    let etdTomorrow = 0;
+    let cutoffNext3 = 0;
+    let stackingClosing = 0;
+      let transportPending = 0;
+    let transportAssigned = 0;
+    let notSentToTransport = 0;
+    let noBookingDoc = 0;
+    let critical = 0;
+    let invoicePending = 0;
+
+    const byStatus = new Map<string, number>();
+    const upcoming: Array<{
+      id: string;
+      ref: string;
+      cliente: string;
+      naviera: string;
+      pod: string;
+      etd: Date;
+      days: number;
+      critico: boolean;
+    }> = [];
+
+    for (const op of mapOperations) {
+      total += 1;
+      const estado = normEstado(op.estado_operacion) || "SIN ESTADO";
+      byStatus.set(estado, (byStatus.get(estado) ?? 0) + 1);
+
+      if (!CLOSED_ESTADOS.has(estado)) active += 1;
+      if (estado === "PENDIENTE" || estado === "SOLICITUD") pending += 1;
+      if (estado === "CONFIRMADA" || estado === "CONFIRMADO") confirmed += 1;
+      if (estado === "CANCELADO") cancelled += 1;
+      if (estado === "ARRIBADO" || estado === "ARRIBADA") arrived += 1;
+      if (estado === "ROLEADO") rolled += 1;
+      if (op.operacion_critica || normEstado(op.prioridad) === "ALTA") critical += 1;
+
+      const etd = parseOpDate(op.etd);
+      if (etd) {
+        const etdDay = startOfDay(etd);
+        if (etdDay >= today && etdDay <= in7) {
+          etdNext7 += 1;
+          const days = differenceInCalendarDays(etdDay, today);
+          if (days === 0) etdToday += 1;
+          if (days === 1) etdTomorrow += 1;
+          upcoming.push({
+            id: op.id,
+            ref: opRefLabel(op),
+            cliente: op.cliente ?? "—",
+            naviera: op.naviera ?? "—",
+            pod: op.pod ?? "—",
+            etd: etdDay,
+            days,
+            critico: !!(op.operacion_critica || normEstado(op.prioridad) === "ALTA"),
+          });
+        }
+      }
+
+      const corte = parseOpDate(op.corte_documental);
+      if (corte) {
+        const corteDay = startOfDay(corte);
+        if (corteDay >= today && corteDay <= in3 && !CLOSED_ESTADOS.has(estado)) cutoffNext3 += 1;
+      }
+
+      const stackingEnd = parseOpDate(op.fin_stacking);
+      if (stackingEnd) {
+        const stackDay = startOfDay(stackingEnd);
+        if (stackDay >= today && stackDay <= in3 && !CLOSED_ESTADOS.has(estado)) stackingClosing += 1;
+      }
+
+      if (op.enviado_transporte) {
+        if (op.transporte || op.contenedor) transportAssigned += 1;
+        else transportPending += 1;
+      } else if (!CLOSED_ESTADOS.has(estado)) {
+        notSentToTransport += 1;
+      }
+
+      if (!op.booking_doc_url && !CLOSED_ESTADOS.has(estado)) noBookingDoc += 1;
+
+      if (
+        op.enviado_transporte &&
+        (op.transporte || op.contenedor) &&
+        !op.numero_factura_asli &&
+        !CLOSED_ESTADOS.has(estado)
+      ) {
+        invoicePending += 1;
+      }
+    }
+
+    upcoming.sort((a, b) => a.etd.getTime() - b.etd.getTime() || a.ref.localeCompare(b.ref));
+
+    const statusItems = Array.from(byStatus.entries())
+      .map(([estado, cantidad]) => ({ estado, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad || a.estado.localeCompare(b.estado));
+
+    return {
+      total,
+      active,
+      pending,
+      confirmed,
+      cancelled,
+      arrived,
+      rolled,
+      etdNext7,
+      etdToday,
+      etdTomorrow,
+      cutoffNext3,
+      stackingClosing,
+      transportPending,
+      transportAssigned,
+      notSentToTransport,
+      noBookingDoc,
+      critical,
+      invoicePending,
+      statusItems,
+      upcoming: upcoming.slice(0, 8),
+    };
   }, [mapOperations]);
 
   const clientsWithOperationCount = useMemo(() => {
@@ -349,19 +512,7 @@ export function DashboardContent() {
     return leaders;
   }, [mapOperations]);
 
-  const speciesWithPodLeaderCount = useMemo(() => {
-    let n = 0;
-    for (const { especie } of speciesStats.ranked) {
-      if (speciesTopPodByEspecie.has(especie)) n += 1;
-    }
-    return n;
-  }, [speciesStats.ranked, speciesTopPodByEspecie]);
-
   const speciesFunnelItems = useMemo(() => speciesStats.ranked.slice(0, 8), [speciesStats.ranked]);
-  const speciesFunnelMax = useMemo(
-    () => Math.max(...speciesFunnelItems.map((item) => item.cantidad), 1),
-    [speciesFunnelItems]
-  );
   const speciesLeaderByEspecie = useMemo(
     () =>
       speciesStats.ranked
@@ -383,10 +534,6 @@ export function DashboardContent() {
     [speciesStats.ranked, speciesTopPodByEspecie]
   );
   const speciesLeaderPodItems = useMemo(() => speciesLeaderByEspecie.slice(0, 8), [speciesLeaderByEspecie]);
-  const speciesLeaderPodItemsMax = useMemo(
-    () => Math.max(...speciesLeaderPodItems.map((item) => item.podCantidad), 1),
-    [speciesLeaderPodItems]
-  );
 
   useEffect(() => {
     const map = mapRef.current;
@@ -418,143 +565,354 @@ export function DashboardContent() {
 
   if (loading) {
     return (
-      <main className="relative flex-1 min-h-0 overflow-auto bg-[#060B17]">
+      <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col bg-[#060B17]">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
           <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
         </div>
-        <div className="relative bg-[#0A1328]/90 border-b border-cyan-400/20 h-14" />
-        <div className="p-4 sm:p-5 w-full max-w-[1600px] mx-auto space-y-4 animate-pulse">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className={`bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-24 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`} />
+        <div className="relative shrink-0 bg-[#0A1328]/90 border-b border-cyan-400/20 h-11" />
+        <div className="relative flex-1 min-h-0 p-2 grid grid-rows-[auto_1fr_1fr] gap-2 animate-pulse">
+          <div className="grid grid-cols-8 gap-2 h-14">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-[#101C36]/80 rounded-lg border border-cyan-300/20" />
             ))}
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-20" />
+          <div className="grid grid-cols-3 gap-2 min-h-0">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-[#101C36]/80 rounded-lg border border-cyan-300/20" />
             ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-72" />
-            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-72" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-60" />
-            <div className="bg-[#101C36]/80 rounded-2xl border border-cyan-300/20 h-60" />
+          <div className="grid grid-cols-4 gap-2 min-h-0">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-[#101C36]/80 rounded-lg border border-cyan-300/20" />
+            ))}
           </div>
         </div>
       </main>
     );
   }
 
+  const kpiCards = [
+    {
+      key: "total",
+      label: tr.totalOperations,
+      value: operationalKpis.total,
+      hint: `${operationalKpis.active} ${tr.activeOps}`,
+      icon: "lucide:layers",
+      accent: "text-cyan-300",
+      ring: "border-cyan-300/25",
+      href: withBase("/registros"),
+    },
+    {
+      key: "pending",
+      label: tr.pending,
+      value: operationalKpis.pending,
+      hint: `${operationalKpis.confirmed} ${tr.confirmed}`,
+      icon: "lucide:clock-3",
+      accent: "text-amber-300",
+      ring: "border-amber-300/25",
+      href: withBase("/registros"),
+    },
+    {
+      key: "etd",
+      label: tr.upcomingDepartures,
+      value: operationalKpis.etdNext7,
+      hint: `${operationalKpis.etdToday} ${tr.today} · ${operationalKpis.etdTomorrow} ${tr.tomorrow}`,
+      icon: "lucide:ship",
+      accent: "text-sky-300",
+      ring: "border-sky-300/25",
+      href: withBase("/registros"),
+    },
+    {
+      key: "cutoff",
+      label: tr.docCutoffSoon,
+      value: operationalKpis.cutoffNext3,
+      hint: tr.docCutoffSoonHint,
+      icon: "lucide:file-warning",
+      accent: "text-orange-300",
+      ring: "border-orange-300/25",
+      href: withBase("/documentos/mis-documentos"),
+    },
+    {
+      key: "stacking",
+      label: tr.stackingClosing,
+      value: operationalKpis.stackingClosing,
+      hint: tr.stackingClosingHint,
+      icon: "lucide:calendar-clock",
+      accent: "text-violet-300",
+      ring: "border-violet-300/25",
+      href: withBase("/registros"),
+    },
+    {
+      key: "transport",
+      label: tr.transportPending,
+      value: operationalKpis.transportPending,
+      hint: `${operationalKpis.notSentToTransport} ${tr.notSentToTransport}`,
+      icon: "lucide:truck",
+      accent: "text-emerald-300",
+      ring: "border-emerald-300/25",
+      href: withBase("/transportes/reserva-asli"),
+    },
+    {
+      key: "docs",
+      label: tr.missingBookingDoc,
+      value: operationalKpis.noBookingDoc,
+      hint: tr.missingBookingDocHint,
+      icon: "lucide:file-x",
+      accent: "text-rose-300",
+      ring: "border-rose-300/25",
+      href: withBase("/documentos/mis-documentos"),
+    },
+    {
+      key: "critical",
+      label: tr.criticalOps,
+      value: operationalKpis.critical,
+      hint: operationalKpis.invoicePending > 0
+        ? `${operationalKpis.invoicePending} ${tr.invoicePending}`
+        : `${operationalKpis.rolled} ${tr.rolled}`,
+      icon: "lucide:alert-triangle",
+      accent: "text-red-300",
+      ring: "border-red-300/30",
+      href: withBase("/registros"),
+    },
+  ] as const;
+
+  const upcomingRows = operationalKpis.upcoming.slice(0, 5);
+  const topClients = clientsWithOperationCount.slice(0, 5);
+  const topNav = topNavieras.topItems.slice(0, 5);
+  const topSpecies = speciesFunnelItems.slice(0, 5);
+  const topSpeciesPod = speciesLeaderPodItems.slice(0, 5);
+
   return (
-    <main className="relative flex-1 min-h-0 overflow-auto bg-[#060B17]">
+    <main className="relative flex-1 min-h-0 overflow-y-auto flex flex-col bg-[#060B17] text-base">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
       </div>
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 bg-[#0A1328]/90 border-b border-cyan-400/20 backdrop-blur">
-        <div className="w-full px-4 sm:px-5 lg:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h1 className="text-base font-bold text-cyan-100 tracking-tight leading-tight">{tr.title}</h1>
-            <p className="text-[11px] text-cyan-300/60 mt-0.5">
-              {format(new Date(), "EEEE d MMM yyyy", { locale: locale === "es" ? es : undefined })}
+      {/* Header */}
+      <div className="relative shrink-0 z-10 bg-[#0A1328]/90 border-b border-cyan-400/20 backdrop-blur">
+        <div className="w-full px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-cyan-100 tracking-tight leading-tight">{tr.title}</h1>
+            <p className="text-sm text-cyan-300/70 truncate mt-1">
+              {format(new Date(), "EEE d MMM yyyy", { locale: locale === "es" ? es : undefined })}
               {lastFetchedAt && getLastUpdatedText() && (
-                <> · <span className="text-cyan-300/40">actualizado {getLastUpdatedText()}</span></>
+                <> · {tr.lastUpdated} {getLastUpdatedText()}</>
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <a href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors shadow-[0_0_18px_rgba(34,211,238,0.25)]">
-              <Icon icon="lucide:plus" className="w-3.5 h-3.5" />
-              {isCliente ? t.sidebar.solicitarReserva : t.sidebar.crearReserva}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors">
+              <Icon icon="lucide:plus" className="w-5 h-5" />
+              <span className="hidden sm:inline">{isCliente ? t.sidebar.solicitarReserva : t.sidebar.crearReserva}</span>
             </a>
             <a href={withBase("/reservas/mis-reservas")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors">
-              <Icon icon="lucide:list" className="w-3.5 h-3.5" />
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-medium text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors">
+              <Icon icon="lucide:list" className="w-5 h-5" />
               {t.sidebar.misReservas}
             </a>
-            <button onClick={() => void fetchDashboardData()}
-              className="p-1.5 text-cyan-200/70 hover:text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors"
+            <button type="button" onClick={() => void fetchDashboardData()}
+              className="p-2.5 text-cyan-200/70 hover:text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors"
               title={tr.refresh}>
-              <Icon icon="lucide:refresh-cw" className="w-3.5 h-3.5" />
+              <Icon icon="lucide:refresh-cw" className="w-5 h-5" />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 lg:p-5 w-full overflow-x-auto min-[2200px]:overflow-visible">
-        <div className="min-[2200px]:h-[720px]">
-          <div className="min-[2200px]:w-1/2 min-[2200px]:scale-[2] min-[2200px]:origin-top-left">
-          <div className="grid grid-cols-1 md:grid-cols-2 min-[1180px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] min-[1440px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2.3fr)] min-[2200px]:grid-cols-[380px_380px_minmax(0,1fr)_980px] gap-4 min-[2200px]:gap-6 items-start">
-          {/* KPI clientes (izquierda) */}
-          <div className="bg-[#0D1830]/80 rounded-2xl border border-cyan-300/20 shadow-[0_0_30px_rgba(56,189,248,0.12)] p-3.5 min-[2133px]:p-6 h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] flex flex-col backdrop-blur-sm">
-            <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Clientes con operaciones</p>
-            <p className="text-2xl min-[2133px]:text-[52px] font-bold text-cyan-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(103,232,249,0.4)]">{activeClientsCount}</p>
-            <p className="text-sm min-[2133px]:text-lg text-cyan-100/60 mt-1">con operaciones</p>
-            <div className="mt-2 border-t border-cyan-300/15 pt-1.5 min-[2133px]:mt-3 min-[2133px]:pt-3 flex-1 overflow-auto">
-              {clientsWithOperationCount.length === 0 ? (
-                <p className="text-sm min-[2133px]:text-lg text-cyan-100/45">Sin clientes con operaciones</p>
+      <div className="relative flex-1 min-h-0 p-3 sm:p-4 flex flex-col gap-3">
+
+        {/* KPIs */}
+        <div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
+          {kpiCards.map((kpi) => (
+            <a
+              key={kpi.key}
+              href={kpi.href}
+              className={`rounded-xl border ${kpi.ring} bg-[#0D1830]/90 px-3 py-3 hover:bg-[#12203C] transition-colors min-w-0`}
+            >
+              <div className="flex items-start justify-between gap-1.5">
+                <p className="text-sm font-semibold text-cyan-200/80 leading-snug line-clamp-2">{kpi.label}</p>
+                <Icon icon={kpi.icon} width={18} height={18} className={`shrink-0 mt-0.5 ${kpi.accent}`} />
+              </div>
+              <p className={`text-3xl sm:text-4xl font-bold tabular-nums leading-none mt-2 ${kpi.accent}`}>{kpi.value}</p>
+              <p className="text-sm text-cyan-100/60 truncate mt-2">{kpi.hint}</p>
+            </a>
+          ))}
+        </div>
+
+        {/* Fila media: zarpes | estados | mapa */}
+        <div className="flex-1 min-h-[280px] grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)] gap-3">
+          {/* Zarpes */}
+          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-center justify-between gap-2">
+              <p className="text-base font-bold text-cyan-100 truncate">{tr.upcomingDepartures}</p>
+              <a href={withBase("/registros")} className="text-sm font-semibold text-cyan-300/90 hover:text-cyan-200">{tr.viewAll}</a>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto">
+              {upcomingRows.length === 0 ? (
+                <div className="h-full flex items-center justify-center px-6 text-center">
+                  <p className="text-base sm:text-lg text-cyan-100/55 leading-relaxed max-w-sm">{tr.noUpcoming}</p>
+                </div>
               ) : (
-                <ul className="space-y-1.5">
-                  {clientsWithOperationCount.map((item) => (
-                    <li key={item.cliente} className="text-sm min-[2133px]:text-lg text-cyan-50/90">
-                      <span className="font-medium">{item.cliente}</span>{" "}
-                      <span className="text-cyan-200/60">({item.cantidad})</span>
-                    </li>
-                  ))}
-                </ul>
+                <table className="w-full text-left text-base">
+                  <thead className="sticky top-0 bg-[#0D1830]">
+                    <tr className="text-sm text-cyan-300/60 border-b border-cyan-300/10">
+                      <th className="px-4 py-2.5 font-bold">{tr.colRef}</th>
+                      <th className="px-4 py-2.5 font-bold hidden sm:table-cell">{tr.colClient}</th>
+                      <th className="px-4 py-2.5 font-bold">{tr.colPod}</th>
+                      <th className="px-4 py-2.5 font-bold">{tr.colWhen}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-cyan-300/10">
+                    {upcomingRows.map((item) => (
+                      <tr key={item.id} className="hover:bg-cyan-400/5">
+                        <td className="px-4 py-2.5 font-bold text-cyan-100 whitespace-nowrap">
+                          {item.ref}
+                          {item.critico && <Icon icon="lucide:alert-triangle" width={16} height={16} className="inline ml-1.5 text-red-300" />}
+                        </td>
+                        <td className="px-4 py-2.5 text-cyan-100/85 truncate max-w-[8rem] hidden sm:table-cell">{item.cliente}</td>
+                        <td className="px-4 py-2.5 text-cyan-100/80 truncate max-w-[6rem]">{item.pod}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`text-sm font-bold px-2.5 py-1 rounded-sm border ${
+                            item.days === 0
+                              ? "bg-red-500/15 text-red-300 border-red-400/30"
+                              : item.days === 1
+                                ? "bg-amber-500/15 text-amber-300 border-amber-400/30"
+                                : "bg-cyan-500/10 text-cyan-300 border-cyan-400/25"
+                          }`}>
+                            {item.days === 0 ? tr.today : item.days === 1 ? tr.tomorrow : `${item.days}d`}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
 
-          {/* Dona marítima vs aéreo */}
-          <div className="bg-[#0D1830]/80 rounded-2xl border border-cyan-300/20 shadow-[0_0_30px_rgba(56,189,248,0.12)] p-3.5 min-[2133px]:p-6 h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] backdrop-blur-sm">
-            <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Operaciones por vía</p>
-            <div className="mt-3 min-[2133px]:mt-4 flex items-center gap-4 min-[2133px]:gap-6">
-              <div
-                className="relative h-28 w-28 min-[2133px]:h-44 min-[2133px]:w-44 rounded-full shadow-inner"
-                style={{
-                  background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)`,
-                }}
-              >
-                <div className="absolute inset-[14px] min-[2133px]:inset-[24px] rounded-full bg-[#0D1830] border border-cyan-300/20 flex items-center justify-center">
-                  <div className="text-center leading-tight">
-                    <p className="text-xs min-[2133px]:text-base text-cyan-200/60">Marítima</p>
-                    <p className="text-base min-[2133px]:text-2xl font-bold text-cyan-100">
-                      {transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}
-                    </p>
+          {/* Estados */}
+          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15">
+              <p className="text-base font-bold text-cyan-100">{tr.byStatus}</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-2.5">
+              {operationalKpis.statusItems.slice(0, 6).map((item) => {
+                const pct = operationalKpis.total > 0 ? Math.round((item.cantidad / operationalKpis.total) * 100) : 0;
+                const tone =
+                  item.estado === "CANCELADO" ? "bg-red-400"
+                    : item.estado === "PENDIENTE" || item.estado === "SOLICITUD" ? "bg-amber-400"
+                      : item.estado === "CONFIRMADA" || item.estado === "CONFIRMADO" ? "bg-emerald-400"
+                        : item.estado === "ROLEADO" ? "bg-violet-400"
+                          : item.estado.startsWith("ARRIB") ? "bg-sky-400"
+                            : "bg-cyan-400";
+                return (
+                  <div key={item.estado}>
+                    <div className="flex items-center justify-between gap-2 text-base mb-1">
+                      <span className="font-semibold text-cyan-50/95 truncate">{item.estado}</span>
+                      <span className="tabular-nums text-cyan-200/85 shrink-0 font-semibold">{item.cantidad}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-cyan-950/60 overflow-hidden">
+                      <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(pct, 3)}%` }} />
+                    </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+            <div className="shrink-0 px-4 py-3 border-t border-cyan-300/15 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-lg font-bold text-emerald-300 tabular-nums">{operationalKpis.arrived}</p>
+                <p className="text-sm text-cyan-300/65 mt-0.5">{tr.arrived}</p>
               </div>
-              <div className="text-sm min-[2133px]:text-lg space-y-1.5 min-[2133px]:space-y-2">
-                <p className="text-cyan-100/90"><span className="inline-block w-2 h-2 rounded-full bg-cyan-400 mr-1" />Marítima ({transportDistribution.maritima})</p>
-                <p className="text-cyan-100/90"><span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1" />Aéreo ({transportDistribution.aereo})</p>
+              <div>
+                <p className="text-lg font-bold text-violet-300 tabular-nums">{operationalKpis.rolled}</p>
+                <p className="text-sm text-cyan-300/65 mt-0.5">{tr.rolled}</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-red-300 tabular-nums">{operationalKpis.cancelled}</p>
+                <p className="text-sm text-cyan-300/65 mt-0.5">{tr.cancelled}</p>
               </div>
             </div>
-            <p className="text-[13px] min-[2133px]:text-base text-cyan-100/60 mt-2 min-[2133px]:mt-3">Total: {transportDistribution.total}</p>
           </div>
 
-          {/* Barras por región */}
-          <div className="bg-[#0D1830]/80 rounded-2xl border border-cyan-300/20 shadow-[0_0_30px_rgba(56,189,248,0.12)] p-3.5 min-[2133px]:p-6 h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] backdrop-blur-sm">
-            <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-300/70 uppercase tracking-[0.16em]">Distribución por región</p>
-            <div className="mt-3 min-[2133px]:mt-4 space-y-2.5 min-[2133px]:space-y-3">
-              {regionDistribution.items.map((item) => {
+          {/* Mapa */}
+          <div className="min-h-[220px] lg:min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/70 overflow-hidden relative">
+            <MapLibreMap
+              ref={mapRef}
+              initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
+              mapStyle={DASHBOARD_MAP_STYLE}
+              style={{ width: "100%", height: "100%" }}
+              dragRotate={false}
+              attributionControl={false}
+            >
+              <NavigationControl position="top-right" showCompass={false} />
+              {portMarkers.map((marker) => {
+                const isOrigin = marker.type === "origen";
+                return (
+                  <Marker key={marker.key} longitude={marker.lng} latitude={marker.lat} anchor="center">
+                    <div
+                      title={`${marker.label} (${marker.count})`}
+                      className={`h-3.5 w-3.5 rounded-full border-2 border-white ${isOrigin ? "bg-red-500" : "bg-emerald-500"}`}
+                    />
+                  </Marker>
+                );
+              })}
+            </MapLibreMap>
+          </div>
+        </div>
+
+        {/* Fila inferior */}
+        <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 min-h-[200px]">
+          {/* Clientes */}
+          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-cyan-200/90">{tr.activeClients}</p>
+              <p className="text-2xl font-bold text-cyan-200 tabular-nums">{activeClientsCount}</p>
+            </div>
+            <ul className="flex-1 min-h-0 overflow-auto px-4 py-2 space-y-2">
+              {topClients.length === 0 ? (
+                <li className="text-base text-cyan-100/40 py-2">—</li>
+              ) : (
+                topClients.map((item) => (
+                  <li key={item.cliente} className="flex items-center justify-between gap-2 text-base">
+                    <span className="text-cyan-50/95 truncate">{item.cliente}</span>
+                    <span className="text-cyan-200/80 tabular-nums shrink-0 font-semibold">{item.cantidad}</span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+
+          {/* Vía + región */}
+          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col p-4 gap-3">
+            <div className="flex items-center gap-3 shrink-0">
+              <div
+                className="relative h-16 w-16 rounded-full shrink-0"
+                style={{ background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)` }}
+              >
+                <div className="absolute inset-[9px] rounded-full bg-[#0D1830] flex items-center justify-center">
+                  <span className="text-sm font-bold text-cyan-100">{transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}</span>
+                </div>
+              </div>
+              <div className="text-base space-y-1.5 min-w-0">
+                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 mr-2" />Marítima {transportDistribution.maritima}</p>
+                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />Aéreo {transportDistribution.aereo}</p>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto space-y-2">
+              {regionDistribution.items.filter((i) => i.count > 0).slice(0, 5).map((item) => {
                 const width = (item.count / regionDistribution.max) * 100;
                 return (
                   <div key={item.region}>
-                    <div className="flex items-center justify-between text-[13px] min-[2133px]:text-lg mb-1 min-[2133px]:mb-1.5">
-                      <span className="text-cyan-50/90">{item.region}</span>
-                      <span className="text-cyan-200/60">{item.count}</span>
+                    <div className="flex justify-between text-base text-cyan-100/90 mb-1">
+                      <span className="truncate">{item.region}</span>
+                      <span className="tabular-nums text-cyan-200/80 font-semibold">{item.count}</span>
                     </div>
-                    <div className="h-2 min-[2133px]:h-4 bg-cyan-950/50 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-400 rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(34,211,238,0.8)]" style={{ width: `${width}%` }} />
+                    <div className="h-2 bg-cyan-950/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${width}%` }} />
                     </div>
                   </div>
                 );
@@ -562,180 +920,56 @@ export function DashboardContent() {
             </div>
           </div>
 
-          {/* Mapa */}
-          <div className="overflow-hidden h-[220px] min-[1180px]:h-[240px] min-[1440px]:h-[260px] min-[2133px]:h-[360px] rounded-2xl border border-cyan-300/20 shadow-[0_0_35px_rgba(56,189,248,0.16)] bg-[#0D1830]/70 backdrop-blur-sm">
-            <div className="relative h-full">
-              <MapLibreMap
-                ref={mapRef}
-                initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
-                mapStyle={DASHBOARD_MAP_STYLE}
-                style={{ width: "100%", height: "100%" }}
-                dragRotate={false}
-                attributionControl={false}
-              >
-                <NavigationControl position="top-right" showCompass={false} />
-                {portMarkers.map((marker) => {
-                  const isOrigin = marker.type === "origen";
+          {/* Navieras */}
+          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-cyan-200/90">{tr.topCarriers}</p>
+              <p className="text-2xl font-bold text-cyan-200 tabular-nums">{topNavieras.ranked.length}</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-2.5">
+              {topNav.length === 0 ? (
+                <p className="text-base text-cyan-100/40">{tr.noCarriers}</p>
+              ) : (
+                topNav.map((item, idx) => (
+                  <div key={item.naviera}>
+                    <div className="flex justify-between gap-2 text-base mb-1">
+                      <span className="text-cyan-50/95 truncate">{idx + 1}. {item.naviera}</span>
+                      <span className="tabular-nums text-cyan-200/90 shrink-0 font-semibold">{item.cantidad}</span>
+                    </div>
+                    <div className="h-2 bg-cyan-950/45 rounded-full overflow-hidden">
+                      <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${Math.max((item.cantidad / topNavieras.max) * 100, 8)}%` }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Especies / POD */}
+          <div className="min-h-0 rounded-xl border border-fuchsia-400/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+            <div className="shrink-0 px-4 py-3 border-b border-fuchsia-300/15 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-fuchsia-200/90">Especies</p>
+              <p className="text-2xl font-bold text-fuchsia-200 tabular-nums">{speciesStats.distinct}</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-2">
+              {topSpecies.length === 0 ? (
+                <p className="text-base text-cyan-100/40">—</p>
+              ) : (
+                topSpecies.map((item, idx) => {
+                  const pod = topSpeciesPod.find((s) => s.especie === item.especie)?.pod;
                   return (
-                    <Marker key={marker.key} longitude={marker.lng} latitude={marker.lat} anchor="center">
-                      <div
-                        title={`${marker.label} (${marker.count})`}
-                        className={`h-3.5 w-3.5 rounded-full border border-white shadow-[0_0_0_2px_rgba(0,0,0,0.14)] ${
-                          isOrigin ? "bg-red-500" : "bg-emerald-500"
-                        }`}
-                      />
-                    </Marker>
+                    <div key={item.especie} className="flex items-center justify-between gap-2 text-base">
+                      <span className="text-cyan-50/95 truncate min-w-0">
+                        {idx + 1}. {item.especie}
+                        {pod ? <span className="text-emerald-300/85"> · {pod}</span> : null}
+                      </span>
+                      <span className="tabular-nums text-fuchsia-200 font-semibold shrink-0">{item.cantidad}</span>
+                    </div>
                   );
-                })}
-              </MapLibreMap>
+                })
+              )}
             </div>
           </div>
-          </div>
-
-          {/* KPI especies + destino por especie — fila inferior */}
-          <div className="mt-4 grid grid-cols-3 gap-4 items-stretch">
-            <div className="min-w-0 overflow-hidden bg-gradient-to-br from-[#0F1E3A]/92 via-[#0B1731]/88 to-[#081226]/92 rounded-2xl border border-cyan-300/25 shadow-[0_0_36px_rgba(56,189,248,0.14)] p-4 min-[1440px]:p-5 backdrop-blur-sm h-[280px] min-[1536px]:flex min-[1536px]:flex-row min-[1536px]:items-stretch min-[1536px]:gap-6">
-              <div className="min-[1536px]:w-48 shrink-0">
-                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-cyan-200/75 uppercase tracking-[0.16em]">
-                  Top navieras
-                </p>
-                <p className="text-2xl min-[2133px]:text-5xl font-bold text-cyan-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(103,232,249,0.4)]">
-                  {topNavieras.ranked.length}
-                </p>
-                <p className="text-sm min-[2133px]:text-base text-cyan-100/60 mt-1">con operaciones</p>
-                {topNavieras.top && (
-                  <p className="text-xs min-[2133px]:text-sm text-cyan-100/80 mt-2 min-[1180px]:line-clamp-none" title={topNavieras.top.naviera}>
-                    Líder: <span className="font-semibold">{topNavieras.top.naviera}</span> ({topNavieras.top.cantidad})
-                  </p>
-                )}
-              </div>
-              <div className="mt-3 min-[1536px]:mt-0 w-full min-[1536px]:flex-1 min-h-0 border-t border-cyan-300/15 min-[1536px]:border-t-0 min-[1536px]:border-l min-[1536px]:border-cyan-300/15 min-[1536px]:pl-6 pt-3 min-[1536px]:pt-0 min-[1536px]:flex min-[1536px]:flex-col">
-                {topNavieras.ranked.length === 0 ? (
-                  <p className="text-sm text-cyan-100/45">Sin navieras registradas</p>
-                ) : (
-                  <div className="h-[160px] min-[1536px]:h-full min-[1536px]:min-h-0 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-cyan-300/15 bg-black/10 p-2 pr-3 [scrollbar-gutter:stable]">
-                    <div className="space-y-2 w-full">
-                      {topNavieras.topItems.map((item, idx) => {
-                        const widthPercent = (item.cantidad / topNavieras.max) * 100;
-                        return (
-                          <div key={`naviera-${item.naviera}`} className="space-y-0.5 w-full" title={`${item.naviera}: ${item.cantidad}`}>
-                            <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
-                              <span className="text-cyan-100/85 font-medium truncate">
-                                {idx + 1}. {item.naviera}
-                              </span>
-                              <span className="text-cyan-100 tabular-nums shrink-0 font-semibold">{item.cantidad}</span>
-                            </div>
-                            <div className="h-3.5 min-[1440px]:h-4.5 bg-cyan-950/45 rounded-full overflow-hidden ring-1 ring-cyan-300/15">
-                              <div
-                                className="h-full bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.75)] transition-all duration-500"
-                                style={{ width: `${Math.max(widthPercent, 8)}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="min-w-0 overflow-hidden bg-gradient-to-br from-[#231236]/92 via-[#150E2B]/88 to-[#0B0A1F]/92 rounded-2xl border border-fuchsia-400/25 shadow-[0_0_36px_rgba(232,121,249,0.14)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1536px]:flex min-[1536px]:flex-row min-[1536px]:items-stretch min-[1536px]:gap-6">
-              <div className="min-[1536px]:w-48 shrink-0">
-                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-fuchsia-200/75 uppercase tracking-[0.16em]">Operaciones por especie</p>
-                <p className="text-2xl min-[2133px]:text-5xl font-bold text-fuchsia-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(232,121,249,0.35)]">
-                  {speciesStats.distinct}
-                </p>
-                <p className="text-sm min-[2133px]:text-base text-cyan-100/60 mt-1">especies distintas</p>
-                {speciesStats.top && (
-                  <p className="text-xs min-[2133px]:text-sm text-fuchsia-200/80 mt-2 min-[1180px]:line-clamp-none" title={speciesStats.top.especie}>
-                    Líder: <span className="font-semibold">{speciesStats.top.especie}</span> ({speciesStats.top.cantidad})
-                  </p>
-                )}
-              </div>
-              <div className="mt-3 min-[1536px]:mt-0 w-full min-[1536px]:flex-1 min-h-0 border-t border-cyan-300/15 min-[1536px]:border-t-0 min-[1536px]:border-l min-[1536px]:border-cyan-300/15 min-[1536px]:pl-6 pt-3 min-[1536px]:pt-0 min-[1536px]:flex min-[1536px]:flex-col">
-                {speciesStats.ranked.length === 0 ? (
-                  <p className="text-sm text-cyan-100/45">Sin especie registrada</p>
-                ) : (
-                  <div className="h-[160px] min-[1536px]:h-full min-[1536px]:min-h-0 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-fuchsia-300/15 bg-black/10 p-2 pr-3 [scrollbar-gutter:stable]">
-                    <div className="space-y-2 w-full">
-                      {speciesFunnelItems.map((item, index) => {
-                        const widthPercent = (item.cantidad / speciesFunnelMax) * 100;
-                        return (
-                          <div key={item.especie} className="space-y-0.5 w-full" title={`${item.especie}: ${item.cantidad}`}>
-                            <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
-                              <span className="text-cyan-100/85 font-medium truncate">
-                                {index + 1}. {item.especie}
-                              </span>
-                              <span className="text-fuchsia-200/85 tabular-nums shrink-0">{item.cantidad}</span>
-                            </div>
-                            <div className="h-3.5 min-[1440px]:h-4.5 bg-fuchsia-950/40 rounded-full overflow-hidden ring-1 ring-fuchsia-300/15">
-                              <div
-                                className="h-full bg-fuchsia-400 rounded-full shadow-[0_0_12px_rgba(232,121,249,0.75)] transition-all duration-500"
-                                style={{ width: `${Math.max(widthPercent, 8)}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="min-w-0 overflow-hidden bg-gradient-to-br from-[#122A24]/92 via-[#0D1F1C]/88 to-[#081513]/92 rounded-2xl border border-emerald-400/25 shadow-[0_0_36px_rgba(52,211,153,0.14)] p-4 min-[1440px]:p-5 min-[2133px]:p-6 backdrop-blur-sm h-[280px] min-[1536px]:flex min-[1536px]:flex-row min-[1536px]:items-stretch min-[1536px]:gap-6">
-              <div className="min-[1536px]:w-48 shrink-0">
-                <p className="text-[11px] min-[2133px]:text-sm font-semibold text-emerald-200/75 uppercase tracking-[0.16em]">Destino más usado por especie</p>
-                <p className="text-2xl min-[2133px]:text-5xl font-bold text-emerald-200 leading-none mt-2 drop-shadow-[0_0_14px_rgba(52,211,153,0.35)]">
-                  {speciesWithPodLeaderCount}
-                </p>
-                <p className="text-sm min-[2133px]:text-base text-cyan-100/60 mt-1">de {speciesStats.distinct} con POD líder</p>
-                {speciesLeaderPodItems[0] && (
-                  <p className="text-xs min-[2133px]:text-sm text-emerald-200/80 mt-2 min-[1180px]:line-clamp-none" title={speciesLeaderPodItems[0].pod}>
-                    Líder: <span className="font-semibold">{speciesLeaderPodItems[0].pod}</span> ({speciesLeaderPodItems[0].podCantidad})
-                  </p>
-                )}
-                <div className="mt-2 space-y-1 max-h-[110px] overflow-auto pr-1">
-                  {speciesLeaderPodItems.slice(0, 4).map((item, idx) => (
-                    <p
-                      key={`left-mini-${item.especie}`}
-                      className="text-[11px] text-cyan-100/85 truncate"
-                      title={`${item.especie} -> ${item.pod} (${item.podCantidad})`}
-                    >
-                      {idx + 1}. <span className="font-semibold text-cyan-50">{item.especie}</span>
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 min-[1536px]:mt-0 w-full min-[1536px]:flex-1 min-h-0 border-t border-cyan-300/15 min-[1536px]:border-t-0 min-[1536px]:border-l min-[1536px]:border-cyan-300/15 min-[1536px]:pl-6 pt-3 min-[1536px]:pt-0 min-[1536px]:flex min-[1536px]:flex-col">
-                {speciesLeaderByEspecie.length === 0 ? (
-                  <p className="text-sm text-cyan-100/45">Sin especie registrada</p>
-                ) : (
-                  <div className="h-[160px] min-[1536px]:h-full min-[1536px]:min-h-0 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-emerald-300/15 bg-black/10 p-2 pr-3 [scrollbar-gutter:stable]">
-                    {speciesLeaderPodItems.map((item, idx) => (
-                      <div key={`species-destino-${item.especie}`} className="space-y-0.5 w-full" title={`${item.especie} -> ${item.pod} (${item.podCantidad})`}>
-                        <div className="flex items-center justify-between gap-2 text-xs min-[1440px]:text-sm">
-                          <span className="truncate">
-                            {idx + 1}. <span className="font-semibold text-cyan-50">{item.especie}</span> - <span className="text-emerald-200/90">{item.pod}</span>
-                          </span>
-                          <span className="text-emerald-200/90 tabular-nums shrink-0">{item.podCantidad}</span>
-                        </div>
-                        <div className="h-3.5 min-[1440px]:h-4.5 w-full bg-emerald-950/45 rounded-full overflow-hidden ring-1 ring-emerald-300/15">
-                          <div
-                            className="h-full bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.75)] transition-all duration-500"
-                            style={{ width: `${Math.max((item.podCantidad / speciesLeaderPodItemsMax) * 100, 8)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
         </div>
       </div>
     </main>

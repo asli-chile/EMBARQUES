@@ -80,7 +80,6 @@ const quickLinks = [
   { key: "quickRecords" as const, descKey: "quickRecordsDesc" as const, href: "/registros", icon: "lucide:table-2" },
   { key: "quickDocument" as const, descKey: "quickDocumentDesc" as const, href: "/documentos/mis-documentos", icon: "lucide:file-text" },
   { key: "quickTransport" as const, descKey: "quickTransportDesc" as const, href: "/transportes/reserva-asli", icon: "lucide:truck" },
-  { key: "quickReports" as const, descKey: "quickReportsDesc" as const, href: "/reportes", icon: "lucide:bar-chart-3" },
 ] as const;
 
 const kpiConfig = [
