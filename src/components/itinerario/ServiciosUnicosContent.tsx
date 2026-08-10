@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/i18n";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { getApiOriginPrefix } from "@/lib/basePath";
+import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
 
 const AREAS = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA"] as const;
 
@@ -733,42 +734,41 @@ export function ServiciosUnicosContent() {
 
   return (
     <>
-    <main className="flex-1 min-h-0 min-w-0 overflow-auto bg-neutral-50" role="main">
+    <main className={`flex-1 min-h-0 min-w-0 overflow-auto ${modulePageBg}`} role="main">
+      {/* Hero */}
+      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
+        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <Icon icon="lucide:ship" width={24} height={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
+                {tr.title}
+              </h1>
+              <p className="text-base text-white/75 mt-1">
+                {tr.modalDescNew}
+              </p>
+            </div>
+          </div>
+          {isSuperadmin && (
+          <button
+            type="button"
+            onClick={handleOpenModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-semibold rounded-lg bg-white text-brand-blue hover:bg-white/95 transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
+            aria-label={tr.newServiceAria}
+          >
+            <Icon icon="lucide:plus" width={18} height={18} />
+            {tr.newService}
+          </button>
+          )}
+        </div>
+      </div>
+
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-5 py-4 sm:py-6 space-y-4">
 
-        {/* Header card */}
-        <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-          <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:ship" width={20} height={20} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold text-neutral-900 leading-tight">
-                  {tr.title}
-                </h1>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  {tr.modalDescNew}
-                </p>
-              </div>
-            </div>
-            {isSuperadmin && (
-            <button
-              type="button"
-              onClick={handleOpenModal}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-              aria-label={tr.newServiceAria}
-            >
-              <Icon icon="lucide:plus" width={18} height={18} />
-              {tr.newService}
-            </button>
-            )}
-          </div>
-        </div>
-
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2" role="alert">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700 flex items-start gap-2" role="alert">
             <Icon icon="lucide:alert-triangle" width={18} height={18} className="mt-0.5" aria-hidden />
             <span>{error}</span>
           </div>
@@ -779,10 +779,10 @@ export function ServiciosUnicosContent() {
             <Icon icon="lucide:loader-2" width={32} height={32} className="animate-spin text-brand-blue" aria-hidden />
           </div>
         ) : servicios.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-8 text-center text-neutral-500">
+          <div className={`${moduleCard} p-8 text-center text-neutral-500`}>
             <Icon icon="lucide:ship" width={40} height={40} className="mx-auto mb-3 opacity-50" />
-            <p className="font-medium">{tr.noServices}</p>
-            <p className="text-sm mt-1">{tr.noServicesHint}</p>
+            <p className="font-medium text-base">{tr.noServices}</p>
+            <p className="text-base mt-1">{tr.noServicesHint}</p>
           </div>
         ) : (() => {
           const getServiceAreas = (s: ServicioUnico): string[] => {
@@ -840,7 +840,7 @@ export function ServiciosUnicosContent() {
             return (
               <li
                 key={s.id}
-                className="bg-white rounded-xl border border-neutral-200 shadow-sm min-w-0 overflow-hidden transition-shadow hover:shadow-md flex flex-col"
+                className={`${moduleCard} min-w-0 overflow-hidden transition-shadow hover:shadow-md flex flex-col`}
               >
                 <div className="p-4 flex flex-col h-full">
                   <div className="flex items-start justify-between gap-2">
@@ -961,7 +961,7 @@ export function ServiciosUnicosContent() {
 
                 return (
                   <section key={areaName} className="min-w-0">
-                    <h2 className="text-base font-bold text-neutral-800 mb-1 flex items-center gap-2">
+                    <h2 className="text-base font-bold text-brand-blue mb-1 flex items-center gap-2">
                       <Icon icon="lucide:map-pin" width={16} height={16} className="text-brand-blue shrink-0" />
                       {areaName}
                     </h2>

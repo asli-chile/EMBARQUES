@@ -1,6 +1,7 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
 import { ConfigGuard } from "./ConfigGuard";
+import { CartolasNuboxGuard } from "./CartolasNuboxGuard";
 import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -74,6 +75,15 @@ const LazyFormatosDocumentosContent = lazy(() =>
 );
 const LazyMisDocumentosContent = lazy(() =>
   import("@/components/documentos").then((m) => ({ default: m.MisDocumentosContent })),
+);
+const LazyCrearProformaContent = lazy(() =>
+  import("@/components/documentos/CrearProformaContent").then((m) => ({ default: m.CrearProformaContent })),
+);
+const LazyCrearInstructivoContent = lazy(() =>
+  import("@/components/documentos/CrearInstructivoContent").then((m) => ({ default: m.CrearInstructivoContent })),
+);
+const LazyCartolasNuboxContent = lazy(() =>
+  import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
 );
 function RouteFallback() {
   return <ModuleRouteLoader />;
@@ -212,6 +222,24 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyMisDocumentosContent />
         </Sus>
       </ModuleWithVisitorInfo>
+    ) : pathname === "/documentos/crear-proforma" ? (
+      <ModuleWithVisitorInfo moduleKey="crearProforma">
+        <Sus>
+          <LazyCrearProformaContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
+    ) : pathname === "/documentos/crear-instructivo" ? (
+      <ModuleWithVisitorInfo moduleKey="crearInstructivo">
+        <Sus>
+          <LazyCrearInstructivoContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
+    ) : pathname === "/cartolas-nubox" ? (
+      <CartolasNuboxGuard>
+        <Sus>
+          <LazyCartolasNuboxContent />
+        </Sus>
+      </CartolasNuboxGuard>
     ) : (
       children
     );

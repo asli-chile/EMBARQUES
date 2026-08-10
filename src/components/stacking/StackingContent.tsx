@@ -13,6 +13,7 @@ import {
   saveDraftToStorage,
   type StackingDraft,
 } from "@/lib/stacking-drafts";
+import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
 
 type StackingContentProps = {
   /** Datos del embarque y horarios de recepción stacking. Si no se pasa, se intenta cargar automáticamente. */
@@ -330,7 +331,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
   return (
     <main
-      className="flex flex-col flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-neutral-50 to-neutral-100/80"
+      className={`flex flex-col flex-1 min-h-0 overflow-hidden ${modulePageBg}`}
       role="main"
       aria-label={tr.title}
     >
@@ -343,21 +344,23 @@ export function StackingContent({ data = null }: StackingContentProps) {
 
         {!hasPropData && (
           <>
-            {/* Cabecera compacta */}
-            <header className="flex-shrink-0 bg-white border-b border-neutral-200 overflow-hidden">
-              <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-              <div className="px-4 py-2 flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-8 h-8 shrink-0 rounded-xl bg-brand-blue flex items-center justify-center shadow-sm shadow-brand-blue/20">
-                    <Icon icon="lucide:ship" width={16} height={16} className="text-white" aria-hidden />
+            {/* Hero navy */}
+            <header className={`flex-shrink-0 ${moduleHero} overflow-hidden`}>
+              <div className="px-4 sm:px-6 py-5 sm:py-6 flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="w-12 h-12 shrink-0 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center">
+                    <Icon icon="lucide:ship" width={24} height={24} className="text-white" aria-hidden />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-sm font-bold text-neutral-900 leading-tight truncate">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight truncate">
                       {tr.title}
                       {stackingItinerarios.length > 0 && (
-                        <span className="ml-2 text-xs font-bold text-brand-blue">{sortedFiltered.length}/{stackingItinerarios.length}</span>
+                        <span className="ml-2 text-base font-bold text-white/70">{sortedFiltered.length}/{stackingItinerarios.length}</span>
                       )}
                     </h1>
+                    <p className="text-base text-white/75 mt-1 truncate hidden sm:block">
+                      {(tr as { subtitle?: string }).subtitle ?? "Horarios de recepción stacking"}
+                    </p>
                   </div>
                 </div>
                 {stackingItinerarios.length > 0 && (
@@ -365,29 +368,29 @@ export function StackingContent({ data = null }: StackingContentProps) {
                     <select
                       value={filterNaviera}
                       onChange={(e) => setFilterNaviera(e.target.value)}
-                      className="flex-1 sm:flex-initial sm:min-w-[130px] rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                      className="flex-1 sm:flex-initial sm:min-w-[130px] rounded-lg border border-white/25 bg-white/15 px-3 py-2.5 text-base text-white focus:outline-none focus:ring-2 focus:ring-white/30"
                       aria-label={tr.filterNaviera}
                     >
-                      <option value="">{tr.filterAll}</option>
-                      {navieraOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+                      <option value="" className="text-neutral-800">{tr.filterAll}</option>
+                      {navieraOptions.map((n) => <option key={n} value={n} className="text-neutral-800">{n}</option>)}
                     </select>
                     <select
                       value={filterPol}
                       onChange={(e) => setFilterPol(e.target.value)}
-                      className="flex-1 sm:flex-initial sm:min-w-[100px] rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                      className="flex-1 sm:flex-initial sm:min-w-[100px] rounded-lg border border-white/25 bg-white/15 px-3 py-2.5 text-base text-white focus:outline-none focus:ring-2 focus:ring-white/30"
                       aria-label={tr.filterPol}
                     >
-                      <option value="">{tr.filterAllPol}</option>
-                      {polOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                      <option value="" className="text-neutral-800">{tr.filterAllPol}</option>
+                      {polOptions.map((p) => <option key={p} value={p} className="text-neutral-800">{p}</option>)}
                     </select>
                     {(filterNaviera || filterPol) && (
                       <button
                         type="button"
                         onClick={() => { setFilterNaviera(""); setFilterPol(""); }}
-                        className="shrink-0 p-1.5 rounded-xl text-neutral-400 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 transition-colors"
+                        className="shrink-0 p-2.5 rounded-lg text-white/70 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
                         aria-label="Limpiar filtros"
                       >
-                        <Icon icon="lucide:x" width={14} height={14} aria-hidden />
+                        <Icon icon="lucide:x" width={16} height={16} aria-hidden />
                       </button>
                     )}
                   </div>
@@ -461,12 +464,12 @@ export function StackingContent({ data = null }: StackingContentProps) {
               return (
               <section className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
                 {/* ── Col 1: Lista de itinerarios ── */}
-                <div className={`min-h-0 flex-col rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden lg:w-[32%] lg:flex-shrink-0 ${mobileView === "detail" ? "hidden lg:flex" : "flex"}`}>
-                  <div className="flex-shrink-0 px-3 py-2 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/60">
-                    <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
+                <div className={`min-h-0 flex-col ${moduleCard} overflow-hidden lg:w-[32%] lg:flex-shrink-0 ${mobileView === "detail" ? "hidden lg:flex" : "flex"}`}>
+                  <div className="flex-shrink-0 px-3 py-2.5 border-b border-brand-blue/10 flex items-center justify-between bg-[#F4F8FC]">
+                    <span className="text-sm font-bold text-brand-blue uppercase tracking-widest">
                       {(tr as { listTitle?: string }).listTitle ?? "Itinerarios"}
                     </span>
-                    <span className="text-[11px] font-bold text-brand-blue bg-brand-blue/8 px-2.5 py-0.5 rounded-full tabular-nums">{countLabel}</span>
+                    <span className="text-sm font-bold text-brand-blue bg-brand-blue/8 px-2.5 py-0.5 rounded-full tabular-nums">{countLabel}</span>
                   </div>
                   <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-100 scroll-smooth">
                     {sortedFiltered.map((it) => {
@@ -519,7 +522,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
                 </div>
 
                 {/* ── Col 2: Detalle del itinerario ── */}
-                <div className={`flex-1 min-h-0 flex-col rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden ${mobileView === "list" ? "hidden lg:flex" : "flex"}`}>
+                <div className={`flex-1 min-h-0 flex-col ${moduleCard} overflow-hidden ${mobileView === "list" ? "hidden lg:flex" : "flex"}`}>
                   {selected ? (() => {
                     const daysToZarpe = daysUntil(selected.etd, 0);
                     const daysToClose = daysUntil(selected.etd, STACKING_CLOSE_OFFSET_DAYS);
@@ -716,9 +719,9 @@ function StackingTable({ data, tr }: StackingTableProps) {
   return (
     <div className="space-y-5">
       {/* Embarque info card */}
-      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+      <div className={`${moduleCard}`}>
         <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-        <dl className="grid grid-cols-2 md:grid-cols-4 gap-px bg-neutral-100">
+        <dl className="grid grid-cols-2 md:grid-cols-4 gap-px bg-brand-blue/10">
           {[
             { label: tr.nave, value: embarque.nave },
             { label: tr.viaje, value: embarque.viaje },
@@ -726,28 +729,28 @@ function StackingTable({ data, tr }: StackingTableProps) {
             { label: tr.servicio, value: embarque.servicio },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white px-4 py-4">
-              <dt className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{label}</dt>
-              <dd className="mt-1 text-sm font-semibold text-neutral-800">{value || "—"}</dd>
+              <dt className="text-sm font-bold text-brand-blue uppercase tracking-wide">{label}</dt>
+              <dd className="mt-1 text-base font-semibold text-neutral-800">{value || "—"}</dd>
             </div>
           ))}
         </dl>
       </div>
 
       {/* Stacking table */}
-      <div className="rounded-2xl border border-neutral-200 overflow-hidden bg-white shadow-sm">
-        <table className="w-full border-collapse text-sm" role="table" aria-label={tr.title}>
+      <div className={`${moduleCard}`}>
+        <table className="w-full border-collapse text-base" role="table" aria-label={tr.title}>
           <thead>
-            <tr className="bg-brand-blue text-white">
-              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
+            <tr className="bg-[#F4F8FC] border-b border-brand-blue/15">
+              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
                 {tr.colTipoCarga}
               </th>
-              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
+              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
                 {tr.colFecha}
               </th>
-              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
+              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
                 {tr.colHorario}
               </th>
-              <th className="text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3.5">
+              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
                 {tr.colObservaciones}
               </th>
             </tr>

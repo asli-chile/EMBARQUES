@@ -3,6 +3,15 @@ import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleLabel,
+  moduleInput,
+  moduleBtnPrimary,
+  moduleBtnSecondary,
+  moduleCard,
+} from "@/lib/ui/moduleStyles";
 
 const ROLES = [
   { value: "superadmin", label: "Superadmin" },
@@ -475,9 +484,9 @@ export function UsuariosContent() {
   const apiAuthorized = !loading && usuarios.length > 0 && !error;
   if (error && !loading) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-xl font-bold text-brand-blue">{t.sidebar.usuarios}</h1>
+          <h1 className="text-2xl font-bold text-brand-blue">{t.sidebar.usuarios}</h1>
           <p className="mt-2 text-neutral-600">{error}</p>
           {error.includes("superadmin") || error.includes("403") ? (
             <p className="mt-1 text-sm text-neutral-500">Solo el superadmin puede gestionar usuarios.</p>
@@ -487,13 +496,13 @@ export function UsuariosContent() {
     );
   } else if (authLoading && usuarios.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6 flex items-center justify-center" role="main">
+      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6 flex items-center justify-center`} role="main">
         <p className="text-neutral-500">Cargando…</p>
       </main>
     );
   } else if (loading && usuarios.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
         <div className="flex items-center justify-center h-48">
           <span className="text-neutral-500">Cargando usuarios…</span>
         </div>
@@ -501,48 +510,48 @@ export function UsuariosContent() {
     );
   } else if (!profile && !apiAuthorized) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
         <p className="text-neutral-600">Inicia sesión para continuar.</p>
       </main>
     );
   } else if (!isSuperadmin && !apiAuthorized) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
         <p className="text-neutral-600">Solo el superadmin puede gestionar usuarios y configuración.</p>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 min-h-0 flex flex-col bg-neutral-100 overflow-hidden" role="main">
+    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`} role="main">
 
       {/* Hero gradient header */}
-      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-indigo-700 text-white">
+      <div className={`flex-shrink-0 ${moduleHero}`}>
         <div className="px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:users" width={22} height={22} className="text-white" />
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:users" width={24} height={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight">{t.sidebar.usuarios}</h1>
-              <p className="text-xs text-white/70 mt-0.5">Crea cuentas, asigna roles y empresas</p>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight">{t.sidebar.usuarios}</h1>
+              <p className="text-base text-white/75 mt-1">Crea cuentas, asigna roles y empresas</p>
             </div>
           </div>
           <div className="flex gap-2 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:user-check" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{usuarios.filter((u) => u.auth_id).length} activo{usuarios.filter((u) => u.auth_id).length !== 1 ? "s" : ""}</span>
+              <span className="text-sm font-semibold">{usuarios.filter((u) => u.auth_id).length} activo{usuarios.filter((u) => u.auth_id).length !== 1 ? "s" : ""}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{usuarios.length} total</span>
+              <span className="text-sm font-semibold">{usuarios.length} total</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 sm:gap-4 sm:p-4 overflow-hidden">
-        <aside className="flex-shrink-0 lg:w-80 xl:w-96 bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
+        <aside className={`flex-shrink-0 lg:w-80 xl:w-96 ${moduleCard} flex flex-col`}>
           {/* Aside header — on mobile also acts as toggle */}
           <button
             type="button"
@@ -554,8 +563,8 @@ export function UsuariosContent() {
               <Icon icon="lucide:user-plus" width={17} height={17} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-neutral-900">Nueva cuenta</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Crea cuentas y asígnales roles.</p>
+              <p className="text-base font-bold text-brand-blue">Nueva cuenta</p>
+              <p className="text-sm text-neutral-500 mt-0.5">Crea cuentas y asígnales roles.</p>
             </div>
             <Icon
               icon={showCreateForm ? "lucide:chevron-up" : "lucide:chevron-down"}
@@ -564,22 +573,22 @@ export function UsuariosContent() {
             />
           </button>
           <section className={`${showCreateForm ? "block" : "hidden"} lg:block p-4 overflow-y-auto flex-1`}>
-            <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Crear nueva cuenta</h2>
+            <h2 className="text-base font-bold text-brand-blue mb-3">Crear nueva cuenta</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label htmlFor="email" className="block text-xs font-medium text-neutral-600 mb-0.5">Correo</label>
+                <label htmlFor="email" className={moduleLabel}>Correo</label>
                 <input
                   id="email"
                   type="email"
                   required
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className={moduleInput}
                   placeholder="usuario@empresa.com"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-xs font-medium text-neutral-600 mb-0.5">Contraseña</label>
+                <label htmlFor="password" className={moduleLabel}>Contraseña</label>
                 <div className="relative">
                   <input
                     id="password"
@@ -588,7 +597,7 @@ export function UsuariosContent() {
                     minLength={6}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={`${moduleInput} pr-9`}
                     placeholder="Mín. 6 caracteres"
                   />
                   <button
@@ -605,18 +614,18 @@ export function UsuariosContent() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="nombre" className="block text-xs font-medium text-neutral-600 mb-0.5">Nombre</label>
+                  <label htmlFor="nombre" className={moduleLabel}>Nombre</label>
                   <input
                     id="nombre"
                     type="text"
                     value={form.nombre}
                     onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 outline-none"
+                    className={moduleInput}
                     placeholder="Nombre"
                   />
                 </div>
                 <div>
-                  <label htmlFor="rol" className="block text-xs font-medium text-neutral-600 mb-0.5">Rol</label>
+                  <label htmlFor="rol" className={moduleLabel}>Rol</label>
                   <select
                     id="rol"
                     value={form.rol}
@@ -627,7 +636,7 @@ export function UsuariosContent() {
                         empresaIds: e.target.value === "cliente" || e.target.value === "ejecutivo" ? f.empresaIds : [],
                       }))
                     }
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 outline-none"
+                    className={moduleInput}
                   >
                     {ROLES.map((r) => (
                       <option key={r.value} value={r.value}>
@@ -640,12 +649,12 @@ export function UsuariosContent() {
 
               {(form.rol === "cliente" || form.rol === "ejecutivo") && empresas.length > 0 && (
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1">Empresas asignadas</label>
-                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 border border-neutral-200 rounded-lg bg-neutral-50">
+                  <label className={moduleLabel}>Empresas asignadas</label>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 border border-brand-blue/20 rounded-lg bg-[#F4F8FC]">
                     {empresas.map((emp) => (
                       <label
                         key={emp.id}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-neutral-200 cursor-pointer hover:bg-neutral-50 text-xs"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-brand-blue/15 cursor-pointer hover:bg-[#F4F8FC] text-sm"
                       >
                         <input
                           type="checkbox"
@@ -669,7 +678,7 @@ export function UsuariosContent() {
               <button
                 type="submit"
                 disabled={isCreating || ((form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shadow-sm"
+                className={`${moduleBtnPrimary} w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 Crear cuenta
               </button>
@@ -677,12 +686,12 @@ export function UsuariosContent() {
           </section>
         </aside>
 
-        <section className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-200 space-y-3">
+        <section className={`flex-1 min-h-0 flex flex-col ${moduleCard}`}>
+          <div className="flex-shrink-0 px-4 py-3 border-b border-brand-blue/15 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold text-neutral-900">
+              <h2 className="text-base font-bold text-brand-blue">
                 Usuarios existentes{" "}
-                <span className="font-normal text-neutral-500 text-xs">
+                <span className="font-normal text-neutral-500 text-sm">
                   ({filteredUsuarios.length}
                   {(filterRol || filterEmpresaId) && ` de ${usuarios.length}`})
                 </span>
@@ -713,14 +722,14 @@ export function UsuariosContent() {
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <label htmlFor="filter-rol" className="text-xs font-medium text-neutral-600 hidden sm:block">
+                <label htmlFor="filter-rol" className="text-base font-semibold text-brand-blue hidden sm:block">
                   Rol
                 </label>
                 <select
                   id="filter-rol"
                   value={filterRol}
                   onChange={(e) => setFilterRol(e.target.value)}
-                  className="rounded-xl border border-neutral-200 px-2 sm:px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className="rounded-lg border border-brand-blue/20 bg-[#F4F8FC] px-2 sm:px-2.5 py-2 text-base text-brand-blue focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue outline-none"
                 >
                   <option value="">Todos los roles</option>
                   {ROLES.map((r) => (
@@ -731,14 +740,14 @@ export function UsuariosContent() {
                 </select>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <label htmlFor="filter-empresa" className="text-xs font-medium text-neutral-600 hidden sm:block">
+                <label htmlFor="filter-empresa" className="text-base font-semibold text-brand-blue hidden sm:block">
                   Empresa
                 </label>
                 <select
                   id="filter-empresa"
                   value={filterEmpresaId}
                   onChange={(e) => setFilterEmpresaId(e.target.value)}
-                  className="rounded-xl border border-neutral-200 px-2 sm:px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none max-w-[120px] sm:max-w-none"
+                  className="rounded-lg border border-brand-blue/20 bg-[#F4F8FC] px-2 sm:px-2.5 py-2 text-base text-brand-blue focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue outline-none max-w-[120px] sm:max-w-none"
                 >
                   <option value="">Todas</option>
                   {empresas.map((e) => (
@@ -795,7 +804,7 @@ export function UsuariosContent() {
                         ) : (
                           <span className="w-4 h-4 inline-block" aria-hidden="true" />
                         )}
-                        <div className="w-8 h-8 rounded-full bg-brand-blue/10 flex items-center justify-center text-[11px] font-bold text-brand-blue">
+                        <div className="w-8 h-8 rounded-full bg-brand-blue/10 flex items-center justify-center text-sm font-bold text-brand-blue">
                           {initials}
                         </div>
                       </div>
@@ -813,16 +822,16 @@ export function UsuariosContent() {
                             <p className="text-xs text-neutral-400 truncate">{u.email}</p>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-blue/10 text-brand-blue">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-brand-blue/10 text-brand-blue">
                               {getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}
                             </span>
                             {u.auth_id ? (
-                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-sm font-semibold bg-green-100 text-green-700">
                                 <Icon icon="lucide:check" width={9} height={9} />
                                 Activa
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-500">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-neutral-100 text-neutral-500">
                                 Sin cuenta
                               </span>
                             )}
@@ -831,7 +840,7 @@ export function UsuariosContent() {
                         {nombresEmpresas.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {nombresEmpresas.map((n) => (
-                              <span key={n} className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-brand-blue/8 text-brand-blue">
+                              <span key={n} className="px-1.5 py-0.5 text-sm font-medium rounded bg-brand-blue/8 text-brand-blue">
                                 {n}
                               </span>
                             ))}
@@ -892,12 +901,12 @@ export function UsuariosContent() {
                       />
                     )}
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Nombre</th>
-                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide">Correo</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide w-28">Rol</th>
-                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide min-w-[140px]">Empresas</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide w-24">Cuenta</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wide min-w-[140px]">Acciones</th>
+                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue">Nombre</th>
+                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-sm font-bold text-brand-blue">Correo</th>
+                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue w-28">Rol</th>
+                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-sm font-bold text-brand-blue min-w-[140px]">Empresas</th>
+                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue w-24">Cuenta</th>
+                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue min-w-[140px]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -1015,13 +1024,13 @@ export function UsuariosContent() {
                   <Icon icon="lucide:building-2" width={15} height={15} className="text-white" />
                 </div>
                 <div>
-                  <h2 id="assign-modal-title" className="text-sm font-bold text-neutral-900">
+                  <h2 id="assign-modal-title" className="text-base font-bold text-brand-blue">
                     Asignar empresas a {bulkAssigningUsers.length} usuario{bulkAssigningUsers.length !== 1 ? "s" : ""}
                   </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                  <p className="text-sm text-neutral-500 mt-0.5 leading-relaxed">
                     {bulkAssigningUsers.map((u) => u.nombre || u.email).join(", ")}
                   </p>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">
+                  <p className="text-sm text-neutral-400 mt-0.5">
                     Las empresas seleccionadas se añadirán a las existentes.
                   </p>
                 </div>
@@ -1032,14 +1041,14 @@ export function UsuariosContent() {
             </div>
             <form onSubmit={handleAssignSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                <label className={moduleLabel}>
                   Empresas asignadas
                 </label>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-neutral-200 rounded-lg bg-neutral-50">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-brand-blue/20 rounded-lg bg-[#F4F8FC]">
                   {empresas.map((emp) => (
                     <label
                       key={emp.id}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-neutral-200 cursor-pointer hover:bg-neutral-50 text-sm"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-brand-blue/15 cursor-pointer hover:bg-[#F4F8FC] text-sm"
                     >
                       <input
                         type="checkbox"
@@ -1066,14 +1075,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleAssignClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className={`${moduleBtnSecondary} flex-1 justify-center`}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isAssigning || assignEmpresaIds.length === 0}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isAssigning ? "Guardando…" : "Guardar"}
                 </button>
@@ -1105,9 +1114,9 @@ export function UsuariosContent() {
                   <Icon icon="lucide:key-round" width={15} height={15} className="text-white" />
                 </div>
                 <div>
-                  <h2 id="activate-modal-title" className="text-sm font-bold text-neutral-900">Activar cuenta</h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">{activatingUser.nombre} — {activatingUser.email}</p>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Asigna una contraseña para crear la cuenta. El usuario podrá iniciar sesión.</p>
+                  <h2 id="activate-modal-title" className="text-base font-bold text-brand-blue">Activar cuenta</h2>
+                  <p className="text-sm text-neutral-500 mt-0.5">{activatingUser.nombre} — {activatingUser.email}</p>
+                  <p className="text-sm text-neutral-400 mt-0.5">Asigna una contraseña para crear la cuenta. El usuario podrá iniciar sesión.</p>
                 </div>
               </div>
               <button type="button" onClick={handleActivateClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
@@ -1116,7 +1125,7 @@ export function UsuariosContent() {
             </div>
             <form onSubmit={handleActivateSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label htmlFor="activate-password" className="block text-sm font-medium text-neutral-700 mb-1">
+                <label htmlFor="activate-password" className={moduleLabel}>
                   Contraseña (mín. 6 caracteres)
                 </label>
                 <div className="relative">
@@ -1190,9 +1199,9 @@ export function UsuariosContent() {
                   <Icon icon="lucide:refresh-cw" width={15} height={15} className="text-white" />
                 </div>
                 <div>
-                  <h2 id="reset-modal-title" className="text-sm font-bold text-neutral-900">Resetear usuario</h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">{resettingUser.nombre} — {resettingUser.email}</p>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Se borrarán asignaciones y se establecerá nueva contraseña.</p>
+                  <h2 id="reset-modal-title" className="text-base font-bold text-brand-blue">Resetear usuario</h2>
+                  <p className="text-sm text-neutral-500 mt-0.5">{resettingUser.nombre} — {resettingUser.email}</p>
+                  <p className="text-sm text-neutral-400 mt-0.5">Se borrarán asignaciones y se establecerá nueva contraseña.</p>
                 </div>
               </div>
               <button type="button" onClick={handleResetClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
@@ -1201,7 +1210,7 @@ export function UsuariosContent() {
             </div>
             <form onSubmit={handleResetSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label htmlFor="reset-password" className="block text-sm font-medium text-neutral-700 mb-1">
+                <label htmlFor="reset-password" className={moduleLabel}>
                   Nueva contraseña (mín. 6 caracteres)
                 </label>
                 <div className="relative">
@@ -1275,8 +1284,8 @@ export function UsuariosContent() {
                   <Icon icon="lucide:user-cog" width={15} height={15} className="text-white" />
                 </div>
                 <div>
-                  <h2 id="edit-modal-title" className="text-sm font-bold text-neutral-900">Editar usuario</h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">{editingUser.nombre} — {editingUser.email}</p>
+                  <h2 id="edit-modal-title" className="text-base font-bold text-brand-blue">Editar usuario</h2>
+                  <p className="text-sm text-neutral-500 mt-0.5">{editingUser.nombre} — {editingUser.email}</p>
                 </div>
               </div>
               <button type="button" onClick={handleEditClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
@@ -1285,7 +1294,7 @@ export function UsuariosContent() {
             </div>
             <form onSubmit={handleEditSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
-                <label htmlFor="edit-rol" className="block text-sm font-medium text-neutral-700 mb-1">
+                <label htmlFor="edit-rol" className={moduleLabel}>
                   Rol
                 </label>
                 <select
@@ -1310,10 +1319,10 @@ export function UsuariosContent() {
 
               {(editForm.rol === "cliente" || editForm.rol === "ejecutivo") && empresas.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  <label className={moduleLabel}>
                     Empresas asignadas
                   </label>
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 border border-neutral-200 rounded-lg bg-neutral-50">
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 border border-brand-blue/20 rounded-lg bg-[#F4F8FC]">
                     {empresas.map((emp) => (
                       <label
                         key={emp.id}
@@ -1341,7 +1350,7 @@ export function UsuariosContent() {
                   {!changePasswordVerified ? (
                     <div className="space-y-3">
                       <div>
-                        <label htmlFor="edit-change-current" className="block text-xs font-medium text-neutral-600 mb-1">
+                        <label htmlFor="edit-change-current" className={moduleLabel}>
                           Contraseña actual (para autorizar)
                         </label>
                         <div className="relative">
@@ -1350,7 +1359,7 @@ export function UsuariosContent() {
                             type={showChangePasswordCurrent ? "text" : "password"}
                             value={changePasswordCurrent}
                             onChange={(e) => setChangePasswordCurrent(e.target.value)}
-                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                            className={`${moduleInput} pr-9`}
                             placeholder="Ingresa la contraseña actual"
                             autoComplete="current-password"
                           />
@@ -1382,7 +1391,7 @@ export function UsuariosContent() {
                     <div className="space-y-3">
                       <p className="text-xs text-green-600 font-medium">Contraseña actual verificada</p>
                       <div>
-                        <label htmlFor="edit-change-new" className="block text-xs font-medium text-neutral-600 mb-1">
+                        <label htmlFor="edit-change-new" className={moduleLabel}>
                           Nueva contraseña (mín. 6 caracteres)
                         </label>
                         <div className="relative">
@@ -1392,7 +1401,7 @@ export function UsuariosContent() {
                             minLength={6}
                             value={changePasswordNew}
                             onChange={(e) => setChangePasswordNew(e.target.value)}
-                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                            className={`${moduleInput} pr-9`}
                             placeholder="Mínimo 6 caracteres"
                             autoComplete="new-password"
                           />
@@ -1409,7 +1418,7 @@ export function UsuariosContent() {
                         </div>
                       </div>
                       <div>
-                        <label htmlFor="edit-change-confirm" className="block text-xs font-medium text-neutral-600 mb-1">
+                        <label htmlFor="edit-change-confirm" className={moduleLabel}>
                           Confirmar nueva contraseña
                         </label>
                         <input
@@ -1418,7 +1427,7 @@ export function UsuariosContent() {
                           minLength={6}
                           value={changePasswordConfirm}
                           onChange={(e) => setChangePasswordConfirm(e.target.value)}
-                          className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                          className={moduleInput}
                           placeholder="Repite la nueva contraseña"
                           autoComplete="new-password"
                         />
@@ -1590,7 +1599,7 @@ export function UsuariosContent() {
                 </div>
                 {/* ID interno */}
                 <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100">
-                  <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide mb-0.5">ID interno</p>
+                  <p className="text-sm font-medium text-neutral-400 uppercase tracking-wide mb-0.5">ID interno</p>
                   <p className="text-xs text-neutral-500 font-mono break-all">{viewingUser.id}</p>
                 </div>
               </div>

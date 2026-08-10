@@ -54,6 +54,9 @@ export type InstructivoOpData = {
   tramo?: string | null;
   deposito?: string | null;
   moneda?: string | null;
+  viaje?: string | null;
+  dus?: string | null;
+  sps?: string | null;
   // Transporte-específicos
   chofer?: string | null;
   rut_chofer?: string | null;
@@ -69,6 +72,64 @@ export type InstructivoOpData = {
   salida_planta?: string | null;
   agendamiento_retiro?: string | null;
 };
+
+/** Fila de consignatarios usada para enriquecer consignee / notify */
+export type InstructivoConsignatario = {
+  nombre: string;
+  consignatario?: string | null;
+  consignee_company: string | null;
+  consignee_address: string | null;
+  consignee_uscc: string | null;
+  consignee_attn: string | null;
+  consignee_email: string | null;
+  consignee_mobile: string | null;
+  consignee_zip: string | null;
+  notify_company: string | null;
+  notify_address: string | null;
+  notify_attn: string | null;
+  notify_uscc: string | null;
+  notify_email: string | null;
+  notify_mobile: string | null;
+  notify_zip: string | null;
+  destino: string | null;
+};
+
+/** Datos opcionales del exportador / cliente (cuando existan en catálogo) */
+export type InstructivoClienteExtra = {
+  nombre?: string | null;
+  rut?: string | null;
+  direccion?: string | null;
+};
+
+export type InstructivoTagExtras = {
+  consignatario?: InstructivoConsignatario | null;
+  cliente?: InstructivoClienteExtra | null;
+};
+
+/** Elige el consignatario que mejor coincide con la operación (cliente + nombre). */
+export function pickConsignatarioForOperacion(
+  rows: InstructivoConsignatario[] | null | undefined,
+  op: Pick<InstructivoOpData, "consignatario">,
+): InstructivoConsignatario | null {
+  if (!rows?.length) return null;
+  const want = (op.consignatario ?? "").trim().toLowerCase();
+  if (!want) return rows[0] ?? null;
+
+  const exact = rows.find(
+    (r) =>
+      r.nombre?.toLowerCase() === want ||
+      (r.consignee_company && r.consignee_company.toLowerCase() === want),
+  );
+  if (exact) return exact;
+
+  return (
+    rows.find(
+      (r) =>
+        r.nombre?.toLowerCase().includes(want) ||
+        (r.consignee_company && r.consignee_company.toLowerCase().includes(want)),
+    ) ?? rows[0] ?? null
+  );
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -88,10 +149,27 @@ function fmtDatetime(s: string | null | undefined): string {
 
 // ─── Tag replacement ──────────────────────────────────────────────────────────
 
-export function buildInstructivoTagValues(op: InstructivoOpData): Record<string, string> {
+export function buildInstructivoTagValues(
+  op: InstructivoOpData,
+  extras?: InstructivoTagExtras,
+): Record<string, string> {
   const pesoNeto  = op.peso_neto   != null ? `${op.peso_neto.toLocaleString("es-CL")} kg`  : "";
   const pesoBruto = op.peso_bruto  != null ? `${op.peso_bruto.toLocaleString("es-CL")} kg` : "";
   const today     = format(new Date(), "dd/MM/yyyy");
+  const cons = extras?.consignatario ?? null;
+  const cli  = extras?.cliente ?? null;
+
+  const consigneeName =
+    cons?.consignee_company?.trim() ||
+    cons?.nombre?.trim() ||
+    op.consignatario?.trim() ||
+    "";
+  const consigneeAddress = cons?.consignee_address?.trim() || "";
+  const destinoFinal =
+    cons?.destino?.trim() ||
+    op.pais?.trim() ||
+    op.pod?.trim() ||
+    "";
 
   return {
     // ── Referencia / documento ────────────────────────────────────────────────
@@ -101,7 +179,8 @@ export function buildInstructivoTagValues(op: InstructivoOpData): Record<string,
     "{{numero_documento}}":          "",
     "{{numero_embarque}}":           op.booking          ?? "",
     "{{csp}}":                       "",
-    "{{csg}}":                       "",
+    "{{csg}}":                       op.sps              ?? "",
+    "{{dus}}":                       op.dus              ?? "",
     "{{reserva}}":                   "",
     "{{tipo_documento}}":            "",
     "{{tipo_bl}}":                   "",
@@ -112,31 +191,31 @@ export function buildInstructivoTagValues(op: InstructivoOpData): Record<string,
     "{{empresa_rut}}":               "76.XXX.XXX-X",
     "{{empresa_giro}}":              "Agencia de Aduana y Servicios Logísticos",
     "{{empresa_direccion}}":         "Valparaíso, Chile",
-    "{{exportador}}":                op.cliente          ?? "",
+    "{{exportador}}":                (cli?.nombre?.trim() || op.cliente) ?? "",
 
     // ── Cliente ───────────────────────────────────────────────────────────────
-    "{{cliente_nombre}}":            op.cliente          ?? "",
-    "{{cliente_rut}}":               "",
-    "{{cliente_direccion}}":         "",
+    "{{cliente_nombre}}":            (cli?.nombre?.trim() || op.cliente) ?? "",
+    "{{cliente_rut}}":               cli?.rut?.trim() || "",
+    "{{cliente_direccion}}":         cli?.direccion?.trim() || "",
 
     // ── Operación / naviera ───────────────────────────────────────────────────
     "{{booking}}":                   op.booking          ?? "",
     "{{naviera}}":                   op.naviera          ?? "",
     "{{nave}}":                      op.nave             ?? "",
-    "{{viaje}}":                     "",
-    "{{numero_viaje}}":              "",
+    "{{viaje}}":                     op.viaje            ?? "",
+    "{{numero_viaje}}":              op.viaje            ?? "",
     "{{contenedor}}":                op.contenedor       ?? "",
     "{{contenedor_awb}}":            op.contenedor       ?? "",
     "{{sello}}":                     op.sello            ?? "",
     "{{tara}}":                      op.tara        != null ? `${op.tara} kg` : "",
-    "{{tipo_contenedor}}":           "",
+    "{{tipo_contenedor}}":           op.tipo_unidad      ?? "",
     "{{incoterm}}":                  op.incoterm         ?? "",
     "{{modalidad_venta}}":           op.incoterm         ?? "",
-    "{{clausula_venta}}":            "",
+    "{{clausula_venta}}":            op.incoterm         ?? "",
     "{{tipo_flete}}":                "",
     "{{forma_pago}}":                op.forma_pago       ?? "",
     "{{plazo_pago}}":                "",
-    "{{consignatario}}":             op.consignatario    ?? "",
+    "{{consignatario}}":             consigneeName || (op.consignatario ?? ""),
     "{{agente_aduana}}":             "",
     "{{agente_embarcador}}":         "",
     "{{contacto_operador}}":         "",
@@ -151,8 +230,8 @@ export function buildInstructivoTagValues(op: InstructivoOpData): Record<string,
     "{{puerto_destino}}":            op.pod              ?? "",
     "{{puerto_descarga}}":           op.pod              ?? "",
     "{{puerto_entrega}}":            op.pod              ?? "",
-    "{{destino_final}}":             op.pod              ?? "",
-    "{{pais_destino}}":              op.pais             ?? "",
+    "{{destino_final}}":             destinoFinal,
+    "{{pais_destino}}":              op.pais             ?? cons?.destino ?? "",
     "{{puerto_descarga_bl}}":        op.pod              ?? "",
     "{{puerto_descarga_certificado}}": op.pod            ?? "",
     "{{puerto_ingreso_fito}}":       "",
@@ -180,34 +259,34 @@ export function buildInstructivoTagValues(op: InstructivoOpData): Record<string,
     "{{total_pallets}}":             op.pallets     != null ? String(op.pallets) : "",
     "{{unidad_medida}}":             op.tipo_unidad      ?? "",
     "{{hs_code}}":                   "",
-    "{{planta_despacho}}":           op.tramo            ?? "",
-    "{{planta_consolidacion}}":      "",
+    "{{planta_despacho}}":           op.planta_presentacion || op.tramo || "",
+    "{{planta_consolidacion}}":      op.planta_presentacion ?? "",
     "{{inspeccion_sag}}":            "",
     "{{transporte_terrestre}}":      op.transporte       ?? "",
 
     // ── Consignee ─────────────────────────────────────────────────────────────
-    "{{consignee}}":                 op.consignatario    ?? "",
-    "{{consignee_company}}":         op.consignatario    ?? "",
-    "{{consignee_direccion}}":       "",
-    "{{consignee_address}}":         "",
-    "{{consignee_contacto}}":        "",
-    "{{consignee_attn}}":            "",
-    "{{consignee_email}}":           "",
-    "{{consignee_telefono}}":        "",
-    "{{consignee_mobile}}":          "",
-    "{{consignee_usci}}":            "",
-    "{{consignee_uscc}}":            "",
-    "{{consignee_zip}}":             "",
-    "{{consignee_postal_code}}":     "",
-    "{{consignee_pais}}":            op.pais             ?? "",
-    "{{notify}}":                    "",
-    "{{notify_company}}":            "",
-    "{{notify_address}}":            "",
-    "{{notify_attn}}":               "",
-    "{{notify_uscc}}":               "",
-    "{{notify_mobile}}":             "",
-    "{{notify_email}}":              "",
-    "{{notify_zip}}":                "",
+    "{{consignee}}":                 consigneeName,
+    "{{consignee_company}}":         consigneeName,
+    "{{consignee_direccion}}":       consigneeAddress,
+    "{{consignee_address}}":         consigneeAddress,
+    "{{consignee_contacto}}":        cons?.consignee_attn?.trim() || "",
+    "{{consignee_attn}}":            cons?.consignee_attn?.trim() || "",
+    "{{consignee_email}}":           cons?.consignee_email?.trim() || "",
+    "{{consignee_telefono}}":        cons?.consignee_mobile?.trim() || "",
+    "{{consignee_mobile}}":          cons?.consignee_mobile?.trim() || "",
+    "{{consignee_usci}}":            cons?.consignee_uscc?.trim() || "",
+    "{{consignee_uscc}}":            cons?.consignee_uscc?.trim() || "",
+    "{{consignee_zip}}":             cons?.consignee_zip?.trim() || "",
+    "{{consignee_postal_code}}":     cons?.consignee_zip?.trim() || "",
+    "{{consignee_pais}}":            op.pais ?? cons?.destino ?? "",
+    "{{notify}}":                    cons?.notify_company?.trim() || "",
+    "{{notify_company}}":            cons?.notify_company?.trim() || "",
+    "{{notify_address}}":            cons?.notify_address?.trim() || "",
+    "{{notify_attn}}":               cons?.notify_attn?.trim() || "",
+    "{{notify_uscc}}":               cons?.notify_uscc?.trim() || "",
+    "{{notify_mobile}}":             cons?.notify_mobile?.trim() || "",
+    "{{notify_email}}":              cons?.notify_email?.trim() || "",
+    "{{notify_zip}}":                cons?.notify_zip?.trim() || "",
 
     // ── Transporte ────────────────────────────────────────────────────────────
     "{{empresa_transporte}}":        op.transporte       ?? "",

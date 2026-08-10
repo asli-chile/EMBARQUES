@@ -6,6 +6,15 @@ import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleLabel,
+  moduleInput,
+  moduleBtnPrimary,
+  moduleBtnOnHero,
+  moduleCard,
+} from "@/lib/ui/moduleStyles";
 
 type Cliente = { id: string; nombre: string };
 
@@ -185,46 +194,46 @@ export function ConsignatariosContent() {
 
   const inp = (label: string, field: keyof typeof form, type: string = "text", multiline = false) => (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{label}</label>
+      <label className={moduleLabel}>{label}</label>
       {multiline ? (
         <textarea
           value={(form[field] as string) ?? ""}
           onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
           rows={3}
-          className="px-3 py-2 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue resize-none"
+          className={`${moduleInput} resize-none`}
         />
       ) : (
         <input
           type={type}
           value={(form[field] as string) ?? ""}
           onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-          className="px-3 py-2 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+          className={moduleInput}
         />
       )}
     </div>
   );
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`}>
 
       {/* ── Hero header ── */}
-      <div className="bg-gradient-to-br from-brand-blue via-brand-blue/90 to-indigo-700 px-4 sm:px-6 py-5 sm:py-6">
+      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:contact" width={22} height={22} className="text-white" />
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:contact" width={24} height={24} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-white leading-tight">{tr.title}</h1>
-              <p className="text-xs text-white/60 mt-0.5 hidden sm:block">{tr.subtitle}</p>
+              <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">{tr.title}</h1>
+              <p className="text-base text-white/75 mt-1 hidden sm:block">{tr.subtitle}</p>
               {!loading && (
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:users" width={9} height={9} />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold bg-white/15 text-white/90 border border-white/20">
+                    <Icon icon="lucide:users" width={12} height={12} />
                     {filtered.length} {filtered.length !== 1 ? tr.resultados : tr.resultado}
                   </span>
                   {!showInactive && consignatarios.filter(c => !c.activo).length > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-white/60 border border-white/15">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold bg-white/10 text-white/60 border border-white/15">
                       {consignatarios.filter(c => !c.activo).length} {tr.inactivosLabel}
                     </span>
                   )}
@@ -235,7 +244,7 @@ export function ConsignatariosContent() {
           {canEdit && (
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white text-brand-blue text-xs sm:text-sm font-bold hover:bg-white/90 transition-colors shadow-sm shrink-0"
+              className={`${moduleBtnOnHero} shrink-0`}
             >
               <Icon icon="lucide:plus" width={15} height={15} />
               <span className="hidden sm:inline">{tr.nuevo}</span>
@@ -256,29 +265,29 @@ export function ConsignatariosContent() {
         )}
 
         {/* ── Filtros ── */}
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-3 flex flex-col sm:flex-row gap-2">
+        <div className={`${moduleCard} p-3 flex flex-col sm:flex-row gap-2`}>
           <div className="relative flex-1">
-            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-blue/40 pointer-events-none" />
             <input
               type="text"
               placeholder={tr.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-2.5 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+              className={`${moduleInput} pl-9`}
             />
           </div>
           <div className="flex gap-2">
             <select
               value={selectedCliente}
               onChange={(e) => setSelectedCliente(e.target.value)}
-              className="flex-1 sm:flex-none px-3 py-2.5 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue min-w-0"
+              className={`${moduleInput} flex-1 sm:flex-none min-w-0`}
             >
               <option value="all">{tr.allClients}</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.nombre}>{c.nombre}</option>
               ))}
             </select>
-            <label className="flex items-center gap-1.5 text-xs text-neutral-600 cursor-pointer px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 transition-colors shrink-0">
+            <label className="flex items-center gap-1.5 text-base font-semibold text-brand-blue cursor-pointer px-3 py-2 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] hover:bg-white transition-colors shrink-0">
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="w-3.5 h-3.5 accent-brand-blue" />
               <span className="hidden sm:inline">{tr.showInactive}</span>
               <span className="sm:hidden">{tr.showInactiveShort}</span>
@@ -289,13 +298,13 @@ export function ConsignatariosContent() {
         {/* ── Lista ── */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm">
+            <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm">
               <Icon icon="typcn:refresh" className="w-5 h-5 text-brand-blue animate-spin" />
               {tr.loading}
             </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-neutral-200 shadow-sm">
+          <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-brand-blue/15 shadow-sm">
             <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
               <Icon icon="lucide:contact" width={28} height={28} className="text-neutral-300" />
             </div>
@@ -315,7 +324,7 @@ export function ConsignatariosContent() {
             {/* ── Cards móvil ── */}
             <div className="md:hidden space-y-2">
               {filtered.map((c) => (
-                <div key={c.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${!c.activo ? "opacity-60 border-neutral-200" : "border-neutral-200 hover:border-neutral-300"}`}>
+                <div key={c.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${!c.activo ? "opacity-60 border-brand-blue/15" : "border-brand-blue/15 hover:border-brand-blue/30"}`}>
                   <div className="h-1 bg-gradient-to-r from-brand-blue to-indigo-500" />
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2 mb-3">
@@ -323,24 +332,24 @@ export function ConsignatariosContent() {
                         <p className="font-bold text-sm text-neutral-900 truncate">{c.nombre}</p>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                           {c.cliente && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-bold border border-brand-blue/15">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-sm font-bold border border-brand-blue/15">
                               <Icon icon="lucide:building-2" width={9} height={9} />
                               {c.cliente}
                             </span>
                           )}
                           {c.destino && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-[10px] font-semibold border border-neutral-200">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-sm font-semibold border border-neutral-200">
                               <Icon icon="lucide:map-pin" width={9} height={9} />
                               {c.destino}
                             </span>
                           )}
                           {canEdit ? (
-                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
+                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
                               <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={9} />
                               {c.activo ? tr.activo : tr.inactivo}
                             </button>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
                               {c.activo ? tr.activo : tr.inactivo}
                             </span>
                           )}
@@ -359,14 +368,14 @@ export function ConsignatariosContent() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-100">
                       <div className="bg-neutral-50 rounded-xl p-2.5">
-                        <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Consignee</p>
+                        <p className="text-base font-semibold text-brand-blue mb-1">Consignee</p>
                         <p className="text-xs text-neutral-800 font-semibold leading-snug line-clamp-1">{c.consignee_company || <span className="text-neutral-300 font-normal">—</span>}</p>
-                        {c.consignee_attn && <p className="text-[10px] text-neutral-400 mt-0.5 truncate">{c.consignee_attn}</p>}
+                        {c.consignee_attn && <p className="text-sm text-neutral-400 mt-0.5 truncate">{c.consignee_attn}</p>}
                       </div>
                       <div className="bg-neutral-50 rounded-xl p-2.5">
                         <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notify Party</p>
                         <p className="text-xs text-neutral-800 font-semibold leading-snug line-clamp-1">{c.notify_company || <span className="text-neutral-300 font-normal">—</span>}</p>
-                        {c.notify_attn && <p className="text-[10px] text-neutral-400 mt-0.5 truncate">{c.notify_attn}</p>}
+                        {c.notify_attn && <p className="text-sm text-neutral-400 mt-0.5 truncate">{c.notify_attn}</p>}
                       </div>
                     </div>
                   </div>
@@ -375,18 +384,18 @@ export function ConsignatariosContent() {
             </div>
 
             {/* ── Tabla desktop ── */}
-            <div className="hidden md:block bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+            <div className={`hidden md:block ${moduleCard}`}>
               <div className="h-1 bg-gradient-to-r from-brand-blue to-indigo-500" />
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50">
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colNombre}</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colCliente}</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colDestino}</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Consignee</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Notify</th>
-                      <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{tr.colEstado}</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colNombre}</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colCliente}</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colDestino}</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden lg:table-cell">Consignee</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden xl:table-cell">Notify</th>
+                      <th className="text-center px-4 py-3 text-sm font-bold text-brand-blue">{tr.colEstado}</th>
                       {canEdit && <th className="px-4 py-3 w-20" />}
                     </tr>
                   </thead>
@@ -395,7 +404,7 @@ export function ConsignatariosContent() {
                       <tr key={c.id} className={`hover:bg-neutral-50 transition-colors ${!c.activo ? "opacity-50" : ""}`}>
                         <td className="px-4 py-3"><p className="font-semibold text-neutral-800 text-xs">{c.nombre}</p></td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-bold border border-brand-blue/15">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-sm font-bold border border-brand-blue/15">
                             <Icon icon="lucide:building-2" width={9} height={9} />
                             {c.cliente || "—"}
                           </span>
@@ -403,19 +412,19 @@ export function ConsignatariosContent() {
                         <td className="px-4 py-3 text-xs text-neutral-600">{c.destino || "—"}</td>
                         <td className="px-4 py-3 hidden lg:table-cell">
                           <p className="text-xs text-neutral-700 font-medium">{c.consignee_company || "—"}</p>
-                          {c.consignee_attn && <p className="text-[10px] text-neutral-400">{c.consignee_attn}</p>}
+                          {c.consignee_attn && <p className="text-sm text-neutral-400">{c.consignee_attn}</p>}
                         </td>
                         <td className="px-4 py-3 hidden xl:table-cell">
                           <p className="text-xs text-neutral-700 font-medium">{c.notify_company || "—"}</p>
-                          {c.notify_attn && <p className="text-[10px] text-neutral-400">{c.notify_attn}</p>}
+                          {c.notify_attn && <p className="text-sm text-neutral-400">{c.notify_attn}</p>}
                         </td>
                         <td className="px-4 py-3 text-center">
                           {canEdit ? (
-                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"}`}>
+                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"}`}>
                               <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />{c.activo ? tr.activo : tr.inactivo}
                             </button>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>{c.activo ? tr.activo : tr.inactivo}</span>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>{c.activo ? tr.activo : tr.inactivo}</span>
                           )}
                         </td>
                         {canEdit && (
@@ -432,7 +441,7 @@ export function ConsignatariosContent() {
                 </table>
               </div>
               <div className="px-4 py-2.5 border-t border-neutral-100 bg-neutral-50/50">
-                <span className="text-[10px] text-neutral-400 font-medium">{filtered.length} {filtered.length !== 1 ? tr.consignatarios_plural : tr.consignatario}</span>
+                <span className="text-sm text-neutral-400 font-medium">{filtered.length} {filtered.length !== 1 ? tr.consignatarios_plural : tr.consignatario}</span>
               </div>
             </div>
           </>
@@ -465,18 +474,18 @@ export function ConsignatariosContent() {
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
               {/* Datos generales */}
               <div>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+                <p className="text-sm font-bold text-neutral-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
                   <Icon icon="lucide:info" width={10} height={10} />
                   {tr.generalSection}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">{inp(tr.nombre, "nombre")}</div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{tr.clienteLabel}</label>
+                    <label className={moduleLabel}>{tr.clienteLabel}</label>
                     <select
                       value={form.cliente ?? ""}
                       onChange={(e) => setForm((f) => ({ ...f, cliente: e.target.value }))}
-                      className="px-3 py-2.5 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+                      className={moduleInput}
                     >
                       <option value="">{tr.selectCliente}</option>
                       {clientes.map((c) => (
@@ -568,7 +577,7 @@ export function ConsignatariosContent() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-neutral-700">{tr.consignatarioActivo}</p>
-                      <p className="text-[10px] text-neutral-400">{form.activo ? tr.visibleDocs : tr.hiddenDocs}</p>
+                      <p className="text-sm text-neutral-400">{form.activo ? tr.visibleDocs : tr.hiddenDocs}</p>
                     </div>
                   </label>
                 </div>
@@ -588,7 +597,7 @@ export function ConsignatariosContent() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
+                className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50`}
               >
                 {saving ? <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.guardando}</> : <><Icon icon="lucide:save" className="w-4 h-4" />{tr.guardar}</>}
               </button>

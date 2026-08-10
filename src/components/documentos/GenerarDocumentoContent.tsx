@@ -6,10 +6,20 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { withBase } from "@/lib/basePath";
+import {
+  buildInstructivoTagValues,
+  pickConsignatarioForOperacion,
+  type InstructivoConsignatario,
+  type InstructivoOpData,
+} from "@/lib/documentos/instructivo";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleInput,
+} from "@/lib/ui/moduleStyles";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -21,38 +31,8 @@ interface Props {
 
 // ─── Tipos de BD ──────────────────────────────────────────────────────────────
 
-type Operacion = {
-  id: string;
-  ref_asli: string | null;
-  correlativo: number;
-  cliente: string | null;
-  consignatario: string | null;
-  naviera: string | null;
-  nave: string | null;
-  booking: string | null;
-  pol: string | null;
-  pod: string | null;
-  etd: string | null;
-  eta: string | null;
-  especie: string | null;
-  pais: string | null;
-  pallets: number | null;
-  peso_bruto: number | null;
-  peso_neto: number | null;
-  tipo_unidad: string | null;
-  contenedor: string | null;
-  sello: string | null;
-  tara: number | null;
-  temperatura: string | null;
-  ventilacion: number | null;
-  incoterm: string | null;
-  forma_pago: string | null;
-  observaciones: string | null;
-  transporte: string | null;
-  tramo: string | null;
-  valor_tramo: number | null;
-  deposito: string | null;
-  moneda: string | null;
+type Operacion = InstructivoOpData & {
+  valor_tramo?: number | null;
 };
 
 type FormatoDocumento = {
@@ -72,67 +52,17 @@ type TagGroup = { group: string; icon: string; tags: { tag: string; label: strin
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtDate(s: string | null) {
-  if (!s) return "";
-  try { return format(new Date(s), "dd/MM/yyyy", { locale: es }); }
-  catch { return s; }
-}
-
 function fmtRef(op: Operacion) {
   return op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
 }
 
-/** Construye el mapa de etiquetas → valor desde una operación */
-function buildTagValues(op: Operacion): Record<string, string> {
-  return {
-    "{{ref_asli}}":          fmtRef(op),
-    "{{cliente_nombre}}":    op.cliente         ?? "",
-    "{{consignatario}}":     op.consignatario   ?? "",
-    "{{booking}}":           op.booking         ?? "",
-    "{{contenedor}}":        op.contenedor      ?? "",
-    "{{naviera}}":           op.naviera         ?? "",
-    "{{nave}}":              op.nave            ?? "",
-    "{{sello}}":             op.sello           ?? "",
-    "{{incoterm}}":          op.incoterm        ?? "",
-    "{{forma_pago}}":        op.forma_pago      ?? "",
-    "{{puerto_origen}}":     op.pol             ?? "",
-    "{{puerto_destino}}":    op.pod             ?? "",
-    "{{pais_destino}}":      op.pais            ?? "",
-    "{{etd}}":               fmtDate(op.etd),
-    "{{eta}}":               fmtDate(op.eta),
-    "{{fecha_emision}}":     format(new Date(), "dd/MM/yyyy"),
-    "{{descripcion_carga}}": op.especie         ?? "",
-    "{{temperatura}}":       op.temperatura     ?? "",
-    "{{ventilacion}}":       op.ventilacion != null ? String(op.ventilacion) : "",
-    "{{peso_bruto}}":        op.peso_bruto      != null ? `${op.peso_bruto.toLocaleString("es-CL")} kg` : "",
-    "{{peso_neto}}":         op.peso_neto       != null ? `${op.peso_neto.toLocaleString("es-CL")} kg` : "",
-    "{{tara}}":              op.tara            != null ? `${op.tara} kg` : "",
-    "{{cantidad_bultos}}":   op.pallets         != null ? String(op.pallets) : "",
-    "{{unidad_medida}}":     op.tipo_unidad     ?? "",
-    "{{observaciones}}":     op.observaciones   ?? "",
-    "{{moneda}}":            op.moneda          ?? "USD",
-    "{{empresa_transporte}}":op.transporte      ?? "",
-    "{{tramo}}":             op.tramo           ?? "",
-    "{{valor_tramo}}":       op.valor_tramo     != null ? String(op.valor_tramo) : "",
-    "{{deposito}}":          op.deposito        ?? "",
-    // Fijos ASLI
-    "{{asli_nombre}}":       "Asesorías y Servicios Logísticos Integrales Ltda.",
-    "{{asli_rut}}":          "76.XXX.XXX-X",
-    "{{asli_direccion}}":    "Valparaíso, Chile",
-    "{{asli_telefono}}":     "+56 X XXXX XXXX",
-    "{{asli_email}}":        "contacto@asli.cl",
-    // Vacíos completables
-    "{{cliente_rut}}":       "",
-    "{{cliente_direccion}}": "",
-    "{{tipo_contenedor}}":   "",
-    "{{viaje}}":             "",
-    "{{hs_code}}":           "",
-    "{{numero_documento}}":  "",
-    "{{monto_total}}":       "",
-    "{{precio_unitario}}":   "",
-    "{{concepto}}":          "",
-  };
-}
+const OP_SELECT = `id, ref_asli, correlativo, cliente, consignatario, naviera, nave, booking, booking_doc_url,
+  pol, pod, etd, eta, especie, pais, pallets, peso_bruto, peso_neto, tipo_unidad,
+  contenedor, sello, tara, temperatura, ventilacion, incoterm, forma_pago,
+  observaciones, transporte, tramo, valor_tramo, deposito, moneda, viaje, dus, sps,
+  chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque,
+  planta_presentacion, inicio_stacking, fin_stacking, ingreso_stacking,
+  citacion, llegada_planta, salida_planta`;
 
 /** Extrae etiquetas {{...}} de un HTML */
 function extractTags(html: string): string[] {
@@ -205,7 +135,25 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
         { tag: "{{cliente_nombre}}",    label: tr.tagClienteNombre },
         { tag: "{{cliente_rut}}",       label: tr.tagClienteRut },
         { tag: "{{cliente_direccion}}", label: tr.tagClienteDireccion },
+        { tag: "{{exportador}}",        label: "Exportador" },
         { tag: "{{consignatario}}",     label: tr.tagConsignatario },
+      ],
+    },
+    {
+      group: "Consignee / Notify", icon: "lucide:contact",
+      tags: [
+        { tag: "{{consignee_company}}", label: "Consignee company" },
+        { tag: "{{consignee_address}}", label: "Consignee address" },
+        { tag: "{{consignee_attn}}",    label: "Consignee ATTN" },
+        { tag: "{{consignee_email}}",   label: "Consignee email" },
+        { tag: "{{consignee_mobile}}",  label: "Consignee mobile" },
+        { tag: "{{consignee_uscc}}",    label: "Consignee USCC" },
+        { tag: "{{consignee_zip}}",     label: "Consignee ZIP" },
+        { tag: "{{notify_company}}",    label: "Notify company" },
+        { tag: "{{notify_address}}",    label: "Notify address" },
+        { tag: "{{notify_attn}}",       label: "Notify ATTN" },
+        { tag: "{{notify_email}}",      label: "Notify email" },
+        { tag: "{{notify_mobile}}",     label: "Notify mobile" },
       ],
     },
     {
@@ -221,6 +169,8 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
         { tag: "{{sello}}",             label: tr.tagSello },
         { tag: "{{incoterm}}",          label: tr.tagIncoterm },
         { tag: "{{forma_pago}}",        label: tr.tagFormaPago },
+        { tag: "{{dus}}",               label: "DUS" },
+        { tag: "{{csg}}",               label: "CSG / SPS" },
       ],
     },
     {
@@ -228,6 +178,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
       tags: [
         { tag: "{{puerto_origen}}",     label: tr.tagPuertoOrigen },
         { tag: "{{puerto_destino}}",    label: tr.tagPuertoDestino },
+        { tag: "{{destino_final}}",     label: "Destino final" },
         { tag: "{{pais_destino}}",      label: tr.tagPaisDestino },
         { tag: "{{etd}}",               label: tr.tagEtd },
         { tag: "{{eta}}",               label: tr.tagEta },
@@ -250,6 +201,20 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
       ],
     },
     {
+      group: "Transporte / Planta", icon: "lucide:truck",
+      tags: [
+        { tag: "{{empresa_transporte}}", label: "Empresa transporte" },
+        { tag: "{{chofer}}",             label: "Chofer" },
+        { tag: "{{patente_camion}}",     label: "Patente camión" },
+        { tag: "{{patente_remolque}}",   label: "Patente remolque" },
+        { tag: "{{deposito}}",           label: "Depósito" },
+        { tag: "{{planta_presentacion}}",label: "Planta presentación" },
+        { tag: "{{citacion}}",           label: "Citación" },
+        { tag: "{{inicio_stacking}}",    label: "Inicio stacking" },
+        { tag: "{{fin_stacking}}",       label: "Fin stacking" },
+      ],
+    },
+    {
       group: tr.groupFinanciero, icon: "lucide:dollar-sign",
       tags: [
         { tag: "{{numero_documento}}",  label: tr.tagNumeroDocumento },
@@ -257,15 +222,6 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
         { tag: "{{moneda}}",            label: tr.tagMoneda },
         { tag: "{{precio_unitario}}",   label: tr.tagPrecioUnitario },
         { tag: "{{concepto}}",          label: tr.tagConcepto },
-      ],
-    },
-    {
-      group: tr.groupTransporte, icon: "lucide:truck",
-      tags: [
-        { tag: "{{empresa_transporte}}", label: tr.tagEmpresaTransporte },
-        { tag: "{{tramo}}",              label: tr.tagTramo },
-        { tag: "{{valor_tramo}}",        label: tr.tagValorTramo },
-        { tag: "{{deposito}}",           label: tr.tagDeposito },
       ],
     },
     {
@@ -296,6 +252,9 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
   // ── Valores de etiquetas ──────────────────────────────────────────────────
   const [tagValues, setTagValues] = useState<Record<string, string>>({});
+  const [autoTagValues, setAutoTagValues] = useState<Record<string, string>>({});
+  const [linkingOp, setLinkingOp] = useState(false);
+  const [enrichmentNote, setEnrichmentNote] = useState<string | null>(null);
   const [tagsDeDePlantilla, setTagsDePlantilla] = useState<string[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
 
@@ -314,10 +273,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
     let q = supabase
       .from("operaciones")
-      .select(`id, ref_asli, correlativo, cliente, consignatario, naviera, nave, booking, pol, pod,
-               etd, eta, especie, pais, pallets, peso_bruto, peso_neto, tipo_unidad,
-               contenedor, sello, tara, temperatura, ventilacion, incoterm, forma_pago,
-               observaciones, transporte, tramo, valor_tramo, deposito, moneda`)
+      .select(OP_SELECT)
       .is("deleted_at", null)
       .order("correlativo", { ascending: false });
     if (isCliente && empresaNombres.length > 0) q = q.in("cliente", empresaNombres);
@@ -336,12 +292,69 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
-  // ── Seleccionar operación → llenar tags ───────────────────────────────────
-  const handleSelectOp = (op: Operacion) => {
-    setSelectedOp(op);
-    setTagValues(buildTagValues(op));
+  // ── Seleccionar operación → enriquecer con consignatario + cliente ─────────
+  const handleSelectOp = useCallback(async (opBrief: Operacion) => {
+    if (!supabase) return;
+    setSelectedOp(opBrief);
+    setLinkingOp(true);
+    setEnrichmentNote(null);
     setMobileTab("formato");
-  };
+
+    let op: Operacion = opBrief;
+    try {
+      const { data: full } = await supabase
+        .from("operaciones")
+        .select(OP_SELECT)
+        .eq("id", opBrief.id)
+        .single();
+      if (full) {
+        op = full as Operacion;
+        setSelectedOp(op);
+      }
+    } catch {
+      /* usar brief */
+    }
+
+    let cons: InstructivoConsignatario | null = null;
+    if (op.cliente?.trim()) {
+      const { data: consList } = await supabase
+        .from("consignatarios")
+        .select(`nombre, consignee_company, consignee_address, consignee_uscc,
+                 consignee_attn, consignee_email, consignee_mobile, consignee_zip,
+                 notify_company, notify_address, notify_attn, notify_uscc,
+                 notify_email, notify_mobile, notify_zip, destino`)
+        .eq("activo", true)
+        .eq("cliente", op.cliente.trim());
+      cons = pickConsignatarioForOperacion(
+        (consList ?? []) as InstructivoConsignatario[],
+        op,
+      );
+    }
+
+    // Cliente: hoy `empresas` solo tiene nombre (sin RUT/dirección en BD)
+    const clienteExtra = op.cliente?.trim()
+      ? { nombre: op.cliente.trim(), rut: null, direccion: null }
+      : null;
+
+    const values = buildInstructivoTagValues(op, {
+      consignatario: cons,
+      cliente: clienteExtra,
+    });
+    setTagValues(values);
+    setAutoTagValues(values);
+
+    const notes: string[] = [];
+    if (cons) {
+      notes.push(`Consignatario: ${cons.consignee_company || cons.nombre}`);
+    } else if (op.consignatario) {
+      notes.push("Consignatario de la operación (sin ficha en configuración)");
+    } else {
+      notes.push("Sin consignatario vinculado");
+    }
+    if (clienteExtra?.nombre) notes.push(`Cliente: ${clienteExtra.nombre}`);
+    setEnrichmentNote(notes.join(" · "));
+    setLinkingOp(false);
+  }, [supabase]);
 
   // ── Seleccionar formato → detectar qué tags usa ───────────────────────────
   const handleSelectFormato = useCallback(async (fmt: FormatoDocumento) => {
@@ -420,7 +433,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
   }, [tagsDeDePlantilla, tagGroups]);
 
   // ─── CSS ──────────────────────────────────────────────────────────────────
-  const inputCls = "w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all text-sm";
+  const inputCls = moduleInput;
 
   const canGenerate = !!selectedOp && !!selectedFormato && !loadingTags && !isCliente;
   const isExcel = (selectedFormato?.template_type ?? "html") === "excel";
@@ -429,16 +442,21 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-50">
+    <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`}>
       {/* ── Topbar ── */}
-      <div className="bg-white border-b border-neutral-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl ${cfg.colorBg} flex items-center justify-center shrink-0`}>
-            <Icon icon={cfg.icon} width={18} height={18} className={cfg.color} />
+      <div className={`${moduleHero} px-4 sm:px-6 py-5 flex items-center justify-between gap-3 shrink-0`}>
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+            <Icon icon={cfg.icon} width={24} height={24} className="text-white" />
           </div>
-          <div>
-            <h1 className="text-base font-bold text-neutral-900">{cfg.titulo}</h1>
-            <p className="text-xs text-neutral-500 hidden sm:block">{cfg.subtitulo}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">{cfg.titulo}</h1>
+            <p className="text-base text-white/75 mt-1 truncate">{cfg.subtitulo}</p>
+            {enrichmentNote && (
+              <p className="text-sm text-emerald-200/90 mt-1 truncate">
+                {linkingOp ? "Cargando datos…" : `Auto: ${enrichmentNote}`}
+              </p>
+            )}
           </div>
         </div>
         {/* Botón generar (desktop) */}
@@ -446,7 +464,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
           <button
             onClick={handleGenerar}
             disabled={generating}
-            className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors disabled:opacity-50 ${cfg.colorBtn}`}
+            className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 shadow-sm transition-colors disabled:opacity-50"
           >
             <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={15} height={15} className={generating ? "animate-spin" : ""} />
             {generating ? tr.generando : isExcel ? tr.descargarExcel : tr.generarPdf}
@@ -526,7 +544,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                 return (
                   <button
                     key={op.id}
-                    onClick={() => handleSelectOp(op)}
+                    onClick={() => void handleSelectOp(op)}
                     className={`w-full flex items-start gap-3 px-3 py-3 text-left border-b border-neutral-100 transition-all ${
                       isActive ? "bg-brand-blue/5 border-l-2 border-l-brand-blue" : "hover:bg-neutral-50 border-l-2 border-l-transparent"
                     }`}
@@ -690,7 +708,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
                               <div className="grid sm:grid-cols-2 gap-3">
                                 {g.tags.map(({ tag, label }) => {
                                   const val = tagValues[tag] ?? "";
-                                  const autoFilled = !!val && buildTagValues(selectedOp)[tag] === val;
+                                  const autoFilled = !!val && autoTagValues[tag] === val;
                                   return (
                                     <div key={tag}>
                                       <label className="flex items-center gap-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wide mb-1">

@@ -6,6 +6,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { modulePageBg, moduleHero, moduleCard, moduleInput } from "@/lib/ui/moduleStyles";
 
 type Operacion = {
   id: string;
@@ -378,8 +379,8 @@ export function MisDocumentosContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-lg border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-brand-blue/70 text-base font-medium">
           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
@@ -397,7 +398,7 @@ export function MisDocumentosContent() {
     const pct = Math.min(100, Math.round((count / totalTipos) * 100));
     return (
       <span
-        className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-sm border tabular-nums ${
+        className={`inline-flex items-center gap-1 text-base font-extrabold px-2 py-0.5 rounded-sm border tabular-nums ${
           completo
             ? "text-emerald-700 bg-emerald-50 border-emerald-200"
             : count > 0
@@ -412,21 +413,21 @@ export function MisDocumentosContent() {
   };
 
   const paginationBar = (
-    <div className={`border-t border-neutral-100 flex flex-col gap-2 bg-neutral-50/80 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
-      <div className={`flex flex-wrap items-center gap-2 text-xs text-neutral-600 ${hasSelection ? "justify-center" : ""}`}>
-        {!hasSelection && <span className="font-semibold text-neutral-500">{tr.rowsPerPage}</span>}
-        <div className="inline-flex rounded-lg border border-neutral-200 overflow-hidden bg-white">
+    <div className={`border-t border-brand-blue/10 flex flex-col gap-2 bg-[#F4F8FC]/80 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
+      <div className={`flex flex-wrap items-center gap-2 text-base text-neutral-600 ${hasSelection ? "justify-center" : ""}`}>
+        {!hasSelection && <span className="font-semibold text-brand-blue/70">{tr.rowsPerPage}</span>}
+        <div className="inline-flex rounded-lg border border-brand-blue/20 overflow-hidden bg-white">
           {PAGE_SIZE_OPTIONS.map((size) => (
             <button
               key={size}
               type="button"
               onClick={() => handlePageSizeChange(size)}
               className={`font-bold transition-colors ${
-                hasSelection ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-xs"
+                hasSelection ? "px-2 py-1 text-sm" : "px-3 py-1.5 text-base"
               } ${
                 pageSize === size
                   ? "bg-brand-blue text-white"
-                  : "text-neutral-600 hover:bg-neutral-100"
+                  : "text-brand-blue/80 hover:bg-[#F4F8FC]"
               }`}
             >
               {size}
@@ -434,7 +435,7 @@ export function MisDocumentosContent() {
           ))}
         </div>
         {!hasSelection && (
-          <span className="text-neutral-400 tabular-nums">
+          <span className="text-neutral-500 tabular-nums">
             {tr.showingRange
               .replace("{from}", String(rangeFrom))
               .replace("{to}", String(rangeTo))
@@ -448,13 +449,13 @@ export function MisDocumentosContent() {
           type="button"
           disabled={safePage <= 1}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
-          className="inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-brand-blue/20 bg-white text-brand-blue/80 hover:bg-[#F4F8FC] disabled:opacity-40 disabled:pointer-events-none transition-colors"
           title={tr.prevPage}
         >
-          <Icon icon="lucide:chevron-left" width={14} height={14} />
+          <Icon icon="lucide:chevron-left" width={16} height={16} />
           {!hasSelection && tr.prevPage}
         </button>
-        <span className="text-[11px] font-bold text-neutral-600 tabular-nums px-1.5">
+        <span className="text-base font-bold text-brand-blue tabular-nums px-1.5">
           {hasSelection
             ? `${safePage}/${totalPages}`
             : tr.pageOf.replace("{page}", String(safePage)).replace("{pages}", String(totalPages))}
@@ -463,11 +464,11 @@ export function MisDocumentosContent() {
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          className="inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-brand-blue/20 bg-white text-brand-blue/80 hover:bg-[#F4F8FC] disabled:opacity-40 disabled:pointer-events-none transition-colors"
           title={tr.nextPage}
         >
           {!hasSelection && tr.nextPage}
-          <Icon icon="lucide:chevron-right" width={14} height={14} />
+          <Icon icon="lucide:chevron-right" width={16} height={16} />
         </button>
       </div>
     </div>
@@ -475,24 +476,24 @@ export function MisDocumentosContent() {
 
   const docsPanel = hasSelection && operacionActual ? (
     <div className="space-y-3">
-      <div className={`rounded-lg overflow-hidden shadow-sm border-2 ${progressPct === 100 ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50" : "border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 to-sky-50"}`}>
+      <div className={`rounded-2xl overflow-hidden shadow-sm border-2 ${progressPct === 100 ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50" : "border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 to-sky-50"}`}>
         <div className="px-4 py-3 flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${progressPct === 100 ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
-            <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={20} height={20} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
+          <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${progressPct === 100 ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
+            <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={22} height={22} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-neutral-800 truncate">
+            <p className="text-base font-bold text-brand-blue truncate">
               {opRef(operacionActual)} — {operacionActual.cliente}
             </p>
-            <p className="text-[11px] text-neutral-500 truncate">
+            <p className="text-base text-neutral-500 truncate">
               {operacionActual.naviera}{operacionActual.booking ? ` · ${operacionActual.booking}` : ""}{operacionActual.pod ? ` · ${operacionActual.pod}` : ""}
             </p>
             <div className="flex items-center gap-2 mt-1.5">
-              <div className="flex-1 h-2 bg-white/70 rounded-sm overflow-hidden border border-neutral-200">
+              <div className="flex-1 h-2 bg-white/70 rounded-sm overflow-hidden border border-brand-blue/15">
                 <div className="h-full rounded-sm transition-all duration-500"
                   style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#11224E,#007A7B)" }} />
               </div>
-              <span className={`text-[11px] font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
+              <span className={`text-base font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
                 {docsCompletados}/{visibleTipos.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
               </span>
             </div>
@@ -503,14 +504,14 @@ export function MisDocumentosContent() {
             className="shrink-0 p-2 text-neutral-400 hover:text-neutral-700 hover:bg-white/70 rounded-lg transition-colors"
             title={tr.closeSelection}
           >
-            <Icon icon="lucide:x" width={16} height={16} />
+            <Icon icon="lucide:x" width={18} height={18} />
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs font-medium flex items-center gap-2">
-          <Icon icon="lucide:alert-circle" className="w-3.5 h-3.5 flex-shrink-0" />
+        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-base font-medium flex items-center gap-2">
+          <Icon icon="lucide:alert-circle" className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
       )}
@@ -524,38 +525,38 @@ export function MisDocumentosContent() {
           const tipoLabel = tr.tipoLabels[tipo as keyof typeof tr.tipoLabels] ?? meta.label;
 
           return (
-            <div key={tipo} className={`bg-white rounded-lg border-2 shadow-sm overflow-hidden transition-all ${
-              doc ? "border-emerald-300" : "border-neutral-200"
+            <div key={tipo} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-all ${
+              doc ? "border-emerald-300" : "border-brand-blue/15"
             }`}>
-              <div className={`h-1.5 ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-neutral-200 to-neutral-100"}`} />
-              <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
+              <div className={`h-1.5 ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-brand-blue/20 to-brand-blue/5"}`} />
+              <div className="px-4 py-3 flex items-center gap-3 border-b border-brand-blue/10">
                 <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : meta.color.split(" ")[1]}`}>
                   <Icon icon={doc ? "lucide:check" : meta.icon} className={`w-4.5 h-4.5 ${doc ? "text-emerald-600" : meta.color.split(" ")[0]}`} width={18} height={18} />
                 </span>
-                <h3 className="text-sm font-bold text-neutral-700 leading-tight flex-1 min-w-0">{tipoLabel}</h3>
+                <h3 className="text-base font-bold text-brand-blue leading-tight flex-1 min-w-0">{tipoLabel}</h3>
               </div>
               <div className="p-3">
                 {doc ? (
                   <div className="space-y-2.5">
-                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-neutral-50 border border-neutral-100">
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#F4F8FC] border border-brand-blue/10">
                       <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}
                         className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-500" : "text-green-600"}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
-                        <p className="text-xs text-neutral-400 mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
+                        <p className="text-base font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
+                        <p className="text-base text-neutral-500 mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={() => handlePreview(doc)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-brand-blue bg-brand-blue/8 rounded-lg hover:bg-brand-blue/15 transition-colors">
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-brand-blue bg-brand-blue/8 rounded-lg hover:bg-brand-blue/15 transition-colors">
                         <Icon icon="lucide:eye" className="w-4 h-4" />{tr.preview}
                       </button>
                       <button type="button" onClick={() => handleDownload(doc)}
-                        className="inline-flex items-center justify-center w-9 h-9 text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
+                        className="inline-flex items-center justify-center w-10 h-10 text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
                         <Icon icon="lucide:download" className="w-4 h-4" />
                       </button>
                       {!isCliente && !isSyntheticBooking && (
-                        <label className="inline-flex items-center justify-center w-9 h-9 text-neutral-500 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer border border-neutral-200" title={tr.replace}>
+                        <label className="inline-flex items-center justify-center w-10 h-10 text-neutral-500 bg-[#F4F8FC] rounded-lg hover:bg-white transition-colors cursor-pointer border border-brand-blue/20" title={tr.replace}>
                           <Icon icon="lucide:refresh-cw" className="w-4 h-4" />
                           <input type="file" accept=".pdf,.xls,.xlsx" className="hidden"
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
@@ -563,29 +564,29 @@ export function MisDocumentosContent() {
                       )}
                       {!isCliente && !isSyntheticBooking && (
                         <button type="button" onClick={() => handleDelete(doc)}
-                          className="inline-flex items-center justify-center w-9 h-9 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200" title={tr.deleteDocument}>
+                          className="inline-flex items-center justify-center w-10 h-10 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200" title={tr.deleteDocument}>
                           <Icon icon="lucide:trash-2" className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                   </div>
                 ) : isCliente ? (
-                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-neutral-200">
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-brand-blue/20">
                     <Icon icon="lucide:file-x" className="w-5 h-5 text-neutral-300" />
-                    <p className="text-sm text-neutral-400">{tr.noDocument}</p>
+                    <p className="text-base text-neutral-400">{tr.noDocument}</p>
                   </div>
                 ) : (
                   <label className={`flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed cursor-pointer transition-all ${
-                    isUploading ? "border-brand-blue bg-brand-blue/5" : "border-neutral-200 hover:border-brand-blue/50 hover:bg-brand-blue/[0.03]"
+                    isUploading ? "border-brand-blue bg-brand-blue/5" : "border-brand-blue/20 hover:border-brand-blue/50 hover:bg-brand-blue/[0.03]"
                   }`}>
                     {isUploading ? (
                       <><Icon icon="lucide:loader-2" className="w-5 h-5 text-brand-blue animate-spin flex-shrink-0" />
-                      <span className="text-sm font-semibold text-brand-blue">{tr.uploading}</span></>
+                      <span className="text-base font-semibold text-brand-blue">{tr.uploading}</span></>
                     ) : (
                       <><Icon icon="lucide:upload" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-semibold text-neutral-600">{tr.uploadFile}</p>
-                        <p className="text-xs text-neutral-400">{tr.fileTypesHint}</p>
+                        <p className="text-base font-semibold text-neutral-600">{tr.uploadFile}</p>
+                        <p className="text-base text-neutral-400">{tr.fileTypesHint}</p>
                       </div></>
                     )}
                     <input type="file" accept=".pdf,.xls,.xlsx" className="hidden" disabled={isUploading}
@@ -602,22 +603,22 @@ export function MisDocumentosContent() {
 
   return (
     <>
-    <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col bg-neutral-100">
+    <main className={`flex-1 min-h-0 w-full overflow-hidden flex flex-col ${modulePageBg}`}>
 
-      <div className="flex-shrink-0 w-full bg-gradient-to-br from-brand-blue via-brand-blue/90 to-brand-dark-teal text-white px-3 sm:px-4 py-3">
+      <div className={`${moduleHero} px-4 sm:px-6 pt-5 pb-4`}>
         <div className="flex items-center justify-between gap-3 w-full">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:folder-open" width={18} height={18} className="text-white" />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:folder-open" width={24} height={24} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold leading-tight">{tr.title}</h1>
-              <p className="text-[11px] text-white/70 mt-0.5 truncate">{tr.subtitle}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{tr.title}</h1>
+              <p className="text-base text-white/75 mt-1 truncate">{tr.subtitle}</p>
             </div>
           </div>
           <button type="button" onClick={() => void fetchOperaciones()}
-            className="p-2 bg-white/15 hover:bg-white/25 rounded-lg transition-colors text-white" title={tr.updateTooltip}>
-            <Icon icon="lucide:refresh-cw" width={16} height={16} />
+            className="p-2.5 bg-white/15 hover:bg-white/25 rounded-lg transition-colors text-white" title={tr.updateTooltip}>
+            <Icon icon="lucide:refresh-cw" width={18} height={18} />
           </button>
         </div>
       </div>
@@ -633,24 +634,24 @@ export function MisDocumentosContent() {
                 : "w-full flex-1"
             }`}
           >
-            <div className="bg-white rounded-lg border border-neutral-200 shadow-sm overflow-hidden flex flex-col min-h-0 h-full w-full">
-              <div className={`border-b border-neutral-100 flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
-                <Icon icon="lucide:history" width={hasSelection ? 14 : 16} height={hasSelection ? 14 : 16} className="text-brand-blue shrink-0" />
+            <div className={`${moduleCard} flex flex-col min-h-0 h-full w-full`}>
+              <div className={`border-b border-brand-blue/10 flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
+                <Icon icon="lucide:history" width={hasSelection ? 16 : 18} height={hasSelection ? 16 : 18} className="text-brand-blue shrink-0" />
                 <div className="min-w-0 flex-1 basis-[8rem]">
-                  <p className={`font-bold text-neutral-800 ${hasSelection ? "text-xs" : "text-sm"}`}>{tr.recentMovements}</p>
+                  <p className={`font-bold text-brand-blue ${hasSelection ? "text-sm" : "text-base"}`}>{tr.recentMovements}</p>
                   {!hasSelection && (
-                    <p className="text-[11px] text-neutral-400 truncate hidden sm:block">{tr.selectOperationPrompt}</p>
+                    <p className="text-base text-neutral-500 truncate hidden sm:block">{tr.selectOperationPrompt}</p>
                   )}
                 </div>
                 {!hasSelection && (
                   <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl order-last sm:order-none">
-                    <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
+                    <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40 w-4 h-4 pointer-events-none" />
                     <input
                       type="text"
                       placeholder={tr.searchPlaceholder}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-8 pr-2.5 py-2 border border-neutral-200 bg-neutral-50 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue focus:bg-white transition-colors"
+                      className={`${moduleInput} pl-9`}
                     />
                   </div>
                 )}
@@ -661,7 +662,7 @@ export function MisDocumentosContent() {
                     className="shrink-0 p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors"
                     title={tr.expandOperations}
                   >
-                    <Icon icon="lucide:panel-left-open" width={14} height={14} />
+                    <Icon icon="lucide:panel-left-open" width={16} height={16} />
                   </button>
                 )}
               </div>
@@ -669,9 +670,9 @@ export function MisDocumentosContent() {
               <div className="flex-1 min-h-0 overflow-auto w-full">
                 {/* Lista compacta (selección activa): solo Ref + Booking */}
                 {hasSelection ? (
-                  <div className="divide-y divide-neutral-100">
+                  <div className="divide-y divide-brand-blue/10">
                     {pagedOperaciones.length === 0 ? (
-                      <div className="py-8 px-3 text-center text-neutral-400 text-xs">{tr.noOperations}</div>
+                      <div className="py-8 px-3 text-center text-neutral-400 text-base">{tr.noOperations}</div>
                     ) : (
                       pagedOperaciones.map((op) => {
                         const isActive = selectedOperacion === op.id;
@@ -683,13 +684,13 @@ export function MisDocumentosContent() {
                             className={`w-full text-left px-2.5 py-2.5 transition-colors ${
                               isActive
                                 ? "bg-brand-blue/8 border-l-2 border-l-brand-blue"
-                                : "hover:bg-neutral-50 border-l-2 border-l-transparent"
+                                : "hover:bg-[#F4F8FC] border-l-2 border-l-transparent"
                             }`}
                           >
-                            <p className={`text-xs font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                            <p className={`text-base font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
                               {opRef(op)}
                             </p>
-                            <p className="text-[10px] text-neutral-500 truncate mt-0.5">
+                            <p className="text-base text-neutral-500 truncate mt-0.5">
                               {op.booking || "—"}
                             </p>
                           </button>
@@ -700,11 +701,11 @@ export function MisDocumentosContent() {
                 ) : (
                   <>
                     {/* Cards móvil sin selección */}
-                    <div className="md:hidden divide-y divide-neutral-100">
+                    <div className="md:hidden divide-y divide-brand-blue/10">
                       {pagedOperaciones.length === 0 ? (
                         <div className="py-12 px-4 text-center">
-                          <Icon icon="lucide:folder" width={28} height={28} className="text-neutral-300 mx-auto mb-2" />
-                          <p className="text-neutral-400 text-sm">{tr.noOperations}</p>
+                          <Icon icon="lucide:folder" width={28} height={28} className="text-brand-blue/30 mx-auto mb-2" />
+                          <p className="text-neutral-500 text-base">{tr.noOperations}</p>
                         </div>
                       ) : (
                         pagedOperaciones.map((op) => (
@@ -712,20 +713,20 @@ export function MisDocumentosContent() {
                             key={op.id}
                             type="button"
                             onClick={() => handleSelectOperacion(op.id)}
-                            className="w-full text-left p-3.5 transition-colors bg-white hover:bg-neutral-50"
+                            className="w-full text-left p-3.5 transition-colors bg-white hover:bg-[#F4F8FC]"
                           >
                             <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-sm font-bold text-neutral-800">{opRef(op)}</p>
+                              <p className="text-base font-bold text-brand-blue">{opRef(op)}</p>
                               {docsBadge(op.id)}
                             </div>
-                            <p className="text-xs text-neutral-600 truncate">{op.cliente || "-"}</p>
-                            <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+                            <p className="text-base text-neutral-600 truncate">{op.cliente || "-"}</p>
+                            <p className="text-base text-neutral-500 mt-0.5 truncate">
                               {op.naviera || "-"}
                               {op.booking ? ` · ${op.booking}` : ""}
                               {op.contenedor ? ` · ${op.contenedor}` : ""}
                               {op.pod ? ` · ${op.pod}` : ""}
                             </p>
-                            <p className="text-[11px] text-neutral-400 mt-1">{tr.colDate}: {formatDate(op.created_at)}</p>
+                            <p className="text-base text-neutral-500 mt-1">{tr.colDate}: {formatDate(op.created_at)}</p>
                           </button>
                         ))
                       )}
@@ -733,7 +734,7 @@ export function MisDocumentosContent() {
 
                     {/* Tabla completa desktop — ancho completo */}
                     <div className="hidden md:block w-full overflow-x-auto">
-                      <table className="w-full table-fixed text-left text-sm">
+                      <table className="w-full table-fixed text-left text-base">
                         <colgroup>
                           <col className="w-[8%]" />
                           <col className="w-[15%]" />
@@ -746,22 +747,22 @@ export function MisDocumentosContent() {
                           <col className="w-[8%]" />
                         </colgroup>
                         <thead>
-                          <tr className="bg-neutral-50 border-b border-neutral-200 text-[11px] uppercase tracking-wider text-neutral-500">
-                            <th className="px-3 py-2.5 font-bold">{tr.colRef}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colCliente}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colNaviera}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colBooking}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colContenedor}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colPod}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colEtd}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colDocs}</th>
-                            <th className="px-3 py-2.5 font-bold">{tr.colDate}</th>
+                          <tr className="bg-[#F4F8FC] border-b border-brand-blue/10">
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colRef}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colCliente}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colNaviera}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colBooking}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colContenedor}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colPod}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colEtd}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colDocs}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colDate}</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-neutral-100">
+                        <tbody className="divide-y divide-brand-blue/10">
                           {pagedOperaciones.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="px-4 py-12 text-center text-neutral-400">
+                              <td colSpan={9} className="px-4 py-12 text-center text-neutral-400 text-base">
                                 {tr.noOperations}
                               </td>
                             </tr>
@@ -770,13 +771,13 @@ export function MisDocumentosContent() {
                               <tr
                                 key={op.id}
                                 onClick={() => handleSelectOperacion(op.id)}
-                                className="cursor-pointer transition-colors hover:bg-neutral-50"
+                                className="cursor-pointer transition-colors hover:bg-[#F4F8FC]"
                               >
-                                <td className="px-3 py-2.5 font-bold truncate text-neutral-800">{opRef(op)}</td>
+                                <td className="px-3 py-2.5 font-bold truncate text-brand-blue">{opRef(op)}</td>
                                 <td className="px-3 py-2.5 text-neutral-700 truncate">{op.cliente || "-"}</td>
                                 <td className="px-3 py-2.5 text-neutral-600 truncate">{op.naviera || "-"}</td>
                                 <td className="px-3 py-2.5 text-neutral-600 truncate">{op.booking || "-"}</td>
-                                <td className="px-3 py-2.5 text-neutral-600 truncate font-mono text-xs">{op.contenedor || "-"}</td>
+                                <td className="px-3 py-2.5 text-neutral-600 truncate font-mono">{op.contenedor || "-"}</td>
                                 <td className="px-3 py-2.5 text-neutral-600 truncate">{op.pod || "-"}</td>
                                 <td className="px-3 py-2.5 text-neutral-600 truncate">{formatDate(op.etd)}</td>
                                 <td className="px-3 py-2.5">{docsBadge(op.id)}</td>
@@ -823,8 +824,8 @@ export function MisDocumentosContent() {
                   />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-semibold text-neutral-800 text-sm truncate">{previewDoc.nombre_archivo}</p>
-                  <p className="text-xs text-neutral-400">
+                  <p className="font-semibold text-neutral-800 text-base truncate">{previewDoc.nombre_archivo}</p>
+                  <p className="text-base text-neutral-500">
                     {formatFileSize(previewDoc.tamano)} · {formatDate(previewDoc.created_at)}
                   </p>
                 </div>
@@ -833,7 +834,7 @@ export function MisDocumentosContent() {
                 <button
                   type="button"
                   onClick={() => handleDownload(previewDoc)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
                 >
                   <Icon icon="lucide:download" className="w-3.5 h-3.5" />
                   {tr.download}
@@ -859,12 +860,12 @@ export function MisDocumentosContent() {
                   <span className="w-16 h-16 rounded-lg bg-neutral-200 flex items-center justify-center">
                     <Icon icon="lucide:file-spreadsheet" className="w-8 h-8 text-neutral-400" />
                   </span>
-                  <p className="text-neutral-600 font-medium">{tr.excelPreviewNotAvailable}</p>
-                  <p className="text-neutral-400 text-sm">{tr.downloadToView}</p>
+                  <p className="text-neutral-600 font-medium text-base">{tr.excelPreviewNotAvailable}</p>
+                  <p className="text-neutral-400 text-base">{tr.downloadToView}</p>
                   <button
                     type="button"
                     onClick={() => handleDownload(previewDoc)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
                   >
                     <Icon icon="lucide:download" className="w-4 h-4" />
                     {tr.downloadFile}

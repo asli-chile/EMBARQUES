@@ -1,4 +1,5 @@
 import { brand, icons } from "./brand";
+import { CARTOLAS_NUBOX_ALLOWED_EMAILS } from "./cartolas-nubox-access";
 
 /** Inicio del sitio web corporativo (fuera de la app /embarques). Usar en el logo del header. */
 export const marketingHomeUrl = "/" as const;
@@ -40,6 +41,12 @@ export const siteConfig = {
       ],
     },
     { labelKey: "registros", id: "registros", href: "/registros" },
+    {
+      labelKey: "cartolasNubox",
+      id: "cartolas-nubox",
+      href: "/cartolas-nubox",
+      allowedEmails: [...CARTOLAS_NUBOX_ALLOWED_EMAILS],
+    },
     {
       labelKey: "configuracion",
       id: "configuracion",

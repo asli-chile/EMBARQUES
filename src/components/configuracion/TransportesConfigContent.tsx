@@ -6,6 +6,14 @@ import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleInput,
+  moduleBtnPrimary,
+  moduleCard,
+  moduleSectionTitle,
+} from "@/lib/ui/moduleStyles";
 
 type Empresa = {
   id: string;
@@ -494,7 +502,7 @@ export function TransportesConfigContent() {
 
   if (authLoading) {
     return (
-      <main className="flex-1 min-h-0 bg-neutral-100 flex items-center justify-center" role="main">
+      <main className={`flex-1 min-h-0 ${modulePageBg} flex items-center justify-center`} role="main">
         <p className="text-neutral-500">{tr.loading}</p>
       </main>
     );
@@ -502,7 +510,7 @@ export function TransportesConfigContent() {
 
   if (!profile) {
     return (
-      <main className="flex-1 min-h-0 bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 ${modulePageBg} p-6`} role="main">
         <p className="text-neutral-600">{tr.loginRequired}</p>
       </main>
     );
@@ -510,7 +518,7 @@ export function TransportesConfigContent() {
 
   if (!isSuperadmin && !isAdmin) {
     return (
-      <main className="flex-1 min-h-0 bg-neutral-100 p-6 flex items-center justify-center" role="main">
+      <main className={`flex-1 min-h-0 ${modulePageBg} p-6 flex items-center justify-center`} role="main">
         <p className="text-neutral-600">
           {tr.superadminOnly}
         </p>
@@ -518,41 +526,40 @@ export function TransportesConfigContent() {
     );
   }
 
-  const inputBase =
-    "w-full px-2.5 py-1.5 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all";
+  const inputBase = moduleInput;
 
   return (
-    <main className="flex-1 min-h-0 flex flex-col bg-neutral-100 overflow-auto" role="main">
+    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-auto`} role="main">
 
       {/* Hero gradient header */}
-      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-sky-700 text-white">
+      <div className={`flex-shrink-0 ${moduleHero}`}>
         <div className="px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:truck" width={22} height={22} className="text-white" />
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:truck" width={24} height={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
-              <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight">{tr.title}</h1>
+              <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
             </div>
           </div>
           <div className="flex gap-2 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}</span>
+              <span className="text-sm font-semibold">{empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:route" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{tramos.length} {tramos.length !== 1 ? tr.tramos : tr.tramo}</span>
+              <span className="text-sm font-semibold">{tramos.length} {tramos.length !== 1 ? tr.tramos : tr.tramo}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:tag" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{costosExtra.length} {tr.costosExtraCount}</span>
+              <span className="text-sm font-semibold">{costosExtra.length} {tr.costosExtraCount}</span>
             </div>
             {selectedEmpresaId && (
               <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
                 <Icon icon="lucide:user" width={13} height={13} className="text-white/80" />
-                <span className="text-xs font-semibold">{choferes.length} {choferes.length !== 1 ? tr.choferes : tr.chofer}</span>
+                <span className="text-sm font-semibold">{choferes.length} {choferes.length !== 1 ? tr.choferes : tr.chofer}</span>
               </div>
             )}
           </div>
@@ -563,9 +570,9 @@ export function TransportesConfigContent() {
       <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-3 p-3">
 
         {/* Empresas panel */}
-        <section className="flex-shrink-0 xl:w-64 xl:self-start xl:sticky xl:top-0 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-neutral-100 space-y-2">
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{tr.empresasSection}</span>
+        <section className={`flex-shrink-0 xl:w-64 xl:self-start xl:sticky xl:top-0 flex flex-col ${moduleCard}`}>
+          <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-brand-blue/15 space-y-2">
+            <span className={moduleSectionTitle}>{tr.empresasSection}</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               <input
                 type="text"
@@ -585,7 +592,7 @@ export function TransportesConfigContent() {
                 type="button"
                 onClick={() => void handleCreateEmpresa()}
                 disabled={!newEmpresaNombre.trim() || creatingEmpresa}
-                className="sm:col-span-2 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 transition-colors"
+                className={`${moduleBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}
               >
                 {creatingEmpresa ? (
                   <><Icon icon="eos-icons:loading" width={13} height={13} className="animate-spin" />{tr.creando}</>
@@ -658,7 +665,7 @@ export function TransportesConfigContent() {
                   >
                     <span className="text-xs font-medium truncate">{emp.nombre}</span>
                     {emp.rut && (
-                      <span className={`text-[10px] ${isSelected ? "text-white/80" : "text-neutral-400"}`}>{emp.rut}</span>
+                      <span className={`text-sm ${isSelected ? "text-white/80" : "text-neutral-400"}`}>{emp.rut}</span>
                     )}
                   </button>
                   <button
@@ -681,7 +688,7 @@ export function TransportesConfigContent() {
         <section className="flex-1 min-w-0 space-y-3">
 
           {/* Choferes y Equipos */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
             {!selectedEmpresaId ? (
               <div className="flex flex-col items-center justify-center gap-3 text-center p-10">
                 <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center">
@@ -722,8 +729,8 @@ export function TransportesConfigContent() {
                       <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center">
                         <Icon icon="lucide:user" width={14} height={14} className="text-brand-blue" />
                       </span>
-                      <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">{tr.choferesSection}</span>
-                      <span className="ml-auto text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{choferes.length}</span>
+                      <span className="text-base font-bold text-brand-blue">{tr.choferesSection}</span>
+                      <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{choferes.length}</span>
                     </div>
                     <div className="p-3 border-b border-neutral-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                       <input type="text" value={newChofer.nombre} onChange={(e) => setNewChofer((p) => ({ ...p, nombre: e.target.value }))} placeholder={tr.nombreChofer} className={inputBase} />
@@ -731,7 +738,7 @@ export function TransportesConfigContent() {
                       <input type="text" value={newChofer.rut} onChange={(e) => setNewChofer((p) => ({ ...p, rut: e.target.value }))} placeholder={tr.rut} className={inputBase} />
                       <input type="text" value={newChofer.telefono} onChange={(e) => setNewChofer((p) => ({ ...p, telefono: e.target.value }))} placeholder={tr.telefono} className={inputBase} />
                       <button type="button" onClick={() => void handleAddChofer()} disabled={!newChofer.nombre.trim() || saving}
-                        className="sm:col-span-2 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 transition-colors">
+                        className={`${moduleBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}>
                         <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarChofer}
                       </button>
                     </div>
@@ -745,11 +752,11 @@ export function TransportesConfigContent() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-neutral-800 truncate">{c.nombre}</p>
-                            <p className="text-[10px] text-neutral-400 truncate">{c.rut || tr.sinRut} · {c.telefono || tr.sinTelefono}</p>
+                            <p className="text-sm text-neutral-400 truncate">{c.rut || tr.sinRut} · {c.telefono || tr.sinTelefono}</p>
                           </div>
                           <div className="shrink-0 flex items-center gap-1">
                             <button type="button" onClick={() => void handleToggleChoferActivo(c.id, c.activo)}
-                              className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
+                              className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
                                 c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
                               }`}>
                               {c.activo ? tr.activo : tr.inactivo}
@@ -770,14 +777,14 @@ export function TransportesConfigContent() {
                       <span className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center">
                         <Icon icon="lucide:truck" width={14} height={14} className="text-sky-600" />
                       </span>
-                      <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">{tr.equiposSection}</span>
-                      <span className="ml-auto text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{equipos.length}</span>
+                      <span className="text-base font-bold text-brand-blue">{tr.equiposSection}</span>
+                      <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{equipos.length}</span>
                     </div>
                     <div className="p-3 border-b border-neutral-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                       <input type="text" value={newEquipo.patente_camion} onChange={(e) => setNewEquipo((p) => ({ ...p, patente_camion: e.target.value }))} placeholder={tr.patenteCamion} className={inputBase} />
                       <input type="text" value={newEquipo.patente_remolque} onChange={(e) => setNewEquipo((p) => ({ ...p, patente_remolque: e.target.value }))} placeholder={tr.patenteRemolque} className={inputBase} />
                       <button type="button" onClick={() => void handleAddEquipo()} disabled={!newEquipo.patente_camion.trim() || saving}
-                        className="sm:col-span-2 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 transition-colors">
+                        className={`${moduleBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}>
                         <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarEquipo}
                       </button>
                     </div>
@@ -791,11 +798,11 @@ export function TransportesConfigContent() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-neutral-800 truncate">{e.patente_camion}</p>
-                            <p className="text-[10px] text-neutral-400 truncate">{e.patente_remolque ? `${tr.remolque} ${e.patente_remolque}` : tr.sinRemolque}</p>
+                            <p className="text-sm text-neutral-400 truncate">{e.patente_remolque ? `${tr.remolque} ${e.patente_remolque}` : tr.sinRemolque}</p>
                           </div>
                           <div className="shrink-0 flex items-center gap-1">
                             <button type="button" onClick={() => void handleToggleEquipoActivo(e.id, e.activo)}
-                              className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
+                              className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
                                 e.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
                               }`}>
                               {e.activo ? tr.activo : tr.inactivo}
@@ -815,16 +822,16 @@ export function TransportesConfigContent() {
           </div>
 
           {/* Tramos */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
                 <Icon icon="lucide:route" width={15} height={15} className="text-brand-blue" />
               </span>
               <div>
-                <h2 className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">{tr.tramosSection}</h2>
+                <h2 className="text-base font-bold text-brand-blue">{tr.tramosSection}</h2>
                 <p className="text-[11px] text-neutral-400">{tr.tramosSubtitle}</p>
               </div>
-              <span className="ml-auto text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{tramos.length}</span>
+              <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{tramos.length}</span>
             </div>
 
             {/* Add form */}
@@ -834,7 +841,7 @@ export function TransportesConfigContent() {
               <input type="number" value={newTramo.valor} onChange={(e) => setNewTramo((p) => ({ ...p, valor: e.target.value }))} placeholder={tr.valor} className={inputBase} />
               <input type="text" value={newTramo.moneda} onChange={(e) => setNewTramo((p) => ({ ...p, moneda: e.target.value }))} placeholder={tr.moneda} className={inputBase} />
               <button type="button" onClick={() => void handleAddTramo()} disabled={!newTramo.origen.trim() || !newTramo.destino.trim() || !newTramo.valor.trim() || saving}
-                className="col-span-2 sm:col-span-4 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 transition-colors">
+                className={`${moduleBtnPrimary} col-span-2 sm:col-span-4 justify-center disabled:opacity-40`}>
                 <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarTramo}
               </button>
             </div>
@@ -858,7 +865,7 @@ export function TransportesConfigContent() {
                             {tramo.moneda} {tramo.valor.toLocaleString("es-CL", { maximumFractionDigits: 0 })}
                           </span>
                           <button type="button" onClick={() => void handleToggleTramoActivo(tramo.id, tramo.activo)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors ${
+                            className={`px-2 py-0.5 rounded-full text-sm font-semibold border transition-colors ${
                               tramo.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
                             }`}>
                             {tramo.activo ? tr.activo : tr.inactivo}
@@ -875,15 +882,15 @@ export function TransportesConfigContent() {
 
                 {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-neutral-50 text-[11px] text-neutral-500 sticky top-0">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#F4F8FC] text-sm text-brand-blue sticky top-0">
                       <tr>
-                        <th className="text-left px-3 py-2 font-semibold">{tr.origen}</th>
-                        <th className="text-left px-3 py-2 font-semibold">{tr.destino}</th>
-                        <th className="text-right px-3 py-2 font-semibold">{tr.valor}</th>
-                        <th className="text-left px-3 py-2 font-semibold">{tr.moneda}</th>
-                        <th className="text-center px-3 py-2 font-semibold">{tr.estado}</th>
-                        <th className="text-center px-3 py-2 font-semibold">{tr.acciones}</th>
+                        <th className="text-left px-3 py-2 font-bold">{tr.origen}</th>
+                        <th className="text-left px-3 py-2 font-bold">{tr.destino}</th>
+                        <th className="text-right px-3 py-2 font-bold">{tr.valor}</th>
+                        <th className="text-left px-3 py-2 font-bold">{tr.moneda}</th>
+                        <th className="text-center px-3 py-2 font-bold">{tr.estado}</th>
+                        <th className="text-center px-3 py-2 font-bold">{tr.acciones}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -895,7 +902,7 @@ export function TransportesConfigContent() {
                           <td className="px-3 py-2">{tramo.moneda}</td>
                           <td className="px-3 py-2 text-center">
                             <button type="button" onClick={() => void handleToggleTramoActivo(tramo.id, tramo.activo)}
-                              className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
+                              className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
                                 tramo.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
                               }`}>
                               {tramo.activo ? tr.activo : tr.inactivo}
@@ -917,16 +924,16 @@ export function TransportesConfigContent() {
           </div>
 
           {/* Costos Extra */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                 <Icon icon="lucide:tag" width={15} height={15} className="text-amber-600" />
               </span>
               <div>
-                <h2 className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">{tr.costosExtraSection}</h2>
+                <h2 className="text-base font-bold text-brand-blue">{tr.costosExtraSection}</h2>
                 <p className="text-[11px] text-neutral-400">{tr.costosExtraSubtitle}</p>
               </div>
-              <span className="ml-auto text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{costosExtra.length}</span>
+              <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{costosExtra.length}</span>
             </div>
 
             {/* Add form */}
@@ -937,7 +944,7 @@ export function TransportesConfigContent() {
               <input type="text" value={newCostoExtra.moneda} onChange={(e) => setNewCostoExtra((p) => ({ ...p, moneda: e.target.value }))} placeholder={tr.costoExtraMoneda} className={inputBase} />
               <input type="text" value={newCostoExtra.condicion} onChange={(e) => setNewCostoExtra((p) => ({ ...p, condicion: e.target.value }))} placeholder={tr.costoExtraCondicion} className={inputBase} />
               <button type="button" onClick={() => void handleAddCostoExtra()} disabled={!newCostoExtra.concepto.trim() || saving}
-                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 transition-colors">
+                className={`${moduleBtnPrimary} justify-center disabled:opacity-40`}>
                 <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarCostoExtra}
               </button>
             </div>
@@ -958,9 +965,9 @@ export function TransportesConfigContent() {
                               ? `${ce.moneda} ${ce.tarifa_valor.toLocaleString("es-CL", { maximumFractionDigits: 2 })}`
                               : ce.tarifa_texto ?? "—"}
                           </span>
-                          {ce.condicion && <span className="text-[10px] text-neutral-400">{ce.condicion}</span>}
+                          {ce.condicion && <span className="text-sm text-neutral-400">{ce.condicion}</span>}
                           <button type="button" onClick={() => void handleToggleCostoExtraActivo(ce.id, ce.activo)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors ${
+                            className={`px-2 py-0.5 rounded-full text-sm font-semibold border transition-colors ${
                               ce.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
                             }`}>
                             {ce.activo ? tr.activo : tr.inactivo}
@@ -977,15 +984,15 @@ export function TransportesConfigContent() {
 
                 {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-neutral-50 text-[11px] text-neutral-500 sticky top-0">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#F4F8FC] text-sm text-brand-blue sticky top-0">
                       <tr>
-                        <th className="text-left px-3 py-2 font-semibold">{tr.costoExtraConcepto}</th>
-                        <th className="text-right px-3 py-2 font-semibold">{tr.costoExtraTarifaValor}</th>
-                        <th className="text-left px-3 py-2 font-semibold">{tr.costoExtraMoneda}</th>
-                        <th className="text-left px-3 py-2 font-semibold">{tr.costoExtraCondicion}</th>
-                        <th className="text-center px-3 py-2 font-semibold">{tr.estado}</th>
-                        <th className="text-center px-3 py-2 font-semibold">{tr.acciones}</th>
+                        <th className="text-left px-3 py-2 font-bold">{tr.costoExtraConcepto}</th>
+                        <th className="text-right px-3 py-2 font-bold">{tr.costoExtraTarifaValor}</th>
+                        <th className="text-left px-3 py-2 font-bold">{tr.costoExtraMoneda}</th>
+                        <th className="text-left px-3 py-2 font-bold">{tr.costoExtraCondicion}</th>
+                        <th className="text-center px-3 py-2 font-bold">{tr.estado}</th>
+                        <th className="text-center px-3 py-2 font-bold">{tr.acciones}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -1001,7 +1008,7 @@ export function TransportesConfigContent() {
                           <td className="px-3 py-2 text-neutral-500">{ce.condicion ?? "—"}</td>
                           <td className="px-3 py-2 text-center">
                             <button type="button" onClick={() => void handleToggleCostoExtraActivo(ce.id, ce.activo)}
-                              className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
+                              className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
                                 ce.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
                               }`}>
                               {ce.activo ? tr.activo : tr.inactivo}

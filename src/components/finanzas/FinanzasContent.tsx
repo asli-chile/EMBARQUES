@@ -5,6 +5,14 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  moduleCard,
+  moduleHeroRounded,
+  moduleInput,
+  moduleLabel,
+  modulePageBg,
+  moduleSectionTitle,
+} from "@/lib/ui/moduleStyles";
 
 type DbOperacion = {
   id: string;
@@ -262,16 +270,16 @@ export function FinanzasContent() {
 
   if (authLoading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0">
-        <p className="text-neutral-500 px-4">Cargando…</p>
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-4`}>
+        <p className="text-brand-blue/60 text-base px-4">Cargando…</p>
       </main>
     );
   }
 
   if (isCliente || !canViewFinanzas) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0 flex items-center justify-center" role="main">
-        <p className="text-neutral-600 text-sm px-4 text-center">
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-4 flex items-center justify-center`} role="main">
+        <p className="text-brand-blue/80 text-base px-4 text-center">
           No tienes acceso al módulo de Finanzas. Solo personal interno puede ver facturación y márgenes.
         </p>
       </main>
@@ -280,53 +288,59 @@ export function FinanzasContent() {
 
   if (loading && !rows.length) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0">
-        <div className="w-full min-w-0 space-y-4 animate-pulse">
-          <div className="h-8 w-48 bg-neutral-200 rounded-lg" />
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-3 sm:p-4 lg:p-5`}>
+        <div className="w-full max-w-[1600px] mx-auto space-y-4 animate-pulse">
+          <div className="h-24 bg-brand-blue/20 rounded-2xl" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl border border-neutral-200 p-3 h-20"
+                className="bg-white rounded-2xl border border-brand-blue/15 p-3 h-20"
               />
             ))}
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 h-64" />
+          <div className="bg-white rounded-2xl border border-brand-blue/15 h-64" />
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0" role="main">
-      <div className="w-full min-w-0 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">
-              {tr.title}
-            </h1>
-            <p className="text-neutral-500 text-xs sm:text-sm mt-1">{tr.subtitle}</p>
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full`} role="main">
+      <div className={`${moduleHeroRounded} rounded-none`}>
+        <div className="px-4 sm:px-6 py-5 sm:py-6 max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <Icon icon="typcn:calculator" width={24} height={24} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
+                {tr.title}
+              </h1>
+              <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={!filteredRows.length}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:ring-offset-2"
-            >
-              <Icon icon="lucide:download" width={16} height={16} />
-              {tr.export}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={!filteredRows.length}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold text-brand-blue bg-white rounded-lg hover:bg-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+          >
+            <Icon icon="lucide:download" width={16} height={16} />
+            {tr.export}
+          </button>
         </div>
+      </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-3 sm:p-4 shadow-mac-modal">
-          <div className="flex items-center justify-between w-full text-left text-sm font-medium text-neutral-700">
+      <div className="p-3 sm:p-4 lg:p-5">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+        <div className={`${moduleCard} p-3 sm:p-4`}>
+          <div className="flex items-center justify-between w-full text-left text-base font-semibold text-brand-blue">
             <span className="flex items-center gap-2">
               <Icon icon="typcn:filter" width={18} height={18} />
               {tr.filters}
               {hasActiveFilters && (
-                <span className="px-1.5 py-0.5 text-xs bg-brand-blue/10 text-brand-blue rounded">
+                <span className="px-1.5 py-0.5 text-sm bg-brand-blue/10 text-brand-blue rounded-lg font-bold">
                   {[filters.fechaDesde, filters.fechaHasta, filters.cliente, filters.estado].filter(
                     Boolean
                   ).length}
@@ -334,37 +348,37 @@ export function FinanzasContent() {
               )}
             </span>
           </div>
-          <div className="mt-3 pt-3 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="mt-3 pt-3 border-t border-brand-blue/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-neutral-500 mb-1">
+              <label className={moduleLabel}>
                 {tr.dateFrom}
               </label>
               <input
                 type="date"
                 value={filters.fechaDesde}
                 onChange={(e) => setFilters((f) => ({ ...f, fechaDesde: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                className={moduleInput}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-500 mb-1">
+              <label className={moduleLabel}>
                 {tr.dateTo}
               </label>
               <input
                 type="date"
                 value={filters.fechaHasta}
                 onChange={(e) => setFilters((f) => ({ ...f, fechaHasta: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 bg-white text-brand-blue placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                className={moduleInput}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-500 mb-1">
+              <label className={moduleLabel}>
                 {tr.client}
               </label>
               <select
                 value={filters.cliente}
                 onChange={(e) => setFilters((f) => ({ ...f, cliente: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 bg-white focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                className={moduleInput}
               >
                 <option value="">{tr.allClients}</option>
                 {clientesOpts.map((c) => (
@@ -375,13 +389,13 @@ export function FinanzasContent() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-500 mb-1">
+              <label className={moduleLabel}>
                 {tr.state}
               </label>
               <select
                 value={filters.estado}
                 onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 bg-white focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                className={moduleInput}
               >
                 <option value="">{tr.allStates}</option>
                 {ESTADOS_OPTS.map((e) => (
@@ -397,7 +411,7 @@ export function FinanzasContent() {
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="px-3 py-1.5 text-xs sm:text-sm font-medium text-neutral-600 hover:text-brand-blue transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded-lg"
+                className="px-3 py-2 text-base font-semibold text-brand-blue/80 hover:text-brand-blue transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded-lg"
               >
                 {tr.clearFilters}
               </button>
@@ -406,26 +420,26 @@ export function FinanzasContent() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-emerald-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <p className="text-xs sm:text-sm text-neutral-500">{tr.totalInvoiced}</p>
+          <div className={`${moduleCard} border-t-[3px] border-t-emerald-400 p-3 sm:p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+            <p className="text-base text-neutral-500">{tr.totalInvoiced}</p>
             <p className="text-2xl sm:text-3xl font-bold text-emerald-600 mt-1">
               {formatCurrency(kpis.totalFacturado)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-teal-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <p className="text-xs sm:text-sm text-neutral-500">{tr.totalMargin}</p>
+          <div className={`${moduleCard} border-t-[3px] border-t-teal-400 p-3 sm:p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+            <p className="text-base text-neutral-500">{tr.totalMargin}</p>
             <p className="text-2xl sm:text-3xl font-bold text-emerald-700 mt-1">
               {formatCurrency(kpis.totalMargen)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-blue-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <p className="text-xs sm:text-sm text-neutral-500">{tr.avgMarginPerOp}</p>
+          <div className={`${moduleCard} border-t-[3px] border-t-blue-400 p-3 sm:p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+            <p className="text-base text-neutral-500">{tr.avgMarginPerOp}</p>
             <p className="text-2xl sm:text-3xl font-bold text-neutral-800 mt-1">
               {formatCurrency(kpis.avgMargen)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 border-t-2 border-t-slate-400 p-3 sm:p-4 shadow-mac-modal transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-            <p className="text-xs sm:text-sm text-neutral-500">{tr.operationsWithBilling}</p>
+          <div className={`${moduleCard} border-t-[3px] border-t-slate-400 p-3 sm:p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+            <p className="text-base text-neutral-500">{tr.operationsWithBilling}</p>
             <p className="text-2xl sm:text-3xl font-bold text-neutral-800 mt-1">
               {kpis.opsConFacturacion}
             </p>
@@ -433,22 +447,22 @@ export function FinanzasContent() {
         </div>
 
         {!filteredRows.length ? (
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-mac-modal p-8 text-center">
+          <div className={`${moduleCard} p-8 text-center`}>
             <Icon
               icon="typcn:calculator"
               width={40}
               height={40}
-              className="mx-auto mb-4 text-neutral-300"
+              className="mx-auto mb-4 text-brand-blue/30"
             />
-            <p className="text-neutral-600 text-sm">{tr.noData}</p>
+            <p className="text-brand-blue/70 text-base">{tr.noData}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-            <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 shadow-mac-modal overflow-hidden">
-              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 overflow-x-auto rounded-t-xl">
-                <table className="w-full text-left text-sm">
+            <div className={`lg:col-span-2 ${moduleCard}`}>
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-brand-blue/10 bg-[#F4F8FC] overflow-x-auto">
+                <table className="w-full text-left text-base">
                   <thead>
-                    <tr className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                    <tr className="text-sm font-bold text-brand-blue">
                       <th className="pb-2 pr-2">{tr.tableClient}</th>
                       <th className="pb-2 pr-2">{tr.tableDate}</th>
                       <th className="pb-2 pr-2">{tr.tableState}</th>
@@ -456,11 +470,11 @@ export function FinanzasContent() {
                       <th className="pb-2 text-right">{tr.tableMargin}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100">
+                  <tbody className="divide-y divide-brand-blue/10">
                     {filteredRows.slice(0, 15).map((r) => (
                       <tr
                         key={r.id}
-                        className="text-neutral-700 hover:bg-neutral-50/80 transition-colors"
+                        className="text-neutral-700 hover:bg-[#F4F8FC]/80 transition-colors"
                       >
                         <td className="py-2 pr-2 truncate max-w-[120px]">{r.cliente || "—"}</td>
                         <td className="py-2 pr-2 whitespace-nowrap">
@@ -484,9 +498,9 @@ export function FinanzasContent() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal overflow-hidden">
-              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-neutral-100 bg-neutral-50/50 rounded-t-xl">
-                <h2 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm sm:text-base">
+            <div className={moduleCard}>
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-brand-blue/10 bg-[#F4F8FC]">
+                <h2 className={`${moduleSectionTitle} flex items-center gap-2`}>
                   <span className="w-1 h-4 bg-emerald-500 rounded-full flex-shrink-0" />
                   <Icon icon="lucide:building" width={16} height={16} className="text-brand-blue" />
                   {tr.byClient}
@@ -499,7 +513,7 @@ export function FinanzasContent() {
                     const percentage = max > 0 ? (item.totalFacturado / max) * 100 : 0;
                     return (
                       <div key={item.cliente} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <div className="flex items-center justify-between text-base">
                           <span className="text-neutral-700 truncate max-w-[60%]">
                             {item.cliente}
                           </span>
@@ -507,13 +521,13 @@ export function FinanzasContent() {
                             {formatCurrency(item.totalFacturado)}
                           </span>
                         </div>
-                        <div className="h-1.5 sm:h-2 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 sm:h-2 bg-[#F4F8FC] rounded-full overflow-hidden">
                           <div
                             className="h-full bg-brand-blue/60 rounded-full transition-all duration-500"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
-                        <div className="text-[10px] sm:text-xs text-neutral-500">
+                        <div className="text-sm text-neutral-500">
                           {item.operaciones} ops · Margen {formatCurrency(item.totalMargen)}
                         </div>
                       </div>
@@ -526,8 +540,9 @@ export function FinanzasContent() {
         )}
 
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
+          <div className="p-3 rounded-lg bg-red-50 text-red-700 text-base">{error}</div>
         )}
+      </div>
       </div>
     </main>
   );

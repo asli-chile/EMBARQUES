@@ -6,6 +6,14 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
+import {
+  moduleCardAccent,
+  moduleHeroRounded,
+  moduleInput,
+  moduleLabel,
+  modulePageBg,
+  moduleSectionTitle,
+} from "@/lib/ui/moduleStyles";
 import { format } from "date-fns";
 import { sileo } from "sileo";
 
@@ -840,10 +848,8 @@ export function ReservaExtContent() {
     }
   };
 
-  const inputClass =
-    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all text-sm";
-  const labelClass =
-    "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
+  const inputClass = moduleInput;
+  const labelClass = moduleLabel;
 
   const renderInput = (
     label: string,
@@ -891,8 +897,8 @@ export function ReservaExtContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm font-medium">
           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
@@ -901,31 +907,31 @@ export function ReservaExtContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
         {/* Hero */}
-        <div className="rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue/90 to-violet-700 text-white overflow-hidden shadow-sm">
+        <div className={moduleHeroRounded}>
           <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
                 <Icon icon="lucide:truck" width={22} height={22} className="text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
-                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+                <h1 className="text-2xl font-bold leading-tight">{tr.title}</h1>
+                <p className="text-base text-white/75 mt-0.5">{tr.subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {reservas.length > 0 && (
                 <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
                   <Icon icon="lucide:clipboard-list" width={13} height={13} className="text-white/80" />
-                  <span className="text-xs font-bold">{reservas.length} {tr.tabReservas.toLowerCase()}</span>
+                  <span className="text-sm font-bold">{reservas.length} {tr.tabReservas.toLowerCase()}</span>
                 </div>
               )}
               <button
                 type="button"
                 onClick={handleNewReserva}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
               >
                 <Icon icon="lucide:plus" width={14} height={14} />
                 <span className="hidden sm:inline">{tr.newReserva}</span>
@@ -948,7 +954,7 @@ export function ReservaExtContent() {
           <button
             type="button"
             onClick={() => setMobilePanel("list")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all ${
               mobilePanel === "list"
                 ? "bg-white text-brand-blue shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
@@ -960,7 +966,7 @@ export function ReservaExtContent() {
           <button
             type="button"
             onClick={() => setMobilePanel("form")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all ${
               mobilePanel === "form"
                 ? "bg-white text-brand-blue shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
@@ -982,20 +988,20 @@ export function ReservaExtContent() {
                 mobilePanel === "form" ? "hidden lg:block" : ""
               }`}
             >
-              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-                <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+              <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden lg:sticky lg:top-0">
+                <div className={moduleCardAccent} />
                 <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                       <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
                     </span>
-                    <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                    <h2 className={moduleSectionTitle}>
                       {tr.listTitle}
                     </h2>
                   </div>
                   {reservas.filter((r) => r.estado !== "completada").length > 0 && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold flex-shrink-0">
-                      <Icon icon="lucide:alert-circle" width={10} height={10} />
+                    <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-bold flex-shrink-0">
+                      <Icon icon="lucide:alert-circle" width={12} height={12} />
                       {reservas.filter((r) => r.estado !== "completada").length} {reservas.filter((r) => r.estado !== "completada").length !== 1 ? tr.activasPluralSuffix : tr.activasSuffix}
                     </span>
                   )}
@@ -1012,7 +1018,7 @@ export function ReservaExtContent() {
                         placeholder={tr.searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                        className="w-full pl-9 pr-4 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
                       />
                     </div>
                   </div>
@@ -1102,11 +1108,11 @@ export function ReservaExtContent() {
             >
               {showForm ? (
                 <div className="space-y-4">
-                  <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                  <div className="rounded-2xl bg-white border border-brand-blue/15 shadow-sm overflow-hidden">
+                    <div className={moduleCardAccent} />
                     <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider">
+                        <p className={moduleSectionTitle}>
                           {isNew ? tr.formHeadingNew : tr.formHeadingEdit}
                         </p>
                         <p className="text-neutral-800 font-bold mt-1 text-sm">
@@ -1146,8 +1152,8 @@ export function ReservaExtContent() {
 
                   {/* Instructivo de Embarque */}
                   {!isNew && (
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-violet-500 to-purple-600" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
 
                       {/* Header */}
                       <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
@@ -1155,7 +1161,7 @@ export function ReservaExtContent() {
                           <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Instructivo de Embarque</p>
+                          <p className={moduleSectionTitle}>Instructivo de Embarque</p>
                           <p className="text-[10px] text-neutral-400 mt-0.5">
                             {instrSavedUrl ? `${instrFilename} · subido` : "Sube el instructivo preparado (Excel o PDF)"}
                           </p>
@@ -1211,10 +1217,10 @@ export function ReservaExtContent() {
                   )}
 
                   {/* Estado de la reserva */}
-                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                  <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                    <div className={moduleCardAccent} />
                     <div className="px-4 py-3 flex items-center justify-between gap-3">
-                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{tr.statusLabel}</span>
+                      <span className={moduleSectionTitle}>{tr.statusLabel}</span>
                       <div className="flex gap-1.5">
                         {[
                           { value: "pendiente", label: tr.statusPendiente, color: "bg-neutral-100 text-neutral-600 border-neutral-200", active: "bg-neutral-700 text-white border-neutral-700" },
@@ -1225,7 +1231,7 @@ export function ReservaExtContent() {
                             key={opt.value}
                             type="button"
                             onClick={() => handleChange("estado", opt.value)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
                               formData.estado === opt.value ? opt.active : opt.color + " hover:opacity-80"
                             }`}
                           >
@@ -1238,13 +1244,13 @@ export function ReservaExtContent() {
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     {/* Datos de la operación */}
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-indigo-400 to-brand-blue" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.sectionOp}</h2>
+                        <h2 className={moduleSectionTitle}>{tr.sectionOp}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.clientLabel, "cliente", "text", tr.clientPlaceholder)}
@@ -1314,13 +1320,13 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Transporte */}
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-brand-blue to-blue-400" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="lucide:truck" className="w-4 h-4 text-blue-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.transportInfo}</h2>
+                        <h2 className={moduleSectionTitle}>{tr.transportInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         <div>
@@ -1380,13 +1386,13 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Contenedor */}
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-teal-400 to-cyan-500" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:box" className="w-4 h-4 text-teal-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.containerInfo}</h2>
+                        <h2 className={moduleSectionTitle}>{tr.containerInfo}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.container, "contenedor")}
@@ -1396,13 +1402,13 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Citación a Planta */}
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-amber-400 to-orange-400" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.sectionCitacion}</h2>
+                        <h2 className={moduleSectionTitle}>{tr.sectionCitacion}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         <div className="col-span-2">
@@ -1425,13 +1431,13 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Stacking */}
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-violet-400 to-purple-500" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.stacking}</h2>
+                        <h2 className={moduleSectionTitle}>{tr.stacking}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
@@ -1443,13 +1449,13 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Costos */}
-                    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                      <div className="h-[3px] bg-gradient-to-r from-emerald-400 to-teal-500" />
+                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                      <div className={moduleCardAccent} />
                       <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                         <span className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
                           <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-600" />
                         </span>
-                        <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.costs}</h2>
+                        <h2 className={moduleSectionTitle}>{tr.costs}</h2>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
                         <div className="col-span-2">
@@ -1476,10 +1482,10 @@ export function ReservaExtContent() {
                                 key={v}
                                 type="button"
                                 onClick={() => handleChange("porteo", v)}
-                                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                className={`flex-1 py-2 rounded-xl text-base font-bold border transition-all ${
                                   formData.porteo === v
                                     ? "bg-brand-blue text-white border-brand-blue"
-                                    : "bg-neutral-50 text-neutral-500 border-neutral-200 hover:border-neutral-300"
+                                    : "bg-[#F4F8FC] text-brand-blue/70 border-brand-blue/20 hover:border-brand-blue/40"
                                 }`}
                               >
                                 {v}
@@ -1496,10 +1502,10 @@ export function ReservaExtContent() {
                                 key={v}
                                 type="button"
                                 onClick={() => handleChange("falso_flete", v)}
-                                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                className={`flex-1 py-2 rounded-xl text-base font-bold border transition-all ${
                                   formData.falso_flete === v
                                     ? "bg-brand-blue text-white border-brand-blue"
-                                    : "bg-neutral-50 text-neutral-500 border-neutral-200 hover:border-neutral-300"
+                                    : "bg-[#F4F8FC] text-brand-blue/70 border-brand-blue/20 hover:border-brand-blue/40"
                                 }`}
                               >
                                 {v}
@@ -1516,13 +1522,13 @@ export function ReservaExtContent() {
                   </div>
 
                   {/* Observaciones */}
-                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[3px] bg-gradient-to-r from-neutral-300 to-neutral-400" />
+                  <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+                    <div className={moduleCardAccent} />
                     <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
                       <span className="w-8 h-8 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
                         <Icon icon="typcn:notes" className="w-4 h-4 text-neutral-500" />
                       </span>
-                      <h2 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">{tr.observations}</h2>
+                      <h2 className={moduleSectionTitle}>{tr.observations}</h2>
                     </div>
                     <div className="p-4">
                       <textarea
@@ -1582,7 +1588,7 @@ export function ReservaExtContent() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
+                <div className="rounded-2xl bg-white border border-brand-blue/15 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
                   <div className="text-center py-8 px-4">
                     <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
                       <Icon icon="lucide:truck" width={24} height={24} className="text-neutral-400" />

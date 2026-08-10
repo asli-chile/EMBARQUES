@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { modulePageBg, moduleHeroRounded, moduleCard } from "@/lib/ui/moduleStyles";
 
 type Operacion = {
   id: string;
@@ -186,8 +187,8 @@ export function PapeleraTransportesContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-brand-blue/70 text-base font-medium">
           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
@@ -197,42 +198,42 @@ export function PapeleraTransportesContent() {
 
   return (
     <>
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
 
         {/* Hero */}
-        <div className="rounded-2xl bg-gradient-to-br from-neutral-700 via-neutral-600 to-red-800 text-white overflow-hidden shadow-sm">
+        <div className={moduleHeroRounded}>
           <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:trash-2" width={22} height={22} className="text-white" />
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:trash-2" width={24} height={24} className="text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
-                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{tr.title}</h1>
+                <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-                <Icon icon="lucide:package-x" width={13} height={13} className="text-white/80" />
-                <span className="text-xs font-bold">{operaciones.length} {tr.itemsInTrash}</span>
+              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3.5 py-2.5">
+                <Icon icon="lucide:package-x" width={16} height={16} className="text-white/80" />
+                <span className="text-base font-bold">{operaciones.length} {tr.itemsInTrash}</span>
               </div>
               {isSuperadmin && operaciones.length > 0 && (
                 <button
                   onClick={() => void handleEmptyTrash()}
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-base font-semibold bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
                 >
-                  <Icon icon="lucide:trash-2" width={13} height={13} />
+                  <Icon icon="lucide:trash-2" width={16} height={16} />
                   <span className="hidden sm:inline">{tr.emptyTrash}</span>
                 </button>
               )}
               <button
                 onClick={() => void fetchOperaciones()}
-                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
+                className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
                 title={tr.refresh}
               >
-                <Icon icon="lucide:refresh-cw" width={16} height={16} />
+                <Icon icon="lucide:refresh-cw" width={18} height={18} />
               </button>
             </div>
           </div>
@@ -240,42 +241,42 @@ export function PapeleraTransportesContent() {
 
         {/* Barra de selección */}
         {selectedIds.size > 0 && (
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-4 py-3 flex items-center gap-3">
-            <span className="text-xs font-semibold text-neutral-700 flex-1">
+          <div className={`${moduleCard} px-4 py-3 flex items-center gap-3`}>
+            <span className="text-base font-semibold text-brand-blue flex-1">
               {selectedIds.size} elemento{selectedIds.size !== 1 ? "s" : ""} seleccionado{selectedIds.size !== 1 ? "s" : ""}
             </span>
             <button
               onClick={() => void handleRestore(Array.from(selectedIds))}
               disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
             >
-              <Icon icon="lucide:undo-2" width={13} height={13} />
+              <Icon icon="lucide:undo-2" width={16} height={16} />
               <span className="hidden sm:inline">{tr.restore}</span>
             </button>
             {isSuperadmin && (
               <button
                 onClick={() => void handleDeletePermanently(Array.from(selectedIds))}
                 disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
               >
-                <Icon icon="lucide:trash-2" width={13} height={13} />
+                <Icon icon="lucide:trash-2" width={16} height={16} />
                 <span className="hidden sm:inline">{tr.deletePermanent}</span>
               </button>
             )}
             <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
-              <Icon icon="lucide:x" width={13} height={13} />
+              <Icon icon="lucide:x" width={16} height={16} />
             </button>
           </div>
         )}
 
         {/* Contenido */}
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className={moduleCard}>
           {operaciones.length === 0 ? (
             <div className="py-20 flex flex-col items-center gap-3 text-center">
-              <span className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                <Icon icon="lucide:trash-2" width={26} height={26} className="text-neutral-300" />
+              <span className="w-14 h-14 rounded-2xl bg-[#F4F8FC] flex items-center justify-center">
+                <Icon icon="lucide:trash-2" width={26} height={26} className="text-brand-blue/30" />
               </span>
-              <p className="text-neutral-500 font-semibold text-sm">{tr.trashEmpty}</p>
+              <p className="text-brand-blue font-semibold text-base">{tr.trashEmpty}</p>
             </div>
           ) : (
             <>
@@ -296,31 +297,31 @@ export function PapeleraTransportesContent() {
                             {isSelected && <Icon icon="lucide:check" width={11} height={11} className="text-white" />}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-sm text-brand-blue">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}</p>
-                            <p className="text-xs text-neutral-500 truncate">{op.cliente || "-"}</p>
+                            <p className="font-bold text-base text-brand-blue">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}</p>
+                            <p className="text-base text-neutral-500 truncate">{op.cliente || "-"}</p>
                           </div>
                         </div>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${badge.cls}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold border shrink-0 ${badge.cls}`}>
                           {badge.label}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5 text-xs mb-3">
-                        <div className="bg-neutral-50 rounded-xl px-2.5 py-1.5">
-                          <p className="text-neutral-400 text-[10px] font-semibold uppercase">Naviera</p>
+                      <div className="grid grid-cols-2 gap-1.5 text-base mb-3">
+                        <div className="bg-[#F4F8FC] rounded-xl px-2.5 py-1.5">
+                          <p className="text-brand-blue/60 text-sm font-semibold">Naviera</p>
                           <p className="text-neutral-700 font-medium truncate">{op.naviera || "-"}</p>
                         </div>
-                        <div className="bg-neutral-50 rounded-xl px-2.5 py-1.5">
-                          <p className="text-neutral-400 text-[10px] font-semibold uppercase">Transporte</p>
+                        <div className="bg-[#F4F8FC] rounded-xl px-2.5 py-1.5">
+                          <p className="text-brand-blue/60 text-sm font-semibold">Transporte</p>
                           <p className="text-neutral-700 font-medium truncate">{op.transporte || "-"}</p>
                         </div>
                         {op.contenedor && (
-                          <div className="bg-neutral-50 rounded-xl px-2.5 py-1.5">
-                            <p className="text-neutral-400 text-[10px] font-semibold uppercase">Contenedor</p>
+                          <div className="bg-[#F4F8FC] rounded-xl px-2.5 py-1.5">
+                            <p className="text-brand-blue/60 text-sm font-semibold">Contenedor</p>
                             <p className="text-neutral-700 font-mono truncate">{op.contenedor}</p>
                           </div>
                         )}
                         <div className="bg-red-50 rounded-xl px-2.5 py-1.5">
-                          <p className="text-red-400 text-[10px] font-semibold uppercase">Eliminado</p>
+                          <p className="text-red-400 text-sm font-semibold">Eliminado</p>
                           <p className="text-red-700 font-medium">{formatDate(op.transporte_deleted_at)}</p>
                         </div>
                       </div>
@@ -328,18 +329,18 @@ export function PapeleraTransportesContent() {
                         <button
                           onClick={() => void handleRestore([op.id])}
                           disabled={actionLoading}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
                         >
-                          <Icon icon="lucide:undo-2" width={13} height={13} />
+                          <Icon icon="lucide:undo-2" width={16} height={16} />
                           {tr.restore}
                         </button>
                         {isSuperadmin && (
                           <button
                             onClick={() => void handleDeletePermanently([op.id])}
                             disabled={actionLoading}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-base font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
                           >
-                            <Icon icon="lucide:trash-2" width={13} height={13} />
+                            <Icon icon="lucide:trash-2" width={16} height={16} />
                             {tr.deletePermanent}
                           </button>
                         )}
@@ -351,21 +352,21 @@ export function PapeleraTransportesContent() {
 
               {/* Tabla desktop */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-base">
                   <thead>
-                    <tr className="bg-neutral-50 border-b border-neutral-100">
+                    <tr className="bg-[#F4F8FC] border-b border-brand-blue/10">
                       <th className="px-4 py-3 w-10">
                         <input type="checkbox" checked={selectedIds.size === operaciones.length && operaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
                       </th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colRef}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colClient}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colCarrier}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colBooking}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colTransport}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colContainer}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">{tr.colType}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap min-w-[7.5rem]">{tr.colDeleted}</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{tr.colActions}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colRef}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colClient}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colCarrier}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colBooking}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colTransport}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colContainer}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colType}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap min-w-[7.5rem]">{tr.colDeleted}</th>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue">{tr.colActions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -382,17 +383,17 @@ export function PapeleraTransportesContent() {
                             <input type="checkbox" checked={selectedIds.has(op.id)} onChange={() => handleSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className="font-bold text-brand-blue text-xs">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span>
+                            <span className="font-bold text-brand-blue text-base">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span>
                           </td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-700 font-medium">{op.cliente || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.naviera || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs font-mono text-neutral-600">{op.booking || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600">{op.transporte || "-"}</td>
-                          <td className="px-4 py-3 text-center text-xs font-mono text-neutral-600">{op.contenedor || "-"}</td>
+                          <td className="px-4 py-3 text-center text-base text-neutral-700 font-medium">{op.cliente || "-"}</td>
+                          <td className="px-4 py-3 text-center text-base text-neutral-600">{op.naviera || "-"}</td>
+                          <td className="px-4 py-3 text-center text-base font-mono text-neutral-600">{op.booking || "-"}</td>
+                          <td className="px-4 py-3 text-center text-base text-neutral-600">{op.transporte || "-"}</td>
+                          <td className="px-4 py-3 text-center text-base font-mono text-neutral-600">{op.contenedor || "-"}</td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.cls}`}>{badge.label}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold border ${badge.cls}`}>{badge.label}</span>
                           </td>
-                          <td className="px-4 py-3 text-center text-xs text-neutral-600 font-medium min-w-[7.5rem]">{formatDate(op.transporte_deleted_at)}</td>
+                          <td className="px-4 py-3 text-center text-base text-neutral-600 font-medium min-w-[7.5rem]">{formatDate(op.transporte_deleted_at)}</td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => void handleRestore([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50" title={tr.restore}>
@@ -410,9 +411,9 @@ export function PapeleraTransportesContent() {
                     })}
                   </tbody>
                 </table>
-                <div className="px-4 py-2.5 border-t border-neutral-100 bg-neutral-50 text-xs text-neutral-400">
+                <div className="px-4 py-2.5 border-t border-brand-blue/10 bg-[#F4F8FC]/80 text-base text-neutral-500">
                   {operaciones.length} elemento{operaciones.length !== 1 ? "s" : ""} en papelera
-                  {selectedIds.size > 0 && <span className="ml-2 text-brand-blue font-medium">· {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>}
+                  {selectedIds.size > 0 && <span className="ml-2 text-brand-blue font-semibold">· {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>}
                 </div>
               </div>
             </>

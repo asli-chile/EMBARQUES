@@ -9,6 +9,15 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
+import {
+  moduleCard,
+  moduleCardAccent,
+  moduleHeroRounded,
+  moduleInput,
+  moduleLabel,
+  modulePageBg,
+  moduleSectionTitle,
+} from "@/lib/ui/moduleStyles";
 
 type Operacion = {
   id: string;
@@ -873,9 +882,8 @@ export function FacturacionContent() {
   };
 
   // ─── Clases base ─────────────────────────────────────────────────────────
-  const inputClass =
-    "w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all text-sm";
-  const labelClass = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
+  const inputClass = moduleInput;
+  const labelClass = moduleLabel;
 
   const renderInput = (label: string, field: keyof FormData, type = "text", placeholder?: string) => (
     <div>
@@ -903,8 +911,8 @@ export function FacturacionContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm font-medium">
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
+        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-brand-blue/70 text-base font-medium">
           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
           <span>{tr.loading}</span>
         </div>
@@ -913,26 +921,26 @@ export function FacturacionContent() {
   }
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
       <div className="w-full max-w-[1600px] mx-auto space-y-4">
 
         {/* Hero */}
-        <div className="rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue/90 to-teal-700 text-white overflow-hidden shadow-sm">
+        <div className={moduleHeroRounded}>
           <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:receipt" width={22} height={22} className="text-white" />
+              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:receipt" width={24} height={24} className="text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
-                <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{tr.title}</h1>
+                <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {formData.numero_factura_asli && (
                 <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
                   <Icon icon="lucide:hash" width={13} height={13} className="text-white/80" />
-                  <span className="text-xs font-bold">{formData.numero_factura_asli}</span>
+                  <span className="text-sm font-bold">{formData.numero_factura_asli}</span>
                 </div>
               )}
               {formData.operacion_id && (
@@ -940,7 +948,7 @@ export function FacturacionContent() {
                   <button
                     type="button"
                     onClick={exportarExcel}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-base font-semibold bg-white/15 hover:bg-white/25 text-white transition-colors"
                     title={tr.exportExcelTitle}
                   >
                     <Icon icon="lucide:table-2" width={14} height={14} />
@@ -949,7 +957,7 @@ export function FacturacionContent() {
                   <button
                     type="button"
                     onClick={exportarPDF}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
                     title={tr.exportPdfTitle}
                   >
                     <Icon icon="lucide:file-text" width={14} height={14} />
@@ -960,7 +968,7 @@ export function FacturacionContent() {
               <button
                 type="button"
                 onClick={() => void fetchData()}
-                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
+                className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
                 title={t.misReservas?.refresh ?? tr.refresh}
               >
                 <Icon icon="lucide:refresh-cw" width={16} height={16} />
@@ -970,11 +978,11 @@ export function FacturacionContent() {
         </div>
 
         {/* Tabs mobile */}
-        <div className="lg:hidden flex bg-neutral-100 rounded-2xl p-1 gap-1">
+        <div className="lg:hidden flex bg-white/80 border border-brand-blue/15 rounded-2xl p-1 gap-1">
           <button
             type="button"
             onClick={() => setMobilePanel("select")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all ${
               mobilePanel === "select" ? "bg-white text-brand-blue shadow-sm" : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
@@ -985,7 +993,7 @@ export function FacturacionContent() {
             type="button"
             onClick={() => setMobilePanel("form")}
             disabled={!formData.operacion_id}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
               mobilePanel === "form" ? "bg-white text-brand-blue shadow-sm" : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
@@ -1001,31 +1009,31 @@ export function FacturacionContent() {
 
           {/* Panel izquierdo — lista de operaciones */}
           <div className={`w-full lg:w-72 xl:w-80 lg:flex-shrink-0 ${mobilePanel !== "select" ? "hidden lg:block" : ""}`}>
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden lg:sticky lg:top-0">
-              <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-              <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
+            <div className={`${moduleCard} lg:sticky lg:top-0`}>
+              <div className={moduleCardAccent} />
+              <div className="px-4 py-3 border-b border-brand-blue/10 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                     <Icon icon="lucide:search" className="w-3.5 h-3.5 text-brand-blue" />
                   </span>
-                  <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.selectOperation}</h2>
+                  <h2 className={moduleSectionTitle}>{tr.selectOperation}</h2>
                 </div>
-                <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
+                <span className="text-sm font-semibold text-brand-blue/60 bg-[#F4F8FC] px-2 py-0.5 rounded-lg">
                   {filteredOperaciones.length}
                 </span>
               </div>
               <div className="p-3 space-y-2">
                 <div className="relative">
-                  <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
+                  <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40 w-4 h-4 pointer-events-none" />
                   <input
                     type="text"
                     placeholder={tr.searchPlaceholder}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 border border-neutral-200 bg-neutral-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all"
+                    className={`${moduleInput} pl-9`}
                   />
                 </div>
-                <label className="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer px-1 py-0.5 rounded-lg hover:bg-neutral-50 transition-colors">
+                <label className="flex items-center gap-2 text-base text-brand-blue/80 cursor-pointer px-1 py-0.5 rounded-lg hover:bg-[#F4F8FC] transition-colors">
                   <input
                     type="checkbox"
                     checked={filterPending}
@@ -1037,10 +1045,10 @@ export function FacturacionContent() {
 
                 {filteredOperaciones.length === 0 ? (
                   <div className="py-10 text-center">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2">
-                      <Icon icon="lucide:file-x" width={18} height={18} className="text-neutral-300" />
+                    <div className="w-10 h-10 rounded-xl bg-[#F4F8FC] flex items-center justify-center mx-auto mb-2">
+                      <Icon icon="lucide:file-x" width={18} height={18} className="text-brand-blue/30" />
                     </div>
-                    <p className="text-neutral-400 text-xs font-medium">{tr.noOperations}</p>
+                    <p className="text-brand-blue/50 text-base font-medium">{tr.noOperations}</p>
                   </div>
                 ) : (
                   <div className="max-h-[calc(100vh-340px)] overflow-y-auto space-y-1.5 pr-0.5">
@@ -1056,11 +1064,11 @@ export function FacturacionContent() {
                           className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${
                             isActive
                               ? "border-brand-blue bg-brand-blue/5 ring-1 ring-brand-blue/20"
-                              : "border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
+                              : "border-brand-blue/10 hover:border-brand-blue/25 hover:bg-[#F4F8FC]"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <p className={`font-bold text-xs ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>{ref}</p>
+                            <p className={`font-bold text-base ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>{ref}</p>
                             <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
                               facturado ? "bg-emerald-100" : "bg-amber-100"
                             }`}>
@@ -1070,12 +1078,12 @@ export function FacturacionContent() {
                               />
                             </span>
                           </div>
-                          <p className="text-[11px] text-neutral-500 truncate">{op.cliente}</p>
-                          <p className="text-[10px] text-neutral-400 truncate mt-0.5">
+                          <p className="text-sm text-neutral-500 truncate">{op.cliente}</p>
+                          <p className="text-sm text-neutral-400 truncate mt-0.5">
                             {op.naviera}{op.booking ? ` · ${op.booking}` : ""}
                           </p>
                           {op.valor_tramo && (
-                            <p className="text-[10px] text-brand-blue/70 mt-0.5 font-medium">
+                            <p className="text-sm text-brand-blue/70 mt-0.5 font-medium">
                               {formatMonto(op.valor_tramo, op.moneda ?? undefined)}
                             </p>
                           )}
@@ -1095,24 +1103,24 @@ export function FacturacionContent() {
 
                 {/* Banner operación seleccionada */}
                 {selectedOperacion && (
-                  <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                  <div className={moduleCard}>
+                    <div className={moduleCardAccent} />
                     <div className="p-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-brand-blue uppercase tracking-wider mb-0.5">
+                        <p className="text-sm font-semibold text-brand-blue mb-0.5">
                           {tr.selectedOperation}
                         </p>
-                        <p className="text-neutral-900 font-bold text-sm">
+                        <p className="text-neutral-900 font-bold text-base">
                           {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`}
                           {" "}—{" "}{selectedOperacion.cliente}
                         </p>
-                        <p className="text-xs text-neutral-500 mt-0.5">
+                        <p className="text-base text-neutral-500 mt-0.5">
                           {selectedOperacion.naviera}
                           {selectedOperacion.nave ? ` · ${selectedOperacion.nave}` : ""}
                           {selectedOperacion.booking ? ` · ${selectedOperacion.booking}` : ""}
                         </p>
                         {selectedOperacion.transporte && (
-                          <p className="text-xs text-neutral-400 mt-0.5 flex items-center gap-1">
+                          <p className="text-sm text-neutral-400 mt-0.5 flex items-center gap-1">
                             <Icon icon="lucide:truck" width={11} height={11} />
                             {selectedOperacion.transporte}
                             {selectedOperacion.contenedor ? ` · ${selectedOperacion.contenedor}` : ""}
@@ -1123,7 +1131,7 @@ export function FacturacionContent() {
                         <button
                           type="button"
                           onClick={exportarPDF}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                         >
                           <Icon icon="lucide:file-text" width={12} height={12} />
                           {tr.pdfShort}
@@ -1131,7 +1139,7 @@ export function FacturacionContent() {
                         <button
                           type="button"
                           onClick={exportarExcel}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
                         >
                           <Icon icon="lucide:table-2" width={12} height={12} />
                           {tr.excelShort}
@@ -1139,7 +1147,7 @@ export function FacturacionContent() {
                         <button
                           type="button"
                           onClick={() => setMobilePanel("select")}
-                          className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
+                          className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
                         >
                           <Icon icon="lucide:list" width={12} height={12} />
                           {tr.change}
@@ -1151,21 +1159,21 @@ export function FacturacionContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Info de factura */}
-                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                  <div className={moduleCard}>
+                    <div className={moduleCardAccent} />
+                    <div className="px-4 py-3 border-b border-brand-blue/10 flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                         <Icon icon="lucide:file-text" className="w-3.5 h-3.5 text-brand-blue" />
                       </span>
-                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.invoiceInfo}</h2>
+                      <h2 className={moduleSectionTitle}>{tr.invoiceInfo}</h2>
                     </div>
                     <div className="p-4 grid grid-cols-2 gap-3">
                       {renderInput(tr.asliInvoice, "numero_factura_asli")}
                       <div>
                         <label className={labelClass}>{tr.invoicedAmount}</label>
-                        <div className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-700 text-sm font-bold flex items-center justify-between gap-2 min-h-[42px]">
-                          <span className="text-xs text-neutral-400 font-normal">{tr.calculadoDeItems}</span>
-                          <span className={totalProforma > 0 ? "text-brand-blue" : "text-neutral-400"}>
+                        <div className="w-full px-3.5 py-3 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] text-brand-blue text-base font-bold flex items-center justify-between gap-2 min-h-[48px]">
+                          <span className="text-sm text-brand-blue/40 font-normal">{tr.calculadoDeItems}</span>
+                          <span className={totalProforma > 0 ? "text-brand-blue" : "text-brand-blue/40"}>
                             {totalProforma > 0
                               ? formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)
                               : "—"}
@@ -1178,13 +1186,13 @@ export function FacturacionContent() {
                   </div>
 
                   {/* Financiero */}
-                  <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                  <div className={moduleCard}>
+                    <div className={moduleCardAccent} />
+                    <div className="px-4 py-3 border-b border-brand-blue/10 flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                         <Icon icon="lucide:bar-chart-2" className="w-3.5 h-3.5 text-brand-blue" />
                       </span>
-                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.financial}</h2>
+                      <h2 className={moduleSectionTitle}>{tr.financial}</h2>
                     </div>
                     <div className="p-4 grid grid-cols-2 gap-3">
                       {renderSelect(tr.currency, "moneda", monedas)}
@@ -1196,20 +1204,20 @@ export function FacturacionContent() {
                 </div>
 
                 {/* ── Ítems de Proforma ──────────────────────────────────── */}
-                <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                  <div className="h-[2px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                  <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
+                <div className={moduleCard}>
+                  <div className={moduleCardAccent} />
+                  <div className="px-4 py-3 border-b border-brand-blue/10 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                         <Icon icon="lucide:list-checks" className="w-3.5 h-3.5 text-brand-blue" />
                       </span>
-                      <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                      <h2 className={moduleSectionTitle}>
                         {tr.proformaItemsTitle}
                       </h2>
                     </div>
                     <div className="flex items-center gap-2">
                       {totalProforma > 0 && (
-                        <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 px-2.5 py-1 rounded-full">
+                        <span className="text-sm font-bold text-brand-blue bg-brand-blue/10 px-2.5 py-1 rounded-lg">
                           {tr.total}: {formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)}
                         </span>
                       )}
@@ -1221,7 +1229,7 @@ export function FacturacionContent() {
                     <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-start gap-3">
                       <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
                         <Icon icon="lucide:zap" width={12} height={12} className="text-sky-500" />
-                        <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wide whitespace-nowrap">
+                        <span className="text-sm font-bold text-sky-600 whitespace-nowrap">
                           {tr.costosExtraLabel}
                         </span>
                       </div>
@@ -1236,7 +1244,7 @@ export function FacturacionContent() {
                                 ? translateExtraCostText(ce.tarifa_texto)
                                 : (ce.tarifa_valor != null ? `${ce.moneda} ${ce.tarifa_valor.toLocaleString("es-CL")}` : "")
                             }
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-100 hover:border-sky-400 transition-colors shadow-sm"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-100 hover:border-sky-400 transition-colors shadow-sm"
                           >
                             <Icon icon="lucide:plus" width={10} height={10} />
                             {translateExtraCostText(ce.concepto)}
@@ -1256,33 +1264,33 @@ export function FacturacionContent() {
 
                   {itemsProforma.length === 0 ? (
                     <div className="py-8 text-center px-4">
-                      <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2">
-                        <Icon icon="lucide:package-open" width={18} height={18} className="text-neutral-300" />
+                      <div className="w-10 h-10 rounded-xl bg-[#F4F8FC] flex items-center justify-center mx-auto mb-2">
+                        <Icon icon="lucide:package-open" width={18} height={18} className="text-brand-blue/30" />
                       </div>
-                      <p className="text-neutral-400 text-xs font-medium">{tr.noItems}</p>
+                      <p className="text-brand-blue/50 text-base font-medium">{tr.noItems}</p>
                     </div>
                   ) : (
                     <div className="p-4 space-y-2">
                       {/* Header de columnas */}
                       <div className={`hidden sm:grid gap-2 px-1 ${isCliente ? "grid-cols-[1fr_80px_120px_100px]" : "grid-cols-[1fr_80px_120px_100px_36px]"}`}>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{tr.itemDescription}</span>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide text-center">{tr.itemQty}</span>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{tr.itemUnitAmount}</span>
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">{tr.itemCurrency}</span>
+                        <span className="text-sm font-bold text-brand-blue">{tr.itemDescription}</span>
+                        <span className="text-sm font-bold text-brand-blue text-center">{tr.itemQty}</span>
+                        <span className="text-sm font-bold text-brand-blue">{tr.itemUnitAmount}</span>
+                        <span className="text-sm font-bold text-brand-blue">{tr.itemCurrency}</span>
                         {!isCliente && <span />}
                       </div>
 
                       {itemsProforma.map((item) => {
                         const subtotal = parseFloat(item.cantidad || "1") * parseFloat(item.monto_unitario || "0");
                         return (
-                          <div key={item.id} className={`grid grid-cols-1 gap-2 items-center p-3 rounded-xl bg-neutral-50 border border-neutral-100 ${isCliente ? "sm:grid-cols-[1fr_80px_120px_100px]" : "sm:grid-cols-[1fr_80px_120px_100px_36px]"}`}>
+                          <div key={item.id} className={`grid grid-cols-1 gap-2 items-center p-3 rounded-xl bg-[#F4F8FC] border border-brand-blue/10 ${isCliente ? "sm:grid-cols-[1fr_80px_120px_100px]" : "sm:grid-cols-[1fr_80px_120px_100px_36px]"}`}>
                             <input
                               type="text"
                               value={item.descripcion}
                               onChange={(e) => updateItem(item.id, "descripcion", e.target.value)}
                               placeholder={tr.itemDescriptionPlaceholder}
                               readOnly={isCliente}
-                              className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
+                              className={`${moduleInput} ${isCliente ? "cursor-default opacity-70" : ""}`}
                             />
                             <input
                               type="number"
@@ -1291,7 +1299,7 @@ export function FacturacionContent() {
                               placeholder="1"
                               min="1"
                               readOnly={isCliente}
-                              className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs text-center focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
+                              className={`${moduleInput} text-center ${isCliente ? "cursor-default opacity-70" : ""}`}
                             />
                             <div className="relative">
                               <input
@@ -1300,10 +1308,10 @@ export function FacturacionContent() {
                                 onChange={(e) => updateItem(item.id, "monto_unitario", e.target.value)}
                                 placeholder="0.00"
                                 readOnly={isCliente}
-                                className={`w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
+                                className={`${moduleInput} ${isCliente ? "cursor-default opacity-70" : ""}`}
                               />
                               {subtotal > 0 && (
-                                <span className="absolute -bottom-4 left-0 text-[9px] text-brand-blue font-medium">
+                                <span className="absolute -bottom-4 left-0 text-sm text-brand-blue font-medium">
                                   = {subtotal.toLocaleString("es-CL")}
                                 </span>
                               )}
@@ -1312,7 +1320,7 @@ export function FacturacionContent() {
                               value={item.moneda}
                               onChange={(e) => updateItem(item.id, "moneda", e.target.value)}
                               disabled={isCliente}
-                              className={`w-full px-2 py-2 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all ${isCliente ? "cursor-default opacity-70" : ""}`}
+                              className={`${moduleInput} ${isCliente ? "cursor-default opacity-70" : ""}`}
                             >
                               {monedas.map((m) => <option key={m} value={m}>{m}</option>)}
                             </select>
@@ -1331,10 +1339,10 @@ export function FacturacionContent() {
 
                       {/* Total */}
                       {itemsProforma.length > 0 && (
-                        <div className="flex justify-end pt-2 border-t border-neutral-100">
+                        <div className="flex justify-end pt-2 border-t border-brand-blue/10">
                           <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-brand-blue/5 border border-brand-blue/20">
-                            <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wide">{tr.totalProformaLabel}</span>
-                            <span className="text-sm font-bold text-brand-blue">
+                            <span className="text-sm font-semibold text-brand-blue">{tr.totalProformaLabel}</span>
+                            <span className="text-base font-bold text-brand-blue">
                               {formatMonto(totalProforma, formData.moneda || itemsProforma[0]?.moneda)}
                             </span>
                           </div>
@@ -1345,13 +1353,13 @@ export function FacturacionContent() {
                 </div>
 
                 {/* Fechas de pago */}
-                <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-                  <div className="h-[2px] bg-gradient-to-r from-brand-blue/60 to-brand-teal/60" />
-                  <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+                <div className={moduleCard}>
+                  <div className={moduleCardAccent} />
+                  <div className="px-4 py-3 border-b border-brand-blue/10 flex items-center gap-2">
                     <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                       <Icon icon="lucide:calendar" className="w-3.5 h-3.5 text-brand-blue" />
                     </span>
-                    <h2 className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{tr.paymentDates}</h2>
+                    <h2 className={moduleSectionTitle}>{tr.paymentDates}</h2>
                   </div>
                   <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {renderInput(tr.invoiceDelivery, "fecha_entrega_factura", "date")}
@@ -1370,7 +1378,7 @@ export function FacturacionContent() {
 
                 {/* Acciones */}
                 {isCliente ? (
-                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-base">
                     <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
                     <span>{tr.readOnlyNotice}</span>
                   </div>
@@ -1380,14 +1388,14 @@ export function FacturacionContent() {
                       <button
                         type="button"
                         onClick={() => { setFormData(initialFormData); setItemsProforma([]); setError(null); }}
-                        className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                        className="px-4 py-2.5 text-base font-semibold text-brand-blue/80 bg-[#F4F8FC] border border-brand-blue/20 rounded-lg hover:bg-white transition-colors"
                       >
                         {tr.cancel}
                       </button>
                       <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors shadow-sm disabled:opacity-50"
                       >
                         {saving ? (
                           <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.saving}</>
@@ -1401,17 +1409,17 @@ export function FacturacionContent() {
 
               </div>
             ) : (
-              <div className="rounded-2xl bg-white border border-neutral-200 shadow-sm overflow-hidden">
+              <div className={moduleCard}>
                 <div className="py-16 px-6 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-                    <Icon icon="lucide:receipt" width={28} height={28} className="text-neutral-300" />
+                  <div className="w-16 h-16 rounded-2xl bg-[#F4F8FC] flex items-center justify-center mx-auto mb-4">
+                    <Icon icon="lucide:receipt" width={28} height={28} className="text-brand-blue/30" />
                   </div>
-                  <p className="text-neutral-700 font-semibold text-sm mb-1">{tr.selectOperation}</p>
-                  <p className="text-neutral-400 text-xs">{tr.selectOpHint}</p>
+                  <p className="text-brand-blue font-semibold text-base mb-1">{tr.selectOperation}</p>
+                  <p className="text-neutral-500 text-base">{tr.selectOpHint}</p>
                   <button
                     type="button"
                     onClick={() => setMobilePanel("select")}
-                    className="lg:hidden mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
+                    className="lg:hidden mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
                   >
                     <Icon icon="lucide:list" width={13} height={13} />
                     {tr.viewOperations}

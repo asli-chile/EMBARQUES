@@ -6,6 +6,14 @@ import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleInput,
+  moduleBtnPrimary,
+  moduleCard,
+  moduleSectionTitle,
+} from "@/lib/ui/moduleStyles";
 
 const NEW_EMPRESA_VALUE = "__new__";
 
@@ -190,49 +198,49 @@ export function AsignarClientesEmpresasContent() {
 
   if (authLoading) {
     return (
-      <main className="flex-1 min-h-0 bg-neutral-100 flex items-center justify-center" role="main">
+      <main className={`flex-1 min-h-0 ${modulePageBg} flex items-center justify-center`} role="main">
         <p className="text-neutral-500">{tr.loading}</p>
       </main>
     );
   }
   if (!profile) {
     return (
-      <main className="flex-1 min-h-0 bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 ${modulePageBg} p-6`} role="main">
         <p className="text-neutral-600">{tr.loginRequired}</p>
       </main>
     );
   }
   if (!isSuperadmin && !isAdmin) {
     return (
-      <main className="flex-1 min-h-0 bg-neutral-100 p-6" role="main">
+      <main className={`flex-1 min-h-0 ${modulePageBg} p-6`} role="main">
         <p className="text-neutral-600">{tr.superadminOnly}</p>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 min-h-0 flex flex-col bg-neutral-100 overflow-hidden" role="main">
+    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`} role="main">
 
       {/* Hero gradient header */}
-      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-violet-700 text-white">
+      <div className={`flex-shrink-0 ${moduleHero}`}>
         <div className="px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:link" width={22} height={22} className="text-white" />
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:link" width={24} height={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight">{tr.title}</h1>
-              <p className="text-xs text-white/70 mt-0.5">{tr.subtitle}</p>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight">{tr.title}</h1>
+              <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
             </div>
           </div>
           <div className="flex gap-2 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}</span>
+              <span className="text-sm font-semibold">{empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{usuariosCliente.length} {usuariosCliente.length !== 1 ? tr.clientes : tr.cliente}</span>
+              <span className="text-sm font-semibold">{usuariosCliente.length} {usuariosCliente.length !== 1 ? tr.clientes : tr.cliente}</span>
             </div>
           </div>
         </div>
@@ -242,10 +250,10 @@ export function AsignarClientesEmpresasContent() {
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
 
         {/* ── Left panel: empresa list ── */}
-        <div className="flex-shrink-0 h-48 sm:h-56 lg:h-auto lg:w-64 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-neutral-100 space-y-2">
+        <div className={`flex-shrink-0 h-48 sm:h-56 lg:h-auto lg:w-64 flex flex-col ${moduleCard}`}>
+          <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-brand-blue/15 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{tr.empresasSection}</span>
+              <span className={moduleSectionTitle}>{tr.empresasSection}</span>
               <button
                 type="button"
                 onClick={() => { setShowNewEmpresa((v) => !v); setNewEmpresaNombre(""); }}
@@ -265,7 +273,7 @@ export function AsignarClientesEmpresasContent() {
                   value={newEmpresaNombre}
                   onChange={(e) => setNewEmpresaNombre(e.target.value)}
                   placeholder={tr.nombreEmpresaPlaceholder}
-                  className="flex-1 min-w-0 rounded-xl border border-neutral-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                  className={`${moduleInput} flex-1 min-w-0`}
                   onKeyDown={(e) => e.key === "Enter" && void handleCreateEmpresa()}
                   autoFocus
                 />
@@ -273,7 +281,7 @@ export function AsignarClientesEmpresasContent() {
                   type="button"
                   onClick={() => void handleCreateEmpresa()}
                   disabled={!newEmpresaNombre.trim() || creatingEmpresa}
-                  className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 transition-colors"
+                  className={`${moduleBtnPrimary} disabled:opacity-40`}
                 >
                   {creatingEmpresa ? "…" : "OK"}
                 </button>
@@ -288,7 +296,7 @@ export function AsignarClientesEmpresasContent() {
                 value={searchEmpresa}
                 onChange={(e) => setSearchEmpresa(e.target.value)}
                 placeholder={tr.buscarEmpresa}
-                className="w-full rounded-xl border border-neutral-200 pl-7 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                className={`${moduleInput} pl-7`}
               />
             </div>
           </div>
@@ -325,7 +333,7 @@ export function AsignarClientesEmpresasContent() {
                     </div>
                     {count > 0 && (
                       <span
-                        className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        className={`shrink-0 text-sm font-bold px-1.5 py-0.5 rounded-full ${
                           isSelected ? "bg-white/20 text-white" : "bg-brand-blue/10 text-brand-blue"
                         }`}
                       >
@@ -340,7 +348,7 @@ export function AsignarClientesEmpresasContent() {
         </div>
 
         {/* ── Right panel: user assignment ── */}
-        <div className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className={`flex-1 min-h-0 flex flex-col ${moduleCard}`}>
 
           {!selectedEmpresaId ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
@@ -384,7 +392,7 @@ export function AsignarClientesEmpresasContent() {
                     type="button"
                     onClick={() => void handleGuardar()}
                     disabled={saving || !hasChanges}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    className={`${moduleBtnPrimary} disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
                     {saving ? (
                       <><Icon icon="eos-icons:loading" width={13} height={13} className="animate-spin" />{tr.guardando}</>
@@ -416,7 +424,7 @@ export function AsignarClientesEmpresasContent() {
                     value={searchUsuario}
                     onChange={(e) => setSearchUsuario(e.target.value)}
                     placeholder={tr.buscarUsuario}
-                    className="w-full rounded-xl border border-neutral-200 pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+                    className={`${moduleInput} pl-8`}
                   />
                   {searchUsuario && (
                     <button
@@ -476,7 +484,7 @@ export function AsignarClientesEmpresasContent() {
                     {/* Assigned section header */}
                     {asignadosCount > 0 && (
                       <div className="px-4 py-1.5 bg-green-50/60 sticky top-0 z-10">
-                        <span className="text-[10px] font-semibold text-green-700 uppercase tracking-wide flex items-center gap-1">
+                        <span className="text-sm font-semibold text-green-700 uppercase tracking-wide flex items-center gap-1">
                           <Icon icon="lucide:user-check" width={10} height={10} />
                           {tr.asignadosSection} ({asignadosCount})
                         </span>
@@ -495,9 +503,9 @@ export function AsignarClientesEmpresasContent() {
                         <Avatar name={u.nombre || u.email} assigned />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-semibold text-neutral-800 truncate">{u.nombre || u.email}</p>
-                          <p className="text-[10px] text-neutral-400 truncate">{u.email}</p>
+                          <p className="text-sm text-neutral-400 truncate">{u.email}</p>
                         </div>
-                        <span className="shrink-0 text-[10px] text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                        <span className="shrink-0 text-sm text-red-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                           {tr.quitar}
                         </span>
                       </button>
@@ -506,7 +514,7 @@ export function AsignarClientesEmpresasContent() {
                     {/* Available section header */}
                     {sortedUsuarios.filter((u) => !asignados.has(u.id)).length > 0 && (
                       <div className="px-4 py-1.5 bg-neutral-50 sticky top-0 z-10">
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide flex items-center gap-1">
+                        <span className="text-sm font-semibold text-neutral-400 uppercase tracking-wide flex items-center gap-1">
                           <Icon icon="lucide:user-plus" width={10} height={10} />
                           {tr.disponiblesSection} ({sortedUsuarios.filter((u) => !asignados.has(u.id)).length})
                         </span>
@@ -523,9 +531,9 @@ export function AsignarClientesEmpresasContent() {
                         <Avatar name={u.nombre || u.email} assigned={false} />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium text-neutral-700 truncate">{u.nombre || u.email}</p>
-                          <p className="text-[10px] text-neutral-400 truncate">{u.email}</p>
+                          <p className="text-sm text-neutral-400 truncate">{u.email}</p>
                         </div>
-                        <span className="shrink-0 text-[10px] text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                        <span className="shrink-0 text-sm text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                           {tr.asignar}
                         </span>
                       </button>

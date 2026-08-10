@@ -11,6 +11,7 @@ import { exportRegistrosSimpleExcel } from "@/lib/registros-export-simple-excel"
 import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
+import { modulePageBg, moduleHero } from "@/lib/ui/moduleStyles";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -1686,11 +1687,11 @@ export function RegistrosContent() {
 
   if (loading && rowData.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
-        <div className="flex-1 flex items-center justify-center text-neutral-500">
-          <div className="flex items-center gap-2">
-            <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin" />
-            <span className="text-sm">{t.registros.loading}</span>
+      <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
+        <div className="flex-1 flex items-center justify-center text-brand-blue/70">
+          <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm">
+            <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
+            <span className="text-base font-medium">{t.registros.loading}</span>
           </div>
         </div>
       </main>
@@ -1698,47 +1699,63 @@ export function RegistrosContent() {
   }
 
   return (
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
+    <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
       {error && (
-        <div className="flex-shrink-0 px-3 sm:px-4 py-2 bg-red-100 text-red-700 text-xs sm:text-sm border-b border-red-200" role="alert">
+        <div className="flex-shrink-0 px-3 sm:px-4 py-2.5 bg-red-100 text-red-700 text-base border-b border-red-200" role="alert">
           {error}
         </div>
       )}
 
+      {/* Hero */}
+      <div className={`${moduleHero} px-4 sm:px-6 pt-5 pb-4`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <Icon icon="lucide:clipboard-list" width={24} height={24} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
+              <p className="text-base text-white/75 mt-1">
+                <span className="font-semibold text-white">{rowData.length}</span> {t.registros.records}
+              </p>
+            </div>
+          </div>
+          {canEdit && (
+            <a
+              href={withBase("/reservas/crear")}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm shrink-0"
+            >
+              <Icon icon="typcn:plus" width={16} height={16} />
+              <span className="hidden sm:inline">{t.registros.newBooking}</span>
+              <span className="sm:hidden">{t.registros.nuevoShort}</span>
+            </a>
+          )}
+        </div>
+      </div>
+
       {/* Barra de herramientas */}
-      <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b border-neutral-200">
+      <div className="relative z-40 flex-shrink-0 px-3 sm:px-4 py-3 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
         <div className="flex items-center gap-2 flex-wrap">
           {canEdit && (
             <>
-              {/* Botón Agregar Reserva */}
-              <a
-                href={withBase("/reservas/crear")}
-                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
-              >
-                <Icon icon="typcn:plus" width={14} height={14} className="sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">{t.registros.newBooking}</span>
-                <span className="sm:hidden">{t.registros.nuevoShort}</span>
-              </a>
-              {/* Botón Enviar a Transportes — solo visible con selección */}
               {selectionCount > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowTransportModal(true)}
-                  className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2.5 rounded-lg text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                 >
-                  <Icon icon="lucide:truck" width={14} height={14} className="sm:w-4 sm:h-4" />
+                  <Icon icon="lucide:truck" width={16} height={16} />
                   <span className="hidden sm:inline">{t.registros.sendToTransport} ({selectionCount})</span>
                   <span className="sm:hidden">{t.registros.sendToTransportShort} ({selectionCount})</span>
                 </button>
               )}
-              {/* Botón Eliminar — solo visible con selección */}
               {selectionCount > 0 && (
                 <button
                   type="button"
                   onClick={() => void handleRemoveSelected()}
-                  className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2.5 rounded-lg text-base font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
                 >
-                  <Icon icon="typcn:trash" width={14} height={14} className="sm:w-4 sm:h-4" />
+                  <Icon icon="typcn:trash" width={16} height={16} />
                   <span className="hidden sm:inline">{t.registros.deleteSelection} ({selectionCount})</span>
                   <span className="sm:hidden">Eliminar ({selectionCount})</span>
                 </button>
@@ -1746,33 +1763,32 @@ export function RegistrosContent() {
             </>
           )}
           
-          {/* Botón Actualizar */}
-          <div className="relative" ref={actionsMenuRef}>
+          <div className="relative z-50" ref={actionsMenuRef}>
             <button
               type="button"
               onClick={() => setShowActionsMenu((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2.5 rounded-lg text-base font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 ${
                 showActionsMenu
-                  ? "text-brand-blue bg-brand-blue/10 ring-1 ring-brand-blue/20"
-                  : "text-neutral-700 bg-neutral-100 hover:bg-neutral-200"
+                  ? "text-brand-blue bg-brand-blue/10 ring-1 ring-brand-blue/20 border border-brand-blue/20"
+                  : "text-brand-blue/80 bg-[#F4F8FC] border border-brand-blue/20 hover:bg-white"
               }`}
             >
-              <Icon icon="lucide:menu" width={14} height={14} className="sm:w-4 sm:h-4" />
+              <Icon icon="lucide:menu" width={16} height={16} />
               <span>Acciones</span>
-              <Icon icon={showActionsMenu ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} />
+              <Icon icon={showActionsMenu ? "lucide:chevron-up" : "lucide:chevron-down"} width={16} height={16} />
             </button>
 
             {showActionsMenu && (
-              <div className="absolute left-0 mt-1.5 z-30 w-60 rounded-xl border border-neutral-200 bg-white shadow-xl p-1.5">
+              <div className="absolute left-0 mt-1.5 z-[60] w-60 rounded-xl border border-neutral-200 bg-white shadow-xl p-1.5">
                 <button
                   type="button"
                   onClick={() => {
                     handleRefresh();
                     setShowActionsMenu(false);
                   }}
-                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-neutral-700 hover:bg-neutral-100 transition-colors text-left"
+                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-neutral-700 hover:bg-neutral-100 transition-colors text-left"
                 >
-                  <Icon icon="typcn:refresh" width={14} height={14} />
+                  <Icon icon="typcn:refresh" width={16} height={16} />
                   <span>{t.registros.refresh}</span>
                 </button>
 
@@ -1782,22 +1798,22 @@ export function RegistrosContent() {
                     setShowColumnPanel(true);
                     setShowActionsMenu(false);
                   }}
-                  className={`w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm transition-colors text-left ${
+                  className={`w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base transition-colors text-left ${
                     hiddenColumns.size > 0
                       ? "text-brand-blue bg-brand-blue/5 hover:bg-brand-blue/10"
                       : "text-neutral-700 hover:bg-neutral-100"
                   }`}
                 >
-                  <Icon icon="lucide:columns" width={14} height={14} />
+                  <Icon icon="lucide:columns" width={16} height={16} />
                   <span>Columnas{hiddenColumns.size > 0 ? ` (${hiddenColumns.size})` : ""}</span>
                 </button>
 
                 <a
                   href={withBase("/reservas/papelera")}
                   onClick={() => setShowActionsMenu(false)}
-                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
                 >
-                  <Icon icon="lucide:trash-2" width={14} height={14} />
+                  <Icon icon="lucide:trash-2" width={16} height={16} />
                   <span>Papelera</span>
                 </a>
 
@@ -1810,10 +1826,10 @@ export function RegistrosContent() {
                     setShowActionsMenu(false);
                   }}
                   disabled={rowData.length === 0}
-                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-emerald-700 hover:bg-emerald-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
                   title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
                 >
-                  <Icon icon="lucide:table-2" width={14} height={14} />
+                  <Icon icon="lucide:table-2" width={16} height={16} />
                   <span>{t.registros.exportExcelButton}</span>
                 </button>
 
@@ -1824,7 +1840,7 @@ export function RegistrosContent() {
                     setShowActionsMenu(false);
                   }}
                   disabled={rowData.length === 0 || isExportingPdf}
-                  className="w-full inline-flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs sm:text-sm text-rose-700 hover:bg-rose-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-rose-700 hover:bg-rose-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Exportar Reserva Confirmada PDF"
                 >
                   <Icon icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"} width={14} height={14} className={isExportingPdf ? "animate-spin" : ""} />
@@ -1838,46 +1854,40 @@ export function RegistrosContent() {
           <div className="relative min-w-[220px] sm:min-w-[280px] flex-1 sm:flex-none">
             <Icon
               icon="lucide:search"
-              width={14}
-              height={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+              width={16}
+              height={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40 pointer-events-none"
             />
             <input
               type="text"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="Buscar: nave, booking, contenedor..."
-              className="w-full h-8 rounded-lg border border-neutral-200 bg-white pl-8 pr-8 text-xs sm:text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+              className="w-full h-11 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] pl-9 pr-8 text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-colors"
             />
             {globalSearch && (
               <button
                 type="button"
                 onClick={() => setGlobalSearch("")}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
                 aria-label="Limpiar búsqueda"
                 title="Limpiar búsqueda"
               >
-                <Icon icon="lucide:x" width={13} height={13} />
+                <Icon icon="lucide:x" width={14} height={14} />
               </button>
             )}
           </div>
-
-          {/* Contador de registros */}
-          <span className="ml-auto text-xs sm:text-sm text-neutral-500 whitespace-nowrap">
-            <span className="font-medium text-neutral-700">{rowData.length}</span> {t.registros.records}
-          </span>
         </div>
         
-        {/* Indicador de scroll en móvil */}
-        <p className="sm:hidden text-[10px] text-neutral-400 mt-1.5 flex items-center gap-1">
-          <Icon icon="lucide:move-horizontal" width={12} height={12} />
+        <p className="sm:hidden text-sm text-brand-blue/50 mt-2 flex items-center gap-1">
+          <Icon icon="lucide:move-horizontal" width={14} height={14} />
           {t.registros.scrollHint}
         </p>
       </div>
       
       {/* Contenedor de la tabla */}
       <div className="flex-1 min-h-0 p-2 sm:p-4 overflow-hidden flex flex-col">
-        <div className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden" style={{ minHeight: 300 }}>
+        <div className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden rounded-xl border border-brand-blue/15 bg-white shadow-sm" style={{ minHeight: 300 }}>
           <AgGridReact<OperacionRow>
             ref={gridRef}
             rowData={rowData}
@@ -1908,7 +1918,7 @@ export function RegistrosContent() {
             onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
             onGridReady={onGridReady}
             onDragStopped={onDragStopped}
-            headerHeight={34}
+            headerHeight={40}
           />
         </div>
       </div>

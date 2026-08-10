@@ -5,6 +5,7 @@ import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { withBase } from "@/lib/basePath";
 import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
+import { AuthModal, type AuthUser } from "@/components/ui/AuthModal";
 
 // Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
 const PINNED_NAV = [
@@ -52,9 +53,17 @@ type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
-  const { user, profile, isExternalUser, empresaNombres, isSuperadmin, isAdmin, isEjecutivo, isCliente } = useAuth();
+  const { user, profile, isExternalUser, isSuperadmin, isAdmin, isEjecutivo, isCliente } = useAuth();
   const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
   const displayName = profile?.nombre || user?.name || user?.email || null;
+
+  const authUser: AuthUser | null = user
+    ? {
+        name: displayName ?? user.email,
+        email: user.email,
+        level: profile ? getRolLabel(profile.rol) : "Usuario",
+      }
+    : null;
 
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [showUserModal, setShowUserModal]   = useState(false);
@@ -338,90 +347,13 @@ export function NavBanner({ pathname }: NavBannerProps) {
       </div>
     </>
 
-    {/* ── Modal de usuario ────────────────────────────────────────────────── */}
-    {showUserModal && profile && (
-      <div
-        className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
-        role="dialog" aria-modal="true" aria-labelledby="user-profile-modal-title"
-        onClick={() => setShowUserModal(false)}
-      >
-        <div
-          className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-sm max-h-[92dvh] overflow-hidden flex flex-col"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
-          <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-            <div className="w-10 h-1 rounded-full bg-neutral-200" />
-          </div>
-          <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-brand-blue flex items-center justify-center text-white text-sm font-black uppercase flex-shrink-0">
-                {displayName![0]}
-              </div>
-              <div>
-                <h2 id="user-profile-modal-title" className="text-sm font-bold text-neutral-900">{displayName}</h2>
-                <p className="text-xs text-neutral-500 mt-0.5">{user!.email}</p>
-              </div>
-            </div>
-            <button type="button" onClick={() => setShowUserModal(false)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-            >
-              <Icon icon="lucide:x" width={16} height={16} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-              <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:shield" width={15} height={15} className="text-brand-blue" />
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide mb-0.5">Rol</p>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-blue/10 text-brand-blue">
-                  {getRolLabel(profile.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${profile.activo ? "bg-green-100" : "bg-red-100"}`}>
-                <Icon icon={profile.activo ? "lucide:check-circle" : "lucide:circle-off"} width={15} height={15} className={profile.activo ? "text-green-600" : "text-red-500"} />
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide mb-0.5">Estado</p>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${profile.activo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                  <Icon icon={profile.activo ? "lucide:check" : "lucide:x"} width={10} height={10} />
-                  {profile.activo ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-            </div>
-            {empresaNombres.length > 0 && (
-              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                    <Icon icon="lucide:building-2" width={15} height={15} className="text-brand-blue" />
-                  </div>
-                  <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">
-                    Empresas asignadas <span className="text-neutral-300">({empresaNombres.length})</span>
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5 ml-10">
-                  {empresaNombres.map((n) => (
-                    <span key={n} className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
-                      {n}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-neutral-100">
-            <button type="button" onClick={() => setShowUserModal(false)}
-              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
+    {/* ── Modal de usuario (mismo AuthModal que el icono del header) ─────── */}
+    {authUser && (
+      <AuthModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        user={authUser}
+      />
     )}
     </>
   );

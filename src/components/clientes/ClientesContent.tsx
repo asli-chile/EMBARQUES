@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleLabel,
+  moduleInput,
+  moduleBtnPrimary,
+  moduleCard,
+  moduleToolbar,
+} from "@/lib/ui/moduleStyles";
 
 const API_CLIENTES = withBase("/api/clientes");
 
@@ -222,39 +231,39 @@ export function ClientesContent() {
 
   if (loading && rowData.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
+      <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
         <div className="flex-1 flex items-center justify-center text-neutral-500">Cargando clientes…</div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-100" role="main">
+    <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
 
       {/* Hero gradient header */}
-      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-brand-blue/90 to-teal-700 text-white">
+      <div className={`flex-shrink-0 ${moduleHero}`}>
         <div className="px-4 pt-5 pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:briefcase" width={22} height={22} className="text-white" />
+              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:briefcase" width={24} height={24} className="text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold leading-tight">Clientes</h1>
-                <p className="text-xs text-white/70 mt-0.5">Empresas con términos comerciales</p>
+                <h1 className="text-2xl font-bold leading-tight tracking-tight">Clientes</h1>
+                <p className="text-base text-white/75 mt-1">Empresas con términos comerciales</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {selectedIds.size > 0 && (
                 <button type="button" onClick={() => void handleRemoveSelected()}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-100 bg-red-500/30 hover:bg-red-500/50 transition-colors">
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-base font-semibold text-red-100 bg-red-500/30 hover:bg-red-500/50 transition-colors">
                   <Icon icon="lucide:trash-2" width={13} height={13} />
                   <span className="hidden sm:inline">Eliminar ({selectedIds.size})</span>
                   <span className="sm:hidden">{selectedIds.size}</span>
                 </button>
               )}
               <button type="button" onClick={handleOpenAddModal}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-blue bg-white hover:bg-white/90 transition-colors shadow-sm">
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold text-brand-blue bg-white hover:bg-white/90 transition-colors shadow-sm">
                 <Icon icon="lucide:plus" width={14} height={14} />
                 Agregar
               </button>
@@ -263,17 +272,17 @@ export function ClientesContent() {
           <div className="flex gap-2 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
-              <span className="text-xs font-semibold">{rowData.length} cliente{rowData.length !== 1 ? "s" : ""}</span>
+              <span className="text-sm font-semibold">{rowData.length} cliente{rowData.length !== 1 ? "s" : ""}</span>
             </div>
             {rowData.filter((r) => r.activo).length > 0 && (
               <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
                 <Icon icon="lucide:check-circle" width={13} height={13} className="text-white/80" />
-                <span className="text-xs font-semibold">{rowData.filter((r) => r.activo).length} activo{rowData.filter((r) => r.activo).length !== 1 ? "s" : ""}</span>
+                <span className="text-sm font-semibold">{rowData.filter((r) => r.activo).length} activo{rowData.filter((r) => r.activo).length !== 1 ? "s" : ""}</span>
               </div>
             )}
             {selectedIds.size > 0 && (
               <button type="button" onClick={() => setSelectedIds(new Set())}
-                className="flex items-center gap-1 bg-white/20 rounded-xl px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white transition-colors">
+                className="flex items-center gap-1 bg-white/20 rounded-xl px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors">
                 <Icon icon="lucide:x" width={11} height={11} />
                 Desmarcar
               </button>
@@ -283,15 +292,15 @@ export function ClientesContent() {
       </div>
 
       {/* Search bar */}
-      <div className="flex-shrink-0 bg-white border-b border-neutral-200 px-4 py-2.5 flex items-center gap-2">
+      <div className={`flex-shrink-0 ${moduleToolbar} px-4 py-2.5 flex items-center gap-2`}>
         <div className="relative flex-1">
-          <Icon icon="lucide:search" width={13} height={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar cliente…"
-            className="w-full rounded-xl border border-neutral-200 pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
+            className={`${moduleInput} pl-9`}
           />
           {search && (
             <button type="button" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-neutral-500">
@@ -300,7 +309,7 @@ export function ClientesContent() {
           )}
         </div>
         <button type="button" onClick={() => void fetchClientes()}
-          className="p-2 rounded-xl text-neutral-500 bg-neutral-100 hover:bg-neutral-200 transition-colors" title="Actualizar">
+          className="p-2.5 rounded-lg text-brand-blue bg-[#F4F8FC] border border-brand-blue/20 hover:bg-white transition-colors" title="Actualizar">
           <Icon icon="lucide:refresh-cw" width={14} height={14} />
         </button>
       </div>
@@ -342,7 +351,7 @@ export function ClientesContent() {
                     key={row.id}
                     onClick={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next; })}
                     className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all cursor-pointer active:scale-[0.99] ${
-                      isSelected ? "border-brand-blue ring-1 ring-brand-blue/30" : "border-neutral-200"
+                      isSelected ? "border-brand-blue ring-1 ring-brand-blue/30" : "border-brand-blue/15"
                     }`}
                   >
                     <div className={`h-1 transition-colors ${isSelected ? "bg-brand-blue" : "bg-gradient-to-r from-brand-blue/20 to-teal-400/20"}`} />
@@ -356,16 +365,16 @@ export function ClientesContent() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-neutral-900 text-sm leading-tight truncate">{row.nombre}</p>
-                          <p className="text-[11px] text-neutral-400 mt-0.5">
+                          <p className="text-sm text-neutral-400 mt-0.5">
                             {row.condicion_pago ? `Pago: ${row.condicion_pago}` : "Sin condición de pago"}
                           </p>
                         </div>
                         {row.activo ? (
-                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-sm font-semibold rounded-full bg-emerald-100 text-emerald-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Activo
                           </span>
                         ) : (
-                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-neutral-100 text-neutral-500">
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-sm font-semibold rounded-full bg-neutral-100 text-neutral-500">
                             <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />Inactivo
                           </span>
                         )}
@@ -374,13 +383,13 @@ export function ClientesContent() {
                       {/* Stats row */}
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-neutral-50 rounded-xl px-3 py-2">
-                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">Límite crédito</p>
+                          <p className="text-base font-semibold text-brand-blue">Límite crédito</p>
                           <p className="text-xs font-bold text-neutral-800 mt-0.5 font-mono">
                             {row.limite_credito !== null ? row.limite_credito.toLocaleString("es-CL") : "—"}
                           </p>
                         </div>
                         <div className="bg-neutral-50 rounded-xl px-3 py-2">
-                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">Descuento</p>
+                          <p className="text-base font-semibold text-brand-blue">Descuento</p>
                           <p className="text-xs font-bold text-neutral-800 mt-0.5">
                             {row.descuento !== null ? `${row.descuento}%` : "—"}
                           </p>
@@ -402,7 +411,7 @@ export function ClientesContent() {
             </div>
 
             {/* ── Desktop table (md+) ── */}
-            <div className="hidden md:block bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+            <div className={`hidden md:block ${moduleCard}`}>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -411,11 +420,11 @@ export function ClientesContent() {
                         className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
                         aria-label="Seleccionar todos" />
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Cliente / Empresa</th>
-                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Límite crédito</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Condición pago</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Descuento</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Estado</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue">Cliente / Empresa</th>
+                    <th className="px-4 py-3 text-right text-sm font-bold text-brand-blue">Límite crédito</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue">Condición pago</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue">Descuento</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue">Estado</th>
                     <th className="px-4 py-3 w-20" />
                   </tr>
                 </thead>
@@ -449,8 +458,8 @@ export function ClientesContent() {
                         </td>
                         <td className="px-4 py-3">
                           {row.activo
-                            ? <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Activo</span>
-                            : <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-neutral-100 text-neutral-500"><span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />Inactivo</span>}
+                            ? <span className="inline-flex items-center gap-1 px-2 py-0.5 text-sm font-semibold rounded-full bg-emerald-100 text-emerald-700"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Activo</span>
+                            : <span className="inline-flex items-center gap-1 px-2 py-0.5 text-sm font-semibold rounded-full bg-neutral-100 text-neutral-500"><span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />Inactivo</span>}
                         </td>
                         <td className="px-4 py-3">
                           <button type="button" onClick={() => handleEditOpen(row)}
@@ -464,8 +473,8 @@ export function ClientesContent() {
                 </tbody>
               </table>
               <div className="px-4 py-2.5 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between">
-                <span className="text-[11px] text-neutral-400">{filtered.length} cliente{filtered.length !== 1 ? "s" : ""}{search ? ` · filtrado de ${rowData.length}` : ""}</span>
-                {selectedIds.size > 0 && <span className="text-[11px] text-brand-blue font-medium">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>}
+                <span className="text-sm text-neutral-400">{filtered.length} cliente{filtered.length !== 1 ? "s" : ""}{search ? ` · filtrado de ${rowData.length}` : ""}</span>
+                {selectedIds.size > 0 && <span className="text-sm text-brand-blue font-medium">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>}
               </div>
             </div>
           </>
@@ -506,13 +515,13 @@ export function ClientesContent() {
             </div>
             <div className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">
+                <label className={moduleLabel}>
                   Empresa <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={addForm.empresa_id}
                   onChange={(e) => setAddForm((f) => ({ ...f, empresa_id: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className={moduleInput}
                 >
                   <option value="">— Seleccionar empresa —</option>
                   {empresas.map((emp) => (
@@ -522,23 +531,23 @@ export function ClientesContent() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1">Límite de crédito</label>
+                  <label className={moduleLabel}>Límite de crédito</label>
                   <input
                     type="number"
                     value={addForm.limite_credito}
                     onChange={(e) => setAddForm((f) => ({ ...f, limite_credito: e.target.value }))}
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={moduleInput}
                     placeholder="0"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1">Descuento (%)</label>
+                  <label className={moduleLabel}>Descuento (%)</label>
                   <input
                     type="number"
                     value={addForm.descuento}
                     onChange={(e) => setAddForm((f) => ({ ...f, descuento: e.target.value }))}
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={moduleInput}
                     placeholder="0"
                     min="0"
                     max="100"
@@ -546,12 +555,12 @@ export function ClientesContent() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Condición de pago</label>
+                <label className={moduleLabel}>Condición de pago</label>
                 <input
                   type="text"
                   value={addForm.condicion_pago}
                   onChange={(e) => setAddForm((f) => ({ ...f, condicion_pago: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className={moduleInput}
                   placeholder="Ej: 30 días"
                 />
               </div>
@@ -586,7 +595,7 @@ export function ClientesContent() {
                 type="button"
                 onClick={() => void handleAddSubmit()}
                 disabled={isAdding || !addForm.empresa_id}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shadow-sm"
+                className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isAdding ? "Agregando…" : "Agregar cliente"}
               </button>
@@ -632,11 +641,11 @@ export function ClientesContent() {
             </div>
             <div className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Empresa</label>
+                <label className={moduleLabel}>Empresa</label>
                 <select
                   value={editForm.empresa_id}
                   onChange={(e) => setEditForm((f) => ({ ...f, empresa_id: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className={moduleInput}
                 >
                   <option value="">— Sin empresa —</option>
                   {empresas.map((emp) => (
@@ -646,22 +655,22 @@ export function ClientesContent() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1">Límite de crédito</label>
+                  <label className={moduleLabel}>Límite de crédito</label>
                   <input
                     type="number"
                     value={editForm.limite_credito}
                     onChange={(e) => setEditForm((f) => ({ ...f, limite_credito: e.target.value }))}
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={moduleInput}
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1">Descuento (%)</label>
+                  <label className={moduleLabel}>Descuento (%)</label>
                   <input
                     type="number"
                     value={editForm.descuento}
                     onChange={(e) => setEditForm((f) => ({ ...f, descuento: e.target.value }))}
-                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={moduleInput}
                     placeholder="0"
                     min="0"
                     max="100"
@@ -669,12 +678,12 @@ export function ClientesContent() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Condición de pago</label>
+                <label className={moduleLabel}>Condición de pago</label>
                 <input
                   type="text"
                   value={editForm.condicion_pago}
                   onChange={(e) => setEditForm((f) => ({ ...f, condicion_pago: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                  className={moduleInput}
                   placeholder="Ej: 30 días"
                 />
               </div>
@@ -705,7 +714,7 @@ export function ClientesContent() {
                 type="button"
                 onClick={() => void handleEditSave()}
                 disabled={isSaving}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isSaving ? "Guardando…" : "Guardar"}
               </button>

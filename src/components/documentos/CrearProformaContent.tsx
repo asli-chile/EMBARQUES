@@ -9,6 +9,15 @@ import JSZip from "jszip";
 import * as XLSX from "xlsx";
 import { parseProformaRows, sheetToRows, type ProformaNormalizada } from "@/lib/documentos/proforma-normalizer";
 import { withBase } from "@/lib/basePath";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleLabel,
+  moduleInput,
+} from "@/lib/ui/moduleStyles";
+import { ComboboxInput, type ComboboxOption } from "@/components/ui/ComboboxInput";
+import { saveDestinoToCatalog } from "@/lib/destinos-service";
+import { sileo } from "sileo";
 
 // -- Types --------------------------------------------------------------------
 
@@ -373,12 +382,21 @@ const escapeHtml = (value: string) =>
 /** Fecha para plantillas (alineado con instructivos / formatos del sistema) */
 function fmtDateTag(s: string | null | undefined): string {
   if (!s || !String(s).trim()) return "";
+  const raw = String(s).trim();
+  // yyyy-MM-dd (con o sin hora): parsear como fecha local para no restar un día en Chile
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (!Number.isNaN(d.getTime())) {
+      return format(d, "dd/MM/yyyy", { locale: esLocale });
+    }
+  }
   try {
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return String(s).trim();
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
     return format(d, "dd/MM/yyyy", { locale: esLocale });
   } catch {
-    return String(s).trim();
+    return raw;
   }
 }
 
@@ -418,8 +436,12 @@ function descripcionCargaFromItems(items: ProformaItem[]): string {
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (!iso) return "";
+  const s = String(iso).trim();
+  // Preferir el prefijo de calendario: evita desfase UTC (new Date("yyyy-MM-dd") = medianoche UTC)
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
   try {
-    const d = new Date(iso);
+    const d = new Date(s);
     if (Number.isNaN(d.getTime())) return "";
     return format(d, "yyyy-MM-dd");
   } catch {
@@ -468,6 +490,7 @@ type OperacionSyncRow = {
   consignatario: string | null;
   naviera: string | null;
   nave: string | null;
+  viaje: string | null;
   booking: string | null;
   pol: string | null;
   pod: string | null;
@@ -481,6 +504,7 @@ type OperacionSyncRow = {
   tipo_unidad: string | null;
   contenedor: string | null;
   incoterm: string | null;
+  forma_pago: string | null;
   observaciones: string | null;
   moneda: string | null;
   temperatura: string | null;
@@ -489,8 +513,14 @@ type OperacionSyncRow = {
   sps: string | null;
 };
 
+type DestinoCatalogRow = ComboboxOption & {
+  pais?: string | null;
+};
+
 type ConsignatarioRow = {
+  id?: string;
   nombre: string;
+  cliente?: string | null;
   consignee_company: string | null;
   consignee_address: string | null;
   consignee_uscc: string | null;
@@ -506,6 +536,60 @@ type ConsignatarioRow = {
   notify_zip: string | null;
   destino: string | null;
 };
+
+function consignatarioDisplayName(c: ConsignatarioRow): string {
+  const company = (c.consignee_company || c.nombre || "").trim();
+  const cliente = (c.cliente || "").trim();
+  if (cliente && cliente.toUpperCase() !== company.toUpperCase()) {
+    return `${company} · ${cliente}`;
+  }
+  return company;
+}
+
+function applyConsignatarioToHeader(h: ProformaHeader, cons: ConsignatarioRow): ProformaHeader {
+  return {
+    ...h,
+    importador:
+      cons.consignee_company?.trim() ||
+      cons.nombre?.trim() ||
+      h.importador,
+    importador_direccion: cons.consignee_address?.trim() || h.importador_direccion,
+    consignee_uscc:       cons.consignee_uscc?.trim()  || h.consignee_uscc,
+    consignee_attn:       cons.consignee_attn?.trim()  || h.consignee_attn,
+    consignee_email:      cons.consignee_email?.trim() || h.consignee_email,
+    consignee_mobile:     cons.consignee_mobile?.trim()|| h.consignee_mobile,
+    consignee_zip:        cons.consignee_zip?.trim()   || h.consignee_zip,
+    notify_company:  cons.notify_company?.trim()  || h.notify_company,
+    notify_address:  cons.notify_address?.trim()  || h.notify_address,
+    notify_attn:     cons.notify_attn?.trim()     || h.notify_attn,
+    notify_email:    cons.notify_email?.trim()    || h.notify_email,
+    notify_mobile:   cons.notify_mobile?.trim()   || h.notify_mobile,
+    notify_zip:      cons.notify_zip?.trim()      || h.notify_zip,
+    destino: cons.destino?.trim() || h.destino,
+    importador_pais: cons.destino?.trim() || h.importador_pais,
+  };
+}
+
+/** Limpia consignee + notify precargados al borrar el nombre del consignatario. */
+function clearConsignatarioFromHeader(h: ProformaHeader): ProformaHeader {
+  return {
+    ...h,
+    importador: "",
+    importador_direccion: "",
+    importador_pais: "",
+    consignee_uscc: "",
+    consignee_attn: "",
+    consignee_email: "",
+    consignee_mobile: "",
+    consignee_zip: "",
+    notify_company: "",
+    notify_address: "",
+    notify_attn: "",
+    notify_email: "",
+    notify_mobile: "",
+    notify_zip: "",
+  };
+}
 
 function pickConsignatario(rows: ConsignatarioRow[] | null, op: OperacionSyncRow): ConsignatarioRow | null {
   if (!rows?.length || !op.consignatario?.trim()) return null;
@@ -868,9 +952,29 @@ export function CrearProformaContent() {
   // Catálogo de especies desde BD
   const [especiesCatalog, setEspeciesCatalog] = useState<string[]>([]);
 
+  // Catálogos Partes (empresas + consignatarios)
+  const [empresasOpts, setEmpresasOpts] = useState<ComboboxOption[]>([]);
+  const [consignatariosCatalog, setConsignatariosCatalog] = useState<ConsignatarioRow[]>([]);
+  const [addingEmpresa, setAddingEmpresa] = useState(false);
+  const [addingConsignatario, setAddingConsignatario] = useState(false);
+
+  // Catálogos Embarque
+  const [puertosOrigenOpts, setPuertosOrigenOpts] = useState<ComboboxOption[]>([]);
+  const [destinosOpts, setDestinosOpts] = useState<DestinoCatalogRow[]>([]);
+  const [navierasOpts, setNavierasOpts] = useState<ComboboxOption[]>([]);
+  const [navesOpts, setNavesOpts] = useState<ComboboxOption[]>([]);
+  const [navesByNaviera, setNavesByNaviera] = useState<Record<string, string[]>>({});
+  const [formasPagoOpts, setFormasPagoOpts] = useState<ComboboxOption[]>([]);
+  const [addingPuertoOrigen, setAddingPuertoOrigen] = useState(false);
+  const [addingDestinoPod, setAddingDestinoPod] = useState(false);
+  const [addingNaviera, setAddingNaviera] = useState(false);
+  const [addingNave, setAddingNave] = useState(false);
+
   // Import from external Excel
   const [importing, setImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const canFeedCatalog = !isCliente && !isLoading;
 
   // -- Load templates ---------------------------------------------------------
   useEffect(() => {
@@ -923,6 +1027,398 @@ export function CrearProformaContent() {
     supabase.from("especies").select("nombre").eq("activo", true).order("nombre")
       .then(({ data }) => { if (data) setEspeciesCatalog(data.map((r: any) => r.nombre)); });
   }, [supabase]);
+
+  // -- Cargar catálogos Partes (empresas + consignatarios) --------------------
+  useEffect(() => {
+    if (!supabase) return;
+    void Promise.all([
+      supabase.from("empresas").select("id, nombre").order("nombre"),
+      supabase
+        .from("consignatarios")
+        .select(
+          `id, nombre, cliente, destino,
+           consignee_company, consignee_address, consignee_uscc, consignee_attn,
+           consignee_email, consignee_mobile, consignee_zip,
+           notify_company, notify_address, notify_attn, notify_email, notify_mobile, notify_zip`
+        )
+        .eq("activo", true)
+        .order("nombre"),
+    ]).then(([empRes, consRes]) => {
+      if (empRes.data) setEmpresasOpts(empRes.data as ComboboxOption[]);
+      if (consRes.data) setConsignatariosCatalog(consRes.data as ConsignatarioRow[]);
+    });
+  }, [supabase]);
+
+  // -- Cargar catálogos Embarque ----------------------------------------------
+  useEffect(() => {
+    if (!supabase) return;
+    void Promise.all([
+      supabase.from("puertos_origen").select("id, nombre").eq("activo", true).order("nombre"),
+      supabase.from("destinos").select("id, nombre, pais").eq("activo", true).order("nombre"),
+      supabase.from("navieras").select("id, nombre").order("nombre"),
+      supabase.from("naves").select("id, nombre").order("nombre"),
+      supabase.from("navieras_naves").select("naviera_id, nave_id"),
+      supabase.from("catalogos").select("id, valor").eq("categoria", "forma_pago").eq("activo", true).order("orden"),
+    ]).then(([polRes, destRes, navRes, naveRes, linkRes, pagoRes]) => {
+      if (polRes.data) setPuertosOrigenOpts(polRes.data as ComboboxOption[]);
+      if (destRes.data) setDestinosOpts(destRes.data as DestinoCatalogRow[]);
+      if (navRes.data) setNavierasOpts(navRes.data as ComboboxOption[]);
+      if (naveRes.data) setNavesOpts(naveRes.data as ComboboxOption[]);
+      if (linkRes.data) {
+        const map: Record<string, string[]> = {};
+        for (const row of linkRes.data as { naviera_id: string; nave_id: string }[]) {
+          if (!map[row.naviera_id]) map[row.naviera_id] = [];
+          map[row.naviera_id].push(row.nave_id);
+        }
+        setNavesByNaviera(map);
+      }
+      if (pagoRes.data) {
+        setFormasPagoOpts(
+          (pagoRes.data as { id: string; valor: string }[]).map((r) => ({
+            id: r.id,
+            nombre: r.valor,
+          }))
+        );
+      }
+    });
+  }, [supabase]);
+
+  const navesFilteredOpts = useMemo(() => {
+    const navieraNombre = header.naviera.trim().toUpperCase();
+    if (!navieraNombre) return navesOpts;
+    const nav = navierasOpts.find((n) => n.nombre.toUpperCase() === navieraNombre);
+    if (!nav) return navesOpts;
+    const ids = new Set(navesByNaviera[nav.id] ?? []);
+    if (ids.size === 0) return navesOpts;
+    const filtered = navesOpts.filter((n) => ids.has(n.id));
+    return filtered.length > 0 ? filtered : navesOpts;
+  }, [header.naviera, navierasOpts, navesOpts, navesByNaviera]);
+
+  const consignatarioOpts = useMemo((): ComboboxOption[] => {
+    const exportador = header.exportador.trim().toUpperCase();
+    const rows = exportador
+      ? consignatariosCatalog.filter(
+          (c) =>
+            !c.cliente?.trim() ||
+            c.cliente.trim().toUpperCase() === exportador ||
+            consignatarioDisplayName(c).toUpperCase().includes(exportador)
+        )
+      : consignatariosCatalog;
+    const list = (rows.length > 0 ? rows : consignatariosCatalog).map((c) => ({
+      id: c.id || c.nombre,
+      nombre: consignatarioDisplayName(c),
+    }));
+    // Deduplicar por id
+    const seen = new Set<string>();
+    return list.filter((o) => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
+  }, [consignatariosCatalog, header.exportador]);
+
+  const handleSelectExportador = useCallback((opt: ComboboxOption) => {
+    setHeader((h) => ({ ...h, exportador: opt.nombre }));
+  }, []);
+
+  const handleAddExportador = useCallback(
+    async (text: string) => {
+      if (!supabase || !canFeedCatalog) return;
+      const nombre = text.trim();
+      if (!nombre) return;
+      setAddingEmpresa(true);
+      try {
+        const { data, error } = await supabase
+          .from("empresas")
+          .insert({ nombre })
+          .select("id, nombre")
+          .single();
+        if (error) {
+          sileo.error({ title: "No se pudo crear el exportador", description: error.message });
+          return;
+        }
+        if (data) {
+          setEmpresasOpts((prev) =>
+            [...prev, data as ComboboxOption].sort((a, b) => a.nombre.localeCompare(b.nombre))
+          );
+          setHeader((h) => ({ ...h, exportador: data.nombre }));
+          sileo.success({ title: "Exportador agregado al catálogo" });
+        }
+      } finally {
+        setAddingEmpresa(false);
+      }
+    },
+    [supabase, canFeedCatalog]
+  );
+
+  const handleImportadorChange = useCallback((value: string) => {
+    if (!value.trim()) {
+      setHeader((h) => clearConsignatarioFromHeader(h));
+      return;
+    }
+    setHeader((h) => ({ ...h, importador: value }));
+  }, []);
+
+  const handleSelectConsignatario = useCallback(
+    (opt: ComboboxOption) => {
+      const cons =
+        consignatariosCatalog.find((c) => c.id === opt.id) ||
+        consignatariosCatalog.find(
+          (c) => consignatarioDisplayName(c).toUpperCase() === opt.nombre.toUpperCase()
+        );
+      if (!cons) {
+        setHeader((h) => ({ ...h, importador: opt.nombre }));
+        return;
+      }
+      setHeader((h) => applyConsignatarioToHeader(h, cons));
+    },
+    [consignatariosCatalog]
+  );
+
+  const handleAddConsignatario = useCallback(
+    async (text: string) => {
+      if (!supabase || !canFeedCatalog) return;
+      const company = text.trim();
+      if (!company) return;
+      const cliente = header.exportador.trim() || opLinked?.cliente?.trim() || company;
+      setAddingConsignatario(true);
+      try {
+        const payload = {
+          nombre: company,
+          cliente,
+          destino: header.destino.trim() || header.importador_pais.trim() || null,
+          consignee_company: company,
+          consignee_address: header.importador_direccion.trim() || null,
+          consignee_uscc: header.consignee_uscc.trim() || null,
+          consignee_attn: header.consignee_attn.trim() || null,
+          consignee_email: header.consignee_email.trim() || null,
+          consignee_mobile: header.consignee_mobile.trim() || null,
+          consignee_zip: header.consignee_zip.trim() || null,
+          notify_company: header.notify_company.trim() || null,
+          notify_address: header.notify_address.trim() || null,
+          notify_attn: header.notify_attn.trim() || null,
+          notify_email: header.notify_email.trim() || null,
+          notify_mobile: header.notify_mobile.trim() || null,
+          notify_zip: header.notify_zip.trim() || null,
+          activo: true,
+        };
+        const { data, error } = await supabase
+          .from("consignatarios")
+          .insert(payload)
+          .select(
+            `id, nombre, cliente, destino,
+             consignee_company, consignee_address, consignee_uscc, consignee_attn,
+             consignee_email, consignee_mobile, consignee_zip,
+             notify_company, notify_address, notify_attn, notify_email, notify_mobile, notify_zip`
+          )
+          .single();
+        if (error) {
+          sileo.error({ title: "No se pudo crear el consignatario", description: error.message });
+          return;
+        }
+        if (data) {
+          const row = data as ConsignatarioRow;
+          setConsignatariosCatalog((prev) =>
+            [...prev, row].sort((a, b) =>
+              consignatarioDisplayName(a).localeCompare(consignatarioDisplayName(b))
+            )
+          );
+          setHeader((h) => applyConsignatarioToHeader({ ...h, importador: company }, row));
+          sileo.success({ title: "Consignatario agregado al catálogo" });
+        }
+      } finally {
+        setAddingConsignatario(false);
+      }
+    },
+    [supabase, canFeedCatalog, header, opLinked]
+  );
+
+  // -- Handlers Embarque (catálogos) ------------------------------------------
+  const handleAddPuertoOrigen = useCallback(
+    async (text: string) => {
+      if (!supabase || !canFeedCatalog) return;
+      const nombre = text.trim();
+      if (!nombre) return;
+      setAddingPuertoOrigen(true);
+      try {
+        const { data, error } = await supabase
+          .from("puertos_origen")
+          .insert({ nombre, activo: true })
+          .select("id, nombre")
+          .single();
+        if (error) {
+          sileo.error({ title: "No se pudo crear el puerto", description: error.message });
+          return;
+        }
+        if (data) {
+          setPuertosOrigenOpts((prev) =>
+            [...prev, data as ComboboxOption].sort((a, b) => a.nombre.localeCompare(b.nombre))
+          );
+          setHeader((h) => ({ ...h, puerto_origen: data.nombre }));
+          sileo.success({ title: "Puerto de embarque agregado" });
+        }
+      } finally {
+        setAddingPuertoOrigen(false);
+      }
+    },
+    [supabase, canFeedCatalog]
+  );
+
+  const handleSelectPod = useCallback(
+    (opt: ComboboxOption) => {
+      const dest = destinosOpts.find((d) => d.id === opt.id);
+      setHeader((h) => ({
+        ...h,
+        puerto_destino: opt.nombre,
+        destino: h.destino.trim() ? h.destino : opt.nombre,
+        importador_pais: dest?.pais?.trim() || h.importador_pais,
+      }));
+    },
+    [destinosOpts]
+  );
+
+  const handleAddDestinoPod = useCallback(
+    async (text: string) => {
+      if (!canFeedCatalog) return;
+      const nombre = text.trim();
+      if (!nombre) return;
+      setAddingDestinoPod(true);
+      try {
+        const data = await saveDestinoToCatalog({ nombre });
+        const nuevo: DestinoCatalogRow = {
+          id: data.id,
+          nombre: data.nombre,
+          pais: data.pais ?? null,
+        };
+        setDestinosOpts((prev) =>
+          [...prev.filter((d) => d.id !== nuevo.id), nuevo].sort((a, b) =>
+            a.nombre.localeCompare(b.nombre)
+          )
+        );
+        setHeader((h) => ({
+          ...h,
+          puerto_destino: data.nombre,
+          destino: h.destino.trim() ? h.destino : data.nombre,
+          importador_pais: data.pais?.trim() || h.importador_pais,
+        }));
+        sileo.success({ title: "Destino agregado al catálogo" });
+      } catch (err) {
+        sileo.error({
+          title: "No se pudo crear el destino",
+          description: err instanceof Error ? err.message : "Error desconocido",
+        });
+      } finally {
+        setAddingDestinoPod(false);
+      }
+    },
+    [canFeedCatalog]
+  );
+
+  const handleAddDestinoFinal = useCallback(
+    async (text: string) => {
+      if (!canFeedCatalog) return;
+      const nombre = text.trim();
+      if (!nombre) return;
+      setAddingDestinoPod(true);
+      try {
+        const data = await saveDestinoToCatalog({ nombre });
+        const nuevo: DestinoCatalogRow = {
+          id: data.id,
+          nombre: data.nombre,
+          pais: data.pais ?? null,
+        };
+        setDestinosOpts((prev) =>
+          [...prev.filter((d) => d.id !== nuevo.id), nuevo].sort((a, b) =>
+            a.nombre.localeCompare(b.nombre)
+          )
+        );
+        setHeader((h) => ({
+          ...h,
+          destino: data.nombre,
+          importador_pais: data.pais?.trim() || h.importador_pais,
+        }));
+        sileo.success({ title: "Destino agregado al catálogo" });
+      } catch (err) {
+        sileo.error({
+          title: "No se pudo crear el destino",
+          description: err instanceof Error ? err.message : "Error desconocido",
+        });
+      } finally {
+        setAddingDestinoPod(false);
+      }
+    },
+    [canFeedCatalog]
+  );
+
+  const handleAddNaviera = useCallback(
+    async (text: string) => {
+      if (!supabase || !canFeedCatalog) return;
+      const nombre = text.trim();
+      if (!nombre) return;
+      setAddingNaviera(true);
+      try {
+        const { data, error } = await supabase
+          .from("navieras")
+          .insert({ nombre, activo: true })
+          .select("id, nombre")
+          .single();
+        if (error) {
+          sileo.error({ title: "No se pudo crear la naviera", description: error.message });
+          return;
+        }
+        if (data) {
+          setNavierasOpts((prev) =>
+            [...prev, data as ComboboxOption].sort((a, b) => a.nombre.localeCompare(b.nombre))
+          );
+          setHeader((h) => ({ ...h, naviera: data.nombre }));
+          sileo.success({ title: "Naviera agregada al catálogo" });
+        }
+      } finally {
+        setAddingNaviera(false);
+      }
+    },
+    [supabase, canFeedCatalog]
+  );
+
+  const handleAddNave = useCallback(
+    async (text: string) => {
+      if (!supabase || !canFeedCatalog) return;
+      const nombre = text.trim();
+      if (!nombre) return;
+      setAddingNave(true);
+      try {
+        const { data, error } = await supabase
+          .from("naves")
+          .insert({ nombre, activo: true })
+          .select("id, nombre")
+          .single();
+        if (error) {
+          sileo.error({ title: "No se pudo crear la nave", description: error.message });
+          return;
+        }
+        if (data) {
+          setNavesOpts((prev) =>
+            [...prev, data as ComboboxOption].sort((a, b) => a.nombre.localeCompare(b.nombre))
+          );
+          const nav = navierasOpts.find(
+            (n) => n.nombre.toUpperCase() === header.naviera.trim().toUpperCase()
+          );
+          if (nav) {
+            await supabase.from("navieras_naves").insert({ naviera_id: nav.id, nave_id: data.id });
+            setNavesByNaviera((prev) => ({
+              ...prev,
+              [nav.id]: [...(prev[nav.id] ?? []), data.id],
+            }));
+          }
+          setHeader((h) => ({ ...h, nave: data.nombre }));
+          sileo.success({ title: "Nave agregada al catálogo" });
+        }
+      } finally {
+        setAddingNave(false);
+      }
+    },
+    [supabase, canFeedCatalog, navierasOpts, header.naviera]
+  );
 
   // -- Escanear etiquetas usadas en la plantilla seleccionada -----------------
   useEffect(() => {
@@ -993,9 +1489,9 @@ export function CrearProformaContent() {
       const { data: op, error } = await supabase
         .from("operaciones")
         .select(
-          `id, ref_asli, correlativo, cliente, consignatario, naviera, nave, booking, pol, pod,
+          `id, ref_asli, correlativo, cliente, consignatario, naviera, nave, viaje, booking, pol, pod,
            etd, eta, especie, pais, pallets, peso_bruto, peso_neto, tipo_unidad, contenedor,
-           incoterm, observaciones, moneda, temperatura, ventilacion, dus, sps`
+           incoterm, forma_pago, observaciones, moneda, temperatura, ventilacion, dus, sps`
         )
         .eq("id", opBrief.id)
         .single();
@@ -1068,8 +1564,10 @@ export function CrearProformaContent() {
         contenedor:     row.contenedor ?? h.contenedor,
         naviera:        row.naviera ?? h.naviera,
         nave:           row.nave ?? h.nave,
+        viaje:          row.viaje?.trim() || h.viaje,
         booking:        row.booking ?? h.booking,
         clausula_venta: inc ?? h.clausula_venta,
+        forma_pago:     row.forma_pago?.trim() || h.forma_pago,
         moneda:         monedaOk ?? h.moneda,
         // Carga
         especie_general: row.especie?.trim() || h.especie_general,
@@ -1271,7 +1769,7 @@ export function CrearProformaContent() {
       "{{CONSIGNEE_ADDRESS}}": header.importador_direccion || "",
       "{{CONSIGNEE_EMAIL}}":   (header.consignee_email || "").replace(/\t/g, ""),
       "{{CONSIGNEE_MOBILE}}":  header.consignee_mobile || "",
-      "{{FECHA_EMBARQUE}}":    header.fecha || "",
+      "{{FECHA_EMBARQUE}}":    fmtDateTag(header.etd) || fmtDateTag(header.fecha) || "",
       "{{CONSIGNEE_ATTN}}":    header.consignee_attn || "",
       "{{NOTIFY_USCC}}":       header.consignee_uscc || "",
       "{{CONSIGNEE_PAIS}}":    header.importador_pais || "",
@@ -1294,6 +1792,8 @@ export function CrearProformaContent() {
       "{{PRODUCTO_TOTAL}}":    String(totals.cajas),
       "{{TOTAL_FOB}}":         `${mon} ${fmt(totals.valor, mon)}`,
       "{{VALOR_TOTAL}}":       fmt(totals.valor, mon),
+      "{{FECHA}}":             fmtDateTag(header.fecha) || "",
+      "{{INVOICE_DATE}}":      fmtDateTag(header.fecha) || "",
     };
     let sharedStr = await zip.files["xl/sharedStrings.xml"].async("string");
     for (const [tag, val] of Object.entries(tagMap)) {
@@ -1355,6 +1855,8 @@ export function CrearProformaContent() {
     const escH = (v: any) => String(v ?? "")
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     const totalFob = `${mon} ${fmt(totals.valor, mon)}`;
+    const fechaDoc = fmtDateTag(header.fecha);
+    const fechaEmbarque = fmtDateTag(header.etd) || fechaDoc;
 
     const activeItems = items.filter(it => (it.cantidad_cajas || "") !== "" || (it.variedad || "") !== "");
     const blankCount = Math.max(0, 8 - activeItems.length);
@@ -1367,11 +1869,12 @@ export function CrearProformaContent() {
         <td>${escH(it.etiqueta)}</td>
         <td>${escH(it.calibre)}</td>
         <td>${fmtKg(parseFloat(it.kg_neto_caja)||0)}</td>
+        <td>${fmt(it.valor_kilo||0, mon)}</td>
         <td>${fmt(parseFloat(it.valor_caja)||0, mon)}</td>
         <td style="font-weight:bold">${fmt(it.valor_total||0, mon)}</td>
       </tr>`).join("");
     const blankRows = Array.from({ length: blankCount },
-      () => `<tr>${`<td style="${B};height:16px"></td>`.repeat(9)}</tr>`).join("");
+      () => `<tr>${`<td style="${B};height:16px"></td>`.repeat(10)}</tr>`).join("");
 
     const SH = "font-weight:bold;font-size:7px";          // section header text style
     const SHB = `background:#1e3a5f;color:#fff;${SH}`;    // section header with bg
@@ -1387,7 +1890,9 @@ export function CrearProformaContent() {
   body{font-family:Arial,Helvetica,sans-serif;font-size:7.5px;margin:0;padding:6px;color:#000}
   @page{size:A4 landscape;margin:8mm}
   table{border-collapse:collapse;width:100%;margin-bottom:2px;table-layout:fixed}
-  td,th{border:1px solid #888;padding:3px 5px;vertical-align:middle;text-align:center;word-break:break-word}
+  td,th{border:1px solid #888;padding:3px 5px;vertical-align:middle;text-align:left;word-break:break-word}
+  table.tc td,table.tc th{text-align:center}
+  td.tr,th.tr{text-align:right}
   .print-btn{position:fixed;top:8px;right:8px;padding:5px 14px;background:#059669;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;z-index:9}
   @media print{.print-btn{display:none}}
 </style>
@@ -1400,7 +1905,7 @@ export function CrearProformaContent() {
   <colgroup><col style="width:14%"/><col style="width:58%"/><col style="width:28%"/></colgroup>
   <tr>
     <td rowspan="3" style="vertical-align:middle;padding:4px">
-      <img src="${withBase("/logoasli.png")}" style="height:54px;width:auto"/>
+      <img src="${withBase("/almafruit-logo.png")}" alt="Logo" style="height:54px;width:auto"/>
     </td>
     <td style="font-weight:bold;font-size:8.5px">${escH(header.exportador || "EXPORTADORA ALMA FRUIT SPA")}</td>
     <td style="font-weight:bold">RUT: ${escH(header.exportador_rut)}</td>
@@ -1416,13 +1921,13 @@ export function CrearProformaContent() {
 </table>
 
 <!-- ② Consignee (2 mitades: 70% izq | 30% der)  -->
-<table style="text-align:left">
+<table>
   <colgroup><col style="width:14%"/><col style="width:56%"/><col style="width:14%"/><col style="width:16%"/></colgroup>
   <tr>
     <td style="${LBL}">CONSIGNEE:</td>
     <td>${escH(header.importador)}</td>
     <td style="${LBL}">FECHA:</td>
-    <td>${escH(header.fecha)}</td>
+    <td>${escH(fechaDoc)}</td>
   </tr>
   <tr>
     <td style="${LBL}">ADDRESS:</td>
@@ -1459,7 +1964,7 @@ export function CrearProformaContent() {
 </table>
 
 <!-- ③ Embarque — 5 columnas iguales (20% c/u) -->
-<table>
+<table class="tc">
   <colgroup><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/></colgroup>
   <tr>
     <td style="${SHB}">FECHA DE EMBARQUE</td>
@@ -1476,7 +1981,7 @@ export function CrearProformaContent() {
     <td style="${SUB}">Clause of Sale</td>
   </tr>
   <tr>
-    <td>${escH(header.fecha)}</td>
+    <td>${escH(fechaEmbarque)}</td>
     <td>${escH(header.nave)}</td>
     <td>${escH(header.viaje)}</td>
     <td>${escH(header.clausula_venta)}</td>
@@ -1485,7 +1990,7 @@ export function CrearProformaContent() {
 </table>
 
 <!-- ④ Puertos — 5 columnas iguales -->
-<table>
+<table class="tc">
   <colgroup><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/><col style="width:20%"/></colgroup>
   <tr>
     <td style="${SHB}">PAIS ORIGEN</td>
@@ -1511,7 +2016,7 @@ export function CrearProformaContent() {
 </table>
 
 <!-- ⑤ Pesos + contenedor — 3 columnas iguales -->
-<table>
+<table class="tc">
   <colgroup><col style="width:33.3%"/><col style="width:33.3%"/><col style="width:33.4%"/></colgroup>
   <tr>
     <td style="${SHB}">PESO NETO TOTAL</td>
@@ -1540,12 +2045,12 @@ export function CrearProformaContent() {
   </tr>
 </table>
 
-<!-- ⑦ Tabla de productos — 9 columnas -->
-<table>
+<!-- ⑦ Tabla de productos — mismas columnas que FORMATO ALMAFRUIT.xlsx -->
+<table class="tc">
   <colgroup>
-    <col style="width:8%"/><col style="width:12%"/><col style="width:12%"/>
-    <col style="width:9%"/><col style="width:11%"/><col style="width:8%"/>
-    <col style="width:12%"/><col style="width:14%"/><col style="width:14%"/>
+    <col style="width:7%"/><col style="width:10%"/><col style="width:11%"/>
+    <col style="width:8%"/><col style="width:10%"/><col style="width:7%"/>
+    <col style="width:10%"/><col style="width:10%"/><col style="width:12%"/><col style="width:15%"/>
   </colgroup>
   <thead>
     <tr>
@@ -1556,6 +2061,7 @@ export function CrearProformaContent() {
       <th style="${SHB}">ETIQUETA<br/><span style="${SUB}">Label</span></th>
       <th style="${SHB}">CALIBRE<br/><span style="${SUB}">Size</span></th>
       <th style="${SHB}">KG NETO UNIDAD<br/><span style="${SUB}">Net Weight Per Unit</span></th>
+      <th style="${SHB}">PRECIO / KG<br/><span style="${SUB}">Price Per Kg</span></th>
       <th style="${SHB}">PRECIO POR CAJA<br/><span style="${SUB}">Price Per Box</span></th>
       <th style="${SHB}">TOTAL<br/><span style="${SUB}">Total Value</span></th>
     </tr>
@@ -1567,7 +2073,7 @@ export function CrearProformaContent() {
   <tfoot>
     <tr>
       <td style="font-weight:bold">${totals.cajas}</td>
-      <td colspan="7" style="font-weight:bold">TOTALES</td>
+      <td colspan="8" style="font-weight:bold">TOTALES</td>
       <td style="font-weight:bold">${totalFob}</td>
     </tr>
   </tfoot>
@@ -1614,131 +2120,12 @@ export function CrearProformaContent() {
   };
 
   const exportBuiltinXlsx = async () => {
-    // ── Cargar template Almafruit desde /public ───────────────────────────────
-    // Usamos JSZip para modificar el XML directamente — esto preserva la imagen/logo.
-    // xlsx-js-style strip images al hacer write(), por eso se abandonó ese approach.
     const resp = await fetch(withBase("/FORMATO ALMAFRUIT.xlsx"));
     if (!resp.ok) throw new Error("No se pudo cargar el formato Almafruit");
     const buffer = await resp.arrayBuffer();
     const zip = await JSZip.loadAsync(buffer);
+    await fillAlmafruitZip(zip);
 
-    // Helper: escapar caracteres especiales XML
-    const ex = (s: string) => String(s ?? "")
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-    // ── 1. Reemplazar etiquetas de cabecera en sharedStrings.xml ─────────────
-    // La plantilla tiene tags {{XXX}} en celdas individuales.
-    // Reemplazamos el texto del sharedStrings (no tocamos el sheet XML de cabecera).
-    const mon = header.moneda || "USD";
-    const tagMap: Record<string, string> = {
-      "{{EXPORTADOR_RUT}}":    header.exportador_rut || "",
-      "{{INVOICE_NUMBER}}":    header.numero || "",
-      "{{CONSIGNEE_COMPANY}}": header.importador || "",
-      "{{CONSIGNEE_ADDRESS}}": header.importador_direccion || "",
-      "{{CONSIGNEE_EMAIL}}":   (header.consignee_email || "").replace(/\t/g, ""),
-      "{{CONSIGNEE_MOBILE}}":  header.consignee_mobile || "",
-      "{{FECHA_EMBARQUE}}":    header.fecha || "",
-      "{{CONSIGNEE_ATTN}}":    header.consignee_attn || "",
-      "{{NOTIFY_USCC}}":       header.consignee_uscc || "",
-      "{{CONSIGNEE_PAIS}}":    header.importador_pais || "",
-      "{{REF_CLIENTE}}":       header.numero || "",
-      "{{CSP}}":               header.csp || "",
-      "{{CSG}}":               header.csg || "",
-      "{{MOTONAVE}}":          header.nave || "",
-      "{{VIAJE}}":             header.viaje || "",
-      "{{MODALIDAD_VENTA}}":   header.clausula_venta || "",
-      "{{CLAUSULA_VENTA}}":    header.clausula_venta || "",
-      "{{FORMA_PAGO}}":        header.forma_pago || "",
-      "{{PAIS_DESTINO}}":      header.destino || "",
-      "{{PUERTO_DESTINO}}":    header.puerto_destino || "",
-      "{{PUERTO_EMBARQUE}}":   header.puerto_origen || "",
-      "{{PAIS_ORIGEN}}":       "Chile",
-      "{{PESO_NETO_TOTAL}}":   `${fmtKg(totals.kg_neto)} KG`,
-      "{{PESO_BRUTO_TOTAL}}":  `${fmtKg(totals.kg_bruto)} KG`,
-      "{{CONTENEDOR}}":        header.contenedor || "",
-      "{{PRODUCTO_ESPECIE}}":  header.especie_general || items[0]?.especie || "",
-      "{{PRODUCTO_TOTAL}}":    String(totals.cajas),
-      "{{TOTAL_FOB}}":         `${mon} ${fmt(totals.valor, mon)}`,
-      "{{VALOR_TOTAL}}":       fmt(totals.valor, mon),
-    };
-
-    let sharedStr = await zip.files["xl/sharedStrings.xml"].async("string");
-    for (const [tag, val] of Object.entries(tagMap)) {
-      sharedStr = sharedStr.replaceAll(tag, ex(val));
-    }
-    zip.file("xl/sharedStrings.xml", sharedStr);
-
-    // ── 2. Reemplazar filas de productos en sheet1.xml ────────────────────────
-    // Fila 43: fila template con etiquetas {{PRODUCTO_X}} como shared strings.
-    // Filas 44–62: filas vacías con estilos, sin datos.
-    // Reemplazamos el XML de cada fila con valores inline para preservar estilos.
-    let sheet = await zip.files["xl/worksheets/sheet1.xml"].async("string");
-
-    const buildItemRow = (rowNum: number, it: ProformaItem | null): string => {
-      const s = "41"; // mismo estilo que la fila template
-      const str = (col: string, val: string) =>
-        val
-          ? `<c r="${col}${rowNum}" s="${s}" t="inlineStr"><is><t>${ex(val)}</t></is></c>`
-          : `<c r="${col}${rowNum}" s="${s}"/>`;
-      const num = (col: string, val: number) =>
-        val
-          ? `<c r="${col}${rowNum}" s="${s}"><v>${val}</v></c>`
-          : `<c r="${col}${rowNum}" s="${s}"/>`;
-      if (!it) {
-        return `<row r="${rowNum}" spans="1:20" ht="21">`
-          + "ABCDEFGHIJKLMNOPQRST".split("").map(c => `<c r="${c}${rowNum}" s="${s}"/>`).join("")
-          + `</row>`;
-      }
-      return `<row r="${rowNum}" spans="1:20" ht="21">`
-        + str("A", it.cantidad_cajas)
-        + `<c r="B${rowNum}" s="${s}"/>`
-        + str("C", it.tipo_envase)
-        + `<c r="D${rowNum}" s="${s}"/>`
-        + str("E", it.variedad)
-        + `<c r="F${rowNum}" s="${s}"/>`
-        + str("G", it.categoria)
-        + `<c r="H${rowNum}" s="${s}"/>`
-        + str("I", it.etiqueta)
-        + `<c r="J${rowNum}" s="${s}"/>`
-        + str("K", it.calibre)
-        + `<c r="L${rowNum}" s="${s}"/>`
-        + num("M", parseFloat(it.kg_neto_caja) || 0)
-        + `<c r="N${rowNum}" s="${s}"/>`
-        + num("O", it.valor_kilo || 0)
-        + `<c r="P${rowNum}" s="${s}"/>`
-        + num("Q", parseFloat(it.valor_caja) || 0)
-        + `<c r="R${rowNum}" s="${s}"/>`
-        + num("S", it.valor_total || 0)
-        + `<c r="T${rowNum}" s="${s}"/>`
-        + `</row>`;
-    };
-
-    for (let i = 0; i < 20; i++) {
-      const rowNum = 43 + i;
-      sheet = sheet.replace(
-        new RegExp(`<row[^>]*r="${rowNum}"[^>]*>[\\s\\S]*?<\\/row>`),
-        buildItemRow(rowNum, items[i] ?? null)
-      );
-    }
-
-    // ── 3. Añadir valores en celdas S del footer ─────────────────────────────
-    // S66/S67 = total FOB, S68/S69 = forma de pago
-    const totalVal = `${mon} ${fmt(totals.valor, mon)}`;
-    const pagoVal  = header.forma_pago || "";
-    const fillCell = (col: string, row: number, style: string, val: string) =>
-      sheet.replace(
-        new RegExp(`<c r="${col}${row}"[^/]*/>`),
-        `<c r="${col}${row}" s="${style}" t="inlineStr"><is><t>${ex(val)}</t></is></c>`
-      );
-    sheet = fillCell("S", 66, "45", totalVal);
-    sheet = fillCell("S", 67, "49", totalVal);
-    sheet = fillCell("S", 68, "49", pagoVal);
-    sheet = fillCell("S", 69, "49", pagoVal);
-
-    zip.file("xl/worksheets/sheet1.xml", sheet);
-
-    // ── 4. Descargar ──────────────────────────────────────────────────────────
     const blob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1945,12 +2332,12 @@ export function CrearProformaContent() {
     setHeader(h => ({ ...h, [field]: value }));
 
   const inp = (label: string, field: keyof ProformaHeader, opts?: { type?: string; placeholder?: string }) => (
-    <div className="flex flex-col gap-0.5">
-      <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label className={moduleLabel}>{label}</label>
       <input
         type={opts?.type ?? "text"} placeholder={opts?.placeholder ?? ""}
         value={header[field] as string} onChange={e => setH(field, e.target.value)}
-        className="border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+        className={moduleInput}
       />
     </div>
   );
@@ -1968,107 +2355,111 @@ export function CrearProformaContent() {
 
   // -- Render -----------------------------------------------------------------
   return (
-    <div className="flex flex-col h-full bg-neutral-50">
+    <div className={`flex flex-col h-full ${modulePageBg}`}>
 
       {/* Datalists globales */}
       <datalist id="variedades-cereza-list">
         {VARIEDADES_CEREZA.map(v => <option key={v} value={v} />)}
       </datalist>
 
-      {/* -- Top Bar -- */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-white border-b border-neutral-200 flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
-            <Icon icon="lucide:file-text" width={16} className="text-white" />
+      {/* -- Hero -- */}
+      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6 flex-shrink-0`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <Icon icon="lucide:file-text" width={24} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">Crear Proforma</h1>
+              {header.numero
+                ? <p className="text-base text-white/80 font-mono font-semibold mt-1">{header.numero}</p>
+                : <p className="text-base text-white/75 mt-1">Documento comercial de exportación</p>}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-base font-bold text-neutral-800 leading-tight">Crear Proforma</h1>
-            {header.numero && <p className="text-xs text-emerald-600 font-mono font-semibold">{header.numero}</p>}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-          <button onClick={() => { setShowList(true); loadProformas(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">
-            <Icon icon="lucide:list" width={14} /><span className="hidden sm:inline">Mis Proformas</span>
-          </button>
-          {/* Importar Excel externo */}
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) void handleImportExcel(f); }}
-          />
-          <button
-            type="button"
-            onClick={() => importInputRef.current?.click()}
-            disabled={importing}
-            title="Importar proforma desde Excel externo (normalización automática)"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 transition-colors">
-            {importing
-              ? <Icon icon="lucide:loader-2" width={14} className="animate-spin" />
-              : <Icon icon="lucide:upload" width={14} />}
-            <span className="hidden sm:inline">Importar</span>
-          </button>
-          {isSuperadmin && (
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <button onClick={() => { setShowList(true); loadProformas(); }}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-white/25 bg-white/10 text-white hover:bg-white/20 transition-colors">
+              <Icon icon="lucide:list" width={16} /><span className="hidden sm:inline">Mis Proformas</span>
+            </button>
+            {/* Importar Excel externo */}
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) void handleImportExcel(f); }}
+            />
             <button
               type="button"
-              onClick={loadDatosDePrueba}
-              title="Rellenar con datos de prueba"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 transition-colors">
-              <Icon icon="typcn:flash" width={14} />
-              <span className="hidden sm:inline">Prueba</span>
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+              title="Importar proforma desde Excel externo (normalización automática)"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-white/25 bg-white/10 text-white hover:bg-white/20 disabled:opacity-50 transition-colors">
+              {importing
+                ? <Icon icon="lucide:loader-2" width={16} className="animate-spin" />
+                : <Icon icon="lucide:upload" width={16} />}
+              <span className="hidden sm:inline">Importar</span>
             </button>
-          )}
-          <button onClick={handleNew}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors">
-            <Icon icon="lucide:plus" width={14} /><span className="hidden sm:inline">Nueva</span>
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-            {saving
-              ? <><Icon icon="lucide:loader-2" width={14} className="animate-spin" /><span>Guardando...</span></>
-              : <><Icon icon="lucide:save" width={14} /><span>Guardar</span></>}
-          </button>
+            {isSuperadmin && (
+              <button
+                type="button"
+                onClick={loadDatosDePrueba}
+                title="Rellenar con datos de prueba"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-violet-300/40 bg-violet-500/20 text-violet-100 hover:bg-violet-500/30 transition-colors">
+                <Icon icon="typcn:flash" width={16} />
+                <span className="hidden sm:inline">Prueba</span>
+              </button>
+            )}
+            <button onClick={handleNew}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-white/25 bg-white/10 text-white hover:bg-white/20 transition-colors">
+              <Icon icon="lucide:plus" width={16} /><span className="hidden sm:inline">Nueva</span>
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold rounded-lg bg-white text-brand-blue hover:bg-white/95 disabled:opacity-50 transition-colors">
+              {saving
+                ? <><Icon icon="lucide:loader-2" width={16} className="animate-spin" /><span>Guardando...</span></>
+                : <><Icon icon="lucide:save" width={16} /><span>Guardar</span></>}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* -- Operation link + Template selector -- */}
-      <div className="px-4 py-2.5 bg-white border-b border-neutral-100 flex-shrink-0 flex flex-col gap-2">
+      <div className="px-4 py-2.5 bg-[#E8F0FA]/95 border-b border-brand-blue/15 flex-shrink-0 flex flex-col gap-2">
 
         {/* Operation search */}
         <div className="relative flex items-center gap-2">
           {opLinked ? (
             <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-xs bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
-                <Icon icon="lucide:link" width={12} className="text-emerald-600 flex-shrink-0" />
-                <span className="text-emerald-700 font-medium">{opLinked.ref_asli}</span>
-                <span className="text-emerald-600 truncate">- {opLinked.cliente}</span>
-                {linkingOpId && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-emerald-600 flex-shrink-0" />}
-                <button type="button" onClick={() => { setOpLinked(null); setHeader(h => ({ ...h, operacion_id: "", ref_asli: "" })); }} className="ml-auto text-emerald-500 hover:text-emerald-700 flex-shrink-0">
-                  <Icon icon="lucide:x" width={12} />
+              <div className="flex items-center gap-2 text-base bg-brand-blue/8 border border-brand-blue/20 rounded-lg px-3 py-2">
+                <Icon icon="lucide:link" width={14} className="text-brand-blue flex-shrink-0" />
+                <span className="text-brand-blue font-semibold">{opLinked.ref_asli}</span>
+                <span className="text-brand-blue/80 truncate">- {opLinked.cliente}</span>
+                {linkingOpId && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-brand-blue flex-shrink-0" />}
+                <button type="button" onClick={() => { setOpLinked(null); setHeader(h => ({ ...h, operacion_id: "", ref_asli: "" })); }} className="ml-auto text-brand-blue/60 hover:text-brand-blue flex-shrink-0">
+                  <Icon icon="lucide:x" width={14} />
                 </button>
               </div>
-              <p className="text-xs text-neutral-500 leading-snug px-0.5">
+              <p className="text-base text-brand-blue/70 leading-snug px-0.5">
                 Al vincular se cargan datos de la operación, consignatario (si coincide en configuración) y una línea de mercadería cuando hay especie o pesos/cajas.
               </p>
             </div>
           ) : (
             <div className="relative flex-1">
-              <Icon icon="lucide:search" width={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <Icon icon="lucide:search" width={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-blue/40" />
               <input value={opQuery} onChange={e => setOpQuery(e.target.value)}
                 placeholder="Buscar operación (ref, cliente, booking)..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
-              {opLoading && <Icon icon="lucide:loader-2" width={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 animate-spin" />}
+                className="w-full pl-10 pr-3 py-3 text-lg border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white" />
+              {opLoading && <Icon icon="lucide:loader-2" width={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue/40 animate-spin" />}
               {opResults.length > 0 && (
-                <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-brand-blue/15 rounded-xl shadow-xl overflow-hidden">
                   {opResults.map(op => (
                     <button key={op.id} type="button" disabled={!!linkingOpId} onClick={() => void linkOperation(op)}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-xs hover:bg-emerald-50 text-left border-b border-neutral-50 last:border-0 disabled:opacity-50">
-                      <span className="font-mono font-semibold text-emerald-700">{op.ref_asli}</span>
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-base hover:bg-brand-blue/5 text-left border-b border-neutral-50 last:border-0 disabled:opacity-50">
+                      <span className="font-mono font-semibold text-brand-blue">{op.ref_asli}</span>
                       <span className="text-neutral-500 flex-1 truncate">{op.cliente}</span>
                       {op.booking && <span className="text-neutral-400">{op.booking}</span>}
-                      {linkingOpId === op.id && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-emerald-600" />}
+                      {linkingOpId === op.id && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-brand-blue" />}
                     </button>
                   ))}
                 </div>
@@ -2076,21 +2467,21 @@ export function CrearProformaContent() {
             </div>
           )}
           <input type="date" value={header.fecha} onChange={e => setH("fecha", e.target.value)}
-            className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-white flex-shrink-0" />
+            className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2.5 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white flex-shrink-0" />
         </div>
 
         {/* Template selector */}
-        <div className="flex items-center gap-2">
-          <Icon icon="lucide:layout-template" width={14} className="text-neutral-400 flex-shrink-0" />
-          <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex-shrink-0">Formato:</label>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Icon icon="lucide:layout-template" width={18} className="text-brand-blue/50 flex-shrink-0" />
+          <label className="text-base font-semibold text-brand-blue flex-shrink-0">Formato:</label>
           {availableTemplates.length === 0 ? (
-            <span className="text-xs text-neutral-400 italic">Sin formatos personalizados - se usará PDF estándar</span>
+            <span className="text-base text-brand-blue/50 italic">Sin formatos personalizados — se usará PDF estándar</span>
           ) : (
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <select
                 value={selectedTemplateId}
                 onChange={e => setSelectedTemplateId(e.target.value)}
-                className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-white"
+                className="flex-1 min-w-0 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3.5 py-2.5 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white"
               >
                 <option value="">- PDF estándar -</option>
                 {availableTemplates.map(t => (
@@ -2103,12 +2494,12 @@ export function CrearProformaContent() {
                 ))}
               </select>
               {selectedTemplate && (
-                <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                <span className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${
                   selectedTemplate.template_type === "excel"
                     ? "bg-green-50 text-green-700 border-green-200"
                     : "bg-blue-50 text-blue-700 border-blue-200"
                 }`}>
-                  <Icon icon={selectedTemplate.template_type === "excel" ? "lucide:table" : "lucide:file-text"} width={10} />
+                  <Icon icon={selectedTemplate.template_type === "excel" ? "lucide:table" : "lucide:file-text"} width={14} />
                   {selectedTemplate.template_type === "excel" ? "Excel" : "HTML"}
                 </span>
               )}
@@ -2117,22 +2508,22 @@ export function CrearProformaContent() {
           <button
             onClick={handleExportExcel}
             disabled={exporting}
-            className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-base font-semibold rounded-lg bg-brand-blue text-white hover:bg-brand-blue/90 disabled:opacity-50 transition-colors shadow-sm"
           >
             {exporting
-              ? <><Icon icon="lucide:loader-2" width={14} className="animate-spin" /><span>Generando...</span></>
-              : <><Icon icon="lucide:file-spreadsheet" width={14} /><span>Generar Proforma</span></>
+              ? <><Icon icon="lucide:loader-2" width={16} className="animate-spin" /><span>Generando...</span></>
+              : <><Icon icon="lucide:file-spreadsheet" width={16} /><span>Generar Proforma</span></>
             }
           </button>
         </div>
       </div>
 
       {/* -- Tabs -- */}
-      <div className="flex border-b border-neutral-200 bg-white px-4 flex-shrink-0">
+      <div className="flex border-b border-brand-blue/15 bg-[#E8F0FA]/95 px-4 flex-shrink-0">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
-              tab === t ? "border-emerald-600 text-emerald-700" : "border-transparent text-neutral-500 hover:text-neutral-700"}`}>
+            className={`px-5 py-3.5 text-lg font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              tab === t ? "border-brand-blue text-brand-blue" : "border-transparent text-neutral-500 hover:text-brand-blue"}`}>
             {t}
           </button>
         ))}
@@ -2146,23 +2537,23 @@ export function CrearProformaContent() {
           <div className="p-5 flex flex-col gap-4 w-full">
             {/* Moneda + Cláusula */}
             <div className="flex flex-wrap items-end gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Moneda</label>
-                <div className="flex gap-1">
+              <div className="flex flex-col gap-1.5">
+                <label className={moduleLabel}>Moneda</label>
+                <div className="flex gap-1.5">
                   {MONEDAS.map(mn => (
                     <button key={mn} onClick={() => setH("moneda", mn)}
-                      className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors ${header.moneda === mn ? "bg-emerald-600 text-white border-emerald-600" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"}`}>
+                      className={`px-4 py-2 text-base font-semibold rounded-lg border transition-colors ${header.moneda === mn ? "bg-brand-blue text-white border-brand-blue" : "border-brand-blue/20 text-brand-blue bg-[#F4F8FC] hover:bg-white"}`}>
                       {mn}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Cláusula de Venta</label>
-                <div className="flex gap-1 flex-wrap">
+              <div className="flex flex-col gap-1.5">
+                <label className={moduleLabel}>Cláusula de Venta</label>
+                <div className="flex gap-1.5 flex-wrap">
                   {CLAUSULAS.map(c => (
                     <button key={c} onClick={() => setH("clausula_venta", c)}
-                      className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors ${header.clausula_venta === c ? "bg-blue-600 text-white border-blue-600" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"}`}>
+                      className={`px-4 py-2 text-base font-semibold rounded-lg border transition-colors ${header.clausula_venta === c ? "bg-brand-blue text-white border-brand-blue" : "border-brand-blue/20 text-brand-blue bg-[#F4F8FC] hover:bg-white"}`}>
                       {c}
                     </button>
                   ))}
@@ -2178,80 +2569,80 @@ export function CrearProformaContent() {
                 { label: "KG Bruto Total", val: fmtKg(totals.kg_bruto) },
                 { label: `FOB Total (${header.moneda})`, val: fmt(totals.valor, header.moneda), hi: true },
               ].map(s => (
-                <div key={s.label} className={`rounded-xl border px-4 py-3 flex flex-col gap-0.5 ${s.hi ? "bg-emerald-50 border-emerald-200" : "bg-white border-neutral-200"}`}>
-                  <span className="text-xs font-semibold text-neutral-500 uppercase">{s.label}</span>
-                  <span className={`text-base font-bold font-mono tabular-nums ${s.hi ? "text-emerald-800" : "text-neutral-800"}`}>{s.val}</span>
+                <div key={s.label} className={`rounded-2xl border px-4 py-4 flex flex-col gap-1 ${s.hi ? "bg-brand-blue/8 border-brand-blue/25" : "bg-white border-brand-blue/15"}`}>
+                  <span className="text-base font-semibold text-brand-blue/70 uppercase tracking-wide">{s.label}</span>
+                  <span className={`text-2xl font-bold font-mono tabular-nums ${s.hi ? "text-brand-blue" : "text-neutral-800"}`}>{s.val}</span>
                 </div>
               ))}
             </div>
 
             {/* Botón agregar fila — prominente, antes de la tabla */}
             <button onClick={addItem}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-2 border-dashed border-emerald-400 text-emerald-700 rounded-xl hover:bg-emerald-50 hover:border-emerald-500 transition-colors self-start">
-              <Icon icon="lucide:plus-circle" width={18} />Agregar fila
+              className="flex items-center gap-2 px-5 py-3 text-base font-semibold border-2 border-dashed border-brand-blue/40 text-brand-blue rounded-xl hover:bg-brand-blue/5 hover:border-brand-blue transition-colors self-start">
+              <Icon icon="lucide:plus-circle" width={20} />Agregar fila
             </button>
 
             {/* Desktop table */}
-            <div className="hidden md:block rounded-xl border border-neutral-200 bg-white overflow-x-auto">
-              <table className="w-full text-sm min-w-[960px]">
+            <div className="hidden md:block rounded-2xl border border-brand-blue/15 bg-white overflow-x-auto shadow-sm">
+              <table className="w-full text-base min-w-[960px]">
                 <thead>
-                  <tr className="bg-emerald-700 text-white">
+                  <tr className="bg-brand-blue text-white">
                     {["","#","Especie","Variedad","Tipo Envase","Categoría","Etiqueta","Calibre","KG Neto/Caja","KG Bruto/Caja","Cajas",
                       "KG Neto Total","KG Bruto Total",`Val/Caja (${header.moneda})`,
                       `Val/KG (${header.moneda})`, `Valor Total (${header.moneda})`, ""].map((h,i) => (
-                      <th key={i} className="px-2 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
+                      <th key={i} className="px-2.5 py-3.5 text-left text-base font-bold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it, idx) => (
                     <tr key={it.id} className={idx % 2 === 0 ? "bg-white" : "bg-neutral-50"}>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-2 text-center">
                         <button onClick={() => duplicateItem(it.id)} title="Copiar fila"
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors whitespace-nowrap">
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-semibold rounded-lg bg-brand-blue/8 border border-brand-blue/20 text-brand-blue hover:bg-brand-blue/15 transition-colors whitespace-nowrap">
                           <Icon icon="lucide:copy-plus" width={14} />Copiar
                         </button>
                       </td>
-                      <td className="px-2 py-1 text-neutral-400 text-center">{idx+1}</td>
+                      <td className="px-2 py-2 text-neutral-400 text-center">{idx+1}</td>
                       {/* Especie — select desde tabla especies */}
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <select value={it.especie} onChange={e => updateItem(it.id, "especie", e.target.value)}
-                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
                           <option value="">—</option>
                           {especiesCatalog.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
                       {/* Variedad — datalist cereza + libre en mayúscula */}
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <input list="variedades-cereza-list" value={it.variedad}
                           onChange={e => updateItem(it.id, "variedad", e.target.value.toUpperCase())}
-                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 uppercase" />
+                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base uppercase" />
                       </td>
                       {/* Tipo Envase — select fijo */}
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <select value={it.tipo_envase} onChange={e => updateItem(it.id, "tipo_envase", e.target.value)}
-                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
                           <option value="">—</option>
                           {TIPOS_ENVASE_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
                       {/* Categoría — select fijo */}
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <select value={it.categoria} onChange={e => updateItem(it.id, "categoria", e.target.value)}
-                          className="w-full min-w-[75px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          className="w-full min-w-[75px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
                           <option value="">—</option>
                           {CATEGORIAS_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
                       {/* Etiqueta — texto libre */}
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <input value={it.etiqueta} onChange={e => updateItem(it.id, "etiqueta", e.target.value)}
-                          className="w-full min-w-[70px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5" />
+                          className="w-full min-w-[70px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base" />
                       </td>
                       {/* Calibre — select fijo */}
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <select value={it.calibre} onChange={e => updateItem(it.id, "calibre", e.target.value)}
-                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-sm">
+                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
                           <option value="">—</option>
                           {CALIBRES_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -2259,20 +2650,20 @@ export function CrearProformaContent() {
                       {(["kg_neto_caja","kg_bruto_caja","cantidad_cajas"] as const).map(f => (
                         <td key={f} className="px-1 py-1">
                           <input type="number" value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
-                            className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-right" />
+                            className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base text-right" />
                         </td>
                       ))}
-                      <td className="px-2 py-1 text-right font-mono tabular-nums text-neutral-700">{fmtKg(it.kg_neto_total)}</td>
-                      <td className="px-2 py-1 text-right font-mono tabular-nums text-neutral-700">{fmtKg(it.kg_bruto_total)}</td>
-                      <td className="px-1 py-1">
+                      <td className="px-2 py-2 text-right font-mono tabular-nums text-neutral-700">{fmtKg(it.kg_neto_total)}</td>
+                      <td className="px-2 py-2 text-right font-mono tabular-nums text-neutral-700">{fmtKg(it.kg_bruto_total)}</td>
+                      <td className="px-1.5 py-2">
                         <input type="number" step="any" value={it.valor_caja} onChange={e => updateItem(it.id, "valor_caja", e.target.value)}
-                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-right" />
+                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base text-right" />
                       </td>
-                      <td className="px-1 py-1">
+                      <td className="px-1.5 py-2">
                         <input type="number" step="any" value={valorKiloInputString(it)} onChange={e => updateItem(it.id, "valor_kilo", e.target.value)}
-                          className="w-full min-w-[56px] border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded px-1 py-0.5 text-right font-mono tabular-nums" />
+                          className="w-full min-w-[56px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base text-right font-mono tabular-nums" />
                       </td>
-                      <td className="px-2 py-1 text-right font-mono tabular-nums font-semibold text-neutral-800">{fmt(it.valor_total, header.moneda)}</td>
+                      <td className="px-2 py-2 text-right font-mono tabular-nums font-semibold text-neutral-800">{fmt(it.valor_total, header.moneda)}</td>
                       <td className="px-1 py-1 text-center">
                         {items.length > 1 && (
                           <button onClick={() => removeItem(it.id)} title="Eliminar fila"
@@ -2284,19 +2675,19 @@ export function CrearProformaContent() {
                     </tr>
                   ))}
                   {/* Totals — colSpan debe cuadrar exactamente con las 16 columnas */}
-                  <tr className="bg-emerald-50 border-t-2 border-emerald-200">
+                  <tr className="bg-brand-blue/8 border-t-2 border-brand-blue/25">
                     {/* cols 0-9: Copiar, #, Especie, Variedad, Tipo Envase, Categoría, Etiqueta, Calibre, KG Neto/Caja, KG Bruto/Caja */}
-                    <td colSpan={10} className="px-2 py-2 text-right text-xs font-bold text-neutral-600">TOTAL</td>
+                    <td colSpan={10} className="px-2.5 py-3 text-right text-base font-bold text-brand-blue">TOTAL</td>
                     {/* col 10: Cajas */}
-                    <td className="px-2 py-2 text-right text-xs font-bold font-mono text-emerald-900">{totals.cajas.toLocaleString()}</td>
+                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-brand-blue">{totals.cajas.toLocaleString()}</td>
                     {/* col 11: KG Neto Total */}
-                    <td className="px-2 py-2 text-right text-xs font-bold font-mono text-emerald-900">{fmtKg(totals.kg_neto)}</td>
+                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-brand-blue">{fmtKg(totals.kg_neto)}</td>
                     {/* col 12: KG Bruto Total */}
-                    <td className="px-2 py-2 text-right text-xs font-bold font-mono text-emerald-900">{fmtKg(totals.kg_bruto)}</td>
+                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-brand-blue">{fmtKg(totals.kg_bruto)}</td>
                     {/* cols 13-14: Val/Caja + Val/KG — vacíos */}
                     <td colSpan={2} />
                     {/* col 15: Valor Total */}
-                    <td className="px-2 py-2 text-right text-sm font-bold font-mono text-emerald-900">{fmt(totals.valor, header.moneda)}</td>
+                    <td className="px-2.5 py-3 text-right text-lg font-bold font-mono text-brand-blue">{fmt(totals.valor, header.moneda)}</td>
                     {/* col 16: trash — vacío */}
                     <td />
                   </tr>
@@ -2309,49 +2700,49 @@ export function CrearProformaContent() {
               {items.map((it, idx) => (
                 <div key={it.id} className="bg-white rounded-xl border border-neutral-200 p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-neutral-400 uppercase">Ítem {idx+1}</span>
+                    <span className="text-base font-bold text-brand-blue/60 uppercase">Ítem {idx+1}</span>
                     {items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-neutral-300 hover:text-red-500"><Icon icon="lucide:trash-2" width={13} /></button>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Especie</label>
+                      <label className="text-sm font-semibold text-brand-blue">Especie</label>
                       <select value={it.especie} onChange={e => updateItem(it.id, "especie", e.target.value)}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
                         <option value="">—</option>
                         {especiesCatalog.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Variedad</label>
+                      <label className="text-sm font-semibold text-brand-blue">Variedad</label>
                       <input list="variedades-cereza-list" value={it.variedad}
                         onChange={e => updateItem(it.id, "variedad", e.target.value.toUpperCase())}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400 uppercase" />
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white uppercase" />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Tipo Envase</label>
+                      <label className="text-sm font-semibold text-brand-blue">Tipo Envase</label>
                       <select value={it.tipo_envase} onChange={e => updateItem(it.id, "tipo_envase", e.target.value)}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
                         <option value="">—</option>
                         {TIPOS_ENVASE_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Categoría</label>
+                      <label className="text-sm font-semibold text-brand-blue">Categoría</label>
                       <select value={it.categoria} onChange={e => updateItem(it.id, "categoria", e.target.value)}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
                         <option value="">—</option>
                         {CATEGORIAS_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Etiqueta</label>
+                      <label className="text-sm font-semibold text-brand-blue">Etiqueta</label>
                       <input value={it.etiqueta} onChange={e => updateItem(it.id, "etiqueta", e.target.value)}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white" />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Calibre</label>
+                      <label className="text-sm font-semibold text-brand-blue">Calibre</label>
                       <select value={it.calibre} onChange={e => updateItem(it.id, "calibre", e.target.value)}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
                         <option value="">—</option>
                         {CALIBRES_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
@@ -2360,95 +2751,225 @@ export function CrearProformaContent() {
                   <div className="grid grid-cols-2 gap-2">
                     {([["kg_neto_caja","KG Neto/Caja"],["kg_bruto_caja","KG Bruto/Caja"],["cantidad_cajas","Cajas"],["valor_caja",`Val/Caja (${header.moneda})`]] as const).map(([f,lbl]) => (
                       <div key={f} className="flex flex-col gap-0.5">
-                        <label className="text-[9px] font-semibold text-neutral-400 uppercase">{lbl}</label>
+                        <label className="text-sm font-semibold text-brand-blue">{lbl}</label>
                         <input type="number" step="any" value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
-                          className="border border-neutral-200 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+                          className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue text-right focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white" />
                       </div>
                     ))}
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">{`Val/KG (${header.moneda})`}</label>
+                      <label className="text-sm font-semibold text-brand-blue">{`Val/KG (${header.moneda})`}</label>
                       <input type="number" step="any" value={valorKiloInputString(it)} onChange={e => updateItem(it.id, "valor_kilo", e.target.value)}
-                        className="border border-neutral-200 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 font-mono" />
+                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue text-right focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white font-mono" />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">KG Neto Total</label>
-                      <p className="border border-neutral-100 rounded px-2 py-1 text-xs text-right bg-neutral-50 font-mono">{fmtKg(it.kg_neto_total)}</p>
+                      <label className="text-sm font-semibold text-brand-blue">KG Neto Total</label>
+                      <p className="border border-brand-blue/10 rounded-lg px-3 py-2.5 text-base text-right bg-[#F4F8FC] font-mono text-brand-blue">{fmtKg(it.kg_neto_total)}</p>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">KG Bruto Total</label>
-                      <p className="border border-neutral-100 rounded px-2 py-1 text-xs text-right bg-neutral-50 font-mono">{fmtKg(it.kg_bruto_total)}</p>
+                      <label className="text-sm font-semibold text-brand-blue">KG Bruto Total</label>
+                      <p className="border border-brand-blue/10 rounded-lg px-3 py-2.5 text-base text-right bg-[#F4F8FC] font-mono text-brand-blue">{fmtKg(it.kg_bruto_total)}</p>
                     </div>
                     <div className="flex flex-col gap-0.5 col-span-2">
-                      <label className="text-[9px] font-semibold text-neutral-400 uppercase">Valor Total ({header.moneda})</label>
-                      <p className="border border-emerald-200 rounded px-2 py-1 text-xs text-right bg-emerald-50 font-mono font-bold text-emerald-800">{fmt(it.valor_total, header.moneda)}</p>
+                      <label className="text-sm font-semibold text-brand-blue">Valor Total ({header.moneda})</label>
+                      <p className="border border-brand-blue/20 rounded-lg px-3 py-2.5 text-base text-right bg-brand-blue/8 font-mono font-bold text-brand-blue">{fmt(it.valor_total, header.moneda)}</p>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-neutral-500">Cajas:</span> <span className="font-bold text-emerald-900">{totals.cajas.toLocaleString()}</span></div>
-                <div><span className="text-neutral-500">KG Neto:</span> <span className="font-bold text-emerald-900">{fmtKg(totals.kg_neto)}</span></div>
-                <div><span className="text-neutral-500">KG Bruto:</span> <span className="font-bold text-emerald-900">{fmtKg(totals.kg_bruto)}</span></div>
-                <div><span className="text-neutral-500">FOB Total:</span> <span className="font-bold text-emerald-900">{fmt(totals.valor, header.moneda)} {header.moneda}</span></div>
+              <div className="bg-brand-blue/8 border border-brand-blue/20 rounded-xl px-4 py-4 grid grid-cols-2 gap-3 text-base">
+                <div><span className="text-neutral-500">Cajas:</span> <span className="font-bold text-brand-blue">{totals.cajas.toLocaleString()}</span></div>
+                <div><span className="text-neutral-500">KG Neto:</span> <span className="font-bold text-brand-blue">{fmtKg(totals.kg_neto)}</span></div>
+                <div><span className="text-neutral-500">KG Bruto:</span> <span className="font-bold text-brand-blue">{fmtKg(totals.kg_bruto)}</span></div>
+                <div><span className="text-neutral-500">FOB Total:</span> <span className="font-bold text-brand-blue">{fmt(totals.valor, header.moneda)} {header.moneda}</span></div>
               </div>
             </div>
 
             <div className="flex flex-col gap-0.5">
-              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Observaciones</label>
+              <label className="text-base font-semibold text-brand-blue">Observaciones</label>
               <textarea value={header.observaciones} onChange={e => setH("observaciones", e.target.value)}
                 rows={2} placeholder="Notas o condiciones especiales..."
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white resize-none" />
+                className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3.5 py-3 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white resize-none" />
             </div>
           </div>
         )}
 
         {/* --- Partes --- */}
         {tab === "Partes" && (
-          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider flex items-center gap-2">
-                <Icon icon="lucide:building-2" width={14} className="text-emerald-600" />Exportador
-              </h3>
-              {inp("Nombre / Razón Social", "exportador", { placeholder: "Ej: Agrícola Las Nieves SpA" })}
-              {inp("RUT", "exportador_rut", { placeholder: "76.123.456-7" })}
-              {inp("Dirección", "exportador_direccion", { placeholder: "Av. Los Leones 123, Santiago" })}
+          <div className="p-5 flex flex-col gap-8 w-full">
+            <p className="text-sm text-neutral-600 -mt-1">
+              Elige desde el catálogo o escribe a mano. Si el nombre no existe, puedes agregarlo a la base de datos para usarlo después.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
+                  <Icon icon="lucide:building-2" width={18} className="text-brand-blue" />Exportador
+                </h3>
+                <ComboboxInput
+                  label="Nombre / Razón Social"
+                  labelClass={moduleLabel}
+                  inputClass={moduleInput}
+                  placeholder="Buscar o escribir empresa…"
+                  value={header.exportador}
+                  options={empresasOpts}
+                  onChange={(v) => setH("exportador", v)}
+                  onSelect={handleSelectExportador}
+                  onAddNew={canFeedCatalog ? handleAddExportador : undefined}
+                  addNewLabel={(t) => `Crear exportador “${t}” en catálogo`}
+                  addingNew={addingEmpresa}
+                />
+                {inp("RUT", "exportador_rut", { placeholder: "76.123.456-7" })}
+                {inp("Dirección", "exportador_direccion", { placeholder: "Av. Los Leones 123, Santiago" })}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
+                  <Icon icon="lucide:globe" width={18} className="text-brand-blue" />Consignee / Importador
+                </h3>
+                <ComboboxInput
+                  label="Nombre / Razón Social"
+                  labelClass={moduleLabel}
+                  inputClass={moduleInput}
+                  placeholder="Buscar o escribir consignatario…"
+                  value={header.importador}
+                  options={consignatarioOpts}
+                  onChange={handleImportadorChange}
+                  onSelect={handleSelectConsignatario}
+                  onAddNew={canFeedCatalog ? handleAddConsignatario : undefined}
+                  addNewLabel={(t) => `Crear consignatario “${t}” en catálogo`}
+                  addingNew={addingConsignatario}
+                />
+                {inp("Consignee Address", "importador_direccion", { placeholder: "123 Commerce St, Los Angeles, CA" })}
+                {inp("País", "importador_pais", { placeholder: "USA" })}
+                {inp("USCC / USCI", "consignee_uscc", { placeholder: "91110000100006795A" })}
+                {inp("ATTN (Contacto)", "consignee_attn", { placeholder: "John Smith" })}
+                {inp("Email", "consignee_email", { placeholder: "jsmith@company.com" })}
+                {inp("Teléfono / Mobile", "consignee_mobile", { placeholder: "+1 310 555 0199" })}
+                {inp("ZIP / Código postal", "consignee_zip", { placeholder: "90001" })}
+              </div>
             </div>
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider flex items-center gap-2">
-                <Icon icon="lucide:globe" width={14} className="text-blue-600" />Consignee / Importador
+
+            <div className="flex flex-col gap-3 border-t border-brand-blue/15 pt-6">
+              <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
+                <Icon icon="lucide:bell" width={18} className="text-brand-blue" />Notify Party
               </h3>
-              {inp("Nombre / Razón Social", "importador", { placeholder: "Ej: Fresh Imports Inc." })}
-              {inp("Consignee Address", "importador_direccion", { placeholder: "123 Commerce St, Los Angeles, CA" })}
-              {inp("País", "importador_pais", { placeholder: "USA" })}
-              {inp("USCC / USCI", "consignee_uscc", { placeholder: "91110000100006795A" })}
-              {inp("ATTN (Contacto)", "consignee_attn", { placeholder: "John Smith" })}
-              {inp("Email", "consignee_email", { placeholder: "jsmith@company.com" })}
-              {inp("Teléfono / Mobile", "consignee_mobile", { placeholder: "+1 310 555 0199" })}
+              <p className="text-sm text-neutral-500 -mt-1">
+                Se rellena al elegir un consignatario del catálogo; también puedes editarlo a mano.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {inp("Notify Company", "notify_company", { placeholder: "Same as consignee / otra empresa" })}
+                {inp("Notify Address", "notify_address")}
+                {inp("Notify ATTN", "notify_attn")}
+                {inp("Notify Email", "notify_email")}
+                {inp("Notify Mobile", "notify_mobile")}
+                {inp("Notify ZIP", "notify_zip")}
+              </div>
             </div>
           </div>
         )}
 
         {/* --- Embarque --- */}
         {tab === "Embarque" && (
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
-            {inp("Puerto de Embarque", "puerto_origen", { placeholder: "San Antonio" })}
-            {inp("Puerto de Descarga", "puerto_destino", { placeholder: "Los Angeles" })}
-            {inp("Destino Final", "destino", { placeholder: "Los Angeles, CA" })}
-            {inp("ETD", "etd", { type: "date" })}
-            {inp("ETA", "eta", { type: "date" })}
-            {inp("Forma de Pago", "forma_pago", { placeholder: "Crédito 60 días" })}
-            {inp("Contenedor", "contenedor", { placeholder: "TCKU1234567" })}
-            {inp("Naviera", "naviera", { placeholder: "Hapag-Lloyd" })}
-            {inp("Nave / Buque", "nave", { placeholder: "SANTA ELENA" })}
-            {inp("N° de Viaje", "viaje", { placeholder: "001A" })}
-            {inp("Booking", "booking", { placeholder: "HAP1234567" })}
-            {inp("Ref. ASLI", "ref_asli", { placeholder: "ASLI-2026-001" })}
-            <div className="flex flex-col gap-0.5">
-              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Cláusula de Venta</label>
-              <select value={header.clausula_venta} onChange={e => setH("clausula_venta", e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                {CLAUSULAS.map(c => <option key={c}>{c}</option>)}
-              </select>
+          <div className="p-5 flex flex-col gap-4 w-full">
+            <p className="text-sm text-neutral-600">
+              Al vincular una operación se precargan estos datos. También puedes elegir del catálogo, escribir a mano o crear registros nuevos.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <ComboboxInput
+                label="Puerto de Embarque"
+                labelClass={moduleLabel}
+                inputClass={moduleInput}
+                placeholder="Buscar POL…"
+                value={header.puerto_origen}
+                options={puertosOrigenOpts}
+                onChange={(v) => setH("puerto_origen", v)}
+                onSelect={(opt) => setH("puerto_origen", opt.nombre)}
+                onAddNew={canFeedCatalog ? handleAddPuertoOrigen : undefined}
+                addNewLabel={(t) => `Crear puerto “${t}”`}
+                addingNew={addingPuertoOrigen}
+              />
+              <ComboboxInput
+                label="Puerto de Descarga"
+                labelClass={moduleLabel}
+                inputClass={moduleInput}
+                placeholder="Buscar POD…"
+                value={header.puerto_destino}
+                options={destinosOpts}
+                onChange={(v) => setH("puerto_destino", v)}
+                onSelect={handleSelectPod}
+                onAddNew={canFeedCatalog ? handleAddDestinoPod : undefined}
+                addNewLabel={(t) => `Crear destino “${t}”`}
+                addingNew={addingDestinoPod}
+              />
+              <ComboboxInput
+                label="Destino Final"
+                labelClass={moduleLabel}
+                inputClass={moduleInput}
+                placeholder="Ciudad / país final…"
+                value={header.destino}
+                options={destinosOpts}
+                onChange={(v) => setH("destino", v)}
+                onSelect={(opt) => {
+                  const dest = destinosOpts.find((d) => d.id === opt.id);
+                  setHeader((h) => ({
+                    ...h,
+                    destino: opt.nombre,
+                    importador_pais: dest?.pais?.trim() || h.importador_pais,
+                  }));
+                }}
+                onAddNew={canFeedCatalog ? handleAddDestinoFinal : undefined}
+                addNewLabel={(t) => `Crear destino “${t}”`}
+                addingNew={addingDestinoPod}
+              />
+              {inp("ETD", "etd", { type: "date" })}
+              {inp("ETA", "eta", { type: "date" })}
+              <ComboboxInput
+                label="Forma de Pago"
+                labelClass={moduleLabel}
+                inputClass={moduleInput}
+                placeholder="PREPAID / crédito…"
+                value={header.forma_pago}
+                options={formasPagoOpts}
+                onChange={(v) => setH("forma_pago", v)}
+                onSelect={(opt) => setH("forma_pago", opt.nombre)}
+              />
+              {inp("Contenedor", "contenedor", { placeholder: "TCKU1234567" })}
+              <ComboboxInput
+                label="Naviera"
+                labelClass={moduleLabel}
+                inputClass={moduleInput}
+                placeholder="Buscar naviera…"
+                value={header.naviera}
+                options={navierasOpts}
+                onChange={(v) => setH("naviera", v)}
+                onSelect={(opt) => setH("naviera", opt.nombre)}
+                onAddNew={canFeedCatalog ? handleAddNaviera : undefined}
+                addNewLabel={(t) => `Crear naviera “${t}”`}
+                addingNew={addingNaviera}
+              />
+              <ComboboxInput
+                label="Nave / Buque"
+                labelClass={moduleLabel}
+                inputClass={moduleInput}
+                placeholder="Buscar nave…"
+                value={header.nave}
+                options={navesFilteredOpts}
+                onChange={(v) => setH("nave", v)}
+                onSelect={(opt) => setH("nave", opt.nombre)}
+                onAddNew={canFeedCatalog ? handleAddNave : undefined}
+                addNewLabel={(t) => `Crear nave “${t}”`}
+                addingNew={addingNave}
+              />
+              {inp("N° de Viaje", "viaje", { placeholder: "001A" })}
+              {inp("Booking", "booking", { placeholder: "HAP1234567" })}
+              {inp("Ref. ASLI", "ref_asli", { placeholder: "ASLI-2026-001" })}
+              <div className="flex flex-col gap-1.5">
+                <label className={moduleLabel}>Cláusula de Venta</label>
+                <select value={header.clausula_venta} onChange={e => setH("clausula_venta", e.target.value)}
+                  className={moduleInput}>
+                  {CLAUSULAS.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -2456,8 +2977,8 @@ export function CrearProformaContent() {
         {/* --- Documentos --- */}
         {tab === "Documentos" && (
           <div className="p-5 flex flex-col gap-4 w-full">
-            <h3 className="text-sm font-bold text-neutral-700 uppercase tracking-wider flex items-center gap-2">
-              <Icon icon="lucide:file-check-2" width={15} className="text-emerald-600" />Documentos de Exportación
+            <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
+              <Icon icon="lucide:file-check-2" width={18} className="text-brand-blue" />Documentos de Exportación
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {inp("DUS", "dus", { placeholder: "DUS-2026-0001" })}
@@ -2471,7 +2992,7 @@ export function CrearProformaContent() {
         {tab === "Etiquetas" && (
           <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6 w-full items-start">
             <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
-              <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-lg font-bold text-indigo-900 tracking-wide flex items-center gap-2">
                 <Icon icon="lucide:scan-search" width={16} className="text-indigo-700" />
                 Detectadas en tu formato
               </h3>
@@ -2489,7 +3010,7 @@ export function CrearProformaContent() {
                 </p>
               ) : templateTagsDetected.length === 0 ? (
                 <p className="text-sm text-indigo-900/75 mt-3">
-                  No aparecen celdas o textos con <code className="font-mono text-xs bg-white/80 px-1 rounded border border-indigo-100">{"{{etiqueta}}"}</code>
+                  No aparecen celdas o textos con <code className="font-mono text-sm bg-white/80 px-1 rounded border border-indigo-100">{"{{etiqueta}}"}</code>
                   . Usa la referencia de abajo al diseñar el formato.
                 </p>
               ) : (
@@ -2507,7 +3028,7 @@ export function CrearProformaContent() {
                         }`}
                       >
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-mono break-all">{tag}</span>
+                          <span className="text-sm font-mono break-all">{tag}</span>
                           <button
                             type="button"
                             onClick={() => void copyTag(tag)}
@@ -2518,17 +3039,17 @@ export function CrearProformaContent() {
                           </button>
                         </div>
                         {recognized && innerM && previewLookup.has(normalizeTagInner(innerM[1])) && (
-                          <span className="text-xs text-neutral-500 truncate" title={preview ?? ""}>
+                          <span className="text-sm text-neutral-500 truncate" title={preview ?? ""}>
                             → {preview === "" || preview === undefined ? "-" : preview}
                           </span>
                         )}
                         {!recognized && suggestion && (
                           <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-xs text-amber-800">Usa:</span>
+                            <span className="text-sm text-amber-800">Usa:</span>
                             <button
                               type="button"
                               onClick={() => void copyTag(suggestion)}
-                              className="inline-flex items-center gap-1 font-mono text-xs bg-white border border-emerald-300 text-emerald-800 rounded px-1.5 py-0.5 hover:bg-emerald-50 transition-colors"
+                              className="inline-flex items-center gap-1 font-mono text-sm bg-white border border-emerald-300 text-emerald-800 rounded px-1.5 py-0.5 hover:bg-emerald-50 transition-colors"
                               title="Copiar etiqueta sugerida"
                             >
                               {suggestion}
@@ -2537,7 +3058,7 @@ export function CrearProformaContent() {
                           </div>
                         )}
                         {!recognized && !suggestion && (
-                          <span className="text-xs text-amber-800 font-medium">Sin equivalente conocido</span>
+                          <span className="text-sm text-amber-800 font-medium">Sin equivalente conocido</span>
                         )}
                       </li>
                     );
@@ -2547,26 +3068,26 @@ export function CrearProformaContent() {
             </div>
 
             <div className="rounded-xl border border-neutral-200 bg-white p-5">
-              <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
                 <Icon icon="lucide:tags" width={16} className="text-emerald-600" />
                 Referencia: etiquetas disponibles
               </h3>
               <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
                 {PROFORMA_ITEM_EXCEL_NOTE} En HTML, envuelve filas repetibles entre{" "}
-                <code className="font-mono text-xs bg-neutral-100 px-1 rounded">{"{{#items}}"}</code> y{" "}
-                <code className="font-mono text-xs bg-neutral-100 px-1 rounded">{"{{/items}}"}</code> y usa las etiquetas de fila indicadas abajo.
+                <code className="font-mono text-sm bg-neutral-100 px-1 rounded">{"{{#items}}"}</code> y{" "}
+                <code className="font-mono text-sm bg-neutral-100 px-1 rounded">{"{{/items}}"}</code> y usa las etiquetas de fila indicadas abajo.
               </p>
               <div className="mt-4 flex flex-col gap-4">
                 {PROFORMA_TAG_CATALOG.map(grp => (
                   <div key={grp.group} className="border border-neutral-100 rounded-lg overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-2.5 bg-neutral-50 border-b border-neutral-100">
                       <Icon icon={grp.icon} width={15} className="text-neutral-500" />
-                      <span className="text-sm font-bold text-neutral-700 uppercase tracking-wide">{grp.group}</span>
+                      <span className="text-base font-bold text-brand-blue tracking-wide">{grp.group}</span>
                     </div>
                     <ul className="divide-y divide-neutral-50">
                       {grp.entries.map(e => (
                         <li key={e.tag} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50/80">
-                          <code className="font-mono text-xs text-emerald-800 flex-shrink-0 break-all">{e.tag}</code>
+                          <code className="font-mono text-sm text-emerald-800 flex-shrink-0 break-all">{e.tag}</code>
                           <span className="text-sm text-neutral-600 flex-1 min-w-0">{e.label}</span>
                           <button
                             type="button"
@@ -2584,12 +3105,12 @@ export function CrearProformaContent() {
                 <div className="border border-neutral-100 rounded-lg overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-2.5 bg-neutral-50 border-b border-neutral-100">
                     <Icon icon="lucide:list" width={15} className="text-neutral-500" />
-                    <span className="text-sm font-bold text-neutral-700 uppercase tracking-wide">Dentro de {"{{#items}}"} (HTML)</span>
+                    <span className="text-base font-bold text-brand-blue tracking-wide">Dentro de {"{{#items}}"} (HTML)</span>
                   </div>
                   <ul className="divide-y divide-neutral-50">
                     {PROFORMA_ITEM_ROW_HTML_TAGS.map(e => (
                       <li key={e.tag} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50/80">
-                        <code className="font-mono text-xs text-blue-800 flex-shrink-0 break-all">{e.tag}</code>
+                        <code className="font-mono text-sm text-blue-800 flex-shrink-0 break-all">{e.tag}</code>
                         <span className="text-sm text-neutral-600 flex-1 min-w-0">{e.label}</span>
                         {!e.tag.includes("…") && (
                           <button
@@ -2660,32 +3181,32 @@ export function CrearProformaContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-              <h3 className="font-bold text-neutral-800">Proformas emitidas</h3>
-              <button onClick={() => setShowList(false)} className="text-neutral-400 hover:text-neutral-600"><Icon icon="lucide:x" width={18} /></button>
+              <h3 className="font-bold text-neutral-800 text-xl">Proformas emitidas</h3>
+              <button onClick={() => setShowList(false)} className="text-neutral-400 hover:text-neutral-600"><Icon icon="lucide:x" width={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {loadingList
                 ? <div className="flex justify-center py-8"><Icon icon="lucide:loader-2" width={20} className="animate-spin text-neutral-400" /></div>
                 : proformas.length === 0
-                  ? <p className="text-center text-sm text-neutral-400 py-8">No hay proformas registradas.</p>
+                  ? <p className="text-center text-base text-neutral-400 py-8">No hay proformas registradas.</p>
                   : (
-                    <table className="w-full text-xs">
-                      <thead className="bg-neutral-50 sticky top-0">
+                    <table className="w-full text-base">
+                      <thead className="bg-[#E8F0FA] sticky top-0">
                         <tr>{["N°","Ref. ASLI","Importador","Fecha","Total FOB",""].map(h => (
-                          <th key={h} className="px-4 py-2 text-left font-semibold text-neutral-500 uppercase text-xs">{h}</th>
+                          <th key={h} className="px-4 py-3 text-left font-bold text-brand-blue text-sm">{h}</th>
                         ))}</tr>
                       </thead>
                       <tbody>
                         {proformas.map(pf => (
-                          <tr key={pf.id} className="border-t border-neutral-50 hover:bg-neutral-50">
-                            <td className="px-4 py-2 font-mono font-semibold text-emerald-700">{pf.numero}</td>
-                            <td className="px-4 py-2 text-neutral-600">{pf.ref_asli ?? "-"}</td>
-                            <td className="px-4 py-2 text-neutral-700 max-w-[160px] truncate">{pf.importador ?? "-"}</td>
-                            <td className="px-4 py-2 text-neutral-500">{pf.fecha}</td>
-                            <td className="px-4 py-2 font-mono font-semibold">{fmt(pf.total_valor ?? 0, pf.moneda ?? "USD")} {pf.moneda}</td>
+                          <tr key={pf.id} className="border-t border-neutral-100 hover:bg-brand-blue/5">
+                            <td className="px-4 py-3 font-mono font-semibold text-brand-blue">{pf.numero}</td>
+                            <td className="px-4 py-3 text-neutral-600">{pf.ref_asli ?? "-"}</td>
+                            <td className="px-4 py-3 text-neutral-700 max-w-[160px] truncate">{pf.importador ?? "-"}</td>
+                            <td className="px-4 py-3 text-neutral-500">{pf.fecha}</td>
+                            <td className="px-4 py-3 font-mono font-semibold">{fmt(pf.total_valor ?? 0, pf.moneda ?? "USD")} {pf.moneda}</td>
                             <td className="px-4 py-2">
                               <button onClick={() => loadProforma(pf.id)}
-                                className="px-2 py-1 text-xs font-medium border border-emerald-200 text-emerald-700 rounded hover:bg-emerald-50 transition-colors">
+                                className="px-3 py-2 text-base font-semibold border border-brand-blue/20 text-brand-blue rounded-lg hover:bg-brand-blue/8 transition-colors">
                                 Abrir
                               </button>
                             </td>

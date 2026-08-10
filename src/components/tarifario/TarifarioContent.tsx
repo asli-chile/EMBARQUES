@@ -7,6 +7,14 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleCard,
+  moduleLabel,
+  moduleInput,
+  moduleBtnPrimary,
+} from "@/lib/ui/moduleStyles";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -682,8 +690,8 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
   const t2Opts = useMemo(() => toComboOpts(mergeCurrent(catalog.transbordo, f.t2)), [catalog.transbordo, f.t2]);
   const monedaOpts = useMemo(() => mergeCurrent(catalog.monedas.length > 0 ? catalog.monedas : [...MONEDAS_FALLBACK], f.moneda), [catalog.monedas, f.moneda]);
 
-  const fieldCls = "w-full px-2 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30";
-  const labelCls = "block text-xs font-medium text-neutral-600 mb-1";
+  const fieldCls = moduleInput;
+  const labelCls = moduleLabel;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -1173,10 +1181,10 @@ export function TarifarioContent() {
   );
 
   // ── Shared styles ──────────────────────────────────────────────────────────
-  const inputCls = "w-full px-2.5 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white";
+  const inputCls = moduleInput;
   const comboClsEditor =
-    "w-full pl-2.5 pr-8 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white";
-  const labelCls = "block text-xs font-medium text-neutral-500 mb-1";
+    "w-full pl-3.5 pr-8 py-3 text-base border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all";
+  const labelCls = moduleLabel;
 
   // ─── Access Check ─────────────────────────────────────────────────────────
   if (isLoading) {
@@ -1201,60 +1209,64 @@ export function TarifarioContent() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-neutral-50">
-      {/* ── Topbar ── */}
-      <div className="flex-shrink-0 bg-white border-b border-neutral-200 px-4 py-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Icon icon="lucide:file-spreadsheet" className="w-5 h-5 text-brand-blue flex-shrink-0" />
-          <div>
-            <h1 className="text-base font-semibold text-neutral-800 leading-none">Tarifario</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">Gestiona tarifas de flete por cliente</p>
+    <div className={`flex flex-col h-full overflow-hidden ${modulePageBg}`}>
+      {/* ── Hero ── */}
+      <div className={`flex-shrink-0 ${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3.5 flex-1 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <Icon icon="lucide:file-spreadsheet" className="w-6 h-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">Tarifario</h1>
+              <p className="text-base text-white/75 mt-1">Gestiona tarifas de flete por cliente</p>
+            </div>
           </div>
-        </div>
-        {/* Filtros */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Icon icon="lucide:search" className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar..."
-              className="pl-7 pr-3 py-1.5 text-sm border border-neutral-300 rounded-lg w-44 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+          {/* Filtros */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar..."
+                className="pl-9 pr-3 py-2.5 text-base border border-white/25 bg-white/15 text-white placeholder:text-white/45 rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-white/30"
+              />
+            </div>
+            <select
+              value={filterCliente}
+              onChange={(e) => setFilterCliente(e.target.value)}
+              className="px-3 py-2.5 text-base border border-white/25 bg-white/15 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/30"
+            >
+              <option value="todos" className="text-neutral-800">Todos los clientes</option>
+              {clientes.map((c) => <option key={c} value={c} className="text-neutral-800">{c}</option>)}
+            </select>
           </div>
-          <select
-            value={filterCliente}
-            onChange={(e) => setFilterCliente(e.target.value)}
-            className="px-2.5 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none bg-white"
-          >
-            <option value="todos">Todos los clientes</option>
-            {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={abrirNuevo}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold text-brand-blue bg-white rounded-lg hover:bg-white/95 transition-colors"
+            >
+              <Icon icon="lucide:plus" className="w-4 h-4" />
+              Nuevo tarifario
+            </button>
+          )}
         </div>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={abrirNuevo}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
-          >
-            <Icon icon="lucide:plus" className="w-4 h-4" />
-            Nuevo tarifario
-          </button>
-        )}
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto p-4">
         {loading ? (
-          <div className="flex items-center justify-center h-40 gap-2 text-neutral-400">
-            <Icon icon="lucide:loader-circle" className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Cargando tarifarios...</span>
+          <div className="flex items-center justify-center h-40 gap-2 text-neutral-500">
+            <Icon icon="lucide:loader-circle" className="w-5 h-5 animate-spin text-brand-blue" />
+            <span className="text-base">Cargando tarifarios...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-60 gap-3 text-neutral-400">
             <Icon icon="lucide:file-spreadsheet" className="w-12 h-12 opacity-30" />
-            <p className="text-sm">No hay tarifarios{search ? " que coincidan" : " creados"}</p>
+            <p className="text-base">No hay tarifarios{search ? " que coincidan" : " creados"}</p>
             {canEdit && !search && (
-              <button onClick={abrirNuevo} className="mt-1 px-4 py-2 text-sm text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90">
+              <button onClick={abrirNuevo} className={`${moduleBtnPrimary} mt-1`}>
                 Crear primer tarifario
               </button>
             )}
@@ -1264,7 +1276,7 @@ export function TarifarioContent() {
             {filtered.map((tar) => (
               <div
                 key={tar.id}
-                className="bg-white border border-neutral-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer group"
+                className={`${moduleCard} p-4 hover:shadow-md transition-shadow cursor-pointer group`}
                 onClick={() => void abrirEditar(tar)}
               >
                 {/* Cabecera card */}
@@ -1526,21 +1538,21 @@ export function TarifarioContent() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto rounded-xl border border-neutral-200">
-                    <table className="w-full text-xs min-w-[900px]">
+                    <table className="w-full text-sm min-w-[900px]">
                       <thead>
-                        <tr className="bg-brand-blue text-white">
-                          <th className="px-2 py-2 text-center font-medium w-6">#</th>
-                          <th className="px-2 py-2 text-center font-medium">Naviera</th>
-                          <th className="px-2 py-2 text-center font-medium">POL</th>
-                          <th className="px-2 py-2 text-center font-medium">POD</th>
-                          <th className="px-2 py-2 text-center font-medium">Pública</th>
-                          <th className="px-2 py-2 text-center font-medium">Neta</th>
-                          <th className="px-2 py-2 text-center font-medium">VD</th>
-                          <th className="px-2 py-2 text-center font-medium">TT</th>
-                          <th className="px-2 py-2 text-center font-medium">Servicio</th>
-                          <th className="px-2 py-2 text-center font-medium">Desde</th>
-                          <th className="px-2 py-2 text-center font-medium">Hasta</th>
-                          {canEdit && <th className="px-2 py-2 text-center font-medium w-20">Acc.</th>}
+                        <tr className="bg-[#F4F8FC] border-b border-brand-blue/15">
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue w-6">#</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Naviera</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">POL</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">POD</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Pública</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Neta</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">VD</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">TT</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Servicio</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Desde</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Hasta</th>
+                          {canEdit && <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue w-20">Acc.</th>}
                         </tr>
                       </thead>
                       <tbody>

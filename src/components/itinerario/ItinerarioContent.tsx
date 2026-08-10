@@ -1384,12 +1384,12 @@ export function ItinerarioContent() {
       role="main"
     >
       {/* Título y acciones arriba: mínimo padding para usar toda la pantalla */}
-      <header className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 w-full px-4 py-2.5">
+      <header className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 w-full px-4 py-3 sm:py-4">
         <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
             {tr.title}
           </h1>
-          <p className="text-white/70 text-xs sm:text-sm mt-0.5 sm:mt-2 hidden xs:block sm:block">{tr.subtitle}</p>
+          <p className="text-white/75 text-base mt-1 hidden xs:block sm:block">{tr.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Botón descargar PDF */}
@@ -1398,7 +1398,7 @@ export function ItinerarioContent() {
               type="button"
               onClick={handleDownloadPDF}
               disabled={pdfLoading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/15 border border-white/25 text-white text-sm font-medium hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors backdrop-blur-sm"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/15 border border-white/25 text-white text-base font-semibold hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors backdrop-blur-sm"
               aria-label={locale === "es" ? "Descargar PDF" : "Download PDF"}
             >
               {pdfLoading ? (
@@ -1418,7 +1418,7 @@ export function ItinerarioContent() {
             <button
               type="button"
               onClick={handleOpenModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-sm font-medium hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-brand-blue text-base font-semibold hover:bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50"
               aria-label={tr.newItinerary}
             >
               <Icon icon="lucide:plus" width={18} height={18} />
@@ -1469,7 +1469,7 @@ export function ItinerarioContent() {
                     <Icon icon="lucide:globe-2" width={10} height={10} aria-hidden />
                     {tr.mapViewGlobal}
                   </div>
-                  <h2 className="text-sm font-bold text-white leading-tight">
+                  <h2 className="text-base font-bold text-white leading-tight">
                     {tr.mapDiscoverTitle}
                   </h2>
                   <p className="mt-1 text-[11px] text-white/55 leading-relaxed">
@@ -1480,7 +1480,7 @@ export function ItinerarioContent() {
                 {/* Chips de regiones */}
                 {areasWithData.length > 0 && (
                   <div className="relative">
-                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.15em] mb-1.5 hidden lg:block">Regiones</p>
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.15em] mb-1.5 hidden lg:block">Regiones</p>
                     {/* Mobile: fila compacta horizontal */}
                     <div className="flex gap-1.5 lg:hidden overflow-x-auto scrollbar-none pb-0.5">
                       {(
@@ -1534,7 +1534,7 @@ export function ItinerarioContent() {
 
                 {/* Buscador de destino — solo desktop */}
                 <div className="relative hidden lg:flex lg:flex-col">
-                  <p className="text-[10px] font-bold text-white/35 uppercase tracking-[0.15em] mb-1.5">Buscar destino</p>
+                  <p className="text-sm font-bold text-white/50 uppercase tracking-[0.15em] mb-1.5">Buscar destino</p>
                   <div className="relative">
                     <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" aria-hidden />
                     <input
@@ -1542,7 +1542,7 @@ export function ItinerarioContent() {
                       value={destSearch}
                       onChange={(e) => setDestSearch(e.target.value)}
                       placeholder="Ej: Shangai, Rotterdam…"
-                      className="w-full pl-8 pr-8 py-2 rounded-xl bg-white/10 border border-white/20 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all"
+                      className="w-full pl-8 pr-8 py-2.5 rounded-xl bg-white/10 border border-white/20 text-base text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all"
                     />
                     {destSearch && (
                       <button
@@ -1648,8 +1648,8 @@ export function ItinerarioContent() {
               className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Icon icon="lucide:sliders-horizontal" width={13} height={13} className="text-white/70" aria-hidden />
-                <span className="text-xs font-semibold text-white/90">Filtros</span>
+                <Icon icon="lucide:sliders-horizontal" width={16} height={16} className="text-white/70" aria-hidden />
+                <span className="text-base font-semibold text-white/90">Filtros</span>
                 {activeFiltersCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-white text-[#00529b] text-[9px] font-bold tabular-nums">
                     {activeFiltersCount}
@@ -1709,7 +1709,7 @@ export function ItinerarioContent() {
 
             {/* Fila 2: Región */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[9.5px] font-bold text-white/45 uppercase tracking-wider shrink-0 w-14">Región</span>
+              <span className="text-sm font-bold text-white/60 uppercase tracking-wider shrink-0 w-16">Región</span>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {/* Chip "Todas" */}
                 <button
@@ -1752,7 +1752,7 @@ export function ItinerarioContent() {
             {/* Fila 3: Naviera */}
             {availableNavieras.length > 0 && (
               <div className="flex items-start gap-2 flex-wrap">
-                <span className="text-[9.5px] font-bold text-white/45 uppercase tracking-wider shrink-0 w-14 pt-1">Naviera</span>
+                <span className="text-sm font-bold text-white/60 uppercase tracking-wider shrink-0 w-16 pt-1">Naviera</span>
                 <div className="flex items-center gap-1.5 flex-wrap flex-1">
                   {availableNavieras.map((nav) => {
                     const count = navieraCountMap.get(nav) ?? 0;
@@ -1781,7 +1781,7 @@ export function ItinerarioContent() {
             {/* Fila 4: Semana */}
             {availableSemanas.length > 1 && (
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[9.5px] font-bold text-white/45 uppercase tracking-wider shrink-0 w-14">Semana</span>
+                <span className="text-sm font-bold text-white/60 uppercase tracking-wider shrink-0 w-16">Semana</span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {availableSemanas.map((sem) => {
                     const active = filterSemana === sem;
@@ -2235,41 +2235,41 @@ export function ItinerarioContent() {
                           {/* ── Vista de tabla (sm+) ─────────────────────────── */}
                           {displayedRows.length > 0 && (
                           <div className="w-full hidden sm:block">
-                            <table className="w-full text-xs" role="table">
+                            <table className="w-full text-sm" role="table">
                               <thead>
-                                <tr className="border-b-2 border-[#00529b]/20 bg-gradient-to-r from-[#eef4fb] to-[#e6f0f9]">
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[42px]">
+                                <tr className="border-b-2 border-brand-blue/20 bg-gradient-to-r from-[#eef4fb] to-[#e6f0f9]">
+                                  <th className="text-center px-1.5 py-2.5 font-bold text-brand-blue whitespace-nowrap text-sm uppercase tracking-wide w-[42px]">
                                     {tr.colSemana}
                                   </th>
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[11%]">
+                                  <th className="text-center px-1.5 py-2.5 font-bold text-brand-blue text-sm uppercase tracking-wide w-[11%]">
                                     {tr.colNave}
                                   </th>
-                                  <th className="text-center px-1 py-2 font-bold text-[#1e3a6e] text-[10px] uppercase tracking-wide w-[8%]">
+                                  <th className="text-center px-1 py-2.5 font-bold text-brand-blue text-sm uppercase tracking-wide w-[8%]">
                                     {tr.colOperador}
                                   </th>
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[58px]">
+                                  <th className="text-center px-1.5 py-2.5 font-bold text-brand-blue whitespace-nowrap text-sm uppercase tracking-wide w-[58px]">
                                     {tr.colViaje}
                                   </th>
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[148px]">
+                                  <th className="text-center px-1.5 py-2.5 font-bold text-brand-blue whitespace-nowrap text-sm uppercase tracking-wide w-[148px]">
                                     <span className="block">{tr.colPol}</span>
-                                    <span className="block text-[9px] font-medium text-[#1e3a6e]/50 normal-case">{tr.colEtd}</span>
+                                    <span className="block text-xs font-medium text-brand-blue/50 normal-case">{tr.colEtd}</span>
                                   </th>
                                   {destinosColumnas.map((portKey) => (
                                     <th
                                       key={portKey}
-                                      className="text-center px-1.5 py-2 bg-[#dbeafe]/70 border-x border-[#3b82f6]/10 w-[80px]"
+                                      className="text-center px-1.5 py-2.5 bg-[#dbeafe]/70 border-x border-[#3b82f6]/10 w-[80px]"
                                     >
-                                      <span className="block text-[#1d4ed8] font-bold text-[10px] leading-tight">{portKey}</span>
-                                      <span className="block text-[9px] font-medium text-[#1d4ed8]/55 mt-0.5">
+                                      <span className="block text-brand-blue font-bold text-sm leading-tight">{portKey}</span>
+                                      <span className="block text-xs font-medium text-brand-blue/55 mt-0.5">
                                         ETA / TT
                                       </span>
                                     </th>
                                   ))}
-                                  <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[80px]">
+                                  <th className="text-center px-1.5 py-2.5 font-bold text-brand-blue whitespace-nowrap text-sm uppercase tracking-wide w-[80px]">
                                     {tr.colStacking}
                                   </th>
                                   {isLoggedIn && (
-                                    <th className="text-center px-1.5 py-2 font-bold text-[#1e3a6e] whitespace-nowrap text-[10px] uppercase tracking-wide w-[80px]">
+                                    <th className="text-center px-1.5 py-2.5 font-bold text-brand-blue whitespace-nowrap text-sm uppercase tracking-wide w-[80px]">
                                       {tr.colActions}
                                     </th>
                                   )}

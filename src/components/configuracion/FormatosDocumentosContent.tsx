@@ -10,6 +10,17 @@ import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { withBase } from "@/lib/basePath";
+import {
+  modulePageBg,
+  moduleHero,
+  moduleLabel,
+  moduleInput,
+  moduleBtnPrimary,
+  moduleBtnOnHero,
+  moduleBtnSecondary,
+  moduleCard,
+  moduleCardAccent,
+} from "@/lib/ui/moduleStyles";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -338,11 +349,34 @@ function getTipoMeta(tipo: TipoFormato) {
 }
 
 function applyPreview(html: string): string {
+  const hoy = format(new Date(), "dd/MM/yyyy", { locale: es });
+  const en14 = format(new Date(Date.now() + 14 * 86400000), "dd/MM/yyyy", { locale: es });
+  const en35 = format(new Date(Date.now() + 35 * 86400000), "dd/MM/yyyy", { locale: es });
+  const liveDates: Record<string, string> = {
+    "{{fecha}}": hoy,
+    "{{fecha_emision}}": hoy,
+    "{{fecha_embarque}}": en14,
+    "{{fecha_presentacion}}": hoy,
+    "{{etd}}": en14,
+    "{{eta}}": en35,
+  };
+
   let result = html;
-  for (const [tag, sample] of Object.entries(TAG_SAMPLE_MAP)) {
-    result = result.replaceAll(tag, `<span style="background:#fef9c3;color:#92400e;border-radius:3px;padding:0 2px">${sample}</span>`);
+  const samples = { ...TAG_SAMPLE_MAP, ...liveDates };
+  for (const [tag, sample] of Object.entries(samples)) {
+    result = result.replaceAll(
+      tag,
+      `<span style="background:#fef9c3;color:#92400e;border-radius:3px;padding:0 2px">${sample}</span>`
+    );
   }
-  return result;
+  return stripPreviewScripts(result);
+}
+
+/** Quita scripts del HTML de preview (iframe sandboxed sin allow-scripts). */
+function stripPreviewScripts(html: string): string {
+  return html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*(['"])[\s\S]*?\1/gi, "");
 }
 
 function formatFecha(str: string) {
@@ -377,7 +411,9 @@ function scanXlsxTags(wb: XLSX.WorkBook): string[] {
 function generateSheetPreview(wb: XLSX.WorkBook, sheetName: string): string {
   const ws = wb.Sheets[sheetName];
   if (!ws) return "<p style='padding:16px;color:#6b7280'>Hoja vacía</p>";
-  const tableHtml = XLSX.utils.sheet_to_html(ws, { id: "preview-table", editable: false });
+  const tableHtml = stripPreviewScripts(
+    XLSX.utils.sheet_to_html(ws, { id: "preview-table", editable: false })
+  );
   const highlighted = tableHtml.replace(/\{\{[a-z_]+\}\}/g, (m) =>
     `<mark style="background:#fef9c3;color:#92400e;border-radius:3px;padding:0 3px;font-weight:700">${m}</mark>`
   );
@@ -754,38 +790,40 @@ export function FormatosDocumentosContent() {
   })).filter((g) => g.tags.length > 0);
 
   // ─── Estilos base ──────────────────────────────────────────────────────────
-  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all text-sm";
-  const labelCls = "block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1";
+  const inputCls = moduleInput;
+  const labelCls = moduleLabel;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: LISTA
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (view === "list") return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto">
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`}>
 
       {/* ── Hero header ── */}
-      <div className="bg-gradient-to-br from-brand-blue via-brand-blue/90 to-brand-teal/80 px-4 sm:px-6 py-5 sm:py-6">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:file-code-2" width={22} height={22} className="text-white" />
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:file-code-2" width={24} height={24} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-white leading-tight">Formatos de Documentos</h1>
-              <p className="text-xs text-white/60 mt-0.5 hidden sm:block">Plantillas HTML y Excel con etiquetas dinámicas</p>
+              <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">Formatos de Documentos</h1>
+              <p className="text-base text-white/75 mt-1 hidden sm:block">
+                Plantillas Excel o HTML por cliente para proformas e instructivos
+              </p>
               {formatos.length > 0 && (
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:files" width={9} height={9} />
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-white/15 text-white/90 border border-white/20">
+                    <Icon icon="lucide:files" width={14} height={14} />
                     {formatos.length} formato{formatos.length !== 1 ? "s" : ""}
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:file-spreadsheet" width={9} height={9} />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-white/15 text-white/90 border border-white/20">
+                    <Icon icon="lucide:file-spreadsheet" width={14} height={14} />
                     {formatos.filter(f => f.template_type === "excel").length} Excel
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:code" width={9} height={9} />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-white/15 text-white/90 border border-white/20">
+                    <Icon icon="lucide:code" width={14} height={14} />
                     {formatos.filter(f => f.template_type !== "excel").length} HTML
                   </span>
                 </div>
@@ -795,9 +833,9 @@ export function FormatosDocumentosContent() {
           {!isCliente && (
             <button
               onClick={handleNuevo}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white text-brand-blue text-xs sm:text-sm font-bold hover:bg-white/90 transition-colors shadow-sm shrink-0"
+              className={`${moduleBtnOnHero} shrink-0`}
             >
-              <Icon icon="lucide:plus" width={15} height={15} />
+              <Icon icon="lucide:plus" width={16} height={16} />
               <span className="hidden sm:inline">Nuevo formato</span>
               <span className="sm:hidden">Nuevo</span>
             </button>
@@ -805,76 +843,103 @@ export function FormatosDocumentosContent() {
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 lg:p-6 max-w-5xl mx-auto">
+      <div className="p-3 sm:p-4 lg:p-6 max-w-6xl mx-auto space-y-4">
         {error && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-            <Icon icon="lucide:alert-circle" width={16} height={16} className="shrink-0" />
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-base">
+            <Icon icon="lucide:alert-circle" width={18} height={18} className="shrink-0" />
             <span className="flex-1">{error}</span>
-            <button onClick={() => setError(null)}><Icon icon="lucide:x" width={14} height={14} /></button>
+            <button type="button" onClick={() => setError(null)}><Icon icon="lucide:x" width={16} height={16} /></button>
           </div>
         )}
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm">
+            <div className={`${moduleCard} px-5 py-4 flex items-center gap-3 text-neutral-600 text-base`}>
               <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
               Cargando formatos...
             </div>
           </div>
         ) : formatos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-brand-blue/10 flex items-center justify-center mb-5 shadow-inner">
-              <Icon icon="lucide:file-code-2" width={32} height={32} className="text-brand-blue" />
+          <div className={`${moduleCard}`}>
+            <div className={moduleCardAccent} />
+            <div className="p-6 sm:p-8">
+              <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                <div className="flex-1 min-w-0">
+                  <div className="w-14 h-14 rounded-lg bg-brand-blue/10 border border-brand-blue/15 flex items-center justify-center mb-4">
+                    <Icon icon="lucide:file-spreadsheet" width={28} height={28} className="text-brand-blue" />
+                  </div>
+                  <h3 className="text-xl font-bold text-brand-blue tracking-tight">Sin formatos personalizados</h3>
+                  <p className="text-base text-neutral-600 mt-2 max-w-xl leading-relaxed">
+                    Todavía no hay plantillas en la base de datos. Mientras tanto, Crear Proforma usa el formato Almafruit por defecto.
+                  </p>
+                  <p className="text-base text-neutral-600 mt-2 max-w-xl leading-relaxed">
+                    Sube un Excel con etiquetas como{" "}
+                    <code className="bg-[#F4F8FC] border border-brand-blue/15 px-1.5 py-0.5 rounded-lg text-sm font-mono text-brand-blue">{"{{booking}}"}</code>
+                    {" "}y asígnalo a un cliente para que se elija solo al exportar.
+                  </p>
+                  {!isCliente && (
+                    <button type="button" onClick={handleNuevo} className={`${moduleBtnPrimary} mt-5`}>
+                      <Icon icon="lucide:plus" width={16} height={16} />
+                      Crear primer formato
+                    </button>
+                  )}
+                </div>
+                <div className="w-full lg:w-[280px] shrink-0 rounded-xl border border-brand-blue/15 bg-[#F4F8FC] p-4">
+                  <p className="text-base font-bold text-brand-blue mb-3">Pasos rápidos</p>
+                  <ol className="space-y-3 text-base text-neutral-700">
+                    <li className="flex gap-2.5">
+                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">1</span>
+                      <span>Tipo: Proforma Invoice</span>
+                    </li>
+                    <li className="flex gap-2.5">
+                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">2</span>
+                      <span>Plantilla Excel</span>
+                    </li>
+                    <li className="flex gap-2.5">
+                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">3</span>
+                      <span>Asigna el cliente (o Global)</span>
+                    </li>
+                    <li className="flex gap-2.5">
+                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">4</span>
+                      <span>Sube el .xlsx y guarda</span>
+                    </li>
+                  </ol>
+                </div>
+              </div>
             </div>
-            <h3 className="text-base font-bold text-neutral-800 mb-2">Sin formatos creados</h3>
-            <p className="text-sm text-neutral-500 mb-6 max-w-xs leading-relaxed">
-              Crea tu primer formato HTML o sube una plantilla Excel con etiquetas como{" "}
-              <code className="bg-neutral-100 px-1.5 py-0.5 rounded-lg text-xs font-mono text-brand-blue">{"{{booking}}"}</code>
-            </p>
-            {!isCliente && (
-              <button onClick={handleNuevo} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-blue text-white text-sm font-bold hover:bg-brand-blue/90 transition-colors shadow-md shadow-brand-blue/20">
-                <Icon icon="lucide:plus" width={16} height={16} />
-                Crear primer formato
-              </button>
-            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {formatos.map((f) => {
               const meta = getTipoMeta(f.tipo);
               const isExcel = f.template_type === "excel";
-              const accentGradient = isExcel
-                ? "from-emerald-500 to-green-400"
-                : "from-brand-blue to-brand-teal";
               return (
-                <div key={f.id} className="bg-white rounded-2xl border border-neutral-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
-                  {/* Top accent */}
-                  <div className={`h-1.5 bg-gradient-to-r ${accentGradient}`} />
+                <div key={f.id} className={`${moduleCard} flex flex-col`}>
+                  <div className={`h-[3px] bg-gradient-to-r ${isExcel ? "from-emerald-600 to-emerald-400" : "from-brand-blue to-brand-teal"}`} />
 
                   <div className="p-4 flex-1 flex flex-col gap-3">
-                    {/* Header row */}
                     <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isExcel ? "bg-emerald-50" : "bg-brand-blue/8"}`}>
-                        <Icon icon={isExcel ? "lucide:file-spreadsheet" : meta.icon} width={18} height={18} className={isExcel ? "text-emerald-600" : "text-brand-blue"} />
+                      <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border ${isExcel ? "bg-emerald-50 border-emerald-200" : "bg-brand-blue/8 border-brand-blue/15"}`}>
+                        <Icon icon={isExcel ? "lucide:file-spreadsheet" : meta.icon} width={20} height={20} className={isExcel ? "text-emerald-700" : "text-brand-blue"} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-bold text-neutral-900 leading-snug line-clamp-2">{f.nombre}</h3>
-                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${meta.color}`}>
+                        <h3 className="text-base font-bold text-brand-blue leading-snug line-clamp-2">{f.nombre}</h3>
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${meta.color}`}>
                             {meta.label}
                           </span>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${isExcel ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-sky-50 text-sky-700 border-sky-200"}`}>
-                            <Icon icon={isExcel ? "lucide:table" : "lucide:code"} width={9} height={9} />
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border ${isExcel ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-[#F4F8FC] text-brand-blue border-brand-blue/20"}`}>
+                            <Icon icon={isExcel ? "lucide:table" : "lucide:code"} width={12} height={12} />
                             {isExcel ? "Excel" : "HTML"}
                           </span>
                           {f.cliente ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-violet-50 text-violet-700 border-violet-200 max-w-[110px]">
-                              <Icon icon="lucide:building-2" width={9} height={9} />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border bg-[#F4F8FC] text-brand-blue border-brand-blue/20 max-w-[140px]">
+                              <Icon icon="lucide:building-2" width={12} height={12} />
                               <span className="truncate">{f.cliente}</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-neutral-100 text-neutral-500 border-neutral-200">
-                              <Icon icon="lucide:globe" width={9} height={9} />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border bg-neutral-50 text-neutral-600 border-neutral-200">
+                              <Icon icon="lucide:globe" width={12} height={12} />
                               Global
                             </span>
                           )}
@@ -882,62 +947,62 @@ export function FormatosDocumentosContent() {
                       </div>
                     </div>
 
-                    {/* Descripción */}
                     {f.descripcion && (
-                      <p className="text-xs text-neutral-500 leading-relaxed line-clamp-2">{f.descripcion}</p>
+                      <p className="text-base text-neutral-600 leading-relaxed line-clamp-2">{f.descripcion}</p>
                     )}
 
-                    {/* Excel filename chip */}
                     {isExcel && f.excel_nombre && (
-                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
-                        <Icon icon="lucide:file-spreadsheet" width={11} height={11} className="text-emerald-600 shrink-0" />
-                        <span className="text-[11px] text-emerald-700 font-medium truncate">{f.excel_nombre}</span>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F4F8FC] border border-brand-blue/15">
+                        <Icon icon="lucide:file-spreadsheet" width={14} height={14} className="text-brand-blue shrink-0" />
+                        <span className="text-sm text-brand-blue font-medium truncate">{f.excel_nombre}</span>
                       </div>
                     )}
 
-                    {/* Fecha */}
-                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 mt-auto">
-                      <Icon icon="lucide:clock" width={10} height={10} />
-                      {formatFecha(f.updated_at)}
+                    <div className="flex items-center gap-1.5 text-sm text-neutral-500 mt-auto">
+                      <Icon icon="lucide:clock" width={13} height={13} />
+                      Actualizado {formatFecha(f.updated_at)}
                     </div>
                   </div>
 
-                  {/* Actions row — separadas del contenido */}
-                  <div className="px-3 pb-3 flex items-center gap-2">
+                  <div className="px-4 pb-4 flex items-center gap-2">
                     {!isCliente && (
                       <button
+                        type="button"
                         onClick={() => handleAbrirGenerar(f)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold text-white transition-colors ${isExcel ? "bg-emerald-600 hover:bg-emerald-700" : "bg-brand-blue hover:bg-brand-blue/90"}`}
+                        className={`${moduleBtnPrimary} flex-1 justify-center ${isExcel ? "bg-emerald-700 hover:bg-emerald-800" : ""}`}
                       >
-                        <Icon icon="lucide:zap" width={13} height={13} />
+                        <Icon icon="lucide:zap" width={15} height={15} />
                         Generar
                       </button>
                     )}
                     {!isCliente && (
                       <button
+                        type="button"
                         onClick={() => handleEditar(f)}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-brand-blue hover:bg-brand-blue/8 transition-all border border-neutral-200 hover:border-brand-blue/30"
+                        className={moduleBtnSecondary}
                         title="Editar"
                       >
-                        <Icon icon="lucide:pencil" width={14} height={14} />
+                        <Icon icon="lucide:pencil" width={15} height={15} />
                       </button>
                     )}
                     {isExcel && f.excel_path && (
                       <button
+                        type="button"
                         onClick={() => handleDescargarPlantilla(f)}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-neutral-200 hover:border-emerald-200"
+                        className={moduleBtnSecondary}
                         title="Descargar plantilla"
                       >
-                        <Icon icon="lucide:download" width={14} height={14} />
+                        <Icon icon="lucide:download" width={15} height={15} />
                       </button>
                     )}
                     {!isCliente && (
                       <button
+                        type="button"
                         onClick={() => setConfirmDelete({ id: f.id, nombre: f.nombre, excel_path: f.excel_path })}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-all border border-neutral-200 hover:border-red-200"
+                        className="inline-flex items-center justify-center px-3 py-2.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         title="Eliminar"
                       >
-                        <Icon icon="lucide:trash-2" width={14} height={14} />
+                        <Icon icon="lucide:trash-2" width={15} height={15} />
                       </button>
                     )}
                   </div>
@@ -1021,7 +1086,7 @@ export function FormatosDocumentosContent() {
                           <div className="w-5 h-5 rounded-lg bg-brand-blue/10 flex items-center justify-center">
                             <Icon icon={g.icon} width={11} height={11} className="text-brand-blue" />
                           </div>
-                          <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{g.group}</span>
+                          <span className="text-sm font-bold text-neutral-500 uppercase tracking-wider">{g.group}</span>
                         </div>
                         <div className="space-y-2.5">
                           {tagsInGroup.map(({ tag, label, sample }) => (
@@ -1070,54 +1135,57 @@ export function FormatosDocumentosContent() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   return (
-    <main className="flex-1 min-h-0 flex flex-col bg-neutral-50 overflow-hidden">
+    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`}>
       {/* Topbar editor */}
-      <div className="bg-gradient-to-r from-brand-blue to-brand-blue/90 px-3 sm:px-5 py-3 flex items-center gap-2 shrink-0 min-w-0">
-        <button onClick={() => setView("list")} className="flex items-center gap-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors shrink-0 px-2 py-1.5 rounded-lg hover:bg-white/10">
-          <Icon icon="lucide:arrow-left" width={14} height={14} />
+      <div className={`${moduleHero} px-3 sm:px-5 py-3.5 flex items-center gap-2 shrink-0 min-w-0`}>
+        <button type="button" onClick={() => setView("list")} className="flex items-center gap-1.5 text-base font-medium text-white/80 hover:text-white transition-colors shrink-0 px-2.5 py-2 rounded-lg hover:bg-white/10">
+          <Icon icon="lucide:arrow-left" width={16} height={16} />
           <span className="hidden sm:inline">Formatos</span>
         </button>
-        <Icon icon="lucide:chevron-right" width={11} height={11} className="text-white/30 shrink-0" />
-        <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">
+        <Icon icon="lucide:chevron-right" width={14} height={14} className="text-white/35 shrink-0" />
+        <span className="text-base font-semibold text-white truncate flex-1 min-w-0">
           {editingId ? nombre || "Sin nombre" : "Nuevo formato"}
         </span>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => setMobileTagDrawer(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-colors lg:hidden"
+            className={`${moduleBtnSecondary} lg:hidden bg-white/10 border-white/25 text-white hover:bg-white/20`}
           >
-            <Icon icon="lucide:tag" width={13} height={13} />
+            <Icon icon="lucide:tag" width={15} height={15} />
             <span className="hidden sm:inline">Etiquetas</span>
           </button>
           {templateType === "html" && (
             <button
+              type="button"
               onClick={() => {
                 const win = window.open("", "_blank", "width=900,height=700");
                 if (win) { win.document.write(applyPreview(contenidoHtml)); win.document.close(); }
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
+              className={`${moduleBtnSecondary} bg-white/10 border-white/25 text-white hover:bg-white/20`}
               title="Vista previa"
             >
-              <Icon icon="lucide:eye" width={13} height={13} />
+              <Icon icon="lucide:eye" width={15} height={15} />
               <span className="hidden sm:inline">Preview</span>
             </button>
           )}
           <button
+            type="button"
             onClick={handleGuardar}
             disabled={saving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm disabled:opacity-50"
+            className={`${moduleBtnOnHero} disabled:opacity-50`}
           >
-            <Icon icon={saving ? "typcn:refresh" : "lucide:save"} width={13} height={13} className={saving ? "animate-spin" : ""} />
-            {saving ? "..." : "Guardar"}
+            <Icon icon={saving ? "typcn:refresh" : "lucide:save"} width={15} height={15} className={saving ? "animate-spin" : ""} />
+            {saving ? "Guardando…" : "Guardar"}
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="mx-3 mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs shrink-0">
-          <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
+        <div className="mx-3 mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-base shrink-0">
+          <Icon icon="lucide:alert-circle" width={16} height={16} className="shrink-0" />
           <span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)}><Icon icon="lucide:x" width={12} height={12} /></button>
+          <button type="button" onClick={() => setError(null)}><Icon icon="lucide:x" width={14} height={14} /></button>
         </div>
       )}
 
@@ -1126,14 +1194,14 @@ export function FormatosDocumentosContent() {
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
           {/* ── Metadatos ── */}
-          <div className="bg-white border-b border-neutral-100 px-3 sm:px-4 pt-3 pb-4 shrink-0">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
-              <Icon icon="lucide:settings-2" width={10} height={10} />
+          <div className="bg-white border-b border-brand-blue/15 px-3 sm:px-5 pt-4 pb-4 shrink-0">
+            <p className="text-base font-bold text-brand-blue tracking-wide mb-3 flex items-center gap-2">
+              <Icon icon="lucide:settings-2" width={16} height={16} />
               Configuración del formato
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Nombre <span className="text-red-400">*</span></label>
+                <label className={labelCls}>Nombre <span className="text-red-500">*</span></label>
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Proforma estándar" className={inputCls} />
               </div>
               <div>
@@ -1143,14 +1211,11 @@ export function FormatosDocumentosContent() {
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Descripción <span className="text-neutral-300 font-normal normal-case tracking-normal">— opcional</span></label>
-                <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Uso o cliente de este formato" className={inputCls} />
+                <label className={labelCls}>Descripción <span className="text-neutral-400 font-normal">(opcional)</span></label>
+                <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Uso o notas de este formato" className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>
-                  <Icon icon="lucide:building-2" className="inline w-3 h-3 mr-1" />
-                  Cliente asignado
-                </label>
+                <label className={labelCls}>Cliente asignado</label>
                 <select value={clienteFormato} onChange={(e) => setClienteFormato(e.target.value)} className={inputCls}>
                   <option value="">— Global (todos los clientes) —</option>
                   {empresas.map((e) => <option key={e} value={e}>{e}</option>)}
@@ -1160,20 +1225,21 @@ export function FormatosDocumentosContent() {
           </div>
 
           {/* ── Toolbar tipo + tabs ── */}
-          <div className="bg-neutral-50 border-b border-neutral-200 px-3 py-2 flex items-center gap-2 shrink-0">
+          <div className="bg-[#E8F0FA]/95 border-b border-brand-blue/15 px-3 sm:px-4 py-2.5 flex items-center gap-2 shrink-0 flex-wrap">
             {/* Pill toggle HTML / Excel */}
-            <div className="flex items-center gap-1 p-1 bg-neutral-200/60 rounded-xl shrink-0">
+            <div className="flex items-center gap-1 p-1 bg-white border border-brand-blue/15 rounded-lg shrink-0">
               {(["html", "excel"] as const).map((tt) => (
                 <button
                   key={tt}
+                  type="button"
                   onClick={() => setTemplateType(tt)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap ${
                     templateType === tt
-                      ? "bg-white text-brand-blue shadow-sm border border-neutral-200/80"
-                      : "text-neutral-500 hover:text-neutral-800"
+                      ? "bg-brand-blue text-white"
+                      : "text-brand-blue/70 hover:text-brand-blue hover:bg-brand-blue/5"
                   }`}
                 >
-                  <Icon icon={tt === "html" ? "lucide:code" : "lucide:file-spreadsheet"} width={12} height={12} />
+                  <Icon icon={tt === "html" ? "lucide:code" : "lucide:file-spreadsheet"} width={15} height={15} />
                   {tt === "html" ? "HTML" : "Excel"}
                 </button>
               ))}
@@ -1181,16 +1247,16 @@ export function FormatosDocumentosContent() {
 
             {/* Pill toggle Código / Preview (solo HTML) */}
             {templateType === "html" && (
-              <div className="flex items-center gap-1 p-1 bg-neutral-200/60 rounded-xl">
+              <div className="flex items-center gap-1 p-1 bg-white border border-brand-blue/15 rounded-lg">
                 {(["code", "preview"] as const).map((tab) => (
-                  <button key={tab} onClick={() => setEditorTab(tab)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  <button key={tab} type="button" onClick={() => setEditorTab(tab)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap ${
                       editorTab === tab
-                        ? "bg-white text-brand-blue shadow-sm border border-neutral-200/80"
-                        : "text-neutral-500 hover:text-neutral-800"
+                        ? "bg-brand-blue text-white"
+                        : "text-brand-blue/70 hover:text-brand-blue hover:bg-brand-blue/5"
                     }`}
                   >
-                    <Icon icon={tab === "code" ? "lucide:terminal" : "lucide:eye"} width={11} height={11} />
+                    <Icon icon={tab === "code" ? "lucide:terminal" : "lucide:eye"} width={14} height={14} />
                     {tab === "code" ? "Código" : "Preview"}
                   </button>
                 ))}
@@ -1199,24 +1265,24 @@ export function FormatosDocumentosContent() {
 
             {/* Sub-tabs archivo/preview (solo Excel) */}
             {templateType === "excel" && (
-              <div className="flex items-center gap-1 p-1 bg-neutral-200/60 rounded-xl">
+              <div className="flex items-center gap-1 p-1 bg-white border border-brand-blue/15 rounded-lg">
                 {(["upload", "preview"] as const).map((tab) => (
                   <button
                     key={tab}
+                    type="button"
                     onClick={() => {
                       if (tab === "preview" && !xlsxPreviewHtml && excelPath) void handleCargarPreviewStorage();
                       else setXlsxPanel(tab);
                     }}
                     disabled={tab === "preview" && !xlsxPreviewHtml && !excelPath}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
                       xlsxPanel === tab
-                        ? "bg-white text-emerald-700 shadow-sm border border-neutral-200/80"
-                        : "text-neutral-500 hover:text-neutral-800"
+                        ? "bg-emerald-700 text-white"
+                        : "text-brand-blue/70 hover:text-brand-blue hover:bg-brand-blue/5"
                     }`}
                   >
-                    <Icon icon={tab === "upload" ? "lucide:upload-cloud" : "lucide:eye"} width={11} height={11} />
+                    <Icon icon={tab === "upload" ? "lucide:upload-cloud" : "lucide:eye"} width={14} height={14} />
                     {tab === "upload" ? "Archivo" : "Vista previa"}
-                    {tab === "preview" && xlsxPreviewHtml && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
                   </button>
                 ))}
               </div>
@@ -1226,22 +1292,13 @@ export function FormatosDocumentosContent() {
             {templateType === "excel" && xlsxPanel === "preview" && xlsxSheetNames.length > 1 && (
               <div className="flex items-center gap-1 ml-1 overflow-x-auto">
                 {xlsxSheetNames.map((sn) => (
-                  <button key={sn}
+                  <button key={sn} type="button"
                     onClick={() => { setXlsxActiveSheet(sn); if (xlsxWb) setXlsxPreviewHtml(generateSheetPreview(xlsxWb, sn)); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 ${xlsxActiveSheet === sn ? "bg-emerald-600 text-white" : "text-neutral-500 hover:bg-neutral-200"}`}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shrink-0 ${xlsxActiveSheet === sn ? "bg-emerald-700 text-white" : "text-neutral-600 hover:bg-white border border-transparent hover:border-brand-blue/20"}`}
                   >{sn}</button>
                 ))}
               </div>
             )}
-
-            <div className="ml-auto lg:hidden shrink-0">
-              <button onClick={() => setMobileTagDrawer(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-600 bg-white border border-neutral-200 hover:border-brand-blue/40 hover:text-brand-blue transition-colors shadow-sm"
-              >
-                <Icon icon="lucide:tag" width={12} height={12} />
-                Tags
-              </button>
-            </div>
           </div>
 
           {/* ── Área principal ── */}
@@ -1258,7 +1315,7 @@ export function FormatosDocumentosContent() {
                   placeholder="Escribe el HTML del documento aquí..."
                 />
               ) : (
-                <iframe srcDoc={applyPreview(contenidoHtml)} title="Preview" className="w-full h-full border-0 bg-white" sandbox="allow-same-origin" />
+                <iframe srcDoc={applyPreview(contenidoHtml)} title="Preview" className="w-full h-full border-0 bg-white" />
               )
             ) : (
               <div className="h-full flex flex-col overflow-hidden">
@@ -1313,19 +1370,19 @@ export function FormatosDocumentosContent() {
 
                     {/* Tags detectadas */}
                     {xlsxTags.length > 0 && (
-                      <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm">
+                      <div className="bg-white rounded-2xl border border-brand-blue/15 p-4 shadow-sm">
                         <h4 className="text-xs font-bold text-neutral-700 mb-3 flex items-center gap-2">
                           <span className="w-5 h-5 rounded-lg bg-brand-blue/10 flex items-center justify-center">
                             <Icon icon="lucide:tag" width={11} height={11} className="text-brand-blue" />
                           </span>
                           Etiquetas detectadas
-                          <span className="ml-auto px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-bold">{xlsxTags.length}</span>
+                          <span className="ml-auto px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-sm font-bold">{xlsxTags.length}</span>
                         </h4>
                         <div className="flex flex-wrap gap-1.5">
                           {xlsxTags.map((tag) => {
                             const meta = TAG_GROUPS.flatMap((g) => g.tags).find((t) => t.tag === tag);
                             return (
-                              <span key={tag} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-blue/8 border border-brand-blue/15 text-[10px] font-mono text-brand-blue">
+                              <span key={tag} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-blue/8 border border-brand-blue/15 text-sm font-mono text-brand-blue">
                                 <Icon icon="lucide:check" width={9} height={9} />
                                 {tag}
                                 {meta && <span className="font-sans text-neutral-400 ml-0.5">{meta.label}</span>}
@@ -1350,8 +1407,8 @@ export function FormatosDocumentosContent() {
                           { n: "4", text: "Al generar, ingresa valores y descarga.", code: null },
                         ].map(({ n, text, code }) => (
                           <div key={n} className="flex gap-2 text-xs text-amber-700">
-                            <span className="w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
-                            <span>{text} {code && <code className="bg-amber-100 px-1.5 py-0.5 rounded-md font-mono text-[10px]">{code}</code>}</span>
+                            <span className="w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
+                            <span>{text} {code && <code className="bg-amber-100 px-1.5 py-0.5 rounded-md font-mono text-sm">{code}</code>}</span>
                           </div>
                         ))}
                       </div>
@@ -1365,7 +1422,7 @@ export function FormatosDocumentosContent() {
                         <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center gap-3 shrink-0">
                           <Icon icon="lucide:info" width={13} height={13} className="text-emerald-600 shrink-0" />
                           <p className="text-xs text-emerald-700 flex-1 leading-relaxed">
-                            Las etiquetas <mark className="bg-yellow-200 text-yellow-800 px-1 rounded font-mono text-[10px]">{"{{etiqueta}}"}</mark> se reemplazarán al generar.
+                            Las etiquetas <mark className="bg-yellow-200 text-yellow-800 px-1 rounded font-mono text-sm">{"{{etiqueta}}"}</mark> se reemplazarán al generar.
                           </p>
                           <button onClick={() => setXlsxPanel("upload")} className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 shrink-0 font-semibold">
                             <Icon icon="lucide:upload-cloud" width={12} height={12} />
@@ -1373,12 +1430,12 @@ export function FormatosDocumentosContent() {
                           </button>
                         </div>
                         <div className="flex-1 min-h-0 overflow-hidden bg-neutral-100">
-                          <iframe srcDoc={xlsxPreviewHtml} title="Vista previa Excel" className="w-full h-full border-0" sandbox="allow-same-origin" />
+                          <iframe srcDoc={xlsxPreviewHtml} title="Vista previa Excel" className="w-full h-full border-0" />
                         </div>
                       </>
                     ) : (
                       <div className="flex-1 flex items-center justify-center">
-                        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-neutral-200 shadow-sm text-neutral-500 text-sm">
+                        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm">
                           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-emerald-600" />
                           Cargando vista previa...
                         </div>
@@ -1438,7 +1495,7 @@ export function FormatosDocumentosContent() {
                             <Icon icon={templateType === "html" ? "lucide:plus-circle" : "lucide:copy"} width={13} height={13} className="text-brand-blue/50 group-hover:text-brand-blue mt-0.5 shrink-0" />
                             <div className="min-w-0 text-left">
                               <div className="text-xs font-medium text-neutral-700 group-hover:text-neutral-900">{label}</div>
-                              <div className="text-[10px] font-mono text-neutral-400 group-hover:text-brand-blue truncate">{tag}</div>
+                              <div className="text-sm font-mono text-neutral-400 group-hover:text-brand-blue truncate">{tag}</div>
                             </div>
                           </button>
                         ))}
@@ -1457,43 +1514,44 @@ export function FormatosDocumentosContent() {
         )}
 
         {/* Panel de etiquetas (solo desktop) */}
-        <div className="w-64 shrink-0 bg-white border-l border-neutral-200 hidden lg:flex flex-col overflow-hidden">
-          <div className="px-3 py-3 border-b border-neutral-200 shrink-0">
-            <h4 className="text-xs font-bold text-neutral-800 mb-2">
+        <div className="w-72 shrink-0 bg-white border-l border-brand-blue/15 hidden lg:flex flex-col overflow-hidden">
+          <div className="px-3.5 py-3.5 border-b border-brand-blue/15 shrink-0 bg-[#F4F8FC]">
+            <h4 className="text-base font-bold text-brand-blue mb-2">
               {templateType === "html" ? "Insertar etiqueta" : "Etiquetas disponibles"}
             </h4>
             <input
               value={tagSearch}
               onChange={(e) => setTagSearch(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-brand-blue/30 focus:border-brand-blue transition-all"
+              placeholder="Buscar…"
+              className={moduleInput}
             />
           </div>
           <div className="flex-1 overflow-y-auto">
             {filteredGroups.map((g) => (
               <div key={g.group} className="border-b border-neutral-100 last:border-0">
-                <button onClick={() => toggleGroup(g.group)} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-neutral-50 transition-colors">
-                  <Icon icon={g.icon} width={12} height={12} className="text-neutral-400 shrink-0" />
-                  <span className="text-[11px] font-semibold text-neutral-600 flex-1">{g.group}</span>
-                  <Icon icon={expandedGroups.has(g.group) ? "lucide:chevron-up" : "lucide:chevron-down"} width={11} height={11} className="text-neutral-400" />
+                <button type="button" onClick={() => toggleGroup(g.group)} className="w-full flex items-center gap-2 px-3.5 py-2.5 text-left hover:bg-[#F4F8FC] transition-colors">
+                  <Icon icon={g.icon} width={15} height={15} className="text-brand-blue/60 shrink-0" />
+                  <span className="text-sm font-semibold text-brand-blue flex-1">{g.group}</span>
+                  <Icon icon={expandedGroups.has(g.group) ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} className="text-neutral-400" />
                 </button>
                 {expandedGroups.has(g.group) && (
                   <div className="pb-1">
                     {g.tags.map(({ tag, label }) => (
                       <button
                         key={tag}
+                        type="button"
                         onClick={() => templateType === "html" ? handleInsertTag(tag) : navigator.clipboard.writeText(tag)}
                         title={templateType === "html" ? `Insertar ${tag}` : `Copiar ${tag}`}
-                        className="w-full flex items-start gap-2 px-3 py-1.5 hover:bg-brand-blue/5 group transition-colors"
+                        className="w-full flex items-start gap-2 px-3.5 py-2 hover:bg-brand-blue/5 group transition-colors"
                       >
                         <Icon
                           icon={templateType === "html" ? "lucide:plus-circle" : "lucide:copy"}
-                          width={11} height={11}
+                          width={14} height={14}
                           className="text-brand-blue/50 group-hover:text-brand-blue mt-0.5 shrink-0"
                         />
                         <div className="min-w-0 text-left">
-                          <div className="text-[10px] font-medium text-neutral-600 group-hover:text-neutral-900">{label}</div>
-                          <div className="text-[9px] font-mono text-neutral-400 group-hover:text-brand-blue truncate">{tag}</div>
+                          <div className="text-sm font-medium text-neutral-700 group-hover:text-brand-blue">{label}</div>
+                          <div className="text-xs font-mono text-neutral-400 group-hover:text-brand-blue/80 truncate">{tag}</div>
                         </div>
                       </button>
                     ))}
@@ -1502,11 +1560,11 @@ export function FormatosDocumentosContent() {
               </div>
             ))}
           </div>
-          <div className="px-3 py-2.5 border-t border-neutral-200 bg-neutral-50 shrink-0">
-            <p className="text-[10px] text-neutral-400 leading-relaxed">
+          <div className="px-3.5 py-3 border-t border-brand-blue/15 bg-[#F4F8FC] shrink-0">
+            <p className="text-sm text-neutral-600 leading-relaxed">
               {templateType === "html"
-                ? "Click → inserta en el cursor del editor."
-                : "Click → copia al portapapeles para pegar en Excel."}
+                ? "Clic → inserta en el cursor del editor."
+                : "Clic → copia al portapapeles para pegar en Excel."}
             </p>
           </div>
         </div>

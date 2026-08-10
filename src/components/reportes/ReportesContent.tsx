@@ -5,6 +5,14 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
+import {
+  moduleCard,
+  moduleHeroRounded,
+  moduleInput,
+  moduleLabel,
+  modulePageBg,
+  moduleSectionTitle,
+} from "@/lib/ui/moduleStyles";
 
 type DbOperacion = {
   id: string;
@@ -228,16 +236,16 @@ export function ReportesContent() {
   // ── Loading skeleton ────────────────────────────────────────────────────────
   if (authLoading) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0">
-        <p className="text-neutral-500 px-4">Cargando…</p>
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-4`}>
+        <p className="text-brand-blue/60 text-base px-4">Cargando…</p>
       </main>
     );
   }
 
   if (isCliente || !canViewReportes) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto w-full py-3 sm:py-4 lg:py-5 px-0 flex items-center justify-center" role="main">
-        <p className="text-neutral-600 text-sm px-4 text-center">
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-4 flex items-center justify-center`} role="main">
+        <p className="text-brand-blue/80 text-base px-4 text-center">
           No tienes acceso al módulo de Reportes. Solo personal interno puede ver estos datos.
         </p>
       </main>
@@ -246,15 +254,15 @@ export function ReportesContent() {
 
   if (loading && !rows.length) {
     return (
-      <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5">
-        <div className="max-w-[1400px] mx-auto space-y-4 animate-pulse">
-          <div className="h-7 w-40 bg-neutral-200 rounded-lg" />
+      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
+        <div className="max-w-[1600px] mx-auto space-y-4 animate-pulse">
+          <div className="h-24 bg-brand-blue/20 rounded-2xl" />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-24 bg-white rounded-xl border border-neutral-200" />)}
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-24 bg-white rounded-2xl border border-brand-blue/15" />)}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="h-56 bg-white rounded-xl border border-neutral-200" />
-            <div className="h-56 bg-white rounded-xl border border-neutral-200" />
+            <div className="h-56 bg-white rounded-2xl border border-brand-blue/15" />
+            <div className="h-56 bg-white rounded-2xl border border-brand-blue/15" />
           </div>
         </div>
       </main>
@@ -266,12 +274,12 @@ export function ReportesContent() {
     icon: string; iconBg: string; iconColor: string; label: string; value: string;
     valueColor?: string; borderColor: string;
   }) => (
-    <div className={`bg-white rounded-xl border border-neutral-200 border-t-2 ${borderColor} p-4 flex items-start gap-3`}>
-      <div className={`w-9 h-9 ${iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+    <div className={`${moduleCard} border-t-[3px] ${borderColor} p-4 flex items-start gap-3`}>
+      <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
         <Icon icon={icon} width={18} height={18} className={iconColor} />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-neutral-500 font-medium">{label}</p>
+        <p className="text-base text-neutral-500 font-medium">{label}</p>
         <p className={`text-xl font-bold mt-0.5 truncate ${valueColor}`}>{value}</p>
       </div>
     </div>
@@ -285,46 +293,53 @@ export function ReportesContent() {
     return (
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-neutral-700 truncate max-w-[55%] font-medium">{label}</span>
-          <span className="text-sm font-semibold text-neutral-800 flex-shrink-0">{displayValue}</span>
+          <span className="text-base text-neutral-700 truncate max-w-[55%] font-medium">{label}</span>
+          <span className="text-base font-semibold text-neutral-800 flex-shrink-0">{displayValue}</span>
         </div>
-        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+        <div className="h-2 bg-[#F4F8FC] rounded-full overflow-hidden">
           <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-xs text-neutral-400">{subValue}</p>
+        <p className="text-sm text-neutral-400">{subValue}</p>
       </div>
     );
   };
 
   return (
-    <main className="flex-1 bg-neutral-50 min-h-0 overflow-auto p-3 sm:p-4 lg:p-5" role="main">
-      <div className="max-w-[1400px] mx-auto space-y-4 animate-fade-in-up">
-
-        {/* ── Header ── */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-brand-blue tracking-tight">{tr.title}</h1>
-            <p className="text-neutral-500 text-xs sm:text-sm mt-0.5">{tr.subtitle}</p>
+    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`} role="main">
+      <div className={`${moduleHeroRounded} rounded-none`}>
+        <div className="px-4 sm:px-6 py-5 sm:py-6 max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <Icon icon="lucide:bar-chart-3" width={24} height={24} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">{tr.title}</h1>
+              <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={handleExport}
             disabled={!filteredRows.length}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors disabled:opacity-50 flex-shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-semibold text-brand-blue bg-white rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 flex-shrink-0 shadow-sm"
           >
             <Icon icon="lucide:download" width={15} height={15} />
             {tr.export}
           </button>
         </div>
+      </div>
+
+      <div className="p-3 sm:p-4 lg:p-5">
+      <div className="max-w-[1600px] mx-auto space-y-4 animate-fade-in-up">
 
         {/* ── Filtros ── */}
-        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+        <div className={`${moduleCard} p-4`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Icon icon="typcn:filter" width={16} height={16} className="text-brand-blue" />
-              <span className="text-sm font-semibold text-neutral-700">{tr.filters}</span>
+              <span className="text-base font-semibold text-brand-blue">{tr.filters}</span>
               {activeFilterCount > 0 && (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-brand-blue text-white rounded-full">
+                <span className="px-2 py-0.5 text-sm font-semibold bg-brand-blue text-white rounded-lg">
                   {activeFilterCount}
                 </span>
               )}
@@ -333,7 +348,7 @@ export function ReportesContent() {
               <button
                 type="button"
                 onClick={() => setFilters({ fechaDesde: "", fechaHasta: "", estado: "", cliente: "", naviera: "" })}
-                className="text-xs text-neutral-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                className="text-base text-neutral-500 hover:text-red-600 transition-colors flex items-center gap-1"
               >
                 <Icon icon="lucide:x" width={12} height={12} />
                 {tr.clearFilters}
@@ -346,35 +361,35 @@ export function ReportesContent() {
               { label: tr.dateTo, type: "date", key: "fechaHasta" as const },
             ].map(({ label, type, key }) => (
               <div key={key}>
-                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{label}</label>
+                <label className={moduleLabel}>{label}</label>
                 <input
                   type={type}
                   value={filters[key]}
                   onChange={(e) => setFilters((f) => ({ ...f, [key]: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all bg-neutral-50 focus:bg-white"
+                  className={moduleInput}
                 />
               </div>
             ))}
             <div>
-              <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{tr.state}</label>
+              <label className={moduleLabel}>{tr.state}</label>
               <select value={filters.estado} onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all bg-neutral-50 focus:bg-white">
+                className={moduleInput}>
                 <option value="">{tr.allStates}</option>
                 {ESTADOS_OPTS.map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{tr.client}</label>
+              <label className={moduleLabel}>{tr.client}</label>
               <select value={filters.cliente} onChange={(e) => setFilters((f) => ({ ...f, cliente: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all bg-neutral-50 focus:bg-white">
+                className={moduleInput}>
                 <option value="">{tr.allClients}</option>
                 {clientesOpts.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">{tr.carrier}</label>
+              <label className={moduleLabel}>{tr.carrier}</label>
               <select value={filters.naviera} onChange={(e) => setFilters((f) => ({ ...f, naviera: e.target.value }))}
-                className="w-full px-2.5 py-1.5 text-sm rounded-lg border border-neutral-200 focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all bg-neutral-50 focus:bg-white">
+                className={moduleInput}>
                 <option value="">{tr.allCarriers}</option>
                 {navierasOpts.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
@@ -383,7 +398,7 @@ export function ReportesContent() {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-base flex items-center gap-2">
             <Icon icon="lucide:alert-circle" width={16} height={16} />
             {error}
           </div>
@@ -404,11 +419,11 @@ export function ReportesContent() {
         </div>
 
         {!filteredRows.length ? (
-          <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center">
-            <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Icon icon="lucide:bar-chart-3" width={28} height={28} className="text-neutral-400" />
+          <div className={`${moduleCard} p-12 text-center`}>
+            <div className="w-14 h-14 bg-[#F4F8FC] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Icon icon="lucide:bar-chart-3" width={28} height={28} className="text-brand-blue/30" />
             </div>
-            <p className="text-neutral-500 text-sm">{tr.noData}</p>
+            <p className="text-brand-blue/70 text-base">{tr.noData}</p>
           </div>
         ) : (
           <>
@@ -416,12 +431,12 @@ export function ReportesContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
 
               {/* Por Estado */}
-              <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center gap-2">
+              <div className={moduleCard}>
+                <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
                   <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
                   <Icon icon="lucide:pie-chart" width={15} height={15} className="text-brand-blue" />
-                  <h2 className="font-semibold text-neutral-800 text-sm">{tr.byStatus}</h2>
-                  <span className="ml-auto text-xs text-neutral-400">{filteredRows.length} {tr.opsUnit}</span>
+                  <h2 className={moduleSectionTitle}>{tr.byStatus}</h2>
+                  <span className="ml-auto text-sm text-neutral-400">{filteredRows.length} {tr.opsUnit}</span>
                 </div>
                 <div className="p-4 space-y-2.5">
                   {byStatus.map(([estado, count]) => {
@@ -433,14 +448,14 @@ export function ReportesContent() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                            <span className="text-sm text-neutral-700 truncate font-medium">{estado}</span>
+                            <span className="text-base text-neutral-700 truncate font-medium">{estado}</span>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{count}</span>
-                            <span className="text-xs text-neutral-400 w-9 text-right">{pct.toFixed(0)}%</span>
+                            <span className={`text-sm font-semibold px-2 py-0.5 rounded-lg ${cfg.bg} ${cfg.color}`}>{count}</span>
+                            <span className="text-sm text-neutral-400 w-9 text-right">{pct.toFixed(0)}%</span>
                           </div>
                         </div>
-                        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-[#F4F8FC] rounded-full overflow-hidden">
                           <div className={`h-full ${bar} rounded-full transition-all duration-700`} style={{ width: `${Math.max(2, pct)}%` }} />
                         </div>
                       </div>
@@ -451,11 +466,11 @@ export function ReportesContent() {
 
               {/* Por Mes */}
               {byMonth.length > 0 && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center gap-2">
+                <div className={moduleCard}>
+                  <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-teal rounded-full flex-shrink-0" />
                     <Icon icon="lucide:calendar-days" width={15} height={15} className="text-brand-teal" />
-                    <h2 className="font-semibold text-neutral-800 text-sm">{tr.byMonth}</h2>
+                    <h2 className={moduleSectionTitle}>{tr.byMonth}</h2>
                   </div>
                   <div className="p-4 space-y-2.5">
                     {(() => {
@@ -463,13 +478,13 @@ export function ReportesContent() {
                       return byMonth.map(([mes, val]) => (
                         <div key={mes} className="space-y-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm text-neutral-700 font-medium capitalize w-24 flex-shrink-0">{mes}</span>
+                            <span className="text-base text-neutral-700 font-medium capitalize w-24 flex-shrink-0">{mes}</span>
                             <div className="flex items-center gap-3 flex-shrink-0">
-                              <span className="text-xs text-neutral-400">{val.ops} {tr.opsUnit}</span>
-                              <span className="text-sm font-semibold text-neutral-800">{fmtCur(val.facturado)}</span>
+                              <span className="text-sm text-neutral-400">{val.ops} {tr.opsUnit}</span>
+                              <span className="text-base font-semibold text-neutral-800">{fmtCur(val.facturado)}</span>
                             </div>
                           </div>
-                          <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-[#F4F8FC] rounded-full overflow-hidden">
                             <div
                               className="h-full bg-brand-teal/70 rounded-full transition-all duration-700"
                               style={{ width: `${Math.max(2, (val.facturado / maxFact) * 100)}%` }}
@@ -486,11 +501,11 @@ export function ReportesContent() {
             {/* ── Por Cliente + Por Naviera ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
               {/* Por Cliente */}
-              <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center gap-2">
+              <div className={moduleCard}>
+                <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
                   <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
                   <Icon icon="lucide:building-2" width={15} height={15} className="text-brand-blue" />
-                  <h2 className="font-semibold text-neutral-800 text-sm">{tr.byClient}</h2>
+                  <h2 className={moduleSectionTitle}>{tr.byClient}</h2>
                 </div>
                 <div className="p-4 space-y-3.5">
                   {byClient.map((item) => (
@@ -508,11 +523,11 @@ export function ReportesContent() {
               </div>
 
               {/* Por Naviera */}
-              <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/50 flex items-center gap-2">
+              <div className={moduleCard}>
+                <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
                   <span className="w-1 h-4 bg-brand-olive rounded-full flex-shrink-0" />
                   <Icon icon="typcn:anchor" width={17} height={17} className="text-brand-olive" />
-                  <h2 className="font-semibold text-neutral-800 text-sm">{tr.byCarrier}</h2>
+                  <h2 className={moduleSectionTitle}>{tr.byCarrier}</h2>
                 </div>
                 <div className="p-4 space-y-3.5">
                   {byCarrier.map((item) => (
@@ -531,6 +546,7 @@ export function ReportesContent() {
             </div>
           </>
         )}
+      </div>
       </div>
     </main>
   );
