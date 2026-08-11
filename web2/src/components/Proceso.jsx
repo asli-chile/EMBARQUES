@@ -46,13 +46,18 @@ const Proceso = () => {
           className="text-center max-w-2xl mx-auto mb-6 sm:mb-8 md:mb-10"
         >
           <span className="section-label justify-center !mb-2">Cómo trabajamos</span>
-          <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-3 text-balance">
+          <h2 className="font-display text-asli-dark text-[clamp(1.5rem,5.5vw,2.5rem)] font-bold tracking-tight mb-2 sm:mb-3 text-balance">
             Un método simple, con personas detrás
           </h2>
-          <p className="text-muted-strong text-base md:text-lg leading-relaxed">
-            No entregamos una cotización y desaparecemos. Te acompañamos desde la primera
-            conversación hasta que la carga llega: con criterio, plazos claros y alguien a
-            quien llamar.
+          <p className="text-muted-strong text-sm sm:text-base md:text-lg leading-relaxed">
+            <span className="sm:hidden">
+              Te acompañamos desde la primera conversación hasta que la carga llega.
+            </span>
+            <span className="hidden sm:inline">
+              No entregamos una cotización y desaparecemos. Te acompañamos desde la primera
+              conversación hasta que la carga llega: con criterio, plazos claros y alguien a
+              quien llamar.
+            </span>
           </p>
         </div>
 
