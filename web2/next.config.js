@@ -67,9 +67,6 @@ const nextConfig = {
     };
     const paths = [
       "/",
-      "/contacto",
-      "/ejecutivos",
-      "/nosotros",
       "/presentacion",
       "/servicios",
       "/tracking",

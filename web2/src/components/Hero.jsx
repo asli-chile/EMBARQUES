@@ -1,196 +1,143 @@
-import { motion } from 'framer-motion'
-import ImagePlaceholder from './ImagePlaceholder'
-import { useLang } from '../lib/LangContext'
+/**
+ * Hero — primera pantalla compacta para caber bien en el viewport
+ */
+import { useEffect, useState } from 'react'
+
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
+const DURATION = '1.35s'
+
+function useEnter(delay = 0) {
+  const [on, setOn] = useState(false)
+
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduce) {
+      setOn(true)
+      return
+    }
+    const id = window.setTimeout(() => setOn(true), 180 + delay)
+    return () => window.clearTimeout(id)
+  }, [delay])
+
+  return {
+    opacity: on ? 1 : 0,
+    transform: on ? 'translate3d(0,0,0)' : 'translate3d(0, 40px, 0)',
+    transition: `opacity ${DURATION} ${EASE} ${delay}ms, transform ${DURATION} ${EASE} ${delay}ms`,
+  }
+}
 
 const Hero = () => {
-  const { t } = useLang()
-  const stats = [
-    { value: '2021', label: t.hero.stat1l },
-    { value: '9+', label: t.hero.stat2l },
-    { value: '15+', label: t.hero.stat3l },
-    { value: '100%', label: t.hero.stat4l },
-  ]
+  const logo = useEnter(0)
+  const title = useEnter(220)
+  const text = useEnter(420)
+  const cta = useEnter(620)
+  const image = useEnter(280)
 
-  const handleScroll = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  const handleAccederApp = () => {
+    if (typeof window === 'undefined') return
+
+    const hostname = window.location.hostname
+    const isLocal =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '' ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('172.')
+
+    if (isLocal) {
+      window.location.replace('http://localhost:3001')
+      return
+    }
+
+    window.location.href = '/auth'
+  }
+
+  const handleServiciosClick = () => {
+    document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
     <section
       id="inicio"
-      className="relative min-h-screen flex items-end pb-0 bg-asli-dark overflow-hidden"
+      className="section-fit relative overflow-hidden bg-[#F7F5F2]"
     >
-      <div className="absolute inset-0 overflow-hidden">
-        <ImagePlaceholder
-          variant="hero"
-          src="/frontis.webp"
-          alt="ASLI"
-        />
-      </div>
-
-      {/* Layered overlays for depth */}
-      <div className="absolute inset-0 bg-gradient-to-r from-asli-dark via-asli-dark/80 to-asli-dark/30" />
-      <div className="absolute inset-0 bg-gradient-to-t from-asli-dark via-transparent to-asli-dark/60" />
-
-      {/* Grain texture */}
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-30"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          background: 'radial-gradient(circle, rgba(0,122,123,0.28), transparent 70%)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute -bottom-32 -left-20 w-[380px] h-[380px] rounded-full opacity-25"
+        style={{
+          background: 'radial-gradient(circle, rgba(102,153,0,0.22), transparent 70%)',
         }}
       />
 
-      {/* Teal accent line left */}
-      <motion.div
-        initial={{ scaleY: 0, originY: 1 }}
-        animate={{ scaleY: 1 }}
-        transition={{ duration: 1.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute left-6 lg:left-10 top-28 bottom-[240px] w-px bg-gradient-to-b from-transparent via-asli-primary to-transparent"
-      />
-
-      {/* Main content */}
-      <div className="relative z-10 w-full container mx-auto px-6 lg:px-10 pt-32 pb-0">
-        <div className="max-w-4xl">
-
-          {/* Eyebrow */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="flex items-center gap-3 mb-6"
-          >
-            <span className="w-8 h-px bg-asli-primary" />
-            <span className="eyebrow">{t.hero.eyebrow}</span>
-          </motion.div>
-
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35 }}
-            className="mb-6"
-          >
-            <ImagePlaceholder
-              variant="logo"
-              className="h-16 md:h-20 min-w-[180px] md:min-w-[220px]"
+      <div className="relative z-10 container-asli w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          <div className="lg:col-span-6">
+            <img
+              src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
+              alt="ASLI"
+              width={420}
+              height={140}
+              className="h-12 sm:h-14 w-auto object-contain mb-5"
+              style={logo}
             />
-          </motion.div>
 
-          {/* Headline — staggered words */}
-          <div className="overflow-hidden mb-3">
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.1, delay: 0.4 }}
-              className="font-display font-black text-white leading-none"
-              style={{ fontSize: 'clamp(2.8rem, 7vw, 6rem)', letterSpacing: '-0.03em' }}
+            <p className="section-label !mb-2" style={title}>
+              Logística y comercio exterior
+            </p>
+
+            <h1
+              className="font-display text-asli-dark text-[clamp(2rem,4.2vw,3.35rem)] font-bold leading-[1.1] tracking-tight text-balance mb-4"
+              style={title}
             >
-              {[t.hero.line1, t.hero.line2].map((line, li) => (
-                <motion.span
-                  key={li}
-                  initial={{ y: '110%' }}
-                  animate={{ y: 0 }}
-                  transition={{ duration: 0.9, delay: 0.45 + li * 0.12, ease: [0.22, 1, 0.36, 1] }}
-                  className="block"
-                >
-                  {line}
-                </motion.span>
-              ))}
-              <motion.span
-                initial={{ y: '110%' }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.9, delay: 0.69, ease: [0.22, 1, 0.36, 1] }}
-                className="block italic text-asli-primary"
-                style={{ WebkitTextStroke: '0px' }}
-              >
-                {t.hero.line3}
-              </motion.span>
-            </motion.h1>
+              Del origen al destino,{' '}
+              <span className="text-asli-primary">ASLI está en cada paso</span>
+            </h1>
+
+            <p
+              className="text-muted-strong text-base md:text-lg max-w-lg mb-6 leading-relaxed"
+              style={text}
+            >
+              Exportación, importación y coordinación multimodal para tu carga.
+              Clara, rápida y pensada para operar — no solo para verse bien.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3" style={cta}>
+              <button type="button" onClick={handleServiciosClick} className="btn-primary !py-3 !px-7 !text-[0.95rem]">
+                Ver servicios
+                <span aria-hidden="true">→</span>
+              </button>
+              <button type="button" onClick={handleAccederApp} className="btn-secondary !py-3 !px-7 !text-[0.95rem]">
+                Acceder a la app
+              </button>
+            </div>
           </div>
 
-          {/* Subtext */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.9 }}
-            className="text-white/60 text-lg md:text-xl max-w-xl leading-relaxed mb-10 font-light"
-          >
-            {t.hero.sub}
-          </motion.p>
-
-          {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 1.05 }}
-            className="flex flex-col sm:flex-row flex-wrap gap-3 mb-12 md:mb-16"
-          >
-            <button
-              onClick={() => handleScroll('servicios')}
-              className="group inline-flex items-center justify-center gap-3 px-7 py-4 rounded-full bg-asli-primary text-white font-semibold hover:bg-asli-primary/90 transition-all duration-300 shadow-lg shadow-asli-primary/25 w-full sm:w-auto"
-            >
-              {t.hero.cta1}
-              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </button>
-            <button
-              onClick={() => handleScroll('contacto')}
-              className="inline-flex items-center justify-center gap-3 px-7 py-4 rounded-full border border-white/20 text-white/80 font-semibold hover:border-white/40 hover:text-white transition-all duration-300 w-full sm:w-auto"
-            >
-              {t.hero.cta3}
-            </button>
-          </motion.div>
-        </div>
-
-        {/* Stats bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
-          className="border-t border-white/10 grid grid-cols-2 md:grid-cols-4"
-        >
-          {stats.map((stat, i) => (
-            <div
-              key={stat.label}
-              className={`py-5 px-4 md:px-6 ${
-                // mobile: borde derecho solo en col izquierda (índices 0 y 2)
-                // desktop: borde derecho en todos menos el último
-                i % 2 === 0 && i !== stats.length - 1
-                  ? 'border-r border-white/10 md:border-r-0'
-                  : ''
-              } ${
-                i < stats.length - 1 ? 'md:border-r md:border-white/10' : ''
-              }`}
-            >
-              <p
-                className="font-display font-black text-asli-primary mb-1"
-                style={{ fontSize: 'clamp(1.6rem, 4vw, 2.8rem)', lineHeight: 1 }}
-              >
-                {stat.value}
-              </p>
-              <p className="text-white/50 text-xs font-light tracking-wide leading-snug">{stat.label}</p>
+          <div className="lg:col-span-6" style={image}>
+            <div className="relative rounded-[20px] overflow-hidden shadow-asli-high border border-asli-dark/5 aspect-[16/11] max-h-[min(52vh,420px)] mx-auto w-full">
+              <img
+                src="/img/HERO.webp"
+                alt="Operaciones logísticas ASLI"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/50 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5">
+                <p className="text-white font-display font-semibold text-base sm:text-lg">
+                  Curicó · Maule · Chile
+                </p>
+                <p className="text-white/75 text-sm mt-0.5">
+                  Especialistas en fruta fresca y congelada
+                </p>
+              </div>
             </div>
-          ))}
-        </motion.div>
+          </div>
+        </div>
       </div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
-        className="absolute bottom-8 right-8 hidden lg:flex flex-col items-center gap-2"
-      >
-        <p className="eyebrow rotate-90 origin-center" style={{ writingMode: 'vertical-rl' }}>
-          Scroll
-        </p>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
-          className="w-px h-12 bg-gradient-to-b from-asli-primary to-transparent"
-        />
-      </motion.div>
     </section>
   )
 }

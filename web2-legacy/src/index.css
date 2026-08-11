@@ -1,0 +1,83 @@
+/* ① @import SIEMPRE PRIMERO — el navegador ignora imports después de cualquier otra regla */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,600;1,700;1,800;1,900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy:  #11224E;
+  --teal:  #007A7B;
+  --mid:   #003F5A;
+  --cream: #F6EEE8;
+  --green: #669900;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-asli-dark text-white;
+    font-family: 'Fira Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Fira Sans', system-ui, sans-serif;
+    font-style: italic;
+    font-weight: 800;
+  }
+
+  ::-webkit-scrollbar       { width: 5px; }
+  ::-webkit-scrollbar-track { background: #11224E; }
+  ::-webkit-scrollbar-thumb { background: #007A7B; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #669900; }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* Eyebrow — solo Fira Sans, sin Outfit que no se importa */
+  .eyebrow {
+    font-family: 'Fira Sans', system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    font-style: normal;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--teal);
+  }
+
+  .font-display {
+    font-family: 'Fira Sans', system-ui, sans-serif !important;
+    font-style: italic;
+  }
+
+  .clip-diagonal     { clip-path: polygon(0 0, 100% 0, 100% 94%, 0 100%); }
+  .clip-diagonal-top { clip-path: polygon(0 6%, 100% 0, 100% 100%, 0 100%); }
+  .teal-line         { @apply block w-12 h-0.5 bg-asli-primary rounded-full; }
+}
+
+/* ── Marquee ────────────────────────────────── */
+.marquee-track { overflow: hidden; }
+.marquee-inner {
+  display: flex;
+  width: max-content;
+  animation: marquee 38s linear infinite;
+}
+.marquee-inner:hover { animation-play-state: paused; }
+.marquee-inner-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee-reverse 42s linear infinite;
+}
+
+@keyframes marquee         { to { transform: translateX(-50%); } }
+@keyframes marquee-reverse { to { transform: translateX(50%);  } }

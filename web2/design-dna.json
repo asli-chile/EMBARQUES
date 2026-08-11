@@ -1,0 +1,367 @@
+{
+  "meta": {
+    "name": "Logística moderna ASLI — v2 (evolución 2026)",
+    "description": "Identidad visual moderna y portuario-corporativa para el sitio público de ASLI, centrada en servicios logísticos y comercio exterior. V2 evoluciona la base editorial hacia bento grids, mesh gradients animados y marquee, manteniendo paleta y tipografía.",
+    "source_references": [
+      "ASLI brand palette (PANTONE-aligned)",
+      "https://pymewebapp.com/ — layout conversional, cards suaves, scroll reveals",
+      "Brief: tono moderno, servicios como eje de conversión",
+      "Brief v2: landing comercialmente más atractiva, últimos patrones visuales, sin romper identidad"
+    ],
+    "created_at": "2026-08-03",
+    "updated_at": "2026-08-03"
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "analogous",
+      "primary": {
+        "hex": "#007A7B",
+        "role": "CTAs, enlaces, acentos interactivos"
+      },
+      "secondary": {
+        "hex": "#003F5A",
+        "role": "Superficies profundas, franjas secundarias"
+      },
+      "accent": {
+        "hex": "#669900",
+        "role": "Éxito, énfasis secundario, slogan"
+      },
+      "neutral": {
+        "scale": ["#F6EEE8", "#E8E4DF", "#B8B4AE", "#6B7280", "#2A3344", "#11224E"],
+        "usage": "Cream para superficies claras; navy para texto y fondos institucionales"
+      },
+      "semantic": {
+        "success": "#669900",
+        "warning": "#D97706",
+        "error": "#B91C1C",
+        "info": "#007A7B"
+      },
+      "surface": {
+        "background": "#F6EEE8",
+        "card": "#FFFFFF",
+        "elevated": "#FFFFFF"
+      },
+      "contrast_strategy": "high contrast — navy/teal over cream or white; white over navy hero imagery"
+    },
+    "typography": {
+      "type_scale": {
+        "display": {
+          "size": "clamp(2.75rem, 6vw, 4.5rem)",
+          "weight": "700",
+          "line_height": "1.05",
+          "tracking": "-0.03em"
+        },
+        "heading_1": {
+          "size": "clamp(2rem, 4vw, 3rem)",
+          "weight": "700",
+          "line_height": "1.15",
+          "tracking": "-0.02em"
+        },
+        "heading_2": {
+          "size": "clamp(1.5rem, 3vw, 2.25rem)",
+          "weight": "600",
+          "line_height": "1.2",
+          "tracking": "-0.015em"
+        },
+        "heading_3": {
+          "size": "1.25rem",
+          "weight": "600",
+          "line_height": "1.3",
+          "tracking": "-0.01em"
+        },
+        "body": {
+          "size": "1.0625rem",
+          "weight": "400",
+          "line_height": "1.65",
+          "tracking": "0"
+        },
+        "body_small": {
+          "size": "0.9375rem",
+          "weight": "400",
+          "line_height": "1.55",
+          "tracking": "0"
+        },
+        "caption": {
+          "size": "0.8125rem",
+          "weight": "500",
+          "line_height": "1.4",
+          "tracking": "0.02em"
+        },
+        "overline": {
+          "size": "0.75rem",
+          "weight": "600",
+          "line_height": "1.3",
+          "tracking": "0.14em"
+        }
+      },
+      "font_families": {
+        "heading": "\"Syne\", sans-serif",
+        "body": "\"Manrope\", sans-serif",
+        "mono": "\"JetBrains Mono\", monospace"
+      },
+      "font_style_notes": "Syne display geométrica con carácter; Manrope humanista limpia para lectura. Evitar Inter/Roboto/Arial."
+    },
+    "spacing": {
+      "base_unit": "8px",
+      "scale": ["4px", "8px", "12px", "16px", "24px", "32px", "48px", "64px", "96px", "128px"],
+      "content_density": "spacious",
+      "section_rhythm": "py-20 md:py-28 between major sections; tighter within service rows"
+    },
+    "layout": {
+      "grid_system": "12-column fluid with max-width container",
+      "max_content_width": "72rem",
+      "columns": "1 mobile / 2 tablet / 12 desktop editorial",
+      "gutter": "1.5rem md:2rem",
+      "breakpoints": {
+        "sm": "640px",
+        "md": "768px",
+        "lg": "1024px",
+        "xl": "1280px"
+      },
+      "alignment_tendency": "asymmetric — brand and services left-weighted on desktop"
+    },
+    "shape": {
+      "border_radius": {
+        "small": "2px",
+        "medium": "4px",
+        "large": "8px",
+        "pill": "9999px"
+      },
+      "border_usage": "subtle 1px on light surfaces; hairline dividers between service rows",
+      "divider_style": "1px solid rgba(17,34,78,0.12)"
+    },
+    "elevation": {
+      "shadow_style": "soft diffused",
+      "levels": {
+        "low": "0 1px 2px rgba(17,34,78,0.06)",
+        "medium": "0 8px 24px rgba(17,34,78,0.1)",
+        "high": "0 20px 48px rgba(17,34,78,0.16)"
+      },
+      "depth_cues": "overlapping image crops, soft shadows, tonal shifts cream/navy"
+    },
+    "iconography": {
+      "style": "outline geometric, minimal",
+      "stroke_weight": "1.75px",
+      "size_scale": ["16px", "20px", "24px", "32px"],
+      "preferred_set": "inline SVG custom strokes matching teal"
+    },
+    "motion": {
+      "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+      "duration_scale": {
+        "micro": "150ms",
+        "normal": "320ms",
+        "macro": "700ms"
+      },
+      "entrance_pattern": "fade-up with slight translateY(16px)",
+      "exit_pattern": "fade-out soft",
+      "philosophy": "minimal functional — 2–3 intentional motions, never decorative spam"
+    },
+    "components": {
+      "button_style": "rectangular low-radius solid teal primary; ghost navy outline secondary; no pill shapes",
+      "input_style": "light surface, 1px border neutral, focus ring teal/30",
+      "card_style": "avoid cards by default; when needed: flat surface, hairline border, no heavy shadow",
+      "navigation_pattern": "sticky navy bar, hamburger sheet, brand logos left",
+      "modal_style": "elevated white panel over dark overlay",
+      "list_style": "asymmetric bento grid — one dominant tile + varied secondary tiles, real photos with gradient veil",
+      "component_notes": "Services are bento tiles (never identical check-icon cards); trust logos run as an infinite CSS marquee, pausable on hover; contact panels use a subtle glass-panel over mesh-gradient backgrounds"
+    }
+  },
+  "design_style": {
+    "aesthetic": {
+      "mood": ["confident", "modern", "reliable", "open-air", "operational"],
+      "visual_metaphor": "puerto + fruta + ruta: movimiento limpio del origen al destino",
+      "era_influence": "contemporary corporate logistics 2020s",
+      "genre": "modern logistics brand site",
+      "personality_traits": ["precise", "approachable", "expert", "grounded"],
+      "adjectives": ["claro", "ágil", "sólido", "internacional"]
+    },
+    "visual_language": {
+      "complexity": "moderate",
+      "ornamentation": "subtle accents — grain overlay, teal hairlines",
+      "whitespace_usage": "generous — one job per section",
+      "visual_weight_distribution": "hero and services carry most weight; trust logos lighter",
+      "focal_strategy": "single hero element then progressive service reveal",
+      "contrast_level": "high",
+      "texture_usage": "subtle film grain on cream surfaces; photographic realism in service imagery"
+    },
+    "composition": {
+      "hierarchy_method": "typographic hierarchy + scale contrast",
+      "balance_type": "asymmetric",
+      "flow_direction": "top-to-bottom vertical narrative",
+      "grouping_strategy": "services clustered; trust logos in one quiet band",
+      "negative_space_role": "breathing room that signals premium clarity"
+    },
+    "imagery": {
+      "photo_treatment": "full-bleed hero with dark gradient veil; service photos cropped edge-to-edge with teal-navy overlay on hover",
+      "illustration_style": "none — photography only",
+      "graphic_elements": "hairline rules, overline labels, grain texture",
+      "pattern_usage": "optional faint diagonal grain, not decorative patterns",
+      "image_shape": "rectangular sharp corners; avoid rounded media cards"
+    },
+    "interaction_feel": {
+      "feedback_style": "immediate color/opacity shifts",
+      "hover_behavior": "image scale 1.04 + overlay deepen; link underline/teal",
+      "transition_personality": "smooth glide",
+      "loading_style": "soft pulse on dolar widget only",
+      "microinteraction_density": "sparse"
+    },
+    "brand_voice_in_ui": {
+      "tone": "direct and professional Spanish",
+      "formality": "semi-formal",
+      "cta_style": "direct imperative — Ver servicios / Acceder / Cotizar",
+      "empty_state_approach": "clear next action",
+      "error_tone": "calm and actionable"
+    }
+  },
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "subtle-accent",
+      "performance_tier": "lightweight",
+      "fallback_strategy": "reduce to CSS — disable grain and scroll reveals if prefers-reduced-motion",
+      "primary_technology": "CSS only"
+    },
+    "background_effects": {
+      "type": "noise-field",
+      "description": "Subtle SVG/CSS grain overlay on cream page backgrounds at low opacity",
+      "technology": "CSS",
+      "params": {
+        "color_palette": ["#11224E", "#F6EEE8"],
+        "speed": "0",
+        "density": "low",
+        "opacity": "0.04",
+        "blend_mode": "multiply"
+      }
+    },
+    "particle_systems": {
+      "enabled": false,
+      "type": "custom",
+      "description": "none",
+      "technology": "none",
+      "params": {
+        "count": "0",
+        "shape": "none",
+        "size_range": "0",
+        "movement_pattern": "none",
+        "color_behavior": "none",
+        "interaction": "none",
+        "spawn_area": "none"
+      }
+    },
+    "3d_elements": {
+      "enabled": false,
+      "type": "abstract-geometry",
+      "description": "none",
+      "technology": "none",
+      "params": {
+        "renderer": "none",
+        "lighting": "none",
+        "camera": "none",
+        "materials": "none",
+        "geometry": "none",
+        "post_processing": [],
+        "interaction_model": "none"
+      }
+    },
+    "shader_effects": {
+      "enabled": false,
+      "type": "custom-GLSL",
+      "description": "none",
+      "technology": "none",
+      "params": {
+        "uniforms": "none",
+        "vertex_manipulation": "none",
+        "fragment_output": "none",
+        "noise_type": "perlin",
+        "distortion": "none"
+      }
+    },
+    "scroll_effects": {
+      "parallax": {
+        "enabled": false,
+        "layers": "0",
+        "depth_range": "0",
+        "speed_curve": "none"
+      },
+      "scroll_triggered_animations": {
+        "enabled": true,
+        "trigger_points": "when service rows enter viewport",
+        "animation_type": "fade-up",
+        "scrub_behavior": "once play, no scrub"
+      },
+      "scroll_morphing": {
+        "enabled": false,
+        "description": "none"
+      }
+    },
+    "text_effects": {
+      "type": "none",
+      "description": "Hero text enters with CSS fade-up only",
+      "technology": "CSS",
+      "params": {
+        "split_strategy": "by-line",
+        "animation_per_unit": "fade-up",
+        "stagger": "80ms",
+        "effect_style": "subtle"
+      }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "none",
+      "params": {
+        "shape": "none",
+        "size": "0",
+        "blend_mode": "normal",
+        "trail": "none",
+        "interaction_zone": "none"
+      }
+    },
+    "image_effects": {
+      "type": "reveal-clip",
+      "description": "Service images gently scale and darken on hover; ken-burns disabled",
+      "technology": "CSS",
+      "params": {
+        "filter_pipeline": "contrast(1.05) saturate(1.05)",
+        "hover_transform": "scale(1.04)",
+        "reveal_animation": "fade-up on scroll",
+        "distortion_type": "wave"
+      }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": true,
+      "style": "restrained glass — one panel per dark section, never stacked cards",
+      "params": {
+        "blur_radius": "16px",
+        "transparency": "0.06 fill / 0.12 border",
+        "border_treatment": "1px solid rgba(255,255,255,0.12)",
+        "shadow_type": "none — relies on backdrop blur only",
+        "light_source_angle": "0"
+      }
+    },
+    "canvas_drawings": {
+      "enabled": false,
+      "type": "none",
+      "description": "none",
+      "technology": "none",
+      "params": {
+        "draw_method": "none",
+        "animation_loop": "false",
+        "color_scheme": "none",
+        "responsiveness": "none",
+        "interaction": "none"
+      }
+    },
+    "svg_animations": {
+      "enabled": false,
+      "type": "none",
+      "description": "none",
+      "params": {
+        "animation_method": "none",
+        "path_morphing": "false",
+        "stroke_animation": "false",
+        "filter_effects": "none"
+      }
+    },
+    "composite_notes": "v2: still CSS-only, no WebGL/particles/3D. Added: animated mesh-gradient aurora (radial blends of teal/accent/navy, 18–22s drift, disabled on prefers-reduced-motion) on hero and dark sections; infinite marquee for trust logo strips (pauses on hover); bento grid replaces alternating rows for services (one dominant tile, mixed spans, hover scale 1.08 + deepen); text-gradient-accent for one emphasis word per major headline; hover-lift (translateY -4px + shadow-high) on buttons/cards. Glass-panel (blur 16px, 6% white fill) is the one deliberate exception to 'avoid cards', reserved for contact/info panels over mesh-gradient dark sections — not used elsewhere."
+  }
+}

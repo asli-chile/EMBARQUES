@@ -1,125 +1,107 @@
-import { motion } from 'framer-motion'
-import { useLang } from '../lib/LangContext'
+import { useReveal } from '../hooks/useReveal'
 
 const Ubicacion = () => {
-  const { t } = useLang()
-  const openMap = (type) => {
-    const urls = {
-      google: 'https://maps.app.goo.gl/cGrni677vZDk5pp26',
-      waze:   'https://www.waze.com/en/live-map/directions/asli-logistica-y-comercio-exterior-ruta-5-sur?place=w.189269418.1892694183.25097777',
-      apple:  'https://maps.apple.com/place?map=satellite&place-id=IEA0826463ACE71BC',
-    }
-    window.open(urls[type], '_blank')
+  const info = useReveal('left')
+  const map = useReveal('right', 280)
+
+  const handleGoogleMaps = () => {
+    window.open('https://maps.app.goo.gl/cGrni677vZDk5pp26', '_blank')
+  }
+
+  const handleWaze = () => {
+    window.open(
+      'https://www.waze.com/en/live-map/directions/asli-logistica-y-comercio-exterior-ruta-5-sur?place=w.189269418.1892694183.25097777',
+      '_blank'
+    )
+  }
+
+  const handleAppleMaps = () => {
+    window.open(
+      'https://maps.apple.com/place?map=satellite&place-id=IEA0826463ACE71BC&address=Caletera+Ruta+5%2C+Curic%C3%B3%2C+Chile&coordinate=-34.9743702%2C-71.2034765&name=ASLI+-+Log%C3%ADstica+y+Comercio+Exterior&_provider=9902',
+      '_blank'
+    )
   }
 
   return (
-    <section id="contacto" className="relative py-14 md:py-36 bg-asli-dark overflow-hidden">
+    <section id="contacto" className="section-fit bg-[#F7F5F2]">
+      <div className="container-asli">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          <div ref={info.ref} style={info.style} className="lg:col-span-5">
+            <div className="card-soft p-6 md:p-8 h-full">
+              <span className="section-label !mb-2">Contacto</span>
+              <h2 className="font-display text-[clamp(1.55rem,3.2vw,2.35rem)] font-bold tracking-tight mb-3 text-asli-dark">
+                Cuéntanos qué necesitas
+              </h2>
+              <p className="text-muted-strong text-base leading-relaxed mb-6">
+                Primera conversación clara. Revisamos tu operación y te orientamos
+                sin compromiso.
+              </p>
 
-      <div className="container mx-auto px-6 lg:px-10">
-
-        {/* Header */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-80px' }}
-          variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-          className="mb-10 md:mb-16"
-        >
-          <motion.p
-            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
-            className="eyebrow mb-4"
-          >
-            {t.ubicacion.eyebrow}
-          </motion.p>
-          <motion.h2
-            variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22,1,0.36,1] } } }}
-            className="font-display font-black text-white"
-            style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
-          >
-            {t.ubicacion.title}{' '}
-            <em className="not-italic text-asli-primary">{t.ubicacion.titleSpan}</em>
-          </motion.h2>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-
-          {/* Info column */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:col-span-2 flex flex-col gap-6"
-          >
-            {/* Address */}
-            <div className="glass rounded-2xl p-6 border border-white/8">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-asli-primary/20 flex items-center justify-center text-asli-primary">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-muted text-xs uppercase tracking-wider mb-1 font-bold">
+                    Dirección
+                  </p>
+                  <p className="text-asli-dark font-semibold text-base">
+                    Longitudinal Sur Km. 186
+                    <br />
+                    3340000 Curicó, Maule
+                  </p>
                 </div>
-                <p className="eyebrow">{t.ubicacion.dir}</p>
-              </div>
-              <p className="text-white font-semibold text-lg leading-snug">{t.ubicacion.line1}</p>
-              <p className="text-white/60 text-sm mt-1">{t.ubicacion.line2}</p>
-            </div>
-
-            {/* Contact */}
-            <div className="glass rounded-2xl p-6 border border-white/8">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-asli-accent/20 flex items-center justify-center text-asli-accent">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
+                <div>
+                  <p className="text-muted text-xs uppercase tracking-wider mb-1 font-bold">
+                    Contacto
+                  </p>
+                  <p className="text-asli-dark font-semibold text-base">Mario Basaez</p>
+                  <a
+                    href="tel:+56968394225"
+                    className="text-asli-primary hover:text-asli-accent transition-colors duration-320 text-base font-bold"
+                  >
+                    +56 9 6839 4225
+                  </a>
                 </div>
-                <p className="eyebrow">{t.ubicacion.contacto}</p>
               </div>
-              <p className="text-white font-semibold">Mario Basaez</p>
-              <a href="tel:+56968394225" className="text-asli-primary hover:text-asli-accent transition-colors duration-200 font-medium">
-                +56 9 6839 4225
-              </a>
-              <p className="text-white/50 text-sm mt-1">contacto@asli.cl</p>
-            </div>
 
-            {/* Map buttons */}
-            <div className="flex flex-col gap-3">
-              {[
-                { id: 'google', label: t.ubicacion.google, color: 'bg-asli-primary hover:bg-asli-primary/90' },
-                { id: 'waze',   label: t.ubicacion.waze,   color: 'bg-asli-secondary hover:bg-asli-secondary/80 border border-white/15' },
-                { id: 'apple',  label: t.ubicacion.apple,  color: 'glass hover:border-asli-primary/40' },
-              ].map(btn => (
-                <button
-                  key={btn.id}
-                  onClick={() => openMap(btn.id)}
-                  className={`w-full py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 ${btn.color}`}
-                >
-                  {btn.label}
+              <div className="flex flex-wrap gap-2.5 mb-5">
+                <button type="button" onClick={handleGoogleMaps} className="btn-primary !py-2 !px-4 text-sm">
+                  Google Maps
                 </button>
-              ))}
-            </div>
-          </motion.div>
+                <button type="button" onClick={handleWaze} className="btn-secondary !py-2 !px-4 text-sm">
+                  Waze
+                </button>
+                <button type="button" onClick={handleAppleMaps} className="btn-secondary !py-2 !px-4 text-sm">
+                  Apple Maps
+                </button>
+              </div>
 
-          {/* Map */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:col-span-3 rounded-3xl overflow-hidden border border-white/10"
+              <a
+                href="https://api.whatsapp.com/send/?phone=56968394225&text&type=phone_number&app_absent=0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-asli-accent font-semibold hover:gap-3 transition-all duration-320 ease-asli"
+              >
+                Escribir por WhatsApp
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+
+          <div
+            ref={map.ref}
+            style={map.style}
+            className="lg:col-span-7 overflow-hidden rounded-[20px] shadow-asli-med min-h-[260px] lg:min-h-[min(52vh,400px)] border border-asli-dark/5"
           >
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4022.7608648636206!2d-71.20605142340338!3d-34.97436577716874!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x966457bfbad3103d%3A0x1a06a30ef08571a5!2sASLI%20-%20Log%C3%ADstica%20y%20Comercio%20Exterior!5e1!3m2!1ses-419!2scl!4v1768069231458!5m2!1ses-419!2scl"
               width="100%"
               height="100%"
-              style={{ minHeight: '280px', height: 'clamp(280px, 50vw, 480px)', border: 0, display: 'block' }}
-              allowFullScreen
+              style={{ minHeight: '260px', border: 0, display: 'block' }}
+              allowFullScreen=""
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title={`${t.ubicacion.title} ASLI`}
+              title="Ubicación ASLI - Logística y Comercio Exterior"
             />
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

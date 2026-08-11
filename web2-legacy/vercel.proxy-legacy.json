@@ -1,0 +1,178 @@
+{
+  "rewrites": [
+    {
+      "source": "/logoasli.png",
+      "destination": "https://asli.cl/embarques/logoasli.png"
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "https://asli.cl/embarques/favicon.ico"
+    },
+    {
+      "source": "/fonts/:path*",
+      "destination": "https://asli.cl/embarques/fonts/:path*"
+    },
+    {
+      "source": "/embarques",
+      "destination": "https://asli.cl/embarques/inicio"
+    },
+    {
+      "source": "/embarques/:path*",
+      "destination": "https://asli.cl/embarques/:path*"
+    },
+    {
+      "source": "/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png",
+      "destination": "/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "https://asli.cl/embarques/api/admin/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://asli.cl/embarques/api/:path*"
+    },
+    {
+      "source": "/auth",
+      "destination": "https://asli.cl/embarques/auth/login",
+      "has": [
+        {
+          "type": "header",
+          "key": "x-forwarded-host",
+          "value": "asli.cl"
+        }
+      ]
+    },
+    {
+      "source": "/indicadores",
+      "destination": "https://asli.cl/embarques/indicadores"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "https://asli.cl/embarques/dashboard"
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": "https://asli.cl/embarques/dashboard/:path*"
+    },
+    {
+      "source": "/documentos",
+      "destination": "https://asli.cl/embarques/documentos"
+    },
+    {
+      "source": "/documentos/:path*",
+      "destination": "https://asli.cl/embarques/documentos/:path*"
+    },
+    {
+      "source": "/generar-documentos",
+      "destination": "https://asli.cl/embarques/generar-documentos"
+    },
+    {
+      "source": "/generar-documentos/:path*",
+      "destination": "https://asli.cl/embarques/generar-documentos/:path*"
+    },
+    {
+      "source": "/facturas",
+      "destination": "https://asli.cl/embarques/facturas"
+    },
+    {
+      "source": "/facturas/:path*",
+      "destination": "https://asli.cl/embarques/facturas/:path*"
+    },
+    {
+      "source": "/facturar-preview",
+      "destination": "https://asli.cl/embarques/facturar-preview"
+    },
+    {
+      "source": "/facturar-preview/:path*",
+      "destination": "https://asli.cl/embarques/facturar-preview/:path*"
+    },
+    {
+      "source": "/itinerario",
+      "destination": "https://asli.cl/embarques/itinerario"
+    },
+    {
+      "source": "/itinerario/:path*",
+      "destination": "https://asli.cl/embarques/itinerario/:path*"
+    },
+    {
+      "source": "/mantenimiento",
+      "destination": "https://asli.cl/embarques/mantenimiento"
+    },
+    {
+      "source": "/mantenimiento/:path*",
+      "destination": "https://asli.cl/embarques/mantenimiento/:path*"
+    },
+    {
+      "source": "/profile",
+      "destination": "https://asli.cl/embarques/profile"
+    },
+    {
+      "source": "/profile/:path*",
+      "destination": "https://asli.cl/embarques/profile/:path*"
+    },
+    {
+      "source": "/registros",
+      "destination": "https://asli.cl/embarques/registros"
+    },
+    {
+      "source": "/registros/:path*",
+      "destination": "https://asli.cl/embarques/registros/:path*"
+    },
+    {
+      "source": "/reportes",
+      "destination": "https://asli.cl/embarques/reportes"
+    },
+    {
+      "source": "/reportes/:path*",
+      "destination": "https://asli.cl/embarques/reportes/:path*"
+    },
+    {
+      "source": "/finanzas",
+      "destination": "https://asli.cl/embarques/finanzas"
+    },
+    {
+      "source": "/finanzas/:path*",
+      "destination": "https://asli.cl/embarques/finanzas/:path*"
+    },
+    {
+      "source": "/tablas-personalizadas",
+      "destination": "https://asli.cl/embarques/tablas-personalizadas"
+    },
+    {
+      "source": "/tablas-personalizadas/:path*",
+      "destination": "https://asli.cl/embarques/tablas-personalizadas/:path*"
+    },
+    {
+      "source": "/transportes",
+      "destination": "https://asli.cl/embarques/transportes"
+    },
+    {
+      "source": "/transportes/:path*",
+      "destination": "https://asli.cl/embarques/transportes/:path*"
+    },
+    {
+      "source": "/vessel-diagnose",
+      "destination": "https://asli.cl/embarques/vessel-diagnose"
+    },
+    {
+      "source": "/vessel-diagnose/:path*",
+      "destination": "https://asli.cl/embarques/vessel-diagnose/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "x-forwarded-host",
+          "value": "asli.cl"
+        },
+        {
+          "key": "x-forwarded-proto",
+          "value": "https"
+        }
+      ]
+    }
+  ]
+}
