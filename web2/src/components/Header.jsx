@@ -164,35 +164,38 @@ const Header = () => {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-320 ease-asli ${
+      className={`sticky top-0 z-50 transition-all duration-320 ease-asli pt-[env(safe-area-inset-top)] ${
         scrolled
           ? 'bg-white/90 backdrop-blur-xl shadow-asli-low border-b border-asli-dark/5'
           : 'bg-[#F7F5F2]/90 backdrop-blur-md'
       }`}
     >
       <nav className="container-asli">
-        <div className="flex items-center justify-between h-[4.5rem] gap-3">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="flex items-center justify-between h-14 sm:h-[4.5rem] gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
             <a href="/" className="flex items-center min-w-0" aria-label="ASLI - Inicio">
               <img
                 src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
                 alt="ASLI"
-                className="h-9 sm:h-10 md:h-11 w-auto object-contain"
+                className="h-7 sm:h-10 md:h-11 w-auto object-contain"
               />
             </a>
-            <span className="h-7 w-px bg-asli-dark/15 shrink-0" aria-hidden="true" />
+            <span
+              className="hidden min-[380px]:block h-6 sm:h-7 w-px bg-asli-dark/15 shrink-0"
+              aria-hidden="true"
+            />
             <a
               href="https://www.prochile.gob.cl/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center shrink-0"
+              className="hidden min-[380px]:flex items-center shrink-0"
               aria-label="ProChile"
               title="ProChile"
             >
               <img
                 src="/img/prochile-sin-fondo.png"
                 alt="ProChile"
-                className="h-8 sm:h-9 md:h-10 w-auto object-contain"
+                className="h-6 sm:h-9 md:h-10 w-auto object-contain"
               />
             </a>
           </div>
@@ -210,12 +213,12 @@ const Header = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <DolarChip className="hidden lg:inline-flex" {...chipProps} />
 
             <button
               type="button"
-              className="lg:hidden p-2 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full"
+              className="lg:hidden inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full"
               onClick={handleToggleMenu}
               onKeyDown={handleKeyDown}
               aria-label={isMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
@@ -242,22 +245,26 @@ const Header = () => {
       )}
 
       <div
-        className={`fixed top-[4.5rem] left-0 right-0 bg-white border-t border-asli-dark/5 shadow-asli-high z-40 transition-all duration-320 ease-asli lg:hidden ${
+        className={`fixed left-0 right-0 bg-white border-t border-asli-dark/5 shadow-asli-high z-40 transition-all duration-320 ease-asli lg:hidden top-14 sm:top-[4.5rem] ${
           isMenuOpen
             ? 'translate-y-0 opacity-100'
             : '-translate-y-2 opacity-0 pointer-events-none'
         }`}
-        style={{ maxHeight: 'calc(100vh - 4.5rem)', overflowY: 'auto' }}
+        style={{
+          maxHeight: 'calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))',
+          overflowY: 'auto',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
       >
-        <div className="container-asli py-6 flex flex-col gap-1">
-          <DolarChip className="dolar-chip--mobile mb-5 w-full" {...chipProps} />
+        <div className="container-asli py-5 sm:py-6 flex flex-col gap-1">
+          <DolarChip className="dolar-chip--mobile mb-4 w-full" {...chipProps} />
 
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={(e) => handleNavClick(e, link)}
-              className="font-display text-xl text-asli-dark hover:text-asli-primary py-3 border-b border-asli-dark/5 transition-colors duration-320"
+              className="font-display text-lg sm:text-xl text-asli-dark hover:text-asli-primary py-3.5 min-h-12 border-b border-asli-dark/5 transition-colors duration-320 flex items-center"
             >
               {link.label}
             </a>

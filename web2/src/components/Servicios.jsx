@@ -7,7 +7,7 @@ function ServiceCard({ servicio, index }) {
   return (
     <div ref={ref} style={style}>
       <article className="card-soft overflow-hidden flex flex-col h-full group">
-        <div className="relative h-28 sm:h-32 overflow-hidden">
+        <div className="relative h-36 sm:h-32 overflow-hidden">
           <img
             src={servicio.imagen}
             alt=""
@@ -28,7 +28,7 @@ function ServiceCard({ servicio, index }) {
           </p>
           <a
             href="/servicios"
-            className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320 ease-asli"
+            className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320 ease-asli min-h-10"
           >
             Conocer más
             <span aria-hidden="true">→</span>
@@ -69,15 +69,18 @@ const Servicios = ({ limit = null, showCta = true }) => {
         </div>
 
         {showCta && (
-          <div className="mt-6 md:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="/servicios" className="btn-primary !py-2.5 !px-6 !text-sm">
+          <div className="mt-6 md:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3">
+            <a
+              href="/servicios"
+              className="btn-primary !py-3 sm:!py-2.5 !px-6 !text-sm w-full sm:w-auto justify-center"
+            >
               Ver todos los servicios
             </a>
             <a
               href="https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-ghost-dark !py-2.5 !px-6 !text-sm"
+              className="btn-ghost-dark !py-3 sm:!py-2.5 !px-6 !text-sm w-full sm:w-auto justify-center"
             >
               Cotizar ahora
             </a>

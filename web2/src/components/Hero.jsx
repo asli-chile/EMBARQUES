@@ -1,5 +1,5 @@
 /**
- * Hero — primera pantalla compacta para caber bien en el viewport
+ * Hero — primera pantalla compacta; tipografía y media adaptadas a mobile
  */
 import { useEffect, useState } from 'react'
 
@@ -60,7 +60,7 @@ const Hero = () => {
   return (
     <section
       id="inicio"
-      className="section-fit relative overflow-hidden bg-[#F7F5F2]"
+      className="section-fit relative overflow-hidden bg-[#F7F5F2] !py-8 sm:!py-12 lg:!py-[unset]"
     >
       <div
         className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-30"
@@ -76,14 +76,14 @@ const Hero = () => {
       />
 
       <div className="relative z-10 container-asli w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 items-center">
           <div className="lg:col-span-6">
             <img
               src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
               alt="ASLI"
               width={420}
               height={140}
-              className="h-12 sm:h-14 w-auto object-contain mb-5"
+              className="h-10 sm:h-14 w-auto object-contain mb-4 sm:mb-5"
               style={logo}
             />
 
@@ -92,7 +92,7 @@ const Hero = () => {
             </p>
 
             <h1
-              className="font-display text-asli-dark text-[clamp(2rem,4.2vw,3.35rem)] font-bold leading-[1.1] tracking-tight text-balance mb-4"
+              className="font-display text-asli-dark text-[clamp(1.7rem,7vw,3.35rem)] font-bold leading-[1.12] tracking-tight text-balance mb-3 sm:mb-4"
               style={title}
             >
               Del origen al destino,{' '}
@@ -100,7 +100,7 @@ const Hero = () => {
             </h1>
 
             <p
-              className="text-muted-strong text-base md:text-lg max-w-xl mb-6 leading-relaxed"
+              className="text-muted-strong text-[0.95rem] sm:text-base md:text-lg max-w-xl mb-5 sm:mb-6 leading-relaxed"
               style={text}
             >
               Somos un equipo de Curicó que acompaña a exportadores e importadores — sobre
@@ -108,30 +108,38 @@ const Hero = () => {
               Hablamos claro, respondemos rápido y operamos contigo, no solo para ti.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3" style={cta}>
-              <button type="button" onClick={handleServiciosClick} className="btn-primary !py-3 !px-7 !text-[0.95rem]">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3" style={cta}>
+              <button
+                type="button"
+                onClick={handleServiciosClick}
+                className="btn-primary !py-3 !px-7 !text-[0.95rem] w-full sm:w-auto justify-center"
+              >
                 Ver servicios
                 <span aria-hidden="true">→</span>
               </button>
-              <button type="button" onClick={handleAccederApp} className="btn-secondary !py-3 !px-7 !text-[0.95rem]">
+              <button
+                type="button"
+                onClick={handleAccederApp}
+                className="btn-secondary !py-3 !px-7 !text-[0.95rem] w-full sm:w-auto justify-center"
+              >
                 Acceder a la app
               </button>
             </div>
           </div>
 
           <div className="lg:col-span-6" style={image}>
-            <div className="relative rounded-[20px] overflow-hidden shadow-asli-high border border-asli-dark/5 aspect-[16/11] max-h-[min(52vh,420px)] mx-auto w-full">
+            <div className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden shadow-asli-high border border-asli-dark/5 aspect-[16/11] max-h-[min(38vh,280px)] sm:max-h-[min(48vh,380px)] lg:max-h-[min(52vh,420px)] mx-auto w-full">
               <img
                 src="/img/HERO.webp"
                 alt="Operaciones logísticas ASLI"
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5">
-                <p className="text-white font-display font-semibold text-base sm:text-lg">
+              <div className="absolute bottom-3 left-3 right-3 sm:bottom-5 sm:left-5">
+                <p className="text-white font-display font-semibold text-sm sm:text-lg">
                   Curicó · Maule · Chile
                 </p>
-                <p className="text-white/75 text-sm mt-0.5">
+                <p className="text-white/75 text-xs sm:text-sm mt-0.5">
                   Especialistas en fruta fresca y congelada
                 </p>
               </div>
