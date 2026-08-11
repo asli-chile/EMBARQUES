@@ -30,11 +30,12 @@ const Ubicacion = () => {
             <div className="card-soft p-6 md:p-8 h-full">
               <span className="section-label !mb-2">Contacto</span>
               <h2 className="font-display text-[clamp(1.55rem,3.2vw,2.35rem)] font-bold tracking-tight mb-3 text-asli-dark">
-                Cuéntanos qué necesitas
+                Hablemos de tu próxima operación
               </h2>
               <p className="text-muted-strong text-base leading-relaxed mb-6">
-                Primera conversación clara. Revisamos tu operación y te orientamos
-                sin compromiso.
+                Cuéntanos qué necesitas exportar o importar. En la primera conversación
+                revisamos tu caso con sinceridad, te orientamos y te proponemos un camino
+                concreto — sin compromiso y sin rodeos.
               </p>
 
               <div className="space-y-4 mb-6">

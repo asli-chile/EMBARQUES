@@ -4,17 +4,17 @@ const steps = [
   {
     num: '01',
     title: 'Escuchamos',
-    desc: 'Entendemos tu carga, destino, plazos y restricciones. Sin tecnicismos innecesarios.',
+    desc: 'Partimos por ti: qué cargas, a dónde van, en qué plazos y qué restricciones tienes. Traducimos eso a un plan operable, sin tecnicismos de más.',
   },
   {
     num: '02',
     title: 'Coordinamos',
-    desc: 'Armamos la ruta multimodal: naviera, aéreo o terrestre, documentación y aduanas.',
+    desc: 'Armamos la ruta multimodal — naviera, aérea o terrestre — con documentación, aduanas y proveedores alineados. Tú sabes qué sigue en cada etapa.',
   },
   {
     num: '03',
     title: 'Operamos',
-    desc: 'Ejecutamos y hacemos seguimiento hasta el destino, con contacto directo cuando lo necesitas.',
+    desc: 'Ejecutamos y hacemos seguimiento hasta el destino. Cuando algo se mueve o se complica, tienes contacto directo con alguien que conoce tu operación.',
   },
 ]
 
@@ -23,7 +23,7 @@ function StepCard({ step, index }) {
 
   return (
     <div ref={ref} style={style} className="relative z-10">
-      <div className="card-soft p-6 md:p-7 text-center">
+      <div className="card-soft p-6 md:p-7 text-center h-full">
         <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-asli-primary/10 text-asli-primary font-display font-bold text-base flex items-center justify-center">
           {step.num}
         </div>
@@ -45,13 +45,14 @@ const Proceso = () => {
           style={header.style}
           className="text-center max-w-2xl mx-auto mb-8 md:mb-10"
         >
-          <span className="section-label justify-center !mb-2">Método</span>
-          <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-2 text-balance">
-            Simple, claro y sin marearte
+          <span className="section-label justify-center !mb-2">Cómo trabajamos</span>
+          <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-3 text-balance">
+            Un método simple, con personas detrás
           </h2>
           <p className="text-muted-strong text-base md:text-lg leading-relaxed">
-            Un flujo pensado para exportadores e importadores: escuchamos, coordinamos y
-            operamos con criterio.
+            No entregamos una cotización y desaparecemos. Te acompañamos desde la primera
+            conversación hasta que la carga llega: con criterio, plazos claros y alguien a
+            quien llamar.
           </p>
         </div>
 

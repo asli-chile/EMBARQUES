@@ -135,6 +135,7 @@ const Header = () => {
   }, [])
 
   const navLinks = [
+    { href: '/#historia', label: 'Historia', section: 'historia' },
     { href: '/#servicios', label: 'Servicios', section: 'servicios' },
     { href: '/#proceso', label: 'Cómo trabajamos', section: 'proceso' },
     { href: '/servicios', label: 'Equipo' },

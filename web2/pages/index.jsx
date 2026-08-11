@@ -2,6 +2,7 @@ import Head from 'next/head'
 import Header from '../src/components/Header'
 import Hero from '../src/components/Hero'
 import Estadisticas from '../src/components/Estadisticas'
+import NuestraHistoria from '../src/components/NuestraHistoria'
 import Servicios from '../src/components/Servicios'
 import Proceso from '../src/components/Proceso'
 import Confianza from '../src/components/Confianza'
@@ -29,6 +30,7 @@ const Home = () => {
         <main className="flex-grow">
           <Hero />
           <Estadisticas />
+          <NuestraHistoria />
           <Servicios limit={6} />
           <Proceso />
           <Confianza />

@@ -100,11 +100,12 @@ const Hero = () => {
             </h1>
 
             <p
-              className="text-muted-strong text-base md:text-lg max-w-lg mb-6 leading-relaxed"
+              className="text-muted-strong text-base md:text-lg max-w-xl mb-6 leading-relaxed"
               style={text}
             >
-              Exportación, importación y coordinación multimodal para tu carga.
-              Clara, rápida y pensada para operar — no solo para verse bien.
+              Somos un equipo de Curicó que acompaña a exportadores e importadores — sobre
+              todo del agro — en cada etapa: documentación, navieras, aduanas y seguimiento.
+              Hablamos claro, respondemos rápido y operamos contigo, no solo para ti.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3" style={cta}>

@@ -30,11 +30,15 @@ const Estadisticas = () => {
         <div
           ref={header.ref}
           style={header.style}
-          className="text-center max-w-xl mx-auto mb-6"
+          className="text-center max-w-2xl mx-auto mb-6"
         >
-          <h2 className="font-display text-asli-dark text-[clamp(1.35rem,2.8vw,1.9rem)] font-bold tracking-tight text-balance">
+          <h2 className="font-display text-asli-dark text-[clamp(1.45rem,3vw,2.1rem)] font-bold tracking-tight text-balance mb-2">
             Trayectoria que respalda cada operación
           </h2>
+          <p className="text-muted-strong text-sm md:text-base leading-relaxed">
+            Desde 2021 trabajamos con exportadores e importadores que necesitan control,
+            cercanía y una logística que no se trabe en temporada alta.
+          </p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
           {stats.map((stat, index) => (

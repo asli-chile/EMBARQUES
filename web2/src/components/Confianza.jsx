@@ -37,12 +37,13 @@ const Confianza = () => {
       <div ref={ref} style={style} className="container-asli">
         <div className="text-center max-w-2xl mx-auto mb-8 md:mb-10">
           <span className="section-label justify-center !mb-2">Red operativa</span>
-          <h2 className="font-display text-asli-dark text-[clamp(1.55rem,3.2vw,2.35rem)] font-bold tracking-tight mb-2 text-balance">
-            Confianza demostrada en cada operación
+          <h2 className="font-display text-asli-dark text-[clamp(1.55rem,3.2vw,2.35rem)] font-bold tracking-tight mb-3 text-balance">
+            Confianza que se construye operación a operación
           </h2>
           <p className="text-muted-strong text-base md:text-lg leading-relaxed">
-            Clientes del agro-exportador, alianzas institucionales y las principales
-            navieras y aerolíneas del sector.
+            Trabajamos con clientes del agro-exportador, alianzas institucionales y las
+            principales navieras y aerolíneas del sector. Esa red no es decoración: es la
+            base para que tu carga avance con respaldo real.
           </p>
         </div>
 

@@ -23,7 +23,7 @@ function ServiceCard({ servicio, index }) {
           <h3 className="font-display text-base md:text-lg font-bold text-asli-dark tracking-tight mb-1.5">
             {servicio.titulo}
           </h3>
-          <p className="text-muted-strong text-sm leading-snug mb-3 flex-grow line-clamp-2">
+          <p className="text-muted-strong text-sm leading-relaxed mb-3 flex-grow line-clamp-4">
             {servicio.descripcion}
           </p>
           <a
@@ -51,13 +51,14 @@ const Servicios = ({ limit = null, showCta = true }) => {
           style={header.style}
           className="text-center max-w-2xl mx-auto mb-6 md:mb-8"
         >
-          <span className="section-label justify-center !mb-2">Todo lo que necesitas</span>
-          <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-2 text-balance">
-            Nuestros servicios logísticos
+          <span className="section-label justify-center !mb-2">Lo que hacemos por ti</span>
+          <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-3 text-balance">
+            Servicios logísticos con acompañamiento real
           </h2>
           <p className="text-muted-strong text-base md:text-lg leading-relaxed">
-            Exportar, importar y mover carga con coordinación naviera, aérea, terrestre y
-            aduanera.
+            Desde la asesoría de exportación e importación hasta el transporte multimodal y
+            la gestión aduanera: armamos la operación completa para que puedas enfocarte en
+            tu negocio, no en perseguir papeles o navieras.
           </p>
         </div>
 
