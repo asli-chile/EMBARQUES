@@ -169,35 +169,81 @@
     transform: scaleX(1);
   }
 
-  /* Indicador dólar + reloj — ticker de dos celdas */
+  /* Indicador dólar + reloj — liquid glass frame */
   .dolar-chip {
+    position: relative;
     align-items: stretch;
+    isolation: isolate;
     overflow: hidden;
-    border-radius: 14px;
-    border: 1px solid rgba(17, 34, 78, 0.08);
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 10px 28px rgba(17, 34, 78, 0.05);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.18) 42%,
+        rgba(0, 122, 123, 0.08) 100%
+      );
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.75) inset,
+      0 -1px 0 rgba(17, 34, 78, 0.06) inset,
+      0 10px 28px rgba(17, 34, 78, 0.08),
+      0 2px 8px rgba(0, 122, 123, 0.06);
+  }
+
+  .dolar-chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 80% at 12% 0%, rgba(255, 255, 255, 0.72), transparent 55%),
+      radial-gradient(90% 70% at 88% 100%, rgba(0, 122, 123, 0.12), transparent 50%);
+    opacity: 0.95;
+    z-index: 0;
+  }
+
+  .dolar-chip::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 12%;
+    right: 12%;
+    height: 1px;
+    border-radius: 999px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.95),
+      transparent
+    );
+    z-index: 2;
   }
 
   .dolar-chip__cell {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 0.28rem;
-    padding: 0.55rem 0.9rem;
+    padding: 0.6rem 0.95rem;
     min-width: 6.5rem;
   }
 
   .dolar-chip__cell--time {
-    border-left: 1px solid rgba(17, 34, 78, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.35);
     background: linear-gradient(
       180deg,
-      rgba(0, 122, 123, 0.06),
-      rgba(0, 122, 123, 0.02)
+      rgba(255, 255, 255, 0.22),
+      rgba(0, 122, 123, 0.06)
     );
     min-width: 7.25rem;
+    box-shadow: -1px 0 0 rgba(17, 34, 78, 0.04);
   }
 
   .dolar-chip__label {
@@ -208,7 +254,7 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(17, 34, 78, 0.5);
+    color: rgba(17, 34, 78, 0.55);
     line-height: 1;
   }
 
@@ -217,7 +263,9 @@
     height: 5px;
     border-radius: 999px;
     background: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(0, 122, 123, 0.12);
+    box-shadow:
+      0 0 0 3px rgba(0, 122, 123, 0.14),
+      0 0 10px rgba(0, 122, 123, 0.35);
     flex-shrink: 0;
   }
 
@@ -229,6 +277,7 @@
     color: var(--color-navy);
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
   }
 
   .dolar-chip__value--muted {
@@ -249,6 +298,7 @@
     color: var(--color-navy);
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
   }
 
   .dolar-chip--mobile {
@@ -259,6 +309,24 @@
   .dolar-chip--mobile .dolar-chip__cell {
     flex: 1;
     min-width: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .dolar-chip::before {
+      animation: liquid-glass-sheen 7s var(--ease) infinite;
+    }
+  }
+
+  @keyframes liquid-glass-sheen {
+    0%,
+    100% {
+      opacity: 0.88;
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      opacity: 1;
+      transform: translate3d(1.5%, -1%, 0);
+    }
   }
 
   .text-muted {
