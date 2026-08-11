@@ -24,7 +24,7 @@ const NuestraHistoria = () => {
           <div ref={left.ref} style={left.style} className="lg:col-span-5 lg:sticky lg:top-28">
             <span className="section-label !mb-3">Nuestra historia</span>
             <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.8vw,2.85rem)] font-bold tracking-tight text-balance mb-3 sm:mb-4">
-              Nacimos en el Maule para{' '}
+              Nacimos en Curicó para{' '}
               <span className="text-asli-primary">acercar la logística grande</span> a quien
               exporta e importa de verdad
             </h2>
@@ -89,7 +89,7 @@ const NuestraHistoria = () => {
             >
               {[
                 { v: '2021', l: 'Fundación' },
-                { v: 'Maule', l: 'Origen' },
+                { v: 'Curicó', l: 'Origen' },
                 { v: 'PyME', l: 'Foco cercano' },
               ].map((item) => (
                 <div key={item.l} className="text-center sm:text-left">
