@@ -85,7 +85,7 @@ const Hero = () => {
               className="font-display text-asli-dark text-[clamp(1.75rem,7.2vw,3.35rem)] font-bold leading-[1.12] tracking-tight text-balance mb-3 sm:mb-4"
               style={title}
             >
-              De Curicó al destino,{' '}
+              En tu operación,{' '}
               <span className="text-asli-primary">ASLI está en cada paso</span>
             </h1>
 
