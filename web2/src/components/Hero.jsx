@@ -137,7 +137,7 @@ const Hero = () => {
                 border-y sm:border border-asli-dark/5 shadow-asli-high"
             >
               <img
-                src="/img/edificio.webp"
+                src="/img/oficina.png"
                 alt="Oficinas ASLI en Curicó"
                 className="absolute inset-0 w-full h-full object-cover object-[center_32%] sm:object-[center_28%] lg:object-[center_30%]"
               />
