@@ -72,6 +72,11 @@ const Footer = () => {
             <h4 className="font-display text-white text-lg font-semibold mb-4">Empresa</h4>
             <ul className="space-y-2.5 text-base">
               <li>
+                <a href="/#historia" className="hover:text-asli-primary transition-colors duration-320">
+                  Nuestra historia
+                </a>
+              </li>
+              <li>
                 <a href="/#confianza" className="hover:text-asli-primary transition-colors duration-320">
                   Red operativa
                 </a>
