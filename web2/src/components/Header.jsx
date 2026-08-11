@@ -138,8 +138,8 @@ const Header = () => {
     { href: '/#historia', label: 'Historia', section: 'historia' },
     { href: '/#servicios', label: 'Servicios', section: 'servicios' },
     { href: '/#proceso', label: 'Cómo trabajamos', section: 'proceso' },
-    { href: '/servicios', label: 'Equipo' },
     { href: '/#contacto', label: 'Contacto', section: 'contacto' },
+    { href: '/servicios', label: 'Equipo' },
   ]
 
   const handleNavClick = (event, link) => {
