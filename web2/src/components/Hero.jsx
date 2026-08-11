@@ -27,11 +27,10 @@ function useEnter(delay = 0) {
 }
 
 const Hero = () => {
-  const logo = useEnter(0)
-  const title = useEnter(220)
-  const text = useEnter(420)
-  const cta = useEnter(620)
-  const image = useEnter(280)
+  const title = useEnter(0)
+  const text = useEnter(180)
+  const cta = useEnter(360)
+  const image = useEnter(220)
 
   const handleAccederApp = () => {
     if (typeof window === 'undefined') return
@@ -60,7 +59,7 @@ const Hero = () => {
   return (
     <section
       id="inicio"
-      className="section-fit relative overflow-hidden bg-[#F7F5F2] !py-8 sm:!py-12 lg:!py-[unset]"
+      className="section-fit relative overflow-hidden bg-[#F7F5F2] !py-5 sm:!py-10 lg:!py-[unset]"
     >
       <div
         className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-30"
@@ -76,23 +75,14 @@ const Hero = () => {
       />
 
       <div className="relative z-10 container-asli w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 lg:gap-10 items-center">
           <div className="lg:col-span-6">
-            <img
-              src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
-              alt="ASLI"
-              width={420}
-              height={140}
-              className="h-10 sm:h-14 w-auto object-contain mb-4 sm:mb-5"
-              style={logo}
-            />
-
             <p className="section-label !mb-2" style={title}>
               Logística y comercio exterior
             </p>
 
             <h1
-              className="font-display text-asli-dark text-[clamp(1.7rem,7vw,3.35rem)] font-bold leading-[1.12] tracking-tight text-balance mb-3 sm:mb-4"
+              className="font-display text-asli-dark text-[clamp(1.75rem,7.2vw,3.35rem)] font-bold leading-[1.12] tracking-tight text-balance mb-3 sm:mb-4"
               style={title}
             >
               Del origen al destino,{' '}
@@ -100,7 +90,7 @@ const Hero = () => {
             </h1>
 
             <p
-              className="text-muted-strong text-[0.95rem] sm:text-base md:text-lg max-w-xl mb-5 sm:mb-6 leading-relaxed"
+              className="text-muted-strong text-[0.95rem] sm:text-base md:text-lg max-w-xl mb-4 sm:mb-6 leading-relaxed"
               style={text}
             >
               Somos un equipo de Curicó que acompaña a exportadores e importadores — sobre
@@ -128,7 +118,7 @@ const Hero = () => {
           </div>
 
           <div className="lg:col-span-6" style={image}>
-            <div className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden shadow-asli-high border border-asli-dark/5 aspect-[16/11] max-h-[min(38vh,280px)] sm:max-h-[min(48vh,380px)] lg:max-h-[min(52vh,420px)] mx-auto w-full">
+            <div className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden shadow-asli-high border border-asli-dark/5 aspect-[16/11] max-h-[min(36vh,260px)] sm:max-h-[min(48vh,380px)] lg:max-h-[min(52vh,420px)] mx-auto w-full">
               <img
                 src="/img/HERO.webp"
                 alt="Operaciones logísticas ASLI"
