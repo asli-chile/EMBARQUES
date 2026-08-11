@@ -35,15 +35,20 @@ const Confianza = () => {
   return (
     <section id="confianza" className="section-fit bg-white">
       <div ref={ref} style={style} className="container-asli">
-        <div className="text-center max-w-2xl mx-auto mb-8 md:mb-10">
+        <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8 md:mb-10">
           <span className="section-label justify-center !mb-2">Red operativa</span>
-          <h2 className="font-display text-asli-dark text-[clamp(1.55rem,3.2vw,2.35rem)] font-bold tracking-tight mb-3 text-balance">
+          <h2 className="font-display text-asli-dark text-[clamp(1.45rem,5.5vw,2.35rem)] font-bold tracking-tight mb-2 sm:mb-3 text-balance">
             Confianza que se construye operación a operación
           </h2>
-          <p className="text-muted-strong text-base md:text-lg leading-relaxed">
-            Trabajamos con clientes del agro-exportador, alianzas institucionales y las
-            principales navieras y aerolíneas del sector. Esa red no es decoración: es la
-            base para que tu carga avance con respaldo real.
+          <p className="text-muted-strong text-sm sm:text-base md:text-lg leading-relaxed">
+            <span className="sm:hidden">
+              Clientes del agro, alianzas y las principales navieras y aerolíneas del sector.
+            </span>
+            <span className="hidden sm:inline">
+              Trabajamos con clientes del agro-exportador, alianzas institucionales y las
+              principales navieras y aerolíneas del sector. Esa red no es decoración: es la
+              base para que tu carga avance con respaldo real.
+            </span>
           </p>
         </div>
 

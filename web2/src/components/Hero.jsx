@@ -59,7 +59,7 @@ const Hero = () => {
   return (
     <section
       id="inicio"
-      className="section-fit relative overflow-hidden bg-[#F7F5F2] !py-5 sm:!py-10 lg:!py-[unset]"
+      className="section-fit relative overflow-hidden bg-[#F7F5F2] !py-4 sm:!py-10 lg:!py-[unset]"
     >
       <div
         className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-30"
@@ -75,14 +75,14 @@ const Hero = () => {
       />
 
       <div className="relative z-10 container-asli w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 lg:gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 lg:gap-10 items-center">
           <div className="lg:col-span-6">
-            <p className="section-label !mb-2" style={title}>
+            <p className="section-label !mb-1.5 sm:!mb-2" style={title}>
               Logística y comercio exterior
             </p>
 
             <h1
-              className="font-display text-asli-dark text-[clamp(1.75rem,7.2vw,3.35rem)] font-bold leading-[1.12] tracking-tight text-balance mb-3 sm:mb-4"
+              className="font-display text-asli-dark text-[clamp(1.85rem,8vw,3.35rem)] font-bold leading-[1.1] tracking-tight text-balance mb-2.5 sm:mb-4"
               style={title}
             >
               En tu operación,{' '}
@@ -90,19 +90,25 @@ const Hero = () => {
             </h1>
 
             <p
-              className="text-muted-strong text-[0.95rem] sm:text-base md:text-lg max-w-xl mb-4 sm:mb-6 leading-relaxed"
+              className="text-muted-strong text-[0.92rem] sm:text-base md:text-lg max-w-xl mb-4 sm:mb-6 leading-relaxed"
               style={text}
             >
-              Somos un equipo de Curicó que acompaña a exportadores e importadores — sobre
-              todo del agro — en cada etapa: documentación, navieras, aduanas y seguimiento.
-              Hablamos claro, respondemos rápido y operamos contigo, no solo para ti.
+              <span className="sm:hidden">
+                Equipo de Curicó que acompaña a exportadores e importadores del agro:
+                documentación, navieras, aduanas y seguimiento — claro, rápido y contigo.
+              </span>
+              <span className="hidden sm:inline">
+                Somos un equipo de Curicó que acompaña a exportadores e importadores — sobre
+                todo del agro — en cada etapa: documentación, navieras, aduanas y seguimiento.
+                Hablamos claro, respondemos rápido y operamos contigo, no solo para ti.
+              </span>
             </p>
 
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3" style={cta}>
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:gap-3" style={cta}>
               <button
                 type="button"
                 onClick={handleServiciosClick}
-                className="btn-primary !py-3 !px-7 !text-[0.95rem] w-full sm:w-auto justify-center"
+                className="btn-primary !py-3 !px-5 sm:!px-7 !text-[0.92rem] w-full sm:w-auto justify-center"
               >
                 Ver servicios
                 <span aria-hidden="true">→</span>
@@ -110,26 +116,26 @@ const Hero = () => {
               <button
                 type="button"
                 onClick={handleAccederApp}
-                className="btn-secondary !py-3 !px-7 !text-[0.95rem] w-full sm:w-auto justify-center"
+                className="btn-secondary !py-3 !px-5 sm:!px-7 !text-[0.92rem] w-full sm:w-auto justify-center"
               >
                 Acceder a la app
               </button>
             </div>
           </div>
 
-          <div className="lg:col-span-6" style={image}>
-            <div className="relative rounded-[16px] sm:rounded-[20px] overflow-hidden shadow-asli-high border border-asli-dark/5 aspect-[16/11] max-h-[min(36vh,260px)] sm:max-h-[min(48vh,380px)] lg:max-h-[min(52vh,420px)] mx-auto w-full">
+          <div className="lg:col-span-6 -mx-4 sm:mx-0" style={image}>
+            <div className="relative overflow-hidden shadow-asli-high border-y sm:border border-asli-dark/5 rounded-none sm:rounded-[20px] aspect-[16/10] sm:aspect-[16/11] max-h-[min(34vh,240px)] sm:max-h-[min(48vh,380px)] lg:max-h-[min(52vh,420px)] mx-auto w-full">
               <img
                 src="/img/HERO.webp"
                 alt="Operaciones logísticas ASLI"
                 className="absolute inset-0 w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/50 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3 sm:bottom-5 sm:left-5">
+              <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/55 via-transparent to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4 sm:bottom-5 sm:left-5">
                 <p className="text-white font-display font-semibold text-sm sm:text-lg">
-                  Curicó · Maule · Chile
+                  Curicó · Chile
                 </p>
-                <p className="text-white/75 text-xs sm:text-sm mt-0.5">
+                <p className="text-white/80 text-xs sm:text-sm mt-0.5">
                   Especialistas en fruta fresca y congelada
                 </p>
               </div>

@@ -181,14 +181,14 @@ const Header = () => {
               />
             </a>
             <span
-              className="hidden min-[380px]:block h-6 sm:h-7 w-px bg-asli-dark/15 shrink-0"
+              className="hidden sm:block h-6 sm:h-7 w-px bg-asli-dark/15 shrink-0"
               aria-hidden="true"
             />
             <a
               href="https://www.prochile.gob.cl/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden min-[380px]:flex items-center shrink-0"
+              className="hidden sm:flex items-center shrink-0"
               aria-label="ProChile"
               title="ProChile"
             >

@@ -23,7 +23,7 @@ function ServiceCard({ servicio, index }) {
           <h3 className="font-display text-base md:text-lg font-bold text-asli-dark tracking-tight mb-1.5">
             {servicio.titulo}
           </h3>
-          <p className="text-muted-strong text-sm leading-relaxed mb-3 flex-grow line-clamp-4">
+          <p className="text-muted-strong text-sm leading-relaxed mb-3 flex-grow line-clamp-3 sm:line-clamp-4">
             {servicio.descripcion}
           </p>
           <a
@@ -55,14 +55,20 @@ const Servicios = ({ limit = null, showCta = true }) => {
           <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-3 text-balance">
             Servicios logísticos con acompañamiento real
           </h2>
-          <p className="text-muted-strong text-base md:text-lg leading-relaxed">
-            Desde la asesoría de exportación e importación hasta el transporte multimodal y
-            la gestión aduanera: armamos la operación completa para que puedas enfocarte en
-            tu negocio, no en perseguir papeles o navieras.
+          <p className="text-muted-strong text-sm sm:text-base md:text-lg leading-relaxed">
+            <span className="sm:hidden">
+              Asesoría, multimodal y aduanas: armamos la operación completa para que
+              te enfoques en tu negocio.
+            </span>
+            <span className="hidden sm:inline">
+              Desde la asesoría de exportación e importación hasta el transporte multimodal y
+              la gestión aduanera: armamos la operación completa para que puedas enfocarte en
+              tu negocio, no en perseguir papeles o navieras.
+            </span>
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 md:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {items.map((servicio, index) => (
             <ServiceCard key={servicio.id} servicio={servicio} index={index} />
           ))}

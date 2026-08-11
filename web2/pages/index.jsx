@@ -23,7 +23,7 @@ const Home = () => {
         />
         <link rel="icon" type="image/png" href="/img/logoblanco.png" />
         <link rel="apple-touch-icon" href="/img/logoblanco.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </Head>
       <div className="min-h-screen flex flex-col bg-[#F7F5F2]">
         <Header />

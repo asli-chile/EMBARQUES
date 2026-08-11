@@ -364,7 +364,7 @@
 
   /* Sección que “cae” bien en una pantalla (desktop alto) */
   .section-fit {
-    @apply py-14 md:py-16;
+    @apply py-10 sm:py-14 md:py-16;
     scroll-snap-align: start;
   }
 
@@ -396,9 +396,11 @@
       box-shadow var(--duration-normal) var(--ease);
   }
 
-  .card-soft:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-med);
+  @media (hover: hover) and (pointer: fine) {
+    .card-soft:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-med);
+    }
   }
 
   /* Scroll reveal — keyframes (más visibles y sin pelear con hover) */

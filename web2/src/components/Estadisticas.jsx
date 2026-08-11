@@ -25,14 +25,14 @@ const Estadisticas = () => {
   const header = useReveal('up')
 
   return (
-    <section className="section-band bg-white border-y border-asli-dark/5">
+    <section className="section-band bg-white border-y border-asli-dark/5 !py-6 sm:!py-8 md:!py-10">
       <div className="container-asli">
         <div
           ref={header.ref}
           style={header.style}
-          className="text-center max-w-2xl mx-auto mb-6"
+          className="text-center max-w-2xl mx-auto mb-5 sm:mb-6"
         >
-          <h2 className="font-display text-asli-dark text-[clamp(1.45rem,3vw,2.1rem)] font-bold tracking-tight text-balance mb-2">
+          <h2 className="font-display text-asli-dark text-[clamp(1.35rem,5.5vw,2.1rem)] font-bold tracking-tight text-balance mb-2">
             Trayectoria que respalda cada operación
           </h2>
           <p className="text-muted-strong text-sm md:text-base leading-relaxed">
@@ -40,7 +40,7 @@ const Estadisticas = () => {
             cercanía y una logística que no se trabe en temporada alta.
           </p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5 sm:gap-x-6 sm:gap-y-6">
           {stats.map((stat, index) => (
             <Stat key={stat.label} stat={stat} index={index} />
           ))}
