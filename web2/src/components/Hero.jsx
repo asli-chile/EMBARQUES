@@ -126,17 +126,17 @@ const Hero = () => {
           <div className="lg:col-span-6 -mx-4 sm:mx-0" style={image}>
             <div className="relative overflow-hidden shadow-asli-high border-y sm:border border-asli-dark/5 rounded-none sm:rounded-[20px] aspect-[16/10] sm:aspect-[16/11] max-h-[min(34vh,240px)] sm:max-h-[min(48vh,380px)] lg:max-h-[min(52vh,420px)] mx-auto w-full">
               <img
-                src="/img/HERO.webp"
-                alt="Operaciones logísticas ASLI"
+                src="/img/edificio.webp"
+                alt="Oficinas ASLI en Curicó"
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/55 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-4 right-4 sm:bottom-5 sm:left-5">
                 <p className="text-white font-display font-semibold text-sm sm:text-lg">
-                  Curicó · Chile
+                  Oficinas ASLI · Curicó
                 </p>
                 <p className="text-white/80 text-xs sm:text-sm mt-0.5">
-                  Especialistas en fruta fresca y congelada
+                  Logística y comercio exterior
                 </p>
               </div>
             </div>
