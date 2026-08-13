@@ -8,13 +8,12 @@ import { HeaderTitle } from "./HeaderTitle";
 export function Header() {
   return (
     <header
-      className="sticky top-0 z-50 h-[60px] min-h-[60px] bg-white flex items-center px-4 flex-shrink-0 gap-3"
+      className="sticky top-0 z-50 h-12 min-h-12 md:h-[60px] md:min-h-[60px] bg-white flex items-center px-3 md:px-4 flex-shrink-0 gap-1.5 md:gap-3 pt-[env(safe-area-inset-top)]"
       role="banner"
     >
-      {/* Logo — mobile: tamaño reducido, desktop: tamaño completo */}
       <a
         href={marketingHomeUrl}
-        className="h-9 md:h-[50px] w-auto flex items-center flex-shrink-0"
+        className="h-8 md:h-[50px] w-auto flex items-center flex-shrink-0"
         aria-label="Ir al inicio del sitio web"
       >
         <img
@@ -28,17 +27,17 @@ export function Header() {
         />
       </a>
 
-      {/* Título — solo desktop */}
       <div className="hidden md:flex flex-1 items-center">
         <HeaderTitle />
       </div>
 
-      {/* Spacer — empuja el auth widget a la derecha en mobile */}
       <div className="flex-1 md:hidden" />
 
-      {/* Auth widget — visible en todas las pantallas */}
+      {/* Siempre montado: cuenta visitas de todos; la UI se oculta en <sm */}
       <VisitCounterBadge />
-      <OnlineUsersButton />
+      <div className="hidden sm:block">
+        <OnlineUsersButton />
+      </div>
       <NotificationsBell />
       <AuthWidget />
     </header>

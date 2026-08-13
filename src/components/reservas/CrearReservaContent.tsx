@@ -2089,8 +2089,49 @@ export function CrearReservaContent() {
                 style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.35)) / SECTION_ORDER.length) * 100, 8)}%` }}
               />
             </div>
-            <div className="overflow-x-auto">
-              <div className="flex items-start justify-between min-w-[560px] gap-1">
+            <div className="overflow-x-auto md:overflow-visible">
+              {/* Móvil: paso actual + dots táctiles */}
+              <div className="md:hidden">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-sm font-semibold text-brand-blue/70">
+                    Paso {currentStep + 1} de {SECTION_ORDER.length}
+                  </p>
+                  <p className="text-base font-bold text-brand-blue truncate">
+                    {sectionTitles[activeKey]}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-1">
+                  {SECTION_ORDER.map((key, idx) => {
+                    const isActive = idx === currentStep;
+                    const isComplete = sectionValidation[key];
+                    const isPast = idx < currentStep;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
+                        className={`flex-1 h-11 rounded-lg flex items-center justify-center transition-all duration-300 border ${
+                          isActive
+                            ? "bg-brand-blue border-brand-blue text-white shadow-sm"
+                            : isComplete
+                              ? "bg-brand-teal border-brand-teal text-white"
+                              : "bg-[#E4EBF6] border-brand-blue/25 text-brand-blue/60"
+                        }`}
+                        aria-label={sectionTitles[key]}
+                        aria-current={isActive ? "step" : undefined}
+                      >
+                        {isComplete
+                          ? <Icon icon="lucide:check" width={16} height={16} />
+                          : <Icon icon={sectionIcons[key]} width={16} height={16} />
+                        }
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Desktop: stepper completo con labels */}
+              <div className="hidden md:flex items-start justify-between gap-1">
                 {SECTION_ORDER.map((key, idx) => {
                   const isActive = idx === currentStep;
                   const isComplete = sectionValidation[key];

@@ -1765,26 +1765,28 @@ export function RegistrosContent() {
         </div>
       </div>
 
-      {/* Toolbar — búsqueda + acciones fijas (sin wrap desordenado) */}
+      {/* Toolbar — búsqueda arriba en móvil; acciones en fila secundaria */}
       <div className="relative z-40 flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
-        <div className="px-3 sm:px-4 py-3 flex items-center gap-2">
+        <div className="px-3 sm:px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="flex-1 min-w-0 relative">
             <Icon
               icon="lucide:search"
               className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none"
             />
             <input
-              type="text"
+              type="search"
+              enterKeyHint="search"
+              autoComplete="off"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="Buscar: nave, booking, contenedor..."
-              className="w-full pl-10 pr-8 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
+              className="w-full pl-10 pr-8 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base sm:text-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
             />
             {globalSearch && (
               <button
                 type="button"
                 onClick={() => setGlobalSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors p-1"
                 aria-label="Limpiar búsqueda"
               >
                 <Icon icon="lucide:x" width={13} height={13} />
@@ -1792,17 +1794,18 @@ export function RegistrosContent() {
             )}
           </div>
 
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
           <button
             type="button"
             onClick={() => setShowColumnPanel(true)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 border rounded-lg text-base font-semibold transition-colors shrink-0 ${
+            className={`inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-2.5 border rounded-lg text-base font-semibold transition-colors shrink-0 ${
               hiddenColumns.size > 0
                 ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
                 : "border-brand-blue/20 bg-[#F4F8FC] hover:bg-white text-brand-blue/70"
             }`}
             title="Columnas"
           >
-            <Icon icon="lucide:columns" width={13} height={13} />
+            <Icon icon="lucide:columns" width={16} height={16} />
             <span className="hidden sm:inline">Columnas</span>
             {hiddenColumns.size > 0 && (
               <span className="w-4 h-4 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">
@@ -1815,10 +1818,10 @@ export function RegistrosContent() {
             type="button"
             onClick={() => void handleExportExcel()}
             disabled={rowData.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
             title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
           >
-            <Icon icon="lucide:table-2" width={13} height={13} />
+            <Icon icon="lucide:table-2" width={16} height={16} />
             <span className="hidden sm:inline">Excel</span>
           </button>
 
@@ -1826,13 +1829,13 @@ export function RegistrosContent() {
             type="button"
             onClick={() => void handleExportPdf()}
             disabled={rowData.length === 0 || isExportingPdf}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
             title="Exportar Reserva Confirmada PDF"
           >
             <Icon
               icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"}
-              width={13}
-              height={13}
+              width={16}
+              height={16}
               className={isExportingPdf ? "animate-spin" : ""}
             />
             <span className="hidden sm:inline">PDF</span>
@@ -1841,11 +1844,12 @@ export function RegistrosContent() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="p-2.5 text-brand-blue/60 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-brand-blue/60 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
             title={t.registros.refresh}
           >
-            <Icon icon="lucide:refresh-cw" width={14} height={14} />
+            <Icon icon="lucide:refresh-cw" width={16} height={16} />
           </button>
+          </div>
         </div>
 
         {canEdit && selectionCount > 0 && (

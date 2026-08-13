@@ -102,20 +102,60 @@ export function NavBanner({ pathname }: NavBannerProps) {
     }
   }, [drawerOpen, pathname, visibleSidebarItems]);
 
-  // Cerrar drawer al hacer clic fuera
+  // Overlay + Escape + botón X cierran el drawer (sin listener de click fuera:
+  // el hamburguesa está fuera del drawer y chocaría con el toggle)
   useEffect(() => {
     if (!drawerOpen) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        setDrawerOpen(false);
-      }
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
     };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
   }, [drawerOpen]);
 
+  // Escape cierra el drawer
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
 
   const handleLocaleToggle = () => setLocale(locale === "es" ? "en" : "es");
+
+  // ── Drawer público (invitados) ───────────────────────────────────────────
+  const publicDrawerContent = (
+    <nav className="flex flex-col gap-2.5">
+      {PUBLIC_NAV_CARDS.map(({ labelKey, href, icon, desc }) => {
+        const isActive = pathname === href;
+        return (
+          <a
+            key={href}
+            href={withBase(href)}
+            onClick={() => setDrawerOpen(false)}
+            {...navPrefetchHandlers(href)}
+            className={`flex items-center gap-3.5 w-full text-left px-3.5 py-3.5 rounded-xl border transition-all duration-200 ${
+              isActive
+                ? "bg-white/15 border-white/25 text-white"
+                : "bg-white/5 border-white/10 text-neutral-200 hover:bg-white/10 hover:border-white/20 hover:text-white"
+            }`}
+            aria-current={isActive ? "page" : undefined}
+          >
+            <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${isActive ? "bg-brand-blue/30" : "bg-white/8"}`}>
+              <Icon icon={icon} width={22} height={22} className={isActive ? "text-white" : "text-neutral-300"} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-semibold leading-tight">{t.nav[labelKey]}</p>
+              <p className="text-sm text-neutral-300/80 mt-1 leading-snug">{desc}</p>
+            </div>
+            {isActive && <Icon icon="lucide:check-circle" width={18} height={18} className="text-brand-olive ml-auto shrink-0" />}
+          </a>
+        );
+      })}
+    </nav>
+  );
 
   // ── Drawer con sidebarItems (estilo cards modernas) ──────────────────────
   const sidebarDrawerContent = (
@@ -204,19 +244,19 @@ export function NavBanner({ pathname }: NavBannerProps) {
     <>
     {/* ── Barra de navegación ──────────────────────────────────────────────── */}
     <nav
-      className="h-[56px] min-h-[56px] bg-neutral-700/95 backdrop-blur-md flex-shrink-0 flex items-center justify-between px-4 md:px-6 border-b border-white/10 relative z-40"
+      className="h-12 min-h-12 md:h-[56px] md:min-h-[56px] bg-neutral-700/95 backdrop-blur-md flex-shrink-0 flex items-center justify-between px-3 md:px-6 border-b border-white/10 relative z-40"
       role="navigation"
       aria-label="Navegación principal"
     >
       {isLoggedIn ? (
         /* ── LOGUEADO: ítems fijos + hamburguesa ── */
         <>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 min-w-0">
             {/* Hamburguesa */}
             <button
               type="button"
               onClick={() => setDrawerOpen((p) => !p)}
-              className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all duration-200 mr-1 ${
+              className={`flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 ${
                 drawerOpen
                   ? "text-white bg-white/15 border-white/25"
                   : "text-neutral-300 hover:text-white hover:bg-white/10 border-transparent"
@@ -233,7 +273,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
               return (
                 <a key={href} href={withBase(href)}
                   {...navPrefetchHandlers(href)}
-                  className={`px-3.5 py-2 text-lg font-semibold uppercase tracking-wide rounded-lg transition-all duration-200 ${
+                  className={`px-3 py-2 text-sm md:text-lg font-semibold uppercase tracking-wide rounded-lg transition-all duration-200 ${
                     isActive
                       ? "text-white bg-white/15 border border-white/20 shadow-sm"
                       : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent"
@@ -245,8 +285,8 @@ export function NavBanner({ pathname }: NavBannerProps) {
             })}
           </div>
 
-          {/* Derecha: usuario */}
-          <div className="flex items-center gap-2">
+          {/* Derecha: usuario — oculto en móvil (está en el drawer) */}
+          <div className="hidden sm:flex items-center gap-2">
             {!isExternalUser && displayName && (
               <button type="button" onClick={() => setShowUserModal(true)}
                 className="flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/25 transition-all duration-200"
@@ -265,10 +305,9 @@ export function NavBanner({ pathname }: NavBannerProps) {
       ) : (
         /* ── NO LOGUEADO: horizontal en desktop, hamburguesa en mobile ── */
         <>
-          {/* Desktop + Mobile izquierda: hamburguesa + ítems horizontales */}
           <div className="flex items-center gap-1">
             <button type="button" onClick={() => setDrawerOpen((p) => !p)}
-              className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all duration-200 mr-1 ${
+              className={`flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 ${
                 drawerOpen ? "text-white bg-white/15 border-white/25" : "text-neutral-300 hover:text-white hover:bg-white/10 border-transparent"
               }`}
               aria-label={drawerOpen ? "Cerrar menú" : "Abrir menú"}
@@ -277,7 +316,6 @@ export function NavBanner({ pathname }: NavBannerProps) {
               <Icon icon={drawerOpen ? "lucide:x" : "lucide:menu"} width={22} height={22} />
             </button>
 
-            {/* Ítems horizontales solo en desktop */}
             <div className="hidden md:flex items-center gap-1">
               {siteConfig.navItems.map(({ labelKey, href }) => {
                 const isActive = pathname === href;
@@ -297,7 +335,6 @@ export function NavBanner({ pathname }: NavBannerProps) {
             </div>
           </div>
 
-          {/* Derecha vacía para mantener distribución */}
           <div className="flex items-center gap-2" />
         </>
       )}
@@ -315,15 +352,33 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
       <div
         ref={drawerRef}
-        className={`fixed left-0 top-[60px] bottom-0 z-50 w-80 bg-brand-blue/95 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-[min(100vw,20rem)] bg-brand-blue/95 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menú de navegación"
       >
+        {/* Cabecera del drawer */}
+        <div className="flex items-center justify-between px-3 pt-3 pb-1 flex-shrink-0">
+          <p className="text-sm font-semibold uppercase tracking-wider text-white/70 px-1">
+            {isLoggedIn ? "Menú" : "Navegación"}
+          </p>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(false)}
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Cerrar menú"
+          >
+            <Icon icon="lucide:x" width={22} height={22} />
+          </button>
+        </div>
+
         {/* Header: info de usuario si está logueado */}
         {isLoggedIn && !isExternalUser && displayName && (
           <button type="button"
             onClick={() => { setShowUserModal(true); setDrawerOpen(false); }}
-            className="flex items-center gap-3.5 mx-3 mt-3 mb-2 px-3.5 py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left flex-shrink-0"
+            className="flex items-center gap-3.5 mx-3 mt-1 mb-2 px-3.5 py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left flex-shrink-0"
           >
             <span className="w-11 h-11 rounded-full bg-brand-blue flex items-center justify-center text-white text-base font-black uppercase shrink-0">
               {displayName[0]}
@@ -339,8 +394,8 @@ export function NavBanner({ pathname }: NavBannerProps) {
         {isLoggedIn && <div className="mx-3 mb-2 border-t border-white/10 flex-shrink-0" />}
 
         {/* Items de navegación */}
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 pt-3 pb-4">
-          {sidebarDrawerContent}
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 pt-2 pb-4">
+          {isLoggedIn ? sidebarDrawerContent : publicDrawerContent}
         </div>
 
         {/* Footer: idioma */}

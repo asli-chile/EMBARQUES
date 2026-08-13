@@ -39,10 +39,11 @@ export function AuthWidget() {
       <button
         type="button"
         onClick={() => openAuthForm("login")}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-semibold text-brand-blue hover:bg-neutral-200/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+        className="flex items-center justify-center gap-2 min-w-11 h-11 px-2.5 sm:px-4 rounded-lg text-base font-semibold text-brand-blue hover:bg-neutral-200/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+        aria-label={t.auth.login}
       >
         <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
-        {t.auth.login}
+        <span className="hidden sm:inline">{t.auth.login}</span>
       </button>
     );
   }
@@ -52,7 +53,7 @@ export function AuthWidget() {
       <button
         type="button"
         onClick={handleOpen}
-        className="flex items-center justify-center w-11 h-11 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
+        className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
         aria-label="Ver perfil de usuario"
       >
         <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
