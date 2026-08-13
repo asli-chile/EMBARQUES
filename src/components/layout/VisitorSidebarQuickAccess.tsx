@@ -3,6 +3,7 @@ import { useLocale } from "@/lib/i18n";
 import { stripBasePathname, withBase } from "@/lib/basePath";
 import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 type SidebarLink = { href: string; labelKey: string };
 
@@ -66,7 +67,13 @@ export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAc
             {labelFor(link.labelKey)}
           </span>
         ) : (
-          <a key={link.href} href={withBase(link.href)} className={btnClass}>
+          <a
+            key={link.href}
+            href={withBase(link.href)}
+            className={btnClass}
+            onPointerEnter={() => prefetchRoute(link.href)}
+            onFocus={() => prefetchRoute(link.href)}
+          >
             {labelFor(link.labelKey)}
           </a>
         );

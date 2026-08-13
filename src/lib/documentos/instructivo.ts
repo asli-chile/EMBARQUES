@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import JSZip from "jszip";
+import { formatRefAsli } from "@/lib/refAsli";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ export function pickConsignatarioForOperacion(
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtRef(op: InstructivoOpData): string {
-  return op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
+  return formatRefAsli(op.ref_asli, op.correlativo) ?? "";
 }
 
 function fmtDate(s: string | null | undefined): string {
@@ -397,7 +398,7 @@ export function buildInstructivoPlainBody(op: InstructivoOpData): string {
     `Se adjunta el instructivo de embarque para la operación ${ref} — ${op.cliente ?? ""}.`,
     ``,
     `OPERACIÓN`,
-    `  Ref ASLI:    ${op.ref_asli ?? "-"}`,
+    `  Ref ASLI:    ${fmtRef(op) || "-"}`,
     `  Cliente:     ${op.cliente ?? "-"}`,
     `  Naviera:     ${op.naviera ?? "-"}`,
     `  Nave:        ${op.nave ?? "-"}`,

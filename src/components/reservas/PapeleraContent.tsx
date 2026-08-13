@@ -3,11 +3,17 @@ import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import {
+  applyOperacionesClienteFilter,
+  shouldSkipOperacionesForCliente,
+} from "@/lib/auth/operacionesClienteScope";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
+import { displayRefAsli } from "@/lib/refAsli";
+import { ESTADO_OPERACION_STYLES } from "@/lib/ui/estadoOperacion";
 
 type Operacion = {
   id: string;
@@ -23,15 +29,7 @@ type Operacion = {
   created_at: string;
 };
 
-const estadoConfig: Record<string, { dot: string; bg: string; text: string; border: string }> = {
-  PENDIENTE:     { dot: "bg-amber-400",   bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
-  "EN PROCESO":  { dot: "bg-blue-400",    bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
-  "EN TRÁNSITO": { dot: "bg-violet-400",  bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
-  ARRIBADO:      { dot: "bg-emerald-400", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
-  COMPLETADO:    { dot: "bg-neutral-400", bg: "bg-neutral-100", text: "text-neutral-600", border: "border-neutral-200" },
-  CANCELADO:     { dot: "bg-red-400",     bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200" },
-  ROLEADO:       { dot: "bg-orange-400",  bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200" },
-};
+const estadoConfig = ESTADO_OPERACION_STYLES;
 
 export function PapeleraContent() {
   const { t } = useLocale();
@@ -55,15 +53,21 @@ export function PapeleraContent() {
     if (!supabase || authLoading) return;
     setLoading(true);
 
+    const scope = { isCliente, empresaNombres };
+    if (shouldSkipOperacionesForCliente(scope)) {
+      setOperaciones([]);
+      setLoading(false);
+      return;
+    }
+
     let q = supabase
       .from("operaciones")
       .select(
         "id, correlativo, ref_asli, cliente, especie, naviera, nave, booking, estado_operacion, deleted_at, created_at"
       )
       .not("deleted_at", "is", null);
-    if (empresaNombres.length > 0) {
-      q = q.in("cliente", empresaNombres);
-    }
+
+    q = applyOperacionesClienteFilter(q, scope);
     const { data, error } = await q.order("deleted_at", { ascending: false });
 
     if (error) {
@@ -317,7 +321,7 @@ export function PapeleraContent() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-brand-blue text-base">
-                                {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}
+                                {displayRefAsli(op.ref_asli, op.correlativo, "-")}
                               </span>
                               {cfg && (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
@@ -437,7 +441,7 @@ export function PapeleraContent() {
                             </td>
                             <td className="px-4 py-3">
                               <span className="font-bold text-brand-blue text-base">
-                                {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}
+                                {displayRefAsli(op.ref_asli, op.correlativo, "-")}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-base text-neutral-700 font-medium whitespace-nowrap">{op.cliente || "-"}</td>

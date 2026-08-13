@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { withBase } from "@/lib/basePath";
+import { formatRefAsli } from "@/lib/refAsli";
 import {
   buildInstructivoTagValues,
   pickConsignatarioForOperacion,
@@ -53,7 +54,7 @@ type TagGroup = { group: string; icon: string; tags: { tag: string; label: strin
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtRef(op: Operacion) {
-  return op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`;
+  return formatRefAsli(op.ref_asli, op.correlativo) ?? "";
 }
 
 const OP_SELECT = `id, ref_asli, correlativo, cliente, consignatario, naviera, nave, booking, booking_doc_url,

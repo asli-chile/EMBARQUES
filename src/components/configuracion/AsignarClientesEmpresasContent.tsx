@@ -404,14 +404,12 @@ export function AsignarClientesEmpresasContent() {
               </div>
 
               {/* Alerts */}
-              {(error || success) && (
+              {error && (
                 <div className="flex-shrink-0 px-4 pt-2">
-                  {error && (
-                    <div className="px-3 py-2 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2" role="alert">
-                      <Icon icon="lucide:alert-circle" width={13} height={13} className="shrink-0" />
-                      {error}
-                    </div>
-                  )}
+                  <div className="px-3 py-2 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2" role="alert">
+                    <Icon icon="lucide:alert-circle" width={13} height={13} className="shrink-0" />
+                    {error}
+                  </div>
                 </div>
               )}
 

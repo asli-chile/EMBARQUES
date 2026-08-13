@@ -7,7 +7,7 @@ import { brand } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
 export function AuthFormModalOverlay() {
-  const { open, mode, closeAuthForm, openAuthForm } = useAuthFormModal();
+  const { open, mode, closeAuthForm } = useAuthFormModal();
   const { t } = useLocale();
   const tr = t.auth;
 
@@ -30,29 +30,27 @@ export function AuthFormModalOverlay() {
 
   if (!open) return null;
 
+  const isLogin = mode === "login";
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={mode === "login" ? tr.login : tr.signUp}
+      aria-label={isLogin ? tr.login : tr.signUp}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/55 backdrop-blur-sm animate-auth-backdrop-in"
         aria-hidden
         onClick={closeAuthForm}
       />
 
-      {/* Card */}
       <div
         className="relative w-full max-w-[420px] bg-white rounded-2xl shadow-mac-modal animate-auth-modal-in overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Accent bar */}
         <div className="h-[3px] w-full bg-gradient-to-r from-brand-blue via-brand-teal to-brand-blue" />
 
-        {/* Header: logo + close */}
         <div className="flex items-center justify-between px-5 pt-4">
           <div className="flex items-center gap-2">
             <img
@@ -76,41 +74,8 @@ export function AuthFormModalOverlay() {
           </button>
         </div>
 
-        {/* Pill tabs */}
-        <div className="px-5 mt-4">
-          <div className="flex bg-neutral-100 rounded-xl p-1 gap-1">
-            <button
-              type="button"
-              onClick={() => openAuthForm("login")}
-              className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200 focus:outline-none ${
-                mode === "login"
-                  ? "bg-white text-brand-blue shadow-sm"
-                  : "text-neutral-400 hover:text-neutral-600"
-              }`}
-            >
-              {tr.login}
-            </button>
-            <button
-              type="button"
-              onClick={() => openAuthForm("registro")}
-              className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200 focus:outline-none ${
-                mode === "registro"
-                  ? "bg-white text-brand-blue shadow-sm"
-                  : "text-neutral-400 hover:text-neutral-600"
-              }`}
-            >
-              {tr.tabRegistro}
-            </button>
-          </div>
-        </div>
-
-        {/* Form area */}
         <div className="px-5 pb-6 pt-5">
-          {mode === "login" ? (
-            <LoginForm />
-          ) : (
-            <RegistroForm />
-          )}
+          {isLogin ? <LoginForm /> : <RegistroForm />}
         </div>
       </div>
     </div>

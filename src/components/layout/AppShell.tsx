@@ -9,8 +9,10 @@ import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
 import { NotificationsProvider } from "@/lib/notifications/NotificationsContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
 import { Toaster } from "sileo";
-import { lazy, Suspense, type ReactNode } from "react";
-import { ModuleRouteLoader } from "@/components/ui/ModuleRouteLoader";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
+import { withBase } from "@/lib/basePath";
+import { prefetchFrequentRoutes } from "@/lib/routePrefetch";
 
 /** Cada ruta en su propio chunk: evita cargar MapLibre/xlsx/ag-grid en /inicio (crítico en Android + Vite dev). */
 const LazyDashboardContent = lazy(() =>
@@ -25,8 +27,35 @@ const LazyServiciosContent = lazy(() =>
 const LazySobreNosotrosContent = lazy(() =>
   import("@/components/sobre-nosotros").then((m) => ({ default: m.SobreNosotrosContent })),
 );
-const LazyTrackingContent = lazy(() =>
-  import("@/components/tracking/TrackingContent").then((m) => ({ default: m.TrackingContent })),
+const LazyTrackingDisabled = lazy(() =>
+  Promise.resolve({
+    default: function TrackingDisabled() {
+      return (
+        <main className="flex-1 min-h-0 overflow-auto flex items-center justify-center bg-[#D9E3F2] p-6" role="main">
+          <div className="max-w-md text-center rounded-2xl border border-brand-blue/15 bg-white px-6 py-8 shadow-sm">
+            <p className="text-lg font-bold text-brand-blue mb-2">Seguimiento desactivado</p>
+            <p className="text-sm text-neutral-600 mb-5">
+              Esta sección no está disponible por ahora. Puedes volver al inicio o al dashboard.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <a
+                href={withBase("/inicio")}
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-semibold bg-brand-blue text-white hover:bg-brand-blue/90"
+              >
+                Ir a inicio
+              </a>
+              <a
+                href={withBase("/dashboard")}
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-semibold border border-brand-blue/20 bg-[#F4F8FC] text-brand-blue hover:bg-white"
+              >
+                Dashboard
+              </a>
+            </div>
+          </div>
+        </main>
+      );
+    },
+  }),
 );
 const LazyRegistrosContent = lazy(() =>
   import("@/components/registros").then((m) => ({ default: m.RegistrosContent })),
@@ -86,7 +115,7 @@ const LazyCartolasNuboxContent = lazy(() =>
   import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
 );
 function RouteFallback() {
-  return <ModuleRouteLoader />;
+  return <ModuleSoftFallback />;
 }
 
 function Sus({ children }: { children: ReactNode }) {
@@ -100,6 +129,10 @@ type AppShellProps = {
 
 export function AppShell({ children, pathname }: AppShellProps) {
   const isAuthRoute = pathname.startsWith("/auth");
+
+  useEffect(() => {
+    prefetchFrequentRoutes();
+  }, []);
 
   if (isAuthRoute) {
     return (
@@ -138,7 +171,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
       </Sus>
     ) : pathname === "/tracking" ? (
       <Sus>
-        <LazyTrackingContent />
+        <LazyTrackingDisabled />
       </Sus>
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros">
@@ -213,9 +246,11 @@ export function AppShell({ children, pathname }: AppShellProps) {
         </Sus>
       </ModuleWithVisitorInfo>
     ) : pathname === "/transportes/papelera" ? (
-      <Sus>
-        <LazyPapeleraTransportesContent />
-      </Sus>
+      <ModuleWithVisitorInfo moduleKey="papeleraTransportes">
+        <Sus>
+          <LazyPapeleraTransportesContent />
+        </Sus>
+      </ModuleWithVisitorInfo>
     ) : pathname === "/documentos/mis-documentos" ? (
       <ModuleWithVisitorInfo moduleKey="misDocumentos">
         <Sus>

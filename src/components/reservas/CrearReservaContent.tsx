@@ -10,6 +10,7 @@ import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { isClienteNombrePermitido } from "@/lib/auth/operacionesClienteScope";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
 import { format, parse, differenceInDays } from "date-fns";
@@ -537,7 +538,11 @@ export function CrearReservaContent() {
   // Lista de clientes permitidos según el rol del usuario
   const clientesFiltradosPorRol = useMemo(() => {
     const rol = profile?.rol;
-    if ((rol === "ejecutivo" || rol === "cliente") && empresaNombres.length > 0) {
+    if (rol === "cliente") {
+      if (empresaNombres.length === 0) return [];
+      return clientes.filter((c) => empresaNombres.includes(c.nombre));
+    }
+    if (rol === "ejecutivo" && empresaNombres.length > 0) {
       return clientes.filter((c) => empresaNombres.includes(c.nombre));
     }
     return clientes;
@@ -769,15 +774,23 @@ export function CrearReservaContent() {
     setError(null);
     setSuccess(null);
 
+    const clienteNombre = formData.cliente
+      ? clientes.find((c) => c.id === formData.cliente)?.nombre ?? null
+      : null;
+
+    if (isCliente && !isClienteNombrePermitido(clienteNombre, empresaNombres)) {
+      setError("No tienes permiso para crear reservas para esta empresa. Contacta a ASLI si necesitas acceso.");
+      setSubmitting(false);
+      return;
+    }
+
     const payload = {
       tipo_operacion: formData.tipo_operacion || null,
       estado_operacion: formData.estado_operacion || "PENDIENTE",
       ejecutivo: formData.ejecutivo
         ? ejecutivos.find((e) => e.id === formData.ejecutivo)?.nombre
         : null,
-      cliente: formData.cliente
-        ? clientes.find((c) => c.id === formData.cliente)?.nombre
-        : null,
+      cliente: clienteNombre,
       dueno_reserva: formData.dueno_reserva || "ASLI",
       consignatario: formData.consignatario
         ? consignatarios.find((c) => c.id === formData.consignatario)?.nombre

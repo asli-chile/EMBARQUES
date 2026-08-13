@@ -8,6 +8,7 @@ import { format, formatDistanceToNow, addDays, startOfDay, parseISO, isValid, di
 import { es } from "date-fns/locale";
 import { withBase } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
+import { formatRefAsli } from "@/lib/refAsli";
 import MapLibreMap, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -69,9 +70,7 @@ function parseOpDate(value: string | null | undefined): Date | null {
 }
 
 function opRefLabel(op: OperacionResumen): string {
-  if (op.ref_asli) return op.ref_asli;
-  if (op.correlativo != null) return `A${String(op.correlativo).padStart(5, "0")}`;
-  return "—";
+  return formatRefAsli(op.ref_asli, op.correlativo) ?? "—";
 }
 
 function classifyRegionFromPodName(pod: string): RegionLabel | null {

@@ -6,6 +6,14 @@ import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { withBase } from "@/lib/basePath";
 import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
 import { AuthModal, type AuthUser } from "@/components/ui/AuthModal";
+import { prefetchRoute } from "@/lib/routePrefetch";
+
+function navPrefetchHandlers(href: string) {
+  return {
+    onPointerEnter: () => prefetchRoute(href),
+    onFocus: () => prefetchRoute(href),
+  };
+}
 
 // Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
 const PINNED_NAV = [
@@ -17,7 +25,6 @@ const PUBLIC_NAV_CARDS = [
   { labelKey: "inicio"       as const, href: "/inicio",         icon: "lucide:home",        desc: "Página principal y bienvenida" },
   { labelKey: "servicios"    as const, href: "/servicios",      icon: "lucide:briefcase",   desc: "Conoce nuestros servicios logísticos" },
   { labelKey: "sobreNosotros"as const, href: "/sobre-nosotros", icon: "lucide:users",        desc: "Quiénes somos y nuestra misión" },
-  { labelKey: "tracking"     as const, href: "/tracking",       icon: "lucide:map-pin",     desc: "Seguimiento de tus embarques" },
 ];
 
 type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
@@ -141,6 +148,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
           <div key={item.id} className="flex flex-col gap-1.5">
             {hasHref ? (
               <a href={withBase(item.href!)} onClick={() => setDrawerOpen(false)}
+                {...navPrefetchHandlers(item.href!)}
                 className={isActive ? cardActive : cardNormal}
                 aria-current={isActive ? "page" : undefined}
               >
@@ -167,6 +175,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                   const isChildActive = pathname === child.href;
                   return (
                     <a key={child.id} href={child.href ? withBase(child.href) : "#"} onClick={() => setDrawerOpen(false)}
+                      {...(child.href ? navPrefetchHandlers(child.href) : {})}
                       className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-200 ${
                         isChildActive
                           ? "bg-brand-olive/20 border-brand-olive/40 text-white"
@@ -223,6 +232,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
               const isActive = pathname === href;
               return (
                 <a key={href} href={withBase(href)}
+                  {...navPrefetchHandlers(href)}
                   className={`px-3.5 py-2 text-lg font-semibold uppercase tracking-wide rounded-lg transition-all duration-200 ${
                     isActive
                       ? "text-white bg-white/15 border border-white/20 shadow-sm"
@@ -273,6 +283,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                 const isActive = pathname === href;
                 return (
                   <a key={href} href={withBase(href)}
+                    {...navPrefetchHandlers(href)}
                     className={`px-3.5 py-2 text-lg font-semibold uppercase tracking-wide rounded-lg transition-all duration-200 ${
                       isActive
                         ? "text-white bg-white/15 border border-white/20 shadow-sm"

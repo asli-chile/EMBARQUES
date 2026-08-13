@@ -1,22 +1,22 @@
 import { Icon } from "@iconify/react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n";
-import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
-import { useState, useEffect, useRef } from "react";
-import { AnimatedNetworkBackground } from "@/components/ui/AnimatedNetworkBackground";
+import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
+import { GlassCard, GhostButton, PrimaryButton, SectionHeader, inicioStyles } from "@/components/inicio/inicio-ui";
 
 const missionCards = [
-  { key: "proposito" as const, icon: "lucide:target", color: "blue" },
-  { key: "mision" as const, icon: "lucide:compass", color: "emerald" },
-  { key: "vision" as const, icon: "lucide:eye", color: "violet" },
-  { key: "valores" as const, icon: "lucide:heart-handshake", color: "amber" },
+  { key: "proposito" as const, icon: "lucide:target" },
+  { key: "mision" as const, icon: "lucide:compass" },
+  { key: "vision" as const, icon: "lucide:eye" },
+  { key: "valores" as const, icon: "lucide:heart-handshake" },
 ] as const;
 
 const diferenciales = [
-  { key: "experienciaFruticola" as const, icon: "lucide:apple", color: "emerald" },
-  { key: "redLogistica" as const, icon: "lucide:network", color: "blue" },
-  { key: "acompanamiento" as const, icon: "lucide:users", color: "violet" },
-  { key: "puertaPuerta" as const, icon: "lucide:door-open", color: "amber" },
+  { key: "experienciaFruticola" as const, icon: "lucide:apple" },
+  { key: "redLogistica" as const, icon: "lucide:network" },
+  { key: "acompanamiento" as const, icon: "lucide:users" },
+  { key: "puertaPuerta" as const, icon: "lucide:door-open" },
 ] as const;
 
 const metricas = [
@@ -27,109 +27,17 @@ const metricas = [
 ] as const;
 
 const equipo = [
-  {
-    nombre: "Mario Basaez",
-    cargo: "cargoFundador" as const,
-    imagen: "/team/mario-basaez.jpg",
-  },
-  {
-    nombre: "Hans Vasquez",
-    cargo: "cargoOperaciones" as const,
-    imagen: "/team/hans-vasquez.jpg",
-  },
-  {
-    nombre: "Poliana Cisternas",
-    cargo: "cargoComercial" as const,
-    imagen: "/team/poliana-cisternas.jpg",
-  },
-  {
-    nombre: "Stefanie Cordova",
-    cargo: "cargoAdminFinanzas" as const,
-    imagen: "/team/stefanie-cordova.jpg",
-  },
-  {
-    nombre: "Ricardo Lazo",
-    cargo: "cargoComercioExterior" as const,
-    imagen: "/team/ricardo-lazo.jpg",
-  },
-  {
-    nombre: "Rocio Villareal",
-    cargo: "cargoSeguridad" as const,
-    imagen: "/team/rocio-villareal.jpg",
-  },
-  {
-    nombre: "Rodrigo Castillo",
-    cargo: "cargoEjecutivoComercialzonal" as const,
-    imagen: "/team/rodrigo-castillo.jpg",
-  },
-  {
-    nombre: "Alex Cárdenas",
-    cargo: "cargoTransportes" as const,
-    imagen: "/team/alex-cardenas.jpg",
-  },
-  {
-    nombre: "Nina Scotti",
-    cargo: "cargoEjecutivaComercial" as const,
-    imagen: "/team/nina-scotti.jpg",
-  },
-  {
-    nombre: "Rodrigo Cáceres",
-    cargo: "cargoCustomerServices" as const,
-    imagen: "/team/rodrigo-caceres.jpg",
-  },
+  { nombre: "Mario Basaez", cargo: "cargoFundador" as const, imagen: "/team/mario-basaez.jpg" },
+  { nombre: "Hans Vasquez", cargo: "cargoOperaciones" as const, imagen: "/team/hans-vasquez.jpg" },
+  { nombre: "Poliana Cisternas", cargo: "cargoComercial" as const, imagen: "/team/poliana-cisternas.jpg" },
+  { nombre: "Stefanie Cordova", cargo: "cargoAdminFinanzas" as const, imagen: "/team/stefanie-cordova.jpg" },
+  { nombre: "Ricardo Lazo", cargo: "cargoComercioExterior" as const, imagen: "/team/ricardo-lazo.jpg" },
+  { nombre: "Rocio Villareal", cargo: "cargoSeguridad" as const, imagen: "/team/rocio-villareal.jpg" },
+  { nombre: "Rodrigo Castillo", cargo: "cargoEjecutivoComercialzonal" as const, imagen: "/team/rodrigo-castillo.jpg" },
+  { nombre: "Alex Cárdenas", cargo: "cargoTransportes" as const, imagen: "/team/alex-cardenas.jpg" },
+  { nombre: "Nina Scotti", cargo: "cargoEjecutivaComercial" as const, imagen: "/team/nina-scotti.jpg" },
+  { nombre: "Rodrigo Cáceres", cargo: "cargoCustomerServices" as const, imagen: "/team/rodrigo-caceres.jpg" },
 ] as const;
-
-const colorStyles: Record<string, {
-  border: string;
-  iconGradient: string;
-  iconBorder: string;
-  iconColor: string;
-  iconGlow: string;
-  accent: string;
-  glow: string;
-  tag: string;
-}> = {
-  blue: {
-    border: "border-blue-500/25 hover:border-blue-400/60",
-    iconGradient: "from-blue-500/30 to-blue-900/20",
-    iconBorder: "border-blue-500/40",
-    iconColor: "text-blue-300",
-    iconGlow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]",
-    accent: "bg-blue-500",
-    glow: "group-hover:shadow-blue-500/10",
-    tag: "bg-blue-500/20 border-blue-500/40 text-blue-300",
-  },
-  emerald: {
-    border: "border-emerald-500/25 hover:border-emerald-400/60",
-    iconGradient: "from-emerald-500/30 to-emerald-900/20",
-    iconBorder: "border-emerald-500/40",
-    iconColor: "text-emerald-300",
-    iconGlow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]",
-    accent: "bg-emerald-500",
-    glow: "group-hover:shadow-emerald-500/10",
-    tag: "bg-emerald-500/20 border-emerald-500/40 text-emerald-300",
-  },
-  violet: {
-    border: "border-violet-500/25 hover:border-violet-400/60",
-    iconGradient: "from-violet-500/30 to-violet-900/20",
-    iconBorder: "border-violet-500/40",
-    iconColor: "text-violet-300",
-    iconGlow: "drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]",
-    accent: "bg-violet-500",
-    glow: "group-hover:shadow-violet-500/10",
-    tag: "bg-violet-500/20 border-violet-500/40 text-violet-300",
-  },
-  amber: {
-    border: "border-amber-500/25 hover:border-amber-400/60",
-    iconGradient: "from-amber-500/30 to-amber-900/20",
-    iconBorder: "border-amber-500/40",
-    iconColor: "text-amber-300",
-    iconGlow: "drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]",
-    accent: "bg-amber-500",
-    glow: "group-hover:shadow-amber-500/10",
-    tag: "bg-amber-500/20 border-amber-500/40 text-amber-300",
-  },
-};
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -141,8 +49,8 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated.current) {
           hasAnimated.current = true;
-          const duration = 2000;
-          const steps = 60;
+          const duration = 1800;
+          const steps = 50;
           const increment = target / steps;
           let current = 0;
           const timer = setInterval(() => {
@@ -156,15 +64,14 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
           }, duration / steps);
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.4 },
     );
-
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [target]);
 
   return (
-    <span ref={ref}>
+    <span ref={ref} className="inicio-stat-value">
       {count.toLocaleString()}
       {suffix}
     </span>
@@ -174,376 +81,221 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
 export function SobreNosotrosContent() {
   const { t } = useLocale();
   const tr = t.sobreNosotrosPage;
-  const mainRef = useRef<HTMLElement>(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-
-  useEffect(() => {
-    const mainElement = mainRef.current;
-    if (!mainElement) return;
-    const handleScroll = () => setShowScrollTop(mainElement.scrollTop > 400);
-    mainElement.addEventListener("scroll", handleScroll);
-    return () => mainElement.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const handleScrollToTop = () => {
-    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   return (
-    <main ref={mainRef} className="flex-1 min-h-0 overflow-auto relative isolate scroll-smooth" role="main">
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden min-h-[100dvh] w-full">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-600 via-slate-800 to-slate-900" />
-        <AnimatedNetworkBackground />
-        <div className="absolute inset-0 bg-slate-900/30 pointer-events-none" />
-      </div>
-
-      {/* Hero */}
-      <header className="relative z-10 text-white py-20 sm:py-28 lg:py-36">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center">
-            <span className="inline-block px-4 py-1.5 bg-brand-olive/20 border border-brand-olive/40 text-xs font-semibold text-brand-olive uppercase tracking-wider mb-4 sm:mb-6 rounded-full">
+    <MarketingPageShell>
+      <header className="relative z-10 text-white pt-16 sm:pt-24 pb-12 sm:pb-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2.5 mb-6 px-4 py-2 rounded-full inicio-glass text-xs font-medium uppercase tracking-[0.18em] text-white/60">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-teal opacity-40" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-teal" />
+              </span>
               {tr.heroTag}
-            </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold tracking-tight text-white mb-4 sm:mb-6">
+            </div>
+            <h1 className="inicio-display text-4xl sm:text-5xl lg:text-[3.15rem] font-extrabold leading-[1.05]">
               {tr.heroTitle}
             </h1>
-            <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed mb-4">
+            <p className="mt-5 text-base sm:text-lg text-white/55 max-w-xl leading-relaxed">
               {tr.heroSubtitle}
             </p>
-            <p className="text-base sm:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+            <p className="mt-3 text-sm sm:text-base text-white/40 max-w-2xl leading-relaxed">
               {tr.heroText}
             </p>
           </div>
         </div>
       </header>
 
-      {/* Nuestra Historia */}
-      <section className="relative z-10 py-16 sm:py-24">
-        <div className="max-w-6xl mx-auto px-4">
+      {/* Historia */}
+      <section className={inicioStyles.section}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="order-2 lg:order-1">
-              <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-4 rounded-full">
-                {tr.historyTag}
-              </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-6">
-                {tr.historyTitle}
-              </h2>
-              <div className="space-y-4 text-white/70 text-sm sm:text-base leading-relaxed">
+            <div>
+              <SectionHeader
+                align="left"
+                tag={tr.historyTag}
+                title={tr.historyTitle}
+              />
+              <div className="space-y-4 text-white/55 text-sm sm:text-base leading-relaxed -mt-4">
                 <p>{tr.historyP1}</p>
                 <p>{tr.historyP2}</p>
                 <p>{tr.historyP3}</p>
               </div>
-              <blockquote className="mt-6 pl-4 border-l-4 border-brand-olive rounded-r-lg bg-black/30 backdrop-blur-sm py-2 pr-4">
-                <p className="text-white/90 italic text-base sm:text-lg">
-                  &quot;{tr.historyQuote}&quot;
+              <blockquote className="mt-6 pl-4 border-l-2 border-brand-teal/60 py-1">
+                <p className="text-white/85 italic text-base sm:text-lg leading-relaxed">
+                  “{tr.historyQuote}”
                 </p>
               </blockquote>
             </div>
-            <div className="order-1 lg:order-2">
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                <div className="relative aspect-[4/3] w-full sm:flex-1 max-w-md bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden shadow-xl shadow-black/30">
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 opacity-70 rounded-t-2xl" />
+            <div className="flex flex-col sm:flex-row items-stretch gap-4">
+              <GlassCard className="flex-1 aspect-[4/3] p-0 overflow-hidden" reveal={false}>
+                <div className="relative h-full min-h-[220px]">
                   <img
                     src={withBase("/images/puerto-contenedores.jpg")}
                     alt="Puerto con contenedores"
-                    className="w-full h-full object-cover opacity-80"
+                    className="absolute inset-0 w-full h-full object-cover opacity-70"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#070f1f]/90 via-transparent to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <Icon icon="lucide:ship" className="text-white/10" width={120} height={120} />
+                    <Icon icon="lucide:ship" className="text-white/10" width={100} height={100} />
                   </div>
                 </div>
-                <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-black/40 backdrop-blur-md border border-brand-olive/40 rounded-2xl flex items-center justify-center shadow-xl shadow-black/20">
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-3xl font-bold text-brand-olive">15+</p>
-                    <p className="text-[10px] sm:text-xs text-white/60 uppercase tracking-wide">{tr.yearsExperience}</p>
-                  </div>
-                </div>
-              </div>
+              </GlassCard>
+              <GlassCard className="sm:w-36 flex flex-col items-center justify-center p-6 text-center" reveal={false}>
+                <p className="inicio-stat-value text-4xl font-bold inicio-gradient-text">15+</p>
+                <p className="text-[11px] text-white/45 uppercase tracking-wider mt-2">{tr.yearsExperience}</p>
+              </GlassCard>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Propósito / Misión / Visión / Valores */}
-      <section className="relative z-10 py-16 sm:py-24 bg-black/35 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-4 rounded-full">
-              {tr.missionTag}
-            </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
-              {tr.missionTitle}
-            </h2>
-            <p className="text-white/50 max-w-xl mx-auto text-sm sm:text-base">
-              {tr.missionSubtitle}
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {missionCards.map(({ key, icon, color }) => {
-              const c = colorStyles[color];
+      {/* Misión */}
+      <section className={inicioStyles.sectionAlt}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <SectionHeader tag={tr.missionTag} title={tr.missionTitle} subtitle={tr.missionSubtitle} gradient />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {missionCards.map(({ key, icon }) => {
               const isValores = key === "valores";
               return (
-                <div
-                  key={key}
-                  className={`group relative bg-black/40 backdrop-blur-md border ${c.border} rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:bg-black/55 shadow-xl shadow-black/30 ${c.glow}`}
-                >
-                  <div className={`absolute top-0 left-0 right-0 h-[2px] ${c.accent} opacity-70`} />
-                  <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
-                    <Icon icon={icon} width={120} height={120} />
+                <GlassCard key={key} interactive className="p-5 sm:p-6">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-teal/25 to-transparent border border-brand-teal/25 flex items-center justify-center mb-4">
+                    <Icon icon={icon} className="text-brand-teal" width={22} height={22} />
                   </div>
-                  <div className="relative p-5 sm:p-6">
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${c.iconGradient} border ${c.iconBorder} flex items-center justify-center mb-4 shadow-lg flex-shrink-0`}>
-                      <Icon icon={icon} className={`${c.iconColor} ${c.iconGlow}`} width={28} height={28} />
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2">
-                      {tr[`${key}Title` as keyof typeof tr]}
-                    </h3>
-                    {isValores ? (
-                      <ul className="space-y-1.5 text-white/50 text-sm">
-                        {(tr.valoresList as string[]).map((valor, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <Icon icon="lucide:check" className={c.iconColor} width={14} height={14} />
-                            {valor}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-white/50 text-sm leading-relaxed">
-                        {tr[`${key}Desc` as keyof typeof tr]}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Nuestros Diferenciales */}
-      <section className="relative z-10 py-16 sm:py-24">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-violet-500/20 border border-violet-500/40 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-4 rounded-full">
-              {tr.diferencialesTag}
-            </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
-              {tr.diferencialesTitle}
-            </h2>
-            <p className="text-white/50 max-w-xl mx-auto text-sm sm:text-base">
-              {tr.diferencialesSubtitle}
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {diferenciales.map(({ key, icon, color }) => {
-              const c = colorStyles[color];
-              return (
-                <div
-                  key={key}
-                  className={`group relative bg-black/40 backdrop-blur-md border ${c.border} rounded-2xl overflow-hidden text-center transition-all duration-300 hover:-translate-y-1 hover:bg-black/55 shadow-xl shadow-black/30 ${c.glow}`}
-                >
-                  <div className={`absolute top-0 left-0 right-0 h-[2px] ${c.accent} opacity-70`} />
-                  <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
-                    <Icon icon={icon} width={100} height={100} />
-                  </div>
-                  <div className="relative p-6 sm:p-8">
-                    <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-br ${c.iconGradient} border ${c.iconBorder} flex items-center justify-center shadow-lg`}>
-                      <Icon icon={icon} className={`${c.iconColor} ${c.iconGlow}`} width={32} height={32} />
-                    </div>
-                    <h3 className="text-base sm:text-lg font-bold text-white mb-2">
-                      {tr[`${key}Title` as keyof typeof tr]}
-                    </h3>
-                    <p className="text-white/50 text-sm leading-relaxed">
+                  <h3 className="inicio-display text-lg font-bold text-white mb-2">
+                    {tr[`${key}Title` as keyof typeof tr]}
+                  </h3>
+                  {isValores ? (
+                    <ul className="space-y-1.5 text-white/45 text-sm">
+                      {(tr.valoresList as string[]).map((valor) => (
+                        <li key={valor} className="flex items-center gap-2">
+                          <Icon icon="lucide:check" className="text-brand-teal shrink-0" width={14} height={14} />
+                          {valor}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-white/45 text-sm leading-relaxed">
                       {tr[`${key}Desc` as keyof typeof tr]}
                     </p>
-                  </div>
-                </div>
+                  )}
+                </GlassCard>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* Métricas de Confianza */}
-      <section className="relative z-10 py-16 sm:py-24 bg-black/35 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <span className="inline-block px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-3 rounded-full">
-              {tr.metricasTag}
-            </span>
-            <h2 className="text-2xl lg:text-4xl font-bold text-white mb-2">
-              {tr.metricasTitle}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {metricas.map(({ key, value, suffix, icon }) => (
-              <div
-                key={key}
-                className="group relative text-center p-5 sm:p-6 bg-black/40 backdrop-blur-md border border-white/15 hover:border-emerald-500/40 rounded-2xl shadow-xl shadow-black/20 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-500 opacity-50 rounded-t-2xl" />
-                <div className="absolute -bottom-4 -right-4 opacity-[0.04] pointer-events-none">
-                  <Icon icon={icon} width={80} height={80} />
+      {/* Diferenciales */}
+      <section className={inicioStyles.section}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <SectionHeader
+            tag={tr.diferencialesTag}
+            title={tr.diferencialesTitle}
+            subtitle={tr.diferencialesSubtitle}
+            align="left"
+          />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {diferenciales.map(({ key, icon }, i) => (
+              <GlassCard key={key} interactive className="p-6 text-center">
+                <span className="inicio-display text-[10px] font-bold text-white/15 tabular-nums block mb-3">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand-teal/25 to-transparent border border-brand-teal/25 flex items-center justify-center">
+                  <Icon icon={icon} className="text-brand-teal" width={24} height={24} />
                 </div>
-                <div className="relative z-10 w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-emerald-500/30 to-emerald-900/20 border border-emerald-500/40 rounded-xl flex items-center justify-center">
-                  <Icon icon={icon} className="text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" width={22} height={22} />
-                </div>
-                <p className="text-3xl lg:text-4xl font-black text-white mb-1">
-                  <AnimatedCounter target={value} suffix={suffix} />
+                <h3 className="inicio-display text-base font-bold text-white mb-2">
+                  {tr[`${key}Title` as keyof typeof tr]}
+                </h3>
+                <p className="text-white/45 text-sm leading-relaxed">
+                  {tr[`${key}Desc` as keyof typeof tr]}
                 </p>
-                <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-wide leading-tight">
-                  {tr[`${key}Label` as keyof typeof tr]}
-                </p>
-              </div>
+              </GlassCard>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Nuestro Equipo */}
-      <section className="relative z-10 py-16 sm:py-24">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-10 sm:mb-14">
-            <span className="inline-block px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-xs font-semibold text-blue-300 uppercase tracking-wider mb-4 rounded-full">
-              {tr.equipoTag}
-            </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
-              {tr.equipoTitle}
-            </h2>
-            <p className="text-white/50 max-w-xl mx-auto text-sm sm:text-base">
-              {tr.equipoSubtitle}
-            </p>
+      {/* Métricas */}
+      <section className={inicioStyles.sectionAlt}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <SectionHeader tag={tr.metricasTag} title={tr.metricasTitle} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {metricas.map(({ key, value, suffix, icon }) => (
+              <GlassCard key={key} interactive className="p-5 sm:p-6 text-center">
+                <div className="w-11 h-11 mx-auto mb-4 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center">
+                  <Icon icon={icon} className="text-brand-teal" width={20} height={20} />
+                </div>
+                <p className="text-3xl sm:text-4xl font-bold inicio-gradient-text mb-1">
+                  <AnimatedCounter target={value} suffix={suffix} />
+                </p>
+                <p className="text-[11px] text-white/40 uppercase tracking-wider">
+                  {tr[`${key}Label` as keyof typeof tr]}
+                </p>
+              </GlassCard>
+            ))}
           </div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+      {/* Equipo */}
+      <section className={inicioStyles.section}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <SectionHeader tag={tr.equipoTag} title={tr.equipoTitle} subtitle={tr.equipoSubtitle} gradient />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {equipo.map(({ nombre, cargo, imagen }) => (
-              <div
-                key={nombre}
-                className="group relative text-center p-4 sm:p-6 bg-black/40 backdrop-blur-md border border-white/15 hover:border-blue-400/50 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 shadow-xl shadow-black/20 hover:shadow-blue-500/10"
-              >
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 opacity-50 rounded-t-2xl" />
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4 rounded-full overflow-hidden border-2 border-blue-500/40 group-hover:border-blue-400/70 transition-colors shadow-lg ring-2 ring-black/20">
+              <GlassCard key={nombre} interactive className="p-4 sm:p-5 text-center">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-full overflow-hidden border border-brand-teal/30 bg-white/[0.04]">
                   <img
                     src={withBase(imagen)}
                     alt={nombre}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-blue-900/30 flex items-center justify-center">
-                    <Icon icon="lucide:user" className="text-white/40" width={40} height={40} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Icon icon="lucide:user" className="text-white/25" width={32} height={32} />
                   </div>
                 </div>
-                <h3 className="text-sm sm:text-base font-bold text-white mb-1">{nombre}</h3>
-                <p className="text-white/60 text-xs sm:text-sm">{tr[cargo as keyof typeof tr]}</p>
-              </div>
+                <h3 className="text-sm font-bold text-white mb-0.5">{nombre}</h3>
+                <p className="text-white/40 text-xs leading-snug">{tr[cargo as keyof typeof tr]}</p>
+              </GlassCard>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Final */}
-      <section className="relative z-10 py-16 sm:py-24">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="relative z-10 bg-black/35 backdrop-blur-md border border-brand-olive/30 rounded-2xl overflow-hidden p-8 sm:p-12 lg:p-16 text-center shadow-xl shadow-black/30">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-brand-olive opacity-70" />
-            <div className="absolute -bottom-8 -right-8 opacity-[0.04] pointer-events-none">
-              <Icon icon="lucide:handshake" width={180} height={180} />
+      {/* CTA */}
+      <section className={`${inicioStyles.section} pb-10`}>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <GlassCard className="p-8 sm:p-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-brand-teal/15 border border-brand-teal/30 flex items-center justify-center">
+              <Icon icon="lucide:handshake" className="text-brand-teal" width={26} height={26} />
             </div>
-
-            <div className="relative z-10">
-              <div className="w-16 h-16 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-brand-olive/30 to-brand-olive/10 border border-brand-olive/40 rounded-2xl flex items-center justify-center shadow-lg">
-                <Icon icon="lucide:handshake" className="text-brand-olive drop-shadow-[0_0_10px_rgba(102,153,0,0.6)]" width={32} height={32} />
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
-                {tr.ctaTitle}
-              </h2>
-              <p className="text-white/60 text-sm sm:text-base mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
-                {tr.ctaSubtitle}
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-                <a
-                  href="mailto:informaciones@asli.cl?subject=Consulta desde web"
-                  className="inline-flex items-center justify-center gap-2 py-3 px-8 bg-brand-olive text-white font-semibold rounded-xl hover:bg-brand-olive/90 transition-colors shadow-lg shadow-brand-olive/30"
-                >
-                  <Icon icon="lucide:mail" width={20} height={20} />
-                  {tr.ctaButton1}
-                </a>
-                <a
-                  href="https://wa.me/56968394225"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 py-3 px-8 bg-white/10 border border-white/30 rounded-xl text-white font-medium hover:bg-white/20 transition-colors"
-                >
-                  <Icon icon="lucide:message-circle" width={20} height={20} />
-                  {tr.ctaButton2}
-                </a>
-              </div>
+            <h2 className="inicio-display text-3xl sm:text-4xl font-bold inicio-gradient-text mb-3">
+              {tr.ctaTitle}
+            </h2>
+            <p className="text-white/50 text-sm sm:text-base mb-8 max-w-md mx-auto leading-relaxed">
+              {tr.ctaSubtitle}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <PrimaryButton href="mailto:informaciones@asli.cl?subject=Consulta%20desde%20web">
+                <Icon icon="lucide:mail" width={18} height={18} />
+                {tr.ctaButton1}
+              </PrimaryButton>
+              <GhostButton href="https://wa.me/56968394225">
+                <Icon icon="lucide:message-circle" width={18} height={18} />
+                {tr.ctaButton2}
+              </GhostButton>
             </div>
-          </div>
+          </GlassCard>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="relative z-10 py-6 bg-black/50 backdrop-blur-lg text-white border-t border-white/10">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="flex flex-col items-center mb-4">
-            <img src={brand.logo} alt={brand.companyTitle} width={160} height={80} className="h-8 sm:h-10 w-auto object-contain brightness-0 invert mb-3" />
-
-            <div className="flex gap-2 sm:gap-3 mb-3">
-              <a href="https://www.linkedin.com/company/aslichile/posts/?feedView=all" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/15 border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="LinkedIn">
-                <Icon icon="mdi:linkedin" width={16} height={16} />
-              </a>
-              <a href="https://www.instagram.com/asli_chile/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/15 border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="Instagram">
-                <Icon icon="mdi:instagram" width={16} height={16} />
-              </a>
-              <a href="https://wa.me/56968394225" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/15 border border-white/20 rounded-lg flex items-center justify-center hover:bg-white/25 hover:border-white/40 transition-colors" aria-label="WhatsApp">
-                <Icon icon="mdi:whatsapp" width={16} height={16} />
-              </a>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-x-6 text-[11px] sm:text-xs text-white/50">
-              <span className="flex items-center gap-1.5">
-                <Icon icon="lucide:map-pin" width={12} height={12} className="text-brand-teal flex-shrink-0" />
-                <span className="text-center sm:text-left">{t.inicio.footerLocation}</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Icon icon="lucide:mail" width={12} height={12} className="text-brand-teal flex-shrink-0" />
-                {t.inicio.footerEmail}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Icon icon="lucide:phone" width={12} height={12} className="text-brand-teal flex-shrink-0" />
-                {t.inicio.footerPhone}
-              </span>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 pt-3 text-center">
-            <p className="text-[10px] sm:text-xs text-white/30">
-              © {new Date().getFullYear()} {brand.companyTitle} · {t.inicio.footerCopyright}
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Scroll to top */}
-      <button
-        type="button"
-        onClick={handleScrollToTop}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-brand-blue/90 backdrop-blur-sm border border-white/20 rounded-xl text-white flex items-center justify-center shadow-lg hover:bg-brand-blue transition-all duration-300 ${showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
-        aria-label="Volver arriba"
-      >
-        <Icon icon="lucide:chevron-up" width={20} height={20} />
-      </button>
-    </main>
+    </MarketingPageShell>
   );
 }

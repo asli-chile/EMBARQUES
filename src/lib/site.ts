@@ -11,7 +11,6 @@ export const siteConfig = {
     { labelKey: "inicio", href: "/inicio" },
     { labelKey: "servicios", href: "/servicios" },
     { labelKey: "sobreNosotros", href: "/sobre-nosotros" },
-    { labelKey: "tracking", href: "/tracking" },
   ] as const,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },

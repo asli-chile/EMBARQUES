@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { Icon } from "@iconify/react";
@@ -6,11 +6,58 @@ import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import {
+  applyOperacionesClienteFilter,
+  shouldSkipOperacionesForCliente,
+} from "@/lib/auth/operacionesClienteScope";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { withBase } from "@/lib/basePath";
+import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
+import { ESTADO_OPERACION_STYLES } from "@/lib/ui/estadoOperacion";
+
+/** Evita pintar filas fuera de viewport (~1000 filas). */
+const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 52px" };
+
+type SvgProps = { size?: number; className?: string };
+
+function IcoCopy({ size = 18, className }: SvgProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  );
+}
+function IcoMail({ size = 18, className }: SvgProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+}
+function IcoExternal({ size = 16, className }: SvgProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </svg>
+  );
+}
+function IcoPaperclip({ size = 16, className }: SvgProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+function IcoBookmark({ size = 16, className }: SvgProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+    </svg>
+  );
+}
 
 type Operacion = {
   id: string;
@@ -45,15 +92,7 @@ type Operacion = {
   fin_stacking: string | null;
 };
 
-const estadoConfig: Record<string, { dot: string; bg: string; text: string; border: string }> = {
-  PENDIENTE:     { dot: "bg-amber-400",   bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
-  "EN PROCESO":  { dot: "bg-blue-400",    bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
-  "EN TRÁNSITO": { dot: "bg-violet-400",  bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
-  ARRIBADO:      { dot: "bg-emerald-400", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
-  COMPLETADO:    { dot: "bg-neutral-400", bg: "bg-neutral-100",text: "text-neutral-600", border: "border-neutral-200" },
-  CANCELADO:     { dot: "bg-red-400",     bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200" },
-  ROLEADO:       { dot: "bg-orange-400",  bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200" },
-};
+const estadoConfig = ESTADO_OPERACION_STYLES;
 
 type SortField = "ref_asli" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "estado_operacion";
 type SortDirection = "asc" | "desc";
@@ -63,6 +102,11 @@ type ViewMode = "table" | "cards";
 
 function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "-";
+  const iso = dateStr.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split("-");
+    return `${d}-${m}-${y}`;
+  }
   try { return format(new Date(dateStr), "dd-MM-yyyy", { locale: es }); } catch { return dateStr; }
 }
 
@@ -92,7 +136,7 @@ function buildEmailContent(op: Operacion) {
   let htmlBody = `<div style="font-family:Arial,sans-serif;color:#374151">`;
   htmlBody += `<p>Estimado equipo,</p><p>Se solicita la siguiente reserva:</p>`;
   htmlBody += renderHtmlTable("General", [
-    ["Ref. ASLI", op.ref_asli],
+    ["Ref. ASLI", formatRefAsli(op.ref_asli, op.correlativo)],
     ["Cliente", op.cliente],
     ["Estado", op.estado_operacion],
   ]);
@@ -121,7 +165,7 @@ function buildEmailContent(op: Operacion) {
 function buildReservaBody(op: Operacion): string {
   const lines: string[] = [
     `SOLICITUD DE RESERVA`,
-    `Ref: ${op.ref_asli ?? `#${op.correlativo}`}`,
+    `Ref: ${displayRefAsli(op.ref_asli, op.correlativo)}`,
     `Cliente: ${op.cliente ?? "-"}`,
     `Naviera: ${op.naviera ?? "-"}  |  Nave: ${op.nave ?? "-"}`,
     `POL: ${op.pol ?? "-"}  |  POD: ${op.pod ?? "-"}`,
@@ -184,17 +228,17 @@ type CardProps = {
   selected: boolean;
   actionLoading: boolean;
   tr: ReturnType<typeof useLocale>["t"]["misReservas"];
-  onSelect: () => void;
+  onSelect: (id: string) => void;
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
 };
 
-function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking }: CardProps) {
+const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking }: CardProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
     <div
-      onClick={!isCliente ? onSelect : undefined}
+      onClick={!isCliente ? () => onSelect(op.id) : undefined}
       className={`bg-[#F4F8FC] rounded-lg flex flex-col overflow-hidden transition-all duration-150 border shadow-sm ${
         !isCliente ? "cursor-pointer" : ""
       } ${
@@ -216,7 +260,7 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, t
           )}
           <div className="min-w-0">
             <p className="text-lg font-bold text-brand-blue leading-tight">
-              {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}
+              {displayRefAsli(op.ref_asli, op.correlativo)}
             </p>
             <p className="text-base text-brand-blue/70 truncate mt-1 font-medium">{op.cliente ?? "-"}</p>
           </div>
@@ -287,10 +331,10 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, t
         </span>
         <div className="flex items-center gap-1">
           <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.copyTitle}>
-            <Icon icon="lucide:copy" width={20} height={20} />
+            <IcoCopy size={20} />
           </button>
           <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.emailTitle}>
-            <Icon icon="lucide:mail" width={20} height={20} />
+            <IcoMail size={20} />
           </button>
           {!isCliente && (
             <button
@@ -305,14 +349,150 @@ function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, t
               }`}
               title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
             >
-              <Icon icon={op.booking_doc_url ? "lucide:paperclip" : "lucide:bookmark-plus"} width={20} height={20} />
+              {op.booking_doc_url ? <IcoPaperclip size={20} /> : <IcoBookmark size={20} />}
             </button>
           )}
         </div>
       </div>
     </div>
   );
-}
+});
+
+type TableRowProps = {
+  op: Operacion;
+  idx: number;
+  selected: boolean;
+  isCliente: boolean;
+  typeExternal: string;
+  typePendiente: string;
+  copyShort: string;
+  emailTitle: string;
+  editBookingTitle: string;
+  confirmBookingTitle: string;
+  confirmShort: string;
+  onSelect: (id: string) => void;
+  onCopy: (op: Operacion) => void;
+  onEmail: (op: Operacion) => void;
+  onBooking: (op: Operacion) => void;
+};
+
+const MisReservasTableRow = memo(function MisReservasTableRow({
+  op,
+  idx,
+  selected,
+  isCliente,
+  typeExternal,
+  typePendiente,
+  copyShort,
+  emailTitle,
+  editBookingTitle,
+  confirmBookingTitle,
+  confirmShort,
+  onSelect,
+  onCopy,
+  onEmail,
+  onBooking,
+}: TableRowProps) {
+  const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+  return (
+    <tr
+      style={ROW_CV}
+      className={`border-b border-neutral-100 ${
+        selected ? "bg-brand-blue/10" : idx % 2 === 0 ? "bg-[#F4F8FC] hover:bg-brand-blue/[0.06]" : "bg-[#EAF0F8] hover:bg-brand-blue/[0.06]"
+      }`}
+    >
+      {!isCliente && (
+        <td className="px-4 py-4 text-center border-r border-brand-blue/10">
+          <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-5 h-5 rounded border-neutral-300 accent-brand-blue" />
+        </td>
+      )}
+      <td className="px-4 py-4 text-center">
+        <span className="font-bold text-brand-blue text-base">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
+      </td>
+      <td className="px-4 py-4 text-center min-w-[10rem]">
+        {!isCliente ? (
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onBooking(op)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-base font-semibold border max-w-[240px] min-h-[44px] ${
+                op.booking_doc_url
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                  : op.booking
+                  ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                  : "bg-neutral-50 text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
+              }`}
+              title={op.booking ? editBookingTitle : confirmBookingTitle}
+            >
+              {op.booking_doc_url ? <IcoPaperclip size={16} className="shrink-0" /> : <IcoBookmark size={16} className="shrink-0" />}
+              <span className="font-mono truncate">{op.booking ?? confirmShort}</span>
+            </button>
+            {op.booking_doc_url && (
+              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg">
+                <IcoExternal size={16} />
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1">
+            <span className="text-base font-mono text-brand-blue/80">{op.booking || "-"}</span>
+            {op.booking_doc_url && (
+              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
+                <IcoPaperclip size={10} />
+              </a>
+            )}
+          </div>
+        )}
+      </td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{op.cliente || "-"}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue/85">{op.especie || "-"}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue/85 whitespace-nowrap">{op.naviera || "-"}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue/85">{op.nave || "-"}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue/75 font-mono">{op.pol || "-"}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue/75 font-mono">{op.pod || "-"}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{fmtDate(op.etd)}</td>
+      <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{fmtDate(op.eta)}</td>
+      <td className="px-4 py-4 text-center">
+        {op.tt !== null ? (
+          <span className="text-base font-semibold text-brand-blue bg-brand-blue/10 px-2.5 py-1.5 rounded-lg">{op.tt}d</span>
+        ) : <span className="text-brand-blue/40 text-base">-</span>}
+      </td>
+      <td className="px-4 py-4 text-center">
+        {cfg ? (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+            <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
+            {op.estado_operacion}
+          </span>
+        ) : <span className="text-brand-blue/40 text-base">-</span>}
+      </td>
+      <td className="px-4 py-4 text-center">
+        {op.tipo_reserva_transporte === "asli" ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+            ASLI
+          </span>
+        ) : op.tipo_reserva_transporte === "externa" ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {typeExternal}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-medium bg-brand-blue/5 text-brand-blue/50 border border-brand-blue/15">
+            {typePendiente}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-4 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <button type="button" onClick={() => onCopy(op)} className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg" title={copyShort}>
+            <IcoCopy size={18} />
+          </button>
+          <button type="button" onClick={() => onEmail(op)} className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg" title={emailTitle}>
+            <IcoMail size={18} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 // ─── EmailModal ───────────────────────────────────────────────────────────────
 
@@ -347,7 +527,7 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
           </div>
           <div>
             <h3 className="text-sm font-bold text-neutral-900">{sent ? tr.emailSentTitle : tr.emailSendTitle}</h3>
-            <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
+            <p className="text-xs text-neutral-500">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
           </div>
         </div>
 
@@ -458,7 +638,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-neutral-900">{tr.confirmBookingModal}</h3>
-              <p className="text-xs text-neutral-500">{op.ref_asli ?? `#${op.correlativo}`} · {op.cliente ?? ""}</p>
+              <p className="text-xs text-neutral-500">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
             </div>
           </div>
 
@@ -587,6 +767,7 @@ export function MisReservasContent() {
   );
   const [emailModal, setEmailModal] = useState<Operacion | null>(null);
   const [bookingModal, setBookingModal] = useState<Operacion | null>(null);
+  const deferredSearch = useDeferredValue(searchTerm);
 
   const supabase = useMemo(() => {
     try { return createClient(); } catch { return null; }
@@ -595,6 +776,13 @@ export function MisReservasContent() {
   const fetchOperaciones = useCallback(async () => {
     if (!supabase || authLoading) return;
     setLoading(true);
+
+    const scope = { isCliente, empresaNombres };
+    if (shouldSkipOperacionesForCliente(scope)) {
+      setOperaciones([]);
+      setLoading(false);
+      return;
+    }
 
     let q = supabase
       .from("operaciones")
@@ -605,9 +793,7 @@ export function MisReservasContent() {
       )
       .is("deleted_at", null);
 
-    if (empresaNombres.length > 0) {
-      q = q.in("cliente", empresaNombres);
-    }
+    q = applyOperacionesClienteFilter(q, scope);
     const { data, error } = await q.order("created_at", { ascending: false });
 
     if (error) {
@@ -616,7 +802,7 @@ export function MisReservasContent() {
       setOperaciones((data ?? []) as Operacion[]);
     }
     setLoading(false);
-  }, [supabase, authLoading, empresaNombres]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();
@@ -635,8 +821,8 @@ export function MisReservasContent() {
   const getFilteredData = useCallback(
     (excludeFilter?: "estado" | "cliente" | "naviera" | "especie" | "pod" | "nave") => {
       let result = operaciones;
-      if (searchTerm.trim()) {
-        const search = searchTerm.toLowerCase();
+      if (deferredSearch.trim()) {
+        const search = deferredSearch.toLowerCase();
         result = result.filter(
           (op) =>
             op.cliente?.toLowerCase().includes(search) ||
@@ -644,6 +830,7 @@ export function MisReservasContent() {
             op.naviera?.toLowerCase().includes(search) ||
             op.nave?.toLowerCase().includes(search) ||
             op.ref_asli?.toLowerCase().includes(search) ||
+            formatRefAsli(op.ref_asli, op.correlativo)?.toLowerCase().includes(search) ||
             op.especie?.toLowerCase().includes(search) ||
             op.pod?.toLowerCase().includes(search) ||
             op.pol?.toLowerCase().includes(search)
@@ -661,7 +848,7 @@ export function MisReservasContent() {
       if (transporteFilter === "sin_enviar") result = result.filter((op) => !op.enviado_transporte);
       return result;
     },
-    [operaciones, searchTerm, estadoFilter, clienteFilter, navieraFilter, especieFilter, podFilter, naveFilter, etdDesde, etdHasta, transporteFilter]
+    [operaciones, deferredSearch, estadoFilter, clienteFilter, navieraFilter, especieFilter, podFilter, naveFilter, etdDesde, etdHasta, transporteFilter]
   );
 
   const filteredOperaciones = useMemo(() => {
@@ -705,8 +892,27 @@ export function MisReservasContent() {
     setSearchTerm(""); setEstadoFilter(""); setClienteFilter(""); setNavieraFilter(""); setEspecieFilter("");
     setPodFilter(""); setNaveFilter(""); setEtdDesde(""); setEtdHasta(""); setTransporteFilter("");
   };
-  const handleSelectAll = () => { setSelectedIds(selectedIds.size === filteredOperaciones.length ? new Set() : new Set(filteredOperaciones.map((op) => op.id))); };
-  const handleSelect = (id: string) => { const s = new Set(selectedIds); s.has(id) ? s.delete(id) : s.add(id); setSelectedIds(s); };
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds((prev) =>
+      prev.size === filteredOperaciones.length ? new Set() : new Set(filteredOperaciones.map((op) => op.id))
+    );
+  }, [filteredOperaciones]);
+  const handleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleCopy = useCallback(async (op: Operacion) => {
+    const ok = await copyToClipboard(op);
+    if (ok) sileo.success({ title: tr.copiedSuccess });
+  }, [tr.copiedSuccess]);
+
+  const handleOpenEmail = useCallback((op: Operacion) => setEmailModal(op), []);
+  const handleOpenBooking = useCallback((op: Operacion) => setBookingModal(op), []);
 
   const handleMoveToTrash = async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
@@ -787,11 +993,6 @@ export function MisReservasContent() {
     ));
   }, [supabase, getSelectedOps]);
 
-  const handleCopy = async (op: Operacion) => {
-    const ok = await copyToClipboard(op);
-    if (ok) { sileo.success({ title: tr.copiedSuccess }); }
-  };
-
   const handleBookingSaved = (opId: string, updated: { booking: string | null; booking_doc_url: string | null }) => {
     setOperaciones((prev) => prev.map((op) => op.id === opId ? { ...op, ...updated } : op));
     setBookingModal(null);
@@ -805,6 +1006,22 @@ export function MisReservasContent() {
           <div className="flex items-center gap-2.5 px-5 py-3.5 bg-[#F4F8FC] rounded-lg border border-brand-blue/15 shadow-mac-modal text-brand-blue text-base font-medium">
             <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin text-brand-blue" />
             <span>{tr.loading}</span>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (isCliente && empresaNombres.length === 0) {
+    return (
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[#D9E3F2]" role="main">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md text-center px-6 py-8 bg-[#F4F8FC] rounded-xl border border-brand-blue/15 shadow-mac-modal">
+            <Icon icon="lucide:building-2" className="mx-auto mb-3 text-brand-blue/50" width={40} height={40} />
+            <p className="text-brand-blue font-semibold text-lg mb-2">Sin empresa asignada</p>
+            <p className="text-brand-blue/70 text-sm">
+              Tu usuario cliente aún no tiene una empresa vinculada. Un administrador debe asignarte en Configuración → Asignar clientes-empresas.
+            </p>
           </div>
         </div>
       </main>
@@ -828,6 +1045,7 @@ export function MisReservasContent() {
 
   const exportRows = filteredOperaciones.map((op) =>
     exportCols.map(({ key }) => {
+      if (key === "ref_asli") return displayRefAsli(op.ref_asli, op.correlativo, "");
       const v = op[key];
       if (key === "etd" || key === "eta") return fmtDate(v as string | null);
       return v ?? "";
@@ -1117,7 +1335,7 @@ export function MisReservasContent() {
                   {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
                 </select>
               </div>
-              <div>
+              <div className={isCliente ? "hidden" : ""}>
                 <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colClient}</label>
                 <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
                   <option value="">{tr.allClients}</option>
@@ -1228,108 +1446,26 @@ export function MisReservasContent() {
                       </td>
                     </tr>
                   ) : (
-                    filteredOperaciones.map((op, idx) => {
-                      const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
-                      return (
-                        <tr
-                          key={op.id}
-                          className={`border-b border-neutral-100 transition-colors ${
-                            selectedIds.has(op.id) ? "bg-brand-blue/10" : idx % 2 === 0 ? "bg-[#F4F8FC] hover:bg-brand-blue/[0.06]" : "bg-[#EAF0F8] hover:bg-brand-blue/[0.06]"
-                          }`}
-                        >
-                          {!isCliente && (
-                            <td className="px-4 py-4 text-center border-r border-brand-blue/10">
-                              <input type="checkbox" checked={selectedIds.has(op.id)} onChange={() => handleSelect(op.id)} className="w-5 h-5 rounded border-neutral-300 accent-brand-blue" />
-                            </td>
-                          )}
-                          <td className="px-4 py-4 text-center">
-                            <span className="font-bold text-brand-blue text-base">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span>
-                          </td>
-                          <td className="px-4 py-4 text-center min-w-[10rem]">
-                            {!isCliente ? (
-                              <div className="inline-flex items-center gap-1">
-                                <button
-                                  onClick={() => setBookingModal(op)}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-base font-semibold border transition-all max-w-[240px] min-h-[44px] ${
-                                    op.booking_doc_url
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                      : op.booking
-                                      ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                      : "bg-neutral-50 text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
-                                  }`}
-                                  title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
-                                >
-                                  <Icon icon={op.booking_doc_url ? "lucide:paperclip" : op.booking ? "lucide:bookmark-check" : "lucide:bookmark-plus"} width={16} height={16} className="shrink-0" />
-                                  <span className="font-mono truncate">{op.booking ?? tr.confirmShort}</span>
-                                </button>
-                                {op.booking_doc_url && (
-                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
-                                    <Icon icon="lucide:external-link" width={16} height={16} />
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="inline-flex items-center gap-1">
-                                <span className="text-base font-mono text-brand-blue/80">{op.booking || "-"}</span>
-                                {op.booking_doc_url && (
-                                  <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
-                                    <Icon icon="lucide:paperclip" width={10} height={10} />
-                                  </a>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{op.cliente || "-"}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue/85">{op.especie || "-"}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue/85 whitespace-nowrap">{op.naviera || "-"}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue/85">{op.nave || "-"}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue/75 font-mono">{op.pol || "-"}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue/75 font-mono">{op.pod || "-"}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{fmtDate(op.etd)}</td>
-                          <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{fmtDate(op.eta)}</td>
-                          <td className="px-4 py-4 text-center">
-                            {op.tt !== null ? (
-                              <span className="text-base font-semibold text-brand-blue bg-brand-blue/10 px-2.5 py-1.5 rounded-lg">{op.tt}d</span>
-                            ) : <span className="text-brand-blue/40 text-base">-</span>}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            {cfg ? (
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
-                                {op.estado_operacion}
-                              </span>
-                            ) : <span className="text-brand-blue/40 text-base">-</span>}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            {op.tipo_reserva_transporte === "asli" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
-                                <Icon icon="lucide:building-2" width={14} height={14} />
-                                ASLI
-                              </span>
-                            ) : op.tipo_reserva_transporte === "externa" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Icon icon="lucide:globe" width={14} height={14} />
-                                {tr.typeExternal}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-medium bg-brand-blue/5 text-brand-blue/50 border border-brand-blue/15">
-                                {tr.typePendiente}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => handleCopy(op)} className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.copyShort}>
-                                <Icon icon="lucide:copy" width={18} height={18} />
-                              </button>
-                              <button onClick={() => setEmailModal(op)} className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.emailTitle}>
-                                <Icon icon="lucide:mail" width={18} height={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
+                    filteredOperaciones.map((op, idx) => (
+                      <MisReservasTableRow
+                        key={op.id}
+                        op={op}
+                        idx={idx}
+                        selected={selectedIds.has(op.id)}
+                        isCliente={isCliente}
+                        typeExternal={tr.typeExternal}
+                        typePendiente={tr.typePendiente}
+                        copyShort={tr.copyShort}
+                        emailTitle={tr.emailTitle}
+                        editBookingTitle={tr.editBookingTitle}
+                        confirmBookingTitle={tr.confirmBookingTitle}
+                        confirmShort={tr.confirmShort}
+                        onSelect={handleSelect}
+                        onCopy={handleCopy}
+                        onEmail={handleOpenEmail}
+                        onBooking={handleOpenBooking}
+                      />
+                    ))
                   )}
                 </tbody>
               </table>
@@ -1371,10 +1507,10 @@ export function MisReservasContent() {
                     selected={selectedIds.has(op.id)}
                     actionLoading={actionLoading}
                     tr={tr}
-                    onSelect={() => handleSelect(op.id)}
+                    onSelect={handleSelect}
                     onCopy={handleCopy}
-                    onEmail={(o) => setEmailModal(o)}
-                    onBooking={(o) => setBookingModal(o)}
+                    onEmail={handleOpenEmail}
+                    onBooking={handleOpenBooking}
                   />
                 ))}
               </div>
@@ -1446,10 +1582,10 @@ export function MisReservasContent() {
             {(alreadyInAsli.length > 0 || alreadyInExt.length > 0) && (
               <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 space-y-0.5">
                 {alreadyInAsli.length > 0 && (
-                  <p>{alreadyInAsli.length} ya está{alreadyInAsli.length > 1 ? "n" : ""} en <strong>ASLI</strong> ({alreadyInAsli.map((o) => o.ref_asli ?? `#${o.correlativo}`).join(", ")})</p>
+                  <p>{alreadyInAsli.length} ya está{alreadyInAsli.length > 1 ? "n" : ""} en <strong>ASLI</strong> ({alreadyInAsli.map((o) => displayRefAsli(o.ref_asli, o.correlativo)).join(", ")})</p>
                 )}
                 {alreadyInExt.length > 0 && (
-                  <p>{alreadyInExt.length} ya está{alreadyInExt.length > 1 ? "n" : ""} en <strong>Externa</strong> ({alreadyInExt.map((o) => o.ref_asli ?? `#${o.correlativo}`).join(", ")})</p>
+                  <p>{alreadyInExt.length} ya está{alreadyInExt.length > 1 ? "n" : ""} en <strong>Externa</strong> ({alreadyInExt.map((o) => displayRefAsli(o.ref_asli, o.correlativo)).join(", ")})</p>
                 )}
                 {!allAssigned && <p className="text-amber-600 font-medium">Solo se enviarán las {pendientes.length} pendiente{pendientes.length > 1 ? "s" : ""}.</p>}
               </div>

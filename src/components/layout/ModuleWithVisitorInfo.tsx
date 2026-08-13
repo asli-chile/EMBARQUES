@@ -7,6 +7,7 @@ import { MisReservasVisitorPreview } from "@/components/reservas/MisReservasVisi
 import { PapeleraVisitorPreview } from "@/components/reservas/PapeleraVisitorPreview";
 import { ReservaAsliVisitorPreview } from "@/components/transportes/ReservaAsliVisitorPreview";
 import { ReservaExtVisitorPreview } from "@/components/transportes/ReservaExtVisitorPreview";
+import { PapeleraTransportesVisitorPreview } from "@/components/transportes/PapeleraTransportesVisitorPreview";
 import { FacturacionVisitorPreview } from "@/components/transportes/FacturacionVisitorPreview";
 import { MisDocumentosVisitorPreview } from "@/components/documentos/MisDocumentosVisitorPreview";
 import { CrearInstructivoVisitorPreview } from "@/components/documentos/CrearInstructivoVisitorPreview";
@@ -20,6 +21,7 @@ export type VisitorModuleKey =
   | "crearReserva"
   | "misReservas"
   | "papelera"
+  | "papeleraTransportes"
   | "reservaAsli"
   | "reservaExt"
   | "facturacion"
@@ -34,6 +36,7 @@ const MODULE_KEY_TO_HREF: Record<VisitorModuleKey, string> = {
   crearReserva: withBase("/reservas/crear"),
   misReservas: withBase("/reservas/mis-reservas"),
   papelera: withBase("/reservas/papelera"),
+  papeleraTransportes: withBase("/transportes/papelera"),
   reservaAsli: withBase("/transportes/reserva-asli"),
   reservaExt: withBase("/transportes/reserva-ext"),
   facturacion: withBase("/transportes/facturacion"),
@@ -70,6 +73,7 @@ export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitor
     if (moduleKey === "crearReserva") return <CrearReservaVisitorPreview />;
     if (moduleKey === "misReservas") return <MisReservasVisitorPreview />;
     if (moduleKey === "papelera") return <PapeleraVisitorPreview />;
+    if (moduleKey === "papeleraTransportes") return <PapeleraTransportesVisitorPreview />;
     if (moduleKey === "reservaAsli") return <ReservaAsliVisitorPreview />;
     if (moduleKey === "reservaExt") return <ReservaExtVisitorPreview />;
     if (moduleKey === "facturacion") return <FacturacionVisitorPreview />;

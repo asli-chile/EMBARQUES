@@ -1,84 +1,64 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
-import { REGISTROS_FIELD_GROUPS } from "@/lib/registros-field-info";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
+import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 
-type SampleRow = {
-  ref_asli: string;
-  ingreso: string;
-  ejecutivo: string;
-  estado_operacion: string;
-  cliente: string;
-  especie: string;
-  naviera: string;
-  etd: string;
-  pod: string;
-  eta: string;
-  booking: string;
-};
-
-const SAMPLE_ROWS: SampleRow[] = [
-  {
-    ref_asli: "ASLI-2025-001",
-    ingreso: "2025-01-15",
-    ejecutivo: "María González",
-    estado_operacion: "EN PROCESO",
-    cliente: "Exportadora Frutícola Sur",
-    especie: "Uvas",
-    naviera: "MSC",
-    etd: "2025-02-10",
-    pod: "Filadelfia",
-    eta: "2025-03-08",
-    booking: "MSCUSN1234567",
-  },
-  {
-    ref_asli: "ASLI-2025-002",
-    ingreso: "2025-01-18",
-    ejecutivo: "Carlos López",
-    estado_operacion: "EN TRÁNSITO",
-    cliente: "Agrícola del Valle",
-    especie: "Cerezas",
-    naviera: "Hapag-Lloyd",
-    etd: "2025-02-05",
-    pod: "Rotterdam",
-    eta: "2025-03-12",
-    booking: "HLAGDE7890123",
-  },
-  {
-    ref_asli: "ASLI-2025-003",
-    ingreso: "2025-01-20",
-    ejecutivo: "María González",
-    estado_operacion: "PENDIENTE",
-    cliente: "Frutas Premium Ltda",
-    especie: "Arándanos",
-    naviera: "ONE",
-    etd: "2025-02-15",
-    pod: "Shanghai",
-    eta: "2025-03-28",
-    booking: "ONEYJP4567890",
-  },
-  {
-    ref_asli: "ASLI-2025-004",
-    ingreso: "2025-01-12",
-    ejecutivo: "Carlos López",
-    estado_operacion: "ARRIBADO",
-    cliente: "Exportadora Frutícola Sur",
-    especie: "Ciruelas",
-    naviera: "MSC",
-    etd: "2025-01-25",
-    pod: "Los Angeles",
-    eta: "2025-02-20",
-    booking: "MSCUSN9876543",
-  },
+const SAMPLE_ROWS = [
+  { ref: "A00001", ingreso: "15-01-2025", ejecutivo: "María González", estado: "EN PROCESO", cliente: "Exportadora Frutícola Sur", especie: "Uvas", naviera: "MSC", etd: "10-02-2025", pod: "Filadelfia", eta: "08-03-2025", booking: "MSCUSN1234567" },
+  { ref: "A00002", ingreso: "18-01-2025", ejecutivo: "Carlos López", estado: "EN TRÁNSITO", cliente: "Agrícola del Valle", especie: "Cerezas", naviera: "Hapag-Lloyd", etd: "05-02-2025", pod: "Rotterdam", eta: "12-03-2025", booking: "HLAGDE7890123" },
+  { ref: "A00003", ingreso: "20-01-2025", ejecutivo: "María González", estado: "PENDIENTE", cliente: "Frutas Premium Ltda", especie: "Arándanos", naviera: "ONE", etd: "15-02-2025", pod: "Shanghai", eta: "28-03-2025", booking: "ONEYJP4567890" },
+  { ref: "A00004", ingreso: "12-01-2025", ejecutivo: "Carlos López", estado: "ARRIBADO", cliente: "Exportadora Frutícola Sur", especie: "Ciruelas", naviera: "MSC", etd: "25-01-2025", pod: "Los Angeles", eta: "20-02-2025", booking: "MSCUSN9876543" },
+  { ref: "A00005", ingreso: "22-01-2025", ejecutivo: "María González", estado: "EN PROCESO", cliente: "Agroexport del Norte", especie: "Paltas", naviera: "CMA CGM", etd: "20-02-2025", pod: "Le Havre", eta: "30-03-2025", booking: "CMAMRS2345678" },
+  { ref: "A00006", ingreso: "25-01-2025", ejecutivo: "Carlos López", estado: "PENDIENTE", cliente: "Frutícola Atacama", especie: "Mandarinas", naviera: "Evergreen", etd: "28-02-2025", pod: "Hong Kong", eta: "05-04-2025", booking: "EVGTPE3456789" },
 ];
+
+const FEATURES = [
+  { icon: "lucide:table-2", text: "Tabla maestra con más de 80 campos operativos editables" },
+  { icon: "lucide:search", text: "Búsqueda global por nave, booking, contenedor y cliente" },
+  { icon: "lucide:columns", text: "Columnas personalizables y exportación a Excel / PDF" },
+  { icon: "lucide:truck", text: "Envío directo de selección a transportes" },
+];
+
+const STATS = [
+  { label: "En proceso", value: 2, dot: "bg-blue-400" },
+  { label: "En tránsito", value: 1, dot: "bg-violet-400" },
+  { label: "Pendiente", value: 2, dot: "bg-amber-400" },
+  { label: "Arribado", value: 1, dot: "bg-emerald-400" },
+];
+
+const COLS = [
+  { key: "ref", label: "Ref. ASLI" },
+  { key: "ingreso", label: "Ingreso" },
+  { key: "ejecutivo", label: "Ejecutivo" },
+  { key: "estado", label: "Estado" },
+  { key: "cliente", label: "Cliente" },
+  { key: "especie", label: "Especie" },
+  { key: "naviera", label: "Naviera" },
+  { key: "etd", label: "ETD" },
+  { key: "pod", label: "POD" },
+  { key: "eta", label: "ETA" },
+  { key: "booking", label: "Booking" },
+] as const;
+
+function EstadoBadge({ estado }: { estado: string }) {
+  const cfg = getEstadoOperacionStyle(estado);
+  if (!cfg) return <span className="text-[11px] text-neutral-600">{estado}</span>;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} aria-hidden />
+      {estado}
+    </span>
+  );
+}
 
 export function RegistrosVisitorPreview() {
   const { t } = useLocale();
-  const tr = t.registros;
   const vr = t.visitor.registros;
-  const [showFields, setShowFields] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | undefined>(undefined);
   const posRef = useRef(0);
@@ -87,22 +67,16 @@ export function RegistrosVisitorPreview() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-
-    const DURATION_ONE_WAY_MS = 35000;
-    const FPS = 90;
-    const stepPerMs = 1 / DURATION_ONE_WAY_MS;
-
+    const DURATION_MS = 32000;
+    const stepPerMs = 1 / DURATION_MS;
     const animate = () => {
-      const maxScroll = el.scrollWidth - el.clientWidth;
-      if (maxScroll <= 0) return;
-
-      const step = maxScroll * stepPerMs * (1000 / FPS) * dirRef.current;
-      posRef.current = Math.max(0, Math.min(maxScroll, posRef.current + step));
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      const step = max * stepPerMs * (1000 / 60) * dirRef.current;
+      posRef.current = Math.max(0, Math.min(max, posRef.current + step));
       el.scrollLeft = posRef.current;
-
-      if (posRef.current >= maxScroll) dirRef.current = -1;
+      if (posRef.current >= max) dirRef.current = -1;
       if (posRef.current <= 0) dirRef.current = 1;
-
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
@@ -111,126 +85,184 @@ export function RegistrosVisitorPreview() {
     };
   }, []);
 
-  const cols = [
-    { field: "ref_asli", label: tr.colRefAsli },
-    { field: "ingreso", label: tr.colEntryDate },
-    { field: "ejecutivo", label: tr.colExecutive },
-    { field: "estado_operacion", label: tr.colOperationStatus },
-    { field: "cliente", label: tr.colClient },
-    { field: "especie", label: tr.colSpecies },
-    { field: "naviera", label: tr.colCarrier },
-    { field: "etd", label: tr.colETD },
-    { field: "pod", label: tr.colPOD },
-    { field: "eta", label: tr.colETA },
-    { field: "booking", label: tr.colBooking },
-  ] as const;
-
   return (
-    <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-50" role="main">
-      <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-4 gap-3 max-w-[1400px] mx-auto w-full min-w-0 overflow-hidden">
+    <main className="flex-1 min-h-0 overflow-auto flex flex-col bg-neutral-100" role="main">
+      <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-4 gap-3 max-w-[1400px] mx-auto w-full">
         <div className="flex-shrink-0">
           <VisitorSidebarQuickAccess currentHref="/registros" />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-4 flex-1 min-h-0 min-w-0 overflow-hidden">
-          <div className="min-h-0 min-w-0 flex">
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-mac-modal p-4 sm:p-5 flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col">
-              <p className="text-sm font-semibold text-brand-teal uppercase tracking-wider mb-1 flex-shrink-0">
+        <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-4 flex-1 min-h-0">
+          {/* Left: Hero — mismo patrón que Mis documentos / Papelera */}
+          <div
+            className="relative rounded-2xl overflow-hidden shadow-xl flex flex-col min-h-[400px] xl:min-h-0"
+            style={{ background: "linear-gradient(145deg, #0f2d5e 0%, #1a4a8a 55%, #0d7377 100%)" }}
+          >
+            <div
+              className="absolute -top-8 -right-8 w-44 h-44 rounded-full opacity-10"
+              style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }}
+            />
+            <div
+              className="absolute -bottom-12 -left-6 w-56 h-56 rounded-full opacity-[0.06]"
+              style={{ background: "radial-gradient(circle, #fff 0%, transparent 70%)" }}
+            />
+
+            <div className="relative flex flex-col flex-1 p-6 sm:p-8 gap-5">
+              <span className="self-start inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white/90 border border-white/20">
+                <Icon icon="lucide:clipboard-list" width={12} height={12} />
                 {vr.moduleTag}
-              </p>
-              <h1 className="text-xl sm:text-2xl font-bold text-brand-blue tracking-tight leading-tight flex-shrink-0">{vr.title}</h1>
-              <p className="text-neutral-500 mt-1 text-base leading-snug flex-shrink-0">{vr.description}</p>
-              <h2 className="text-base font-semibold text-brand-blue mt-4 mb-2 flex-shrink-0">{vr.whatIncludes}</h2>
-              <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                <div className="flex items-start gap-2 text-base text-neutral-600">
-                  <Icon icon="typcn:media-record" className="text-brand-teal flex-shrink-0 mt-0.5" width={8} height={8} />
-                  {vr.highlight1}
-                </div>
-                <div className="flex items-start gap-2 text-base text-neutral-600">
-                  <Icon icon="typcn:media-record" className="text-brand-teal flex-shrink-0 mt-0.5" width={8} height={8} />
-                  {vr.highlight2}
-                </div>
+              </span>
+
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">{vr.title}</h1>
+                <p className="text-white/65 mt-2 text-sm leading-relaxed">{vr.description}</p>
               </div>
-              <div className="mt-3 pt-2 border-t border-neutral-100 flex-shrink-0">
+
+              <div className="grid grid-cols-2 gap-2">
+                {STATS.map((s) => (
+                  <div
+                    key={s.label}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 border border-white/15"
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
+                    <span className="text-white/80 text-xs">{s.label}</span>
+                    <span className="ml-auto text-white font-bold text-sm">{s.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-3 flex-1">
+                {FEATURES.map((f) => (
+                  <div key={f.text} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center mt-0.5">
+                      <Icon icon={f.icon} width={13} height={13} className="text-white/90" />
+                    </span>
+                    <p className="text-white/75 text-sm leading-relaxed">{f.text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-white/15">
                 <AuthFormTrigger
                   mode="login"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-brand-blue bg-white rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all duration-150 shadow-lg shadow-black/20"
                 >
-                  <Icon icon="typcn:key" width={16} height={16} />
+                  <Icon icon="lucide:log-in" width={16} height={16} />
                   {t.visitor.moduleCta}
                 </AuthFormTrigger>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col min-h-0 min-w-0">
-            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 flex-shrink-0">
-              {vr.sampleLabel}
-            </p>
-            <div
-              ref={scrollRef}
-              className="flex-1 min-h-0 bg-white rounded-xl border border-neutral-200 shadow-sm overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            >
-              <table className="w-full min-w-[1100px] text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-neutral-200 bg-neutral-50">
-                    {cols.map((c) => (
-                      <th
-                        key={c.field}
-                        className="px-2 py-1.5 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider whitespace-nowrap"
-                      >
-                        {c.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {SAMPLE_ROWS.map((row, i) => (
-                    <tr key={i} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50/80 transition-colors">
-                      {cols.map((c) => (
-                        <td key={c.field} className="px-2 py-1.5 text-neutral-700 whitespace-nowrap">
-                          {row[c.field]}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Right: Table preview */}
+          <div className="relative rounded-2xl overflow-hidden border border-neutral-200 shadow-sm bg-white flex flex-col min-h-[400px] xl:min-h-0">
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-neutral-200 select-none pointer-events-none">
+              <div className="relative flex-1 max-w-xs">
+                <Icon
+                  icon="lucide:search"
+                  width={13}
+                  height={13}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400"
+                />
+                <div className="w-full pl-8 pr-3 py-1.5 border border-neutral-200 rounded-lg bg-neutral-50 text-[11px] text-neutral-400">
+                  Buscar: nave, booking, contenedor…
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 ml-auto">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-[11px] text-neutral-500">
+                  <Icon icon="lucide:columns" width={11} height={11} />
+                  Columnas
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-[11px] text-neutral-500">
+                  <Icon icon="lucide:table-2" width={11} height={11} />
+                  Excel
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-brand-blue">
+                  <Icon icon="lucide:plus" width={11} height={11} />
+                  Nueva reserva
+                </span>
+              </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-neutral-100 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowFields(!showFields)}
-                className="flex items-center gap-2 text-base font-semibold text-brand-blue hover:text-brand-blue/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-offset-2 rounded px-1"
-                aria-expanded={showFields}
+            <div className="flex-shrink-0 flex items-center gap-3 px-4 py-2 bg-brand-blue/5 border-b border-brand-blue/10 select-none pointer-events-none">
+              <span className="text-[11px] text-brand-blue/70 font-medium">
+                {SAMPLE_ROWS.length} registros · vista de muestra
+              </span>
+              <div className="flex items-center gap-2 ml-auto">
+                {STATS.map((s) => (
+                  <span key={s.label} className="flex items-center gap-1 text-[10px] text-neutral-500">
+                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                    {s.value} {s.label.toLowerCase()}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 relative overflow-hidden">
+              <div
+                ref={scrollRef}
+                className="absolute inset-0 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden select-none pointer-events-none"
+                style={{
+                  maskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 82%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 82%)",
+                }}
               >
-                <Icon icon={showFields ? "typcn:arrow-sorted-up" : "typcn:arrow-sorted-down"} width={18} height={18} />
-                {vr.fieldsTitle}
-              </button>
-              {showFields && (
-                <div className="mt-4 space-y-4 animate-fade-in-up overflow-y-auto max-h-48">
-                  {REGISTROS_FIELD_GROUPS.map((group) => (
-                    <div key={group.groupLabelKey} className="bg-white rounded-lg border border-neutral-200 p-3">
-                      <h3 className="text-base font-semibold text-brand-blue mb-2">
-                        {(vr as Record<string, unknown>)[group.groupLabelKey] as string}
-                      </h3>
-                      <dl className="space-y-1.5">
-                        {group.fields.map((f) => (
-                          <div key={f.key} className="flex flex-col sm:flex-row sm:gap-3">
-                            <dt className="text-sm font-medium text-neutral-600 sm:w-40 flex-shrink-0">
-                              {(tr as Record<string, string>)[f.labelKey]}
-                            </dt>
-                            <dd className="text-sm text-neutral-500 flex-1">
-                              {vr.fieldsDesc?.[f.key] ?? "—"}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </div>
-                  ))}
+                <table className="w-full min-w-[1100px] text-sm border-collapse">
+                  <thead className="bg-neutral-50 border-b border-neutral-200 sticky top-0 z-10">
+                    <tr>
+                      {COLS.map((c) => (
+                        <th
+                          key={c.key}
+                          className="px-3 py-2 text-left text-[10px] font-bold text-neutral-500 uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {c.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SAMPLE_ROWS.map((row, i) => (
+                      <tr
+                        key={row.ref}
+                        className={`border-b border-neutral-100 last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-brand-blue/[0.03]"}`}
+                      >
+                        <td className="px-3 py-2 font-semibold text-brand-blue text-[11px] whitespace-nowrap">{row.ref}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.ingreso}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.ejecutivo}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <EstadoBadge estado={row.estado} />
+                        </td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap max-w-[140px] truncate">{row.cliente}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.especie}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.naviera}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.etd}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.pod}</td>
+                        <td className="px-3 py-2 text-[11px] text-neutral-600 whitespace-nowrap">{row.eta}</td>
+                        <td className="px-3 py-2 text-[11px] font-mono text-neutral-500 whitespace-nowrap">{row.booking}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div
+                className="absolute bottom-0 inset-x-0 flex flex-col items-center justify-end pb-7 pt-16 z-10 pointer-events-auto"
+                style={{ background: "linear-gradient(to top, #ffffff 58%, rgba(255,255,255,0) 100%)" }}
+              >
+                <div className="flex flex-col items-center gap-3 text-center px-4">
+                  <span className="w-10 h-10 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center">
+                    <Icon icon="lucide:lock" width={18} height={18} className="text-brand-blue" />
+                  </span>
+                  <p className="text-sm font-semibold text-neutral-800 max-w-xs">{vr.whatIncludes}</p>
+                  <AuthFormTrigger
+                    mode="login"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm"
+                  >
+                    <Icon icon="lucide:log-in" width={15} height={15} />
+                    {t.visitor.moduleCta}
+                  </AuthFormTrigger>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

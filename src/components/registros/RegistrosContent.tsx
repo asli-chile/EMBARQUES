@@ -12,6 +12,8 @@ import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { modulePageBg, moduleHero } from "@/lib/ui/moduleStyles";
+import { formatRefAsli } from "@/lib/refAsli";
+import { EstadoOperacionCellRenderer } from "@/components/registros/EstadoOperacionCellRenderer";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -498,7 +500,7 @@ function createToRow(locale: string) {
     return {
       id: db.id,
       correlativo: db.correlativo,
-      ref_asli: db.ref_asli ?? `A${String(db.correlativo).padStart(5, "0")}`,
+      ref_asli: formatRefAsli(db.ref_asli, db.correlativo) ?? "",
       temporada: db.temporada ?? "",
       ingreso: formatDateTime(db.ingreso, locale),
       semana: isoWeekFromDate(db.etd),
@@ -681,10 +683,8 @@ export function RegistrosContent() {
   const [showColumnPanel, setShowColumnPanel] = useState(false);
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const hiddenColumnsRef = useRef<Set<string>>(new Set());
-  const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [globalSearch, setGlobalSearch] = useState("");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
     y: number;
@@ -762,7 +762,7 @@ export function RegistrosContent() {
     const mouse = nativeEvent as MouseEvent | undefined;
     const x = mouse?.clientX ?? 0;
     const y = mouse?.clientY ?? 0;
-    const refLabel = data.ref_asli || `A${String(data.correlativo ?? 0).padStart(5, "0")}`;
+    const refLabel = formatRefAsli(data.ref_asli, data.correlativo) ?? "—";
     setCtxMenu({ x, y, operacionId: data.id, refLabel });
   }, []);
 
@@ -978,19 +978,6 @@ export function RegistrosContent() {
     else setRowData([]);
   }, [authLoading, fetchOperaciones]);
 
-  useEffect(() => {
-    if (!showActionsMenu) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!actionsMenuRef.current) return;
-      const target = event.target;
-      if (target instanceof Node && !actionsMenuRef.current.contains(target)) {
-        setShowActionsMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showActionsMenu]);
-
   const booleanCellRenderer = useCallback(
     (p: { value: boolean }) => (p.value ? t.registros.yes : t.registros.no),
     [t.registros.yes, t.registros.no]
@@ -1008,8 +995,15 @@ export function RegistrosContent() {
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left", lockPinned: true, suppressMovable: true },
       { field: "temporada", headerName: "Temporada", sortable: true, editable: canEdit, width: 120 },
       {
-        field: "estado_operacion", headerName: t.registros.colOperationStatus, sortable: true, editable: canEdit, width: columnWidths.estadoOperacion,
-        cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: catalogos.estado_operacion },
+        field: "estado_operacion",
+        headerName: t.registros.colOperationStatus,
+        sortable: true,
+        editable: canEdit,
+        width: Math.max(columnWidths.estadoOperacion, 140),
+        cellRenderer: EstadoOperacionCellRenderer,
+        cellEditor: "agSelectCellEditor",
+        cellEditorPopup: true,
+        cellEditorParams: { values: catalogos.estado_operacion },
       },
       {
         field: "tipo_operacion", headerName: t.registros.colOperationType, sortable: true, editable: canEdit, width: columnWidths.tipoOperacion,
@@ -1687,11 +1681,38 @@ export function RegistrosContent() {
 
   if (loading && rowData.length === 0) {
     return (
-      <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
-        <div className="flex-1 flex items-center justify-center text-brand-blue/70">
-          <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm">
-            <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-            <span className="text-base font-medium">{t.registros.loading}</span>
+      <main className={`relative flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main" aria-busy="true">
+        <div className={`flex-shrink-0 ${moduleHero} px-4 sm:px-6 pt-6 pb-5`}>
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:clipboard-list" width={24} height={24} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
+              <p className="text-base text-white/75 mt-1.5">{t.registros.loading}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15">
+          <div className="px-3 sm:px-4 py-3 flex items-center gap-2">
+            <div className="h-11 flex-1 rounded-lg bg-brand-blue/10 animate-pulse" />
+            <div className="h-11 w-24 rounded-lg bg-brand-blue/10 animate-pulse shrink-0" />
+            <div className="h-11 w-11 rounded-lg bg-brand-blue/10 animate-pulse shrink-0" />
+            <div className="h-11 w-11 rounded-lg bg-brand-blue/10 animate-pulse shrink-0" />
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3">
+          <div className="h-full min-h-[250px] rounded-lg border border-brand-blue/15 bg-[#F4F8FC] shadow-sm overflow-hidden">
+            <div className="h-10 bg-[#E4EBF6] border-b border-brand-blue/15" />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex gap-3 px-3 py-2.5 border-b border-brand-blue/8">
+                <div className="h-4 w-16 rounded bg-brand-blue/10 animate-pulse" />
+                <div className="h-4 flex-1 max-w-[8rem] rounded bg-amber-100/80 animate-pulse" />
+                <div className="h-4 flex-1 rounded bg-brand-blue/8 animate-pulse" />
+                <div className="h-4 flex-1 rounded bg-brand-blue/8 animate-pulse" />
+                <div className="h-4 w-20 rounded bg-emerald-100/70 animate-pulse" />
+              </div>
+            ))}
           </div>
         </div>
       </main>
@@ -1699,15 +1720,15 @@ export function RegistrosContent() {
   }
 
   return (
-    <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
+    <main className={`relative flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
       {error && (
         <div className="flex-shrink-0 px-3 sm:px-4 py-2.5 bg-red-100 text-red-700 text-base border-b border-red-200" role="alert">
           {error}
         </div>
       )}
 
-      {/* Hero */}
-      <div className={`${moduleHero} px-4 sm:px-6 pt-5 pb-4`}>
+      {/* Hero — mismo patrón que Mis Reservas */}
+      <div className={`flex-shrink-0 ${moduleHero} px-4 sm:px-6 pt-6 pb-5`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
@@ -1715,179 +1736,159 @@ export function RegistrosContent() {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
-              <p className="text-base text-white/75 mt-1">
-                <span className="font-semibold text-white">{rowData.length}</span> {t.registros.records}
-              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-base text-white/75">
+                  <span className="font-semibold text-white">{rowData.length}</span> {t.registros.records}
+                </span>
+              </div>
             </div>
           </div>
-          {canEdit && (
+          <div className="flex items-center gap-2 shrink-0">
             <a
-              href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm shrink-0"
+              href={withBase("/reservas/papelera")}
+              className="p-2 bg-white/15 border border-white/20 rounded-xl hover:bg-white/25 transition-colors text-white/70 hover:text-white"
+              title="Papelera"
             >
-              <Icon icon="typcn:plus" width={16} height={16} />
-              <span className="hidden sm:inline">{t.registros.newBooking}</span>
-              <span className="sm:hidden">{t.registros.nuevoShort}</span>
+              <Icon icon="lucide:trash-2" width={16} height={16} />
             </a>
-          )}
+            {canEdit && (
+              <a
+                href={withBase("/reservas/crear")}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+              >
+                <Icon icon="lucide:plus" width={13} height={13} />
+                <span className="hidden sm:inline">{t.registros.newBooking}</span>
+                <span className="sm:hidden">{t.registros.nuevoShort}</span>
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Barra de herramientas */}
-      <div className="relative z-40 flex-shrink-0 px-3 sm:px-4 py-3 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
-        <div className="flex items-center gap-2 flex-wrap">
-          {canEdit && (
-            <>
-              {selectionCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowTransportModal(true)}
-                  className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2.5 rounded-lg text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                >
-                  <Icon icon="lucide:truck" width={16} height={16} />
-                  <span className="hidden sm:inline">{t.registros.sendToTransport} ({selectionCount})</span>
-                  <span className="sm:hidden">{t.registros.sendToTransportShort} ({selectionCount})</span>
-                </button>
-              )}
-              {selectionCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => void handleRemoveSelected()}
-                  className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2.5 rounded-lg text-base font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                >
-                  <Icon icon="typcn:trash" width={16} height={16} />
-                  <span className="hidden sm:inline">{t.registros.deleteSelection} ({selectionCount})</span>
-                  <span className="sm:hidden">Eliminar ({selectionCount})</span>
-                </button>
-              )}
-            </>
-          )}
-          
-          <div className="relative z-50" ref={actionsMenuRef}>
-            <button
-              type="button"
-              onClick={() => setShowActionsMenu((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2.5 rounded-lg text-base font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 ${
-                showActionsMenu
-                  ? "text-brand-blue bg-brand-blue/10 ring-1 ring-brand-blue/20 border border-brand-blue/20"
-                  : "text-brand-blue/80 bg-[#F4F8FC] border border-brand-blue/20 hover:bg-white"
-              }`}
-            >
-              <Icon icon="lucide:menu" width={16} height={16} />
-              <span>Acciones</span>
-              <Icon icon={showActionsMenu ? "lucide:chevron-up" : "lucide:chevron-down"} width={16} height={16} />
-            </button>
-
-            {showActionsMenu && (
-              <div className="absolute left-0 mt-1.5 z-[60] w-60 rounded-xl border border-neutral-200 bg-white shadow-xl p-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleRefresh();
-                    setShowActionsMenu(false);
-                  }}
-                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-neutral-700 hover:bg-neutral-100 transition-colors text-left"
-                >
-                  <Icon icon="typcn:refresh" width={16} height={16} />
-                  <span>{t.registros.refresh}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowColumnPanel(true);
-                    setShowActionsMenu(false);
-                  }}
-                  className={`w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base transition-colors text-left ${
-                    hiddenColumns.size > 0
-                      ? "text-brand-blue bg-brand-blue/5 hover:bg-brand-blue/10"
-                      : "text-neutral-700 hover:bg-neutral-100"
-                  }`}
-                >
-                  <Icon icon="lucide:columns" width={16} height={16} />
-                  <span>Columnas{hiddenColumns.size > 0 ? ` (${hiddenColumns.size})` : ""}</span>
-                </button>
-
-                <a
-                  href={withBase("/reservas/papelera")}
-                  onClick={() => setShowActionsMenu(false)}
-                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
-                >
-                  <Icon icon="lucide:trash-2" width={16} height={16} />
-                  <span>Papelera</span>
-                </a>
-
-                <div className="my-1 h-px bg-neutral-200" />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleExportExcel();
-                    setShowActionsMenu(false);
-                  }}
-                  disabled={rowData.length === 0}
-                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-emerald-700 hover:bg-emerald-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
-                >
-                  <Icon icon="lucide:table-2" width={16} height={16} />
-                  <span>{t.registros.exportExcelButton}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleExportPdf();
-                    setShowActionsMenu(false);
-                  }}
-                  disabled={rowData.length === 0 || isExportingPdf}
-                  className="w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-base text-rose-700 hover:bg-rose-50 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Exportar Reserva Confirmada PDF"
-                >
-                  <Icon icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"} width={14} height={14} className={isExportingPdf ? "animate-spin" : ""} />
-                  <span>{isExportingPdf ? "Exportando..." : "Exportar PDF"}</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Buscador global */}
-          <div className="relative min-w-[220px] sm:min-w-[280px] flex-1 sm:flex-none">
+      {/* Toolbar — búsqueda + acciones fijas (sin wrap desordenado) */}
+      <div className="relative z-40 flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
+        <div className="px-3 sm:px-4 py-3 flex items-center gap-2">
+          <div className="flex-1 min-w-0 relative">
             <Icon
               icon="lucide:search"
-              width={16}
-              height={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40 pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none"
             />
             <input
               type="text"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="Buscar: nave, booking, contenedor..."
-              className="w-full h-11 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] pl-9 pr-8 text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-colors"
+              className="w-full pl-10 pr-8 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
             />
             {globalSearch && (
               <button
                 type="button"
                 onClick={() => setGlobalSearch("")}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
                 aria-label="Limpiar búsqueda"
-                title="Limpiar búsqueda"
               >
-                <Icon icon="lucide:x" width={14} height={14} />
+                <Icon icon="lucide:x" width={13} height={13} />
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowColumnPanel(true)}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 border rounded-lg text-base font-semibold transition-colors shrink-0 ${
+              hiddenColumns.size > 0
+                ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
+                : "border-brand-blue/20 bg-[#F4F8FC] hover:bg-white text-brand-blue/70"
+            }`}
+            title="Columnas"
+          >
+            <Icon icon="lucide:columns" width={13} height={13} />
+            <span className="hidden sm:inline">Columnas</span>
+            {hiddenColumns.size > 0 && (
+              <span className="w-4 h-4 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">
+                {hiddenColumns.size}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleExportExcel()}
+            disabled={rowData.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
+          >
+            <Icon icon="lucide:table-2" width={13} height={13} />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleExportPdf()}
+            disabled={rowData.length === 0 || isExportingPdf}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            title="Exportar Reserva Confirmada PDF"
+          >
+            <Icon
+              icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"}
+              width={13}
+              height={13}
+              className={isExportingPdf ? "animate-spin" : ""}
+            />
+            <span className="hidden sm:inline">PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="p-2.5 text-brand-blue/60 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
+            title={t.registros.refresh}
+          >
+            <Icon icon="lucide:refresh-cw" width={14} height={14} />
+          </button>
         </div>
-        
-        <p className="sm:hidden text-sm text-brand-blue/50 mt-2 flex items-center gap-1">
-          <Icon icon="lucide:move-horizontal" width={14} height={14} />
-          {t.registros.scrollHint}
-        </p>
+
+        {canEdit && selectionCount > 0 && (
+          <div className="px-3 sm:px-4 py-2 border-t border-brand-blue/10 flex items-center gap-2 bg-brand-blue/5">
+            <span className="text-base font-semibold text-brand-blue flex-1">
+              {selectionCount} seleccionada{selectionCount !== 1 ? "s" : ""}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowTransportModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+            >
+              <Icon icon="lucide:truck" width={12} height={12} />
+              <span className="hidden sm:inline">{t.registros.sendToTransport}</span>
+              <span className="sm:hidden">{t.registros.sendToTransportShort}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleRemoveSelected()}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+            >
+              <Icon icon="lucide:trash-2" width={12} height={12} />
+              <span className="hidden sm:inline">{t.registros.deleteSelection}</span>
+              <span className="sm:hidden">Eliminar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => gridRef.current?.api?.deselectAll()}
+              className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+              aria-label="Limpiar selección"
+            >
+              <Icon icon="lucide:x" width={13} height={13} />
+            </button>
+          </div>
+        )}
       </div>
-      
-      {/* Contenedor de la tabla */}
-      <div className="flex-1 min-h-0 p-2 sm:p-4 overflow-hidden flex flex-col">
-        <div className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden rounded-xl border border-brand-blue/15 bg-white shadow-sm" style={{ minHeight: 300 }}>
+
+      {/* Tabla — mismo contenedor que Mis Reservas */}
+      <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3 flex flex-col">
+        <div
+          className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden rounded-lg border border-brand-blue/15 bg-[#F4F8FC] shadow-sm"
+          style={{ minHeight: 300 }}
+        >
           <AgGridReact<OperacionRow>
             ref={gridRef}
             rowData={rowData}

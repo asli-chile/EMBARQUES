@@ -10,7 +10,10 @@ import {
   moduleInput,
   moduleBtnPrimary,
   moduleBtnSecondary,
+  moduleBtnOnHero,
   moduleCard,
+  moduleToolbar,
+  moduleSectionTitle,
 } from "@/lib/ui/moduleStyles";
 
 const ROLES = [
@@ -21,6 +24,55 @@ const ROLES = [
   { value: "cliente", label: "Cliente" },
   { value: "usuario", label: "Usuario" },
 ] as const;
+
+type RolValue = (typeof ROLES)[number]["value"];
+
+const ROL_BADGE: Record<string, string> = {
+  superadmin: "bg-violet-100 text-violet-800 border-violet-200",
+  admin: "bg-brand-blue/10 text-brand-blue border-brand-blue/25",
+  ejecutivo: "bg-teal-50 text-teal-800 border-teal-200",
+  operador: "bg-slate-100 text-slate-700 border-slate-200",
+  cliente: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  usuario: "bg-neutral-100 text-neutral-600 border-neutral-200",
+};
+
+function UserAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
+  const initials = (name.trim() || "?").slice(0, 2).toUpperCase();
+  const sizeCls = size === "sm" ? "w-9 h-9 text-xs" : "w-10 h-10 text-sm";
+  return (
+    <div
+      className={`${sizeCls} rounded-full bg-gradient-to-br from-brand-blue/15 to-brand-teal/15 border border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue shrink-0`}
+    >
+      {initials}
+    </div>
+  );
+}
+
+function RoleBadge({ rol }: { rol: string }) {
+  const cls = ROL_BADGE[rol] ?? ROL_BADGE.usuario;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${cls}`}>
+      {getRolLabel(rol as RolValue)}
+    </span>
+  );
+}
+
+function AccountBadge({ active }: { active: boolean }) {
+  if (active) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <Icon icon="lucide:check-circle-2" width={12} height={12} />
+        Activa
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+      <Icon icon="lucide:clock" width={12} height={12} />
+      Pendiente
+    </span>
+  );
+}
 
 type DbUsuario = {
   id: string;
@@ -87,7 +139,8 @@ export function UsuariosContent() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [viewingUser, setViewingUser] = useState<DbUsuario | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -136,25 +189,31 @@ export function UsuariosContent() {
       e.preventDefault();
       setCreateError(null);
       setCreateSuccess(false);
-      const res = await fetch(withBase("/api/auth/create-user"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email.trim(),
-          password: form.password,
-          nombre: form.nombre.trim() || undefined,
-          rol: form.rol,
-          empresaIds: form.rol === "cliente" || form.rol === "ejecutivo" ? form.empresaIds : [],
-        }),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCreateSuccess(true);
-        setForm({ email: "", password: "", nombre: "", rol: "usuario", empresaIds: [] });
-        void fetchData();
-      } else {
-        setCreateError(data.error ?? "Error al crear usuario");
+      setIsCreating(true);
+      try {
+        const res = await fetch(withBase("/api/auth/create-user"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: form.email.trim(),
+            password: form.password,
+            nombre: form.nombre.trim() || undefined,
+            rol: form.rol,
+            empresaIds: form.rol === "cliente" || form.rol === "ejecutivo" ? form.empresaIds : [],
+          }),
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCreateSuccess(true);
+          setForm({ email: "", password: "", nombre: "", rol: "usuario", empresaIds: [] });
+          setShowCreateModal(false);
+          void fetchData();
+        } else {
+          setCreateError(data.error ?? "Error al crear usuario");
+        }
+      } finally {
+        setIsCreating(false);
       }
     },
     [form, fetchData]
@@ -199,8 +258,17 @@ export function UsuariosContent() {
       const ids = empresasPorUsuario[u.id] ?? [];
       if (!ids.includes(filterEmpresaId)) return false;
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      if (!u.nombre?.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+    }
     return true;
   });
+
+  const activosCount = usuarios.filter((u) => u.auth_id).length;
+  const pendientesCount = usuarios.filter((u) => !u.auth_id).length;
+  const clientesCount = usuarios.filter((u) => u.rol === "cliente").length;
+  const hasActiveFilters = Boolean(filterRol || filterEmpresaId || searchQuery.trim());
 
   const usuariosAsignables = usuarios.filter((u) => u.rol === "cliente" || u.rol === "ejecutivo");
   const asignablesFromFiltered = filteredUsuarios.filter(
@@ -525,60 +593,415 @@ export function UsuariosContent() {
   return (
     <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`} role="main">
 
-      {/* Hero gradient header */}
+      {/* Hero */}
       <div className={`flex-shrink-0 ${moduleHero}`}>
         <div className="px-4 pt-5 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:users" width={24} height={24} className="text-white" />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:users" width={24} height={24} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold leading-tight tracking-tight">{t.sidebar.usuarios}</h1>
+                <p className="text-base text-white/75 mt-1">Cuentas, roles, empresas y acceso al sistema</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold leading-tight tracking-tight">{t.sidebar.usuarios}</h1>
-              <p className="text-base text-white/75 mt-1">Crea cuentas, asigna roles y empresas</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCreateError(null);
+                setCreateSuccess(false);
+                setShowCreateModal(true);
+              }}
+              className={moduleBtnOnHero}
+            >
+              <Icon icon="lucide:user-plus" width={18} height={18} />
+              Nueva cuenta
+            </button>
           </div>
           <div className="flex gap-2 mt-4 flex-wrap">
             <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:user-check" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{usuarios.filter((u) => u.auth_id).length} activo{usuarios.filter((u) => u.auth_id).length !== 1 ? "s" : ""}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
               <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
               <span className="text-sm font-semibold">{usuarios.length} total</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:user-check" width={13} height={13} className="text-white/80" />
+              <span className="text-sm font-semibold">{activosCount} activo{activosCount !== 1 ? "s" : ""}</span>
+            </div>
+            {pendientesCount > 0 && (
+              <div className="flex items-center gap-1.5 bg-amber-400/20 border border-amber-300/30 rounded-xl px-3 py-1.5">
+                <Icon icon="lucide:clock" width={13} height={13} className="text-amber-100" />
+                <span className="text-sm font-semibold text-amber-50">{pendientesCount} pendiente{pendientesCount !== 1 ? "s" : ""}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
+              <span className="text-sm font-semibold">{clientesCount} cliente{clientesCount !== 1 ? "s" : ""}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 sm:gap-4 sm:p-4 overflow-hidden">
-        <aside className={`flex-shrink-0 lg:w-80 xl:w-96 ${moduleCard} flex flex-col`}>
-          {/* Aside header — on mobile also acts as toggle */}
-          <button
-            type="button"
-            className="lg:cursor-default w-full px-4 py-3 border-b border-neutral-200 flex items-center gap-3 text-left"
-            onClick={() => setShowCreateForm((v) => !v)}
-            aria-expanded={showCreateForm}
+      <section className={`flex-1 min-h-0 flex flex-col mx-3 mb-3 mt-3 sm:mx-4 sm:mb-4 ${moduleCard}`}>
+        {/* Toolbar */}
+        <div className={`flex-shrink-0 px-4 py-3 ${moduleToolbar} space-y-3`}>
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre o correo…"
+                className={`${moduleInput} pl-10 pr-9`}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-brand-blue/40 hover:text-brand-blue rounded-lg"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <Icon icon="lucide:x" width={14} height={14} />
+                </button>
+              )}
+            </div>
+            <p className={moduleSectionTitle}>
+              {filteredUsuarios.length}
+              {hasActiveFilters ? ` de ${usuarios.length}` : ""} usuarios
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              id="filter-rol"
+              value={filterRol}
+              onChange={(e) => setFilterRol(e.target.value)}
+              className={`${moduleInput} w-auto min-w-[140px] py-2.5`}
+            >
+              <option value="">Todos los roles</option>
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            <select
+              id="filter-empresa"
+              value={filterEmpresaId}
+              onChange={(e) => setFilterEmpresaId(e.target.value)}
+              className={`${moduleInput} w-auto min-w-[140px] max-w-[200px] py-2.5`}
+            >
+              <option value="">Todas las empresas</option>
+              {empresas.map((e) => (
+                <option key={e.id} value={e.id}>{e.nombre}</option>
+              ))}
+            </select>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterRol("");
+                  setFilterEmpresaId("");
+                  setSearchQuery("");
+                }}
+                className={`${moduleBtnSecondary} py-2 text-sm`}
+              >
+                <Icon icon="lucide:filter-x" width={14} height={14} />
+                Limpiar
+              </button>
+            )}
+          </div>
+
+          {selectedUserIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-blue/8 border border-brand-blue/15">
+              <span className="text-sm font-semibold text-brand-blue">{selectedUserIds.size} seleccionado{selectedUserIds.size !== 1 ? "s" : ""}</span>
+              <button
+                type="button"
+                onClick={handleBulkAssignOpen}
+                className={`${moduleBtnPrimary} py-2 text-sm`}
+              >
+                <Icon icon="lucide:building-2" width={14} height={14} />
+                Asignar empresas
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedUserIds(new Set())}
+                className={`${moduleBtnSecondary} py-2 text-sm`}
+              >
+                Desmarcar
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <div className="px-3 py-2 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200 flex items-center gap-2" role="alert">
+              <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-auto">
+          {/* Mobile cards */}
+          <div className="md:hidden p-2 space-y-2">
+            {filteredUsuarios.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
+                <div className="w-14 h-14 rounded-2xl bg-[#F4F8FC] border border-brand-blue/15 flex items-center justify-center">
+                  <Icon icon="lucide:users" width={26} height={26} className="text-brand-blue/30" />
+                </div>
+                <p className="text-sm font-semibold text-brand-blue/70">Sin usuarios</p>
+                <p className="text-xs text-neutral-400">Prueba otro filtro o crea una cuenta nueva.</p>
+              </div>
+            ) : (
+              filteredUsuarios.map((u) => {
+                const ids = empresasPorUsuario[u.id] ?? [];
+                const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
+                const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
+                return (
+                  <article
+                    key={u.id}
+                    className="rounded-xl border border-brand-blue/15 bg-[#F4F8FC] overflow-hidden shadow-sm"
+                  >
+                    <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
+                    <div className="p-4">
+                      <div className="flex items-start gap-3">
+                        {canAssign ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.has(u.id)}
+                            onChange={() => handleToggleSelect(u)}
+                            className="mt-2 w-4 h-4 rounded border-brand-blue/30 accent-brand-blue"
+                            aria-label={`Seleccionar ${u.nombre}`}
+                          />
+                        ) : (
+                          <span className="w-4 mt-2" aria-hidden="true" />
+                        )}
+                        <UserAvatar name={u.nombre || u.email} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleViewOpen(u)}
+                              className="font-bold text-brand-blue text-left truncate hover:underline"
+                            >
+                              {u.nombre || "—"}
+                            </button>
+                            <AccountBadge active={Boolean(u.auth_id)} />
+                          </div>
+                          <p className="text-xs text-neutral-500 truncate mt-0.5">{u.email}</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <RoleBadge rol={u.rol} />
+                          </div>
+                          {nombresEmpresas.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {nombresEmpresas.map((n) => (
+                                <span key={n} className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-white border border-brand-blue/15 text-brand-blue">
+                                  {n}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 mt-3">
+                            {!u.auth_id ? (
+                              <button type="button" onClick={() => handleActivateOpen(u)} className={`${moduleBtnSecondary} flex-1 justify-center py-2 text-xs`}>
+                                <Icon icon="lucide:key-round" width={13} height={13} /> Activar
+                              </button>
+                            ) : (
+                              <button type="button" onClick={() => handleResetOpen(u)} className={`${moduleBtnSecondary} flex-1 justify-center py-2 text-xs`}>
+                                <Icon icon="lucide:refresh-cw" width={13} height={13} /> Resetear
+                              </button>
+                            )}
+                            <button type="button" onClick={() => handleEditOpen(u)} className={`${moduleBtnPrimary} flex-1 justify-center py-2 text-xs`}>
+                              <Icon icon="lucide:pencil" width={13} height={13} /> Editar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden md:table w-full text-sm border-collapse">
+            <thead className="sticky top-0 z-10 bg-[#E4EBF6] border-b border-brand-blue/15">
+              <tr>
+                <th className="px-4 py-3.5 text-center w-12">
+                  {asignablesFromFiltered.length > 0 && (
+                    <input
+                      type="checkbox"
+                      checked={asignablesFromFiltered.length > 0 && asignablesFromFiltered.every((u) => selectedUserIds.has(u.id))}
+                      onChange={handleSelectAllAsignables}
+                      className="w-4 h-4 rounded border-brand-blue/30 accent-brand-blue"
+                      aria-label="Seleccionar clientes y ejecutivos visibles"
+                    />
+                  )}
+                </th>
+                <th className="px-4 py-3.5 text-left text-sm font-bold text-brand-blue">Usuario</th>
+                <th className="px-4 py-3.5 text-left text-sm font-bold text-brand-blue w-32">Rol</th>
+                <th className="hidden lg:table-cell px-4 py-3.5 text-left text-sm font-bold text-brand-blue min-w-[160px]">Empresas</th>
+                <th className="px-4 py-3.5 text-center text-sm font-bold text-brand-blue w-28">Cuenta</th>
+                <th className="px-4 py-3.5 text-center text-sm font-bold text-brand-blue w-36">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsuarios.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Icon icon="lucide:users" width={32} height={32} className="text-brand-blue/25" />
+                      <p className="text-sm font-semibold text-brand-blue/60">Sin resultados</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredUsuarios.map((u, idx) => {
+                  const ids = empresasPorUsuario[u.id] ?? [];
+                  const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
+                  const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
+                  return (
+                    <tr
+                      key={u.id}
+                      className={`border-b border-brand-blue/10 transition-colors hover:bg-brand-blue/[0.06] ${
+                        idx % 2 === 0 ? "bg-[#F4F8FC]" : "bg-[#EAF0F8]"
+                      }`}
+                    >
+                      <td className="px-4 py-3.5 text-center">
+                        {canAssign ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.has(u.id)}
+                            onChange={() => handleToggleSelect(u)}
+                            className="w-4 h-4 rounded border-brand-blue/30 accent-brand-blue"
+                            aria-label={`Seleccionar ${u.nombre}`}
+                          />
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <UserAvatar name={u.nombre || u.email} size="sm" />
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => handleViewOpen(u)}
+                              className="font-bold text-brand-blue truncate hover:underline text-left block max-w-[220px]"
+                            >
+                              {u.nombre || "—"}
+                            </button>
+                            <p className="text-xs text-neutral-500 truncate max-w-[240px]">{u.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5"><RoleBadge rol={u.rol} /></td>
+                      <td className="hidden lg:table-cell px-4 py-3.5">
+                        {nombresEmpresas.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {nombresEmpresas.slice(0, 2).map((n) => (
+                              <span key={n} className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-white border border-brand-blue/15 text-brand-blue truncate max-w-[100px]">
+                                {n}
+                              </span>
+                            ))}
+                            {nombresEmpresas.length > 2 && (
+                              <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-brand-blue/10 text-brand-blue">
+                                +{nombresEmpresas.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-400 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        {u.auth_id ? (
+                          <AccountBadge active />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleActivateOpen(u)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
+                          >
+                            <Icon icon="lucide:key-round" width={13} height={13} />
+                            Activar
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center justify-center gap-1">
+                          {u.auth_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleResetOpen(u)}
+                              title="Resetear contraseña"
+                              className="p-2 rounded-lg text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-colors"
+                            >
+                              <Icon icon="lucide:refresh-cw" width={15} height={15} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleEditOpen(u)}
+                            title="Editar usuario"
+                            className="p-2 rounded-lg text-brand-blue hover:bg-brand-blue/10 border border-transparent hover:border-brand-blue/20 transition-colors"
+                          >
+                            <Icon icon="lucide:pencil" width={15} height={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleViewOpen(u)}
+                            title="Ver detalle"
+                            className="p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 border border-transparent hover:border-neutral-200 transition-colors"
+                          >
+                            <Icon icon="lucide:eye" width={15} height={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-user-modal-title"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-lg max-h-[92dvh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-9 h-9 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:user-plus" width={17} height={17} className="text-white" />
+            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-brand-blue/10 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center shrink-0">
+                  <Icon icon="lucide:user-plus" width={18} height={18} className="text-white" />
+                </div>
+                <div>
+                  <h2 id="create-user-modal-title" className="text-lg font-bold text-brand-blue">Nueva cuenta</h2>
+                  <p className="text-sm text-neutral-500 mt-0.5">Correo, contraseña, rol y empresas opcionales</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
+                aria-label="Cerrar"
+              >
+                <Icon icon="lucide:x" width={16} height={16} />
+              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-brand-blue">Nueva cuenta</p>
-              <p className="text-sm text-neutral-500 mt-0.5">Crea cuentas y asígnales roles.</p>
-            </div>
-            <Icon
-              icon={showCreateForm ? "lucide:chevron-up" : "lucide:chevron-down"}
-              width={16} height={16}
-              className="text-neutral-400 shrink-0 lg:hidden"
-            />
-          </button>
-          <section className={`${showCreateForm ? "block" : "hidden"} lg:block p-4 overflow-y-auto flex-1`}>
-            <h2 className="text-base font-bold text-brand-blue mb-3">Crear nueva cuenta</h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
-                <label htmlFor="email" className={moduleLabel}>Correo</label>
+                <label htmlFor="create-email" className={moduleLabel}>Correo</label>
                 <input
-                  id="email"
+                  id="create-email"
                   type="email"
                   required
                   value={form.email}
@@ -588,46 +1011,44 @@ export function UsuariosContent() {
                 />
               </div>
               <div>
-                <label htmlFor="password" className={moduleLabel}>Contraseña</label>
+                <label htmlFor="create-password" className={moduleLabel}>Contraseña</label>
                 <div className="relative">
                   <input
-                    id="password"
+                    id="create-password"
                     type={showPassword ? "text" : "password"}
                     required
                     minLength={6}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className={`${moduleInput} pr-9`}
+                    className={`${moduleInput} pr-10`}
                     placeholder="Mín. 6 caracteres"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((p) => !p)}
-                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
-                    tabIndex={0}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-brand-blue/40 hover:text-brand-blue rounded-lg"
                     aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
                   >
                     <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="nombre" className={moduleLabel}>Nombre</label>
+                  <label htmlFor="create-nombre" className={moduleLabel}>Nombre</label>
                   <input
-                    id="nombre"
+                    id="create-nombre"
                     type="text"
                     value={form.nombre}
                     onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
                     className={moduleInput}
-                    placeholder="Nombre"
+                    placeholder="Nombre completo"
                   />
                 </div>
                 <div>
-                  <label htmlFor="rol" className={moduleLabel}>Rol</label>
+                  <label htmlFor="create-rol" className={moduleLabel}>Rol</label>
                   <select
-                    id="rol"
+                    id="create-rol"
                     value={form.rol}
                     onChange={(e) =>
                       setForm((f) => ({
@@ -639,368 +1060,61 @@ export function UsuariosContent() {
                     className={moduleInput}
                   >
                     {ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
+                      <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
                 </div>
               </div>
-
               {(form.rol === "cliente" || form.rol === "ejecutivo") && empresas.length > 0 && (
                 <div>
                   <label className={moduleLabel}>Empresas asignadas</label>
-                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 border border-brand-blue/20 rounded-lg bg-[#F4F8FC]">
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-3 border border-brand-blue/15 rounded-xl bg-[#F4F8FC]">
                     {empresas.map((emp) => (
                       <label
                         key={emp.id}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-brand-blue/15 cursor-pointer hover:bg-[#F4F8FC] text-sm"
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-brand-blue/15 cursor-pointer hover:border-brand-blue/30 text-sm"
                       >
                         <input
                           type="checkbox"
                           checked={form.empresaIds.includes(emp.id)}
                           onChange={() => handleToggleEmpresa(emp.id)}
-                          className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
+                          className="rounded border-brand-blue/30 accent-brand-blue"
                         />
-                        <span className="truncate max-w-[120px]">{emp.nombre}</span>
+                        <span className="truncate max-w-[160px]">{emp.nombre}</span>
                       </label>
                     ))}
                   </div>
-                  {(form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0 && (
-                    <p className="text-amber-600 text-xs mt-0.5">Al menos una empresa.</p>
+                  {form.empresaIds.length === 0 && (
+                    <p className="text-amber-600 text-xs mt-1.5">Selecciona al menos una empresa.</p>
                   )}
                 </div>
               )}
-
-              {createError && <p className="text-red-600 text-xs" role="alert">{createError}</p>}
-              {createSuccess && <p className="text-green-600 text-xs" role="status">Cuenta creada.</p>}
-
-              <button
-                type="submit"
-                disabled={isCreating || ((form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0)}
-                className={`${moduleBtnPrimary} w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                Crear cuenta
-              </button>
-            </form>
-          </section>
-        </aside>
-
-        <section className={`flex-1 min-h-0 flex flex-col ${moduleCard}`}>
-          <div className="flex-shrink-0 px-4 py-3 border-b border-brand-blue/15 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-base font-bold text-brand-blue">
-                Usuarios existentes{" "}
-                <span className="font-normal text-neutral-500 text-sm">
-                  ({filteredUsuarios.length}
-                  {(filterRol || filterEmpresaId) && ` de ${usuarios.length}`})
-                </span>
-              </h2>
-              <div className="flex items-center gap-2">
-              {selectedUserIds.size > 0 && (
-                <>
-                  <span className="text-xs text-neutral-500">{selectedUserIds.size} seleccionados</span>
-                  <button
-                    type="button"
-                    onClick={handleBulkAssignOpen}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-brand-blue hover:bg-brand-blue/90 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                    aria-label="Asignar empresas a usuarios seleccionados"
-                  >
-                    <Icon icon="lucide:building-2" width={14} height={14} />
-                    Asignar empresas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedUserIds(new Set())}
-                    className="text-xs text-neutral-500 hover:text-neutral-700"
-                  >
-                    Desmarcar
-                  </button>
-                </>
-              )}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <label htmlFor="filter-rol" className="text-base font-semibold text-brand-blue hidden sm:block">
-                  Rol
-                </label>
-                <select
-                  id="filter-rol"
-                  value={filterRol}
-                  onChange={(e) => setFilterRol(e.target.value)}
-                  className="rounded-lg border border-brand-blue/20 bg-[#F4F8FC] px-2 sm:px-2.5 py-2 text-base text-brand-blue focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue outline-none"
-                >
-                  <option value="">Todos los roles</option>
-                  {ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <label htmlFor="filter-empresa" className="text-base font-semibold text-brand-blue hidden sm:block">
-                  Empresa
-                </label>
-                <select
-                  id="filter-empresa"
-                  value={filterEmpresaId}
-                  onChange={(e) => setFilterEmpresaId(e.target.value)}
-                  className="rounded-lg border border-brand-blue/20 bg-[#F4F8FC] px-2 sm:px-2.5 py-2 text-base text-brand-blue focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue outline-none max-w-[120px] sm:max-w-none"
-                >
-                  <option value="">Todas</option>
-                  {empresas.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {(filterRol || filterEmpresaId) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilterRol("");
-                    setFilterEmpresaId("");
-                  }}
-                  className="text-xs text-brand-blue hover:underline"
-                >
-                  Limpiar
-                </button>
-              )}
-            </div>
-            {error && <p className="text-red-600 text-xs">{error}</p>}
-          </div>
-          <div className="flex-1 min-h-0 overflow-auto">
-
-            {/* ── Mobile cards (< md) ── */}
-            <div className="md:hidden divide-y divide-neutral-100">
-              {filteredUsuarios.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-12 text-center px-6">
-                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                    <Icon icon="lucide:users" width={22} height={22} className="text-neutral-300" />
-                  </div>
-                  <p className="text-sm text-neutral-400">Sin usuarios.</p>
+              {createError && (
+                <div className="px-3 py-2 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200" role="alert">
+                  {createError}
                 </div>
-              ) : filteredUsuarios.map((u) => {
-                const ids = empresasPorUsuario[u.id] ?? [];
-                const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
-                const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
-                const initials = (u.nombre || u.email).slice(0, 2).toUpperCase();
-                return (
-                  <div key={u.id} className="p-4 hover:bg-neutral-50 transition-colors">
-                    <div className="flex items-start gap-3">
-                      {/* Checkbox + avatar */}
-                      <div className="flex flex-col items-center gap-2 pt-0.5">
-                        {canAssign ? (
-                          <input
-                            type="checkbox"
-                            checked={selectedUserIds.has(u.id)}
-                            onChange={() => handleToggleSelect(u)}
-                            className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                            aria-label={`Seleccionar ${u.nombre}`}
-                          />
-                        ) : (
-                          <span className="w-4 h-4 inline-block" aria-hidden="true" />
-                        )}
-                        <div className="w-8 h-8 rounded-full bg-brand-blue/10 flex items-center justify-center text-sm font-bold text-brand-blue">
-                          {initials}
-                        </div>
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div className="min-w-0">
-                            <button
-                              type="button"
-                              onClick={() => handleViewOpen(u)}
-                              className="font-semibold text-neutral-900 text-sm truncate hover:text-brand-blue hover:underline text-left"
-                            >
-                              {u.nombre || "—"}
-                            </button>
-                            <p className="text-xs text-neutral-400 truncate">{u.email}</p>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-brand-blue/10 text-brand-blue">
-                              {getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}
-                            </span>
-                            {u.auth_id ? (
-                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-sm font-semibold bg-green-100 text-green-700">
-                                <Icon icon="lucide:check" width={9} height={9} />
-                                Activa
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-neutral-100 text-neutral-500">
-                                Sin cuenta
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {nombresEmpresas.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {nombresEmpresas.map((n) => (
-                              <span key={n} className="px-1.5 py-0.5 text-sm font-medium rounded bg-brand-blue/8 text-brand-blue">
-                                {n}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          {!u.auth_id && (
-                            <button
-                              type="button"
-                              onClick={() => handleActivateOpen(u)}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
-                            >
-                              <Icon icon="lucide:key-round" width={13} height={13} />
-                              Activar
-                            </button>
-                          )}
-                          {u.auth_id && (
-                            <button
-                              type="button"
-                              onClick={() => handleResetOpen(u)}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
-                            >
-                              <Icon icon="lucide:refresh-cw" width={13} height={13} />
-                              Resetear
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleEditOpen(u)}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors"
-                          >
-                            <Icon icon="lucide:pencil" width={13} height={13} />
-                            Editar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* ── Desktop table (md+) ── */}
-            <table className="hidden md:table w-full text-sm">
-              <thead className="sticky top-0 bg-neutral-50 z-10 border-b border-neutral-200">
-                <tr>
-                  <th className="px-4 py-2.5 text-left w-10">
-                    {asignablesFromFiltered.length > 0 && (
-                      <input
-                        type="checkbox"
-                        checked={
-                          asignablesFromFiltered.length > 0 &&
-                          asignablesFromFiltered.every((u) => selectedUserIds.has(u.id))
-                        }
-                        onChange={handleSelectAllAsignables}
-                        className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                        aria-label="Seleccionar todos los clientes y ejecutivos visibles"
-                      />
-                    )}
-                  </th>
-                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue">Nombre</th>
-                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-sm font-bold text-brand-blue">Correo</th>
-                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue w-28">Rol</th>
-                  <th className="hidden lg:table-cell px-4 py-2.5 text-left text-sm font-bold text-brand-blue min-w-[140px]">Empresas</th>
-                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue w-24">Cuenta</th>
-                  <th className="px-4 py-2.5 text-left text-sm font-bold text-brand-blue min-w-[140px]">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsuarios.map((u) => {
-                  const ids = empresasPorUsuario[u.id] ?? [];
-                  const nombresEmpresas = ids
-                    .map((eid) => empresas.find((e) => e.id === eid)?.nombre)
-                    .filter(Boolean) as string[];
-                  const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
-                  return (
-                  <tr key={u.id} className="border-t border-neutral-100 hover:bg-neutral-50">
-                    <td className="px-4 py-2.5">
-                      {canAssign ? (
-                        <input
-                          type="checkbox"
-                          checked={selectedUserIds.has(u.id)}
-                          onChange={() => handleToggleSelect(u)}
-                          className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                          aria-label={`Seleccionar ${u.nombre}`}
-                        />
-                      ) : (
-                        <span className="w-4 inline-block" aria-hidden="true" />
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 font-medium">
-                      <button
-                        type="button"
-                        onClick={() => handleViewOpen(u)}
-                        className="text-left font-medium text-neutral-900 hover:text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
-                      >
-                        {u.nombre || "—"}
-                      </button>
-                    </td>
-                    <td className="hidden lg:table-cell px-4 py-2.5 text-neutral-600 text-xs truncate max-w-[160px]">{u.email}</td>
-                    <td className="px-4 py-2.5 text-xs">{getRolLabel(u.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario")}</td>
-                    <td className="hidden lg:table-cell px-4 py-2.5">
-                      {nombresEmpresas.length > 0 ? (
-                        <span className="inline-flex flex-wrap gap-1" title={nombresEmpresas.join(", ")}>
-                          {nombresEmpresas.map((n) => (
-                            <span key={n} className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-brand-blue/10 text-brand-blue">{n}</span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-400 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {u.auth_id ? (
-                        <span className="inline-flex items-center gap-1 text-green-600 text-xs">
-                          <Icon icon="typcn:tick" width={14} height={14} />
-                          Sí
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleActivateOpen(u)}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
-                          aria-label={`Activar cuenta de ${u.nombre}`}
-                        >
-                          <Icon icon="lucide:key-round" width={14} height={14} />
-                          Activar
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-1">
-                        {u.auth_id && (
-                          <button
-                            type="button"
-                            onClick={() => handleResetOpen(u)}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
-                          >
-                            <Icon icon="typcn:refresh" width={14} height={14} />
-                            Resetear
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleEditOpen(u)}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-brand-blue hover:bg-brand-blue/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                        >
-                          <Icon icon="typcn:edit" width={14} height={14} />
-                          Editar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-                })}
-              </tbody>
-            </table>
+              )}
+              {createSuccess && (
+                <div className="px-3 py-2 bg-emerald-50 text-emerald-700 text-sm rounded-xl border border-emerald-200" role="status">
+                  Cuenta creada correctamente.
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setShowCreateModal(false)} className={`${moduleBtnSecondary} flex-1 justify-center`}>
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreating || ((form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0)}
+                  className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {isCreating ? "Creando…" : "Crear cuenta"}
+                </button>
+              </div>
+            </form>
           </div>
-        </section>
-      </div>
+        </div>
+      )}
 
       {bulkAssigningUsers.length > 0 && (
         <div
@@ -1494,8 +1608,6 @@ export function UsuariosContent() {
       {viewingUser && (() => {
         const ids = empresasPorUsuario[viewingUser.id] ?? [];
         const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
-        const initials = (viewingUser.nombre || viewingUser.email).slice(0, 2).toUpperCase();
-        const rolLabel = getRolLabel(viewingUser.rol as "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario");
         return (
           <div
             className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
@@ -1515,11 +1627,9 @@ export function UsuariosContent() {
               {/* Header */}
               <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-sm font-bold text-brand-blue flex-shrink-0">
-                    {initials}
-                  </div>
+                  <UserAvatar name={viewingUser.nombre || viewingUser.email} />
                   <div>
-                    <h2 id="view-user-modal-title" className="text-sm font-bold text-neutral-900">
+                    <h2 id="view-user-modal-title" className="text-base font-bold text-brand-blue">
                       {viewingUser.nombre || viewingUser.email}
                     </h2>
                     <p className="text-xs text-neutral-500 mt-0.5">{viewingUser.email}</p>
@@ -1542,10 +1652,8 @@ export function UsuariosContent() {
                     <Icon icon="lucide:shield" width={15} height={15} className="text-brand-blue" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-neutral-500 mb-0.5">Rol</p>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-blue/10 text-brand-blue">
-                      {rolLabel}
-                    </span>
+                    <p className="text-xs font-medium text-neutral-500 mb-1">Rol</p>
+                    <RoleBadge rol={viewingUser.rol} />
                   </div>
                 </div>
                 {/* Estado cuenta */}
@@ -1559,17 +1667,8 @@ export function UsuariosContent() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-neutral-500 mb-0.5">Estado de cuenta</p>
-                    {viewingUser.auth_id ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                        <Icon icon="lucide:check" width={10} height={10} />
-                        Activa
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
-                        Sin cuenta
-                      </span>
-                    )}
+                    <p className="text-xs font-medium text-neutral-500 mb-1">Estado de cuenta</p>
+                    <AccountBadge active={Boolean(viewingUser.auth_id)} />
                   </div>
                 </div>
                 {/* Empresas */}
