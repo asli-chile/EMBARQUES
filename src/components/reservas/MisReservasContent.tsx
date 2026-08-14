@@ -19,7 +19,11 @@ import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { ESTADO_OPERACION_STYLES } from "@/lib/ui/estadoOperacion";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
-const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 52px" };
+const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 44px" };
+
+const FILTER_FIELD =
+  "w-full px-2.5 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all";
+const FILTER_LABEL = "block text-[10px] font-bold uppercase tracking-wider text-brand-blue/50 mb-1";
 
 type SvgProps = { size?: number; className?: string };
 
@@ -197,23 +201,24 @@ type SortableHeaderProps = {
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
   className?: string;
+  align?: "left" | "center";
 };
 
-function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
+function SortableHeader({ field, label, sortField, sortDirection, onSort, className, align = "left" }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className={`sticky top-0 z-20 bg-[#E4EBF6] px-4 py-4 text-center whitespace-nowrap border-b border-brand-blue/15 ${className ?? ""}`}>
+    <th className={`sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 whitespace-nowrap border-b border-brand-blue/15 ${align === "center" ? "text-center" : "text-left"} ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
-        className={`inline-flex items-center gap-1.5 text-base font-bold transition-colors ${
-          isActive ? "text-brand-blue" : "text-brand-blue/55 hover:text-brand-blue"
+        className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+          isActive ? "text-brand-blue" : "text-brand-blue/45 hover:text-brand-blue"
         }`}
       >
         {label}
-        <span className="flex flex-col gap-[1px]">
-          <Icon icon="typcn:arrow-sorted-up" width={12} height={12} className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-brand-blue/25"} />
-          <Icon icon="typcn:arrow-sorted-down" width={12} height={12} className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-brand-blue/25"} />
+        <span className="flex flex-col gap-px">
+          <Icon icon="typcn:arrow-sorted-up" width={10} height={10} className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-brand-blue/20"} />
+          <Icon icon="typcn:arrow-sorted-down" width={10} height={10} className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-brand-blue/20"} />
         </span>
       </button>
     </th>
@@ -239,119 +244,105 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
   return (
     <div
       onClick={!isCliente ? () => onSelect(op.id) : undefined}
-      className={`bg-[#F4F8FC] rounded-lg flex flex-col overflow-hidden transition-all duration-150 border shadow-sm ${
+      className={`relative bg-white rounded-xl flex flex-col overflow-hidden transition-all duration-150 border ${
         !isCliente ? "cursor-pointer" : ""
       } ${
         selected
-          ? "border-brand-blue shadow-lg shadow-brand-blue/20"
-          : "border-brand-blue/15 hover:border-brand-blue/35 hover:shadow-md"
+          ? "border-brand-blue ring-2 ring-brand-blue/20 shadow-md"
+          : "border-brand-blue/12 hover:border-brand-blue/30 hover:shadow-sm"
       }`}
     >
-      <div className={`h-[3px] ${cfg ? cfg.dot : "bg-brand-blue"}`} />
+      <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg ? cfg.dot : "bg-brand-blue"}`} aria-hidden />
 
-      <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2.5 min-w-0">
+      <div className="pl-4 pr-3 pt-3 pb-2 flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
           {!isCliente && (
-            <div className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
+            <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
               selected ? "bg-brand-blue border-brand-blue" : "border-brand-blue/30 bg-white"
             }`}>
-              {selected && <Icon icon="lucide:check" width={12} height={12} className="text-white" />}
+              {selected && <Icon icon="lucide:check" width={10} height={10} className="text-white" />}
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-lg font-bold text-brand-blue leading-tight">
+            <p className="text-sm font-bold text-brand-blue leading-tight tabular-nums tracking-tight">
               {displayRefAsli(op.ref_asli, op.correlativo)}
             </p>
-            <p className="text-base text-brand-blue/70 truncate mt-1 font-medium">{op.cliente ?? "-"}</p>
+            <p className="text-xs text-brand-blue/65 truncate mt-0.5 font-medium">{op.cliente ?? "-"}</p>
           </div>
         </div>
         {cfg && (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-base font-semibold border whitespace-nowrap shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
             {op.estado_operacion}
           </span>
         )}
       </div>
 
-      <div className="mx-4 mb-3 bg-white rounded-lg border border-brand-blue/10 px-3.5 py-3 flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-brand-blue/60">{tr.cardOrigin}</p>
-          <p className="text-lg font-bold text-brand-blue font-mono truncate mt-0.5">{op.pol ?? "-"}</p>
+      <div className="mx-3 mb-2.5 bg-[#F4F8FC] rounded-lg px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-blue/45">{tr.cardOrigin}</p>
+            <p className="text-sm font-bold text-brand-blue truncate leading-tight">{op.pol ?? "-"}</p>
+          </div>
+          <div className="flex flex-col items-center gap-0.5 shrink-0">
+            <div className="w-10 h-px bg-brand-blue/20" />
+            {op.tt !== null ? (
+              <span className="text-[10px] font-bold text-brand-blue tabular-nums">{op.tt}d</span>
+            ) : (
+              <Icon icon="lucide:arrow-right" width={12} height={12} className="text-brand-blue/30" />
+            )}
+            <div className="w-10 h-px bg-brand-blue/20" />
+          </div>
+          <div className="flex-1 min-w-0 text-right">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-blue/45">{tr.cardDestino}</p>
+            <p className="text-sm font-bold text-brand-blue truncate leading-tight">{op.pod ?? "-"}</p>
+          </div>
         </div>
-        <div className="flex flex-col items-center gap-0.5 shrink-0 px-1">
-          <Icon icon="lucide:arrow-right" width={18} height={18} className="text-brand-blue/35" />
-          {op.tt !== null && (
-            <span className="text-sm font-bold text-brand-blue bg-brand-blue/10 px-2.5 py-1 rounded-lg">{op.tt}d</span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0 text-right">
-          <p className="text-sm font-bold text-brand-blue/60">{tr.cardDestino}</p>
-          <p className="text-lg font-bold text-brand-blue font-mono truncate mt-0.5">{op.pod ?? "-"}</p>
+        <div className="mt-2 flex items-center justify-between text-[11px] tabular-nums">
+          <span className="text-brand-blue/50">ETD <span className="font-semibold text-brand-blue">{fmtDate(op.etd)}</span></span>
+          <span className="text-brand-blue/50">ETA <span className="font-semibold text-brand-blue">{fmtDate(op.eta)}</span></span>
         </div>
       </div>
 
-      <div className="px-4 pb-3 flex-1 space-y-2.5 text-base">
+      <div className="px-3 pb-2 flex-1 space-y-1 text-xs">
         {(op.naviera || op.nave) && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-brand-blue/50 shrink-0 font-medium">{tr.colCarrier}</span>
-            <span className="text-brand-blue font-semibold text-right truncate">
-              {op.naviera ?? "-"}{op.nave ? ` · ${op.nave}` : ""}
-            </span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-white rounded-lg border border-brand-blue/10 px-3 py-2.5">
-            <span className="text-brand-blue/60 text-sm block font-bold">ETD</span>
-            <span className="font-semibold text-brand-blue text-base mt-0.5 block">{fmtDate(op.etd)}</span>
-          </div>
-          <div className="bg-white rounded-lg border border-brand-blue/10 px-3 py-2.5">
-            <span className="text-brand-blue/60 text-sm block font-bold">ETA</span>
-            <span className="font-semibold text-brand-blue text-base mt-0.5 block">{fmtDate(op.eta)}</span>
-          </div>
-        </div>
-
-        {op.booking && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-brand-blue/50 shrink-0 font-medium">{tr.colBooking}</span>
-            <span className="font-mono text-brand-blue font-semibold text-right truncate">{op.booking}</span>
-          </div>
+          <p className="text-brand-blue/80 truncate">
+            <span className="font-semibold">{op.naviera ?? "-"}</span>
+            {op.nave ? <span className="text-brand-blue/50"> · {op.nave}</span> : null}
+          </p>
         )}
         {op.especie && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-brand-blue/50 shrink-0 font-medium">{tr.colSpecies}</span>
-            <span className="text-brand-blue font-semibold text-right truncate">{op.especie}</span>
-          </div>
+          <p className="text-brand-blue/60 truncate">{op.especie}</p>
         )}
       </div>
 
-      <div className="px-3 py-2.5 border-t border-brand-blue/10 flex items-center justify-between bg-brand-blue/[0.04]">
-        <span className="text-sm text-brand-blue/55 font-medium">
-          {format(new Date(op.created_at), "dd MMM yyyy", { locale: es })}
-        </span>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.copyTitle}>
-            <IcoCopy size={20} />
+      <div className="px-2.5 py-1.5 border-t border-brand-blue/8 flex items-center justify-between bg-[#F7FAFD]">
+        {!isCliente ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onBooking(op); }}
+            className={`inline-flex items-center gap-1 max-w-[58%] px-2 py-1 rounded-md text-[11px] font-semibold border truncate ${
+              op.booking_doc_url
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : op.booking
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-white text-brand-blue/40 border-dashed border-brand-blue/25"
+            }`}
+            title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
+          >
+            {op.booking_doc_url ? <IcoPaperclip size={12} className="shrink-0" /> : <IcoBookmark size={12} className="shrink-0" />}
+            <span className="font-mono truncate">{op.booking ?? tr.confirmShort}</span>
           </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.emailTitle}>
-            <IcoMail size={20} />
+        ) : (
+          <span className="font-mono text-[11px] text-brand-blue/70 truncate max-w-[58%]">{op.booking || "—"}</span>
+        )}
+        <div className="flex items-center">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-brand-blue/40 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.copyTitle}>
+            <IcoCopy size={16} />
           </button>
-          {!isCliente && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onBooking(op); }}
-              className={`p-2.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg transition-colors ${
-                op.booking_doc_url
-                  ? "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
-                  : op.booking
-                  ? "text-amber-400 hover:text-amber-600 hover:bg-amber-50"
-                  : "text-brand-blue/40 hover:text-amber-500 hover:bg-amber-50"
-              }`}
-              title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
-            >
-              {op.booking_doc_url ? <IcoPaperclip size={20} /> : <IcoBookmark size={20} />}
-            </button>
-          )}
+          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-brand-blue/40 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.emailTitle}>
+            <IcoMail size={16} />
+          </button>
         </div>
       </div>
     </div>
@@ -397,96 +388,98 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   return (
     <tr
       style={ROW_CV}
-      className={`border-b border-neutral-100 ${
-        selected ? "bg-brand-blue/10" : idx % 2 === 0 ? "bg-[#F4F8FC] hover:bg-brand-blue/[0.06]" : "bg-[#EAF0F8] hover:bg-brand-blue/[0.06]"
+      className={`border-b border-brand-blue/[0.07] ${
+        selected ? "bg-brand-blue/[0.08]" : idx % 2 === 0 ? "bg-white hover:bg-brand-blue/[0.04]" : "bg-[#F7FAFD] hover:bg-brand-blue/[0.04]"
       }`}
     >
       {!isCliente && (
-        <td className="px-4 py-4 text-center border-r border-brand-blue/10">
-          <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-5 h-5 rounded border-neutral-300 accent-brand-blue" />
+        <td className="relative px-3 py-2 text-center w-10">
+          {cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
+          <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
         </td>
       )}
-      <td className="px-4 py-4 text-center">
-        <span className="font-bold text-brand-blue text-base">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
+      <td className={`px-3 py-2 ${isCliente ? "relative" : ""}`}>
+        {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
+        <span className="font-bold text-brand-blue text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
       </td>
-      <td className="px-4 py-4 text-center min-w-[10rem]">
+      <td className="px-3 py-2 min-w-[9rem]">
         {!isCliente ? (
-          <div className="inline-flex items-center gap-1">
+          <div className="inline-flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => onBooking(op)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-base font-semibold border max-w-[240px] min-h-[44px] ${
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border max-w-[200px] ${
                 op.booking_doc_url
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                   : op.booking
                   ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                  : "bg-neutral-50 text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
+                  : "bg-white text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
               }`}
               title={op.booking ? editBookingTitle : confirmBookingTitle}
             >
-              {op.booking_doc_url ? <IcoPaperclip size={16} className="shrink-0" /> : <IcoBookmark size={16} className="shrink-0" />}
+              {op.booking_doc_url ? <IcoPaperclip size={12} className="shrink-0" /> : <IcoBookmark size={12} className="shrink-0" />}
               <span className="font-mono truncate">{op.booking ?? confirmShort}</span>
             </button>
             {op.booking_doc_url && (
-              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg">
-                <IcoExternal size={16} />
+              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded">
+                <IcoExternal size={13} />
               </a>
             )}
           </div>
         ) : (
           <div className="inline-flex items-center gap-1">
-            <span className="text-base font-mono text-brand-blue/80">{op.booking || "-"}</span>
+            <span className="text-[12px] font-mono text-brand-blue/80">{op.booking || "—"}</span>
             {op.booking_doc_url && (
               <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
-                <IcoPaperclip size={10} />
+                <IcoPaperclip size={12} />
               </a>
             )}
           </div>
         )}
       </td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{op.cliente || "-"}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue/85">{op.especie || "-"}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue/85 whitespace-nowrap">{op.naviera || "-"}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue/85">{op.nave || "-"}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue/75 font-mono">{op.pol || "-"}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue/75 font-mono">{op.pod || "-"}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{fmtDate(op.etd)}</td>
-      <td className="px-4 py-4 text-center text-base text-brand-blue font-semibold whitespace-nowrap">{fmtDate(op.eta)}</td>
-      <td className="px-4 py-4 text-center">
+      <td className="px-3 py-2 text-[13px] text-brand-blue font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
+      <td className="px-3 py-2 text-[13px] text-brand-blue/75 max-w-[8rem] truncate">{op.especie || "—"}</td>
+      <td className="px-3 py-2 text-[13px] text-brand-blue/75 whitespace-nowrap">{op.naviera || "—"}</td>
+      <td className="px-3 py-2 text-[13px] text-brand-blue/75 max-w-[9rem] truncate">{op.nave || "—"}</td>
+      <td className="px-3 py-2 text-[12px] text-brand-blue/70 font-medium">{op.pol || "—"}</td>
+      <td className="px-3 py-2 text-[12px] text-brand-blue/70 font-medium">{op.pod || "—"}</td>
+      <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
+      <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
+      <td className="px-3 py-2 text-center">
         {op.tt !== null ? (
-          <span className="text-base font-semibold text-brand-blue bg-brand-blue/10 px-2.5 py-1.5 rounded-lg">{op.tt}d</span>
-        ) : <span className="text-brand-blue/40 text-base">-</span>}
+          <span className="text-[11px] font-bold text-brand-blue tabular-nums">{op.tt}d</span>
+        ) : <span className="text-brand-blue/30 text-xs">—</span>}
       </td>
-      <td className="px-4 py-4 text-center">
+      <td className="px-3 py-2 text-center">
         {cfg ? (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0`} />
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
             {op.estado_operacion}
           </span>
-        ) : <span className="text-brand-blue/40 text-base">-</span>}
+        ) : <span className="text-brand-blue/30 text-xs">—</span>}
       </td>
-      <td className="px-4 py-4 text-center">
+      <td className="px-3 py-2 text-center">
         {op.tipo_reserva_transporte === "asli" ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
             ASLI
           </span>
         ) : op.tipo_reserva_transporte === "externa" ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
             {typeExternal}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-medium bg-brand-blue/5 text-brand-blue/50 border border-brand-blue/15">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-transparent text-brand-blue/40 border border-dashed border-brand-blue/20">
             {typePendiente}
           </span>
         )}
       </td>
-      <td className="px-4 py-4 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <button type="button" onClick={() => onCopy(op)} className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg" title={copyShort}>
-            <IcoCopy size={18} />
+      <td className="px-2 py-2 text-center">
+        <div className="flex items-center justify-center">
+          <button type="button" onClick={() => onCopy(op)} className="p-1.5 text-brand-blue/35 hover:text-brand-blue hover:bg-brand-blue/8 rounded-md" title={copyShort}>
+            <IcoCopy size={15} />
           </button>
-          <button type="button" onClick={() => onEmail(op)} className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-brand-blue/45 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg" title={emailTitle}>
-            <IcoMail size={18} />
+          <button type="button" onClick={() => onEmail(op)} className="p-1.5 text-brand-blue/35 hover:text-brand-blue hover:bg-brand-blue/8 rounded-md" title={emailTitle}>
+            <IcoMail size={15} />
           </button>
         </div>
       </td>
@@ -1176,33 +1169,30 @@ export function MisReservasContent() {
     <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col bg-[#D9E3F2]" role="main">
 
       {/* ── Hero ── */}
-      <div className="flex-shrink-0 bg-gradient-to-br from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-6 pt-6 pb-5">
+      <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="typcn:clipboard" width={24} height={24} className="text-white" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
+              <Icon icon="typcn:clipboard" width={18} height={18} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{t.sidebar.misReservas}</h1>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-base text-white/75">
-                  <span className="font-semibold text-white">{filteredOperaciones.length}</span>
-                  {filteredOperaciones.length !== operaciones.length
-                    ? <span className="text-white/50"> de {operaciones.length}</span>
-                    : null
-                  } {tr.records}
-                </span>
-              </div>
+              <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight">{t.sidebar.misReservas}</h1>
+              <p className="text-xs text-white/65 mt-0.5">
+                <span className="font-semibold text-white tabular-nums">{filteredOperaciones.length}</span>
+                {filteredOperaciones.length !== operaciones.length
+                  ? <span className="text-white/45"> / {operaciones.length}</span>
+                  : null
+                } {tr.records}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Toggle vista */}
-            <div className="flex items-center bg-white/15 rounded-xl p-0.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center bg-white/12 rounded-lg p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("cards")}
                 title={tr.viewCards}
-                className={`px-3 py-2 rounded-lg text-sm transition-all ${viewMode === "cards" ? "bg-white text-brand-blue shadow-sm font-bold" : "text-white/80 hover:text-white"}`}
+                className={`px-2.5 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-white text-brand-blue shadow-sm" : "text-white/75 hover:text-white"}`}
               >
                 <Icon icon="lucide:layout-grid" width={14} height={14} />
               </button>
@@ -1210,21 +1200,21 @@ export function MisReservasContent() {
                 type="button"
                 onClick={() => setViewMode("table")}
                 title={tr.viewTable}
-                className={`px-3 py-2 rounded-lg text-sm transition-all ${viewMode === "table" ? "bg-white text-brand-blue shadow-sm font-bold" : "text-white/80 hover:text-white"}`}
+                className={`px-2.5 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-brand-blue shadow-sm" : "text-white/75 hover:text-white"}`}
               >
                 <Icon icon="lucide:list" width={14} height={14} />
               </button>
             </div>
             <a
               href={withBase("/reservas/papelera")}
-              className="p-2 bg-white/15 border border-white/20 rounded-xl hover:bg-white/25 transition-colors text-white/70 hover:text-white"
+              className="p-2 bg-white/12 border border-white/15 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
               title="Papelera"
             >
-              <Icon icon="lucide:trash-2" width={16} height={16} />
+              <Icon icon="lucide:trash-2" width={14} height={14} />
             </a>
             <a
               href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors"
             >
               <Icon icon="lucide:plus" width={13} height={13} />
               <span className="hidden sm:inline">{tr.newBooking}</span>
@@ -1236,62 +1226,57 @@ export function MisReservasContent() {
 
       {/* ── Barra de búsqueda y filtros ── */}
       <div className="flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
-        <div className="px-3 sm:px-4 py-3 flex items-center gap-2">
-          {/* Búsqueda */}
+        <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
           <div className="flex-1 min-w-0 relative">
-            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none" />
+            <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-blue/35 w-3.5 h-3.5 pointer-events-none" />
             <input
               type="text"
               placeholder={tr.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-8 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
+              className="w-full pl-8 pr-8 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all"
             />
             {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-blue/35 hover:text-brand-blue transition-colors">
                 <Icon icon="lucide:x" width={13} height={13} />
               </button>
             )}
           </div>
-          {/* Filtros */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 border rounded-lg text-base font-semibold transition-colors shrink-0 ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-2 border rounded-lg text-sm font-semibold transition-colors shrink-0 ${
               showFilters || activeFiltersCount > 0
                 ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
-                : "border-brand-blue/20 bg-[#F4F8FC] hover:bg-white text-brand-blue/70"
+                : "border-brand-blue/20 bg-white hover:bg-[#F4F8FC] text-brand-blue/70"
             }`}
           >
             <Icon icon="lucide:sliders-horizontal" width={13} height={13} />
             <span className="hidden sm:inline">{tr.filters}</span>
             {activeFiltersCount > 0 && (
-              <span className="w-4 h-4 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
+              <span className="min-w-4 h-4 px-1 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
             )}
           </button>
-          {/* Exportar Excel */}
           <button
             onClick={() => void handleExportExcel()}
             disabled={filteredOperaciones.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
             title="Exportar a Excel"
           >
             <Icon icon="lucide:table-2" width={13} height={13} />
             <span className="hidden sm:inline">Excel</span>
           </button>
-          {/* Exportar PDF */}
           <button
             onClick={handleExportPDF}
             disabled={filteredOperaciones.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
             title="Exportar a PDF"
           >
             <Icon icon="lucide:file-text" width={13} height={13} />
             <span className="hidden sm:inline">PDF</span>
           </button>
-          {/* Recargar */}
           <button
             onClick={fetchOperaciones}
-            className="p-2.5 text-brand-blue/60 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
+            className="p-2 text-brand-blue/55 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
             title={tr.refresh}
           >
             <Icon icon="lucide:refresh-cw" width={14} height={14} />
@@ -1301,11 +1286,11 @@ export function MisReservasContent() {
         {/* Barra de selección */}
         {!isCliente && selectedIds.size > 0 && (
           <div className="px-3 sm:px-4 py-2 border-t border-brand-blue/10 flex items-center gap-2 bg-brand-blue/5">
-            <span className="text-base font-semibold text-brand-blue flex-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? "s" : ""}</span>
+            <span className="text-sm font-semibold text-brand-blue flex-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? "s" : ""}</span>
             <button
               onClick={() => setShowTransportModal(true)}
               disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
             >
               <Icon icon="lucide:truck" width={12} height={12} />
               <span className="hidden sm:inline">{tr.sendToTransports}</span>
@@ -1314,7 +1299,7 @@ export function MisReservasContent() {
             <button
               onClick={() => handleMoveToTrash(Array.from(selectedIds))}
               disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
             >
               <Icon icon="lucide:trash-2" width={12} height={12} />
               <span className="hidden sm:inline">{tr.delete}</span>
@@ -1327,40 +1312,40 @@ export function MisReservasContent() {
 
         {/* Panel de filtros */}
         {showFilters && (
-          <div className="px-3 sm:px-4 py-3.5 border-t border-brand-blue/10 bg-[#DCE6F4]/80 space-y-2.5">
+          <div className="px-3 sm:px-4 py-2.5 border-t border-brand-blue/10 bg-[#DCE6F4]/80 space-y-2">
             {/* Fila 1: Estado, Cliente, Naviera, Especie, Nave */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colStatus}</label>
-                <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>{tr.colStatus}</label>
+                <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">{tr.allStates}</option>
                   {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
                 </select>
               </div>
               <div className={isCliente ? "hidden" : ""}>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colClient}</label>
-                <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>{tr.colClient}</label>
+                <select value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">{tr.allClients}</option>
                   {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colCarrier}</label>
-                <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>{tr.colCarrier}</label>
+                <select value={navieraFilter} onChange={(e) => setNavieraFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">{tr.allCarriers}</option>
                   {navieras.map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colSpecies}</label>
-                <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>{tr.colSpecies}</label>
+                <select value={especieFilter} onChange={(e) => setEspecieFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">{tr.allSpecies}</option>
                   {especies.map((e) => <option key={e} value={e}>{e}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colVessel}</label>
-                <select value={naveFilter} onChange={(e) => setNaveFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>{tr.colVessel}</label>
+                <select value={naveFilter} onChange={(e) => setNaveFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">Todas</option>
                   {naves.map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
@@ -1369,23 +1354,23 @@ export function MisReservasContent() {
             {/* Fila 2: POD, ETD desde, ETD hasta, Transporte */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">{tr.colPOD}</label>
-                <select value={podFilter} onChange={(e) => setPodFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>{tr.colPOD}</label>
+                <select value={podFilter} onChange={(e) => setPodFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">Todos</option>
                   {pods.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">ETD Desde</label>
-                <input type="date" value={etdDesde} onChange={(e) => setEtdDesde(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all" />
+                <label className={FILTER_LABEL}>ETD Desde</label>
+                <input type="date" value={etdDesde} onChange={(e) => setEtdDesde(e.target.value)} className={FILTER_FIELD} />
               </div>
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">ETD Hasta</label>
-                <input type="date" value={etdHasta} onChange={(e) => setEtdHasta(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all" />
+                <label className={FILTER_LABEL}>ETD Hasta</label>
+                <input type="date" value={etdHasta} onChange={(e) => setEtdHasta(e.target.value)} className={FILTER_FIELD} />
               </div>
               <div>
-                <label className="block text-base font-semibold text-brand-blue/75 mb-1.5">Transporte</label>
-                <select value={transporteFilter} onChange={(e) => setTransporteFilter(e.target.value)} className="w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all">
+                <label className={FILTER_LABEL}>Transporte</label>
+                <select value={transporteFilter} onChange={(e) => setTransporteFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">Todos</option>
                   <option value="enviado">Enviado a transporte</option>
                   <option value="sin_enviar">Sin enviar</option>
@@ -1393,7 +1378,7 @@ export function MisReservasContent() {
               </div>
             </div>
             {activeFiltersCount > 0 && (
-              <button onClick={clearAllFilters} className="text-base text-brand-blue hover:underline font-semibold">
+              <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-semibold">
                 {tr.clearAllFilters}
               </button>
             )}
@@ -1406,14 +1391,14 @@ export function MisReservasContent() {
 
         {/* Vista Tabla */}
         {viewMode === "table" && (
-          <div className="bg-[#F4F8FC] rounded-lg border border-brand-blue/15 shadow-mac-modal overflow-hidden flex flex-col h-full min-h-0" style={{ minHeight: 300 }}>
+          <div className="bg-white rounded-xl border border-brand-blue/12 overflow-hidden flex flex-col h-full min-h-0 shadow-sm" style={{ minHeight: 300 }}>
             <div className="overflow-auto flex-1 min-h-0">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-[#E4EBF6]">
+                  <tr className="bg-[#E8EEF7]">
                     {!isCliente && (
-                      <th className="sticky top-0 z-20 bg-[#E4EBF6] px-4 py-4 w-11 border-r border-brand-blue/10 border-b border-brand-blue/15">
-                        <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-5 h-5 rounded border-neutral-300 accent-brand-blue" />
+                      <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 w-10 border-b border-brand-blue/15">
+                        <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
                       </th>
                     )}
                     <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -1424,12 +1409,12 @@ export function MisReservasContent() {
                     <SortableHeader field="nave" label={tr.colVessel} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="pol" label={tr.colPOL} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="pod" label={tr.colPOD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
-                    <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
-                    <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="sticky top-0 z-20 bg-[#E4EBF6] px-4 py-4 text-center text-base font-bold text-brand-blue/65 border-b border-brand-blue/15">{tr.colTransport}</th>
-                    <th className="sticky top-0 z-20 bg-[#E4EBF6] px-4 py-4 text-center text-base font-bold text-brand-blue/65 border-b border-brand-blue/15">{tr.colActions}</th>
+                    <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" className="min-w-[6.5rem]" />
+                    <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" className="min-w-[6.5rem]" />
+                    <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                    <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                    <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colTransport}</th>
+                    <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colActions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1440,7 +1425,7 @@ export function MisReservasContent() {
                           <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
                             <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
                           </span>
-                          <p className="text-brand-blue/70 font-medium text-base">{tr.noResults}</p>
+                          <p className="text-brand-blue/70 font-medium text-sm">{tr.noResults}</p>
                           {(activeFiltersCount > 0 || searchTerm) && (
                             <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">{tr.clearFilters}</button>
                           )}
@@ -1473,13 +1458,13 @@ export function MisReservasContent() {
               </table>
             </div>
             {filteredOperaciones.length > 0 && (
-              <div className="px-4 py-3 border-t border-brand-blue/10 flex items-center justify-between bg-[#E4EBF6]/80 flex-shrink-0">
-                <span className="text-base text-brand-blue/65 font-medium">
+              <div className="px-3 py-2 border-t border-brand-blue/10 flex items-center justify-between bg-[#E8EEF7]/90 flex-shrink-0">
+                <span className="text-xs text-brand-blue/60 font-medium tabular-nums">
                   {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tr.registro : tr.records}
                   {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 </span>
                 {selectedIds.size > 0 && (
-                  <span className="text-base text-brand-blue font-semibold">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
+                  <span className="text-xs text-brand-blue font-semibold">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
                 )}
               </div>
             )}
@@ -1490,17 +1475,17 @@ export function MisReservasContent() {
         {viewMode === "cards" && (
           <>
             {filteredOperaciones.length === 0 ? (
-              <div className="bg-[#F4F8FC] rounded-lg border border-brand-blue/15 shadow-mac-modal px-4 py-14 flex flex-col items-center gap-2">
+              <div className="bg-white rounded-xl border border-brand-blue/12 px-4 py-12 flex flex-col items-center gap-2">
                 <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
                   <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
                 </span>
-                <p className="text-brand-blue/70 font-medium text-base">{tr.noResults}</p>
+                <p className="text-brand-blue/70 font-medium text-sm">{tr.noResults}</p>
                 {(activeFiltersCount > 0 || searchTerm) && (
                   <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">Limpiar filtros</button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                 {filteredOperaciones.map((op) => (
                   <ReservaCard
                     key={op.id}
@@ -1518,7 +1503,7 @@ export function MisReservasContent() {
               </div>
             )}
             {filteredOperaciones.length > 0 && (
-              <p className="text-base text-brand-blue/60 text-center mt-3 font-medium">
+              <p className="text-xs text-brand-blue/55 text-center mt-3 font-medium">
                 {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tr.reservaSingular : tr.reservasPlural}
                 {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 {selectedIds.size > 0 && ` · ${selectedIds.size} seleccionada${selectedIds.size !== 1 ? "s" : ""}`}
