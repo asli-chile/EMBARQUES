@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useReveal } from '../hooks/useReveal'
+
+const MAP_EMBED =
+  'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4022.7608648636206!2d-71.20605142340338!3d-34.97436577716874!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x966457bfbad3103d%3A0x1a06a30ef08571a5!2sASLI%20-%20Log%C3%ADstica%20y%20Comercio%20Exterior!5e1!3m2!1ses-419!2scl!4v1768069231458!5m2!1ses-419!2scl'
 
 const Ubicacion = () => {
   const info = useReveal('left')
   const map = useReveal('right', 280)
+  const [showMap, setShowMap] = useState(false)
 
   const handleGoogleMaps = () => {
     window.open('https://maps.app.goo.gl/cGrni677vZDk5pp26', '_blank')
@@ -103,16 +108,32 @@ const Ubicacion = () => {
             style={map.style}
             className="lg:col-span-7 overflow-hidden rounded-none sm:rounded-[20px] shadow-asli-med min-h-[220px] sm:min-h-[260px] lg:min-h-[min(52vh,400px)] border-y sm:border border-asli-dark/5 -mx-4 sm:mx-0"
           >
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4022.7608648636206!2d-71.20605142340338!3d-34.97436577716874!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x966457bfbad3103d%3A0x1a06a30ef08571a5!2sASLI%20-%20Log%C3%ADstica%20y%20Comercio%20Exterior!5e1!3m2!1ses-419!2scl!4v1768069231458!5m2!1ses-419!2scl"
-              width="100%"
-              height="100%"
-              style={{ minHeight: '220px', border: 0, display: 'block' }}
-              allowFullScreen=""
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Ubicación ASLI - Logística y Comercio Exterior"
-            />
+            {showMap ? (
+              <iframe
+                src={MAP_EMBED}
+                width="100%"
+                height="100%"
+                style={{ minHeight: '220px', border: 0, display: 'block' }}
+                allowFullScreen=""
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Ubicación ASLI - Logística y Comercio Exterior"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowMap(true)}
+                className="w-full h-full min-h-[220px] sm:min-h-[260px] lg:min-h-[min(52vh,400px)] flex flex-col items-center justify-center gap-3 bg-[#e8efe8] text-asli-dark hover:bg-[#dce8dc] transition-colors"
+              >
+                <span className="text-3xl" aria-hidden="true">
+                  📍
+                </span>
+                <span className="font-display font-bold text-base">Cargar mapa</span>
+                <span className="text-muted text-sm px-4">
+                  Longitudinal Sur Km. 186, Curicó
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>

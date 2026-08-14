@@ -20,6 +20,9 @@ function LogoStrip({ items, label }) {
                 aria-hidden={i >= items.length}
                 className="max-h-full max-w-[110px] md:max-w-[130px] object-contain"
                 loading="lazy"
+                decoding="async"
+                width={140}
+                height={48}
               />
             </div>
           ))}
