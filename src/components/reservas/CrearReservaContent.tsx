@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { Icon } from "@iconify/react";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
+import { FormSelect } from "@/components/ui/FormSelect";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
@@ -130,6 +131,26 @@ const SECTION_ORDER: SectionKey[] = [
   "deposito",
   "observaciones",
 ];
+
+function FieldGrid({ children }: { children: ReactNode }) {
+  return (
+    <div className="grid w-full min-w-0 gap-x-3 gap-y-2.5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&>*]:min-w-0">
+      {children}
+    </div>
+  );
+}
+
+function iconForTipo(valor: string) {
+  const v = valor
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (v.includes("AERE")) return "lucide:plane";
+  if (v.includes("MARIT")) return "lucide:ship";
+  if (v.includes("IMPORT")) return "lucide:package-open";
+  if (v.includes("EXPORT")) return "lucide:package";
+  return "lucide:globe";
+}
 
 export function CrearReservaContent() {
   const { t } = useLocale();
@@ -1233,11 +1254,9 @@ export function CrearReservaContent() {
   };
 
   const inputClass =
-    "w-full px-4 py-3.5 rounded-lg border border-brand-blue/20 bg-[#EEF3FA] text-lg text-brand-blue placeholder:text-brand-blue/40 shadow-[inset_0_1px_2px_rgba(17,34,78,0.06)] hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100";
+    "w-full min-h-[2.6rem] px-3 py-2 rounded-lg border border-brand-blue/20 bg-white text-base font-semibold text-brand-blue placeholder:text-brand-blue/40 placeholder:font-medium shadow-[0_1px_2px_rgba(17,34,78,0.06)] hover:border-brand-blue/45 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100";
 
-  const selectClass = inputClass;
-
-  const labelClass = "block text-base font-semibold text-brand-blue mb-2";
+  const labelClass = "block text-[11px] font-bold uppercase tracking-[0.08em] text-brand-blue/70 mb-1";
 
   const reqMark = <span className="ml-0.5 text-red-500 font-bold" aria-hidden="true">*</span>;
 
@@ -1247,31 +1266,36 @@ export function CrearReservaContent() {
     label: string,
     required?: boolean
   ) => {
-    const htmlName = name === "forma_pago" ? "form_payment_method" : name;
     const items = catalogos[categoria] ?? [];
     return (
-      <div>
+      <div className="min-w-0">
         <label htmlFor={name} className={labelClass}>
           {label}{required && reqMark}
         </label>
-        <select
+        <FormSelect
           id={name}
-          name={htmlName}
-          data-field={name}
+          name={name === "forma_pago" ? "form_payment_method" : name}
           value={formData[name] as string}
-          onChange={handleChange}
-          className={selectClass}
+          placeholder={tr.selectPlaceholder}
           disabled={loadingCatalogos}
-          autoComplete="off"
-        >
-          <option value="">{tr.selectPlaceholder}</option>
-          {items.map((item) => (
-            <option key={item.id} value={item.valor}>
-              {item.valor}
-              {item.descripcion ? ` - ${item.descripcion}` : ""}
-            </option>
-          ))}
-        </select>
+          options={items.map((item) => ({
+            value: item.valor,
+            label: item.descripcion ? `${item.valor} — ${item.descripcion}` : item.valor,
+          }))}
+          onChange={(value) => {
+            if (name === "tipo_atmosfera") {
+              setFormData((prev) => ({
+                ...prev,
+                tipo_atmosfera: value,
+                ventilacion: value ? "0" : prev.ventilacion,
+                tratamiento_frio_o2: value ? prev.tratamiento_frio_o2 : "",
+                tratamiento_frio_co2: value ? prev.tratamiento_frio_co2 : "",
+              }));
+            } else {
+              setFormData((prev) => ({ ...prev, [name]: value }));
+            }
+          }}
+        />
       </div>
     );
   };
@@ -1282,30 +1306,30 @@ export function CrearReservaContent() {
     label: string,
     required?: boolean
   ) => (
-    <div>
+    <div className="min-w-0">
       <label htmlFor={name} className={labelClass}>
         {label}{required && reqMark}
         {options.length > 0 && (
-          <span className="ml-2 text-neutral-400 font-normal">({options.length})</span>
+          <span className="ml-2 text-brand-blue/35 font-semibold normal-case tracking-normal">({options.length})</span>
         )}
       </label>
-      <select
+      <FormSelect
         id={name}
         name={name}
-        data-field={name}
         value={formData[name] as string}
-        onChange={handleChange}
-        className={selectClass}
+        placeholder={tr.selectPlaceholder}
         disabled={loadingCatalogos}
-        autoComplete="off"
-      >
-        <option value="">{tr.selectPlaceholder}</option>
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.nombre}
-          </option>
-        ))}
-      </select>
+        options={options.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+        onChange={(value) => {
+          if (name === "nave") {
+            setViajesSugeridos([]);
+            setViajeInputManual(false);
+            setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
+          } else {
+            setFormData((prev) => ({ ...prev, [name]: value }));
+          }
+        }}
+      />
     </div>
   );
 
@@ -1665,67 +1689,142 @@ export function CrearReservaContent() {
     observaciones: tr.sectionObservaciones,
   };
 
-  const sectionFieldsMap: Record<SectionKey, React.ReactNode> = {
+  const sectionDescs: Record<SectionKey, string> = {
+    general: tr.sectionGeneralDesc,
+    comercial: tr.sectionComercialDesc,
+    carga: tr.sectionCargaDesc,
+    naviera: tr.sectionNavieraDesc,
+    planta: tr.sectionPlantaDesc,
+    deposito: tr.sectionDepositoDesc,
+    observaciones: tr.sectionObservacionesDesc,
+  };
+
+  const sectionFieldsMap: Record<SectionKey, ReactNode> = {
     general: (
       <>
-        {renderCatalogoSelect("tipo_operacion", "tipo_operacion", tr.tipoOperacion, true)}
-        {renderCatalogoSelect("estado_operacion", "estado_operacion", tr.estadoOperacion)}
-        {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo, true)}
-        {(() => {
-          const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
-          return (
-            <ComboboxInput
-              id="cliente"
-              label={tr.cliente}
-              labelClass={labelClass}
-              inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
-              labelExtra={<>{reqMark}{isReadOnly && <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>}</>}
-              value={clienteInput}
-              options={clientesFiltradosPorRol}
-              onSelect={handleSelectCliente}
-              onChange={(val) => {
-                setClienteInput(val);
-                if (!val.trim()) setFormData((prev) => ({ ...prev, cliente: "" }));
-              }}
-              onBlurExtra={() => {
-                if (clienteInput.trim() && !clienteExisteExacto && !formData.cliente && profile?.rol !== "cliente") {
-                  setShowAddClienteModal(true);
-                }
-              }}
-              onAddNew={profile?.rol !== "cliente" ? () => { setShowAddClienteModal(true); } : undefined}
-              addNewLabel={() => tr.addNewLabel}
-              placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
-              disabled={isReadOnly}
-              readOnly={isReadOnly}
-            />
-          );
-        })()}
         <div>
-          <label htmlFor="dueno_reserva" className={labelClass}>
-            Dueño de reserva
-          </label>
-          <select
-            id="dueno_reserva"
-            value={formData.dueno_reserva}
-            onChange={(e) => setFormData((prev) => ({ ...prev, dueno_reserva: e.target.value }))}
-            className={selectClass}
-          >
-            <option value="ASLI">ASLI</option>
-            <option value="CHILFRESH">CHILFRESH</option>
-            <option value="SURLOGISTICA">SURLOGISTICA</option>
-          </select>
+          <p className={labelClass}>
+            {tr.tipoOperacion}{reqMark}
+          </p>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2">
+            {(catalogos.tipo_operacion ?? []).map((item) => {
+              const selected = formData.tipo_operacion === item.valor;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, tipo_operacion: item.valor }))}
+                  className={`flex items-center gap-2.5 text-left rounded-lg border px-3 py-2.5 min-h-[3rem] transition-all ${
+                    selected
+                      ? "border-brand-blue bg-brand-blue text-white shadow-sm"
+                      : "border-brand-blue/15 bg-white text-brand-blue hover:border-brand-blue/40"
+                  }`}
+                >
+                  <Icon
+                    icon={iconForTipo(item.valor)}
+                    width={18}
+                    height={18}
+                    className={selected ? "text-sky-200 shrink-0" : "text-brand-teal shrink-0"}
+                  />
+                  <span className="text-xs font-bold leading-snug tracking-wide">
+                    {item.valor}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+        <div>
+          <p className={labelClass}>{tr.estadoOperacion}</p>
+          <div className="flex flex-wrap gap-2">
+            {(catalogos.estado_operacion ?? []).map((item) => {
+              const selected = formData.estado_operacion === item.valor;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, estado_operacion: item.valor }))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border transition-colors ${
+                    selected
+                      ? "bg-brand-blue text-white border-brand-blue"
+                      : "bg-white text-brand-blue/80 border-brand-blue/20 hover:border-brand-blue/50"
+                  }`}
+                >
+                  {item.valor}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <FieldGrid>
+          {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo, true)}
+          {!isCliente && (
+            <div className="min-w-0 sm:col-span-2 xl:col-span-1">
+              <p className={labelClass}>{tr.duenoReserva}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(["ASLI", "CHILFRESH", "SURLOGISTICA"] as const).map((owner) => {
+                  const selected = formData.dueno_reserva === owner;
+                  return (
+                    <button
+                      key={owner}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, dueno_reserva: owner }))}
+                      className={`px-2 py-2 rounded-lg border text-xs font-bold truncate transition-all ${
+                        selected
+                          ? "bg-brand-teal text-white border-brand-teal shadow-sm"
+                          : "bg-white text-brand-blue border-brand-blue/15 hover:border-brand-blue/40"
+                      }`}
+                    >
+                      {owner}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+            {(() => {
+              const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
+              return (
+                <ComboboxInput
+                  id="cliente"
+                  label={tr.cliente}
+                  labelClass={labelClass}
+                  inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
+                  labelExtra={<>{reqMark}{isReadOnly && <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>}</>}
+                  value={clienteInput}
+                  options={clientesFiltradosPorRol}
+                  onSelect={handleSelectCliente}
+                  onChange={(val) => {
+                    setClienteInput(val);
+                    if (!val.trim()) setFormData((prev) => ({ ...prev, cliente: "" }));
+                  }}
+                  onBlurExtra={() => {
+                    if (clienteInput.trim() && !clienteExisteExacto && !formData.cliente && profile?.rol !== "cliente") {
+                      setShowAddClienteModal(true);
+                    }
+                  }}
+                  onAddNew={profile?.rol !== "cliente" ? () => { setShowAddClienteModal(true); } : undefined}
+                  addNewLabel={() => tr.addNewLabel}
+                  placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
+                  disabled={isReadOnly}
+                  readOnly={isReadOnly}
+                />
+              );
+            })()}
+          </div>
+        </FieldGrid>
       </>
     ),
     comercial: (
-      <>
+      <FieldGrid>
         {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm, true)}
         {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago, true)}
         {renderSelect("consignatario", consignatarios, tr.consignatario)}
-      </>
+      </FieldGrid>
     ),
     carga: (
-      <>
+      <FieldGrid>
         <ComboboxInput
           id="especie"
           label={tr.especie}
@@ -1748,6 +1847,7 @@ export function CrearReservaContent() {
           placeholder={tr.searchEspecie}
           disabled={loadingCatalogos}
         />
+        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true)}
         {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
         <div>
           <label htmlFor="ventilacion" className={labelClass}>
@@ -1800,11 +1900,10 @@ export function CrearReservaContent() {
             disabled={!formData.tipo_atmosfera}
           />
         </div>
-        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true)}
-      </>
+      </FieldGrid>
     ),
     naviera: (
-      <>
+      <FieldGrid>
         {renderSelect("naviera", navieras, tr.naviera, true)}
         {renderSelect("nave", navesFiltered, tr.nave, true)}
         <div>
@@ -1815,26 +1914,24 @@ export function CrearReservaContent() {
             )}
           </label>
           {viajesSugeridos.length > 0 && !viajeInputManual ? (
-            <div className="flex gap-2">
-              <select
-                id="viaje"
-                name="viaje"
-                value={formData.viaje}
-                onChange={handleChange}
-                className={`${selectClass} flex-1`}
-              >
-                <option value="">{tr.selectPlaceholder}</option>
-                {viajesSugeridos.map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+            <div className="flex gap-2 items-stretch">
+              <div className="flex-1 min-w-0">
+                <FormSelect
+                  id="viaje"
+                  name="viaje"
+                  value={formData.viaje}
+                  placeholder={tr.selectPlaceholder}
+                  options={viajesSugeridos.map((v) => ({ value: v, label: v }))}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, viaje: value }))}
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => { setViajeInputManual(true); setFormData((prev) => ({ ...prev, viaje: "" })); }}
-                className="text-xs text-neutral-500 hover:text-neutral-700 px-2 shrink-0"
+                className="shrink-0 px-3 rounded-lg border border-brand-blue/20 bg-white text-brand-blue/70 hover:text-brand-blue hover:border-brand-blue/40 transition-colors"
                 title={tr.viajeManual}
               >
-                <Icon icon="lucide:pencil" width={14} height={14} />
+                <Icon icon="lucide:pencil" width={16} height={16} />
               </button>
             </div>
           ) : (
@@ -1857,15 +1954,16 @@ export function CrearReservaContent() {
                 <button
                   type="button"
                   onClick={() => setViajeInputManual(false)}
-                  className="text-xs text-brand-blue hover:underline px-2 shrink-0"
+                  className="shrink-0 px-3 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] text-brand-blue hover:bg-white transition-colors"
                   title={tr.viajeDesdeItinerario}
                 >
-                  <Icon icon="lucide:list" width={14} height={14} />
+                  <Icon icon="lucide:list" width={16} height={16} />
                 </button>
               )}
             </div>
           )}
         </div>
+        {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
         {renderSelect("pol", puertosOrigen, tr.pol, true)}
         <ComboboxInput
           id="pod"
@@ -1889,49 +1987,55 @@ export function CrearReservaContent() {
           placeholder={tr.searchDestino}
           disabled={loadingCatalogos}
         />
-        <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-3 gap-3">
-          <div>
-            <label htmlFor="etd" className={labelClass}>{tr.etd}{reqMark}</label>
-            <DatePicker
-              id="etd"
-              name="etd_date_field"
-              selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
-              onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
-              dateFormat="dd-MM-yyyy"
-              locale="es"
-              placeholderText={tr.datePlaceholder}
-              className={inputClass}
-              isClearable
-              autoComplete="one-time-code"
-            />
-          </div>
-          <div>
-            <label htmlFor="eta" className={labelClass}>{tr.eta}</label>
-            <DatePicker
-              id="eta"
-              name="eta_date_field"
-              selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
-              onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
-              dateFormat="dd-MM-yyyy"
-              locale="es"
-              placeholderText={tr.datePlaceholder}
-              className={inputClass}
-              isClearable
-              autoComplete="one-time-code"
-            />
-          </div>
-          <div>
-            <label className={labelClass}>{tr.ttDays}</label>
-            <div className="rounded-lg border border-brand-blue/25 bg-gradient-to-br from-brand-blue/10 to-brand-teal/10 px-4 py-3.5 flex items-center justify-center font-bold text-brand-blue text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-              {transitTime !== null ? transitTime : "-"}
-            </div>
+        <div>
+          <label htmlFor="etd" className={labelClass}>{tr.etd}{reqMark}</label>
+          <DatePicker
+            id="etd"
+            name="etd_date_field"
+            selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
+            onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
+            dateFormat="dd-MM-yyyy"
+            locale="es"
+            placeholderText={tr.datePlaceholder}
+            className={inputClass}
+            wrapperClassName="w-full"
+            isClearable
+            withPortal
+            autoComplete="one-time-code"
+          />
+        </div>
+        <div>
+          <label htmlFor="eta" className={labelClass}>{tr.eta}</label>
+          <DatePicker
+            id="eta"
+            name="eta_date_field"
+            selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
+            onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
+            dateFormat="dd-MM-yyyy"
+            locale="es"
+            placeholderText={tr.datePlaceholder}
+            className={inputClass}
+            wrapperClassName="w-full"
+            isClearable
+            withPortal
+            autoComplete="one-time-code"
+          />
+        </div>
+        <div>
+          <label className={labelClass}>{tr.ttDays}</label>
+          <div className="min-h-[2.6rem] rounded-lg border border-brand-teal/30 bg-gradient-to-br from-brand-blue to-brand-dark-teal px-3 flex items-center justify-center gap-2 text-white">
+            <span className="text-lg font-bold tabular-nums leading-none">
+              {transitTime !== null ? transitTime : "—"}
+            </span>
+            {transitTime !== null && (
+              <span className="text-xs font-semibold text-sky-100/80">{tr.transitDays}</span>
+            )}
           </div>
         </div>
-        {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
-      </>
+      </FieldGrid>
     ),
     planta: (
-      <>
+      <FieldGrid>
         <ComboboxInput
           id="planta_presentacion"
           label={tr.planta}
@@ -1958,40 +2062,43 @@ export function CrearReservaContent() {
           <label htmlFor="citacion" className={labelClass}>{tr.citacion}</label>
           <input id="citacion" name="citacion" type="datetime-local" value={formData.citacion} onChange={handleChange} className={inputClass} />
         </div>
-      </>
+      </FieldGrid>
     ),
     deposito: (
       <>
-        {renderSelect("deposito", depositos, tr.deposito)}
-        <p className="sm:col-span-2 lg:col-span-3 text-base text-brand-blue/75 leading-snug rounded-lg border border-brand-blue/20 bg-brand-blue/5 px-3.5 py-3">
-          <Icon icon="lucide:info" className="inline-block align-middle mr-1 text-brand-blue" width={14} height={14} aria-hidden />
+        <p className="text-sm text-brand-blue/75 leading-snug rounded-lg border border-brand-blue/15 bg-white px-3 py-2">
+          <Icon icon="lucide:info" className="inline-block align-middle mr-1.5 text-brand-teal" width={16} height={16} aria-hidden />
           {tr.depositoStackingAutoHint}
         </p>
-        <div>
-          <label htmlFor="inicio_stacking" className={labelClass}>{tr.inicioStacking}</label>
-          <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} />
-        </div>
-        <div>
-          <label htmlFor="fin_stacking" className={labelClass}>{tr.finStacking}</label>
-          <input id="fin_stacking" name="fin_stacking" type="datetime-local" value={formData.fin_stacking} onChange={handleChange} className={inputClass} />
-        </div>
-        <div>
-          <label htmlFor="corte_documental" className={labelClass}>{tr.corteDocumental}</label>
-          <input id="corte_documental" name="corte_documental" type="datetime-local" value={formData.corte_documental} onChange={handleChange} className={inputClass} />
-        </div>
+        <FieldGrid>
+          <div className="sm:col-span-2 xl:col-span-3">
+            {renderSelect("deposito", depositos, tr.deposito)}
+          </div>
+          <div>
+            <label htmlFor="inicio_stacking" className={labelClass}>{tr.inicioStacking}</label>
+            <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="fin_stacking" className={labelClass}>{tr.finStacking}</label>
+            <input id="fin_stacking" name="fin_stacking" type="datetime-local" value={formData.fin_stacking} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="corte_documental" className={labelClass}>{tr.corteDocumental}</label>
+            <input id="corte_documental" name="corte_documental" type="datetime-local" value={formData.corte_documental} onChange={handleChange} className={inputClass} />
+          </div>
+        </FieldGrid>
       </>
     ),
     observaciones: (
-      <div className="sm:col-span-2 lg:col-span-3">
+      <div className="flex flex-col min-h-0 h-full">
         <label htmlFor="observaciones" className={labelClass}>{tr.observaciones}</label>
         <textarea
           id="observaciones"
           name="observaciones"
           value={formData.observaciones}
           onChange={handleChange}
-          rows={4}
           placeholder={tr.placeholderObservaciones}
-          className={`${inputClass} resize-none`}
+          className={`${inputClass} flex-1 min-h-0 resize-none`}
         />
       </div>
     ),
@@ -2004,177 +2111,129 @@ export function CrearReservaContent() {
   const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100);
 
   return (
-    <main className="relative flex-1 min-h-0 flex flex-col bg-[#D9E3F2]" role="main">
-      {/* Atmósfera azul de marca */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-28 -right-16 h-80 w-80 rounded-full bg-brand-blue/20 blur-3xl" />
-        <div className="absolute top-1/4 -left-20 h-96 w-96 rounded-full bg-brand-dark-teal/25 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-brand-teal/20 blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.45]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(17,34,78,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(17,34,78,0.06) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-      </div>
-
-      {/* Marco verde cuando el paso está completo */}
-      <div
-        className={`fixed inset-0 z-40 pointer-events-none rounded-none transition-all duration-500 ${
-          sectionValidation[activeKey]
-            ? "ring-8 ring-inset ring-emerald-500/80 opacity-100"
-            : "ring-0 opacity-0"
-        }`}
-      />
-
-      <div ref={mainRef} className="relative flex-1 overflow-auto">
-
-        {/* Hero */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-6 pt-6 pb-10">
-          <div className="absolute inset-0 opacity-40 pointer-events-none" aria-hidden>
-            <div className="absolute -top-10 right-8 h-48 w-48 rounded-full bg-brand-teal/40 blur-2xl" />
-            <div className="absolute bottom-0 left-1/4 h-32 w-72 bg-sky-400/25 blur-3xl" />
-          </div>
-          <div className="relative flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
-                <Icon icon="lucide:ship" width={24} height={24} className="text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-sky-200/85 mb-1">ASLI · Operaciones</p>
-                <h1 className="text-3xl sm:text-4xl font-bold leading-tight truncate tracking-tight">{pageTitle}</h1>
-                <p className="text-lg text-white/80 mt-1.5">{pageSubtitle}</p>
-              </div>
+    <main className="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-[#E4EBF6]" role="main">
+      <header className="relative shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white">
+        <div className="px-4 sm:px-5 py-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:ship" width={16} height={16} className="text-white" />
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isSuperadmin && (
-                <button
-                  type="button"
-                  onClick={loadDatosDePrueba}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold bg-white/10 hover:bg-white/20 border border-white/25 text-white transition-colors"
-                  title={tr.loadTestData}
-                >
-                  <Icon icon="typcn:flash" width={14} height={14} />
-                  {tr.testDataBtn}
-                </button>
-              )}
-              <div className="flex flex-col items-end gap-1.5 min-w-[5rem]">
-                <div className="flex items-center gap-1.5 bg-white/15 border border-white/25 rounded-lg px-3 py-2">
-                  <Icon icon="lucide:check-circle-2" width={16} height={16} className="text-sky-200" />
-                  <span className="text-base font-bold tabular-nums">{completedCount}/{SECTION_ORDER.length}</span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-white/15 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-300 to-brand-teal transition-all duration-500 ease-out"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold leading-tight truncate tracking-tight" title={pageSubtitle}>{pageTitle}</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-200/80">
+                {tr.stepLabel} {currentStep + 1} {tr.stepOf} {SECTION_ORDER.length} · {sectionTitles[activeKey]}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isSuperadmin && (
+              <button
+                type="button"
+                onClick={loadDatosDePrueba}
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+                title={tr.loadTestData}
+              >
+                <Icon icon="typcn:flash" width={12} height={12} />
+                {tr.testDataBtn}
+              </button>
+            )}
+            <div className="flex items-center gap-2 min-w-[6.5rem]">
+              <span className="text-xs font-bold tabular-nums">{progressPct}%</span>
+              <div className="w-20 h-1.5 rounded-full bg-white/15 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-brand-teal transition-all duration-500 ease-out"
+                  style={{ width: `${progressPct}%` }}
+                />
               </div>
             </div>
           </div>
         </div>
+        <div className="h-0.5 bg-white/10">
+          <div
+            className="h-full bg-brand-teal transition-all duration-500 ease-out"
+            style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.4)) / SECTION_ORDER.length) * 100, 6)}%` }}
+          />
+        </div>
+      </header>
 
-        {/* Stepper */}
-        <div className="relative px-4 sm:px-6 -mt-5 pb-0 z-10">
-          <div className="rounded-lg border border-brand-blue/20 bg-[#F0F5FC]/95 backdrop-blur-md shadow-mac-modal px-3 sm:px-5 py-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-base font-semibold text-brand-blue/80">Progreso del formulario</p>
-              <p className="text-base font-bold text-brand-teal tabular-nums">{progressPct}%</p>
-            </div>
-            <div className="h-2 rounded-full bg-brand-blue/10 overflow-hidden mb-4">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-brand-blue via-brand-teal to-sky-400 transition-all duration-500 ease-out"
-                style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.35)) / SECTION_ORDER.length) * 100, 8)}%` }}
-              />
-            </div>
-            <div className="overflow-x-auto md:overflow-visible">
-              {/* Móvil: paso actual + dots táctiles */}
-              <div className="md:hidden">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <p className="text-sm font-semibold text-brand-blue/70">
-                    Paso {currentStep + 1} de {SECTION_ORDER.length}
-                  </p>
-                  <p className="text-base font-bold text-brand-blue truncate">
-                    {sectionTitles[activeKey]}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between gap-1">
-                  {SECTION_ORDER.map((key, idx) => {
-                    const isActive = idx === currentStep;
-                    const isComplete = sectionValidation[key];
-                    const isPast = idx < currentStep;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
-                        className={`flex-1 h-11 rounded-lg flex items-center justify-center transition-all duration-300 border ${
+      <div ref={mainRef} className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="h-full min-h-0 w-full px-3 sm:px-4 py-2.5 grid gap-3 xl:grid-cols-[200px_minmax(0,1fr)]">
+          <nav className="hidden xl:flex min-h-0" aria-label={tr.stepsPanelTitle}>
+            <ol className="w-full rounded-xl border border-brand-blue/15 bg-white p-1.5 shadow-sm flex flex-col">
+              {SECTION_ORDER.map((key, idx) => {
+                const isActive = idx === currentStep;
+                const isComplete = sectionValidation[key];
+                const isPast = idx < currentStep;
+                const canGo = isPast || isComplete || idx <= currentStep;
+                return (
+                  <li key={key} className="flex-1 min-h-0">
+                    <button
+                      type="button"
+                      onClick={() => { if (canGo) setCurrentStep(idx); }}
+                      aria-current={isActive ? "step" : undefined}
+                      className={`w-full h-full text-left rounded-lg px-2.5 py-1.5 flex items-center gap-2 transition-colors ${
+                        isActive
+                          ? "bg-brand-blue text-white"
+                          : canGo
+                            ? "hover:bg-[#F4F8FC] text-brand-blue"
+                            : "text-brand-blue/40 cursor-default"
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[11px] font-bold ${
                           isActive
-                            ? "bg-brand-blue border-brand-blue text-white shadow-sm"
+                            ? "bg-white/15 text-white"
                             : isComplete
-                              ? "bg-brand-teal border-brand-teal text-white"
-                              : "bg-[#E4EBF6] border-brand-blue/25 text-brand-blue/60"
+                              ? "bg-brand-teal text-white"
+                              : "bg-[#E4EBF6] text-brand-blue/70"
                         }`}
-                        aria-label={sectionTitles[key]}
-                        aria-current={isActive ? "step" : undefined}
                       >
-                        {isComplete
-                          ? <Icon icon="lucide:check" width={16} height={16} />
-                          : <Icon icon={sectionIcons[key]} width={16} height={16} />
-                        }
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        {isComplete && !isActive ? (
+                          <Icon icon="lucide:check" width={11} height={11} />
+                        ) : (
+                          idx + 1
+                        )}
+                      </span>
+                      <span className={`block text-xs font-bold leading-tight truncate ${isActive ? "text-white" : ""}`}>
+                        {sectionTitles[key]}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
 
-              {/* Desktop: stepper completo con labels */}
-              <div className="hidden md:flex items-start justify-between gap-1">
+          <div className="min-w-0 min-h-0 h-full flex flex-col gap-2">
+            <div className="xl:hidden shrink-0 rounded-xl border border-brand-blue/15 bg-white p-2 shadow-sm">
+              <div className="flex items-center gap-1.5">
                 {SECTION_ORDER.map((key, idx) => {
                   const isActive = idx === currentStep;
                   const isComplete = sectionValidation[key];
                   const isPast = idx < currentStep;
                   return (
-                    <div key={key} className="flex items-start flex-1 min-w-0">
-                      <div className="flex flex-col items-center flex-1 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 font-bold text-sm border ${
-                            isActive
-                              ? "bg-brand-blue border-brand-blue text-white shadow-[0_8px_20px_rgba(17,34,78,0.4)] scale-105"
-                              : isComplete
-                                ? "bg-brand-teal border-brand-teal text-white shadow-sm"
-                                : "bg-[#E4EBF6] border-brand-blue/25 text-brand-blue/60 hover:border-brand-blue/50 hover:bg-white"
-                          }`}
-                        >
-                          {isComplete
-                            ? <Icon icon="lucide:check" width={16} height={16} />
-                            : <Icon icon={sectionIcons[key]} width={16} height={16} className={isActive ? "text-white" : "opacity-90"} />
-                          }
-                        </button>
-                        <span className={`text-base font-semibold mt-2 text-center leading-tight max-w-[90px] ${
-                          isActive ? "text-brand-blue" : isComplete ? "text-brand-teal" : "text-brand-blue/60"
-                        }`}>
-                          {sectionTitles[key]}
-                        </span>
-                      </div>
-                      {idx < SECTION_ORDER.length - 1 && (
-                        <div
-                          className={`h-0.5 flex-1 max-w-[36px] mt-5 mx-0.5 rounded-full transition-colors duration-300 ${
-                            idx < currentStep || (idx === currentStep && isComplete) ? "bg-brand-teal" : "bg-brand-blue/15"
-                          }`}
-                        />
-                      )}
-                    </div>
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
+                      className={`flex-1 h-8 rounded-md flex items-center justify-center transition-colors border ${
+                        isActive
+                          ? "bg-brand-blue border-brand-blue text-white"
+                          : isComplete
+                            ? "bg-brand-teal border-brand-teal text-white"
+                            : "bg-[#E4EBF6] border-brand-blue/15 text-brand-blue/55"
+                      }`}
+                      aria-label={sectionTitles[key]}
+                      aria-current={isActive ? "step" : undefined}
+                    >
+                      {isComplete
+                        ? <Icon icon="lucide:check" width={14} height={14} />
+                        : <Icon icon={sectionIcons[key]} width={14} height={14} />}
+                    </button>
                   );
                 })}
               </div>
             </div>
-          </div>
-        </div>
 
         {/* Modals de error/éxito */}
         {error && (
@@ -2216,72 +2275,59 @@ export function CrearReservaContent() {
           </div>
         )}
 
-        {/* Step content card */}
-        <div className="relative px-4 sm:px-6 pt-4 pb-5">
-          <div className={`rounded-lg border overflow-hidden shadow-mac-modal transition-all duration-300 ${
-            sectionValidation[activeKey]
-              ? "border-brand-teal/50 bg-[#F4F8FC]"
-              : "border-brand-blue/20 bg-[#F4F8FC]"
-          }`}>
-            <div className={`h-[3px] ${
+            <div className={`flex-1 min-h-0 rounded-xl border overflow-hidden shadow-sm flex flex-col transition-colors ${
               sectionValidation[activeKey]
-                ? "bg-gradient-to-r from-brand-teal to-sky-400"
-                : "bg-gradient-to-r from-brand-blue via-brand-teal to-brand-dark-teal"
-            }`} />
-            {/* Section header */}
-            <div className={`px-5 py-4 border-b flex items-center justify-between gap-3 transition-colors ${
-              sectionValidation[activeKey]
-                ? "border-brand-teal/20 bg-gradient-to-r from-brand-teal/10 to-[#F4F8FC]"
-                : "border-brand-blue/10 bg-gradient-to-r from-brand-blue/10 to-[#F4F8FC]"
+                ? "border-brand-teal/40 bg-[#F7FAFD]"
+                : "border-brand-blue/15 bg-[#F7FAFD]"
             }`}>
-              <div className="flex items-center gap-3">
-                <span className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${
-                  sectionValidation[activeKey]
-                    ? "bg-brand-teal"
-                    : "bg-gradient-to-br from-brand-blue to-brand-dark-teal"
-                }`}>
-                  <Icon icon={sectionValidation[activeKey] ? "lucide:check" : sectionIcons[activeKey]} width={20} height={20} className="text-white" />
-                </span>
-                <div>
-                  <h2 className="text-xl font-bold text-brand-blue leading-tight tracking-tight">{sectionTitles[activeKey]}</h2>
-                  <p className="text-base text-brand-blue/65 mt-1">{tr.stepLabel} {currentStep + 1} {tr.stepOf} {SECTION_ORDER.length}</p>
+              <div className={`shrink-0 px-4 py-2 border-b flex items-center justify-between gap-3 ${
+                sectionValidation[activeKey]
+                  ? "border-brand-teal/20 bg-brand-teal/[0.08]"
+                  : "border-brand-blue/10 bg-white/80"
+              }`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    sectionValidation[activeKey]
+                      ? "bg-brand-teal"
+                      : "bg-brand-blue"
+                  }`}>
+                    <Icon icon={sectionValidation[activeKey] ? "lucide:check" : sectionIcons[activeKey]} width={16} height={16} className="text-white" />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-bold text-brand-blue leading-tight truncate">{sectionTitles[activeKey]}</h2>
+                    <p className="text-xs text-brand-blue/55 truncate">{sectionDescs[activeKey]}</p>
+                  </div>
                 </div>
-              </div>
-              {sectionValidation[activeKey] && (
-                <span className="inline-flex items-center gap-1.5 text-base font-semibold text-brand-dark-teal bg-brand-teal/15 border border-brand-teal/30 rounded-lg px-3.5 py-1.5 shrink-0">
-                  <Icon icon="lucide:check" width={16} height={16} />{tr.complete}
+                <span className="text-[11px] text-brand-blue/45 shrink-0">
+                  <span className="text-red-500 font-bold">*</span> {tr.requiredHint}
                 </span>
-              )}
-            </div>
+              </div>
 
-            {/* Fields */}
-            <form
-              id="reserva-form"
-              onSubmit={handleSubmit}
-              autoComplete="off"
-              key={activeKey}
-              className="px-5 pt-5 pb-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 animate-fade-in-up"
-            >
-              {sectionFieldsMap[activeKey]}
-            </form>
-            <p className="px-5 pb-4 text-base text-brand-blue/55">
-              <span className="text-red-500 font-bold">*</span> Campo obligatorio
-            </p>
+              <form
+                id="reserva-form"
+                onSubmit={handleSubmit}
+                autoComplete="off"
+                key={activeKey}
+                className="flex-1 min-h-0 overflow-hidden px-4 py-3 flex flex-col gap-2.5"
+              >
+                {sectionFieldsMap[activeKey]}
+              </form>
+            </div>
           </div>
         </div>
 
-      </div>{/* ← cierra flex-1 overflow-auto */}
+      </div>
 
       {/* Barra de acciones */}
       <div
-        className="relative shrink-0 border-t border-brand-blue/15 bg-[#E8F0FA]/95 backdrop-blur-md shadow-[0_-10px_30px_rgba(17,34,78,0.1)] px-4 sm:px-6 py-3.5"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 14px)" }}
+        className="relative shrink-0 border-t border-brand-blue/15 bg-white px-3 sm:px-4 py-2"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="w-full flex items-center gap-2">
           <button
             type="button"
             onClick={() => { setFormData(initialFormData); setClienteInput(""); setCurrentStep(0); }}
-            className="shrink-0 px-4 py-3.5 rounded-lg text-lg font-medium text-brand-blue/75 bg-[#D9E3F2] border border-brand-blue/15 hover:bg-[#CDD8EC] transition-colors"
+            className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium text-brand-blue/75 bg-[#D9E3F2] border border-brand-blue/15 hover:bg-[#CDD8EC] transition-colors"
           >
             {tr.limpiar}
           </button>
@@ -2289,9 +2335,9 @@ export function CrearReservaContent() {
             <button
               type="button"
               onClick={() => setCurrentStep((s) => s - 1)}
-              className="shrink-0 inline-flex items-center gap-1.5 px-5 py-3.5 rounded-lg text-lg font-semibold text-brand-blue bg-[#F4F8FC] border border-brand-blue/25 hover:bg-white transition-colors"
+              className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-brand-blue bg-[#F4F8FC] border border-brand-blue/25 hover:bg-white transition-colors"
             >
-              <Icon icon="lucide:arrow-left" width={20} height={20} />
+              <Icon icon="lucide:arrow-left" width={16} height={16} />
               {tr.btnPrev}
             </button>
           )}
@@ -2299,22 +2345,22 @@ export function CrearReservaContent() {
             <button
               type="button"
               onClick={() => setCurrentStep((s) => s + 1)}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 rounded-lg text-lg font-semibold bg-gradient-to-r from-brand-blue to-brand-dark-teal text-white shadow-[0_10px_24px_rgba(17,34,78,0.32)] hover:brightness-110 active:scale-[0.99] transition-all"
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-semibold bg-gradient-to-r from-brand-blue to-brand-dark-teal text-white shadow-sm hover:brightness-110 active:scale-[0.99] transition-all"
             >
               {tr.btnNext}
-              <Icon icon="lucide:arrow-right" width={20} height={20} />
+              <Icon icon="lucide:arrow-right" width={16} height={16} />
             </button>
           ) : (
             <button
               type="submit"
               form="reserva-form"
               disabled={submitting}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 rounded-lg text-lg font-semibold bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-[0_10px_24px_rgba(17,34,78,0.32)] hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-semibold bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-sm hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (
-                <><Icon icon="lucide:loader-2" width={18} height={18} className="animate-spin" />{tr.guardando}</>
+                <><Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" />{tr.guardando}</>
               ) : (
-                <><Icon icon="lucide:eye" width={18} height={18} />{tr.btnReview}</>
+                <><Icon icon="lucide:eye" width={16} height={16} />{tr.btnReview}</>
               )}
             </button>
           )}

@@ -397,6 +397,14 @@ html, body {
   }
 }
 
+/* DatePicker a ancho completo dentro de formularios */
+.react-datepicker-wrapper,
+.react-datepicker__input-container,
+.react-datepicker__input-container input {
+  display: block;
+  width: 100%;
+}
+
 /* Safe area para barras fijas en dispositivos con notch */
 .safe-bottom {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));

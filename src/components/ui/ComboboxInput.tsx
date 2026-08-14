@@ -154,7 +154,7 @@ export function ComboboxInput({
       ? createPortal(
           <div
             ref={listRef}
-            className="bg-white border border-neutral-200 rounded-xl shadow-xl overflow-y-auto"
+            className="bg-white border border-brand-blue/15 rounded-xl shadow-[0_16px_40px_rgba(17,34,78,0.18)] overflow-y-auto py-1.5"
             style={portalStyle}
             onMouseDown={(e) => e.preventDefault()} // evita que el input pierda foco al hacer click
           >
@@ -166,10 +166,10 @@ export function ComboboxInput({
                     type="button"
                     data-idx={idx}
                     onMouseDown={() => handleSelect(opt)}
-                    className={`w-full px-4 py-2.5 text-left font-medium transition-colors text-sm border-b border-neutral-50 last:border-b-0 ${
+                    className={`w-full px-4 py-2.5 text-left font-semibold transition-colors text-sm last:border-b-0 ${
                       highlight === idx
                         ? "bg-brand-blue text-white"
-                        : "text-neutral-800 hover:bg-brand-blue/5"
+                        : "text-brand-blue hover:bg-[#EEF3FA]"
                     }`}
                   >
                     {opt.nombre}
@@ -213,22 +213,30 @@ export function ComboboxInput({
           {labelExtra}
         </label>
       )}
-      <input
-        ref={inputRef}
-        id={id}
-        type="text"
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onFocus={() => { if (!readOnly) setOpen(true); }}
-        onClick={() => { if (!readOnly) setOpen(true); }}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        className={inputClass}
-        autoComplete="off"
-        disabled={disabled}
-        readOnly={readOnly}
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => { if (!readOnly) setOpen(true); }}
+          onClick={() => { if (!readOnly) setOpen(true); }}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          className={`${inputClass} pr-11`}
+          autoComplete="off"
+          disabled={disabled}
+          readOnly={readOnly}
+        />
+        <Icon
+          icon="lucide:chevron-down"
+          width={18}
+          height={18}
+          className={`pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-blue/45 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </div>
       {dropdown}
     </div>
   );
