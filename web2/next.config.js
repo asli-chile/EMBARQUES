@@ -80,12 +80,7 @@ const nextConfig = {
     return [
       ...embarquesDevViteRewrites(embarquesBase),
       { source: "/logoasli.png", destination: `${embarquesBase}/logoasli.png` },
-      // Astro usa logoasli.png como icono; no hay favicon.ico en public → evita 404 en consola
-      { source: "/favicon.ico", destination: `${embarquesBase}/logoasli.png` },
-      {
-        source: "/embarques/favicon.ico",
-        destination: `${embarquesBase}/logoasli.png`,
-      },
+      { source: "/embarques/favicon.ico", destination: `${embarquesBase}/favicon.ico` },
       { source: "/fonts/:path*", destination: `${embarquesBase}/fonts/:path*` },
       { source: "/embarques/:path*", destination: `${embarquesBase}/:path*` },
       { source: "/api/:path*", destination: `${embarquesBase}/api/:path*` },

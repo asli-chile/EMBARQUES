@@ -11,8 +11,6 @@ const PresentacionPage = () => {
           name="description"
           content="Conoce más sobre ASLI — Asesorías y Servicios Logísticos Integrales. Descarga nuestra presentación corporativa."
         />
-        <link rel="icon" type="image/png" href="/img/logoblanco.png" />
-        <link rel="apple-touch-icon" href="/img/logoblanco.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <div className="min-h-screen flex flex-col bg-asli-light">

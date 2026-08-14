@@ -12,8 +12,6 @@ const TrackingPage = () => {
           name="description"
           content="Consulta el estado de tus cargas en tiempo real. Accede al seguimiento oficial de tu carga directamente con la naviera."
         />
-        <link rel="icon" type="image/png" href="/img/logoblanco.png" />
-        <link rel="apple-touch-icon" href="/img/logoblanco.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <div className="min-h-screen flex flex-col bg-asli-light">

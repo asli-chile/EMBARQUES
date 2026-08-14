@@ -6,12 +6,7 @@
 "redirects": [
     {
       "source": "/favicon.ico",
-      "destination": "/embarques/logoasli.png",
-      "permanent": false
-    },
-    {
-      "source": "/embarques/favicon.ico",
-      "destination": "/embarques/logoasli.png",
+      "destination": "/embarques/favicon.ico",
       "permanent": false
     }
   ]
