@@ -13,33 +13,34 @@ export const siteConfig = {
     { labelKey: "sobreNosotros", href: "/sobre-nosotros" },
   ] as const,
   sidebarItems: [
-    { labelKey: "dashboard", id: "dashboard", href: "/dashboard" },
+    { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
     {
       labelKey: "reservas",
       id: "reservas",
       children: [
-        { labelKey: "crearReserva", id: "crear-reserva", href: "/reservas/crear" },
-        { labelKey: "misReservas", id: "mis-reservas", href: "/reservas/mis-reservas" },
-        { labelKey: "papelera", id: "papelera", href: "/reservas/papelera" },
+        { labelKey: "crearReserva", id: "crear-reserva", href: "/reservas/crear", operational: true },
+        { labelKey: "misReservas", id: "mis-reservas", href: "/reservas/mis-reservas", operational: true },
+        { labelKey: "papelera", id: "papelera", href: "/reservas/papelera", staffOnly: true },
       ],
     },
     {
       labelKey: "transportes",
       id: "transportes",
+      staffOnly: true,
       children: [
-        { labelKey: "reservaAsli", id: "reserva-asli", href: "/transportes/reserva-asli" },
-        { labelKey: "reservaExt", id: "reserva-ext", href: "/transportes/reserva-ext" },
-        { labelKey: "papeleraTransportes", id: "papelera-transportes", href: "/transportes/papelera" },
+        { labelKey: "reservaAsli", id: "reserva-asli", href: "/transportes/reserva-asli", staffOnly: true },
+        { labelKey: "reservaExt", id: "reserva-ext", href: "/transportes/reserva-ext", staffOnly: true },
+        { labelKey: "papeleraTransportes", id: "papelera-transportes", href: "/transportes/papelera", staffOnly: true },
       ],
     },
     {
       labelKey: "documentos",
       id: "documentos",
       children: [
-        { labelKey: "misDocumentos", id: "mis-documentos", href: "/documentos/mis-documentos" },
+        { labelKey: "misDocumentos", id: "mis-documentos", href: "/documentos/mis-documentos", operational: true },
       ],
     },
-    { labelKey: "registros", id: "registros", href: "/registros" },
+    { labelKey: "registros", id: "registros", href: "/registros", staffOnly: true },
     {
       labelKey: "cartolasNubox",
       id: "cartolas-nubox",

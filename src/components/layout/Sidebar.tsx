@@ -3,7 +3,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
+import { getVisibleSidebarItems, resolveSidebarLabel, sidebarAccessFromAuth } from "@/lib/sidebarFilter";
 import { useSidebarScrollIndicators } from "@/hooks/useSidebarScrollIndicators";
 
 const AUTO_COLLAPSE_MS = 2000;
@@ -59,12 +59,8 @@ function SidebarNavScroll({
 
 export function Sidebar({ pathname }: SidebarProps) {
   const { t } = useLocale();
-  const { isSuperadmin, isAdmin, isEjecutivo, isCliente, user, profile } = useAuth();
-  const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
+  const { isSuperadmin, isAdmin, isEjecutivo, isCliente, isStaff, user, profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-
-  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
-  const isLoggedIn = !!user;
 
   const sidebarLabels = t.sidebar as Record<string, string>;
   const labelFor = useCallback(
@@ -73,8 +69,19 @@ export function Sidebar({ pathname }: SidebarProps) {
   );
 
   const visibleItems = useMemo(
-    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin) as SidebarItem[],
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin]
+    () =>
+      getVisibleSidebarItems(
+        sidebarAccessFromAuth({
+          isSuperadmin,
+          isAdmin,
+          isEjecutivo,
+          isStaff,
+          isCliente,
+          user,
+          profile,
+        }),
+      ) as SidebarItem[],
+    [isSuperadmin, isAdmin, isEjecutivo, isStaff, isCliente, user, profile]
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const scrollSyncKey = useMemo(

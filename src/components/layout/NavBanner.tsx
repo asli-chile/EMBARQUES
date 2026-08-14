@@ -4,7 +4,7 @@ import { useLocale } from "@/lib/i18n";
 import { siteConfig } from "@/lib/site";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { withBase } from "@/lib/basePath";
-import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
+import { getVisibleSidebarItems, resolveSidebarLabel, sidebarAccessFromAuth } from "@/lib/sidebarFilter";
 import { AuthModal, type AuthUser } from "@/components/ui/AuthModal";
 import { prefetchRoute } from "@/lib/routePrefetch";
 
@@ -60,8 +60,7 @@ type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
-  const { user, profile, isExternalUser, isSuperadmin, isAdmin, isEjecutivo, isCliente } = useAuth();
-  const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
+  const { user, profile, isExternalUser, isSuperadmin, isAdmin, isEjecutivo, isCliente, isStaff } = useAuth();
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
   const authUser: AuthUser | null = user
@@ -80,13 +79,23 @@ export function NavBanner({ pathname }: NavBannerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!user;
 
-  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
   const sidebarLabels = t.sidebar as Record<string, string>;
   const labelFor = (labelKey: string) => resolveSidebarLabel(labelKey, sidebarLabels, isCliente);
 
   const visibleSidebarItems = useMemo(
-    () => getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin) as SidebarItem[],
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, isLoggedIn, isAdmin]
+    () =>
+      getVisibleSidebarItems(
+        sidebarAccessFromAuth({
+          isSuperadmin,
+          isAdmin,
+          isEjecutivo,
+          isStaff,
+          isCliente,
+          user,
+          profile,
+        }),
+      ) as SidebarItem[],
+    [isSuperadmin, isAdmin, isEjecutivo, isStaff, isCliente, user, profile]
   );
 
   // Auto-expandir sección activa al abrir drawer

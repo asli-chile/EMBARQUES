@@ -22,7 +22,7 @@ const ROLES = [
   { value: "ejecutivo", label: "Ejecutivo" },
   { value: "operador", label: "Operador" },
   { value: "cliente", label: "Cliente" },
-  { value: "usuario", label: "Usuario" },
+  { value: "usuario", label: "Sin acceso" },
 ] as const;
 
 type RolValue = (typeof ROLES)[number]["value"];
@@ -98,7 +98,7 @@ export function UsuariosContent() {
     email: "",
     password: "",
     nombre: "",
-    rol: "usuario",
+    rol: "operador",
     empresaIds: [] as string[],
   });
   const [createError, setCreateError] = useState<string | null>(null);
@@ -206,7 +206,7 @@ export function UsuariosContent() {
         const data = await res.json();
         if (data.success) {
           setCreateSuccess(true);
-          setForm({ email: "", password: "", nombre: "", rol: "usuario", empresaIds: [] });
+          setForm({ email: "", password: "", nombre: "", rol: "operador", empresaIds: [] });
           setShowCreateModal(false);
           void fetchData();
         } else {

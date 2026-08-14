@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
 import "@/styles/inicio.css";
 import type { KpiData } from "./inicio-data";
 import { InicioBackground } from "./InicioBackground";
@@ -19,7 +20,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 export function InicioContent() {
   const { t } = useLocale();
-  const { profile, isExternalUser, isLoading: authLoading } = useAuth();
+  const { profile, isExternalUser, isLoading: authLoading, isCliente, empresaNombres } = useAuth();
   const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
   const mainRef = useRef<HTMLElement>(null);
   const bgParallaxRef = useRef<HTMLDivElement>(null);
@@ -130,9 +131,18 @@ export function InicioContent() {
   }, [loadingKpis, isLoggedIn, authLoading]);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || authLoading) return;
     const fetchKpiData = async () => {
       try {
+        if (shouldSkipOperacionesForCliente({ isCliente, empresaNombres })) {
+          setKpiData({
+            operacionesActivas: 0,
+            contenedores: 0,
+            proximosEtd: 0,
+            documentosPendientes: 0,
+          });
+          return;
+        }
         const today = new Date();
         const nextWeek = new Date(today);
         nextWeek.setDate(today.getDate() + 7);
@@ -140,10 +150,12 @@ export function InicioContent() {
         const nextWeekStr = nextWeek.toISOString().split("T")[0];
         const estadosFinalizados = ["COMPLETADO", "CANCELADO", "ARRIBADO"];
 
-        const { data: operaciones } = await supabase
+        let opsQuery = supabase
           .from("operaciones")
           .select("id, contenedor, etd, estado_operacion")
           .is("deleted_at", null);
+        opsQuery = applyOperacionesClienteFilter(opsQuery, { isCliente, empresaNombres });
+        const { data: operaciones } = await opsQuery;
 
         const { count: docCount } = await supabase.from("documentos").select("id", { count: "exact", head: true });
 
@@ -172,7 +184,7 @@ export function InicioContent() {
     };
 
     fetchKpiData();
-  }, [supabase]);
+  }, [supabase, authLoading, isCliente, empresaNombres]);
 
   const handleScrollToTop = () => {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });

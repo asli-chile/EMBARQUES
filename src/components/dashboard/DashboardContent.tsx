@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { RoleForbidden } from "@/components/layout/RoleForbidden";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
 import { format, formatDistanceToNow, addDays, startOfDay, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -152,7 +153,7 @@ function classifyRegionFromPodName(pod: string): RegionLabel | null {
 
 export function DashboardContent() {
   const { t, locale } = useLocale();
-  const { isExternalUser, isLoading: authLoading, isCliente, empresaNombres } = useAuth();
+  const { isExternalUser, isLoading: authLoading, isCliente, isStaff, empresaNombres } = useAuth();
   const tr = t.dashboard;
 
   const [loading, setLoading] = useState(true);
@@ -560,6 +561,12 @@ export function DashboardContent() {
 
   if (!authLoading && isExternalUser) {
     return <DashboardVisitorContent />;
+  }
+
+  if (!authLoading && !isStaff && !isCliente) {
+    return (
+      <RoleForbidden message="Tu cuenta no tiene un rol asignado para ver el dashboard. Pide a un administrador que te asigne cliente u operador." />
+    );
   }
 
   if (loading) {

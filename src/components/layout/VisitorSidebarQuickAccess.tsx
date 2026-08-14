@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLocale } from "@/lib/i18n";
 import { stripBasePathname, withBase } from "@/lib/basePath";
-import { getVisibleSidebarItems, resolveSidebarLabel } from "@/lib/sidebarFilter";
+import { getVisibleSidebarItems, resolveSidebarLabel, sidebarAccessFromAuth } from "@/lib/sidebarFilter";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { prefetchRoute } from "@/lib/routePrefetch";
 
@@ -36,14 +36,25 @@ type VisitorSidebarQuickAccessProps = {
  */
 export function VisitorSidebarQuickAccess({ currentHref }: VisitorSidebarQuickAccessProps) {
   const { t } = useLocale();
-  const { isSuperadmin, isAdmin, isEjecutivo, isCliente, user, profile } = useAuth();
-  const sessionEmail = (profile?.email ?? user?.email ?? "").trim();
-  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
+  const { isSuperadmin, isAdmin, isEjecutivo, isCliente, isStaff, user, profile } = useAuth();
   const sidebarLabels = t.sidebar as Record<string, string>;
   const labelFor = (labelKey: string) => resolveSidebarLabel(labelKey, sidebarLabels, isCliente);
   const links = useMemo(
-    () => linksFromVisibleSidebar(getVisibleSidebarItems(isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, !!user, isAdmin)),
-    [isSuperadmin, canAccessEjecutivoAndAbove, sessionEmail, user, isAdmin]
+    () =>
+      linksFromVisibleSidebar(
+        getVisibleSidebarItems(
+          sidebarAccessFromAuth({
+            isSuperadmin,
+            isAdmin,
+            isEjecutivo,
+            isStaff,
+            isCliente,
+            user,
+            profile,
+          }),
+        ),
+      ),
+    [isSuperadmin, isAdmin, isEjecutivo, isStaff, isCliente, user, profile]
   );
 
   const baseBtnClass =

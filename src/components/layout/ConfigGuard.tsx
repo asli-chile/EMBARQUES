@@ -13,7 +13,7 @@ type ConfigGuardProps = {
  * Uso: Configuración (usuarios, clientes, consignatarios, etc.).
  */
 export function ConfigGuard({ children, forbiddenMessage, allowAdmin = true }: ConfigGuardProps) {
-  const { profile, isSuperadmin, isAdmin, isLoading } = useAuth();
+  const { user, profile, isSuperadmin, isAdmin, isLoading } = useAuth();
   const message =
     forbiddenMessage ??
     "No tienes acceso a Configuración. Solo administradores pueden gestionarla.";
@@ -28,8 +28,12 @@ export function ConfigGuard({ children, forbiddenMessage, allowAdmin = true }: C
 
   if (!profile) {
     return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6" role="main">
-        <p className="text-neutral-600">Inicia sesión para continuar.</p>
+      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6 flex items-center justify-center" role="main">
+        <p className="text-neutral-600">
+          {user
+            ? "Tu cuenta no tiene un rol activo. Pide a un administrador que te asigne uno."
+            : "Inicia sesión para continuar."}
+        </p>
       </main>
     );
   }

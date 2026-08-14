@@ -34,17 +34,7 @@ export function useSessionPresence() {
     if (!supabase || isLoading) return;
 
     const upsert = () =>
-      supabase.from("sesiones_activas").upsert(
-        {
-          session_id: sessionId,
-          last_seen: new Date().toISOString(),
-          nombre: profile?.nombre ?? "Visitante",
-          email: profile?.email ?? "",
-          rol: profile?.rol ?? "visitante",
-          es_autenticado: !!profile,
-        },
-        { onConflict: "session_id" }
-      ).then(() => {}).catch(() => {});
+      supabase.rpc("upsert_sesion_activa", { p_session_id: sessionId }).then(() => {}).catch(() => {});
 
     upsert();
     const interval = setInterval(upsert, HEARTBEAT_MS);

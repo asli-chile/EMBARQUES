@@ -5,8 +5,7 @@
 import type { AstroCookies } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const STAFF_ROLES = new Set(["superadmin", "admin", "ejecutivo", "operador"]);
+import { isStaffRole } from "@/lib/auth/roles";
 
 function trim(s: string): string {
   return s.replace(/^\s+|\s+$/g, "");
@@ -34,7 +33,7 @@ export async function requireStaff(cookies: AstroCookies): Promise<
     return { authorized: false, status: 403, error: "Perfil no encontrado o inactivo" };
   }
   const rol = trim((perfil.rol ?? "") as string);
-  if (!STAFF_ROLES.has(rol)) {
+  if (!isStaffRole(rol)) {
     return { authorized: false, status: 403, error: "Sin permisos para esta acción" };
   }
   try {

@@ -237,7 +237,7 @@ const POLL_MS = 45_000;
 export function TrackingContent() {
   const { t, locale } = useLocale();
   const tr = t.trackingPage;
-  const { user, profile, isCliente } = useAuth();
+  const { user, profile, isStaff } = useAuth();
 
   const [termino, setTermino] = useState("");
   const [loading, setLoading] = useState(false);
@@ -272,12 +272,7 @@ export function TrackingContent() {
 
   const apiPrefix = useMemo(() => getApiOriginPrefix(), []);
 
-  const canSetManualCoords = Boolean(
-    user &&
-      profile &&
-      !isCliente &&
-      ["superadmin", "admin", "ejecutivo", "operador", "usuario"].includes(profile.rol),
-  );
+  const canSetManualCoords = Boolean(user && profile && isStaff);
 
   const selectedOp = useMemo(
     () => results.find((r) => r.id === selectedOpId) ?? null,

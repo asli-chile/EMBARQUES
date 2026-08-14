@@ -1,9 +1,27 @@
 import { isCartolasNuboxSidebarPriority } from "./cartolas-nubox-access";
 import { siteConfig } from "./site";
 
-type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
+type SidebarItem = {
+  labelKey: string;
+  id: string;
+  href?: string;
+  children?: readonly SidebarItem[];
   allowedEmails?: readonly string[];
   ejecutivoAndAbove?: boolean;
+  adminAndAbove?: boolean;
+  superadminOnly?: boolean;
+  staffOnly?: boolean;
+  operational?: boolean;
+};
+
+export type SidebarAccess = {
+  isSuperadmin: boolean;
+  isAdmin: boolean;
+  isEjecutivo: boolean;
+  isStaff: boolean;
+  isCliente: boolean;
+  isLoggedIn: boolean;
+  userEmail: string;
 };
 
 /**
@@ -34,21 +52,24 @@ function prioritizeCartolasNuboxAfterDashboard(items: SidebarItem[]): SidebarIte
 /**
  * Ítems del menú lateral visibles según rol, correo y flags del ítem.
  */
-export function getVisibleSidebarItems(
-  isSuperadmin: boolean,
-  canAccessEjecutivoAndAbove: boolean,
-  userEmail: string,
-  isLoggedIn: boolean = false,
-  isAdmin: boolean = false
-): SidebarItem[] {
+export function getVisibleSidebarItems(access: SidebarAccess): SidebarItem[] {
+  const { isSuperadmin, isAdmin, isEjecutivo, isStaff, isCliente, isLoggedIn, userEmail } = access;
   const normalized = userEmail.trim().toLowerCase();
   const canAccessAdminAndAbove = isSuperadmin || isAdmin;
+  const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
 
-  const itemAllowed = (item: SidebarItem & { adminAndAbove?: boolean }): boolean => {
-    if ("superadminOnly" in item && item.superadminOnly && !isSuperadmin) return false;
-    if ("adminAndAbove" in item && item.adminAndAbove && !canAccessAdminAndAbove) return false;
-    if ("ejecutivoAndAbove" in item && item.ejecutivoAndAbove && !canAccessEjecutivoAndAbove) return false;
-    if (!isLoggedIn && (item.ejecutivoAndAbove || item.adminAndAbove || item.superadminOnly)) return false;
+  const itemAllowed = (item: SidebarItem): boolean => {
+    if (item.superadminOnly && !isSuperadmin) return false;
+    if (item.adminAndAbove && !canAccessAdminAndAbove) return false;
+    if (item.ejecutivoAndAbove && !canAccessEjecutivoAndAbove) return false;
+    if (item.staffOnly && !isStaff) return false;
+    if (item.operational && !isStaff && !isCliente) return false;
+    if (
+      !isLoggedIn &&
+      (item.ejecutivoAndAbove || item.adminAndAbove || item.superadminOnly || item.staffOnly || item.operational)
+    ) {
+      return false;
+    }
     const allow = item.allowedEmails;
     if (allow && allow.length > 0) {
       if (!normalized || !allow.some((a) => a.toLowerCase() === normalized)) return false;
@@ -56,20 +77,37 @@ export function getVisibleSidebarItems(
     return true;
   };
 
-  let result = (siteConfig.sidebarItems as SidebarItem[])
+  let result: SidebarItem[] = (siteConfig.sidebarItems as unknown as SidebarItem[])
     .filter(itemAllowed)
     .map((item) => {
-      if (!("children" in item) || !item.children) return item;
-      const filtered = (item.children as SidebarItem[]).filter(
-        (child) => itemAllowed(child) && (!child.ejecutivoAndAbove || canAccessEjecutivoAndAbove)
-      );
-      return { ...item, children: filtered };
+      if (!item.children) return item;
+      return { ...item, children: item.children.filter(itemAllowed) };
     })
-    .filter((item) => !("children" in item && item.children && item.children.length === 0));
+    .filter((item) => !item.children || item.children.length > 0);
 
   if (isCartolasNuboxSidebarPriority(normalized)) {
     result = prioritizeCartolasNuboxAfterDashboard(result);
   }
 
   return result;
+}
+
+export function sidebarAccessFromAuth(auth: {
+  isSuperadmin: boolean;
+  isAdmin: boolean;
+  isEjecutivo: boolean;
+  isStaff: boolean;
+  isCliente: boolean;
+  user: { email: string } | null;
+  profile: { email?: string } | null;
+}): SidebarAccess {
+  return {
+    isSuperadmin: auth.isSuperadmin,
+    isAdmin: auth.isAdmin,
+    isEjecutivo: auth.isEjecutivo,
+    isStaff: auth.isStaff,
+    isCliente: auth.isCliente,
+    isLoggedIn: !!auth.user,
+    userEmail: (auth.profile?.email ?? auth.user?.email ?? "").trim(),
+  };
 }

@@ -16,7 +16,7 @@ export function applyOperacionesClienteFilter<Q extends { in: (column: string, v
   query: Q,
   scope: OperacionesClienteScope,
 ): Q {
-  if (scope.isCliente || scope.empresaNombres.length > 0) {
+  if (scope.isCliente) {
     return query.in("cliente", scope.empresaNombres);
   }
   return query;

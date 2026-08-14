@@ -1,3 +1,4 @@
+import { RoleForbidden } from "./RoleForbidden";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { ModuleInfoPlaceholder } from "./ModuleInfoPlaceholder";
@@ -47,17 +48,36 @@ const MODULE_KEY_TO_HREF: Record<VisitorModuleKey, string> = {
   finanzas: withBase("/finanzas"),
 };
 
+const STAFF_ONLY_MODULES = new Set<VisitorModuleKey>([
+  "registros",
+  "papelera",
+  "papeleraTransportes",
+  "reservaAsli",
+  "reservaExt",
+  "facturacion",
+  "crearInstructivo",
+  "crearProforma",
+  "reportes",
+  "finanzas",
+]);
+
+const OPERATIONAL_MODULES = new Set<VisitorModuleKey>([
+  "crearReserva",
+  "misReservas",
+  "misDocumentos",
+]);
+
 type ModuleWithVisitorInfoProps = {
   moduleKey: VisitorModuleKey;
   children: React.ReactNode;
 };
 
 /**
- * Muestra contenido del módulo a usuarios autenticados.
+ * Muestra contenido del módulo a usuarios autenticados según rol.
  * A usuarios externos (sin sesión) muestra descripción informativa del módulo.
  */
 export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitorInfoProps) {
-  const { isExternalUser, isLoading } = useAuth();
+  const { isExternalUser, isStaff, isCliente, isLoading } = useAuth();
   const { t } = useLocale();
 
   if (isLoading) {
@@ -84,6 +104,18 @@ export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitor
     if (moduleKey === "finanzas") return <FinanzasVisitorPreview />;
     const info = t.visitor[moduleKey];
     return <ModuleInfoPlaceholder info={info} currentHref={MODULE_KEY_TO_HREF[moduleKey]} />;
+  }
+
+  if (STAFF_ONLY_MODULES.has(moduleKey) && !isStaff) {
+    return (
+      <RoleForbidden message="Esta sección es solo para el equipo interno. Con el rol de cliente no puedes acceder." />
+    );
+  }
+
+  if (OPERATIONAL_MODULES.has(moduleKey) && !isStaff && !isCliente) {
+    return (
+      <RoleForbidden message="Tu cuenta no tiene un rol asignado para usar esta sección. Pide a un administrador que te asigne cliente u operador." />
+    );
   }
 
   return <>{children}</>;

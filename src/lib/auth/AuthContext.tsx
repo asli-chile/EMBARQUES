@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { isStaffRole } from "@/lib/auth/roles";
 
 export type UserRole = "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario";
 
@@ -31,9 +32,11 @@ type AuthContextValue = {
   isAdmin: boolean;
   isEjecutivo: boolean;
   isCliente: boolean;
+  /** Personal interno ASLI (superadmin, admin, ejecutivo, operador). */
+  isStaff: boolean;
   /** Nombres de empresas asignadas (cliente o ejecutivo) para filtrar operaciones en app. */
   empresaNombres: string[];
-  /** Usuario externo: sin sesión o sin perfil en tabla usuarios. Ve contenido informativo. */
+  /** Usuario externo: sin sesión. Ve contenido informativo. */
   isExternalUser: boolean;
   refetch: () => Promise<void>;
 };
@@ -46,14 +49,14 @@ const ROL_LABELS: Record<UserRole, string> = {
   ejecutivo: "Ejecutivo",
   operador: "Operador",
   cliente: "Cliente",
-  usuario: "Usuario",
+  usuario: "Sin acceso",
 };
 
 export function getRolLabel(rol: UserRole): string {
   return ROL_LABELS[rol] ?? rol;
 }
 
-const AUTH_CACHE_KEY = "_auth_cache_v1";
+const AUTH_CACHE_KEY = "_auth_cache_v2";
 const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutos
 
 type AuthCache = {
@@ -145,35 +148,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: perfil } = await perfilPromise;
 
-      let resolvedProfile: AuthProfile;
+      if (!perfil || !perfil.activo) {
+        setUser(authUser);
+        setProfile(null);
+        setEmpresaNombres([]);
+        clearAuthCache();
+        return;
+      }
+
+      const resolvedProfile: AuthProfile = {
+        id: perfil.id,
+        nombre: perfil.nombre ?? authUser.name,
+        email: perfil.email ?? authUser.email,
+        rol: perfil.rol as UserRole,
+        activo: perfil.activo,
+      };
+
       let resolvedEmpresas: string[] = [];
-
-      if (perfil && perfil.activo) {
-        resolvedProfile = {
-          id: perfil.id,
-          nombre: perfil.nombre ?? authUser.name,
-          email: perfil.email ?? authUser.email,
-          rol: perfil.rol as UserRole,
-          activo: perfil.activo,
-        };
-
-        if (perfil.rol === "cliente" || perfil.rol === "ejecutivo") {
-          const { data: ueData } = await supabase
-            .from("usuarios_empresas")
-            .select("empresas(nombre)")
-            .eq("usuario_id", perfil.id);
-          resolvedEmpresas = (ueData ?? [])
-            .map((r) => (r.empresas as unknown as { nombre: string } | null)?.nombre)
-            .filter((n): n is string => !!n);
-        }
-      } else {
-        resolvedProfile = {
-          id: session.user.id,
-          nombre: authUser.name,
-          email: authUser.email,
-          rol: "usuario",
-          activo: true,
-        };
+      if (perfil.rol === "cliente" || perfil.rol === "ejecutivo") {
+        const { data: ueData } = await supabase
+          .from("usuarios_empresas")
+          .select("empresas(nombre)")
+          .eq("usuario_id", perfil.id);
+        resolvedEmpresas = (ueData ?? [])
+          .map((r) => (r.empresas as unknown as { nombre: string } | null)?.nombre)
+          .filter((n): n is string => !!n);
       }
 
       setUser(authUser);
@@ -231,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin: profile?.rol === "admin",
     isEjecutivo: profile?.rol === "ejecutivo",
     isCliente: profile?.rol === "cliente",
+    isStaff: isStaffRole(profile?.rol),
     empresaNombres,
     isExternalUser: !user,
     refetch: loadSession,
@@ -250,6 +250,7 @@ export function useAuth() {
       isAdmin: false,
       isEjecutivo: false,
       isCliente: false,
+      isStaff: false,
       empresaNombres: [],
       isExternalUser: true,
       refetch: async () => {},
