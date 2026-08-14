@@ -49,9 +49,6 @@ const TIPOS_DOCUMENTO = [
 
 type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 
-/** Tipos visibles para clientes (vista simplificada) */
-const CLIENTE_TIPOS: TipoDocumento[] = ["SOLICITUD_RESERVA", "FULLSET"];
-
 const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
@@ -77,7 +74,7 @@ export function MisDocumentosContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misDocumentos;
-  const visibleTipos = isCliente ? CLIENTE_TIPOS : (TIPOS_DOCUMENTO as readonly TipoDocumento[]);
+  const visibleTipos = TIPOS_DOCUMENTO;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [docCounts, setDocCounts] = useState<Map<string, number>>(new Map());
@@ -104,14 +101,20 @@ export function MisDocumentosContent() {
   const reloadCounts = useCallback(async (ops: Operacion[]) => {
     if (!supabase || ops.length === 0) return;
     const ids = ops.map((o) => o.id);
-    const { data: docsData } = await supabase
-      .from("documentos")
-      .select("operacion_id, tipo")
-      .in("operacion_id", ids);
+    const docsData: { operacion_id: string; tipo: string }[] = [];
+    const IN_CHUNK = 80;
+    for (let i = 0; i < ids.length; i += IN_CHUNK) {
+      const chunk = ids.slice(i, i + IN_CHUNK);
+      const { data, error } = await supabase
+        .from("documentos")
+        .select("operacion_id, tipo")
+        .in("operacion_id", chunk);
+      if (error) continue;
+      if (data) docsData.push(...data);
+    }
 
     const docsByOperacion = new Map<string, { count: number; hasBookingDoc: boolean }>();
-    (docsData ?? []).forEach((d: { operacion_id: string; tipo: string }) => {
-      if (isCliente && !CLIENTE_TIPOS.includes(d.tipo as TipoDocumento)) return;
+    docsData.forEach((d) => {
       const current = docsByOperacion.get(d.operacion_id) ?? { count: 0, hasBookingDoc: false };
       current.count += 1;
       if (d.tipo === "BOOKING") current.hasBookingDoc = true;
@@ -121,11 +124,11 @@ export function MisDocumentosContent() {
     const counts = new Map<string, number>();
     ops.forEach((op) => {
       const current = docsByOperacion.get(op.id) ?? { count: 0, hasBookingDoc: false };
-      const syntheticBookingExtra = !isCliente && op.booking_doc_url && !current.hasBookingDoc ? 1 : 0;
+      const syntheticBookingExtra = op.booking_doc_url && !current.hasBookingDoc ? 1 : 0;
       counts.set(op.id, current.count + syntheticBookingExtra);
     });
     setDocCounts(counts);
-  }, [supabase, isCliente]);
+  }, [supabase]);
 
   useEffect(() => { reloadCountsRef.current = reloadCounts; }, [reloadCounts]);
 
@@ -288,9 +291,9 @@ export function MisDocumentosContent() {
     const visibleDocs = documentos.filter((d) => visibleTipos.includes(d.tipo as TipoDocumento));
     const hasBookingUrl = !!operacionActual?.booking_doc_url;
     const hasBookingDoc = documentos.some((d) => d.tipo === "BOOKING");
-    const syntheticExtra = !isCliente && hasBookingUrl && !hasBookingDoc ? 1 : 0;
+    const syntheticExtra = hasBookingUrl && !hasBookingDoc ? 1 : 0;
     return visibleDocs.length + syntheticExtra;
-  }, [documentos, operacionActual, visibleTipos, isCliente]);
+  }, [documentos, operacionActual, visibleTipos]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -320,11 +323,20 @@ export function MisDocumentosContent() {
 
     const operacion = operaciones.find((op) => op.id === selectedOperacion);
     const ref = operacion ? opRef(operacion) : "DOC";
-    const ext = file.name.split(".").pop();
+    const ext = (file.name.split(".").pop() ?? "pdf").toLowerCase();
     const fileName = `${ref}_${tipo}_${Date.now()}.${ext}`;
-    const filePath = `documentos/${selectedOperacion}/${fileName}`;
+    const filePath = `${selectedOperacion}/${fileName}`;
+    const contentType =
+      file.type ||
+      (ext === "pdf"
+        ? "application/pdf"
+        : ext === "xls"
+        ? "application/vnd.ms-excel"
+        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
-    const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage
+      .from("documentos")
+      .upload(filePath, file, { upsert: true, contentType });
     if (uploadError) { setError(uploadError.message); setUploading(null); return; }
 
     const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(filePath);
@@ -355,8 +367,10 @@ export function MisDocumentosContent() {
       confirmLabel: "Eliminar",
       onConfirm: async () => {
         setConfirmDialog(null);
-        const filePath = doc.url.split("/documentos/")[1];
-        if (filePath) await supabase.storage.from("documentos").remove([`documentos/${filePath}`]);
+        const marker = "/object/public/documentos/";
+        const idx = doc.url.indexOf(marker);
+        const storagePath = idx >= 0 ? decodeURIComponent(doc.url.slice(idx + marker.length)) : null;
+        if (storagePath) await supabase.storage.from("documentos").remove([storagePath]);
         await supabase.from("documentos").delete().eq("id", doc.id);
         void fetchDocumentos();
       },
