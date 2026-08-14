@@ -1256,15 +1256,19 @@ export function CrearReservaContent() {
         }
       }
 
-      if (xlsxBase64 && lastSavedIds.length > 0) {
+      if (xlsxBase64 && lastSavedIds.length > 0 && !isCliente) {
         const firstId = lastSavedIds[0].id;
-        const filePath = `documentos/${firstId}/${xlsxName}`;
+        const filePath = `${firstId}/${xlsxName}`;
         const xlsxBytes = Uint8Array.from(atob(xlsxBase64), (c) => c.charCodeAt(0));
         const savedIds = lastSavedIds;
         void (async () => {
-          const { data: uploadData } = await supabase!.storage
+          const { data: uploadData, error: uploadError } = await supabase!.storage
             .from("documentos")
-            .upload(filePath, xlsxBytes, { contentType: xlsxMime, upsert: true });
+            .upload(filePath, xlsxBytes, { contentType: xlsxMime, upsert: false });
+          if (uploadError) {
+            console.error("Upload solicitud Excel:", uploadError.message);
+            return;
+          }
           if (uploadData) {
             const { data: urlData } = supabase!.storage.from("documentos").getPublicUrl(filePath);
             const docRows = savedIds.map(({ id }) => ({
@@ -1275,13 +1279,16 @@ export function CrearReservaContent() {
               mime_type: xlsxMime,
               tamano: xlsxBytes.length,
             }));
-            await supabase!.from("documentos").insert(docRows);
+            const { error: insertError } = await supabase!.from("documentos").insert(docRows);
+            if (insertError) console.error("Registro documento solicitud:", insertError.message);
           }
         })();
       }
 
       const dueno = String((lastSavedPayload as Record<string, unknown>)?.dueno_reserva ?? "ASLI").toUpperCase();
       const emailTo = dueno === "ASLI" ? "roodericus7@gmail.com" : "ignacio.caceres94@outlook.com";
+      const senderEmail = (profile?.email ?? user?.email ?? "").toLowerCase();
+      const useSharedMailbox = isCliente || !senderEmail.endsWith("@asli.cl");
 
       const result = await sendEmail({
         to: emailTo,
@@ -1290,6 +1297,7 @@ export function CrearReservaContent() {
         attachments: xlsxBase64
           ? [{ name: xlsxName, content: xlsxBase64, mimeType: xlsxMime }]
           : undefined,
+        sendFrom: useSharedMailbox ? "informaciones" : undefined,
       });
 
       setShowEmailModal(false);
@@ -2316,7 +2324,9 @@ export function CrearReservaContent() {
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
                   <Icon icon="typcn:warning" width={24} height={24} className="text-red-500" />
                 </div>
-                <h3 className="font-bold text-neutral-900 mb-2">{tr.errorSaving}</h3>
+                <h3 className="font-bold text-neutral-900 mb-2">
+                  {error && /correo|google|gmail|token/i.test(error) ? "Error al enviar el correo" : tr.errorSaving}
+                </h3>
                 <p className="text-sm text-neutral-600 mb-5">{error}</p>
                 <button type="button" onClick={() => setError(null)} className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-semibold text-sm">
                   {tr.understood}
@@ -2479,7 +2489,9 @@ export function CrearReservaContent() {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-brand-blue/5 border border-brand-blue/15 mb-5">
                 <Icon icon="lucide:info" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />
                 <p className="text-xs text-neutral-600">
-                  El correo se enviará directamente desde <strong>tu cuenta @asli.cl</strong> a roodericus7@gmail.com.
+                  {isCliente
+                    ? <>El correo se enviará desde <strong>informaciones@asli.cl</strong> a roodericus7@gmail.com.</>
+                    : <>El correo se enviará directamente desde <strong>tu cuenta @asli.cl</strong> a roodericus7@gmail.com.</>}
                 </p>
               </div>
               <div className="flex gap-2">

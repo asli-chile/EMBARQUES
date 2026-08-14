@@ -59,23 +59,32 @@ Deno.serve(async (req) => {
 
     let senderEmail = profileEmail;
     let senderName = perfil?.nombre ?? profileEmail;
+    const profileEmailLower = (profileEmail ?? "").trim().toLowerCase();
+    const isAsliMailbox = profileEmailLower.endsWith("@asli.cl");
 
-    if (sendFrom === "informaciones") {
-      const rol = perfil?.rol as string | undefined;
-      const canUseShared = rol === "ejecutivo" || rol === "admin" || rol === "superadmin";
-      if (!canUseShared) {
-        return json({ success: false, error: "No autorizado a enviar desde el buzón informativo" });
-      }
+    const wantsShared = sendFrom === "informaciones" || !isAsliMailbox;
+    if (wantsShared) {
       senderEmail = sharedMailbox;
       senderName = sharedFromName;
     }
 
-    // ── 4. Obtener token de servicio con impersonación del ejecutivo ───────
+    // ── 4. Obtener token de servicio con impersonación ────────────────────
     const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT");
     if (!saJson) return json({ success: false, error: "GOOGLE_SERVICE_ACCOUNT no configurado" });
 
     const sa = JSON.parse(saJson);
-    const accessToken = await getServiceAccountToken(sa, senderEmail);
+    let accessToken: string;
+    try {
+      accessToken = await getServiceAccountToken(sa, senderEmail);
+    } catch (tokenErr) {
+      const tokenMsg = tokenErr instanceof Error ? tokenErr.message : String(tokenErr);
+      const canFallback = senderEmail.toLowerCase() !== sharedMailbox && /unauthorized_client/i.test(tokenMsg);
+      if (!canFallback) throw tokenErr;
+      console.error("Impersonación falló, se usa buzón compartido:", senderEmail, tokenMsg);
+      senderEmail = sharedMailbox;
+      senderName = sharedFromName;
+      accessToken = await getServiceAccountToken(sa, sharedMailbox);
+    }
 
     // ── 5. Obtener firma del usuario desde Gmail settings (timeout 3s) ────
     let signatureHtml = "";
@@ -129,14 +138,19 @@ function json(data: unknown, status = 200) {
   });
 }
 
-async function getServiceAccountToken(sa: Record<string, string>, impersonateEmail: string): Promise<string> {
+async function getServiceAccountToken(
+  sa: Record<string, string>,
+  impersonateEmail: string,
+  scope = "https://www.googleapis.com/auth/gmail.send",
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
+  const privateKeyPem = (sa.private_key ?? "").replace(/\\n/g, "\n");
 
   const header  = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const payload = b64url(JSON.stringify({
     iss:   sa.client_email,
     sub:   impersonateEmail,
-    scope: "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.settings.basic",
+    scope,
     aud:   "https://oauth2.googleapis.com/token",
     iat:   now,
     exp:   now + 3600,
@@ -144,7 +158,7 @@ async function getServiceAccountToken(sa: Record<string, string>, impersonateEma
 
   const sigInput = `${header}.${payload}`;
 
-  const pemBody = sa.private_key
+  const pemBody = privateKeyPem
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
     .replace(/\n/g, "");
@@ -171,7 +185,7 @@ async function getServiceAccountToken(sa: Record<string, string>, impersonateEma
 
   const data = await res.json() as { access_token?: string; error?: string; error_description?: string };
   if (!data.access_token) {
-    throw new Error(`Token Google: ${data.error ?? ""} — ${data.error_description ?? JSON.stringify(data)}`);
+    throw new Error(`Token Google (${impersonateEmail}): ${data.error ?? ""} — ${data.error_description ?? JSON.stringify(data)}`);
   }
   return data.access_token;
 }

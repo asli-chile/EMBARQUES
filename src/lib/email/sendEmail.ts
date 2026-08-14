@@ -51,6 +51,13 @@ export async function sendEmail(params: {
     if (!result?.success && import.meta.env.DEV) {
       console.error("[sendEmail] Error del servidor:", result?.error);
     }
+    if (result?.error && /unauthorized_client|Token Google/i.test(result.error)) {
+      return {
+        success: false,
+        error:
+          "Google no autorizó el envío desde esta cuenta. Prueba de nuevo; las solicitudes de cliente se envían desde informaciones@asli.cl.",
+      };
+    }
     return result ?? { success: false, error: "Respuesta vacía del servidor." };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Error de red." };
