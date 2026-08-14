@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 LAT, LON = -34.97437, -71.20348
-ZOOM = 18
+ZOOM = 17
 TILE = 256
 UA = "ASLI-web/1.0 (asli.cl; static office map)"
 
