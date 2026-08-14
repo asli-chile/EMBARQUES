@@ -1,5 +1,6 @@
 ---
 import { AppShell } from "@/components/layout";
+import FaviconLinks from "@/components/layout/FaviconLinks.astro";
 import { stripBasePathname, withBase } from "@/lib/basePath";
 import "@/styles/globals.css";
 
@@ -17,7 +18,7 @@ const pathname = stripBasePathname(Astro.url.pathname);
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
+    <FaviconLinks />
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

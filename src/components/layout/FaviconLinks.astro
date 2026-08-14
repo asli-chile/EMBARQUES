@@ -1,0 +1,15 @@
+---
+import { withBase } from "@/lib/basePath";
+
+const v = "v=4";
+---
+<link rel="icon" href={`${withBase("/favicon.ico")}?${v}`} sizes="any" />
+<link rel="icon" type="image/png" sizes="32x32" href={`${withBase("/favicon-32.png")}?${v}`} />
+<link rel="icon" type="image/png" sizes="192x192" href={`${withBase("/favicon-192.png")}?${v}`} />
+<link rel="apple-touch-icon" sizes="180x180" href={`${withBase("/apple-touch-icon.png")}?${v}`} />
+<link rel="manifest" href={withBase("/site.webmanifest")} />
+<meta name="theme-color" content="#11224E" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="EMBARQUES" />
+<meta name="application-name" content="EMBARQUES" />

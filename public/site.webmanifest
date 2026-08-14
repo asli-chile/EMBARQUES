@@ -1,0 +1,24 @@
+{
+  "name": "EMBARQUES — ASLI",
+  "short_name": "EMBARQUES",
+  "description": "Logística y Comercio Exterior",
+  "start_url": "/embarques/",
+  "scope": "/embarques/",
+  "display": "standalone",
+  "background_color": "#11224E",
+  "theme_color": "#11224E",
+  "icons": [
+    {
+      "src": "/embarques/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/embarques/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
