@@ -397,12 +397,41 @@ html, body {
   }
 }
 
-/* DatePicker a ancho completo dentro de formularios */
-.react-datepicker-wrapper,
-.react-datepicker__input-container,
-.react-datepicker__input-container input {
-  display: block;
+/* Campo de fecha: se ve como el resto del formulario (dd-mm-aaaa); el input nativo queda invisible encima */
+.asli-date-hit {
+  position: absolute;
+  inset: 0;
   width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0.011;
+  color: transparent;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.asli-date-hit::-webkit-datetime-edit,
+.asli-date-hit::-webkit-datetime-edit-fields-wrapper,
+.asli-date-hit::-webkit-datetime-edit-text,
+.asli-date-hit::-webkit-datetime-edit-month-field,
+.asli-date-hit::-webkit-datetime-edit-day-field,
+.asli-date-hit::-webkit-datetime-edit-year-field,
+.asli-date-hit::-webkit-inner-spin-button,
+.asli-date-hit::-webkit-clear-button {
+  color: transparent;
+  -webkit-appearance: none;
+}
+.asli-date-hit::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* Safe area para barras fijas en dispositivos con notch */

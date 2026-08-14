@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { Icon } from "@iconify/react";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
@@ -11,10 +11,7 @@ import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { isClienteNombrePermitido } from "@/lib/auth/operacionesClienteScope";
-import DatePicker, { registerLocale } from "react-datepicker";
-import { es } from "date-fns/locale";
 import { format, parse, differenceInDays } from "date-fns";
-import "react-datepicker/dist/react-datepicker.css";
 import {
   STACKING_DRAFTS_STORAGE_KEY,
   getDraftForItinerary,
@@ -27,28 +24,50 @@ import {
   pickItinerarioForStackingSync,
 } from "@/lib/stacking-reserva-sync";
 
-registerLocale("es", es);
+type ReservaDateFieldProps = {
+  id: string;
+  label: ReactNode;
+  value: string;
+  onChange: (iso: string) => void;
+  placeholder: string;
+  inputClass: string;
+  min?: string;
+};
 
-const DatePickerInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  function DatePickerInput(props, ref) {
-    const { autoComplete: _ac, name: _name, ...rest } = props;
-    return (
-      <input
-        {...rest}
-        ref={ref}
-        type="text"
-        name="asli_ship_day"
-        autoComplete="nope"
-        autoCorrect="off"
-        spellCheck={false}
-        inputMode="text"
-        data-lpignore="true"
-        data-1p-ignore="true"
-        data-form-type="other"
-      />
-    );
-  }
-);
+function ReservaDateField({ id, label, value, onChange, placeholder, inputClass, min }: ReservaDateFieldProps) {
+  const display = value
+    ? format(parse(value, "yyyy-MM-dd", new Date()), "dd-MM-yyyy")
+    : "";
+
+  return (
+    <div className="min-w-0">
+      <label htmlFor={id} className="block text-[11px] font-bold uppercase tracking-[0.08em] text-brand-blue/70 mb-1">
+        {label}
+      </label>
+      <div className={`relative flex items-center ${inputClass} pr-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-brand-blue/25 focus-within:border-brand-blue`}>
+        <span className={`block truncate pointer-events-none ${display ? "text-brand-blue" : "text-brand-blue/40 font-medium"}`}>
+          {display || placeholder}
+        </span>
+        <Icon
+          icon="lucide:calendar"
+          width={16}
+          height={16}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue/45 pointer-events-none"
+        />
+        <input
+          id={id}
+          type="date"
+          lang="es-CL"
+          value={value}
+          min={min || undefined}
+          onChange={(e) => onChange(e.target.value)}
+          className="asli-date-hit"
+          aria-label={display || placeholder}
+        />
+      </div>
+    </div>
+  );
+}
 
 type CatalogoItem = { id: string; valor: string; descripcion?: string };
 type SelectOption = { id: string; nombre: string };
@@ -2063,44 +2082,23 @@ export function CrearReservaContent() {
           placeholder={tr.searchDestino}
           disabled={loadingCatalogos}
         />
-        <div>
-          <label htmlFor="etd" className={labelClass}>{tr.etd}{reqMark}</label>
-          <DatePicker
-            id="etd"
-            name="zarpe_etd"
-            selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
-            onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
-            dateFormat="dd-MM-yyyy"
-            locale="es"
-            placeholderText={tr.datePlaceholder}
-            className={inputClass}
-            wrapperClassName="w-full"
-            customInput={<DatePickerInput />}
-            isClearable
-            withPortal
-            autoComplete="off"
-            readOnly
-          />
-        </div>
-        <div>
-          <label htmlFor="eta" className={labelClass}>{tr.eta}</label>
-          <DatePicker
-            id="eta"
-            name="arribo_eta"
-            selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
-            onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
-            dateFormat="dd-MM-yyyy"
-            locale="es"
-            placeholderText={tr.datePlaceholder}
-            className={inputClass}
-            wrapperClassName="w-full"
-            customInput={<DatePickerInput />}
-            isClearable
-            withPortal
-            autoComplete="off"
-            readOnly
-          />
-        </div>
+        <ReservaDateField
+          id="etd"
+          label={<>{tr.etd}{reqMark}</>}
+          value={formData.etd}
+          onChange={(iso) => setFormData((prev) => ({ ...prev, etd: iso }))}
+          placeholder={tr.datePlaceholder}
+          inputClass={inputClass}
+        />
+        <ReservaDateField
+          id="eta"
+          label={tr.eta}
+          value={formData.eta}
+          onChange={(iso) => setFormData((prev) => ({ ...prev, eta: iso }))}
+          placeholder={tr.datePlaceholder}
+          inputClass={inputClass}
+          min={formData.etd || undefined}
+        />
         <div>
           <label className={labelClass}>{tr.ttDays}</label>
           <div className="min-h-[2.6rem] rounded-lg border border-brand-teal/30 bg-gradient-to-br from-brand-blue to-brand-dark-teal px-3 flex items-center justify-center gap-2 text-white">
