@@ -48,7 +48,7 @@ export function ModuleRouteLoader() {
         />
 
         <svg
-          className="absolute bottom-0 left-[-8%] h-16 w-[116%] min-w-[640px] overflow-visible text-brand-teal/25 sm:h-[4.5rem]"
+          className="absolute bottom-0 left-0 h-16 w-full overflow-hidden text-brand-teal/25 sm:h-[4.5rem]"
           viewBox="0 0 1200 100"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"

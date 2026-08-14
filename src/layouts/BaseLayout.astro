@@ -16,7 +16,7 @@ const pathname = stripBasePathname(Astro.url.pathname);
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/png" href={withBase("/logoasli.png")} />
     <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -35,7 +35,7 @@ const pathname = stripBasePathname(Astro.url.pathname);
       [data-vercel-toolbar], vercel-toolbar { display: none !important; }
     </style>
   </head>
-  <body class="h-screen overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
+  <body class="h-screen max-w-full overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
     <!--
       Loader pre-hidratación: shell claro (mismo fondo que módulos).
       En navegaciones siguientes de la sesión se oculta al instante (sin pestañeo navy).

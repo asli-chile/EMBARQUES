@@ -139,7 +139,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <LocaleProvider>
         <AuthProvider>
           <AuthFormModalProvider>
-            <div className="h-dvh flex flex-col overflow-hidden">
+            <div className="h-dvh max-w-full min-w-0 flex flex-col overflow-hidden">
               <Header />
               <NavBanner pathname={pathname} />
               <main className="flex-1 min-h-0 overflow-auto bg-brand-blue p-4 flex flex-col items-center justify-center">
@@ -284,7 +284,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <AuthProvider>
         <NotificationsProvider>
           <AuthFormModalProvider>
-            <div className="h-dvh flex flex-col overflow-hidden">
+            <div className="h-dvh max-w-full min-w-0 flex flex-col overflow-hidden">
               <Header />
               <NavBanner pathname={pathname} />
               <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">{mainContent}</div>
