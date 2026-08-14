@@ -185,7 +185,7 @@ export function CrearReservaContent() {
 
   // Estado para sugerencias de viaje desde itinerario
   const [viajesSugeridos, setViajesSugeridos] = useState<string[]>([]);
-  const [viajeInputManual, setViajeInputManual] = useState(false);
+  const [naveInput, setNaveInput] = useState("");
 
   // Estados para el combobox de clientes
   const [clienteInput, setClienteInput] = useState("");
@@ -206,7 +206,22 @@ export function CrearReservaContent() {
 
   const [showPreview, setShowPreview] = useState(false);
   const [copias, setCopias] = useState(1);
+  const [offerEmailAfterSuccess, setOfferEmailAfterSuccess] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+
+  const resetFormulario = () => {
+    setFormData(initialFormData);
+    setClienteInput("");
+    setPlantaInput("");
+    setEspecieInput("");
+    setPodInput("");
+    setNaveInput("");
+    setViajesSugeridos([]);
+    setCopias(1);
+    setCurrentStep(0);
+    setShowPreview(false);
+    setError(null);
+  };
 
   const loadDatosDePrueba = useCallback(() => {
     const firstId = (opts: SelectOption[]) => opts[0]?.id ?? "";
@@ -423,11 +438,11 @@ export function CrearReservaContent() {
           ? data.map((d) => d.naves as unknown as SelectOption).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre))
           : naves;
       setNavesFiltered(filtered);
-      // Si la nave actual no está en la nueva lista filtrada, seleccionar la primera
       setFormData((prev) => {
         if (!prev.nave || filtered.some((n) => n.id === prev.nave)) return prev;
-        return { ...prev, nave: filtered[0]?.id ?? "" };
+        return { ...prev, nave: "", viaje: "" };
       });
+      setNaveInput((text) => (filtered.some((n) => n.nombre === text) ? text : ""));
     };
     void fetchNavesNaviera();
   }, [formData.naviera, supabase, naves]);
@@ -455,7 +470,6 @@ export function CrearReservaContent() {
         // Auto-seleccionar si solo hay un viaje y el usuario no ha escrito nada
         if (unique.length === 1 && !formData.viaje) {
           setFormData((prev) => ({ ...prev, viaje: unique[0] }));
-          setViajeInputManual(false);
         }
       } else {
         setViajesSugeridos([]);
@@ -543,7 +557,6 @@ export function CrearReservaContent() {
         e.target.tagName === "SELECT" ? rawValue : noUpper ? rawValue : rawValue.toUpperCase();
       if (fieldName === "nave") {
         setViajesSugeridos([]);
-        setViajeInputManual(false);
         setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
       } else if (fieldName === "tipo_atmosfera") {
         setFormData((prev) => ({
@@ -644,7 +657,7 @@ export function CrearReservaContent() {
       ),
       naviera: Boolean(
         formData.naviera &&
-        formData.nave &&
+        (formData.nave || naveInput.trim()) &&
         formData.viaje &&
         formData.pol &&
         formData.pod &&
@@ -654,7 +667,18 @@ export function CrearReservaContent() {
       deposito: true,
       observaciones: Boolean(formData.observaciones.trim()),
     };
-  }, [formData]);
+  }, [formData, naveInput]);
+
+  const naveNombreSeleccionado = useMemo(() => {
+    if (formData.nave) {
+      return (
+        navesFiltered.find((n) => n.id === formData.nave)?.nombre ??
+        naves.find((n) => n.id === formData.nave)?.nombre ??
+        naveInput.trim()
+      );
+    }
+    return naveInput.trim();
+  }, [formData.nave, navesFiltered, naves, naveInput]);
 
   const handleSelectCliente = (cliente: SelectOption) => {
     setClienteInput(cliente.nombre);
@@ -713,6 +737,15 @@ export function CrearReservaContent() {
     const nombre = destinos.find((d) => d.id === formData.pod)?.nombre ?? "";
     setPodInput(nombre);
   }, [formData.pod, destinos]);
+
+  useEffect(() => {
+    if (!formData.nave) return;
+    const nombre =
+      navesFiltered.find((n) => n.id === formData.nave)?.nombre ??
+      naves.find((n) => n.id === formData.nave)?.nombre ??
+      "";
+    if (nombre) setNaveInput(nombre);
+  }, [formData.nave, navesFiltered, naves]);
 
   const handleAddPlanta = async (text: string) => {
     if (!supabase || !text.trim()) return;
@@ -875,9 +908,7 @@ export function CrearReservaContent() {
       naviera: formData.naviera
         ? navieras.find((n) => n.id === formData.naviera)?.nombre
         : null,
-      nave: formData.nave
-        ? navesFiltered.find((n) => n.id === formData.nave)?.nombre
-        : null,
+      nave: naveNombreSeleccionado || null,
       viaje: formData.viaje || null,
       pol: formData.pol
         ? puertosOrigen.find((p) => p.id === formData.pol)?.nombre
@@ -915,9 +946,15 @@ export function CrearReservaContent() {
     setLastSavedPayload(payload);
     setLastSavedIds(insertedRows ?? []);
     setLastSavedCopias(copias);
-    setSuccess(copias > 1 ? `${copias} operaciones guardadas correctamente.` : tr.successMessage);
-    setCopias(1);
-    setShowEmailModal(true);
+    const successMsg =
+      copias > 1
+        ? `${copias} operaciones guardadas correctamente.`
+        : isCliente
+          ? tr.successMessageCliente
+          : tr.successMessage;
+    resetFormulario();
+    setSuccess(successMsg);
+    setOfferEmailAfterSuccess(!isCliente);
 
     // Notificar al resto del equipo
     if (user && profile) {
@@ -1285,6 +1322,7 @@ export function CrearReservaContent() {
 
     setSendingEmail(false);
     setShowEmailModal(false);
+    setOfferEmailAfterSuccess(false);
     if (result.success) {
       setSuccess(`Correo enviado correctamente desde ${result.sender ?? "tu cuenta @asli.cl"}.`);
     } else {
@@ -1362,7 +1400,6 @@ export function CrearReservaContent() {
         onChange={(value) => {
           if (name === "nave") {
             setViajesSugeridos([]);
-            setViajeInputManual(false);
             setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
           } else {
             setFormData((prev) => ({ ...prev, [name]: value }));
@@ -1457,7 +1494,7 @@ export function CrearReservaContent() {
 
     const clienteNombre = getDisplayValue(formData.cliente, clientes);
     const navieraNombre = getDisplayValue(formData.naviera, navieras);
-    const naveNombre = getDisplayValue(formData.nave, navesFiltered);
+    const naveNombre = naveNombreSeleccionado || "-";
     const polNombre = getDisplayValue(formData.pol, puertosOrigen);
     const podNombre = getDisplayValue(formData.pod, destinos);
     const especieNombre = getDisplayValue(formData.especie, especies);
@@ -1965,64 +2002,58 @@ export function CrearReservaContent() {
     naviera: (
       <FieldGrid>
         {renderSelect("naviera", navieras, tr.naviera, true)}
-        {renderSelect("nave", navesFiltered, tr.nave, true)}
-        <div>
-          <label htmlFor="viaje" className={labelClass}>
-            {tr.viaje}{reqMark}
-            {viajesSugeridos.length > 0 && !viajeInputManual && (
-              <span className="ml-2 text-brand-blue font-normal normal-case">{tr.fromItinerary}</span>
-            )}
-          </label>
-          {viajesSugeridos.length > 0 && !viajeInputManual ? (
-            <div className="flex gap-2 items-stretch">
-              <div className="flex-1 min-w-0">
-                <FormSelect
-                  id="viaje"
-                  name="viaje"
-                  value={formData.viaje}
-                  placeholder={tr.selectPlaceholder}
-                  options={viajesSugeridos.map((v) => ({ value: v, label: v }))}
-                  onChange={(value) => setFormData((prev) => ({ ...prev, viaje: value }))}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => { setViajeInputManual(true); setFormData((prev) => ({ ...prev, viaje: "" })); }}
-                className="shrink-0 px-3 rounded-lg border border-brand-blue/20 bg-white text-brand-blue/70 hover:text-brand-blue hover:border-brand-blue/40 transition-colors"
-                title={tr.viajeManual}
-              >
-                <Icon icon="lucide:pencil" width={16} height={16} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <input
-                id="viaje"
-                name="voyage_code_field"
-                type="text"
-                value={formData.viaje}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, viaje: e.target.value }))
-                }
-                placeholder={tr.placeholderViaje}
-                className={`${inputClass} flex-1`}
-                autoComplete="one-time-code"
-                inputMode="text"
-                aria-autocomplete="none"
-              />
+        <ComboboxInput
+          id="nave"
+          label={tr.nave}
+          labelExtra={reqMark}
+          labelClass={labelClass}
+          inputClass={inputClass}
+          value={naveInput}
+          options={navesFiltered}
+          maxSuggestions={80}
+          onSelect={(opt) => {
+            setNaveInput(opt.nombre);
+            setViajesSugeridos([]);
+            setFormData((prev) => ({ ...prev, nave: opt.id, viaje: "" }));
+          }}
+          onChange={(val) => {
+            setNaveInput(val);
+            const q = val.trim().toUpperCase();
+            const match = q
+              ? navesFiltered.find((n) => n.nombre.toUpperCase() === q) ??
+                naves.find((n) => n.nombre.toUpperCase() === q)
+              : undefined;
+            setViajesSugeridos((prev) => (match ? prev : []));
+            setFormData((prev) => ({
+              ...prev,
+              nave: match?.id ?? "",
+              viaje: match && match.id === prev.nave ? prev.viaje : "",
+            }));
+          }}
+          placeholder={tr.searchNave}
+          disabled={loadingCatalogos}
+        />
+        <ComboboxInput
+          id="viaje"
+          label={tr.viaje}
+          labelExtra={
+            <>
+              {reqMark}
               {viajesSugeridos.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setViajeInputManual(false)}
-                  className="shrink-0 px-3 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] text-brand-blue hover:bg-white transition-colors"
-                  title={tr.viajeDesdeItinerario}
-                >
-                  <Icon icon="lucide:list" width={16} height={16} />
-                </button>
+                <span className="ml-2 text-brand-blue font-normal normal-case">{tr.fromItinerary}</span>
               )}
-            </div>
-          )}
-        </div>
+            </>
+          }
+          labelClass={labelClass}
+          inputClass={inputClass}
+          value={formData.viaje}
+          options={viajesSugeridos.map((v) => ({ id: v, nombre: v }))}
+          maxSuggestions={80}
+          onSelect={(opt) => setFormData((prev) => ({ ...prev, viaje: opt.nombre }))}
+          onChange={(val) => setFormData((prev) => ({ ...prev, viaje: val }))}
+          placeholder={tr.searchViaje}
+          disabled={loadingCatalogos}
+        />
         {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
         {renderSelect("pol", puertosOrigen, tr.pol, true)}
         <ComboboxInput
@@ -2315,17 +2346,31 @@ export function CrearReservaContent() {
         )}
 
         {success && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
               <div className="h-[3px] bg-emerald-500" />
               <div className="p-6 text-center">
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
                   <Icon icon="typcn:tick" width={24} height={24} className="text-emerald-500" />
                 </div>
-                <h3 className="font-bold text-neutral-900 mb-2">{tr.bookingSaved}</h3>
+                <h3 className="font-bold text-neutral-900 mb-2">
+                  {isCliente ? tr.bookingSavedCliente : tr.bookingSaved}
+                </h3>
                 <p className="text-sm text-neutral-600 mb-5">{success}</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setSuccess(null)} className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm">{tr.btnClose}</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccess(null);
+                      if (offerEmailAfterSuccess) {
+                        setOfferEmailAfterSuccess(false);
+                        setShowEmailModal(true);
+                      }
+                    }}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
+                  >
+                    {tr.btnClose}
+                  </button>
                   <a href={withBase("/reservas/mis-reservas")} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm">
                     Ver reservas <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>
@@ -2386,7 +2431,7 @@ export function CrearReservaContent() {
         <div className="w-full flex items-center gap-2">
           <button
             type="button"
-            onClick={() => { setFormData(initialFormData); setClienteInput(""); setCurrentStep(0); }}
+            onClick={resetFormulario}
             className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium text-brand-blue/75 bg-[#D9E3F2] border border-brand-blue/15 hover:bg-[#CDD8EC] transition-colors"
           >
             {tr.limpiar}

@@ -150,7 +150,7 @@ export function ComboboxInput({
   };
 
   const dropdown =
-    open && typeof document !== "undefined"
+    open && typeof document !== "undefined" && (filtered.length > 0 || hasAdd || options.length > 0)
       ? createPortal(
           <div
             ref={listRef}

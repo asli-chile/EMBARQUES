@@ -549,6 +549,7 @@ export const translations = {
       loading: "Cargando catálogos...",
       supabaseError: "Error de conexión con la base de datos",
       successMessage: "Reserva creada exitosamente",
+      successMessageCliente: "Tu solicitud de reserva se envió correctamente",
       sectionGeneral: "Información General",
       sectionComercial: "Información Comercial",
       sectionCarga: "Datos de Carga",
@@ -647,6 +648,7 @@ export const translations = {
       // Mensajes emergentes
       errorSaving: "Error al guardar",
       bookingSaved: "Reserva guardada",
+      bookingSavedCliente: "Solicitud enviada",
       sendEmailTitle: "Enviar solicitud por correo",
       bookingSavedMsg: "La reserva ya fue guardada exitosamente",
       // Campos específicos
@@ -656,6 +658,8 @@ export const translations = {
       addNewPlanta: "Agregar como nueva planta",
       searchDestino: "Buscar o escribir destino...",
       addNewDestino: "Agregar como nuevo destino",
+      searchNave: "Buscar o escribir nave...",
+      searchViaje: "Buscar o escribir viaje...",
       addNewLabel: "Agregar como nueva empresa",
       ventilacionNote: "forzado por atmósfera (0 CBM/h)",
       placeholderO2: "Ej: 21",
@@ -2896,6 +2900,7 @@ export const translations = {
       loading: "Loading catalogs...",
       supabaseError: "Database connection error",
       successMessage: "Booking created successfully",
+      successMessageCliente: "Your booking request was submitted successfully",
       sectionGeneral: "General Information",
       sectionComercial: "Commercial Information",
       sectionCarga: "Cargo Details",
@@ -2994,6 +2999,7 @@ export const translations = {
       // Alerts
       errorSaving: "Error saving",
       bookingSaved: "Booking saved",
+      bookingSavedCliente: "Request submitted",
       sendEmailTitle: "Send request by email",
       bookingSavedMsg: "The booking was saved successfully",
       // Specific fields
@@ -3003,6 +3009,8 @@ export const translations = {
       addNewPlanta: "Add as new plant",
       searchDestino: "Search or type destination...",
       addNewDestino: "Add as new destination",
+      searchNave: "Search or type vessel...",
+      searchViaje: "Search or type voyage...",
       addNewLabel: "Add as new company",
       ventilacionNote: "forced by atmosphere (0 CBM/h)",
       placeholderO2: "E.g.: 21",
