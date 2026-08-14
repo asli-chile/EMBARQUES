@@ -9,9 +9,11 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-LAT, LON = -34.97437, -71.20348
+# Apple Maps / Waze de la oficina (el embed de Google centra ~190 m al oeste, en un lote vacío).
+LAT, LON = -34.9743702, -71.2034765
 ZOOM = 17
 TILE = 256
+COLS, ROWS = 5, 4
 UA = "ASLI-web/1.0 (asli.cl; static office map)"
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,8 +56,10 @@ def draw_pin(im: Image.Image, px: float, py: float) -> None:
 
 def main() -> None:
     fx, fy = lonlat_to_tile(LAT, LON, ZOOM)
-    xs = list(range(int(fx) - 2, int(fx) + 3))  # 5 cols
-    ys = list(range(int(fy) - 1, int(fy) + 3))  # 4 rows
+    x0 = int(math.floor(fx - (COLS - 1) / 2.0))
+    y0 = int(math.floor(fy - (ROWS - 1) / 2.0))
+    xs = list(range(x0, x0 + COLS))
+    ys = list(range(y0, y0 + ROWS))
     canvas = Image.new("RGB", (len(xs) * TILE, len(ys) * TILE), (30, 40, 35))
 
     for i, tx in enumerate(xs):
@@ -67,10 +71,15 @@ def main() -> None:
     px = (fx - xs[0]) * TILE
     py = (fy - ys[0]) * TILE
     draw_pin(canvas, px, py)
+    print(f"pin at {px:.0f},{py:.0f} of {canvas.size}")
 
-    w, h = canvas.size
-    canvas = canvas.crop((24, 16, w - 24, h - 16))
-    canvas.thumbnail((1280, 860), Image.Resampling.LANCZOS)
+    out_w, out_h = canvas.width, int(canvas.width * 9 / 16)
+    left = int(px - out_w / 2)
+    top = int(py - out_h / 2)
+    left = max(0, min(left, canvas.width - out_w))
+    top = max(0, min(top, canvas.height - out_h))
+    canvas = canvas.crop((left, top, left + out_w, top + out_h))
+    canvas.thumbnail((1280, 720), Image.Resampling.LANCZOS)
 
     d = ImageDraw.Draw(canvas, "RGBA")
     d.rectangle((8, canvas.height - 22, 178, canvas.height - 6), fill=(0, 0, 0, 110))
