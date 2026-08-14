@@ -16,7 +16,7 @@ type FormSelectProps = {
 
 export function FormSelect({
   id,
-  name,
+  name: _name,
   value,
   options,
   placeholder = "Seleccionar...",
@@ -93,7 +93,6 @@ export function FormSelect({
 
   return (
     <div className="relative min-w-0">
-      {name ? <input type="hidden" name={name} value={value} /> : null}
       <button
         ref={btnRef}
         id={id}

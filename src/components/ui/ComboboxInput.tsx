@@ -226,7 +226,10 @@ export function ComboboxInput({
           onBlur={handleBlur}
           placeholder={placeholder}
           className={`${inputClass} pr-11`}
-          autoComplete="off"
+          autoComplete="nope"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
           disabled={disabled}
           readOnly={readOnly}
         />

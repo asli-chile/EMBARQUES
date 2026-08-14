@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
 import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { Icon } from "@iconify/react";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
-import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -29,6 +28,27 @@ import {
 } from "@/lib/stacking-reserva-sync";
 
 registerLocale("es", es);
+
+const DatePickerInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function DatePickerInput(props, ref) {
+    const { autoComplete: _ac, name: _name, ...rest } = props;
+    return (
+      <input
+        {...rest}
+        ref={ref}
+        type="text"
+        name="asli_ship_day"
+        autoComplete="nope"
+        autoCorrect="off"
+        spellCheck={false}
+        inputMode="text"
+        data-lpignore="true"
+        data-1p-ignore="true"
+        data-form-type="other"
+      />
+    );
+  }
+);
 
 type CatalogoItem = { id: string; valor: string; descripcion?: string };
 type SelectOption = { id: string; nombre: string };
@@ -206,7 +226,6 @@ export function CrearReservaContent() {
 
   const [showPreview, setShowPreview] = useState(false);
   const [copias, setCopias] = useState(1);
-  const [offerEmailAfterSuccess, setOfferEmailAfterSuccess] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   const resetFormulario = () => {
@@ -803,11 +822,6 @@ export function CrearReservaContent() {
     setAddingDestino(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowPreview(true);
-  };
-
   const friendlyDbError = (msg: string): string => {
     const colNames: Record<string, string> = {
       ejecutivo:            "Ejecutivo",
@@ -954,7 +968,7 @@ export function CrearReservaContent() {
           : tr.successMessage;
     resetFormulario();
     setSuccess(successMsg);
-    setOfferEmailAfterSuccess(!isCliente);
+    setShowEmailModal(true);
 
     // Notificar al resto del equipo
     if (user && profile) {
@@ -979,6 +993,8 @@ export function CrearReservaContent() {
     const xlsxNamePre = `SOLICITUD_DE_${cantidadLabelPre}_-_${clienteSlugPre}.xlsx`;
     void generateReservaExcel(payload, copias).then((base64) => {
       xlsxCache.current = { base64, name: xlsxNamePre };
+    }).catch((err) => {
+      console.error("Excel de solicitud (precarga):", err);
     });
   };
 
@@ -1073,79 +1089,33 @@ export function CrearReservaContent() {
   };
 
   const generateReservaExcel = async (p: Record<string, unknown>, copias: number): Promise<string> => {
-    const XLSX = await loadXlsxJsStyle();
+    type ExcelJsCtor = typeof import("exceljs");
+    const raw = (await import("exceljs")) as ExcelJsCtor & { default?: ExcelJsCtor };
+    const ExcelJS =
+      raw.default && typeof (raw.default as { Workbook?: unknown }).Workbook === "function"
+        ? raw.default
+        : raw;
+
     const val = (v: unknown) => (v != null && v !== "" ? String(v) : "");
     const fecha = new Date().toLocaleDateString("es-CL");
+    const argb = (rgb: string) => (rgb.length === 8 ? rgb : `FF${rgb}`);
 
-    // ── Paleta de estilos ────────────────────────────────────────────────────
     const BLUE_DARK  = "0F3478";
     const BLUE_MID   = "1D4ED8";
     const BLUE_LIGHT = "EEF2FF";
     const BLUE_ALT   = "F8FAFF";
-    const GRAY_LABEL = "6B7280";
     const WHITE      = "FFFFFF";
     const DARK_TXT   = "0F172A";
     const BORDER_CLR = "C7D2F0";
 
-    const border = {
-      top:    { style: "thin", color: { rgb: BORDER_CLR } },
-      bottom: { style: "thin", color: { rgb: BORDER_CLR } },
-      left:   { style: "thin", color: { rgb: BORDER_CLR } },
-      right:  { style: "thin", color: { rgb: BORDER_CLR } },
-    };
+    const thin = { style: "thin" as const, color: { argb: argb(BORDER_CLR) } };
+    const box = { top: thin, left: thin, bottom: thin, right: thin };
+    const fill = (rgb: string) => ({
+      type: "pattern" as const,
+      pattern: "solid" as const,
+      fgColor: { argb: argb(rgb) },
+    });
 
-    const ws: Record<string, unknown> = {};
-
-    // ── Fila 1: título principal ─────────────────────────────────────────────
-    const titulo = copias > 1
-      ? `SOLICITUD DE ${copias} RESERVAS — ASLI Ltda.`
-      : "SOLICITUD DE RESERVA — ASLI Ltda.";
-    ws["A1"] = {
-      v: titulo, t: "s",
-      s: {
-        font: { bold: true, sz: 16, color: { rgb: WHITE } },
-        fill: { fgColor: { rgb: BLUE_DARK } },
-        alignment: { horizontal: "center", vertical: "center" },
-      },
-    };
-
-    // ── Fila 2: meta-información ─────────────────────────────────────────────
-    ws["A2"] = {
-      v: `Cliente: ${val(p.cliente)}   |   Dueño reserva: ${val(p.dueno_reserva)}   |   Ejecutivo: ${val(p.ejecutivo)}   |   Fecha: ${fecha}`,
-      t: "s",
-      s: {
-        font: { sz: 9, color: { rgb: WHITE } },
-        fill: { fgColor: { rgb: BLUE_MID } },
-        alignment: { horizontal: "center", vertical: "center" },
-      },
-    };
-
-    // ── Fila 3: info operación (naviera/viaje/carga) ──────────────────────────
-    const infoLine = [
-      val(p.naviera) && `Naviera: ${val(p.naviera)}`,
-      val(p.nave) && `Nave: ${val(p.nave)}`,
-      val(p.viaje) && `Viaje: ${val(p.viaje)}`,
-      val(p.pol) && `POL: ${val(p.pol)}`,
-      val(p.pod) && `POD: ${val(p.pod)}`,
-      val(p.etd) && `ETD: ${val(p.etd)}`,
-      val(p.especie) && `Especie: ${val(p.especie)}`,
-      val(p.tipo_unidad) && `Unidad: ${val(p.tipo_unidad)}`,
-      val(p.temperatura) && `Temp: ${val(p.temperatura)}`,
-    ].filter(Boolean).join("   |   ");
-    ws["A3"] = {
-      v: infoLine || " ",
-      t: "s",
-      s: {
-        font: { sz: 8, italic: true, color: { rgb: "3B4B7A" } },
-        fill: { fgColor: { rgb: BLUE_LIGHT } },
-        alignment: { horizontal: "center", vertical: "center" },
-      },
-    };
-
-    // ── Fila 4: vacía separadora ──────────────────────────────────────────────
-    ws["A4"] = { v: "", t: "s", s: { fill: { fgColor: { rgb: "F1F5FF" } } } };
-
-    // ── Definición de columnas de la tabla ───────────────────────────────────
     const colDefs: { header: string; value: string }[] = [
       { header: "#",                 value: String(copias) },
       { header: "Booking",           value: val(p.booking) },
@@ -1164,96 +1134,90 @@ export function CrearReservaContent() {
       { header: "Incoterm",          value: val(p.incoterm) },
       { header: "Cláusula de venta", value: val(p.forma_pago) },
     ];
-    const cols = colDefs.map((c, i) => ({
-      header: c.header,
-      key: (ii: number) => i === 0 ? String(ii + 1) : c.value,
-      // wch = max(header length, content length) + 2 chars de padding
-      wch: Math.max(c.header.length, c.value.length || 7) + 2,
+    const nCols = colDefs.length;
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Solicitud Reserva", { views: [{ showGridLines: false }] });
+    ws.columns = colDefs.map((c) => ({
+      width: Math.max(c.header.length, c.value.length || 7) + 2,
     }));
 
-    const HEADER_ROW = 5; // fila Excel donde van los encabezados (1-indexed)
-    const DATA_START  = HEADER_ROW + 1;
+    const titulo = copias > 1
+      ? `SOLICITUD DE ${copias} RESERVAS — ASLI Ltda.`
+      : "SOLICITUD DE RESERVA — ASLI Ltda.";
 
-    // ── Fila 5: encabezados de columna ───────────────────────────────────────
-    cols.forEach((col, ci) => {
-      const addr = XLSX.utils.encode_cell({ r: HEADER_ROW - 1, c: ci });
-      ws[addr] = {
-        v: col.header, t: "s",
-        s: {
-          font: { bold: true, sz: 8, color: { rgb: WHITE } },
-          fill: { fgColor: { rgb: BLUE_MID } },
-          alignment: { horizontal: "center", vertical: "center", wrapText: false },
-          border,
-        },
-      };
+    ws.mergeCells(1, 1, 1, nCols);
+    const titleCell = ws.getCell(1, 1);
+    titleCell.value = titulo;
+    titleCell.font = { bold: true, size: 16, color: { argb: argb(WHITE) } };
+    titleCell.fill = fill(BLUE_DARK);
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(1).height = 22;
+
+    ws.mergeCells(2, 1, 2, nCols);
+    const metaCell = ws.getCell(2, 1);
+    metaCell.value = `Cliente: ${val(p.cliente)}   |   Dueño reserva: ${val(p.dueno_reserva)}   |   Ejecutivo: ${val(p.ejecutivo)}   |   Fecha: ${fecha}`;
+    metaCell.font = { size: 9, color: { argb: argb(WHITE) } };
+    metaCell.fill = fill(BLUE_MID);
+    metaCell.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(2).height = 14;
+
+    const infoLine = [
+      val(p.naviera) && `Naviera: ${val(p.naviera)}`,
+      val(p.nave) && `Nave: ${val(p.nave)}`,
+      val(p.viaje) && `Viaje: ${val(p.viaje)}`,
+      val(p.pol) && `POL: ${val(p.pol)}`,
+      val(p.pod) && `POD: ${val(p.pod)}`,
+      val(p.etd) && `ETD: ${val(p.etd)}`,
+      val(p.especie) && `Especie: ${val(p.especie)}`,
+      val(p.tipo_unidad) && `Unidad: ${val(p.tipo_unidad)}`,
+      val(p.temperatura) && `Temp: ${val(p.temperatura)}`,
+    ].filter(Boolean).join("   |   ");
+    ws.mergeCells(3, 1, 3, nCols);
+    const infoCell = ws.getCell(3, 1);
+    infoCell.value = infoLine || " ";
+    infoCell.font = { size: 8, italic: true, color: { argb: "FF3B4B7A" } };
+    infoCell.fill = fill(BLUE_LIGHT);
+    infoCell.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(3).height = 13;
+
+    ws.mergeCells(4, 1, 4, nCols);
+    ws.getCell(4, 1).fill = fill("F1F5FF");
+    ws.getRow(4).height = 4;
+
+    const headerRow = ws.getRow(5);
+    headerRow.height = 16;
+    colDefs.forEach((col, ci) => {
+      const cell = headerRow.getCell(ci + 1);
+      cell.value = col.header;
+      cell.font = { bold: true, size: 8, color: { argb: argb(WHITE) } };
+      cell.fill = fill(BLUE_MID);
+      cell.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
+      cell.border = box;
     });
 
-    // ── Filas de datos (una por copia) ────────────────────────────────────────
-    // Columna Booking (índice 1) resaltada en amarillo → campo a rellenar
-    const EDITABLE_COLS = new Set([1]); // índices 0-based
-
     for (let i = 0; i < copias; i++) {
-      const rowIdx = DATA_START - 1 + i; // 0-based para XLSX
+      const row = ws.getRow(6 + i);
+      row.height = 14;
       const isAlt = i % 2 === 1;
-
-      cols.forEach((col, ci) => {
-        const addr = XLSX.utils.encode_cell({ r: rowIdx, c: ci });
-        const isEditable = EDITABLE_COLS.has(ci);
+      colDefs.forEach((col, ci) => {
+        const cell = row.getCell(ci + 1);
+        const isEditable = ci === 1;
         const isNum = ci === 0;
-        const bgColor = isEditable
-          ? "FFFBEB"
-          : isAlt ? BLUE_ALT : WHITE;
-
-        ws[addr] = {
-          v: isNum ? i + 1 : col.key(i),
-          t: isNum ? "n" : "s",
-          s: {
-            font: {
-              sz: 8,
-              bold: isNum,
-              color: { rgb: isEditable ? "92400E" : DARK_TXT },
-            },
-            fill: { fgColor: { rgb: bgColor } },
-            alignment: { horizontal: "center", vertical: "center", wrapText: false },
-            border,
-          },
+        cell.value = isNum ? i + 1 : col.value;
+        cell.font = {
+          size: 8,
+          bold: isNum,
+          color: { argb: argb(isEditable ? "92400E" : DARK_TXT) },
         };
+        cell.fill = fill(isEditable ? "FFFBEB" : isAlt ? BLUE_ALT : WHITE);
+        cell.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
+        cell.border = box;
       });
     }
 
-    // ── Rango de la hoja ─────────────────────────────────────────────────────
-    ws["!ref"] = XLSX.utils.encode_range({
-      s: { r: 0, c: 0 },
-      e: { r: DATA_START - 1 + copias - 1, c: cols.length - 1 },
-    });
-
-    // ── Merges: título y meta se extienden todo el ancho ─────────────────────
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }, // fila 1 título
-      { s: { r: 1, c: 0 }, e: { r: 1, c: cols.length - 1 } }, // fila 2 meta
-      { s: { r: 2, c: 0 }, e: { r: 2, c: cols.length - 1 } }, // fila 3 info
-      { s: { r: 3, c: 0 }, e: { r: 3, c: cols.length - 1 } }, // fila 4 sep
-    ];
-
-    // ── Anchos de columna ─────────────────────────────────────────────────────
-    ws["!cols"] = cols.map((c) => ({ wch: c.wch }));
-
-    // ── Altura de filas ───────────────────────────────────────────────────────
-    ws["!rows"] = [
-      { hpt: 22 }, // fila 1 título
-      { hpt: 14 }, // fila 2 meta
-      { hpt: 13 }, // fila 3 info
-      { hpt: 4  }, // fila 4 separadora
-      { hpt: 16 }, // fila 5 encabezados
-      ...Array(copias).fill({ hpt: 14 }),
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws as never, "Solicitud Reserva");
-    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-
-    // Convertir ArrayBuffer → base64
-    const bytes = new Uint8Array(out as ArrayBuffer);
+    const buf = await wb.xlsx.writeBuffer();
+    const bytes = new Uint8Array(buf as ArrayBuffer);
     let binary = "";
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
@@ -1264,69 +1228,81 @@ export function CrearReservaContent() {
     const p = lastSavedPayload;
     setSendingEmail(true);
 
-    const subject = [
-      lastSavedCopias > 1 ? `SOLICITUD DE ${lastSavedCopias} RESERVAS` : "SOLICITUD DE RESERVA",
-      p.cliente ?? "",
-      p.naviera ?? "",
-      [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
-      p.especie ?? "",
-      p.temperatura ?? "",
-      p.pol ?? "",
-      p.pod ?? "",
-    ].filter(Boolean).join(" // ").toUpperCase();
+    try {
+      const subject = [
+        lastSavedCopias > 1 ? `SOLICITUD DE ${lastSavedCopias} RESERVAS` : "SOLICITUD DE RESERVA",
+        p.cliente ?? "",
+        p.naviera ?? "",
+        [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
+        p.especie ?? "",
+        p.temperatura ?? "",
+        p.pol ?? "",
+        p.pod ?? "",
+      ].filter(Boolean).join(" // ").toUpperCase();
 
-    const { htmlBody } = buildEmailContent(p);
+      const { htmlBody } = buildEmailContent(p);
 
-    // Usar Excel pre-generado si está listo, sino generar ahora
-    const clienteSlug = String(p.cliente ?? "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-    const cantidadLabel = lastSavedCopias > 1 ? `${lastSavedCopias}_RESERVAS` : "1_RESERVA";
-    const xlsxName = `SOLICITUD_DE_${cantidadLabel}_-_${clienteSlug}.xlsx`;
-    const xlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      const clienteSlug = String(p.cliente ?? "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+      const cantidadLabel = lastSavedCopias > 1 ? `${lastSavedCopias}_RESERVAS` : "1_RESERVA";
+      const xlsxName = `SOLICITUD_DE_${cantidadLabel}_-_${clienteSlug}.xlsx`;
+      const xlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    const xlsxBase64 = xlsxCache.current?.base64 ?? await generateReservaExcel(p, lastSavedCopias);
-
-    // Subir Excel a storage y guardar en documentos (fire & forget)
-    if (lastSavedIds.length > 0) {
-      const firstId = lastSavedIds[0].id;
-      const filePath = `documentos/${firstId}/${xlsxName}`;
-      const xlsxBytes = Uint8Array.from(atob(xlsxBase64), (c) => c.charCodeAt(0));
-      const savedIds = lastSavedIds;
-      void (async () => {
-        const { data: uploadData } = await supabase!.storage
-          .from("documentos")
-          .upload(filePath, xlsxBytes, { contentType: xlsxMime, upsert: true });
-        if (uploadData) {
-          const { data: urlData } = supabase!.storage.from("documentos").getPublicUrl(filePath);
-          const docRows = savedIds.map(({ id }) => ({
-            operacion_id: id,
-            tipo: "SOLICITUD_RESERVA",
-            nombre_archivo: xlsxName,
-            url: urlData.publicUrl,
-            mime_type: xlsxMime,
-            tamano: xlsxBytes.length,
-          }));
-          await supabase!.from("documentos").insert(docRows);
+      let xlsxBase64 = xlsxCache.current?.base64 ?? null;
+      if (!xlsxBase64) {
+        try {
+          xlsxBase64 = await generateReservaExcel(p, lastSavedCopias);
+        } catch (err) {
+          console.error("Excel de solicitud:", err);
         }
-      })();
-    }
+      }
 
-    const dueno = String((lastSavedPayload as Record<string, unknown>)?.dueno_reserva ?? "ASLI").toUpperCase();
-    const emailTo = dueno === "ASLI" ? "roodericus7@gmail.com" : "ignacio.caceres94@outlook.com";
+      if (xlsxBase64 && lastSavedIds.length > 0) {
+        const firstId = lastSavedIds[0].id;
+        const filePath = `documentos/${firstId}/${xlsxName}`;
+        const xlsxBytes = Uint8Array.from(atob(xlsxBase64), (c) => c.charCodeAt(0));
+        const savedIds = lastSavedIds;
+        void (async () => {
+          const { data: uploadData } = await supabase!.storage
+            .from("documentos")
+            .upload(filePath, xlsxBytes, { contentType: xlsxMime, upsert: true });
+          if (uploadData) {
+            const { data: urlData } = supabase!.storage.from("documentos").getPublicUrl(filePath);
+            const docRows = savedIds.map(({ id }) => ({
+              operacion_id: id,
+              tipo: "SOLICITUD_RESERVA",
+              nombre_archivo: xlsxName,
+              url: urlData.publicUrl,
+              mime_type: xlsxMime,
+              tamano: xlsxBytes.length,
+            }));
+            await supabase!.from("documentos").insert(docRows);
+          }
+        })();
+      }
 
-    const result = await sendEmail({
-      to: emailTo,
-      subject: String(subject),
-      body: htmlBody,
-      attachments: [{ name: xlsxName, content: xlsxBase64, mimeType: xlsxMime }],
-    });
+      const dueno = String((lastSavedPayload as Record<string, unknown>)?.dueno_reserva ?? "ASLI").toUpperCase();
+      const emailTo = dueno === "ASLI" ? "roodericus7@gmail.com" : "ignacio.caceres94@outlook.com";
 
-    setSendingEmail(false);
-    setShowEmailModal(false);
-    setOfferEmailAfterSuccess(false);
-    if (result.success) {
-      setSuccess(`Correo enviado correctamente desde ${result.sender ?? "tu cuenta @asli.cl"}.`);
-    } else {
-      setError(result.error ?? "Error al enviar el correo.");
+      const result = await sendEmail({
+        to: emailTo,
+        subject: String(subject),
+        body: htmlBody,
+        attachments: xlsxBase64
+          ? [{ name: xlsxName, content: xlsxBase64, mimeType: xlsxMime }]
+          : undefined,
+      });
+
+      setShowEmailModal(false);
+      if (result.success) {
+        setSuccess(`Correo enviado correctamente desde ${result.sender ?? "tu cuenta @asli.cl"}.`);
+      } else {
+        setError(result.error ?? "Error al enviar el correo.");
+      }
+    } catch (err) {
+      setShowEmailModal(false);
+      setError(err instanceof Error ? err.message : "Error al enviar el correo.");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -1351,7 +1327,7 @@ export function CrearReservaContent() {
         </label>
         <FormSelect
           id={name}
-          name={name === "forma_pago" ? "form_payment_method" : name}
+          name={name === "forma_pago" ? "sale_clause_field" : name}
           value={formData[name] as string}
           placeholder={tr.selectPlaceholder}
           disabled={loadingCatalogos}
@@ -1422,7 +1398,7 @@ export function CrearReservaContent() {
       </label>
       <input
         id={name}
-        name={name}
+        name={`reserva_${name}`}
         data-field={name}
         type={type}
         value={formData[name] as string}
@@ -1430,6 +1406,7 @@ export function CrearReservaContent() {
         placeholder={placeholder}
         className={inputClass}
         autoComplete="off"
+        data-form-type="other"
       />
     </div>
   );
@@ -2082,7 +2059,7 @@ export function CrearReservaContent() {
           <label htmlFor="etd" className={labelClass}>{tr.etd}{reqMark}</label>
           <DatePicker
             id="etd"
-            name="etd_date_field"
+            name="zarpe_etd"
             selected={formData.etd ? parse(formData.etd, "yyyy-MM-dd", new Date()) : null}
             onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, etd: date ? format(date, "yyyy-MM-dd") : "" }))}
             dateFormat="dd-MM-yyyy"
@@ -2090,16 +2067,18 @@ export function CrearReservaContent() {
             placeholderText={tr.datePlaceholder}
             className={inputClass}
             wrapperClassName="w-full"
+            customInput={<DatePickerInput />}
             isClearable
             withPortal
-            autoComplete="one-time-code"
+            autoComplete="off"
+            readOnly
           />
         </div>
         <div>
           <label htmlFor="eta" className={labelClass}>{tr.eta}</label>
           <DatePicker
             id="eta"
-            name="eta_date_field"
+            name="arribo_eta"
             selected={formData.eta ? parse(formData.eta, "yyyy-MM-dd", new Date()) : null}
             onChange={(date: Date | null) => setFormData((prev) => ({ ...prev, eta: date ? format(date, "yyyy-MM-dd") : "" }))}
             dateFormat="dd-MM-yyyy"
@@ -2107,9 +2086,11 @@ export function CrearReservaContent() {
             placeholderText={tr.datePlaceholder}
             className={inputClass}
             wrapperClassName="w-full"
+            customInput={<DatePickerInput />}
             isClearable
             withPortal
-            autoComplete="one-time-code"
+            autoComplete="off"
+            readOnly
           />
         </div>
         <div>
@@ -2151,7 +2132,7 @@ export function CrearReservaContent() {
         />
         <div>
           <label htmlFor="citacion" className={labelClass}>{tr.citacion}</label>
-          <input id="citacion" name="citacion" type="datetime-local" value={formData.citacion} onChange={handleChange} className={inputClass} />
+          <input id="citacion" name="citacion" type="datetime-local" value={formData.citacion} onChange={handleChange} className={inputClass} autoComplete="off" />
         </div>
       </FieldGrid>
     ),
@@ -2167,15 +2148,15 @@ export function CrearReservaContent() {
           </div>
           <div>
             <label htmlFor="inicio_stacking" className={labelClass}>{tr.inicioStacking}</label>
-            <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} />
+            <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} autoComplete="off" />
           </div>
           <div>
             <label htmlFor="fin_stacking" className={labelClass}>{tr.finStacking}</label>
-            <input id="fin_stacking" name="fin_stacking" type="datetime-local" value={formData.fin_stacking} onChange={handleChange} className={inputClass} />
+            <input id="fin_stacking" name="fin_stacking" type="datetime-local" value={formData.fin_stacking} onChange={handleChange} className={inputClass} autoComplete="off" />
           </div>
           <div>
             <label htmlFor="corte_documental" className={labelClass}>{tr.corteDocumental}</label>
-            <input id="corte_documental" name="corte_documental" type="datetime-local" value={formData.corte_documental} onChange={handleChange} className={inputClass} />
+            <input id="corte_documental" name="corte_documental" type="datetime-local" value={formData.corte_documental} onChange={handleChange} className={inputClass} autoComplete="off" />
           </div>
         </FieldGrid>
       </>
@@ -2345,7 +2326,7 @@ export function CrearReservaContent() {
           </div>
         )}
 
-        {success && (
+        {success && !showEmailModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
               <div className="h-[3px] bg-emerald-500" />
@@ -2360,13 +2341,7 @@ export function CrearReservaContent() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setSuccess(null);
-                      if (offerEmailAfterSuccess) {
-                        setOfferEmailAfterSuccess(false);
-                        setShowEmailModal(true);
-                      }
-                    }}
+                    onClick={() => setSuccess(null)}
                     className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
                   >
                     {tr.btnClose}
@@ -2408,15 +2383,13 @@ export function CrearReservaContent() {
                 </span>
               </div>
 
-              <form
+              <div
                 id="reserva-form"
-                onSubmit={handleSubmit}
-                autoComplete="off"
                 key={activeKey}
                 className="flex-1 min-h-0 overflow-hidden px-4 py-3 flex flex-col gap-2.5"
               >
                 {sectionFieldsMap[activeKey]}
-              </form>
+              </div>
             </div>
           </div>
         </div>
@@ -2457,8 +2430,8 @@ export function CrearReservaContent() {
             </button>
           ) : (
             <button
-              type="submit"
-              form="reserva-form"
+              type="button"
+              onClick={() => setShowPreview(true)}
               disabled={submitting}
               className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-semibold bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-sm hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -2476,10 +2449,21 @@ export function CrearReservaContent() {
       {renderPreviewModal()}
 
       {showEmailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
             <div className="p-6">
+              <div className="flex items-center gap-3 mb-4 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2.5">
+                <span className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="typcn:tick" width={18} height={18} className="text-emerald-600" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-bold text-emerald-900 text-sm">
+                    {isCliente ? tr.bookingSavedCliente : tr.bookingSaved}
+                  </p>
+                  {success && <p className="text-xs text-emerald-800/80 mt-0.5">{success}</p>}
+                </div>
+              </div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
                   <Icon icon="lucide:mail" width={20} height={20} className="text-brand-blue" />

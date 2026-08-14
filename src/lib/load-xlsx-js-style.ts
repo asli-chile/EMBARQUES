@@ -51,7 +51,7 @@ export async function loadXlsxJsStyle(): Promise<XlsxLib> {
   // Intentar importación dinámica directa
   const mod = await import("xlsx-js-style");
 
-  const found = findXlsxApi(mod);
+  const found = findXlsxApi(mod) ?? findXlsxApi((globalThis as { XLSX?: unknown }).XLSX);
   if (found) {
     cached = found;
     return cached;
