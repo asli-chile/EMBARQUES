@@ -1,14 +1,13 @@
 import { useReveal } from '../hooks/useReveal'
 
-const MAP_EMBED =
-  'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4022.7608648636206!2d-71.20605142340338!3d-34.97436577716874!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x966457bfbad3103d%3A0x1a06a30ef08571a5!2sASLI%20-%20Log%C3%ADstica%20y%20Comercio%20Exterior!5e1!3m2!1ses-419!2scl!4v1768069231458!5m2!1ses-419!2scl'
+const MAPS_URL = 'https://maps.app.goo.gl/cGrni677vZDk5pp26'
 
 const Ubicacion = () => {
   const info = useReveal('left')
   const map = useReveal('right', 280)
 
   const handleGoogleMaps = () => {
-    window.open('https://maps.app.goo.gl/cGrni677vZDk5pp26', '_blank')
+    window.open(MAPS_URL, '_blank')
   }
 
   const handleWaze = () => {
@@ -104,18 +103,28 @@ const Ubicacion = () => {
           <div
             ref={map.ref}
             style={map.style}
-            className="lg:col-span-7 overflow-hidden rounded-none sm:rounded-[20px] shadow-asli-med min-h-[220px] sm:min-h-[260px] lg:min-h-[min(52vh,400px)] border-y sm:border border-asli-dark/5 -mx-4 sm:mx-0"
+            className="lg:col-span-7 overflow-hidden rounded-none sm:rounded-[20px] shadow-asli-med min-h-[220px] sm:min-h-[260px] lg:min-h-[min(52vh,400px)] border-y sm:border border-asli-dark/5 -mx-4 sm:mx-0 relative"
           >
-            <iframe
-              src={MAP_EMBED}
-              width="100%"
-              height="100%"
-              style={{ minHeight: '220px', border: 0, display: 'block' }}
-              allowFullScreen=""
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Ubicación ASLI - Logística y Comercio Exterior"
-            />
+            <button
+              type="button"
+              onClick={handleGoogleMaps}
+              className="absolute inset-0 w-full h-full min-h-[220px] text-left"
+              aria-label="Abrir ubicación de ASLI en Google Maps"
+            >
+              <img
+                src="/img/mapa-asli.webp"
+                alt="Mapa de ASLI en Longitudinal Sur Km. 186, Curicó"
+                width={1280}
+                height={820}
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <span className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-sm font-semibold text-asli-dark shadow-sm">
+                Abrir en Google Maps
+                <span aria-hidden="true">→</span>
+              </span>
+            </button>
           </div>
         </div>
       </div>
