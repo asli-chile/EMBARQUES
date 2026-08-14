@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useReveal } from '../hooks/useReveal'
 
 const MAP_EMBED =
@@ -7,7 +6,6 @@ const MAP_EMBED =
 const Ubicacion = () => {
   const info = useReveal('left')
   const map = useReveal('right', 280)
-  const [showMap, setShowMap] = useState(false)
 
   const handleGoogleMaps = () => {
     window.open('https://maps.app.goo.gl/cGrni677vZDk5pp26', '_blank')
@@ -108,32 +106,16 @@ const Ubicacion = () => {
             style={map.style}
             className="lg:col-span-7 overflow-hidden rounded-none sm:rounded-[20px] shadow-asli-med min-h-[220px] sm:min-h-[260px] lg:min-h-[min(52vh,400px)] border-y sm:border border-asli-dark/5 -mx-4 sm:mx-0"
           >
-            {showMap ? (
-              <iframe
-                src={MAP_EMBED}
-                width="100%"
-                height="100%"
-                style={{ minHeight: '220px', border: 0, display: 'block' }}
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Ubicación ASLI - Logística y Comercio Exterior"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowMap(true)}
-                className="w-full h-full min-h-[220px] sm:min-h-[260px] lg:min-h-[min(52vh,400px)] flex flex-col items-center justify-center gap-3 bg-[#e8efe8] text-asli-dark hover:bg-[#dce8dc] transition-colors"
-              >
-                <span className="text-3xl" aria-hidden="true">
-                  📍
-                </span>
-                <span className="font-display font-bold text-base">Cargar mapa</span>
-                <span className="text-muted text-sm px-4">
-                  Longitudinal Sur Km. 186, Curicó
-                </span>
-              </button>
-            )}
+            <iframe
+              src={MAP_EMBED}
+              width="100%"
+              height="100%"
+              style={{ minHeight: '220px', border: 0, display: 'block' }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Ubicación ASLI - Logística y Comercio Exterior"
+            />
           </div>
         </div>
       </div>
