@@ -33,7 +33,7 @@ const estadoConfig = ESTADO_OPERACION_STYLES;
 
 export function PapeleraContent() {
   const { t } = useLocale();
-  const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isEjecutivo, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papelera;
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,7 @@ export function PapeleraContent() {
     if (!supabase || authLoading) return;
     setLoading(true);
 
-    const scope = { isCliente, empresaNombres };
+    const scope = { isCliente, isEjecutivo, empresaNombres };
     if (shouldSkipOperacionesForCliente(scope)) {
       setOperaciones([]);
       setLoading(false);
@@ -76,7 +76,7 @@ export function PapeleraContent() {
       setOperaciones(data || []);
     }
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();

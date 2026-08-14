@@ -20,7 +20,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 export function InicioContent() {
   const { t } = useLocale();
-  const { profile, isExternalUser, isLoading: authLoading, isCliente, empresaNombres } = useAuth();
+  const { profile, isExternalUser, isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
   const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
   const mainRef = useRef<HTMLElement>(null);
   const bgParallaxRef = useRef<HTMLDivElement>(null);
@@ -134,7 +134,7 @@ export function InicioContent() {
     if (!supabase || authLoading) return;
     const fetchKpiData = async () => {
       try {
-        if (shouldSkipOperacionesForCliente({ isCliente, empresaNombres })) {
+        if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
           setKpiData({
             operacionesActivas: 0,
             contenedores: 0,
@@ -154,7 +154,7 @@ export function InicioContent() {
           .from("operaciones")
           .select("id, contenedor, etd, estado_operacion")
           .is("deleted_at", null);
-        opsQuery = applyOperacionesClienteFilter(opsQuery, { isCliente, empresaNombres });
+        opsQuery = applyOperacionesClienteFilter(opsQuery, { isCliente, isEjecutivo, empresaNombres });
         const { data: operaciones } = await opsQuery;
 
         const { count: docCount } = await supabase.from("documentos").select("id", { count: "exact", head: true });
@@ -184,7 +184,7 @@ export function InicioContent() {
     };
 
     fetchKpiData();
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres]);
 
   const handleScrollToTop = () => {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });

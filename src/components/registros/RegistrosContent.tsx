@@ -665,7 +665,7 @@ const COLUMN_GROUPS = [
 
 export function RegistrosContent() {
   const { locale, t } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading, user } = useAuth();
+  const { isCliente, isEjecutivo, empresaNombres, isLoading: authLoading, user } = useAuth();
   const canEdit = !isCliente;
   const gridRef = useRef<AgGridReact<OperacionRow>>(null);
   const [selectionCount, setSelectionCount] = useState(0);
@@ -955,7 +955,7 @@ export function RegistrosContent() {
       .is("deleted_at", null);
     if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
-    } else if (isCliente) {
+    } else if (isCliente || isEjecutivo) {
       setRowData([]);
       setLoading(false);
       return;
@@ -967,7 +967,7 @@ export function RegistrosContent() {
       return;
     }
     setRowData((data ?? []).map(toRow));
-  }, [supabase, authLoading, isCliente, empresaNombres, t.registros.supabaseError, toRow]);
+  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres, t.registros.supabaseError, toRow]);
 
   useEffect(() => {
     void fetchCatalogos();

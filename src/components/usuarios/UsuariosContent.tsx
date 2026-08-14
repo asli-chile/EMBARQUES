@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
+import { FormSelect } from "@/components/ui/FormSelect";
 import {
   modulePageBg,
   moduleHero,
@@ -11,9 +12,7 @@ import {
   moduleBtnPrimary,
   moduleBtnSecondary,
   moduleBtnOnHero,
-  moduleCard,
   moduleToolbar,
-  moduleSectionTitle,
 } from "@/lib/ui/moduleStyles";
 
 const ROLES = [
@@ -27,31 +26,100 @@ const ROLES = [
 
 type RolValue = (typeof ROLES)[number]["value"];
 
-const ROL_BADGE: Record<string, string> = {
-  superadmin: "bg-violet-100 text-violet-800 border-violet-200",
-  admin: "bg-brand-blue/10 text-brand-blue border-brand-blue/25",
-  ejecutivo: "bg-teal-50 text-teal-800 border-teal-200",
-  operador: "bg-slate-100 text-slate-700 border-slate-200",
-  cliente: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  usuario: "bg-neutral-100 text-neutral-600 border-neutral-200",
+type RolTheme = {
+  avatar: string;
+  strip: string;
+  badge: string;
+  chip: string;
+  chipOn: string;
+  countIdle: string;
+  countOn: string;
 };
 
-function UserAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
-  const initials = (name.trim() || "?").slice(0, 2).toUpperCase();
-  const sizeCls = size === "sm" ? "w-9 h-9 text-xs" : "w-10 h-10 text-sm";
+/** Colores bien distintos entre roles (ejecutivo ≠ cliente). */
+const ROL_THEME: Record<string, RolTheme> = {
+  superadmin: {
+    avatar: "bg-violet-600 text-white",
+    strip: "bg-violet-500",
+    badge: "bg-violet-100 text-violet-800",
+    chip: "bg-violet-50 text-violet-800 border border-violet-200 hover:border-violet-400",
+    chipOn: "bg-violet-600 text-white",
+    countIdle: "text-violet-400",
+    countOn: "text-white/70",
+  },
+  admin: {
+    avatar: "bg-[#11224e] text-white",
+    strip: "bg-[#11224e]",
+    badge: "bg-[#11224e]/10 text-[#11224e]",
+    chip: "bg-[#EEF2FA] text-[#11224e] border border-[#11224e]/20 hover:border-[#11224e]/45",
+    chipOn: "bg-[#11224e] text-white",
+    countIdle: "text-[#11224e]/40",
+    countOn: "text-white/70",
+  },
+  ejecutivo: {
+    avatar: "bg-amber-500 text-amber-950",
+    strip: "bg-amber-500",
+    badge: "bg-amber-100 text-amber-900",
+    chip: "bg-amber-50 text-amber-900 border border-amber-200 hover:border-amber-400",
+    chipOn: "bg-amber-500 text-amber-950",
+    countIdle: "text-amber-600/70",
+    countOn: "text-amber-950/55",
+  },
+  operador: {
+    avatar: "bg-sky-600 text-white",
+    strip: "bg-sky-500",
+    badge: "bg-sky-100 text-sky-800",
+    chip: "bg-sky-50 text-sky-800 border border-sky-200 hover:border-sky-400",
+    chipOn: "bg-sky-600 text-white",
+    countIdle: "text-sky-400",
+    countOn: "text-white/70",
+  },
+  cliente: {
+    avatar: "bg-emerald-600 text-white",
+    strip: "bg-emerald-500",
+    badge: "bg-emerald-100 text-emerald-800",
+    chip: "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:border-emerald-400",
+    chipOn: "bg-emerald-600 text-white",
+    countIdle: "text-emerald-500",
+    countOn: "text-white/70",
+  },
+  usuario: {
+    avatar: "bg-stone-400 text-white",
+    strip: "bg-stone-400",
+    badge: "bg-stone-100 text-stone-600",
+    chip: "bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400",
+    chipOn: "bg-stone-500 text-white",
+    countIdle: "text-stone-400",
+    countOn: "text-white/70",
+  },
+};
+
+function rolTheme(rol: string): RolTheme {
+  return ROL_THEME[rol] ?? ROL_THEME.usuario;
+}
+
+function initialsFrom(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function UserAvatar({ name, rol, size = "md" }: { name: string; rol?: string; size?: "sm" | "md" }) {
+  const color = rolTheme(rol ?? "").avatar;
+  const sizeCls = size === "sm" ? "w-8 h-8 text-[11px] rounded-lg" : "w-11 h-11 text-sm rounded-2xl";
   return (
-    <div
-      className={`${sizeCls} rounded-full bg-gradient-to-br from-brand-blue/15 to-brand-teal/15 border border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue shrink-0`}
-    >
-      {initials}
+    <div className={`${sizeCls} ${color} flex items-center justify-center font-bold shrink-0 tracking-wide`}>
+      {initialsFrom(name)}
     </div>
   );
 }
 
 function RoleBadge({ rol }: { rol: string }) {
-  const cls = ROL_BADGE[rol] ?? ROL_BADGE.usuario;
+  const theme = rolTheme(rol);
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${cls}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide ${theme.badge}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${theme.strip}`} />
       {getRolLabel(rol as RolValue)}
     </span>
   );
@@ -60,17 +128,73 @@ function RoleBadge({ rol }: { rol: string }) {
 function AccountBadge({ active }: { active: boolean }) {
   if (active) {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-        <Icon icon="lucide:check-circle-2" width={12} height={12} />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
         Activa
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-      <Icon icon="lucide:clock" width={12} height={12} />
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
       Pendiente
     </span>
+  );
+}
+
+function CheckBox({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+        checked
+          ? "bg-brand-blue border-brand-blue text-white"
+          : "border-brand-blue/30 bg-white hover:border-brand-blue/60"
+      }`}
+    >
+      {checked ? <Icon icon="lucide:check" width={12} height={12} /> : null}
+    </button>
+  );
+}
+
+function RolePicker({ value, onChange }: { value: string; onChange: (rol: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Rol">
+      {ROLES.map((r) => {
+        const active = value === r.value;
+        const theme = rolTheme(r.value);
+        return (
+          <button
+            key={r.value}
+            type="button"
+            role="option"
+            aria-selected={active}
+            onClick={() => onChange(r.value)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              active ? theme.chipOn : theme.chip
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white/80" : theme.strip}`} />
+            {r.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -84,6 +208,98 @@ type DbUsuario = {
 };
 
 type EmpresaRow = { id: string; nombre: string };
+
+function EmpresaMultiPicker({
+  empresas,
+  selectedIds,
+  onChange,
+}: {
+  empresas: EmpresaRow[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [q, setQ] = useState("");
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = s ? empresas.filter((e) => e.nombre.toLowerCase().includes(s)) : empresas;
+    return [...list].sort((a, b) => Number(selected.has(b.id)) - Number(selected.has(a.id)));
+  }, [empresas, q, selected]);
+
+  const toggle = (id: string) => {
+    onChange(selected.has(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
+  };
+
+  const markFiltered = () => {
+    onChange([...new Set([...selectedIds, ...filtered.map((e) => e.id)])]);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="block text-base font-semibold text-brand-blue">Empresas asignadas</span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={markFiltered}
+            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15"
+          >
+            Marcar todas
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-neutral-500 hover:bg-neutral-100"
+          >
+            Ninguna
+          </button>
+        </div>
+      </div>
+      <div className="relative mb-2">
+        <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/35" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar empresa…"
+          className={`${moduleInput} pl-9 py-2 text-sm`}
+        />
+      </div>
+      <p className="text-[11px] text-neutral-400 mb-1.5">
+        {selectedIds.length} / {empresas.length} seleccionadas
+        {q.trim() ? ` · ${filtered.length} en búsqueda` : ""}
+      </p>
+      <div className="max-h-56 overflow-y-auto rounded-xl border border-brand-blue/15 bg-[#F4F8FC] divide-y divide-brand-blue/8">
+        {filtered.length === 0 ? (
+          <p className="text-sm text-neutral-400 text-center py-6">Sin resultados</p>
+        ) : (
+          filtered.map((emp) => {
+            const on = selected.has(emp.id);
+            return (
+              <button
+                key={emp.id}
+                type="button"
+                onClick={() => toggle(emp.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                  on ? "bg-brand-blue/10 text-brand-blue" : "bg-white hover:bg-[#EEF3FA] text-neutral-700"
+                }`}
+              >
+                <span
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
+                    on ? "bg-brand-blue border-brand-blue text-white" : "border-brand-blue/25 bg-white"
+                  }`}
+                >
+                  {on ? <Icon icon="lucide:check" width={12} height={12} /> : null}
+                </span>
+                <span className="truncate font-medium">{emp.nombre}</span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function UsuariosContent() {
   const { t } = useLocale();
@@ -109,6 +325,7 @@ export function UsuariosContent() {
   const [editForm, setEditForm] = useState<{ rol: string; empresaIds: string[] }>({ rol: "usuario", empresaIds: [] });
   const [editError, setEditError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [editPasswordOpen, setEditPasswordOpen] = useState(false);
 
   const [bulkAssigningUsers, setBulkAssigningUsers] = useState<DbUsuario[]>([]);
   const [assignEmpresaIds, setAssignEmpresaIds] = useState<string[]>([]);
@@ -117,6 +334,7 @@ export function UsuariosContent() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [filterRol, setFilterRol] = useState<string>("");
   const [filterEmpresaId, setFilterEmpresaId] = useState<string>("");
+  const [filterCuenta, setFilterCuenta] = useState<"" | "activa" | "pendiente">("");
 
   const [activatingUser, setActivatingUser] = useState<DbUsuario | null>(null);
   const [activatePassword, setActivatePassword] = useState("");
@@ -219,15 +437,6 @@ export function UsuariosContent() {
     [form, fetchData]
   );
 
-  const handleToggleEmpresa = (id: string) => {
-    setForm((prev) => ({
-      ...prev,
-      empresaIds: prev.empresaIds.includes(id)
-        ? prev.empresaIds.filter((e) => e !== id)
-        : [...prev.empresaIds, id],
-    }));
-  };
-
   const handleEditOpen = (u: DbUsuario) => {
     setEditingUser(u);
     setEditForm({
@@ -240,6 +449,7 @@ export function UsuariosContent() {
     setChangePasswordConfirm("");
     setChangePasswordVerified(false);
     setChangePasswordError(null);
+    setEditPasswordOpen(false);
   };
 
   const handleEditClose = () => {
@@ -250,25 +460,46 @@ export function UsuariosContent() {
     setChangePasswordConfirm("");
     setChangePasswordVerified(false);
     setChangePasswordError(null);
+    setEditPasswordOpen(false);
   };
 
-  const filteredUsuarios = usuarios.filter((u) => {
-    if (filterRol && u.rol !== filterRol) return false;
-    if (filterEmpresaId) {
-      const ids = empresasPorUsuario[u.id] ?? [];
-      if (!ids.includes(filterEmpresaId)) return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      if (!u.nombre?.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  const empresaById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of empresas) map.set(e.id, e.nombre);
+    return map;
+  }, [empresas]);
+
+  const countByRol = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const u of usuarios) map[u.rol] = (map[u.rol] ?? 0) + 1;
+    return map;
+  }, [usuarios]);
+
+  const filteredUsuarios = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const list = usuarios.filter((u) => {
+      if (filterRol && u.rol !== filterRol) return false;
+      if (filterCuenta === "activa" && !u.auth_id) return false;
+      if (filterCuenta === "pendiente" && u.auth_id) return false;
+      if (filterEmpresaId) {
+        const ids = empresasPorUsuario[u.id] ?? [];
+        if (!ids.includes(filterEmpresaId)) return false;
+      }
+      if (q && !u.nombre?.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    return list.slice().sort((a, b) => {
+      const ap = a.auth_id ? 1 : 0;
+      const bp = b.auth_id ? 1 : 0;
+      if (ap !== bp) return ap - bp;
+      return (a.nombre || a.email).localeCompare(b.nombre || b.email, "es");
+    });
+  }, [usuarios, filterRol, filterCuenta, filterEmpresaId, empresasPorUsuario, searchQuery]);
 
   const activosCount = usuarios.filter((u) => u.auth_id).length;
   const pendientesCount = usuarios.filter((u) => !u.auth_id).length;
   const clientesCount = usuarios.filter((u) => u.rol === "cliente").length;
-  const hasActiveFilters = Boolean(filterRol || filterEmpresaId || searchQuery.trim());
+  const hasActiveFilters = Boolean(filterRol || filterEmpresaId || searchQuery.trim() || filterCuenta);
 
   const usuariosAsignables = usuarios.filter((u) => u.rol === "cliente" || u.rol === "ejecutivo");
   const asignablesFromFiltered = filteredUsuarios.filter(
@@ -463,12 +694,6 @@ export function UsuariosContent() {
     [editingUser, changePasswordVerified, changePasswordCurrent, changePasswordNew, changePasswordConfirm]
   );
 
-  const handleToggleAssignEmpresa = (empresaId: string) => {
-    setAssignEmpresaIds((prev) =>
-      prev.includes(empresaId) ? prev.filter((e) => e !== empresaId) : [...prev, empresaId]
-    );
-  };
-
   const handleAssignSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -506,15 +731,6 @@ export function UsuariosContent() {
     },
     [bulkAssigningUsers, assignEmpresaIds, empresasPorUsuario, fetchData]
   );
-
-  const handleToggleEmpresaEdit = (empresaId: string) => {
-    setEditForm((prev) => ({
-      ...prev,
-      empresaIds: prev.empresaIds.includes(empresaId)
-        ? prev.empresaIds.filter((e) => e !== empresaId)
-        : [...prev.empresaIds, empresaId],
-    }));
-  };
 
   const handleEditSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -593,17 +809,16 @@ export function UsuariosContent() {
   return (
     <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`} role="main">
 
-      {/* Hero */}
       <div className={`flex-shrink-0 ${moduleHero}`}>
-        <div className="px-4 pt-5 pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:users" width={24} height={24} className="text-white" />
+              <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:users" width={20} height={20} className="text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold leading-tight tracking-tight">{t.sidebar.usuarios}</h1>
-                <p className="text-base text-white/75 mt-1">Cuentas, roles, empresas y acceso al sistema</p>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold leading-tight tracking-tight">{t.sidebar.usuarios}</h1>
+                <p className="text-sm text-white/70 truncate">Directorio de cuentas, roles y acceso</p>
               </div>
             </div>
             <button
@@ -619,34 +834,62 @@ export function UsuariosContent() {
               Nueva cuenta
             </button>
           </div>
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:users" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{usuarios.length} total</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:user-check" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{activosCount} activo{activosCount !== 1 ? "s" : ""}</span>
-            </div>
+          <div className="flex gap-2 mt-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterCuenta("");
+                setFilterRol("");
+              }}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
+                !filterCuenta && !filterRol ? "bg-white text-brand-blue" : "bg-white/15 text-white hover:bg-white/25"
+              }`}
+            >
+              <Icon icon="lucide:users" width={13} height={13} />
+              {usuarios.length} total
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterCuenta((v) => (v === "activa" ? "" : "activa"))}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
+                filterCuenta === "activa" ? "bg-white text-brand-blue" : "bg-white/15 text-white hover:bg-white/25"
+              }`}
+            >
+              <Icon icon="lucide:user-check" width={13} height={13} />
+              {activosCount} activa{activosCount !== 1 ? "s" : ""}
+            </button>
             {pendientesCount > 0 && (
-              <div className="flex items-center gap-1.5 bg-amber-400/20 border border-amber-300/30 rounded-xl px-3 py-1.5">
-                <Icon icon="lucide:clock" width={13} height={13} className="text-amber-100" />
-                <span className="text-sm font-semibold text-amber-50">{pendientesCount} pendiente{pendientesCount !== 1 ? "s" : ""}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setFilterCuenta((v) => (v === "pendiente" ? "" : "pendiente"))}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  filterCuenta === "pendiente"
+                    ? "bg-amber-300 text-amber-950"
+                    : "bg-amber-400/20 border border-amber-300/30 text-amber-50 hover:bg-amber-400/30"
+                }`}
+              >
+                <Icon icon="lucide:clock" width={13} height={13} />
+                {pendientesCount} pendiente{pendientesCount !== 1 ? "s" : ""}
+              </button>
             )}
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{clientesCount} cliente{clientesCount !== 1 ? "s" : ""}</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFilterRol((v) => (v === "cliente" ? "" : "cliente"))}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
+                filterRol === "cliente" ? "bg-white text-brand-blue" : "bg-white/15 text-white hover:bg-white/25"
+              }`}
+            >
+              <Icon icon="lucide:building-2" width={13} height={13} />
+              {clientesCount} cliente{clientesCount !== 1 ? "s" : ""}
+            </button>
           </div>
         </div>
       </div>
 
-      <section className={`flex-1 min-h-0 flex flex-col mx-3 mb-3 mt-3 sm:mx-4 sm:mb-4 ${moduleCard}`}>
-        {/* Toolbar */}
-        <div className={`flex-shrink-0 px-4 py-3 ${moduleToolbar} space-y-3`}>
-          <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="relative flex-1 min-w-[200px] max-w-md">
+      <section className="flex-1 min-h-0 flex flex-col bg-white border-t border-brand-blue/10">
+        <div className={`flex-shrink-0 px-4 py-2.5 ${moduleToolbar} space-y-2`}>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
               <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40" />
               <input
                 type="search"
@@ -655,7 +898,7 @@ export function UsuariosContent() {
                 placeholder="Buscar por nombre o correo…"
                 className={`${moduleInput} pl-10 pr-9`}
               />
-              {searchQuery && (
+              {searchQuery ? (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
@@ -664,60 +907,86 @@ export function UsuariosContent() {
                 >
                   <Icon icon="lucide:x" width={14} height={14} />
                 </button>
-              )}
+              ) : null}
             </div>
-            <p className={moduleSectionTitle}>
+            <div className="w-full sm:w-56">
+              <FormSelect
+                id="filter-empresa"
+                value={filterEmpresaId}
+                placeholder="Todas las empresas"
+                options={empresas.map((e) => ({ value: e.id, label: e.nombre }))}
+                onChange={setFilterEmpresaId}
+              />
+            </div>
+            <p className="text-sm font-semibold text-brand-blue/70 ml-auto">
               {filteredUsuarios.length}
-              {hasActiveFilters ? ` de ${usuarios.length}` : ""} usuarios
+              {hasActiveFilters ? ` de ${usuarios.length}` : ""}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              id="filter-rol"
-              value={filterRol}
-              onChange={(e) => setFilterRol(e.target.value)}
-              className={`${moduleInput} w-auto min-w-[140px] py-2.5`}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1">
+            <button
+              type="button"
+              onClick={() => setFilterRol("")}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                !filterRol ? "bg-brand-blue text-white" : "bg-white text-brand-blue/80 border border-brand-blue/15 hover:border-brand-blue/35"
+              }`}
             >
-              <option value="">Todos los roles</option>
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-            <select
-              id="filter-empresa"
-              value={filterEmpresaId}
-              onChange={(e) => setFilterEmpresaId(e.target.value)}
-              className={`${moduleInput} w-auto min-w-[140px] max-w-[200px] py-2.5`}
-            >
-              <option value="">Todas las empresas</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>{e.nombre}</option>
-              ))}
-            </select>
-            {hasActiveFilters && (
+              Todos
+            </button>
+            {ROLES.map((r) => {
+              const active = filterRol === r.value;
+              const theme = rolTheme(r.value);
+              return (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => setFilterRol((v) => (v === r.value ? "" : r.value))}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  active ? theme.chipOn : theme.chip
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white/80" : theme.strip}`} />
+                {r.label}
+                <span className={active ? theme.countOn : theme.countIdle}>
+                  {countByRol[r.value] ?? 0}
+                </span>
+              </button>
+              );
+            })}
+            {hasActiveFilters ? (
               <button
                 type="button"
                 onClick={() => {
                   setFilterRol("");
                   setFilterEmpresaId("");
                   setSearchQuery("");
+                  setFilterCuenta("");
                 }}
-                className={`${moduleBtnSecondary} py-2 text-sm`}
+                className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-brand-blue/70 hover:bg-white"
               >
-                <Icon icon="lucide:filter-x" width={14} height={14} />
+                <Icon icon="lucide:filter-x" width={13} height={13} />
                 Limpiar
               </button>
-            )}
+            ) : null}
           </div>
 
-          {selectedUserIds.size > 0 && (
-            <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-blue/8 border border-brand-blue/15">
-              <span className="text-sm font-semibold text-brand-blue">{selectedUserIds.size} seleccionado{selectedUserIds.size !== 1 ? "s" : ""}</span>
+          {selectedUserIds.size > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-blue text-white">
+              {asignablesFromFiltered.length > 0 ? (
+                <CheckBox
+                  checked={asignablesFromFiltered.every((u) => selectedUserIds.has(u.id))}
+                  onChange={handleSelectAllAsignables}
+                  label="Seleccionar clientes y ejecutivos visibles"
+                />
+              ) : null}
+              <span className="text-sm font-semibold">
+                {selectedUserIds.size} seleccionado{selectedUserIds.size !== 1 ? "s" : ""}
+              </span>
               <button
                 type="button"
                 onClick={handleBulkAssignOpen}
-                className={`${moduleBtnPrimary} py-2 text-sm`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-brand-blue hover:bg-white/90"
               >
                 <Icon icon="lucide:building-2" width={14} height={14} />
                 Asignar empresas
@@ -725,243 +994,129 @@ export function UsuariosContent() {
               <button
                 type="button"
                 onClick={() => setSelectedUserIds(new Set())}
-                className={`${moduleBtnSecondary} py-2 text-sm`}
+                className="text-sm font-medium text-white/80 hover:text-white ml-auto"
               >
                 Desmarcar
               </button>
             </div>
-          )}
+          ) : null}
 
-          {error && (
+          {error ? (
             <div className="px-3 py-2 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200 flex items-center gap-2" role="alert">
               <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
               {error}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="flex-1 min-h-0 overflow-auto">
-          {/* Mobile cards */}
-          <div className="md:hidden p-2 space-y-2">
-            {filteredUsuarios.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
-                <div className="w-14 h-14 rounded-2xl bg-[#F4F8FC] border border-brand-blue/15 flex items-center justify-center">
-                  <Icon icon="lucide:users" width={26} height={26} className="text-brand-blue/30" />
-                </div>
-                <p className="text-sm font-semibold text-brand-blue/70">Sin usuarios</p>
-                <p className="text-xs text-neutral-400">Prueba otro filtro o crea una cuenta nueva.</p>
+          {filteredUsuarios.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-20 text-center px-6">
+              <div className="w-16 h-16 rounded-2xl bg-[#F4F8FC] border border-brand-blue/15 flex items-center justify-center">
+                <Icon icon="lucide:users" width={28} height={28} className="text-brand-blue/30" />
               </div>
-            ) : (
-              filteredUsuarios.map((u) => {
+              <p className="text-base font-semibold text-brand-blue/80">Sin usuarios</p>
+              <p className="text-sm text-neutral-400">Prueba otro filtro o crea una cuenta nueva.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-brand-blue/10">
+              {asignablesFromFiltered.length > 0 && selectedUserIds.size === 0 ? (
+                <li className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1.5 bg-[#EEF3FA] border-b border-brand-blue/10">
+                  <CheckBox
+                    checked={false}
+                    onChange={handleSelectAllAsignables}
+                    label="Seleccionar clientes y ejecutivos visibles"
+                  />
+                  <span className="text-xs font-medium text-brand-blue/50">Seleccionar clientes y ejecutivos</span>
+                </li>
+              ) : null}
+              {filteredUsuarios.map((u) => {
                 const ids = empresasPorUsuario[u.id] ?? [];
-                const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
+                const nombresEmpresas = ids
+                  .map((eid) => empresaById.get(eid))
+                  .filter((n): n is string => Boolean(n));
                 const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
+                const selected = selectedUserIds.has(u.id);
                 return (
-                  <article
-                    key={u.id}
-                    className="rounded-xl border border-brand-blue/15 bg-[#F4F8FC] overflow-hidden shadow-sm"
-                  >
-                    <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                    <div className="p-4">
-                      <div className="flex items-start gap-3">
-                        {canAssign ? (
-                          <input
-                            type="checkbox"
-                            checked={selectedUserIds.has(u.id)}
-                            onChange={() => handleToggleSelect(u)}
-                            className="mt-2 w-4 h-4 rounded border-brand-blue/30 accent-brand-blue"
-                            aria-label={`Seleccionar ${u.nombre}`}
-                          />
-                        ) : (
-                          <span className="w-4 mt-2" aria-hidden="true" />
-                        )}
-                        <UserAvatar name={u.nombre || u.email} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
+                  <li key={u.id}>
+                    <article
+                      className={`relative flex items-center gap-3 w-full px-4 py-1.5 pl-5 ${
+                        selected ? "bg-brand-blue/8" : "bg-white hover:bg-[#F4F8FC]"
+                      }`}
+                    >
+                      <span
+                        className={`absolute left-0 top-0 bottom-0 w-1 ${rolTheme(u.rol).strip}`}
+                        aria-hidden="true"
+                      />
+                      {canAssign ? (
+                        <CheckBox
+                          checked={selected}
+                          onChange={() => handleToggleSelect(u)}
+                          label={`Seleccionar ${u.nombre || u.email}`}
+                        />
+                      ) : (
+                        <span className="w-5 shrink-0" aria-hidden="true" />
+                      )}
+                      <UserAvatar name={u.nombre || u.email} rol={u.rol} size="sm" />
+                      <div className="min-w-0 flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-x-4 items-center">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
                             <button
                               type="button"
                               onClick={() => handleViewOpen(u)}
-                              className="font-bold text-brand-blue text-left truncate hover:underline"
+                              className="font-semibold text-brand-blue text-left truncate hover:underline"
                             >
-                              {u.nombre || "—"}
+                              {u.nombre || "Sin nombre"}
                             </button>
                             <AccountBadge active={Boolean(u.auth_id)} />
                           </div>
-                          <p className="text-xs text-neutral-500 truncate mt-0.5">{u.email}</p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            <RoleBadge rol={u.rol} />
-                          </div>
-                          {nombresEmpresas.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {nombresEmpresas.map((n) => (
-                                <span key={n} className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-white border border-brand-blue/15 text-brand-blue">
-                                  {n}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 mt-3">
-                            {!u.auth_id ? (
-                              <button type="button" onClick={() => handleActivateOpen(u)} className={`${moduleBtnSecondary} flex-1 justify-center py-2 text-xs`}>
-                                <Icon icon="lucide:key-round" width={13} height={13} /> Activar
-                              </button>
-                            ) : (
-                              <button type="button" onClick={() => handleResetOpen(u)} className={`${moduleBtnSecondary} flex-1 justify-center py-2 text-xs`}>
-                                <Icon icon="lucide:refresh-cw" width={13} height={13} /> Resetear
-                              </button>
-                            )}
-                            <button type="button" onClick={() => handleEditOpen(u)} className={`${moduleBtnPrimary} flex-1 justify-center py-2 text-xs`}>
-                              <Icon icon="lucide:pencil" width={13} height={13} /> Editar
-                            </button>
-                          </div>
+                          <p className="text-xs text-neutral-500 truncate">{u.email}</p>
                         </div>
+                        <div className="hidden lg:flex min-w-0">
+                          <RoleBadge rol={u.rol} />
+                        </div>
+                        <p className="hidden lg:block text-xs text-brand-blue/70 truncate">
+                          {nombresEmpresas.length > 0 ? nombresEmpresas.join(" · ") : "—"}
+                        </p>
                       </div>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-
-          {/* Desktop table */}
-          <table className="hidden md:table w-full text-sm border-collapse">
-            <thead className="sticky top-0 z-10 bg-[#E4EBF6] border-b border-brand-blue/15">
-              <tr>
-                <th className="px-4 py-3.5 text-center w-12">
-                  {asignablesFromFiltered.length > 0 && (
-                    <input
-                      type="checkbox"
-                      checked={asignablesFromFiltered.length > 0 && asignablesFromFiltered.every((u) => selectedUserIds.has(u.id))}
-                      onChange={handleSelectAllAsignables}
-                      className="w-4 h-4 rounded border-brand-blue/30 accent-brand-blue"
-                      aria-label="Seleccionar clientes y ejecutivos visibles"
-                    />
-                  )}
-                </th>
-                <th className="px-4 py-3.5 text-left text-sm font-bold text-brand-blue">Usuario</th>
-                <th className="px-4 py-3.5 text-left text-sm font-bold text-brand-blue w-32">Rol</th>
-                <th className="hidden lg:table-cell px-4 py-3.5 text-left text-sm font-bold text-brand-blue min-w-[160px]">Empresas</th>
-                <th className="px-4 py-3.5 text-center text-sm font-bold text-brand-blue w-28">Cuenta</th>
-                <th className="px-4 py-3.5 text-center text-sm font-bold text-brand-blue w-36">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsuarios.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Icon icon="lucide:users" width={32} height={32} className="text-brand-blue/25" />
-                      <p className="text-sm font-semibold text-brand-blue/60">Sin resultados</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredUsuarios.map((u, idx) => {
-                  const ids = empresasPorUsuario[u.id] ?? [];
-                  const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
-                  const canAssign = u.rol === "cliente" || u.rol === "ejecutivo";
-                  return (
-                    <tr
-                      key={u.id}
-                      className={`border-b border-brand-blue/10 transition-colors hover:bg-brand-blue/[0.06] ${
-                        idx % 2 === 0 ? "bg-[#F4F8FC]" : "bg-[#EAF0F8]"
-                      }`}
-                    >
-                      <td className="px-4 py-3.5 text-center">
-                        {canAssign ? (
-                          <input
-                            type="checkbox"
-                            checked={selectedUserIds.has(u.id)}
-                            onChange={() => handleToggleSelect(u)}
-                            className="w-4 h-4 rounded border-brand-blue/30 accent-brand-blue"
-                            aria-label={`Seleccionar ${u.nombre}`}
-                          />
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <UserAvatar name={u.nombre || u.email} size="sm" />
-                          <div className="min-w-0">
-                            <button
-                              type="button"
-                              onClick={() => handleViewOpen(u)}
-                              className="font-bold text-brand-blue truncate hover:underline text-left block max-w-[220px]"
-                            >
-                              {u.nombre || "—"}
-                            </button>
-                            <p className="text-xs text-neutral-500 truncate max-w-[240px]">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5"><RoleBadge rol={u.rol} /></td>
-                      <td className="hidden lg:table-cell px-4 py-3.5">
-                        {nombresEmpresas.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[220px]">
-                            {nombresEmpresas.slice(0, 2).map((n) => (
-                              <span key={n} className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-white border border-brand-blue/15 text-brand-blue truncate max-w-[100px]">
-                                {n}
-                              </span>
-                            ))}
-                            {nombresEmpresas.length > 2 && (
-                              <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-brand-blue/10 text-brand-blue">
-                                +{nombresEmpresas.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-neutral-400 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        {u.auth_id ? (
-                          <AccountBadge active />
-                        ) : (
+                      <div className="lg:hidden shrink-0">
+                        <RoleBadge rol={u.rol} />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!u.auth_id ? (
                           <button
                             type="button"
                             onClick={() => handleActivateOpen(u)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors"
                           >
                             <Icon icon="lucide:key-round" width={13} height={13} />
                             Activar
                           </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleResetOpen(u)}
+                            title="Resetear contraseña"
+                            className="p-1.5 rounded-md text-brand-blue/60 hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+                          >
+                            <Icon icon="lucide:refresh-cw" width={15} height={15} />
+                          </button>
                         )}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center justify-center gap-1">
-                          {u.auth_id && (
-                            <button
-                              type="button"
-                              onClick={() => handleResetOpen(u)}
-                              title="Resetear contraseña"
-                              className="p-2 rounded-lg text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-colors"
-                            >
-                              <Icon icon="lucide:refresh-cw" width={15} height={15} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleEditOpen(u)}
-                            title="Editar usuario"
-                            className="p-2 rounded-lg text-brand-blue hover:bg-brand-blue/10 border border-transparent hover:border-brand-blue/20 transition-colors"
-                          >
-                            <Icon icon="lucide:pencil" width={15} height={15} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleViewOpen(u)}
-                            title="Ver detalle"
-                            className="p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 border border-transparent hover:border-neutral-200 transition-colors"
-                          >
-                            <Icon icon="lucide:eye" width={15} height={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        <button
+                          type="button"
+                          onClick={() => handleEditOpen(u)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-blue text-white shadow-sm hover:bg-brand-blue/90 hover:shadow transition-all"
+                        >
+                          <Icon icon="lucide:pencil" width={13} height={13} />
+                          Editar
+                        </button>
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </section>
 
@@ -1033,61 +1188,39 @@ export function UsuariosContent() {
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="create-nombre" className={moduleLabel}>Nombre</label>
-                  <input
-                    id="create-nombre"
-                    type="text"
-                    value={form.nombre}
-                    onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                    className={moduleInput}
-                    placeholder="Nombre completo"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="create-rol" className={moduleLabel}>Rol</label>
-                  <select
-                    id="create-rol"
-                    value={form.rol}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        rol: e.target.value,
-                        empresaIds: e.target.value === "cliente" || e.target.value === "ejecutivo" ? f.empresaIds : [],
-                      }))
-                    }
-                    className={moduleInput}
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label htmlFor="create-nombre" className={moduleLabel}>Nombre</label>
+                <input
+                  id="create-nombre"
+                  type="text"
+                  value={form.nombre}
+                  onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                  className={moduleInput}
+                  placeholder="Nombre completo"
+                />
+              </div>
+              <div>
+                <span className={moduleLabel}>Rol</span>
+                <RolePicker
+                  value={form.rol}
+                  onChange={(rol) =>
+                    setForm((f) => ({
+                      ...f,
+                      rol,
+                      empresaIds: rol === "cliente" || rol === "ejecutivo" ? f.empresaIds : [],
+                    }))
+                  }
+                />
               </div>
               {(form.rol === "cliente" || form.rol === "ejecutivo") && empresas.length > 0 && (
-                <div>
-                  <label className={moduleLabel}>Empresas asignadas</label>
-                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-3 border border-brand-blue/15 rounded-xl bg-[#F4F8FC]">
-                    {empresas.map((emp) => (
-                      <label
-                        key={emp.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-brand-blue/15 cursor-pointer hover:border-brand-blue/30 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.empresaIds.includes(emp.id)}
-                          onChange={() => handleToggleEmpresa(emp.id)}
-                          className="rounded border-brand-blue/30 accent-brand-blue"
-                        />
-                        <span className="truncate max-w-[160px]">{emp.nombre}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {form.empresaIds.length === 0 && (
-                    <p className="text-amber-600 text-xs mt-1.5">Selecciona al menos una empresa.</p>
-                  )}
-                </div>
+                <EmpresaMultiPicker
+                  empresas={empresas}
+                  selectedIds={form.empresaIds}
+                  onChange={(empresaIds) => setForm((f) => ({ ...f, empresaIds }))}
+                />
+              )}
+              {(form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0 && empresas.length > 0 && (
+                <p className="text-amber-600 text-xs">Selecciona al menos una empresa.</p>
               )}
               {createError && (
                 <div className="px-3 py-2 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200" role="alert">
@@ -1154,30 +1287,15 @@ export function UsuariosContent() {
               </button>
             </div>
             <form onSubmit={handleAssignSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
-              <div>
-                <label className={moduleLabel}>
-                  Empresas asignadas
-                </label>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-brand-blue/20 rounded-lg bg-[#F4F8FC]">
-                  {empresas.map((emp) => (
-                    <label
-                      key={emp.id}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-brand-blue/15 cursor-pointer hover:bg-[#F4F8FC] text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={assignEmpresaIds.includes(emp.id)}
-                        onChange={() => handleToggleAssignEmpresa(emp.id)}
-                        className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                      />
-                      <span>{emp.nombre}</span>
-                    </label>
-                  ))}
-                </div>
-                {empresas.length === 0 && (
-                  <p className="text-neutral-500 text-sm">No hay empresas disponibles. Créalas en Configuración.</p>
-                )}
-              </div>
+              {empresas.length > 0 ? (
+                <EmpresaMultiPicker
+                  empresas={empresas}
+                  selectedIds={assignEmpresaIds}
+                  onChange={setAssignEmpresaIds}
+                />
+              ) : (
+                <p className="text-neutral-500 text-sm">No hay empresas disponibles. Créalas en Configuración.</p>
+              )}
 
               {assignError && (
                 <p className="text-red-600 text-sm" role="alert">
@@ -1378,215 +1496,224 @@ export function UsuariosContent() {
 
       {editingUser && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="fixed inset-0 bg-black/45 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-modal-title"
           onClick={handleEditClose}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-xl max-h-[92dvh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
             <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
               <div className="w-10 h-1 rounded-full bg-neutral-200" />
             </div>
-            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-                  <Icon icon="lucide:user-cog" width={15} height={15} className="text-white" />
-                </div>
-                <div>
-                  <h2 id="edit-modal-title" className="text-base font-bold text-brand-blue">Editar usuario</h2>
-                  <p className="text-sm text-neutral-500 mt-0.5">{editingUser.nombre} — {editingUser.email}</p>
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-brand-blue/10 flex items-start justify-between gap-3 bg-[#F7FAFD]">
+              <div className="flex items-center gap-3 min-w-0">
+                <UserAvatar name={editingUser.nombre || editingUser.email} rol={editForm.rol} />
+                <div className="min-w-0">
+                  <h2 id="edit-modal-title" className="text-lg font-bold text-brand-blue truncate">
+                    {editingUser.nombre || "Sin nombre"}
+                  </h2>
+                  <p className="text-sm text-neutral-500 truncate">{editingUser.email}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <RoleBadge rol={editForm.rol} />
+                    <AccountBadge active={Boolean(editingUser.auth_id)} />
+                  </div>
                 </div>
               </div>
-              <button type="button" onClick={handleEditClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+              <button
+                type="button"
+                onClick={handleEditClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-white shrink-0"
+                aria-label="Cerrar"
+              >
                 <Icon icon="lucide:x" width={16} height={16} />
               </button>
             </div>
-            <form onSubmit={handleEditSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
-              <div>
-                <label htmlFor="edit-rol" className={moduleLabel}>
-                  Rol
-                </label>
-                <select
-                  id="edit-rol"
-                  value={editForm.rol}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      rol: e.target.value,
-                      empresaIds: e.target.value === "cliente" || e.target.value === "ejecutivo" ? f.empresaIds : [],
-                    }))
-                  }
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+
+            <form onSubmit={handleEditSubmit} className="flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
+                <div>
+                  <span className={moduleLabel}>Rol</span>
+                  <RolePicker
+                    value={editForm.rol}
+                    onChange={(rol) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        rol,
+                        empresaIds: rol === "cliente" || rol === "ejecutivo" ? f.empresaIds : [],
+                      }))
+                    }
+                  />
+                </div>
+
+                {editForm.rol === "cliente" || editForm.rol === "ejecutivo" ? (
+                  empresas.length > 0 ? (
+                    <EmpresaMultiPicker
+                      empresas={empresas}
+                      selectedIds={editForm.empresaIds}
+                      onChange={(empresaIds) => setEditForm((f) => ({ ...f, empresaIds }))}
+                    />
+                  ) : (
+                    <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                      No hay empresas. Créalas en Configuración → Clientes.
+                    </p>
+                  )
+                ) : null}
+
+                {editForm.rol === "cliente" || editForm.rol === "ejecutivo" ? (
+                  editForm.empresaIds.length === 0 ? (
+                    <p className="text-amber-600 text-sm">Debes asignar al menos una empresa.</p>
+                  ) : null
+                ) : null}
+
+                {editingUser.auth_id ? (
+                  <div className="rounded-xl border border-brand-blue/15 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setEditPasswordOpen((v) => !v)}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#F4F8FC] hover:bg-[#EEF3FA] transition-colors"
+                    >
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand-blue">
+                        <Icon icon="lucide:key-round" width={16} height={16} />
+                        Cambiar contraseña
+                      </span>
+                      <Icon
+                        icon="lucide:chevron-down"
+                        width={16}
+                        height={16}
+                        className={`text-brand-blue/50 transition-transform ${editPasswordOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {editPasswordOpen ? (
+                      <div className="p-4 space-y-3 border-t border-brand-blue/10">
+                        {!changePasswordVerified ? (
+                          <>
+                            <label htmlFor="edit-change-current" className={moduleLabel}>
+                              Contraseña actual (para autorizar)
+                            </label>
+                            <div className="relative">
+                              <input
+                                id="edit-change-current"
+                                type={showChangePasswordCurrent ? "text" : "password"}
+                                value={changePasswordCurrent}
+                                onChange={(e) => setChangePasswordCurrent(e.target.value)}
+                                className={`${moduleInput} pr-9`}
+                                placeholder="Ingresa la contraseña actual"
+                                autoComplete="current-password"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowChangePasswordCurrent((p) => !p)}
+                                aria-label={showChangePasswordCurrent ? "Ocultar" : "Mostrar"}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                              >
+                                <Icon icon={showChangePasswordCurrent ? "lucide:eye-off" : "lucide:eye"} width={14} height={14} />
+                              </button>
+                            </div>
+                            {changePasswordError ? (
+                              <p className="text-red-600 text-xs" role="alert">{changePasswordError}</p>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleVerifyCurrentPassword(e);
+                              }}
+                              disabled={isVerifying || !changePasswordCurrent}
+                              className={`${moduleBtnSecondary} text-sm disabled:opacity-50`}
+                            >
+                              {isVerifying ? "Verificando…" : "Verificar y continuar"}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs font-medium text-emerald-600">Contraseña actual verificada</p>
+                            <label htmlFor="edit-change-new" className={moduleLabel}>
+                              Nueva contraseña (mín. 6 caracteres)
+                            </label>
+                            <div className="relative">
+                              <input
+                                id="edit-change-new"
+                                type={showChangePasswordNew ? "text" : "password"}
+                                minLength={6}
+                                value={changePasswordNew}
+                                onChange={(e) => setChangePasswordNew(e.target.value)}
+                                className={`${moduleInput} pr-9`}
+                                placeholder="Mínimo 6 caracteres"
+                                autoComplete="new-password"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowChangePasswordNew((p) => !p)}
+                                aria-label={showChangePasswordNew ? "Ocultar" : "Mostrar"}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                              >
+                                <Icon icon={showChangePasswordNew ? "lucide:eye-off" : "lucide:eye"} width={14} height={14} />
+                              </button>
+                            </div>
+                            <label htmlFor="edit-change-confirm" className={moduleLabel}>
+                              Confirmar nueva contraseña
+                            </label>
+                            <input
+                              id="edit-change-confirm"
+                              type="password"
+                              minLength={6}
+                              value={changePasswordConfirm}
+                              onChange={(e) => setChangePasswordConfirm(e.target.value)}
+                              className={moduleInput}
+                              placeholder="Repite la nueva contraseña"
+                              autoComplete="new-password"
+                            />
+                            {changePasswordError ? (
+                              <p className="text-red-600 text-xs" role="alert">{changePasswordError}</p>
+                            ) : null}
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setChangePasswordVerified(false);
+                                  setChangePasswordError(null);
+                                }}
+                                className={`${moduleBtnSecondary} text-sm`}
+                              >
+                                Atrás
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleChangePasswordSubmit(e);
+                                }}
+                                disabled={
+                                  isChangingPassword ||
+                                  changePasswordNew.length < 6 ||
+                                  changePasswordNew !== changePasswordConfirm
+                                }
+                                className={`${moduleBtnPrimary} text-sm disabled:opacity-50`}
+                              >
+                                {isChangingPassword ? "Actualizando…" : "Cambiar contraseña"}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {editError ? (
+                  <p className="text-red-600 text-sm" role="alert">
+                    {editError}
+                  </p>
+                ) : null}
               </div>
 
-              {(editForm.rol === "cliente" || editForm.rol === "ejecutivo") && empresas.length > 0 && (
-                <div>
-                  <label className={moduleLabel}>
-                    Empresas asignadas
-                  </label>
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 border border-brand-blue/20 rounded-lg bg-[#F4F8FC]">
-                    {empresas.map((emp) => (
-                      <label
-                        key={emp.id}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-neutral-200 cursor-pointer hover:bg-neutral-50 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editForm.empresaIds.includes(emp.id)}
-                          onChange={() => handleToggleEmpresaEdit(emp.id)}
-                          className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
-                        />
-                        <span>{emp.nombre}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {(editForm.rol === "cliente" || editForm.rol === "ejecutivo") && editForm.empresaIds.length === 0 && (
-                    <p className="text-amber-600 text-sm mt-1">Debes asignar al menos una empresa.</p>
-                  )}
-                </div>
-              )}
-
-              {editingUser.auth_id && (
-                <div className="border-t border-neutral-200 pt-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-neutral-800">Cambiar contraseña</h3>
-                  {!changePasswordVerified ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label htmlFor="edit-change-current" className={moduleLabel}>
-                          Contraseña actual (para autorizar)
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="edit-change-current"
-                            type={showChangePasswordCurrent ? "text" : "password"}
-                            value={changePasswordCurrent}
-                            onChange={(e) => setChangePasswordCurrent(e.target.value)}
-                            className={`${moduleInput} pr-9`}
-                            placeholder="Ingresa la contraseña actual"
-                            autoComplete="current-password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowChangePasswordCurrent((p) => !p)}
-                            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
-                            tabIndex={0}
-                            aria-label={showChangePasswordCurrent ? "Ocultar" : "Mostrar"}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
-                          >
-                            <Icon icon={showChangePasswordCurrent ? "lucide:eye-off" : "lucide:eye"} width={14} height={14} />
-                          </button>
-                        </div>
-                      </div>
-                      {changePasswordError && (
-                        <p className="text-red-600 text-xs" role="alert">{changePasswordError}</p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.preventDefault(); handleVerifyCurrentPassword(e); }}
-                        disabled={isVerifying || !changePasswordCurrent}
-                        className="px-3 py-1.5 text-xs font-medium text-brand-blue hover:bg-brand-blue/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 disabled:opacity-50"
-                      >
-                        {isVerifying ? "Verificando…" : "Verificar y continuar"}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-xs text-green-600 font-medium">Contraseña actual verificada</p>
-                      <div>
-                        <label htmlFor="edit-change-new" className={moduleLabel}>
-                          Nueva contraseña (mín. 6 caracteres)
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="edit-change-new"
-                            type={showChangePasswordNew ? "text" : "password"}
-                            minLength={6}
-                            value={changePasswordNew}
-                            onChange={(e) => setChangePasswordNew(e.target.value)}
-                            className={`${moduleInput} pr-9`}
-                            placeholder="Mínimo 6 caracteres"
-                            autoComplete="new-password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowChangePasswordNew((p) => !p)}
-                            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
-                            tabIndex={0}
-                            aria-label={showChangePasswordNew ? "Ocultar" : "Mostrar"}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
-                          >
-                            <Icon icon={showChangePasswordNew ? "lucide:eye-off" : "lucide:eye"} width={14} height={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="edit-change-confirm" className={moduleLabel}>
-                          Confirmar nueva contraseña
-                        </label>
-                        <input
-                          id="edit-change-confirm"
-                          type="password"
-                          minLength={6}
-                          value={changePasswordConfirm}
-                          onChange={(e) => setChangePasswordConfirm(e.target.value)}
-                          className={moduleInput}
-                          placeholder="Repite la nueva contraseña"
-                          autoComplete="new-password"
-                        />
-                      </div>
-                      {changePasswordError && (
-                        <p className="text-red-600 text-xs" role="alert">{changePasswordError}</p>
-                      )}
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => { setChangePasswordVerified(false); setChangePasswordError(null); }}
-                          className="px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded transition-colors"
-                        >
-                          Atrás
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.preventDefault(); handleChangePasswordSubmit(e); }}
-                          disabled={
-                            isChangingPassword ||
-                            changePasswordNew.length < 6 ||
-                            changePasswordNew !== changePasswordConfirm
-                          }
-                          className="px-3 py-1.5 text-xs font-medium text-white bg-brand-blue hover:bg-brand-blue/90 rounded disabled:opacity-50 transition-colors"
-                        >
-                          {isChangingPassword ? "Actualizando…" : "Cambiar contraseña"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {editError && (
-                <p className="text-red-600 text-sm" role="alert">
-                  {editError}
-                </p>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleEditClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
-                >
+              <div className="flex-shrink-0 border-t border-brand-blue/10 bg-white px-5 sm:px-6 py-3 flex gap-2">
+                <button type="button" onClick={handleEditClose} className={`${moduleBtnSecondary} flex-1 justify-center`}>
                   Cancelar
                 </button>
                 <button
@@ -1595,9 +1722,9 @@ export function UsuariosContent() {
                     isUpdating ||
                     ((editForm.rol === "cliente" || editForm.rol === "ejecutivo") && editForm.empresaIds.length === 0)
                   }
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {isUpdating ? "Guardando…" : "Guardar"}
+                  {isUpdating ? "Guardando…" : "Guardar cambios"}
                 </button>
               </div>
             </form>
@@ -1627,7 +1754,7 @@ export function UsuariosContent() {
               {/* Header */}
               <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <UserAvatar name={viewingUser.nombre || viewingUser.email} />
+                  <UserAvatar name={viewingUser.nombre || viewingUser.email} rol={viewingUser.rol} />
                   <div>
                     <h2 id="view-user-modal-title" className="text-base font-bold text-brand-blue">
                       {viewingUser.nombre || viewingUser.email}

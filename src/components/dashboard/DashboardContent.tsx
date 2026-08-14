@@ -153,7 +153,7 @@ function classifyRegionFromPodName(pod: string): RegionLabel | null {
 
 export function DashboardContent() {
   const { t, locale } = useLocale();
-  const { isExternalUser, isLoading: authLoading, isCliente, isStaff, empresaNombres } = useAuth();
+  const { isExternalUser, isLoading: authLoading, isCliente, isEjecutivo, isStaff, empresaNombres } = useAuth();
   const tr = t.dashboard;
 
   const [loading, setLoading] = useState(true);
@@ -183,7 +183,7 @@ export function DashboardContent() {
 
   const fetchDashboardData = useCallback(async () => {
     if (!supabase || authLoading) return;
-    if (isCliente && empresaNombres.length === 0) {
+    if ((isCliente || isEjecutivo) && empresaNombres.length === 0) {
       setMapOperations([]);
       setLoading(false);
       return;
@@ -197,7 +197,7 @@ export function DashboardContent() {
 
     setLastFetchedAt(new Date());
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres, buildFilteredQuery]);
+  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres, buildFilteredQuery]);
 
   useEffect(() => {
     if (!authLoading) void fetchDashboardData();

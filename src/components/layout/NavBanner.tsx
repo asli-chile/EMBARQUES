@@ -51,6 +51,7 @@ const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
   usuarios:              { icon: "lucide:users",             desc: "Gestión de usuarios y roles" },
   clientes:              { icon: "lucide:building-2",        desc: "Empresas clientes" },
   "asignar-clientes-empresas": { icon: "lucide:link",        desc: "Asignar clientes a empresas" },
+  "asignar-ejecutivos":        { icon: "lucide:user-cog",    desc: "Asignar ejecutivos a clientes" },
   "configuracion-transportes": { icon: "lucide:truck",       desc: "Empresas y tarifas de transporte" },
   consignatarios:        { icon: "lucide:contact",           desc: "Consignatarios y notify parties" },
   "formatos-documentos": { icon: "lucide:layout-template",  desc: "Plantillas de documentos" },

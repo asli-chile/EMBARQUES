@@ -1,14 +1,17 @@
 /**
- * Alcance de operaciones/reservas según rol cliente y empresas asignadas (usuarios_empresas).
+ * Alcance de operaciones/reservas según empresas asignadas (usuarios_empresas).
+ * Cliente y ejecutivo solo ven las empresas que tienen asignadas.
  */
 export type OperacionesClienteScope = {
   isCliente: boolean;
+  isEjecutivo?: boolean;
   empresaNombres: string[];
 };
 
-/** Cliente sin empresas asignadas: no debe cargar operaciones. */
+/** Cliente o ejecutivo sin empresas asignadas: no debe cargar operaciones. */
 export function shouldSkipOperacionesForCliente(scope: OperacionesClienteScope): boolean {
-  return scope.isCliente && scope.empresaNombres.length === 0;
+  const scoped = scope.isCliente || scope.isEjecutivo === true;
+  return scoped && scope.empresaNombres.length === 0;
 }
 
 /** Aplica filtro por nombre de empresa en operaciones.cliente. */
@@ -16,7 +19,7 @@ export function applyOperacionesClienteFilter<Q extends { in: (column: string, v
   query: Q,
   scope: OperacionesClienteScope,
 ): Q {
-  if (scope.isCliente) {
+  if (scope.empresaNombres.length > 0) {
     return query.in("cliente", scope.empresaNombres);
   }
   return query;

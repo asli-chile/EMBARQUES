@@ -68,6 +68,11 @@ const LazyAsignarClientesEmpresasContent = lazy(() =>
     default: m.AsignarClientesEmpresasContent,
   })),
 );
+const LazyAsignarEjecutivosContent = lazy(() =>
+  import("@/components/configuracion/AsignarEjecutivosContent").then((m) => ({
+    default: m.AsignarEjecutivosContent,
+  })),
+);
 const LazyTransportesConfigContent = lazy(() =>
   import("@/components/configuracion/TransportesConfigContent").then((m) => ({
     default: m.TransportesConfigContent,
@@ -189,6 +194,12 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ConfigGuard>
         <Sus>
           <LazyAsignarClientesEmpresasContent />
+        </Sus>
+      </ConfigGuard>
+    ) : pathname === "/configuracion/asignar-ejecutivos" ? (
+      <ConfigGuard>
+        <Sus>
+          <LazyAsignarEjecutivosContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/configuracion/transportes" ? (

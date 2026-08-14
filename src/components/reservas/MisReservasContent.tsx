@@ -740,7 +740,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
 
 export function MisReservasContent() {
   const { t } = useLocale();
-  const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isEjecutivo, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misReservas;
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -777,7 +777,7 @@ export function MisReservasContent() {
     if (!supabase || authLoading) return;
     setLoading(true);
 
-    const scope = { isCliente, empresaNombres };
+    const scope = { isCliente, isEjecutivo, empresaNombres };
     if (shouldSkipOperacionesForCliente(scope)) {
       setOperaciones([]);
       setLoading(false);
@@ -802,7 +802,7 @@ export function MisReservasContent() {
       setOperaciones((data ?? []) as Operacion[]);
     }
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();
@@ -1012,7 +1012,7 @@ export function MisReservasContent() {
     );
   }
 
-  if (isCliente && empresaNombres.length === 0) {
+  if ((isCliente || isEjecutivo) && empresaNombres.length === 0) {
     return (
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[#D9E3F2]" role="main">
         <div className="flex-1 flex items-center justify-center px-4">
@@ -1020,7 +1020,9 @@ export function MisReservasContent() {
             <Icon icon="lucide:building-2" className="mx-auto mb-3 text-brand-blue/50" width={40} height={40} />
             <p className="text-brand-blue font-semibold text-lg mb-2">Sin empresa asignada</p>
             <p className="text-brand-blue/70 text-sm">
-              Tu usuario cliente aún no tiene una empresa vinculada. Un administrador debe asignarte en Configuración → Asignar clientes-empresas.
+              {isEjecutivo
+                ? "Aún no tienes clientes asignados. Un administrador debe asignártelos en Configuración → Asignar ejecutivos a clientes."
+                : "Tu usuario cliente aún no tiene una empresa vinculada. Un administrador debe asignarte en Configuración → Asignar clientes-empresas."}
             </p>
           </div>
         </div>

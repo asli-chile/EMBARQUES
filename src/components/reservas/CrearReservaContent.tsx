@@ -178,6 +178,7 @@ export function CrearReservaContent() {
   const [puertosOrigen, setPuertosOrigen] = useState<SelectOption[]>([]);
   const [consignatarios, setConsignatarios] = useState<SelectOption[]>([]);
   const [ejecutivos, setEjecutivos] = useState<SelectOption[]>([]);
+  const [ejecutivosPorEmpresa, setEjecutivosPorEmpresa] = useState<Record<string, string[]>>({});
   const [clientes, setClientes] = useState<SelectOption[]>([]);
   const [especies, setEspecies] = useState<SelectOption[]>([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
@@ -286,9 +287,9 @@ export function CrearReservaContent() {
         destinosRes,
         puertosRes,
         consigRes,
-        ejecutivosRes,
         clientesRes,
         especiesRes,
+        ejecutivosApiRes,
       ] = await Promise.all([
         supabase.from("catalogos").select("*").eq("activo", true).order("orden"),
         supabase.from("navieras").select("id, nombre").order("nombre"),
@@ -298,9 +299,18 @@ export function CrearReservaContent() {
         supabase.from("destinos").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("puertos_origen").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("consignatarios").select("id, nombre").eq("activo", true).order("nombre"),
-        supabase.from("usuarios").select("id, nombre").in("rol", ["ejecutivo", "admin", "superadmin"]).eq("activo", true).order("nombre"),
         supabase.from("empresas").select("id, nombre").order("nombre"),
         supabase.from("especies").select("id, nombre").order("nombre"),
+        fetch(withBase("/api/reservas/ejecutivos"), { credentials: "include" })
+          .then(async (res) => {
+            const body = (await res.json()) as {
+              ejecutivos?: SelectOption[];
+              porEmpresa?: Record<string, string[]>;
+              error?: string;
+            };
+            return { ok: res.ok, body };
+          })
+          .catch(() => ({ ok: false, body: {} as { ejecutivos?: SelectOption[]; porEmpresa?: Record<string, string[]> } })),
       ]);
 
       if (catalogosRes.error) {
@@ -358,10 +368,12 @@ export function CrearReservaContent() {
         setConsignatarios(consigRes.data);
       }
 
-      if (ejecutivosRes.error) {
-        console.error("Error loading ejecutivos:", ejecutivosRes.error);
-      } else if (ejecutivosRes.data) {
-        const sorted = [...ejecutivosRes.data];
+      if (!ejecutivosApiRes.ok) {
+        console.error("Error loading ejecutivos:", ejecutivosApiRes.body.error);
+        setEjecutivos([]);
+        setEjecutivosPorEmpresa({});
+      } else {
+        const sorted = [...(ejecutivosApiRes.body.ejecutivos ?? [])];
         if (profile?.id) {
           const idx = sorted.findIndex((e) => e.id === profile.id);
           if (idx > 0) {
@@ -370,6 +382,7 @@ export function CrearReservaContent() {
           }
         }
         setEjecutivos(sorted);
+        setEjecutivosPorEmpresa(ejecutivosApiRes.body.porEmpresa ?? {});
       }
 
       if (especiesRes.error) {
@@ -389,19 +402,11 @@ export function CrearReservaContent() {
     }
 
     setLoadingCatalogos(false);
-  }, [supabase, tr.supabaseError]);
+  }, [supabase, tr.supabaseError, profile?.id]);
 
   useEffect(() => {
     void fetchCatalogos();
   }, [fetchCatalogos]);
-
-  // Auto-seleccionar ejecutivo logueado
-  useEffect(() => {
-    if (profile?.id && ejecutivos.length > 0 && !formData.ejecutivo) {
-      const me = ejecutivos.find((e) => e.id === profile.id);
-      if (me) setFormData((prev) => ({ ...prev, ejecutivo: me.id }));
-    }
-  }, [ejecutivos, profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!formData.naviera || !supabase) {
@@ -563,11 +568,34 @@ export function CrearReservaContent() {
       if (empresaNombres.length === 0) return [];
       return clientes.filter((c) => empresaNombres.includes(c.nombre));
     }
-    if (rol === "ejecutivo" && empresaNombres.length > 0) {
+    if (rol === "ejecutivo") {
+      if (empresaNombres.length === 0) return [];
       return clientes.filter((c) => empresaNombres.includes(c.nombre));
     }
     return clientes;
   }, [clientes, profile?.rol, empresaNombres]);
+
+  const ejecutivosFiltrados = useMemo(() => {
+    if (!formData.cliente) return [];
+    const assigned = ejecutivosPorEmpresa[formData.cliente];
+    if (assigned && assigned.length > 0) {
+      const allow = new Set(assigned);
+      return ejecutivos.filter((e) => allow.has(e.id));
+    }
+    return ejecutivos;
+  }, [formData.cliente, ejecutivosPorEmpresa, ejecutivos]);
+
+  useEffect(() => {
+    if (!formData.cliente) return;
+    const ids = ejecutivosFiltrados.map((e) => e.id);
+    if (ids.length === 0) {
+      if (formData.ejecutivo) setFormData((prev) => ({ ...prev, ejecutivo: "" }));
+      return;
+    }
+    if (ids.includes(formData.ejecutivo)) return;
+    const preferred = profile?.id && ids.includes(profile.id) ? profile.id : ids[0];
+    setFormData((prev) => ({ ...prev, ejecutivo: preferred }));
+  }, [formData.cliente, ejecutivosFiltrados, formData.ejecutivo, profile?.id]);
 
   // Auto-seleccionar empresa para rol "cliente" cuando solo tiene una opción
   useEffect(() => {
@@ -630,7 +658,18 @@ export function CrearReservaContent() {
 
   const handleSelectCliente = (cliente: SelectOption) => {
     setClienteInput(cliente.nombre);
-    setFormData((prev) => ({ ...prev, cliente: cliente.id }));
+    const assigned = ejecutivosPorEmpresa[cliente.id] ?? [];
+    setFormData((prev) => {
+      let ejecutivo = prev.ejecutivo;
+      if (assigned.length > 0) {
+        ejecutivo = assigned.includes(prev.ejecutivo)
+          ? prev.ejecutivo
+          : profile?.id && assigned.includes(profile.id)
+            ? profile.id
+            : assigned[0];
+      }
+      return { ...prev, cliente: cliente.id, ejecutivo };
+    });
   };
 
   const handleAddCliente = async () => {
@@ -1757,7 +1796,59 @@ export function CrearReservaContent() {
           </div>
         </div>
         <FieldGrid>
-          {renderSelect("ejecutivo", ejecutivos, tr.ejecutivo, true)}
+          <div className="sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+            {(() => {
+              const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
+              return (
+                <ComboboxInput
+                  id="cliente"
+                  label={tr.cliente}
+                  labelClass={labelClass}
+                  inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
+                  labelExtra={<>{reqMark}{isReadOnly && <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>}</>}
+                  value={clienteInput}
+                  options={clientesFiltradosPorRol}
+                  onSelect={handleSelectCliente}
+                  onChange={(val) => {
+                    setClienteInput(val);
+                    if (!val.trim()) setFormData((prev) => ({ ...prev, cliente: "", ejecutivo: "" }));
+                  }}
+                  onBlurExtra={() => {
+                    if (clienteInput.trim() && !clienteExisteExacto && !formData.cliente && profile?.rol !== "cliente") {
+                      setShowAddClienteModal(true);
+                    }
+                  }}
+                  onAddNew={profile?.rol !== "cliente" ? () => { setShowAddClienteModal(true); } : undefined}
+                  addNewLabel={() => tr.addNewLabel}
+                  placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
+                  disabled={isReadOnly}
+                  readOnly={isReadOnly}
+                />
+              );
+            })()}
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="ejecutivo" className={labelClass}>
+              {tr.ejecutivo}{reqMark}
+              {ejecutivosFiltrados.length > 0 && (
+                <span className="ml-2 text-brand-blue/35 font-semibold normal-case tracking-normal">({ejecutivosFiltrados.length})</span>
+              )}
+            </label>
+            <FormSelect
+              id="ejecutivo"
+              name="ejecutivo"
+              value={formData.ejecutivo}
+              placeholder={formData.cliente ? tr.selectPlaceholder : "Selecciona primero el cliente"}
+              disabled={loadingCatalogos || !formData.cliente}
+              options={ejecutivosFiltrados.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+              onChange={(value) => setFormData((prev) => ({ ...prev, ejecutivo: value }))}
+            />
+            {formData.cliente && ejecutivosFiltrados.length === 0 ? (
+              <p className="text-xs text-amber-700 mt-1.5">
+                Este cliente no tiene ejecutivos asignados. Asígnalos en Configuración → Asignar ejecutivos a clientes.
+              </p>
+            ) : null}
+          </div>
           {!isCliente && (
             <div className="min-w-0 sm:col-span-2 xl:col-span-1">
               <p className={labelClass}>{tr.duenoReserva}</p>
@@ -1782,37 +1873,6 @@ export function CrearReservaContent() {
               </div>
             </div>
           )}
-          <div className="sm:col-span-2 xl:col-span-1 2xl:col-span-2">
-            {(() => {
-              const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
-              return (
-                <ComboboxInput
-                  id="cliente"
-                  label={tr.cliente}
-                  labelClass={labelClass}
-                  inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
-                  labelExtra={<>{reqMark}{isReadOnly && <span className="ml-2 text-brand-blue/60 font-normal normal-case tracking-normal">· asignado</span>}</>}
-                  value={clienteInput}
-                  options={clientesFiltradosPorRol}
-                  onSelect={handleSelectCliente}
-                  onChange={(val) => {
-                    setClienteInput(val);
-                    if (!val.trim()) setFormData((prev) => ({ ...prev, cliente: "" }));
-                  }}
-                  onBlurExtra={() => {
-                    if (clienteInput.trim() && !clienteExisteExacto && !formData.cliente && profile?.rol !== "cliente") {
-                      setShowAddClienteModal(true);
-                    }
-                  }}
-                  onAddNew={profile?.rol !== "cliente" ? () => { setShowAddClienteModal(true); } : undefined}
-                  addNewLabel={() => tr.addNewLabel}
-                  placeholder={tr.placeholderCliente || "Buscar o escribir empresa..."}
-                  disabled={isReadOnly}
-                  readOnly={isReadOnly}
-                />
-              );
-            })()}
-          </div>
         </FieldGrid>
       </>
     ),

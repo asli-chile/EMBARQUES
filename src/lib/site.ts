@@ -55,6 +55,7 @@ export const siteConfig = {
         { labelKey: "usuarios", id: "usuarios", href: "/configuracion/usuarios" },
         { labelKey: "clientes", id: "clientes", href: "/configuracion/clientes" },
         { labelKey: "asignarClientesEmpresas", id: "asignar-clientes-empresas", href: "/configuracion/asignar-clientes-empresas" },
+        { labelKey: "asignarEjecutivos", id: "asignar-ejecutivos", href: "/configuracion/asignar-ejecutivos" },
         { labelKey: "configuracionTransportes", id: "configuracion-transportes", href: "/configuracion/transportes" },
         { labelKey: "consignatarios", id: "consignatarios", href: "/configuracion/consignatarios" },
         { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
