@@ -598,6 +598,9 @@ export function DashboardContent() {
     );
   }
 
+  const opsHref = withBase(isCliente ? "/reservas/mis-reservas" : "/registros");
+  const transportHref = withBase(isCliente ? "/reservas/mis-reservas" : "/transportes/reserva-asli");
+
   const kpiCards = [
     {
       key: "total",
@@ -607,7 +610,7 @@ export function DashboardContent() {
       icon: "lucide:layers",
       accent: "text-cyan-300",
       ring: "border-cyan-300/25",
-      href: withBase("/registros"),
+      href: opsHref,
     },
     {
       key: "pending",
@@ -617,7 +620,7 @@ export function DashboardContent() {
       icon: "lucide:clock-3",
       accent: "text-amber-300",
       ring: "border-amber-300/25",
-      href: withBase("/registros"),
+      href: opsHref,
     },
     {
       key: "etd",
@@ -627,7 +630,7 @@ export function DashboardContent() {
       icon: "lucide:ship",
       accent: "text-sky-300",
       ring: "border-sky-300/25",
-      href: withBase("/registros"),
+      href: opsHref,
     },
     {
       key: "cutoff",
@@ -647,7 +650,7 @@ export function DashboardContent() {
       icon: "lucide:calendar-clock",
       accent: "text-violet-300",
       ring: "border-violet-300/25",
-      href: withBase("/registros"),
+      href: opsHref,
     },
     {
       key: "transport",
@@ -657,7 +660,7 @@ export function DashboardContent() {
       icon: "lucide:truck",
       accent: "text-emerald-300",
       ring: "border-emerald-300/25",
-      href: withBase("/transportes/reserva-asli"),
+      href: transportHref,
     },
     {
       key: "docs",
@@ -679,7 +682,7 @@ export function DashboardContent() {
       icon: "lucide:alert-triangle",
       accent: "text-red-300",
       ring: "border-red-300/30",
-      href: withBase("/registros"),
+      href: opsHref,
     },
   ] as const;
 
@@ -755,7 +758,7 @@ export function DashboardContent() {
           <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-center justify-between gap-2">
               <p className="text-base font-bold text-cyan-100 truncate">{tr.upcomingDepartures}</p>
-              <a href={withBase("/registros")} className="text-sm font-semibold text-cyan-300/90 hover:text-cyan-200">{tr.viewAll}</a>
+              <a href={opsHref} className="text-sm font-semibold text-cyan-300/90 hover:text-cyan-200">{tr.viewAll}</a>
             </div>
             <div className="flex-1 min-h-0 overflow-auto">
               {upcomingRows.length === 0 ? (

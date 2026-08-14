@@ -22,11 +22,13 @@ export function InicioHero({
   t,
   isLoggedIn,
   profile,
+  isCliente = false,
   compact = false,
 }: {
   t: InicioCopy;
   isLoggedIn: boolean;
   profile: AuthProfile | null;
+  isCliente?: boolean;
   compact?: boolean;
 }) {
   const firstName = profile?.nombre?.split(" ")[0] ?? "";
@@ -98,7 +100,11 @@ export function InicioHero({
 
             <p data-hero-item className={`mt-5 text-white/55 max-w-lg leading-relaxed ${compact ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>
               {isLoggedIn ? (
-                <>Panel centralizado para embarques, registros, documentos y transporte.</>
+                isCliente ? (
+                  <>Panel centralizado para tus reservas, documentos y el estado de tus embarques.</>
+                ) : (
+                  <>Panel centralizado para embarques, registros, documentos y transporte.</>
+                )
               ) : (
                 <>
                   {t.heroDescriptionLine1} {t.heroDescriptionLine2}
@@ -108,20 +114,41 @@ export function InicioHero({
 
             <div data-hero-item className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
               {isLoggedIn ? (
-                <>
-                  <PrimaryButton href={withBase("/dashboard")}>
-                    <Icon icon="lucide:layout-dashboard" width={18} height={18} />
-                    Ir al Dashboard
-                  </PrimaryButton>
-                  <GhostButton href={withBase("/registros")}>
-                    <Icon icon="lucide:table-2" width={18} height={18} />
-                    Ver registros
-                  </GhostButton>
-                  <GhostButton href={withBase("/reservas/crear")} className="hidden md:inline-flex">
-                    <Icon icon="lucide:plus" width={18} height={18} />
-                    Nueva reserva
-                  </GhostButton>
-                </>
+                isCliente ? (
+                  <>
+                    <PrimaryButton href={withBase("/dashboard")}>
+                      <Icon icon="lucide:layout-dashboard" width={18} height={18} />
+                      Ir al Dashboard
+                    </PrimaryButton>
+                    <GhostButton href={withBase("/reservas/mis-reservas")}>
+                      <Icon icon="lucide:package" width={18} height={18} />
+                      Mis reservas
+                    </GhostButton>
+                    <GhostButton href={withBase("/reservas/crear")}>
+                      <Icon icon="lucide:plus" width={18} height={18} />
+                      Nueva reserva
+                    </GhostButton>
+                    <GhostButton href={withBase("/documentos/mis-documentos")}>
+                      <Icon icon="lucide:file-text" width={18} height={18} />
+                      Documentos
+                    </GhostButton>
+                  </>
+                ) : (
+                  <>
+                    <PrimaryButton href={withBase("/dashboard")}>
+                      <Icon icon="lucide:layout-dashboard" width={18} height={18} />
+                      Ir al Dashboard
+                    </PrimaryButton>
+                    <GhostButton href={withBase("/registros")}>
+                      <Icon icon="lucide:table-2" width={18} height={18} />
+                      Ver registros
+                    </GhostButton>
+                    <GhostButton href={withBase("/reservas/crear")} className="hidden md:inline-flex">
+                      <Icon icon="lucide:plus" width={18} height={18} />
+                      Nueva reserva
+                    </GhostButton>
+                  </>
+                )
               ) : (
                 <>
                   <AuthFormTrigger
@@ -167,12 +194,20 @@ export function InicioHero({
                   Accesos rápidos
                 </p>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {[
-                    { href: "/reservas/crear", icon: "lucide:plus-circle", label: "Crear reserva" },
-                    { href: "/reservas/mis-reservas", icon: "lucide:package", label: "Mis reservas" },
-                    { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: "Documentos" },
-                    { href: "/transportes/reserva-asli", icon: "lucide:truck", label: "Transportes" },
-                  ].map(({ href, icon, label }) => (
+                  {(isCliente
+                    ? [
+                        { href: "/reservas/crear", icon: "lucide:plus-circle", label: "Nueva reserva" },
+                        { href: "/reservas/mis-reservas", icon: "lucide:package", label: "Mis reservas" },
+                        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: "Documentos" },
+                        { href: "/dashboard", icon: "lucide:layout-dashboard", label: "Dashboard" },
+                      ]
+                    : [
+                        { href: "/reservas/crear", icon: "lucide:plus-circle", label: "Crear reserva" },
+                        { href: "/reservas/mis-reservas", icon: "lucide:package", label: "Mis reservas" },
+                        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: "Documentos" },
+                        { href: "/transportes/reserva-asli", icon: "lucide:truck", label: "Transportes" },
+                      ]
+                  ).map(({ href, icon, label }) => (
                     <a
                       key={href}
                       href={withBase(href)}

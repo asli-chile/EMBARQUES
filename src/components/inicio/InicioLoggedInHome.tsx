@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { withBase } from "@/lib/basePath";
-import { kpiConfig, quickLinks, type KpiData } from "./inicio-data";
+import { kpiConfig, quickLinks, clientQuickLinks, type KpiData } from "./inicio-data";
 import { GlassCard, inicioStyles, SectionHeader } from "./inicio-ui";
 import { KpiSkeletonCard } from "./InicioSkeleton";
 
@@ -15,11 +15,14 @@ const kpiAccent = [
 export function InicioLoggedInHome({
   kpiData,
   loadingKpis,
+  isCliente = false,
 }: {
   kpiData: KpiData;
   loadingKpis: boolean;
+  isCliente?: boolean;
 }) {
   const { t } = useLocale();
+  const links = isCliente ? clientQuickLinks : quickLinks;
 
   return (
     <>
@@ -93,7 +96,7 @@ export function InicioLoggedInHome({
           />
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {quickLinks.map(({ key, descKey, href, icon }, i) => (
+            {links.map(({ key, descKey, href, icon }, i) => (
               <a key={key} href={withBase(href)} data-inicio-reveal className="block group">
                 <GlassCard interactive className="h-full p-5 sm:p-6 flex flex-col gap-4" reveal={false}>
                   <div className="flex items-start justify-between">

@@ -202,10 +202,10 @@ export function InicioContent() {
         <InicioAuthSkeleton />
       ) : (
         <>
-          <InicioHero t={t.inicio} isLoggedIn={isLoggedIn} profile={profile} compact={isLoggedIn} />
+          <InicioHero t={t.inicio} isLoggedIn={isLoggedIn} profile={profile} isCliente={isCliente} compact={isLoggedIn} />
 
           {isLoggedIn ? (
-            <InicioLoggedInHome kpiData={kpiData} loadingKpis={loadingKpis} />
+            <InicioLoggedInHome kpiData={kpiData} loadingKpis={loadingKpis} isCliente={isCliente} />
           ) : (
             <InicioGuestLanding kpiData={kpiData} loadingKpis={loadingKpis} />
           )}
