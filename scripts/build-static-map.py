@@ -1,4 +1,4 @@
-"""Compose a static OSM map of the ASLI office and save WebP."""
+"""Compose a close satellite static map of the ASLI office."""
 from __future__ import annotations
 
 import io
@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 LAT, LON = -34.97437, -71.20348
-ZOOM = 15
+ZOOM = 18
 TILE = 256
 UA = "ASLI-web/1.0 (asli.cl; static office map)"
 
@@ -30,30 +30,33 @@ def lonlat_to_tile(lat: float, lon: float, z: int) -> tuple[float, float]:
 
 
 def fetch_tile(z: int, x: int, y: int) -> Image.Image:
-    url = f"https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    url = (
+        "https://server.arcgisonline.com/ArcGIS/rest/services/"
+        f"World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    )
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=20) as res:
+    with urllib.request.urlopen(req, timeout=25) as res:
         data = res.read()
-    time.sleep(0.12)
+    time.sleep(0.08)
     return Image.open(io.BytesIO(data)).convert("RGB")
 
 
 def draw_pin(im: Image.Image, px: float, py: float) -> None:
     d = ImageDraw.Draw(im, "RGBA")
     x, y = int(px), int(py)
-    # Drop shadow
-    d.ellipse((x - 10, y + 10, x + 10, y + 18), fill=(15, 40, 55, 70))
-    # Teardrop
-    d.polygon([(x, y - 36), (x + 16, y - 12), (x, y + 4), (x - 16, y - 12)], fill=(14, 90, 110, 255))
-    d.ellipse((x - 16, y - 42, x + 16, y - 10), fill=(14, 90, 110, 255))
-    d.ellipse((x - 7, y - 33, x + 7, y - 19), fill=(247, 245, 242, 255))
+    d.ellipse((x - 12, y + 10, x + 12, y + 20), fill=(0, 0, 0, 80))
+    d.polygon([(x, y - 42), (x + 18, y - 14), (x, y + 6), (x - 18, y - 14)], fill=(255, 255, 255, 255))
+    d.ellipse((x - 18, y - 50, x + 18, y - 14), fill=(255, 255, 255, 255))
+    d.polygon([(x, y - 38), (x + 14, y - 14), (x, y + 2), (x - 14, y - 14)], fill=(14, 90, 110, 255))
+    d.ellipse((x - 14, y - 46, x + 14, y - 18), fill=(14, 90, 110, 255))
+    d.ellipse((x - 6, y - 38, x + 6, y - 26), fill=(255, 255, 255, 255))
 
 
 def main() -> None:
     fx, fy = lonlat_to_tile(LAT, LON, ZOOM)
-    xs = list(range(int(fx) - 2, int(fx) + 4))  # 6 cols
+    xs = list(range(int(fx) - 2, int(fx) + 3))  # 5 cols
     ys = list(range(int(fy) - 1, int(fy) + 3))  # 4 rows
-    canvas = Image.new("RGB", (len(xs) * TILE, len(ys) * TILE), (232, 239, 232))
+    canvas = Image.new("RGB", (len(xs) * TILE, len(ys) * TILE), (30, 40, 35))
 
     for i, tx in enumerate(xs):
         for j, ty in enumerate(ys):
@@ -65,13 +68,17 @@ def main() -> None:
     py = (fy - ys[0]) * TILE
     draw_pin(canvas, px, py)
 
-    # Crop a bit of edge so the pin sits well
     w, h = canvas.size
-    canvas = canvas.crop((40, 20, w - 40, h - 20))
+    canvas = canvas.crop((24, 16, w - 24, h - 16))
+    canvas.thumbnail((1280, 860), Image.Resampling.LANCZOS)
+
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.rectangle((8, canvas.height - 22, 178, canvas.height - 6), fill=(0, 0, 0, 110))
+    d.text((12, canvas.height - 20), "Esri, Maxar, Earthstar", fill=(255, 255, 255, 220))
 
     for dest in OUTS:
         dest.parent.mkdir(parents=True, exist_ok=True)
-        canvas.save(dest, "WEBP", quality=78, method=6)
+        canvas.save(dest, "WEBP", quality=74, method=6)
         print(f"wrote {dest} {dest.stat().st_size / 1024:.1f} KB")
 
 
