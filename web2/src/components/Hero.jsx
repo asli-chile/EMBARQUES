@@ -32,26 +32,6 @@ const Hero = () => {
   const cta = useEnter(300)
   const image = useEnter(200)
 
-  const handleAccederApp = () => {
-    if (typeof window === 'undefined') return
-
-    const hostname = window.location.hostname
-    const isLocal =
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '' ||
-      hostname.startsWith('192.168.') ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('172.')
-
-    if (isLocal) {
-      window.location.replace('http://localhost:3001')
-      return
-    }
-
-    window.location.href = '/auth'
-  }
-
   const handleServiciosClick = () => {
     document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -105,10 +85,7 @@ const Hero = () => {
               </span>
             </p>
 
-            <div
-              className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:gap-3 mb-4 lg:mb-0"
-              style={cta}
-            >
+            <div className="flex mb-4 lg:mb-0" style={cta}>
               <button
                 type="button"
                 onClick={handleServiciosClick}
@@ -116,13 +93,6 @@ const Hero = () => {
               >
                 Ver servicios
                 <span aria-hidden="true">→</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleAccederApp}
-                className="btn-secondary !py-3 !px-4 sm:!px-7 !text-[0.9rem] w-full sm:w-auto justify-center"
-              >
-                Acceder a la app
               </button>
             </div>
           </div>
