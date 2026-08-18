@@ -139,9 +139,9 @@ export function InicioHero({
                       <Icon icon="lucide:layout-dashboard" width={18} height={18} />
                       Ir al Dashboard
                     </PrimaryButton>
-                    <GhostButton href={withBase("/registros")}>
-                      <Icon icon="lucide:table-2" width={18} height={18} />
-                      Ver registros
+                    <GhostButton href={withBase("/reservas/mis-reservas")}>
+                      <Icon icon="lucide:package" width={18} height={18} />
+                      Ir a mis reservas
                     </GhostButton>
                     <GhostButton href={withBase("/reservas/crear")} className="hidden md:inline-flex">
                       <Icon icon="lucide:plus" width={18} height={18} />
