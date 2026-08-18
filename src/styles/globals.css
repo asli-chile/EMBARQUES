@@ -92,47 +92,45 @@ html, body {
   justify-content: center;
 }
 
-/* ── Estilo Excel para la tabla de registros ── */
+/* ── Tabla de registros: mismo lenguaje visual que Mis reservas ── */
 .ag-theme-balham {
-  --ag-font-family: "Calibri", "Segoe UI", system-ui, sans-serif;
+  --ag-font-family: "Fira Sans", "Open Sans", system-ui, sans-serif;
   --ag-font-size: 13px;
+  --ag-foreground-color: #11224E;
 
-  /* Cabecera — verde Excel */
-  --ag-header-background-color: #1D6F42;
-  --ag-header-foreground-color: #FFFFFF;
-  --ag-header-cell-hover-background-color: #185A35;
+  --ag-header-background-color: #E8EEF7;
+  --ag-header-foreground-color: #11224E;
+  --ag-header-cell-hover-background-color: #DCE6F4;
   --ag-header-column-separator-display: block;
-  --ag-header-column-separator-color: rgba(255, 255, 255, 0.35);
+  --ag-header-column-separator-color: rgba(17, 34, 78, 0.14);
   --ag-header-column-separator-width: 1px;
-  --ag-header-column-resize-handle-color: rgba(255, 255, 255, 0.6);
+  --ag-header-column-resize-handle-color: rgba(17, 34, 78, 0.35);
 
-  /* Filas — blancas y alternas muy sutiles */
   --ag-background-color: #FFFFFF;
-  --ag-odd-row-background-color: #F2F9F5;
-  --ag-row-hover-color: #E6F3EA;
-  --ag-selected-row-background-color: #BDD7EE;
-  --ag-range-selection-background-color: rgba(189, 215, 238, 0.3);
-  --ag-range-selection-border-color: #107C41;
+  --ag-odd-row-background-color: #F7FAFD;
+  --ag-row-hover-color: rgba(17, 34, 78, 0.04);
+  --ag-selected-row-background-color: rgba(17, 34, 78, 0.08);
+  --ag-range-selection-background-color: rgba(17, 34, 78, 0.08);
+  --ag-range-selection-border-color: #11224E;
 
-  /* Bordes — grilla visible en todas las celdas */
-  --ag-border-color: #C8C8C8;
-  --ag-row-border-color: #D5D5D5;
+  --ag-border-color: rgba(17, 34, 78, 0.12);
+  --ag-row-border-color: rgba(17, 34, 78, 0.07);
   --ag-row-border-width: 1px;
   --ag-row-border-style: solid;
 
-  /* Pinned columns */
-  --ag-pinned-column-border-color: #ADADAD;
+  --ag-pinned-column-border-color: rgba(17, 34, 78, 0.18);
+  --ag-checkbox-checked-color: #11224E;
+  --ag-checkbox-indeterminate-color: #11224E;
 }
 
-/* Línea vertical entre celdas (columnas) */
 .ag-theme-balham .ag-cell {
-  border-right: 1px solid #D5D5D5;
+  border-right: 1px solid rgba(17, 34, 78, 0.08);
   white-space: nowrap !important;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 
-/* Forzar contenido interno en una sola línea (sin wraps por spans/divs internos) */
 .ag-theme-balham .ag-cell .ag-cell-value {
   white-space: nowrap !important;
   overflow: hidden;
@@ -143,31 +141,28 @@ html, body {
   white-space: nowrap !important;
 }
 
-/* Texto cabecera: negrita y algo más compacto */
 .ag-theme-balham .ag-header-cell-text {
   font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.2px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-/* Títulos de grupos de columnas — centrados */
+.ag-theme-balham .ag-header-cell .ag-header-cell-label,
 .ag-theme-balham .ag-header-group-cell-label {
   justify-content: center;
 }
 
-/* Icono de sort en cabecera — blanco */
 .ag-theme-balham .ag-sort-indicator-icon,
 .ag-theme-balham .ag-header-icon {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(17, 34, 78, 0.45);
 }
 
-/* Checkboxes de selección (cabecera y filas) con tamaño uniforme */
 .ag-theme-balham .ag-checkbox-input-wrapper {
   width: 16px;
   height: 16px;
 }
 
-/* Móvil: filas y checks más táctiles */
 @media (max-width: 767px) {
   .ag-theme-balham {
     --ag-font-size: 12px;
@@ -179,7 +174,7 @@ html, body {
     height: 22px;
   }
   .ag-theme-balham .ag-header-cell-text {
-    font-size: 11px;
+    font-size: 10px;
   }
 }
 
@@ -187,31 +182,26 @@ html, body {
   transform: scale(0.95);
 }
 
-/* Celda seleccionada (rango) */
 .ag-theme-balham .ag-cell.ag-cell-range-selected {
-  background-color: rgba(189, 215, 238, 0.35) !important;
+  background-color: rgba(17, 34, 78, 0.08) !important;
 }
 
-/* Celda en edición */
 .ag-theme-balham .ag-cell.ag-cell-inline-editing {
-  border: 2px solid #107C41 !important;
-  box-shadow: 0 0 0 2px rgba(16, 124, 65, 0.2);
+  border: 2px solid #11224E !important;
+  box-shadow: 0 0 0 2px rgba(17, 34, 78, 0.18);
 }
 
-/* Fila seleccionada check */
 .ag-theme-balham .ag-row-selected {
-  background-color: #BDD7EE !important;
+  background-color: rgba(17, 34, 78, 0.08) !important;
 }
 
-/* Columnas pinned — separador más visible */
 .ag-theme-balham .ag-pinned-left-cols-container .ag-cell:last-child {
-  border-right: 2px solid #ADADAD;
+  border-right: 2px solid rgba(17, 34, 78, 0.18);
 }
 
-/* Sin radio en la grilla */
 .ag-theme-balham .ag-root-wrapper {
   border-radius: 0;
-  border: 1px solid #BDBDBD;
+  border: none;
 }
 
 /* Barra de progreso indeterminada (subida de imagen stacking) */

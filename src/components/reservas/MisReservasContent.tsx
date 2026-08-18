@@ -221,17 +221,16 @@ type SortableHeaderProps = {
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
   className?: string;
-  align?: "left" | "center";
 };
 
-function SortableHeader({ field, label, sortField, sortDirection, onSort, className, align = "left" }: SortableHeaderProps) {
+function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className={`sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 whitespace-nowrap border-b border-brand-blue/15 ${align === "center" ? "text-center" : "text-left"} ${className ?? ""}`}>
+    <th className={`sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 whitespace-nowrap border-b border-brand-blue/15 text-center ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
-        className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+        className={`inline-flex items-center justify-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
           isActive ? "text-brand-blue" : "text-brand-blue/45 hover:text-brand-blue"
         }`}
       >
@@ -471,11 +470,11 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
         </td>
       )}
-      <td className={`px-3 py-2 ${isCliente ? "relative" : ""}`}>
+      <td className={`px-3 py-2 text-center ${isCliente ? "relative" : ""}`}>
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
         <span className="font-bold text-brand-blue text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
       </td>
-      <td className="px-3 py-2 min-w-[9rem]">
+      <td className="px-3 py-2 min-w-[9rem] text-center">
         {!isCliente ? (
           <div className="inline-flex items-center gap-0.5">
             <button
@@ -510,12 +509,12 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           </div>
         )}
       </td>
-      <td className="px-3 py-2 text-[13px] text-brand-blue font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
-      <td className="px-3 py-2 text-[13px] text-brand-blue/75 max-w-[8rem] truncate">{op.especie || "—"}</td>
-      <td className="px-3 py-2 text-[13px] text-brand-blue/75 whitespace-nowrap">{op.naviera || "—"}</td>
-      <td className="px-3 py-2 text-[13px] text-brand-blue/75 max-w-[9rem] truncate">{op.nave || "—"}</td>
-      <td className="px-3 py-2 text-[12px] text-brand-blue/70 font-medium">{op.pol || "—"}</td>
-      <td className="px-3 py-2 text-[12px] text-brand-blue/70 font-medium">{op.pod || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-brand-blue font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 max-w-[8rem] truncate">{op.especie || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 whitespace-nowrap">{op.naviera || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 max-w-[9rem] truncate">{op.nave || "—"}</td>
+      <td className="px-3 py-2 text-center text-[12px] text-brand-blue/70 font-medium">{op.pol || "—"}</td>
+      <td className="px-3 py-2 text-center text-[12px] text-brand-blue/70 font-medium">{op.pod || "—"}</td>
       <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
       <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
       <td className="px-3 py-2 text-center">
@@ -1482,10 +1481,10 @@ export function MisReservasContent() {
                     <SortableHeader field="nave" label={tr.colVessel} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="pol" label={tr.colPOL} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="pod" label={tr.colPOD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" className="min-w-[6.5rem]" />
-                    <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" className="min-w-[6.5rem]" />
-                    <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" />
-                    <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                    <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
+                    <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
+                    <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colTransport}</th>
                     <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colActions}</th>
                   </tr>

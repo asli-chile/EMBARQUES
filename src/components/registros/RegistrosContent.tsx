@@ -13,7 +13,7 @@ import { exportRegistrosSimpleExcel } from "@/lib/registros-export-simple-excel"
 import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
-import { modulePageBg, moduleHero } from "@/lib/ui/moduleStyles";
+import { modulePageBg } from "@/lib/ui/moduleStyles";
 import { formatRefAsli } from "@/lib/refAsli";
 import { EstadoOperacionCellRenderer } from "@/components/registros/EstadoOperacionCellRenderer";
 
@@ -1684,35 +1684,35 @@ export function RegistrosContent() {
   if (loading && rowData.length === 0) {
     return (
       <main className={`relative flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main" aria-busy="true">
-        <div className={`flex-shrink-0 ${moduleHero} px-4 sm:px-6 pt-6 pb-5`}>
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:clipboard-list" width={24} height={24} className="text-white" />
+        <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
-              <p className="text-base text-white/75 mt-1.5">{t.registros.loading}</p>
+              <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
+              <p className="text-xs text-white/65 mt-0.5">{t.registros.loading}</p>
             </div>
           </div>
         </div>
         <div className="flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15">
-          <div className="px-3 sm:px-4 py-3 flex items-center gap-2">
-            <div className="h-11 flex-1 rounded-lg bg-brand-blue/10 animate-pulse" />
-            <div className="h-11 w-24 rounded-lg bg-brand-blue/10 animate-pulse shrink-0" />
-            <div className="h-11 w-11 rounded-lg bg-brand-blue/10 animate-pulse shrink-0" />
-            <div className="h-11 w-11 rounded-lg bg-brand-blue/10 animate-pulse shrink-0" />
+          <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
+            <div className="h-9 flex-1 rounded-lg bg-white border border-brand-blue/15 animate-pulse" />
+            <div className="h-9 w-20 rounded-lg bg-white border border-brand-blue/15 animate-pulse shrink-0" />
+            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 animate-pulse shrink-0" />
+            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 animate-pulse shrink-0" />
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3">
-          <div className="h-full min-h-[250px] rounded-lg border border-brand-blue/15 bg-[#F4F8FC] shadow-sm overflow-hidden">
-            <div className="h-10 bg-[#E4EBF6] border-b border-brand-blue/15" />
+          <div className="h-full min-h-[250px] rounded-xl border border-brand-blue/12 bg-white shadow-sm overflow-hidden">
+            <div className="h-10 bg-[#E8EEF7] border-b border-brand-blue/15" />
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex gap-3 px-3 py-2.5 border-b border-brand-blue/8">
+              <div key={i} className={`flex gap-3 px-3 py-2.5 border-b border-brand-blue/8 ${i % 2 === 1 ? "bg-[#F7FAFD]" : ""}`}>
                 <div className="h-4 w-16 rounded bg-brand-blue/10 animate-pulse" />
-                <div className="h-4 flex-1 max-w-[8rem] rounded bg-amber-100/80 animate-pulse" />
+                <div className="h-4 flex-1 max-w-[8rem] rounded bg-brand-blue/10 animate-pulse" />
                 <div className="h-4 flex-1 rounded bg-brand-blue/8 animate-pulse" />
                 <div className="h-4 flex-1 rounded bg-brand-blue/8 animate-pulse" />
-                <div className="h-4 w-20 rounded bg-emerald-100/70 animate-pulse" />
+                <div className="h-4 w-20 rounded bg-brand-blue/10 animate-pulse" />
               </div>
             ))}
           </div>
@@ -1729,34 +1729,32 @@ export function RegistrosContent() {
         </div>
       )}
 
-      {/* Hero — mismo patrón que Mis Reservas */}
-      <div className={`flex-shrink-0 ${moduleHero} px-4 sm:px-6 pt-6 pb-5`}>
+      {/* Hero */}
+      <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:clipboard-list" width={24} height={24} className="text-white" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
+              <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-base text-white/75">
-                  <span className="font-semibold text-white">{rowData.length}</span> {t.registros.records}
-                </span>
-              </div>
+              <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
+              <p className="text-xs text-white/65 mt-0.5">
+                <span className="font-semibold text-white tabular-nums">{rowData.length}</span> {t.registros.records}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <a
               href={withBase("/reservas/papelera")}
-              className="p-2 bg-white/15 border border-white/20 rounded-xl hover:bg-white/25 transition-colors text-white/70 hover:text-white"
+              className="p-2 bg-white/12 border border-white/15 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
               title="Papelera"
             >
-              <Icon icon="lucide:trash-2" width={16} height={16} />
+              <Icon icon="lucide:trash-2" width={14} height={14} />
             </a>
             {canEdit && (
               <a
                 href={withBase("/reservas/crear")}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors"
               >
                 <Icon icon="lucide:plus" width={13} height={13} />
                 <span className="hidden sm:inline">{t.registros.newBooking}</span>
@@ -1767,13 +1765,13 @@ export function RegistrosContent() {
         </div>
       </div>
 
-      {/* Toolbar — búsqueda arriba en móvil; acciones en fila secundaria */}
+      {/* Toolbar */}
       <div className="relative z-40 flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
-        <div className="px-3 sm:px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
           <div className="flex-1 min-w-0 relative">
             <Icon
               icon="lucide:search"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-blue/35 w-3.5 h-3.5 pointer-events-none"
             />
             <input
               type="search"
@@ -1782,13 +1780,13 @@ export function RegistrosContent() {
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="Buscar: nave, booking, contenedor..."
-              className="w-full pl-10 pr-8 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base sm:text-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
+              className="w-full pl-8 pr-8 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all"
             />
             {globalSearch && (
               <button
                 type="button"
                 onClick={() => setGlobalSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-blue/35 hover:text-brand-blue transition-colors"
                 aria-label="Limpiar búsqueda"
               >
                 <Icon icon="lucide:x" width={13} height={13} />
@@ -1796,21 +1794,20 @@ export function RegistrosContent() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-0.5 px-0.5">
           <button
             type="button"
             onClick={() => setShowColumnPanel(true)}
-            className={`inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-2.5 border rounded-lg text-base font-semibold transition-colors shrink-0 ${
+            className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-2 border rounded-lg text-sm font-semibold transition-colors shrink-0 ${
               hiddenColumns.size > 0
                 ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
-                : "border-brand-blue/20 bg-[#F4F8FC] hover:bg-white text-brand-blue/70"
+                : "border-brand-blue/20 bg-white hover:bg-[#F4F8FC] text-brand-blue/70"
             }`}
             title="Columnas"
           >
-            <Icon icon="lucide:columns" width={16} height={16} />
+            <Icon icon="lucide:columns" width={13} height={13} />
             <span className="hidden sm:inline">Columnas</span>
             {hiddenColumns.size > 0 && (
-              <span className="w-4 h-4 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">
+              <span className="min-w-4 h-4 px-1 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">
                 {hiddenColumns.size}
               </span>
             )}
@@ -1820,10 +1817,10 @@ export function RegistrosContent() {
             type="button"
             onClick={() => void handleExportExcel()}
             disabled={rowData.length === 0}
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
             title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
           >
-            <Icon icon="lucide:table-2" width={16} height={16} />
+            <Icon icon="lucide:table-2" width={13} height={13} />
             <span className="hidden sm:inline">Excel</span>
           </button>
 
@@ -1831,13 +1828,13 @@ export function RegistrosContent() {
             type="button"
             onClick={() => void handleExportPdf()}
             disabled={rowData.length === 0 || isExportingPdf}
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-base font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
             title="Exportar Reserva Confirmada PDF"
           >
             <Icon
               icon={isExportingPdf ? "lucide:loader-2" : "lucide:file-text"}
-              width={16}
-              height={16}
+              width={13}
+              height={13}
               className={isExportingPdf ? "animate-spin" : ""}
             />
             <span className="hidden sm:inline">PDF</span>
@@ -1846,23 +1843,22 @@ export function RegistrosContent() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-brand-blue/60 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
+            className="p-2 text-brand-blue/55 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
             title={t.registros.refresh}
           >
-            <Icon icon="lucide:refresh-cw" width={16} height={16} />
+            <Icon icon="lucide:refresh-cw" width={14} height={14} />
           </button>
-          </div>
         </div>
 
         {canEdit && selectionCount > 0 && (
           <div className="px-3 sm:px-4 py-2 border-t border-brand-blue/10 flex items-center gap-2 bg-brand-blue/5">
-            <span className="text-base font-semibold text-brand-blue flex-1">
+            <span className="text-sm font-semibold text-brand-blue flex-1">
               {selectionCount} seleccionada{selectionCount !== 1 ? "s" : ""}
             </span>
             <button
               type="button"
               onClick={() => setShowTransportModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
             >
               <Icon icon="lucide:truck" width={12} height={12} />
               <span className="hidden sm:inline">{t.registros.sendToTransport}</span>
@@ -1871,7 +1867,7 @@ export function RegistrosContent() {
             <button
               type="button"
               onClick={() => void handleRemoveSelected()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
             >
               <Icon icon="lucide:trash-2" width={12} height={12} />
               <span className="hidden sm:inline">{t.registros.deleteSelection}</span>
@@ -1889,44 +1885,59 @@ export function RegistrosContent() {
         )}
       </div>
 
-      {/* Tabla — mismo contenedor que Mis Reservas */}
+      {/* Tabla */}
       <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3 flex flex-col">
         <div
-          className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden rounded-lg border border-brand-blue/15 bg-[#F4F8FC] shadow-sm"
+          className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden rounded-xl border border-brand-blue/12 bg-white shadow-sm flex flex-col"
           style={{ minHeight: 300 }}
         >
-          <AgGridReact<OperacionRow>
-            ref={gridRef}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
-            localeText={t.agGrid}
-            theme="legacy"
-            selectionColumnDef={{
-              width: 40,
-              minWidth: 40,
-              maxWidth: 40,
-              pinned: "left",
-              suppressMovable: true,
-              resizable: false,
-              suppressHeaderMenuButton: true,
-              suppressHeaderFilterButton: true,
-            }}
-            rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true, selectAll: "filtered", enableClickSelection: false }}
-            singleClickEdit
-            stopEditingWhenCellsLoseFocus
-            animateRows
-            domLayout="normal"
-            getRowId={(params) => params.data.id}
-            onCellValueChanged={handleCellValueChanged}
-            onCellContextMenu={handleCellContextMenu}
-            suppressContextMenu
-            preventDefaultOnContextMenu
-            onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
-            onGridReady={onGridReady}
-            onDragStopped={onDragStopped}
-            headerHeight={40}
-          />
+          <div className="flex-1 min-h-0">
+            <AgGridReact<OperacionRow>
+              ref={gridRef}
+              className="h-full w-full"
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={defaultColDef}
+              localeText={t.agGrid}
+              theme="legacy"
+              selectionColumnDef={{
+                width: 40,
+                minWidth: 40,
+                maxWidth: 40,
+                pinned: "left",
+                suppressMovable: true,
+                resizable: false,
+                suppressHeaderMenuButton: true,
+                suppressHeaderFilterButton: true,
+              }}
+              rowSelection={{ mode: "multiRow", checkboxes: true, headerCheckbox: true, selectAll: "filtered", enableClickSelection: false }}
+              singleClickEdit
+              stopEditingWhenCellsLoseFocus
+              animateRows
+              domLayout="normal"
+              getRowId={(params) => params.data.id}
+              onCellValueChanged={handleCellValueChanged}
+              onCellContextMenu={handleCellContextMenu}
+              suppressContextMenu
+              preventDefaultOnContextMenu
+              onSelectionChanged={(e) => setSelectionCount(e.api.getSelectedRows().length)}
+              onGridReady={onGridReady}
+              onDragStopped={onDragStopped}
+              headerHeight={40}
+            />
+          </div>
+          {rowData.length > 0 && (
+            <div className="px-3 py-2 border-t border-brand-blue/10 flex items-center justify-between bg-[#E8EEF7]/90 flex-shrink-0">
+              <span className="text-xs text-brand-blue/60 font-medium tabular-nums">
+                {rowData.length} {t.registros.records}
+              </span>
+              {selectionCount > 0 && (
+                <span className="text-xs text-brand-blue font-semibold">
+                  {selectionCount} seleccionado{selectionCount !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
