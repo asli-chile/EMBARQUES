@@ -1,5 +1,6 @@
 ---
 import FaviconLinks from "@/components/layout/FaviconLinks.astro";
+import { withBase } from "@/lib/basePath";
 import "@/styles/globals.css";
 
 interface Props {
@@ -25,6 +26,7 @@ const { title = "ASLI - Plataforma de Gestión Logística Integral", description
       media="(min-width: 768px)"
     />
     <title>{title}</title>
+    <script src={withBase("/erp-busy.js")}></script>
     <style is:global>
       vercel-live-feedback, #vercel-live-feedback, .__vercel_live_token,
       [data-vercel-toolbar], vercel-toolbar { display: none !important; }

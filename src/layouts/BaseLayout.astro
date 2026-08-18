@@ -28,6 +28,7 @@ const pathname = stripBasePathname(Astro.url.pathname);
       media="(min-width: 768px)"
     />
     <title>{title}</title>
+    <script src={withBase("/erp-busy.js")}></script>
     <style is:global>
       vercel-live-feedback, #vercel-live-feedback, .__vercel_live_token,
       [data-vercel-toolbar], vercel-toolbar { display: none !important; }
@@ -81,6 +82,7 @@ const pathname = stripBasePathname(Astro.url.pathname);
           if (sessionStorage.getItem("erp-shell-ready") === "1") {
             var el = document.getElementById("app-shell-loading");
             if (el) el.style.display = "none";
+            if (window.erpBusy) window.erpBusy.show();
           }
         } catch (_) {}
       })();
@@ -104,6 +106,7 @@ const pathname = stripBasePathname(Astro.url.pathname);
           } catch (_) {}
           var el = document.getElementById("app-shell-loading");
           if (el) el.remove();
+          if (window.erpBusy) window.erpBusy.hide();
         }
         function bind() {
           var island = document.querySelector("astro-island");
