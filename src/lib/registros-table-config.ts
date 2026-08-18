@@ -15,6 +15,7 @@ export const columnWidths = {
   // ─── COLUMNAS FIJAS ────────────────────────────────────────────────────────
   checkbox: 48,
   refAsli: 110,
+  refExterna: 130,
 
   // ─── INFORMACIÓN GENERAL ───────────────────────────────────────────────────
   ingreso: 140,

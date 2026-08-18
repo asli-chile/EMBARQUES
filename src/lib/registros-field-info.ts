@@ -12,6 +12,7 @@ export const REGISTROS_FIELD_GROUPS: FieldGroup[] = [
     groupLabelKey: "groupGeneral",
     fields: [
       { key: "ref_asli", labelKey: "colRefAsli" },
+      { key: "referencia_externa", labelKey: "colRefExterna" },
       { key: "ingreso", labelKey: "colEntryDate" },
       { key: "semana", labelKey: "colWeek" },
       { key: "ejecutivo", labelKey: "colExecutive" },

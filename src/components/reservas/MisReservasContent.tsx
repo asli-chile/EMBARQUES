@@ -67,6 +67,7 @@ type Operacion = {
   id: string;
   correlativo: number | null;
   ref_asli: string | null;
+  referencia_externa: string | null;
   cliente: string | null;
   especie: string | null;
   naviera: string | null;
@@ -98,7 +99,7 @@ type Operacion = {
 
 const estadoConfig = ESTADO_OPERACION_STYLES;
 
-type SortField = "ref_asli" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "estado_operacion";
+type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "estado_operacion";
 type SortDirection = "asc" | "desc";
 type ViewMode = "table" | "cards";
 
@@ -161,6 +162,7 @@ function buildEmailContent(op: Operacion) {
   htmlBody += `<p>Estimado equipo,</p><p>Se solicita la siguiente reserva:</p>`;
   htmlBody += renderHtmlTable("General", [
     ["Ref. ASLI", formatRefAsli(op.ref_asli, op.correlativo)],
+    ["Ref. Externa", op.referencia_externa],
     ["Cliente", op.cliente],
     ["Estado", op.estado_operacion],
   ]);
@@ -190,6 +192,7 @@ function buildReservaBody(op: Operacion): string {
   const lines: string[] = [
     `SOLICITUD DE RESERVA`,
     `Ref: ${displayRefAsli(op.ref_asli, op.correlativo)}`,
+    op.referencia_externa ? `Ref. Externa: ${op.referencia_externa}` : "",
     `Cliente: ${op.cliente ?? "-"}`,
     `Naviera: ${op.naviera ?? "-"}  |  Nave: ${op.nave ?? "-"}`,
     `POL: ${op.pol ?? "-"}  |  POD: ${op.pod ?? "-"}`,
@@ -345,6 +348,7 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
 
       {expanded && (
         <div className="mx-3 mb-2.5 rounded-lg border border-brand-blue/12 bg-white px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
+          <CardDetail label={tr.colRefExterna} value={op.referencia_externa || "—"} />
           <CardDetail label={tr.cardConsignee} value={op.consignatario || "—"} />
           <CardDetail label={tr.cardUnitType} value={op.tipo_unidad || "—"} />
           <CardDetail label={tr.cardPallets} value={op.pallets != null ? String(op.pallets) : "—"} />
@@ -474,6 +478,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
         <span className="font-bold text-brand-blue text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
       </td>
+      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/80 font-medium max-w-[9rem] truncate">{op.referencia_externa || "—"}</td>
       <td className="px-3 py-2 min-w-[9rem] text-center">
         {!isCliente ? (
           <div className="inline-flex items-center gap-0.5">
@@ -852,7 +857,7 @@ export function MisReservasContent() {
     let q = supabase
       .from("operaciones")
       .select(
-        `id, correlativo, ref_asli, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
+        `id, correlativo, ref_asli, referencia_externa, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
          booking_doc_url, enviado_transporte, tipo_reserva_transporte, estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto,
          temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
@@ -896,6 +901,7 @@ export function MisReservasContent() {
             op.nave?.toLowerCase().includes(search) ||
             op.ref_asli?.toLowerCase().includes(search) ||
             formatRefAsli(op.ref_asli, op.correlativo)?.toLowerCase().includes(search) ||
+            op.referencia_externa?.toLowerCase().includes(search) ||
             op.especie?.toLowerCase().includes(search) ||
             op.pod?.toLowerCase().includes(search) ||
             op.pol?.toLowerCase().includes(search)
@@ -1097,6 +1103,7 @@ export function MisReservasContent() {
 
   const exportCols: { key: keyof Operacion; label: string }[] = [
     { key: "ref_asli",        label: "Ref. ASLI" },
+    { key: "referencia_externa", label: "Ref. Externa" },
     { key: "booking",         label: "Booking" },
     { key: "cliente",         label: "Cliente" },
     { key: "especie",         label: "Especie" },
@@ -1474,6 +1481,7 @@ export function MisReservasContent() {
                       </th>
                     )}
                     <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader field="referencia_externa" label={tr.colRefExterna} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
                     <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[9rem]" />
                     <SortableHeader field="cliente" label={tr.colClient} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="especie" label={tr.colSpecies} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -1492,7 +1500,7 @@ export function MisReservasContent() {
                 <tbody>
                   {filteredOperaciones.length === 0 ? (
                     <tr>
-                      <td colSpan={isCliente ? 13 : 14} className="px-4 py-14 text-center">
+                      <td colSpan={isCliente ? 14 : 15} className="px-4 py-14 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
                             <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />

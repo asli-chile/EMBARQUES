@@ -23,6 +23,7 @@ export type OperacionRow = {
   id: string;
   correlativo: number;
   ref_asli: string;
+  referencia_externa: string;
   temporada: string;
   ingreso: string;
   semana: number | null;
@@ -118,6 +119,7 @@ type DbOperacion = {
   id: string;
   correlativo: number;
   ref_asli: string | null;
+  referencia_externa: string | null;
   temporada: string | null;
   ingreso: string | null;
   semana: number | null;
@@ -503,6 +505,7 @@ function createToRow(locale: string) {
       id: db.id,
       correlativo: db.correlativo,
       ref_asli: formatRefAsli(db.ref_asli, db.correlativo) ?? "",
+      referencia_externa: db.referencia_externa ?? "",
       temporada: db.temporada ?? "",
       ingreso: formatDateTime(db.ingreso, locale),
       semana: isoWeekFromDate(db.etd),
@@ -995,6 +998,7 @@ export function RegistrosContent() {
     () => [
       // ── 1. Identificación y Control ───────────────────────────────────────────
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left", lockPinned: true, suppressMovable: true },
+      { field: "referencia_externa", headerName: t.registros.colRefExterna, sortable: true, editable: canEdit, width: columnWidths.refExterna, pinned: "left", lockPinned: true },
       { field: "temporada", headerName: "Temporada", sortable: true, editable: canEdit, width: 120 },
       {
         field: "estado_operacion",
@@ -1226,23 +1230,23 @@ export function RegistrosContent() {
   const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {
     const c = leafCols;
     return [
-      { headerName: "Identificación y Control",       children: c.slice(0,  6)  },
-      { headerName: "Cliente y Condiciones",          children: c.slice(6,  13) },
-      { headerName: "Carga / Mercadería",             children: c.slice(13, 24) },
-      { headerName: "Unidad y Contenedor",            children: c.slice(24, 28) },
-      { headerName: "Naviera y Viaje",                children: c.slice(28, 37) },
-      { headerName: "Documentación",                  children: c.slice(37, 41) },
-      { headerName: "Planta y Proceso",               children: c.slice(41, 45) },
-      { headerName: "Stacking y Puerto",              children: c.slice(45, 49) },
-      { headerName: "Eventos Late / xLate",           children: c.slice(49, 54) },
-      { headerName: "Depósito y Movimientos",         children: c.slice(54, 57) },
-      { headerName: "Transporte",                     children: c.slice(57, 63) },
-      { headerName: "Costos y Logística",             children: c.slice(63, 70) },
-      { headerName: "Facturación",                    children: c.slice(70, 76) },
-      { headerName: "Márgenes",                       children: c.slice(76, 78) },
-      { headerName: "Hitos Administrativos",          children: c.slice(78, 85) },
-      { headerName: "Control y Auditoría",            children: c.slice(85, 86) },
-      { headerName: "Integraciones / Flujo",          children: c.slice(86)     },
+      { headerName: "Identificación y Control",       children: c.slice(0,  7)  },
+      { headerName: "Cliente y Condiciones",          children: c.slice(7,  14) },
+      { headerName: "Carga / Mercadería",             children: c.slice(14, 25) },
+      { headerName: "Unidad y Contenedor",            children: c.slice(25, 29) },
+      { headerName: "Naviera y Viaje",                children: c.slice(29, 38) },
+      { headerName: "Documentación",                  children: c.slice(38, 42) },
+      { headerName: "Planta y Proceso",               children: c.slice(42, 46) },
+      { headerName: "Stacking y Puerto",              children: c.slice(46, 50) },
+      { headerName: "Eventos Late / xLate",           children: c.slice(50, 55) },
+      { headerName: "Depósito y Movimientos",         children: c.slice(55, 58) },
+      { headerName: "Transporte",                     children: c.slice(58, 64) },
+      { headerName: "Costos y Logística",             children: c.slice(64, 71) },
+      { headerName: "Facturación",                    children: c.slice(71, 77) },
+      { headerName: "Márgenes",                       children: c.slice(77, 79) },
+      { headerName: "Hitos Administrativos",          children: c.slice(79, 86) },
+      { headerName: "Control y Auditoría",            children: c.slice(86, 87) },
+      { headerName: "Integraciones / Flujo",          children: c.slice(87)     },
     ];
   }, [leafCols]);
 
