@@ -114,6 +114,26 @@ function fmtDate(dateStr: string | null | undefined): string {
   try { return format(new Date(dateStr), "dd-MM-yyyy", { locale: es }); } catch { return dateStr; }
 }
 
+function fmtDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const stamp = dateStr.slice(0, 16);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(stamp)) {
+    const [dayPart, timePart] = stamp.split("T");
+    const [y, m, d] = dayPart.split("-");
+    return `${d}-${m}-${y} ${timePart}`;
+  }
+  return fmtDate(dateStr);
+}
+
+function CardDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-brand-blue/45">{label}</p>
+      <p className="text-xs font-semibold text-brand-blue leading-snug break-words mt-0.5">{value}</p>
+    </div>
+  );
+}
+
 function renderHtmlTable(title: string, data: [string, unknown][]) {
   const rowsHtml = data
     .map(([label, val]) => {
@@ -240,7 +260,15 @@ type CardProps = {
 };
 
 const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking }: CardProps) {
+  const [expanded, setExpanded] = useState(false);
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+  const transportLabel =
+    op.tipo_reserva_transporte === "asli"
+      ? tr.reservaAsliName
+      : op.tipo_reserva_transporte === "externa"
+        ? tr.typeExternal
+        : tr.typePendiente;
+
   return (
     <div
       onClick={!isCliente ? () => onSelect(op.id) : undefined}
@@ -315,6 +343,51 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
           <p className="text-brand-blue/60 truncate">{op.especie}</p>
         )}
       </div>
+
+      {expanded && (
+        <div className="mx-3 mb-2.5 rounded-lg border border-brand-blue/12 bg-white px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
+          <CardDetail label={tr.cardConsignee} value={op.consignatario || "—"} />
+          <CardDetail label={tr.cardUnitType} value={op.tipo_unidad || "—"} />
+          <CardDetail label={tr.cardPallets} value={op.pallets != null ? String(op.pallets) : "—"} />
+          <CardDetail label={tr.cardNetWeight} value={op.peso_neto != null ? `${op.peso_neto} kg` : "—"} />
+          <CardDetail label={tr.cardTemperature} value={op.temperatura != null ? `${op.temperatura}°C` : "—"} />
+          <CardDetail label={tr.cardVentilation} value={op.ventilacion != null ? `${op.ventilacion} CBM/h` : "—"} />
+          <CardDetail label={tr.cardDepot} value={op.deposito || "—"} />
+          <CardDetail label={tr.cardPlant} value={op.planta_presentacion || "—"} />
+          <CardDetail label={tr.cardCitation} value={fmtDateTime(op.citacion)} />
+          <CardDetail label={tr.cardStackingStart} value={fmtDateTime(op.inicio_stacking)} />
+          <CardDetail label={tr.cardStackingEnd} value={fmtDateTime(op.fin_stacking)} />
+          <CardDetail label={tr.colTransport} value={transportLabel} />
+          {op.booking_doc_url && (
+            <div className="col-span-2 min-w-0">
+              <a
+                href={op.booking_doc_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+              >
+                <IcoPaperclip size={12} />
+                {tr.cardViewDoc}
+                <IcoExternal size={12} />
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpanded((open) => !open);
+        }}
+        aria-expanded={expanded}
+        className="mx-3 mb-2 inline-flex items-center justify-center gap-1 rounded-lg border border-brand-blue/15 bg-[#F4F8FC] px-2.5 py-1.5 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/8 hover:border-brand-blue/25 transition-colors"
+      >
+        {expanded ? tr.cardHideDetails : tr.cardShowDetails}
+        <Icon icon={expanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} />
+      </button>
 
       <div className="px-2.5 py-1.5 border-t border-brand-blue/8 flex items-center justify-between bg-[#F7FAFD]">
         {!isCliente ? (
