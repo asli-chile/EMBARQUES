@@ -28,12 +28,15 @@ export function LoginForm() {
       const data = await res.json();
       setIsPending(false);
       if (data.success && data.redirect) {
+        window.erpBusy?.show();
         window.location.href = withBase(data.redirect);
-      } else if (data.error) {
-        setError(data.error);
+        return;
       }
+      window.erpBusy?.hide();
+      setError(typeof data?.error === "string" && data.error ? data.error : t.auth.errorAcceso);
     } catch {
       setIsPending(false);
+      window.erpBusy?.hide();
       setError(t.auth.errorConexion);
     }
   };
@@ -57,7 +60,7 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate data-erp-busy="skip">
         <div>
           <label htmlFor="login-email" className="block text-xs font-semibold text-neutral-600 mb-1.5">
             {t.auth.email}

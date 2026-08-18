@@ -10,6 +10,7 @@
   var navLock = false;
   var hideTimer = 0;
   var netTimer = 0;
+  var navSafety = 0;
   var root = null;
 
   function ensure() {
@@ -60,11 +61,16 @@
   function showNav() {
     navLock = true;
     clearTimeout(hideTimer);
+    clearTimeout(navSafety);
+    navSafety = setTimeout(function () {
+      if (navLock) hideNav();
+    }, 15000);
     paint();
   }
 
   function hideNav() {
     navLock = false;
+    clearTimeout(navSafety);
     paint();
   }
 
@@ -113,6 +119,7 @@
     var path = String(url || "");
     var verb = String(method || "GET").toUpperCase();
     if (/upsert_sesion_activa|sesiones_activas|notificaciones|visita|rpc\/upsert/i.test(path)) return true;
+    if (/\/api\/auth\/(login|signup)/i.test(path)) return true;
     if (verb === "GET" && /supabase\.co|auth\/v1/i.test(path)) return true;
     return false;
   }
@@ -131,14 +138,24 @@
 
   document.addEventListener(
     "submit",
-    function () {
-      showNav();
+    function (event) {
+      var form = event.target && event.target.closest ? event.target.closest("form") : event.target;
+      if (form && form.getAttribute && form.getAttribute("data-erp-busy") === "skip") {
+        hideNav();
+      }
     },
     true,
   );
 
-  window.addEventListener("pageshow", function (event) {
-    if (event.persisted) hideNav();
+  document.addEventListener("submit", function (event) {
+    var form = event.target && event.target.closest ? event.target.closest("form") : event.target;
+    if (form && form.getAttribute && form.getAttribute("data-erp-busy") === "skip") return;
+    if (event.defaultPrevented) return;
+    showNav();
+  });
+
+  window.addEventListener("pageshow", function () {
+    hideNav();
   });
 
   document.addEventListener("astro:hydrate", hideNav);
@@ -152,9 +169,6 @@
     island.addEventListener("astro:hydrate", hideNav);
   }
   bindIsland();
-  setTimeout(function () {
-    if (navLock) hideNav();
-  }, 15000);
 
   if (typeof fetch === "function") {
     var rawFetch = fetch;

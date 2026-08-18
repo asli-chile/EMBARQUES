@@ -26,9 +26,11 @@ export function RegistroForm() {
       const data = await res.json().catch(() => ({}));
       setIsPending(false);
       if (data.success && data.redirect) {
+        window.erpBusy?.show();
         window.location.href = withBase(data.redirect);
         return;
       }
+      window.erpBusy?.hide();
       setError(
         (typeof data?.error === "string" && data.error) ||
           (res.status === 400 && t.auth.errorDatos) ||
@@ -36,6 +38,7 @@ export function RegistroForm() {
       );
     } catch {
       setIsPending(false);
+      window.erpBusy?.hide();
       setError(t.auth.errorConexion);
     }
   };
@@ -59,7 +62,7 @@ export function RegistroForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate data-erp-busy="skip">
         <div>
           <label htmlFor="reg-name" className="block text-xs font-semibold text-neutral-600 mb-1.5">
             {t.auth.name}
