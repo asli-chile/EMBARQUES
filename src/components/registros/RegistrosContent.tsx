@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-balham.css";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, SELECTION_COLUMN_ID } from "ag-grid-community";
 import type { ColDef, ColGroupDef, CellContextMenuEvent } from "ag-grid-community";

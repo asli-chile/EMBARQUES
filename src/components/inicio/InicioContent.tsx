@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
+import { shouldUseHeavyVisualEffects } from "@/lib/ui/devicePerf";
 import "@/styles/inicio.css";
 import type { KpiData } from "./inicio-data";
 import { InicioBackground } from "./InicioBackground";
@@ -15,8 +14,6 @@ import { InicioLoggedInHome } from "./InicioLoggedInHome";
 import { InicioGuestLanding } from "./InicioGuestLanding";
 import { InicioAuthSkeleton } from "./InicioSkeleton";
 import { InicioFooter, ScrollTopButton } from "./inicio-ui";
-
-gsap.registerPlugin(ScrollTrigger);
 
 export function InicioContent() {
   const { t } = useLocale();
@@ -35,6 +32,7 @@ export function InicioContent() {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
 
   useEffect(() => {
+    if (!shouldUseHeavyVisualEffects()) return;
     const id = "inicio-fonts";
     if (document.getElementById(id)) return;
     const link = document.createElement("link");
@@ -64,70 +62,79 @@ export function InicioContent() {
 
   useLayoutEffect(() => {
     const main = mainRef.current;
-    if (!main || authLoading) return;
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
+    if (!main || authLoading || !shouldUseHeavyVisualEffects()) return;
 
-    const ctx = gsap.context(() => {
-      const heroItems = main.querySelectorAll<HTMLElement>("[data-hero-item]");
-      if (heroItems.length) {
-        gsap.set(heroItems, { autoAlpha: 0, y: 28 });
-        gsap.to(heroItems, {
-          autoAlpha: 1,
-          y: 0,
-          duration: 0.65,
-          stagger: 0.1,
-          ease: "power3.out",
-          delay: 0.05,
-        });
-      }
+    let reverted = false;
+    let revert = () => {};
 
-      const parallaxEl = bgParallaxRef.current;
-      if (parallaxEl) {
-        gsap.to(parallaxEl, {
-          y: 48,
-          ease: "none",
-          scrollTrigger: {
-            trigger: main,
-            scroller: main,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: 0.45,
-          },
-        });
-      }
-
-      main.querySelectorAll<HTMLElement>("[data-inicio-section]").forEach((section) => {
-        const items = section.querySelectorAll<HTMLElement>("[data-inicio-reveal]");
-        if (!items.length) return;
-        gsap.fromTo(
-          items,
-          { autoAlpha: 0, y: 32 },
-          {
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([{ default: gsap }, { ScrollTrigger }]) => {
+      if (reverted || !mainRef.current) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const ctx = gsap.context(() => {
+        const heroItems = main.querySelectorAll<HTMLElement>("[data-hero-item]");
+        if (heroItems.length) {
+          gsap.set(heroItems, { autoAlpha: 0, y: 28 });
+          gsap.to(heroItems, {
             autoAlpha: 1,
             y: 0,
-            duration: 0.55,
-            stagger: 0.06,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: section,
-              scroller: main,
-              start: "top 88%",
-              toggleActions: "play none none none",
-            },
-          },
-        );
-      });
-    }, main);
+            duration: 0.65,
+            stagger: 0.1,
+            ease: "power3.out",
+            delay: 0.05,
+          });
+        }
 
-    return () => ctx.revert();
+        const parallaxEl = bgParallaxRef.current;
+        if (parallaxEl) {
+          gsap.to(parallaxEl, {
+            y: 48,
+            ease: "none",
+            scrollTrigger: {
+              trigger: main,
+              scroller: main,
+              start: "top top",
+              end: "bottom bottom",
+              scrub: 0.45,
+            },
+          });
+        }
+
+        main.querySelectorAll<HTMLElement>("[data-inicio-section]").forEach((section) => {
+          const items = section.querySelectorAll<HTMLElement>("[data-inicio-reveal]");
+          if (!items.length) return;
+          gsap.fromTo(
+            items,
+            { autoAlpha: 0, y: 32 },
+            {
+              autoAlpha: 1,
+              y: 0,
+              duration: 0.55,
+              stagger: 0.06,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: section,
+                scroller: main,
+                start: "top 88%",
+                toggleActions: "play none none none",
+              },
+            },
+          );
+        });
+      }, main);
+      revert = () => ctx.revert();
+    });
+
+    return () => {
+      reverted = true;
+      revert();
+    };
   }, [isLoggedIn, authLoading]);
 
   useEffect(() => {
-    if (!loadingKpis && !authLoading) {
+    if (loadingKpis || authLoading || !shouldUseHeavyVisualEffects()) return;
+    void import("gsap/ScrollTrigger").then(({ ScrollTrigger }) => {
       requestAnimationFrame(() => ScrollTrigger.refresh());
-    }
+    });
   }, [loadingKpis, isLoggedIn, authLoading]);
 
   useEffect(() => {

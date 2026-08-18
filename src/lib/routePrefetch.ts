@@ -48,6 +48,15 @@ export function prefetchRoute(pathname: string): void {
 
 /** Prefetch en idle de rutas frecuentes tras hidratar. */
 export function prefetchFrequentRoutes(): void {
+  if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+    return;
+  }
+  const connection = (
+    navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+  ).connection;
+  if (connection?.saveData || connection?.effectiveType === "2g" || connection?.effectiveType === "slow-2g") {
+    return;
+  }
   const common = ["/inicio", "/dashboard", "/registros", "/reservas/mis-reservas"];
   const schedule =
     typeof requestIdleCallback === "function"
