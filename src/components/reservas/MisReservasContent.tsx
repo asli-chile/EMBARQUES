@@ -1,4 +1,4 @@
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { Icon } from "@iconify/react";
@@ -259,9 +259,10 @@ type CardProps = {
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
+  onContextMenu: (event: MouseEvent, op: Operacion) => void;
 };
 
-const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking }: CardProps) {
+const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking, onContextMenu }: CardProps) {
   const [expanded, setExpanded] = useState(false);
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   const transportLabel =
@@ -274,6 +275,7 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
   return (
     <div
       onClick={!isCliente ? () => onSelect(op.id) : undefined}
+      onContextMenu={(event) => onContextMenu(event, op)}
       className={`relative bg-white rounded-xl flex flex-col overflow-hidden transition-all duration-150 border ${
         !isCliente ? "cursor-pointer" : ""
       } ${
@@ -441,6 +443,7 @@ type TableRowProps = {
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
+  onContextMenu: (event: MouseEvent, op: Operacion) => void;
 };
 
 const MisReservasTableRow = memo(function MisReservasTableRow({
@@ -459,11 +462,13 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   onCopy,
   onEmail,
   onBooking,
+  onContextMenu,
 }: TableRowProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
     <tr
       style={ROW_CV}
+      onContextMenu={(event) => onContextMenu(event, op)}
       className={`border-b border-brand-blue/[0.07] ${
         selected ? "bg-brand-blue/[0.08]" : idx % 2 === 0 ? "bg-white hover:bg-brand-blue/[0.04]" : "bg-[#F7FAFD] hover:bg-brand-blue/[0.04]"
       }`}
@@ -837,6 +842,12 @@ export function MisReservasContent() {
   );
   const [emailModal, setEmailModal] = useState<Operacion | null>(null);
   const [bookingModal, setBookingModal] = useState<Operacion | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    operacionId: string;
+    refLabel: string;
+  } | null>(null);
   const deferredSearch = useDeferredValue(searchTerm);
 
   const supabase = useMemo(() => {
@@ -984,6 +995,45 @@ export function MisReservasContent() {
 
   const handleOpenEmail = useCallback((op: Operacion) => setEmailModal(op), []);
   const handleOpenBooking = useCallback((op: Operacion) => setBookingModal(op), []);
+
+  const handleOpenContextMenu = useCallback((event: MouseEvent, op: Operacion) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setCtxMenu({
+      x: event.clientX,
+      y: event.clientY,
+      operacionId: op.id,
+      refLabel: formatRefAsli(op.ref_asli, op.correlativo) ?? "—",
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    const t = window.setTimeout(() => {
+      window.addEventListener("click", close);
+      window.addEventListener("contextmenu", close);
+      window.addEventListener("scroll", close, true);
+      window.addEventListener("keydown", onKey);
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("click", close);
+      window.removeEventListener("contextmenu", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [ctxMenu]);
+
+  const handleCtxViewDocuments = useCallback(() => {
+    if (!ctxMenu) return;
+    const url = `${withBase("/documentos/mis-documentos")}?op=${encodeURIComponent(ctxMenu.operacionId)}`;
+    setCtxMenu(null);
+    window.location.assign(url);
+  }, [ctxMenu]);
 
   const handleMoveToTrash = async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
@@ -1531,6 +1581,7 @@ export function MisReservasContent() {
                         onCopy={handleCopy}
                         onEmail={handleOpenEmail}
                         onBooking={handleOpenBooking}
+                        onContextMenu={handleOpenContextMenu}
                       />
                     ))
                   )}
@@ -1578,6 +1629,7 @@ export function MisReservasContent() {
                     onCopy={handleCopy}
                     onEmail={handleOpenEmail}
                     onBooking={handleOpenBooking}
+                    onContextMenu={handleOpenContextMenu}
                   />
                 ))}
               </div>
@@ -1703,6 +1755,35 @@ export function MisReservasContent() {
         </div>
         );
       })()}
+
+      {ctxMenu && createPortal((() => {
+        const menuW = 240;
+        const menuH = 88;
+        const left = Math.max(8, Math.min(ctxMenu.x, window.innerWidth - menuW - 8));
+        const top = Math.max(8, Math.min(ctxMenu.y, window.innerHeight - menuH - 8));
+        return (
+          <div
+            role="menu"
+            className="fixed z-[80] min-w-[220px] rounded-lg border border-neutral-200 bg-white shadow-lg py-1"
+            style={{ left, top }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 truncate">
+              {ctxMenu.refLabel}
+            </p>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleCtxViewDocuments}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-neutral-800 hover:bg-brand-blue/8 hover:text-brand-blue transition-colors"
+            >
+              <Icon icon="lucide:folder-open" width={16} height={16} className="shrink-0 text-brand-blue" />
+              {tr.contextViewDocuments}
+            </button>
+          </div>
+        );
+      })(), document.body)}
 
       {/* Modals — renderizados en document.body via portal para evitar problemas de
           fixed positioning en iOS Safari cuando los ancestros tienen overflow:hidden */}

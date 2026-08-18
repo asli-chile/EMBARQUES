@@ -992,6 +992,7 @@ export const translations = {
       cardStackingStart: "Inicio stacking",
       cardStackingEnd: "Fin stacking",
       cardViewDoc: "Ver documento",
+      contextViewDocuments: "Ver documentos",
     },
     papelera: {
       loading: "Cargando papelera...",
@@ -3362,6 +3363,7 @@ export const translations = {
       cardStackingStart: "Stacking start",
       cardStackingEnd: "Stacking end",
       cardViewDoc: "View document",
+      contextViewDocuments: "View documents",
     },
     papelera: {
       loading: "Loading trash...",
