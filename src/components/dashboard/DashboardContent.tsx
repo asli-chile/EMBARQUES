@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
 import { RoleForbidden } from "@/components/layout/RoleForbidden";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
 import { format, formatDistanceToNow, addDays, startOfDay, parseISO, isValid, differenceInCalendarDays } from "date-fns";
@@ -173,17 +174,15 @@ export function DashboardContent() {
     (selectCols: string) => {
       if (!supabase) throw new Error("Supabase not ready");
       let q = supabase.from("operaciones").select(selectCols).is("deleted_at", null);
-      if (empresaNombres.length > 0) {
-        q = q.in("cliente", empresaNombres);
-      }
+      q = applyOperacionesClienteFilter(q, { isCliente, isEjecutivo, empresaNombres });
       return q;
     },
-    [supabase, empresaNombres]
+    [supabase, isCliente, isEjecutivo, empresaNombres]
   );
 
   const fetchDashboardData = useCallback(async () => {
     if (!supabase || authLoading) return;
-    if ((isCliente || isEjecutivo) && empresaNombres.length === 0) {
+    if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
       setMapOperations([]);
       setLoading(false);
       return;
@@ -571,26 +570,26 @@ export function DashboardContent() {
 
   if (loading) {
     return (
-      <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col bg-[#060B17]">
+      <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-[#060B17]">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
           <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         </div>
-        <div className="relative shrink-0 bg-[#0A1328]/90 border-b border-cyan-400/20 h-11" />
-        <div className="relative flex-1 min-h-0 p-2 grid grid-rows-[auto_1fr_1fr] gap-2 animate-pulse">
-          <div className="grid grid-cols-8 gap-2 h-14">
+        <div className="relative shrink-0 bg-[#0A1328]/90 border-b border-cyan-400/20 h-14" />
+        <div className="relative p-4 flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:p-4 lg:gap-3 animate-pulse">
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 h-28 lg:h-14">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-lg border border-cyan-300/20" />
+              <div key={i} className="bg-[#101C36]/80 rounded-xl border border-cyan-300/20" />
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-3 lg:flex-1 lg:min-h-0">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-lg border border-cyan-300/20" />
+              <div key={i} className="bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-56 lg:h-auto" />
             ))}
           </div>
-          <div className="grid grid-cols-4 gap-2 min-h-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-lg border border-cyan-300/20" />
+              <div key={i} className="bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-40 lg:h-32" />
             ))}
           </div>
         </div>
@@ -693,7 +692,7 @@ export function DashboardContent() {
   const topSpeciesPod = speciesLeaderPodItems.slice(0, 5);
 
   return (
-    <main className="relative flex-1 min-h-0 overflow-y-auto flex flex-col bg-[#060B17] text-base">
+    <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-[#060B17] text-base">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
@@ -702,7 +701,7 @@ export function DashboardContent() {
 
       {/* Header */}
       <div className="relative shrink-0 z-10 bg-[#0A1328]/90 border-b border-cyan-400/20 backdrop-blur">
-        <div className="w-full px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
+        <div className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-cyan-100 tracking-tight leading-tight">{tr.title}</h1>
             <p className="text-sm text-cyan-300/70 truncate mt-1">
@@ -714,7 +713,7 @@ export function DashboardContent() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <a href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors">
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors">
               <Icon icon="lucide:plus" className="w-5 h-5" />
               <span className="hidden sm:inline">{isCliente ? t.sidebar.solicitarReserva : t.sidebar.crearReserva}</span>
             </a>
@@ -732,37 +731,37 @@ export function DashboardContent() {
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-0 p-3 sm:p-4 flex flex-col gap-3">
+      <div className="relative flex flex-col gap-4 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:flex-1 lg:min-h-0 lg:overflow-hidden lg:gap-3 lg:p-4">
 
         {/* KPIs */}
-        <div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
+        <div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
           {kpiCards.map((kpi) => (
             <a
               key={kpi.key}
               href={kpi.href}
-              className={`rounded-xl border ${kpi.ring} bg-[#0D1830]/90 px-3 py-3 hover:bg-[#12203C] transition-colors min-w-0`}
+              className={`rounded-xl border ${kpi.ring} bg-[#0D1830]/90 px-3.5 py-3.5 hover:bg-[#12203C] transition-colors min-w-0`}
             >
-              <div className="flex items-start justify-between gap-1.5">
+              <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-cyan-200/80 leading-snug line-clamp-2">{kpi.label}</p>
                 <Icon icon={kpi.icon} width={18} height={18} className={`shrink-0 mt-0.5 ${kpi.accent}`} />
               </div>
-              <p className={`text-3xl sm:text-4xl font-bold tabular-nums leading-none mt-2 ${kpi.accent}`}>{kpi.value}</p>
-              <p className="text-sm text-cyan-100/60 truncate mt-2">{kpi.hint}</p>
+              <p className={`text-3xl sm:text-4xl font-bold tabular-nums leading-none mt-2.5 ${kpi.accent}`}>{kpi.value}</p>
+              <p className="text-sm text-cyan-100/60 leading-snug line-clamp-2 mt-2">{kpi.hint}</p>
             </a>
           ))}
         </div>
 
-        {/* Fila media: zarpes | estados | mapa */}
-        <div className="flex-1 min-h-[280px] grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)] gap-3">
+        {/* Fila media: zarpes | estados | mapa — en móvil cada bloque tiene su altura; en desktop llenan la fila */}
+        <div className="grid grid-cols-1 gap-4 lg:flex-1 lg:min-h-[280px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)] lg:gap-3">
           {/* Zarpes */}
-          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-center justify-between gap-2">
               <p className="text-base font-bold text-cyan-100 truncate">{tr.upcomingDepartures}</p>
               <a href={opsHref} className="text-sm font-semibold text-cyan-300/90 hover:text-cyan-200">{tr.viewAll}</a>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto">
+            <div className="lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {upcomingRows.length === 0 ? (
-                <div className="h-full flex items-center justify-center px-6 text-center">
+                <div className="flex items-center justify-center px-6 py-10 lg:py-6 lg:h-full text-center">
                   <p className="text-base sm:text-lg text-cyan-100/55 leading-relaxed max-w-sm">{tr.noUpcoming}</p>
                 </div>
               ) : (
@@ -804,11 +803,11 @@ export function DashboardContent() {
           </div>
 
           {/* Estados */}
-          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15">
               <p className="text-base font-bold text-cyan-100">{tr.byStatus}</p>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-2.5">
+            <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {operationalKpis.statusItems.slice(0, 6).map((item) => {
                 const pct = operationalKpis.total > 0 ? Math.round((item.cantidad / operationalKpis.total) * 100) : 0;
                 const tone =
@@ -848,7 +847,7 @@ export function DashboardContent() {
           </div>
 
           {/* Mapa */}
-          <div className="min-h-[220px] lg:min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/70 overflow-hidden relative">
+          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/70 overflow-hidden">
             <MapLibreMap
               ref={mapRef}
               initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
@@ -874,14 +873,14 @@ export function DashboardContent() {
         </div>
 
         {/* Fila inferior */}
-        <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 min-h-[200px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-3 lg:shrink-0 lg:min-h-[200px]">
           {/* Clientes */}
-          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
               <p className="text-base font-bold text-cyan-200/90">{tr.activeClients}</p>
               <p className="text-2xl font-bold text-cyan-200 tabular-nums">{activeClientsCount}</p>
             </div>
-            <ul className="flex-1 min-h-0 overflow-auto px-4 py-2 space-y-2">
+            <ul className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topClients.length === 0 ? (
                 <li className="text-base text-cyan-100/40 py-2">—</li>
               ) : (
@@ -896,7 +895,7 @@ export function DashboardContent() {
           </div>
 
           {/* Vía + región */}
-          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col p-4 gap-3">
+          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col p-4 gap-3 lg:min-h-0">
             <div className="flex items-center gap-3 shrink-0">
               <div
                 className="relative h-16 w-16 rounded-full shrink-0"
@@ -911,7 +910,7 @@ export function DashboardContent() {
                 <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />Aéreo {transportDistribution.aereo}</p>
               </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto space-y-2">
+            <div className="space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {regionDistribution.items.filter((i) => i.count > 0).slice(0, 5).map((item) => {
                 const width = (item.count / regionDistribution.max) * 100;
                 return (
@@ -930,12 +929,12 @@ export function DashboardContent() {
           </div>
 
           {/* Navieras */}
-          <div className="min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
               <p className="text-base font-bold text-cyan-200/90">{tr.topCarriers}</p>
               <p className="text-2xl font-bold text-cyan-200 tabular-nums">{topNavieras.ranked.length}</p>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-2.5">
+            <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topNav.length === 0 ? (
                 <p className="text-base text-cyan-100/40">{tr.noCarriers}</p>
               ) : (
@@ -955,12 +954,12 @@ export function DashboardContent() {
           </div>
 
           {/* Especies / POD */}
-          <div className="min-h-0 rounded-xl border border-fuchsia-400/20 bg-[#0D1830]/90 overflow-hidden flex flex-col">
+          <div className="rounded-xl border border-fuchsia-400/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-fuchsia-300/15 flex items-baseline justify-between gap-2">
               <p className="text-base font-bold text-fuchsia-200/90">Especies</p>
               <p className="text-2xl font-bold text-fuchsia-200 tabular-nums">{speciesStats.distinct}</p>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-2">
+            <div className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topSpecies.length === 0 ? (
                 <p className="text-base text-cyan-100/40">—</p>
               ) : (
