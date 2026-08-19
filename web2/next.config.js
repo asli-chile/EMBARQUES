@@ -2,6 +2,7 @@
 /**
  * Sitio público (web2):  https://asli.cl
  * Sistema embarques en URL pública: https://asli.cl/embarques/...
+ * Teaser Seminario Bajo Cero: https://asli.cl/teaser-web-seminario
  *
  * IMPORTANTE — dos formas de embarquesBase:
  *
@@ -20,6 +21,10 @@
 const embarquesBase =
   process.env.NEXT_PUBLIC_EMBARQUES_BASE_URL ||
   "https://embarques-teal.vercel.app";
+
+const seminarioBase =
+  process.env.NEXT_PUBLIC_SEMINARIO_BASE_URL ||
+  "https://teaser-web-seminario.vercel.app";
 
 /**
  * En dev, Astro inyecta scripts/CSS de Vite con rutas en la raíz (/@vite/client, /src/...).
@@ -42,7 +47,12 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ["asli.cl", "www.asli.cl", "embarques-teal.vercel.app"],
+    domains: [
+      "asli.cl",
+      "www.asli.cl",
+      "embarques-teal.vercel.app",
+      "teaser-web-seminario.vercel.app",
+    ],
   },
   /** Normaliza /embarques y /embarques/ hacia /embarques/inicio antes del proxy */
   async redirects() {
@@ -101,6 +111,14 @@ const nextConfig = {
       },
       { source: "/transportes/:path*", destination: `${embarquesBase}/transportes/:path*` },
       { source: "/vessel-diagnose/:path*", destination: `${embarquesBase}/vessel-diagnose/:path*` },
+      {
+        source: "/teaser-web-seminario",
+        destination: `${seminarioBase}/teaser-web-seminario`,
+      },
+      {
+        source: "/teaser-web-seminario/:path*",
+        destination: `${seminarioBase}/teaser-web-seminario/:path*`,
+      },
     ];
   },
 };
