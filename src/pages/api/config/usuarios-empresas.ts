@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { requireAdminOrAbove } from "@/lib/auth/requireSuperadmin";
+import { isNombreClienteOculto } from "@/lib/clientesOcultos";
 
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -25,12 +26,22 @@ export const GET: APIRoute = async ({ cookies }) => {
   if (usuariosRes.error) return jsonResponse({ error: usuariosRes.error.message }, 500);
   if (ueRes.error) return jsonResponse({ error: ueRes.error.message }, 500);
 
+  const empresas = ((empresasRes.data ?? []) as { id: string; nombre: string }[]).filter(
+    (e) => !isNombreClienteOculto(e.nombre),
+  );
+  const hiddenEmpresaIds = new Set(
+    ((empresasRes.data ?? []) as { id: string; nombre: string }[])
+      .filter((e) => isNombreClienteOculto(e.nombre))
+      .map((e) => e.id),
+  );
+
   const ejecutivos = (usuariosRes.data ?? []).filter((u) => u.rol === "ejecutivo");
   const clientes = (usuariosRes.data ?? []).filter((u) => u.rol === "cliente");
   const rolById = new Map((usuariosRes.data ?? []).map((u) => [u.id, u.rol]));
 
   const porEmpresa: Record<string, { ejecutivoIds: string[]; clienteIds: string[] }> = {};
   for (const row of ueRes.data ?? []) {
+    if (hiddenEmpresaIds.has(row.empresa_id)) continue;
     const bucket = porEmpresa[row.empresa_id] ?? { ejecutivoIds: [], clienteIds: [] };
     const rol = rolById.get(row.usuario_id);
     if (rol === "ejecutivo") bucket.ejecutivoIds.push(row.usuario_id);
@@ -39,7 +50,7 @@ export const GET: APIRoute = async ({ cookies }) => {
   }
 
   return jsonResponse({
-    empresas: empresasRes.data ?? [],
+    empresas,
     ejecutivos,
     clientes,
     porEmpresa,

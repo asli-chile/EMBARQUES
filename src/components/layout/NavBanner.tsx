@@ -18,6 +18,7 @@ function navPrefetchHandlers(href: string) {
 // Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
 const PINNED_NAV = [
   { labelKey: "inicio" as const, href: "/dashboard" },
+  { labelKey: "tracking" as const, href: "/tracking" },
 ];
 
 // Ítems del menú público con descripción e ícono para el drawer moderno
@@ -25,6 +26,7 @@ const PUBLIC_NAV_CARDS = [
   { labelKey: "inicio"       as const, href: "/inicio",         icon: "lucide:home",        desc: "Página principal y bienvenida" },
   { labelKey: "servicios"    as const, href: "/servicios",      icon: "lucide:briefcase",   desc: "Conoce nuestros servicios logísticos" },
   { labelKey: "sobreNosotros"as const, href: "/sobre-nosotros", icon: "lucide:users",        desc: "Quiénes somos y nuestra misión" },
+  { labelKey: "tracking"     as const, href: "/tracking",       icon: "lucide:ship",        desc: "Posición de naves y operaciones en el mapa" },
 ];
 
 type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
@@ -36,6 +38,7 @@ type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
 // Metadatos visuales de cada módulo (ícono + descripción)
 const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
   dashboard:             { icon: "lucide:layout-dashboard", desc: "Resumen y estadísticas generales" },
+  tracking:              { icon: "lucide:ship",             desc: "Posición de naves y operaciones en el mapa" },
   registros:             { icon: "lucide:clipboard-list",   desc: "Operaciones y registros de carga" },
   reservas:              { icon: "lucide:package",           desc: "Gestión de reservas de exportación" },
   "crear-reserva":       { icon: "lucide:plus-circle",       desc: "Nueva solicitud de reserva" },

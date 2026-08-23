@@ -1,4 +1,5 @@
-import { siteConfig, marketingHomeUrl } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
+import { withBase } from "@/lib/basePath";
 import { AuthWidget } from "@/components/ui/AuthWidget";
 import { OnlineUsersButton } from "@/components/ui/OnlineUsersButton";
 import { VisitCounterBadge } from "@/components/ui/VisitCounterBadge";
@@ -12,9 +13,9 @@ export function Header() {
       role="banner"
     >
       <a
-        href={marketingHomeUrl}
+        href={withBase("/inicio")}
         className="h-8 md:h-[50px] w-auto flex items-center flex-shrink-0"
-        aria-label="Ir al inicio del sitio web"
+        aria-label="Ir al inicio del ERP"
       >
         <img
           src={siteConfig.logo}

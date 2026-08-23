@@ -61,6 +61,7 @@ export const quickLinks = [
   { key: "quickRecords" as const, descKey: "quickRecordsDesc" as const, href: "/registros", icon: "lucide:table-2" },
   { key: "quickDocument" as const, descKey: "quickDocumentDesc" as const, href: "/documentos/mis-documentos", icon: "lucide:file-text" },
   { key: "quickTransport" as const, descKey: "quickTransportDesc" as const, href: "/transportes/reserva-asli", icon: "lucide:truck" },
+  { key: "quickTracking" as const, descKey: "quickTrackingDesc" as const, href: "/tracking", icon: "lucide:ship" },
 ] as const;
 
 export const clientQuickLinks = [
@@ -68,6 +69,7 @@ export const clientQuickLinks = [
   { key: "quickCreate" as const, descKey: "quickCreateDesc" as const, href: "/reservas/crear", icon: "lucide:plus-circle" },
   { key: "quickReservas" as const, descKey: "quickReservasDesc" as const, href: "/reservas/mis-reservas", icon: "lucide:package" },
   { key: "quickDocument" as const, descKey: "quickDocumentDesc" as const, href: "/documentos/mis-documentos", icon: "lucide:file-text" },
+  { key: "quickTracking" as const, descKey: "quickTrackingDesc" as const, href: "/tracking", icon: "lucide:ship" },
 ] as const;
 
 export const kpiConfig = [

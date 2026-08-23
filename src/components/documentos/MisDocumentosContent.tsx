@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { applyOperacionesClienteFilter } from "@/lib/auth/operacionesClienteScope";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -11,6 +12,7 @@ import { modulePageBg, moduleHero, moduleCard, moduleInput } from "@/lib/ui/modu
 type Operacion = {
   id: string;
   ref_asli: string;
+  referencia_externa: string | null;
   correlativo: number;
   cliente: string;
   naviera: string;
@@ -34,36 +36,50 @@ type Documento = {
 };
 
 const TIPOS_DOCUMENTO = [
-  "SOLICITUD_RESERVA",
   "BOOKING",
   "INSTRUCTIVO_EMBARQUE",
-  "FACTURA_GATE_OUT",
+  "PACKING_LIST",
   "FACTURA_PROFORMA",
   "CERTIFICADO_FITOSANITARIO",
   "CERTIFICADO_ORIGEN",
   "BL_TELEX_SWB_AWB",
-  "FACTURA_COMERCIAL",
-  "DUS",
   "FULLSET",
+  "FACTURA_COMERCIAL",
+  "SOLICITUD_RESERVA",
+  "FACTURA_GATE_OUT",
+  "DUS",
 ] as const;
 
 type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
+
+/** Tipos visibles para rol cliente, en el orden de la UI. */
+const TIPOS_DOCUMENTO_CLIENTE: readonly TipoDocumento[] = [
+  "BOOKING",
+  "INSTRUCTIVO_EMBARQUE",
+  "PACKING_LIST",
+  "FACTURA_PROFORMA",
+  "CERTIFICADO_FITOSANITARIO",
+  "CERTIFICADO_ORIGEN",
+  "BL_TELEX_SWB_AWB",
+  "FULLSET",
+];
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: string }> = {
-  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-emerald-600 bg-emerald-50" },
   BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-blue-600 bg-blue-50" },
   INSTRUCTIVO_EMBARQUE:    { label: "Instructivo de Embarque (IE)",   icon: "lucide:file-text",      color: "text-violet-600 bg-violet-50" },
-  FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt",        color: "text-orange-600 bg-orange-50" },
+  PACKING_LIST:            { label: "Packing List",                   icon: "lucide:package",       color: "text-orange-600 bg-orange-50" },
   FACTURA_PROFORMA:        { label: "Factura Proforma",               icon: "lucide:file-check",     color: "text-amber-600 bg-amber-50" },
   CERTIFICADO_FITOSANITARIO: { label: "Certificado Fitosanitario",   icon: "lucide:leaf",           color: "text-green-600 bg-green-50" },
   CERTIFICADO_ORIGEN:      { label: "Certificado de Origen",         icon: "lucide:globe",          color: "text-teal-600 bg-teal-50" },
   BL_TELEX_SWB_AWB:        { label: "BL / Telex / SWB / AWB",       icon: "lucide:ship",           color: "text-sky-600 bg-sky-50" },
-  FACTURA_COMERCIAL:       { label: "Factura Comercial",             icon: "lucide:shopping-bag",   color: "text-pink-600 bg-pink-50" },
-  DUS:                     { label: "DUS",                           icon: "lucide:landmark",       color: "text-indigo-600 bg-indigo-50" },
   FULLSET:                 { label: "Fullset",                       icon: "lucide:layers",         color: "text-neutral-600 bg-neutral-100" },
+  FACTURA_COMERCIAL:       { label: "Factura Comercial",             icon: "lucide:shopping-bag",   color: "text-pink-600 bg-pink-50" },
+  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-emerald-600 bg-emerald-50" },
+  FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt",        color: "text-orange-600 bg-orange-50" },
+  DUS:                     { label: "DUS",                           icon: "lucide:landmark",       color: "text-indigo-600 bg-indigo-50" },
 };
 
 function opRef(op: Operacion) {
@@ -74,7 +90,8 @@ export function MisDocumentosContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misDocumentos;
-  const visibleTipos = TIPOS_DOCUMENTO;
+  const visibleTipos = isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO;
+  const visibleTiposSet = useMemo(() => new Set<string>(visibleTipos), [visibleTipos]);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [docCounts, setDocCounts] = useState<Map<string, number>>(new Map());
@@ -115,6 +132,7 @@ export function MisDocumentosContent() {
 
     const docsByOperacion = new Map<string, { count: number; hasBookingDoc: boolean }>();
     docsData.forEach((d) => {
+      if (!visibleTiposSet.has(d.tipo)) return;
       const current = docsByOperacion.get(d.operacion_id) ?? { count: 0, hasBookingDoc: false };
       current.count += 1;
       if (d.tipo === "BOOKING") current.hasBookingDoc = true;
@@ -128,7 +146,7 @@ export function MisDocumentosContent() {
       counts.set(op.id, current.count + syntheticBookingExtra);
     });
     setDocCounts(counts);
-  }, [supabase]);
+  }, [supabase, visibleTiposSet]);
 
   useEffect(() => { reloadCountsRef.current = reloadCounts; }, [reloadCounts]);
 
@@ -137,15 +155,15 @@ export function MisDocumentosContent() {
     setLoading(true);
     let q = supabase
       .from("operaciones")
-      .select("id, ref_asli, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at")
+      .select("id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at")
       .is("deleted_at", null);
-    if (empresaNombres.length > 0) q = q.in("cliente", empresaNombres);
+    q = applyOperacionesClienteFilter(q, { isCliente, empresaNombres });
     const { data } = await q.order("created_at", { ascending: false });
     const ops: Operacion[] = data ?? [];
     setOperaciones(ops);
     setLoading(false);
     await reloadCounts(ops);
-  }, [supabase, authLoading, empresaNombres, reloadCounts]);
+  }, [supabase, authLoading, isCliente, empresaNombres, reloadCounts]);
 
   const fetchDocumentos = useCallback(async () => {
     if (!supabase || !selectedOperacion) return;
@@ -160,13 +178,14 @@ export function MisDocumentosContent() {
     setDocCounts((prev) => {
       const next = new Map(prev);
       const op = operaciones.find((o) => o.id === selectedOperacion);
+      const visibleDocs = docs.filter((d) => visibleTiposSet.has(d.tipo));
       const hasBookingUrl = !!op?.booking_doc_url;
       const hasBookingDoc = docs.some((d) => d.tipo === "BOOKING");
       const syntheticExtra = hasBookingUrl && !hasBookingDoc ? 1 : 0;
-      next.set(selectedOperacion, docs.length + syntheticExtra);
+      next.set(selectedOperacion, visibleDocs.length + syntheticExtra);
       return next;
     });
-  }, [supabase, selectedOperacion, operaciones]);
+  }, [supabase, selectedOperacion, operaciones, visibleTiposSet]);
 
   useEffect(() => { reloadDocsRef.current = fetchDocumentos; }, [fetchDocumentos]);
 
@@ -229,6 +248,7 @@ export function MisDocumentosContent() {
       const ref = opRef(op);
       return (
         ref.toLowerCase().includes(search) ||
+        (op.referencia_externa ?? "").toLowerCase().includes(search) ||
         (op.cliente ?? "").toLowerCase().includes(search) ||
         (op.booking ?? "").toLowerCase().includes(search) ||
         (op.contenedor ?? "").toLowerCase().includes(search) ||
@@ -288,12 +308,8 @@ export function MisDocumentosContent() {
   }, [documentos, operacionActual, visibleTipos]);
 
   const docsCompletados = useMemo(() => {
-    const visibleDocs = documentos.filter((d) => visibleTipos.includes(d.tipo as TipoDocumento));
-    const hasBookingUrl = !!operacionActual?.booking_doc_url;
-    const hasBookingDoc = documentos.some((d) => d.tipo === "BOOKING");
-    const syntheticExtra = hasBookingUrl && !hasBookingDoc ? 1 : 0;
-    return visibleDocs.length + syntheticExtra;
-  }, [documentos, operacionActual, visibleTipos]);
+    return [...documentosPorTipo.values()].filter(Boolean).length;
+  }, [documentosPorTipo]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -496,13 +512,25 @@ export function MisDocumentosContent() {
             <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={22} height={22} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-base font-bold text-brand-blue truncate">
-              {opRef(operacionActual)} — {operacionActual.cliente}
-            </p>
-            <p className="text-base text-neutral-500 truncate">
-              {operacionActual.naviera}{operacionActual.booking ? ` · ${operacionActual.booking}` : ""}{operacionActual.pod ? ` · ${operacionActual.pod}` : ""}
-            </p>
-            <div className="flex items-center gap-2 mt-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRef}</p>
+                <p className="text-sm font-bold text-brand-blue truncate">{opRef(operacionActual)}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRefExterna}</p>
+                <p className="text-sm font-semibold text-brand-blue/80 truncate">{operacionActual.referencia_externa || "—"}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colBooking}</p>
+                <p className="text-sm font-semibold text-brand-blue/80 truncate">{operacionActual.booking || "—"}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colContenedor}</p>
+                <p className="text-sm font-semibold text-brand-blue/80 truncate">{operacionActual.contenedor || "—"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
               <div className="flex-1 h-2 bg-white/70 rounded-sm overflow-hidden border border-brand-blue/15">
                 <div className="h-full rounded-sm transition-all duration-500"
                   style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#11224E,#007A7B)" }} />
@@ -682,7 +710,7 @@ export function MisDocumentosContent() {
               </div>
 
               <div className="flex-1 min-h-0 overflow-auto w-full">
-                {/* Lista compacta (selección activa): solo Ref + Booking */}
+                {/* Lista compacta (selección activa): Ref ASLI, Ref Externa, Booking, Contenedor */}
                 {hasSelection ? (
                   <div className="divide-y divide-brand-blue/10">
                     {pagedOperaciones.length === 0 ? (
@@ -701,11 +729,20 @@ export function MisDocumentosContent() {
                                 : "hover:bg-[#F4F8FC] border-l-2 border-l-transparent"
                             }`}
                           >
-                            <p className={`text-base font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                            <p className={`text-sm font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
                               {opRef(op)}
                             </p>
-                            <p className="text-base text-neutral-500 truncate mt-0.5">
+                            <p className="text-xs text-neutral-500 truncate mt-0.5">
+                              <span className="text-neutral-400">{tr.colRefExterna}:</span>{" "}
+                              {op.referencia_externa || "—"}
+                            </p>
+                            <p className="text-xs text-neutral-500 truncate mt-0.5">
+                              <span className="text-neutral-400">{tr.colBooking}:</span>{" "}
                               {op.booking || "—"}
+                            </p>
+                            <p className="text-xs text-neutral-500 truncate mt-0.5">
+                              <span className="text-neutral-400">{tr.colContenedor}:</span>{" "}
+                              {op.contenedor || "—"}
                             </p>
                           </button>
                         );

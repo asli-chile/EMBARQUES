@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { requireAdminOrSuperadmin } from "@/lib/auth/requireAdminOrSuperadmin";
+import { isNombreClienteOculto } from "@/lib/clientesOcultos";
 
 type DbCliente = {
   id: string;
@@ -41,12 +42,21 @@ export const GET: APIRoute = async ({ cookies }) => {
     activo: r.activo != null ? Boolean(r.activo) : null,
   }));
   const { data: empresasData } = await admin.from("empresas").select("id, nombre").order("nombre");
-  const empresas = (empresasData ?? []) as { id: string; nombre: string }[];
+  const empresas = ((empresasData ?? []) as { id: string; nombre: string }[]).filter(
+    (e) => !isNombreClienteOculto(e.nombre),
+  );
   const empMap = new Map(empresas.map((e) => [e.id, e.nombre]));
-  const clientesConNombre = clientes.map((c) => ({
-    ...c,
-    empresa_nombre: c.empresa_id ? empMap.get(c.empresa_id) ?? "—" : "—",
-  }));
+  const hiddenEmpresaIds = new Set(
+    ((empresasData ?? []) as { id: string; nombre: string }[])
+      .filter((e) => isNombreClienteOculto(e.nombre))
+      .map((e) => e.id),
+  );
+  const clientesConNombre = clientes
+    .filter((c) => !c.empresa_id || !hiddenEmpresaIds.has(c.empresa_id))
+    .map((c) => ({
+      ...c,
+      empresa_nombre: c.empresa_id ? empMap.get(c.empresa_id) ?? "—" : "—",
+    }));
   return jsonResponse({ clientes: clientesConNombre, empresas });
 };
 

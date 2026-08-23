@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * No se aceptan: id, correlativo, ref_asli (los asigna la BD / triggers).
  */
 export const OPERACION_MIGRACION_COLUMNAS = [
+  "referencia_externa",
   "ingreso",
   "semana",
   "ejecutivo",

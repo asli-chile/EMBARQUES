@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { isStaffRole } from "@/lib/auth/roles";
+import { filterNombresVisibles } from "@/lib/clientesOcultos";
 
 export type UserRole = "superadmin" | "admin" | "ejecutivo" | "operador" | "cliente" | "usuario";
 
@@ -56,7 +57,7 @@ export function getRolLabel(rol: UserRole): string {
   return ROL_LABELS[rol] ?? rol;
 }
 
-const AUTH_CACHE_KEY = "_auth_cache_v2";
+const AUTH_CACHE_KEY = "_auth_cache_v3";
 const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutos
 
 type AuthCache = {
@@ -170,9 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from("usuarios_empresas")
           .select("empresas(nombre)")
           .eq("usuario_id", perfil.id);
-        resolvedEmpresas = (ueData ?? [])
-          .map((r) => (r.empresas as unknown as { nombre: string } | null)?.nombre)
-          .filter((n): n is string => !!n);
+        resolvedEmpresas = filterNombresVisibles(
+          (ueData ?? [])
+            .map((r) => (r.empresas as unknown as { nombre: string } | null)?.nombre)
+            .filter((n): n is string => !!n),
+        );
       }
 
       setUser(authUser);

@@ -15,6 +15,7 @@ import { es } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { withBase } from "@/lib/basePath";
+import { goBackOr } from "@/lib/navigation";
 import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { ESTADO_OPERACION_STYLES } from "@/lib/ui/estadoOperacion";
 
@@ -82,6 +83,7 @@ type Operacion = {
   enviado_transporte: boolean | null;
   tipo_reserva_transporte: string | null;
   estado_operacion: string | null;
+  solicitud_ventana: string | null;
   created_at: string;
   // campos adicionales para email / tarjeta
   consignatario: string | null;
@@ -99,7 +101,7 @@ type Operacion = {
 
 const estadoConfig = ESTADO_OPERACION_STYLES;
 
-type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "estado_operacion";
+type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "estado_operacion" | "solicitud_ventana";
 type SortDirection = "asc" | "desc";
 type ViewMode = "table" | "cards";
 
@@ -124,6 +126,124 @@ function fmtDateTime(dateStr: string | null | undefined): string {
     return `${d}-${m}-${y} ${timePart}`;
   }
   return fmtDate(dateStr);
+}
+
+function VentanaBadge({ value }: { value: string | null | undefined }) {
+  if (value === "LATE") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border bg-amber-50 text-amber-800 border-amber-300">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+        Late
+      </span>
+    );
+  }
+  if (value === "EXTRA_LATE") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border bg-red-50 text-red-700 border-red-300">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+        Extra late
+      </span>
+    );
+  }
+  if (value === "NORMAL") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border bg-sky-50 text-sky-800 border-sky-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+        Normal
+      </span>
+    );
+  }
+  return <span className="text-brand-blue/30 text-xs">—</span>;
+}
+
+function ventanaLabel(value: string | null | undefined): string {
+  if (value === "LATE") return "Late";
+  if (value === "EXTRA_LATE") return "Extra late";
+  if (value === "NORMAL") return "Normal";
+  return "";
+}
+
+function isBlank(value: string | null | undefined): boolean {
+  return value == null || String(value).trim() === "";
+}
+
+type EmptyInlineCellProps = {
+  value: string | null | undefined;
+  canEdit: boolean;
+  addLabel: string;
+  saving?: boolean;
+  onSave: (next: string) => Promise<boolean>;
+};
+
+function EmptyInlineCell({ value, canEdit, addLabel, saving, onSave }: EmptyInlineCellProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (!isBlank(value)) {
+    return (
+      <span className="text-[13px] text-brand-blue/80 font-medium truncate block max-w-full" title={String(value)}>
+        {value}
+      </span>
+    );
+  }
+
+  if (!canEdit) {
+    return <span className="text-brand-blue/30 text-xs">—</span>;
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setDraft("");
+          setEditing(true);
+        }}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-brand-blue/55 border border-dashed border-brand-blue/30 hover:border-brand-blue/50 hover:text-brand-blue hover:bg-brand-blue/5 transition-colors"
+        title={addLabel}
+      >
+        <Icon icon="lucide:pencil" width={12} height={12} />
+        {addLabel}
+      </button>
+    );
+  }
+
+  const commit = async () => {
+    const next = draft.trim();
+    if (!next) {
+      setEditing(false);
+      return;
+    }
+    setBusy(true);
+    const ok = await onSave(next);
+    setBusy(false);
+    if (ok) setEditing(false);
+  };
+
+  return (
+    <input
+      autoFocus
+      value={draft}
+      disabled={busy || saving}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { void commit(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          void commit();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setEditing(false);
+        }
+      }}
+      className="w-full min-w-[6rem] max-w-[11rem] px-2 py-1 rounded-md border border-brand-blue/35 text-[12px] font-semibold text-brand-blue bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/25"
+      placeholder={addLabel}
+    />
+  );
 }
 
 function CardDetail({ label, value }: { label: string; value: string }) {
@@ -310,6 +430,12 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
         )}
       </div>
 
+      {op.solicitud_ventana ? (
+        <div className="px-3 pb-2">
+          <VentanaBadge value={op.solicitud_ventana} />
+        </div>
+      ) : null}
+
       <div className="mx-3 mb-2.5 bg-[#F4F8FC] rounded-lg px-3 py-2.5">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
@@ -432,6 +558,8 @@ type TableRowProps = {
   idx: number;
   selected: boolean;
   isCliente: boolean;
+  canInlineEdit: boolean;
+  addEmptyLabel: string;
   typeExternal: string;
   typePendiente: string;
   copyShort: string;
@@ -444,13 +572,18 @@ type TableRowProps = {
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
+  onInlineSave: (op: Operacion, field: InlineEditableField, next: string) => Promise<boolean>;
 };
+
+type InlineEditableField = "referencia_externa" | "nave" | "pol" | "pod";
 
 const MisReservasTableRow = memo(function MisReservasTableRow({
   op,
   idx,
   selected,
   isCliente,
+  canInlineEdit,
+  addEmptyLabel,
   typeExternal,
   typePendiente,
   copyShort,
@@ -463,6 +596,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   onEmail,
   onBooking,
   onContextMenu,
+  onInlineSave,
 }: TableRowProps) {
   const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
   return (
@@ -483,7 +617,14 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
         <span className="font-bold text-brand-blue text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
       </td>
-      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/80 font-medium max-w-[9rem] truncate">{op.referencia_externa || "—"}</td>
+      <td className="px-3 py-2 text-center max-w-[9rem]">
+        <EmptyInlineCell
+          value={op.referencia_externa}
+          canEdit={canInlineEdit}
+          addLabel={addEmptyLabel}
+          onSave={(next) => onInlineSave(op, "referencia_externa", next)}
+        />
+      </td>
       <td className="px-3 py-2 min-w-[9rem] text-center">
         {!isCliente ? (
           <div className="inline-flex items-center gap-0.5">
@@ -522,15 +663,39 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       <td className="px-3 py-2 text-center text-[13px] text-brand-blue font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
       <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 max-w-[8rem] truncate">{op.especie || "—"}</td>
       <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 whitespace-nowrap">{op.naviera || "—"}</td>
-      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 max-w-[9rem] truncate">{op.nave || "—"}</td>
-      <td className="px-3 py-2 text-center text-[12px] text-brand-blue/70 font-medium">{op.pol || "—"}</td>
-      <td className="px-3 py-2 text-center text-[12px] text-brand-blue/70 font-medium">{op.pod || "—"}</td>
+      <td className="px-3 py-2 text-center max-w-[9rem]">
+        <EmptyInlineCell
+          value={op.nave}
+          canEdit={canInlineEdit}
+          addLabel={addEmptyLabel}
+          onSave={(next) => onInlineSave(op, "nave", next)}
+        />
+      </td>
+      <td className="px-3 py-2 text-center">
+        <EmptyInlineCell
+          value={op.pol}
+          canEdit={canInlineEdit}
+          addLabel={addEmptyLabel}
+          onSave={(next) => onInlineSave(op, "pol", next)}
+        />
+      </td>
+      <td className="px-3 py-2 text-center">
+        <EmptyInlineCell
+          value={op.pod}
+          canEdit={canInlineEdit}
+          addLabel={addEmptyLabel}
+          onSave={(next) => onInlineSave(op, "pod", next)}
+        />
+      </td>
       <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
       <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
       <td className="px-3 py-2 text-center">
         {op.tt !== null ? (
           <span className="text-[11px] font-bold text-brand-blue tabular-nums">{op.tt}d</span>
         ) : <span className="text-brand-blue/30 text-xs">—</span>}
+      </td>
+      <td className="px-3 py-2 text-center">
+        <VentanaBadge value={op.solicitud_ventana} />
       </td>
       <td className="px-3 py-2 text-center">
         {cfg ? (
@@ -815,7 +980,8 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
 
 export function MisReservasContent() {
   const { t } = useLocale();
-  const { isCliente, isEjecutivo, empresaNombres, isLoading: authLoading } = useAuth();
+  const { isCliente, isEjecutivo, isStaff, empresaNombres, isLoading: authLoading, user, profile } = useAuth();
+  const canInlineEdit = isEjecutivo || isStaff;
   const tr = t.misReservas;
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -869,7 +1035,7 @@ export function MisReservasContent() {
       .from("operaciones")
       .select(
         `id, correlativo, ref_asli, referencia_externa, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
-         booking_doc_url, enviado_transporte, tipo_reserva_transporte, estado_operacion, created_at, consignatario, tipo_unidad, pallets, peso_neto,
+         booking_doc_url, enviado_transporte, tipo_reserva_transporte, estado_operacion, solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
          temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
       .is("deleted_at", null);
@@ -1007,6 +1173,39 @@ export function MisReservasContent() {
     });
   }, []);
 
+  const handleInlineSave = useCallback(async (op: Operacion, field: InlineEditableField, next: string) => {
+    if (!supabase || !canInlineEdit) return false;
+    const trimmed = next.trim();
+    if (!trimmed) return false;
+    if (!isBlank(op[field])) return false;
+
+    const previous = op[field] ?? null;
+    const { error } = await supabase.from("operaciones").update({ [field]: trimmed }).eq("id", op.id);
+    if (error) {
+      sileo.error({ title: error.message || "No se pudo guardar el campo" });
+      return false;
+    }
+
+    const { error: auditError } = await supabase.from("operaciones_cambios").insert({
+      operacion_id: op.id,
+      campo: field,
+      valor_anterior: previous,
+      valor_nuevo: trimmed,
+      usuario_auth_id: user?.id ?? null,
+      usuario_nombre: profile?.nombre ?? user?.name ?? null,
+      usuario_email: profile?.email ?? user?.email ?? null,
+    });
+    if (auditError) {
+      console.error("Auditoría operaciones_cambios:", auditError.message);
+    }
+
+    setOperaciones((prev) =>
+      prev.map((row) => (row.id === op.id ? { ...row, [field]: trimmed } : row))
+    );
+    sileo.success({ title: tr.inlineSaved });
+    return true;
+  }, [supabase, canInlineEdit, user, profile, tr.inlineSaved]);
+
   useEffect(() => {
     if (!ctxMenu) return;
     const close = () => setCtxMenu(null);
@@ -1028,6 +1227,15 @@ export function MisReservasContent() {
     };
   }, [ctxMenu]);
 
+  const handleMoveToTrash = useCallback(async (ids: string[]) => {
+    if (!supabase || ids.length === 0) return;
+    setActionLoading(true);
+    const { error } = await supabase.from("operaciones").update({ deleted_at: new Date().toISOString() }).in("id", ids);
+    if (error) sileo.error({ title: tr.errorMovingToTrash });
+    else { setSelectedIds(new Set()); await fetchOperaciones(); }
+    setActionLoading(false);
+  }, [supabase, tr.errorMovingToTrash, fetchOperaciones]);
+
   const handleCtxViewDocuments = useCallback(() => {
     if (!ctxMenu) return;
     const url = `${withBase("/documentos/mis-documentos")}?op=${encodeURIComponent(ctxMenu.operacionId)}`;
@@ -1035,14 +1243,12 @@ export function MisReservasContent() {
     window.location.assign(url);
   }, [ctxMenu]);
 
-  const handleMoveToTrash = async (ids: string[]) => {
-    if (!supabase || ids.length === 0) return;
-    setActionLoading(true);
-    const { error } = await supabase.from("operaciones").update({ deleted_at: new Date().toISOString() }).in("id", ids);
-    if (error) sileo.error({ title: tr.errorMovingToTrash });
-    else { setSelectedIds(new Set()); await fetchOperaciones(); }
-    setActionLoading(false);
-  };
+  const handleCtxMoveToTrash = useCallback(() => {
+    if (!ctxMenu) return;
+    const id = ctxMenu.operacionId;
+    setCtxMenu(null);
+    void handleMoveToTrash([id]);
+  }, [ctxMenu, handleMoveToTrash]);
 
   const getSelectedOps = useCallback(() => operaciones.filter((op) => selectedIds.has(op.id)), [operaciones, selectedIds]);
 
@@ -1164,12 +1370,14 @@ export function MisReservasContent() {
     { key: "etd",             label: "ETD" },
     { key: "eta",             label: "ETA" },
     { key: "tt",              label: "TT (días)" },
+    { key: "solicitud_ventana", label: "Tipo de operación" },
     { key: "estado_operacion",label: "Estado" },
   ];
 
   const exportRows = filteredOperaciones.map((op) =>
     exportCols.map(({ key }) => {
       if (key === "ref_asli") return displayRefAsli(op.ref_asli, op.correlativo, "");
+      if (key === "solicitud_ventana") return ventanaLabel(op.solicitud_ventana);
       const v = op[key];
       if (key === "etd" || key === "eta") return fmtDate(v as string | null);
       return v ?? "";
@@ -1301,6 +1509,16 @@ export function MisReservasContent() {
       <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => goBackOr(withBase("/inicio"))}
+              title={tr.btnBack}
+              aria-label={tr.btnBack}
+              className="inline-flex items-center gap-1.5 shrink-0 px-2.5 sm:px-3 h-9 rounded-lg border border-white/25 bg-white/15 text-white text-sm font-semibold hover:bg-white/25 transition-colors"
+            >
+              <Icon icon="lucide:arrow-left" width={18} height={18} className="shrink-0" />
+              <span className="hidden sm:inline">{tr.btnBack}</span>
+            </button>
             <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
               <Icon icon="typcn:clipboard" width={18} height={18} className="text-white" />
             </div>
@@ -1542,6 +1760,7 @@ export function MisReservasContent() {
                     <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHeader field="solicitud_ventana" label={tr.colTipoOperacion} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colTransport}</th>
                     <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colActions}</th>
@@ -1550,7 +1769,7 @@ export function MisReservasContent() {
                 <tbody>
                   {filteredOperaciones.length === 0 ? (
                     <tr>
-                      <td colSpan={isCliente ? 14 : 15} className="px-4 py-14 text-center">
+                      <td colSpan={isCliente ? 15 : 16} className="px-4 py-14 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
                             <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
@@ -1570,6 +1789,8 @@ export function MisReservasContent() {
                         idx={idx}
                         selected={selectedIds.has(op.id)}
                         isCliente={isCliente}
+                        canInlineEdit={canInlineEdit}
+                        addEmptyLabel={tr.inlineAdd}
                         typeExternal={tr.typeExternal}
                         typePendiente={tr.typePendiente}
                         copyShort={tr.copyShort}
@@ -1582,6 +1803,7 @@ export function MisReservasContent() {
                         onEmail={handleOpenEmail}
                         onBooking={handleOpenBooking}
                         onContextMenu={handleOpenContextMenu}
+                        onInlineSave={handleInlineSave}
                       />
                     ))
                   )}
@@ -1758,7 +1980,7 @@ export function MisReservasContent() {
 
       {ctxMenu && createPortal((() => {
         const menuW = 240;
-        const menuH = 88;
+        const menuH = 132;
         const left = Math.max(8, Math.min(ctxMenu.x, window.innerWidth - menuW - 8));
         const top = Math.max(8, Math.min(ctxMenu.y, window.innerHeight - menuH - 8));
         return (
@@ -1780,6 +2002,16 @@ export function MisReservasContent() {
             >
               <Icon icon="lucide:folder-open" width={16} height={16} className="shrink-0 text-brand-blue" />
               {tr.contextViewDocuments}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleCtxMoveToTrash}
+              disabled={actionLoading}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              <Icon icon="lucide:trash-2" width={16} height={16} className="shrink-0 text-red-600" />
+              {tr.moveToTrash}
             </button>
           </div>
         );

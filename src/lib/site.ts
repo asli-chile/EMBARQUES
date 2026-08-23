@@ -1,7 +1,7 @@
 import { brand, icons } from "./brand";
 import { CARTOLAS_NUBOX_ALLOWED_EMAILS } from "./cartolas-nubox-access";
 
-/** Inicio del sitio web corporativo (fuera de la app /embarques). Usar en el logo del header. */
+/** @deprecated Usar withBase("/inicio") para el logo del header dentro del ERP. */
 export const marketingHomeUrl = "/" as const;
 
 export const siteConfig = {
@@ -11,6 +11,7 @@ export const siteConfig = {
     { labelKey: "inicio", href: "/inicio" },
     { labelKey: "servicios", href: "/servicios" },
     { labelKey: "sobreNosotros", href: "/sobre-nosotros" },
+    { labelKey: "tracking", href: "/tracking" },
   ] as const,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
@@ -61,6 +62,7 @@ export const siteConfig = {
         { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
       ],
     },
+    { labelKey: "tracking", id: "tracking", href: "/tracking" },
   ],
   authIcon: icons.auth,
   user: {

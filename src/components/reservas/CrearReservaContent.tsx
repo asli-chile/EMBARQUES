@@ -8,9 +8,11 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
+import { goBackOr } from "@/lib/navigation";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { isClienteNombrePermitido } from "@/lib/auth/operacionesClienteScope";
+import { filterRowsByNombreVisible } from "@/lib/clientesOcultos";
 import { format, parse, differenceInDays } from "date-fns";
 import {
   STACKING_DRAFTS_STORAGE_KEY,
@@ -69,8 +71,124 @@ function ReservaDateField({ id, label, value, onChange, placeholder, inputClass,
   );
 }
 
+/** Intervalos de hora cada 30 minutos (00:00 … 23:30). */
+const TIME_OPTIONS_30M = Array.from({ length: 24 * 2 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
+type ReservaDateTimeFieldProps = {
+  id: string;
+  label: ReactNode;
+  value: string; // datetime-local: YYYY-MM-DDTHH:mm
+  onChange: (value: string) => void;
+  datePlaceholder: string;
+  inputClass: string;
+  labelClass: string;
+};
+
+/** Fecha + hora en controles separados (sin el picker nativo datetime-local). */
+function ReservaDateTimeField({
+  id,
+  label,
+  value,
+  onChange,
+  datePlaceholder,
+  inputClass,
+  labelClass,
+}: ReservaDateTimeFieldProps) {
+  const [datePart, timePart] = value.includes("T")
+    ? value.split("T")
+    : [value.slice(0, 10) || "", value.includes(":") ? value.slice(11, 16) : ""];
+  const dateDisplay = datePart
+    ? (() => {
+        try {
+          return format(parse(datePart, "yyyy-MM-dd", new Date()), "dd-MM-yyyy");
+        } catch {
+          return datePart;
+        }
+      })()
+    : "";
+
+  const emit = (nextDate: string, nextTime: string) => {
+    if (!nextDate && !nextTime) {
+      onChange("");
+      return;
+    }
+    if (!nextDate) {
+      onChange("");
+      return;
+    }
+    onChange(`${nextDate}T${nextTime || "00:00"}`);
+  };
+
+  return (
+    <div className="min-w-0">
+      <p className={labelClass}>{label}</p>
+      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-2">
+        <div className={`relative flex items-center ${inputClass} pr-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-brand-blue/25 focus-within:border-brand-blue`}>
+          <span className={`block truncate pointer-events-none ${dateDisplay ? "text-brand-blue" : "text-brand-blue/40 font-medium"}`}>
+            {dateDisplay || datePlaceholder}
+          </span>
+          <Icon
+            icon="lucide:calendar"
+            width={16}
+            height={16}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue/45 pointer-events-none"
+          />
+          <input
+            id={`${id}-date`}
+            type="date"
+            lang="es-CL"
+            value={datePart}
+            onChange={(e) => emit(e.target.value, timePart)}
+            className="asli-date-hit"
+            aria-label={typeof label === "string" ? `${label} fecha` : "Fecha"}
+          />
+        </div>
+        <div className="relative min-w-0">
+          <select
+            id={`${id}-time`}
+            value={timePart && TIME_OPTIONS_30M.includes(timePart) ? timePart : timePart || ""}
+            onChange={(e) => emit(datePart || format(new Date(), "yyyy-MM-dd"), e.target.value)}
+            className={`${inputClass} appearance-none pr-9`}
+            aria-label={typeof label === "string" ? `${label} hora` : "Hora"}
+          >
+            <option value="">{datePart ? "Hora..." : "—:—"}</option>
+            {timePart && !TIME_OPTIONS_30M.includes(timePart) ? (
+              <option value={timePart}>{timePart}</option>
+            ) : null}
+            {TIME_OPTIONS_30M.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <Icon
+            icon="lucide:clock"
+            width={16}
+            height={16}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue/45 pointer-events-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type CatalogoItem = { id: string; valor: string; descripcion?: string };
 type SelectOption = { id: string; nombre: string };
+type ModoTransporte = "maritimo" | "aereo";
+type TransportOption = SelectOption & { modo_transporte: ModoTransporte };
+
+function isOperacionAerea(tipoOperacion: string): boolean {
+  const v = tipoOperacion
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return v.includes("AERE");
+}
 
 type FormData = {
   tipo_operacion: string;
@@ -104,11 +222,17 @@ type FormData = {
   inicio_stacking: string;
   fin_stacking: string;
   corte_documental: string;
+  solicitud_ventana: "" | "NORMAL" | "LATE" | "EXTRA_LATE";
+  late_inicio: string;
+  late_fin: string;
+  xlate_inicio: string;
+  xlate_fin: string;
   observaciones: string;
+  sin_observaciones: boolean;
 };
 
 const initialFormData: FormData = {
-  tipo_operacion: "EXPORTACIÓN",
+  tipo_operacion: "",
   estado_operacion: "PENDIENTE",
   ejecutivo: "",
   cliente: "",
@@ -120,7 +244,7 @@ const initialFormData: FormData = {
   pais: "",
   temperatura: "",
   ventilacion: "",
-  tratamiento_frio: "",
+  tratamiento_frio: "NO",
   tratamiento_frio_o2: "",
   tratamiento_frio_co2: "",
   tipo_atmosfera: "",
@@ -139,7 +263,13 @@ const initialFormData: FormData = {
   inicio_stacking: "",
   fin_stacking: "",
   corte_documental: "",
+  solicitud_ventana: "",
+  late_inicio: "",
+  late_fin: "",
+  xlate_inicio: "",
+  xlate_fin: "",
   observaciones: "",
+  sin_observaciones: false,
 };
 
 type SectionKey =
@@ -208,9 +338,12 @@ export function CrearReservaContent() {
   const xlsxCache = useRef<{ base64: string; name: string } | null>(null);
 
   const [catalogos, setCatalogos] = useState<Record<string, CatalogoItem[]>>({});
-  const [navieras, setNavieras] = useState<SelectOption[]>([]);
-  const [naves, setNaves] = useState<SelectOption[]>([]);
-  const [navesFiltered, setNavesFiltered] = useState<SelectOption[]>([]);
+  const [navieras, setNavieras] = useState<TransportOption[]>([]);
+  const [naves, setNaves] = useState<TransportOption[]>([]);
+  const [navesFiltered, setNavesFiltered] = useState<TransportOption[]>([]);
+  const [navieraInput, setNavieraInput] = useState("");
+  const [addingNaviera, setAddingNaviera] = useState(false);
+  const [addingNave, setAddingNave] = useState(false);
   const [plantas, setPlantas] = useState<SelectOption[]>([]);
   const [depositos, setDepositos] = useState<SelectOption[]>([]);
   const [destinos, setDestinos] = useState<SelectOption[]>([]);
@@ -259,6 +392,7 @@ export function CrearReservaContent() {
     setCurrentStep(0);
     setShowPreview(false);
     setError(null);
+    setNavieraInput("");
   };
 
   const loadDatosDePrueba = useCallback(() => {
@@ -274,7 +408,7 @@ export function CrearReservaContent() {
 
     setFormData((prev) => ({
       ...prev,
-      tipo_operacion: prev.tipo_operacion || "EXPORTACIÓN",
+      tipo_operacion: prev.tipo_operacion || "EXPORTACIÓN MARITIMO",
       ejecutivo: prev.ejecutivo || ejecutivoId,
       incoterm: prev.incoterm || "FOB",
       forma_pago: prev.forma_pago || "CRÉDITO",
@@ -345,8 +479,8 @@ export function CrearReservaContent() {
         ejecutivosApiRes,
       ] = await Promise.all([
         supabase.from("catalogos").select("*").eq("activo", true).order("orden"),
-        supabase.from("navieras").select("id, nombre").order("nombre"),
-        supabase.from("naves").select("id, nombre").order("nombre"),
+        supabase.from("navieras").select("id, nombre, modo_transporte").order("nombre"),
+        supabase.from("naves").select("id, nombre, modo_transporte").order("nombre"),
         supabase.from("plantas").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("destinos").select("id, nombre").eq("activo", true).order("nombre"),
@@ -381,14 +515,25 @@ export function CrearReservaContent() {
       if (navierasRes.error) {
         console.error("Error loading navieras:", navierasRes.error);
       } else if (navierasRes.data) {
-        setNavieras(navierasRes.data);
+        setNavieras(
+          navierasRes.data.map((row) => ({
+            id: row.id,
+            nombre: row.nombre,
+            modo_transporte: (row.modo_transporte === "aereo" ? "aereo" : "maritimo") as ModoTransporte,
+          }))
+        );
       }
 
       if (navesRes.error) {
         console.error("Error loading naves:", navesRes.error);
       } else if (navesRes.data) {
-        setNaves(navesRes.data);
-        setNavesFiltered(navesRes.data);
+        const mapped = navesRes.data.map((row) => ({
+          id: row.id,
+          nombre: row.nombre,
+          modo_transporte: (row.modo_transporte === "aereo" ? "aereo" : "maritimo") as ModoTransporte,
+        }));
+        setNaves(mapped);
+        setNavesFiltered(mapped);
       }
 
       if (plantasRes.error) {
@@ -447,7 +592,7 @@ export function CrearReservaContent() {
       if (clientesRes.error) {
         console.error("Error loading empresas:", clientesRes.error);
       } else if (clientesRes.data) {
-        setClientes(clientesRes.data);
+        setClientes(filterRowsByNombreVisible(clientesRes.data, (e) => e.nombre));
       }
     } catch (err) {
       console.error("Error fetching catalogos:", err);
@@ -461,20 +606,70 @@ export function CrearReservaContent() {
     void fetchCatalogos();
   }, [fetchCatalogos]);
 
+  const isAereo = useMemo(
+    () => isOperacionAerea(formData.tipo_operacion),
+    [formData.tipo_operacion]
+  );
+  const modoTransporte = isAereo ? "aereo" : "maritimo";
+
+  const carriersFiltered = useMemo(
+    () => navieras.filter((n) => n.modo_transporte === modoTransporte),
+    [navieras, modoTransporte]
+  );
+
+  const navesPorModo = useMemo(
+    () => naves.filter((n) => n.modo_transporte === modoTransporte),
+    [naves, modoTransporte]
+  );
+
+  // Si cambia marítimo ↔ aéreo, limpiar carrier / nave / viaje incompatibles
+  useEffect(() => {
+    const carrier = navieras.find((n) => n.id === formData.naviera);
+    const nave = naves.find((n) => n.id === formData.nave);
+    const carrierMismatch = Boolean(formData.naviera && carrier && carrier.modo_transporte !== modoTransporte);
+    const naveMismatch = Boolean(formData.nave && nave && nave.modo_transporte !== modoTransporte);
+    if (!carrierMismatch && !naveMismatch) return;
+    setFormData((prev) => ({
+      ...prev,
+      naviera: carrierMismatch ? "" : prev.naviera,
+      nave: carrierMismatch || naveMismatch ? "" : prev.nave,
+      viaje: carrierMismatch || naveMismatch ? "" : prev.viaje,
+    }));
+    if (carrierMismatch) setNavieraInput("");
+    if (carrierMismatch || naveMismatch) {
+      setNaveInput("");
+      setViajesSugeridos([]);
+    }
+  }, [modoTransporte, formData.naviera, formData.nave, navieras, naves]);
+
+  useEffect(() => {
+    const nombre = carriersFiltered.find((n) => n.id === formData.naviera)?.nombre ?? "";
+    setNavieraInput(nombre);
+  }, [formData.naviera, carriersFiltered]);
+
   useEffect(() => {
     if (!formData.naviera || !supabase) {
-      setNavesFiltered(naves);
+      setNavesFiltered(navesPorModo);
       return;
     }
     const fetchNavesNaviera = async () => {
       const { data } = await supabase
         .from("navieras_naves")
-        .select("nave_id, naves(id, nombre)")
+        .select("nave_id, naves(id, nombre, modo_transporte)")
         .eq("naviera_id", formData.naviera);
-      const filtered =
+      const linked =
         data && data.length > 0
-          ? data.map((d) => d.naves as unknown as SelectOption).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre))
-          : naves;
+          ? data
+              .map((d) => d.naves as unknown as TransportOption | null)
+              .filter((n): n is TransportOption => Boolean(n))
+              .map((n) => ({
+                ...n,
+                modo_transporte: (n.modo_transporte === "aereo" ? "aereo" : "maritimo") as ModoTransporte,
+              }))
+              .filter((n) => n.modo_transporte === modoTransporte)
+              .sort((a, b) => a.nombre.localeCompare(b.nombre))
+          : [];
+      const filtered = linked.length > 0 ? linked : navesPorModo;
       setNavesFiltered(filtered);
       setFormData((prev) => {
         if (!prev.nave || filtered.some((n) => n.id === prev.nave)) return prev;
@@ -483,11 +678,11 @@ export function CrearReservaContent() {
       setNaveInput((text) => (filtered.some((n) => n.nombre === text) ? text : ""));
     };
     void fetchNavesNaviera();
-  }, [formData.naviera, supabase, naves]);
+  }, [formData.naviera, supabase, navesPorModo, modoTransporte]);
 
-  // Al cambiar la nave, buscar viajes disponibles en itinerarios
+  // Al cambiar la nave, buscar viajes disponibles en itinerarios (solo marítimo)
   useEffect(() => {
-    if (!formData.nave || !supabase) {
+    if (isAereo || !formData.nave || !supabase) {
       setViajesSugeridos([]);
       return;
     }
@@ -515,11 +710,11 @@ export function CrearReservaContent() {
     };
     void fetchViajes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.nave, supabase]);
+  }, [formData.nave, supabase, isAereo]);
 
   // Sincronizar inicio/fin stacking y corte documental desde borradores de Stacking (localStorage) cuando nave + viaje coinciden con un itinerario
   useEffect(() => {
-    if (typeof window === "undefined" || !supabase) return;
+    if (isAereo || typeof window === "undefined" || !supabase) return;
 
     const naveName =
       navesFiltered.find((n) => n.id === formData.nave)?.nombre ??
@@ -575,7 +770,7 @@ export function CrearReservaContent() {
     return () => {
       cancelled = true;
     };
-  }, [formData.nave, formData.viaje, supabase, navesFiltered, naves]);
+  }, [formData.nave, formData.viaje, supabase, navesFiltered, naves, isAereo]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -596,6 +791,14 @@ export function CrearReservaContent() {
       if (fieldName === "nave") {
         setViajesSugeridos([]);
         setFormData((prev) => ({ ...prev, nave: value, viaje: "" }));
+      } else if (fieldName === "tratamiento_frio_o2" || fieldName === "tratamiento_frio_co2") {
+        const digits = rawValue.replace(/[^\d]/g, "");
+        if (digits === "") {
+          setFormData((prev) => ({ ...prev, [fieldName]: "" }));
+          return;
+        }
+        const n = Math.min(100, Math.max(0, parseInt(digits, 10)));
+        setFormData((prev) => ({ ...prev, [fieldName]: String(Number.isFinite(n) ? n : "") }));
       } else if (fieldName === "tipo_atmosfera") {
         setFormData((prev) => ({
           ...prev,
@@ -702,8 +905,8 @@ export function CrearReservaContent() {
         formData.etd
       ),
       planta: Boolean(formData.planta_presentacion),
-      deposito: true,
-      observaciones: Boolean(formData.observaciones.trim()),
+      deposito: Boolean(formData.solicitud_ventana),
+      observaciones: formData.sin_observaciones || Boolean(formData.observaciones.trim()),
     };
   }, [formData, naveInput]);
 
@@ -841,6 +1044,71 @@ export function CrearReservaContent() {
     setAddingDestino(false);
   };
 
+  const handleAddCarrier = async (text: string) => {
+    if (!supabase || !text.trim()) return;
+    setAddingNaviera(true);
+    const nombre = text.trim().toUpperCase();
+    const { data, error: insertError } = await supabase
+      .from("navieras")
+      .insert({ nombre, activo: true, modo_transporte: modoTransporte })
+      .select("id, nombre, modo_transporte")
+      .single();
+    if (!insertError && data) {
+      const row: TransportOption = {
+        id: data.id,
+        nombre: data.nombre,
+        modo_transporte: data.modo_transporte === "aereo" ? "aereo" : "maritimo",
+      };
+      setNavieras((prev) => [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setFormData((prev) => ({ ...prev, naviera: row.id }));
+      setNavieraInput(row.nombre);
+    } else if (insertError) {
+      console.error("Error adding carrier:", insertError);
+      setError(insertError.message);
+    }
+    setAddingNaviera(false);
+  };
+
+  const handleAddNave = async (text: string) => {
+    if (!supabase || !text.trim()) return;
+    setAddingNave(true);
+    const nombre = text.trim().toUpperCase();
+    const { data, error: insertError } = await supabase
+      .from("naves")
+      .insert({ nombre, activo: true, modo_transporte: modoTransporte })
+      .select("id, nombre, modo_transporte")
+      .single();
+    if (!insertError && data) {
+      const row: TransportOption = {
+        id: data.id,
+        nombre: data.nombre,
+        modo_transporte: data.modo_transporte === "aereo" ? "aereo" : "maritimo",
+      };
+      setNaves((prev) => [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setNavesFiltered((prev) => {
+        if (prev.some((n) => n.id === row.id)) return prev;
+        return [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre));
+      });
+      if (formData.naviera) {
+        const { error: linkError } = await supabase.from("navieras_naves").insert({
+          naviera_id: formData.naviera,
+          nave_id: row.id,
+          activo: true,
+        });
+        if (linkError && process.env.NODE_ENV === "development") {
+          console.error("Error linking nave to carrier:", linkError);
+        }
+      }
+      setFormData((prev) => ({ ...prev, nave: row.id, viaje: "" }));
+      setNaveInput(row.nombre);
+      setViajesSugeridos([]);
+    } else if (insertError) {
+      console.error("Error adding nave:", insertError);
+      setError(insertError.message);
+    }
+    setAddingNave(false);
+  };
+
   const friendlyDbError = (msg: string): string => {
     const colNames: Record<string, string> = {
       ejecutivo:            "Ejecutivo",
@@ -933,10 +1201,16 @@ export function CrearReservaContent() {
         const n = parseInt(v, 10);
         return Number.isFinite(n) ? n : null;
       })(),
-      tratamiento_frio: formData.tratamiento_frio || null,
-      tratamiento_frio_o2: formData.tratamiento_frio_o2 ? parseInt(formData.tratamiento_frio_o2, 10) : null,
-      tratamiento_frio_co2: formData.tratamiento_frio_co2 ? parseInt(formData.tratamiento_frio_co2, 10) : null,
-      tipo_atmosfera: formData.tipo_atmosfera || null,
+      tratamiento_frio: formData.tratamiento_frio === "SI" ? "SI" : "NO",
+      tratamiento_frio_o2:
+        formData.tratamiento_frio === "SI" && formData.tratamiento_frio_o2
+          ? parseInt(formData.tratamiento_frio_o2, 10)
+          : null,
+      tratamiento_frio_co2:
+        formData.tratamiento_frio === "SI" && formData.tratamiento_frio_co2
+          ? parseInt(formData.tratamiento_frio_co2, 10)
+          : null,
+      tipo_atmosfera: formData.tratamiento_frio === "SI" ? formData.tipo_atmosfera || null : null,
       tipo_unidad: formData.tipo_unidad || null,
       naviera: formData.naviera
         ? navieras.find((n) => n.id === formData.naviera)?.nombre
@@ -956,9 +1230,18 @@ export function CrearReservaContent() {
       planta_presentacion: formData.planta_presentacion
         ? plantas.find((p) => p.id === formData.planta_presentacion)?.nombre
         : null,
+      citacion: formData.citacion.trim() || null,
       deposito: formData.deposito
         ? depositos.find((d) => d.id === formData.deposito)?.nombre
         : null,
+      inicio_stacking: formData.inicio_stacking.trim() || null,
+      fin_stacking: formData.fin_stacking.trim() || null,
+      corte_documental: formData.corte_documental.trim() || null,
+      solicitud_ventana: formData.solicitud_ventana || null,
+      late_inicio: formData.solicitud_ventana === "LATE" ? formData.late_inicio.trim() || null : null,
+      late_fin: formData.solicitud_ventana === "LATE" ? formData.late_fin.trim() || null : null,
+      xlate_inicio: formData.solicitud_ventana === "EXTRA_LATE" ? formData.xlate_inicio.trim() || null : null,
+      xlate_fin: formData.solicitud_ventana === "EXTRA_LATE" ? formData.xlate_fin.trim() || null : null,
       observaciones: formData.observaciones || null,
       origen_registro: "reserva_web",
     };
@@ -1021,8 +1304,15 @@ export function CrearReservaContent() {
   const [lastSavedCopias, setLastSavedCopias] = useState(1);
 
   const buildEmailContent = (p: Record<string, unknown>) => {
+    const ventanaSubject =
+      p.solicitud_ventana === "LATE"
+        ? "LATE"
+        : p.solicitud_ventana === "EXTRA_LATE"
+          ? "EXTRA LATE"
+          : null;
     const subject = [
       "SOLICITUD DE RESERVA",
+      ventanaSubject,
       p.cliente ?? "",
       p.naviera ?? "",
       [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
@@ -1035,6 +1325,37 @@ export function CrearReservaContent() {
     const val = (v: unknown) => (v != null && v !== "" ? String(v) : null);
     const pct = (v: unknown) => (v != null && v !== "" ? String(v) + "%" : null);
     const dias = (v: unknown) => (v != null && v !== "" ? String(v) + " dias" : null);
+    const fmtDate = (v: unknown) => {
+      const s = val(v);
+      if (!s) return null;
+      try {
+        const date = parse(s.slice(0, 10), "yyyy-MM-dd", new Date());
+        if (Number.isNaN(date.getTime())) return s;
+        return format(date, "dd-MM-yyyy");
+      } catch {
+        return s;
+      }
+    };
+    const fmtDt = (v: unknown) => {
+      const s = val(v);
+      if (!s) return null;
+      try {
+        const normalized = s.includes("T") ? s : s.replace(" ", "T");
+        const date = parse(normalized.slice(0, 16), "yyyy-MM-dd'T'HH:mm", new Date());
+        if (Number.isNaN(date.getTime())) return s;
+        return format(date, "dd-MM-yyyy HH:mm");
+      } catch {
+        return s;
+      }
+    };
+    const ventanaLabel =
+      p.solicitud_ventana === "LATE"
+        ? "Late"
+        : p.solicitud_ventana === "EXTRA_LATE"
+          ? "Extra late"
+          : p.solicitud_ventana === "NORMAL"
+            ? "Normal"
+            : null;
 
     const makeRow = (label: string, value: string | null, even: boolean) => {
       if (!value) return "";
@@ -1045,7 +1366,7 @@ export function CrearReservaContent() {
         + "</tr>";
     };
 
-    const makeSection = (title: string, pairs: Array<[string, string | null]>) => {
+    const makeSection = (title: string, pairs: Array<[string, string | null]>, headerBg = "#1d4ed8") => {
       let rows = "";
       let idx = 0;
       for (const [label, value] of pairs) {
@@ -1053,7 +1374,7 @@ export function CrearReservaContent() {
       }
       if (!rows) return "";
       return "<table width=\"560\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:560px;margin-bottom:16px;border-collapse:collapse;border:1px solid #cccccc\">"
-        + "<tr><td colspan=\"2\" style=\"background:#1d4ed8;color:#ffffff;font-size:11px;font-weight:bold;text-transform:uppercase;padding:8px 12px;font-family:Arial,sans-serif\">" + title + "</td></tr>"
+        + "<tr><td colspan=\"2\" style=\"background:" + headerBg + ";color:#ffffff;font-size:11px;font-weight:bold;text-transform:uppercase;padding:8px 12px;font-family:Arial,sans-serif\">" + title + "</td></tr>"
         + rows
         + "</table>";
     };
@@ -1082,15 +1403,34 @@ export function CrearReservaContent() {
       ["Viaje",     val(p.viaje)],
       ["POL",       val(p.pol)],
       ["POD",       val(p.pod)],
-      ["ETD",       val(p.etd)],
-      ["ETA",       val(p.eta)],
+      ["ETD",       fmtDate(p.etd)],
+      ["ETA",       fmtDate(p.eta)],
       ["Transito",  dias(p.tt)],
       ["Booking",   val(p.booking)],
     ]);
     const planta = makeSection("Planta / Deposito", [
       ["Planta",   val(p.planta_presentacion)],
+      ["Citacion", fmtDt(p.citacion)],
       ["Deposito", val(p.deposito)],
     ]);
+    const stacking = makeSection("Stacking / Corte", [
+      ["Tipo de operacion (ventana)", ventanaLabel],
+      ["Inicio stacking", fmtDt(p.inicio_stacking)],
+      ["Fin stacking", fmtDt(p.fin_stacking)],
+      ["Corte documental", fmtDt(p.corte_documental)],
+    ]);
+    const lateExtra =
+      p.solicitud_ventana === "LATE"
+        ? makeSection("Ventana Late", [
+            ["Inicio Late", fmtDt(p.late_inicio)],
+            ["Fin Late", fmtDt(p.late_fin)],
+          ], "#d97706")
+        : p.solicitud_ventana === "EXTRA_LATE"
+          ? makeSection("Ventana Extra late", [
+              ["Inicio Extra late", fmtDt(p.xlate_inicio)],
+              ["Fin Extra late", fmtDt(p.xlate_fin)],
+            ], "#dc2626")
+          : "";
     const obs = p.observaciones ? makeSection("Observaciones", [["Nota", val(p.observaciones)]]) : "";
 
     const htmlBody =
@@ -1098,7 +1438,7 @@ export function CrearReservaContent() {
       + "<div style=\"max-width:600px;margin:24px 0;background:#ffffff;padding:24px;border-radius:8px\">"
       + "<p style=\"font-size:14px;color:#222;margin-top:0\">Estimado equipo,</p>"
       + "<p style=\"font-size:14px;color:#222\">Se ha creado una nueva solicitud de reserva con los siguientes datos:</p>"
-      + general + carga + naviera + planta + obs
+      + general + carga + naviera + planta + stacking + lateExtra + obs
       + "<p style=\"font-size:14px;color:#222\">Quedo atento.</p>"
       + `<p style="color:#aaa;font-size:11px;margin-bottom:0">${brand.companyShort} &middot; Sistema de Reservas</p>`
       + "</div>"
@@ -1116,6 +1456,37 @@ export function CrearReservaContent() {
         : raw;
 
     const val = (v: unknown) => (v != null && v !== "" ? String(v) : "");
+    const fmtDate = (v: unknown) => {
+      const s = val(v);
+      if (!s) return "";
+      try {
+        const date = parse(s.slice(0, 10), "yyyy-MM-dd", new Date());
+        if (Number.isNaN(date.getTime())) return s;
+        return format(date, "dd-MM-yyyy");
+      } catch {
+        return s;
+      }
+    };
+    const fmtDt = (v: unknown) => {
+      const s = val(v);
+      if (!s) return "";
+      try {
+        const normalized = s.includes("T") ? s : s.replace(" ", "T");
+        const date = parse(normalized.slice(0, 16), "yyyy-MM-dd'T'HH:mm", new Date());
+        if (Number.isNaN(date.getTime())) return s;
+        return format(date, "dd-MM-yyyy HH:mm");
+      } catch {
+        return s;
+      }
+    };
+    const ventanaLabel =
+      p.solicitud_ventana === "LATE"
+        ? "Late"
+        : p.solicitud_ventana === "EXTRA_LATE"
+          ? "Extra late"
+          : p.solicitud_ventana === "NORMAL"
+            ? "Normal"
+            : "";
     const fecha = new Date().toLocaleDateString("es-CL");
     const argb = (rgb: string) => (rgb.length === 8 ? rgb : `FF${rgb}`);
 
@@ -1144,14 +1515,29 @@ export function CrearReservaContent() {
       { header: "POL",               value: val(p.pol) },
       { header: "POD",               value: val(p.pod) },
       { header: "Depósito",          value: val(p.deposito) },
-      { header: "ETD",               value: val(p.etd) },
-      { header: "ETA",               value: val(p.eta) },
+      { header: "ETD",               value: fmtDate(p.etd) },
+      { header: "ETA",               value: fmtDate(p.eta) },
       { header: "Especie",           value: val(p.especie) },
+      { header: "Tipo Unidad",       value: val(p.tipo_unidad) },
       { header: "T°",                value: val(p.temperatura) },
       { header: "CBM",               value: val(p.ventilacion) },
+      { header: "Trat. Frío",        value: val(p.tratamiento_frio) },
+      { header: "Atmósfera",         value: val(p.tipo_atmosfera) },
+      { header: "O2 %",              value: val(p.tratamiento_frio_o2) },
+      { header: "CO2 %",             value: val(p.tratamiento_frio_co2) },
       { header: "Planta",            value: val(p.planta_presentacion) },
+      { header: "Citación",          value: fmtDt(p.citacion) },
+      { header: "Inicio Stacking",   value: fmtDt(p.inicio_stacking) },
+      { header: "Fin Stacking",      value: fmtDt(p.fin_stacking) },
+      { header: "Corte Documental",  value: fmtDt(p.corte_documental) },
+      { header: "Tipo Operación",    value: ventanaLabel },
+      { header: "Inicio Late",       value: fmtDt(p.late_inicio) },
+      { header: "Fin Late",          value: fmtDt(p.late_fin) },
+      { header: "Inicio Extra late", value: fmtDt(p.xlate_inicio) },
+      { header: "Fin Extra late",    value: fmtDt(p.xlate_fin) },
       { header: "Incoterm",          value: val(p.incoterm) },
       { header: "Cláusula de venta", value: val(p.forma_pago) },
+      { header: "Observaciones",     value: val(p.observaciones) },
     ];
     const nCols = colDefs.length;
 
@@ -1187,10 +1573,11 @@ export function CrearReservaContent() {
       val(p.viaje) && `Viaje: ${val(p.viaje)}`,
       val(p.pol) && `POL: ${val(p.pol)}`,
       val(p.pod) && `POD: ${val(p.pod)}`,
-      val(p.etd) && `ETD: ${val(p.etd)}`,
+      fmtDate(p.etd) && `ETD: ${fmtDate(p.etd)}`,
       val(p.especie) && `Especie: ${val(p.especie)}`,
       val(p.tipo_unidad) && `Unidad: ${val(p.tipo_unidad)}`,
       val(p.temperatura) && `Temp: ${val(p.temperatura)}`,
+      ventanaLabel && `Tipo operación: ${ventanaLabel}`,
     ].filter(Boolean).join("   |   ");
     ws.mergeCells(3, 1, 3, nCols);
     const infoCell = ws.getCell(3, 1);
@@ -1248,8 +1635,15 @@ export function CrearReservaContent() {
     setSendingEmail(true);
 
     try {
+      const ventanaSubject =
+        p.solicitud_ventana === "LATE"
+          ? "LATE"
+          : p.solicitud_ventana === "EXTRA_LATE"
+            ? "EXTRA LATE"
+            : null;
       const subject = [
         lastSavedCopias > 1 ? `SOLICITUD DE ${lastSavedCopias} RESERVAS` : "SOLICITUD DE RESERVA",
+        ventanaSubject,
         p.cliente ?? "",
         p.naviera ?? "",
         [p.nave, p.viaje].filter(Boolean).join(" - ") || "",
@@ -1344,7 +1738,9 @@ export function CrearReservaContent() {
     name: keyof FormData,
     categoria: string,
     label: string,
-    required?: boolean
+    required?: boolean,
+    /** Si true, el desplegable muestra solo el valor (p. ej. FOB) sin descripción. */
+    valorOnly?: boolean
   ) => {
     const items = catalogos[categoria] ?? [];
     return (
@@ -1360,7 +1756,7 @@ export function CrearReservaContent() {
           disabled={loadingCatalogos}
           options={items.map((item) => ({
             value: item.valor,
-            label: item.descripcion ? `${item.valor} — ${item.descripcion}` : item.valor,
+            label: valorOnly || !item.descripcion ? item.valor : `${item.valor} — ${item.descripcion}`,
           }))}
           onChange={(value) => {
             if (name === "tipo_atmosfera") {
@@ -1493,6 +1889,19 @@ export function CrearReservaContent() {
     }
   };
 
+  /** YYYY-MM-DDTHH:mm → dd-MM-yyyy HH:mm */
+  const formatDateTimeDisplay = (dateTimeStr: string) => {
+    if (!dateTimeStr) return "-";
+    try {
+      const normalized = dateTimeStr.includes("T") ? dateTimeStr : dateTimeStr.replace(" ", "T");
+      const date = parse(normalized.slice(0, 16), "yyyy-MM-dd'T'HH:mm", new Date());
+      if (Number.isNaN(date.getTime())) return dateTimeStr;
+      return format(date, "dd-MM-yyyy HH:mm");
+    } catch {
+      return dateTimeStr;
+    }
+  };
+
   const renderPreviewModal = () => {
     if (!showPreview) return null;
 
@@ -1510,6 +1919,15 @@ export function CrearReservaContent() {
       CANCELADA:   { bg: "bg-red-400/20",   text: "text-red-200",     dot: "bg-red-300" },
     };
     const esCfg = estadoColors[formData.estado_operacion ?? ""] ?? { bg: "bg-amber-400/20", text: "text-amber-200", dot: "bg-amber-300" };
+
+    const ventanaCfg =
+      formData.solicitud_ventana === "LATE"
+        ? { label: `${tr.tipoOperacion} · ${tr.ventanaLate}`, bg: "bg-amber-400/25", text: "text-amber-100", border: "border-amber-300/45", dot: "bg-amber-300" }
+        : formData.solicitud_ventana === "EXTRA_LATE"
+          ? { label: `${tr.tipoOperacion} · ${tr.ventanaExtraLate}`, bg: "bg-red-400/25", text: "text-red-100", border: "border-red-300/45", dot: "bg-red-300" }
+          : formData.solicitud_ventana === "NORMAL"
+            ? { label: `${tr.tipoOperacion} · ${tr.ventanaNormal}`, bg: "bg-white/12", text: "text-sky-100", border: "border-white/20", dot: "bg-sky-300" }
+            : null;
 
     const sections = [
       {
@@ -1531,18 +1949,21 @@ export function CrearReservaContent() {
           { label: tr.tipoUnidad, value: formData.tipo_unidad },
           { label: tr.temperatura, value: formData.temperatura },
           { label: tr.ventilacion, value: formData.ventilacion !== "" ? formData.ventilacion : "—" },
-          { label: tr.tratamientoFrio, value: formData.tratamiento_frio },
-          ...(formData.tratamiento_frio_o2 ? [{ label: tr.o2, value: `${formData.tratamiento_frio_o2}%` }] : []),
-          ...(formData.tratamiento_frio_co2 ? [{ label: tr.co2, value: `${formData.tratamiento_frio_co2}%` }] : []),
-          ...(formData.tipo_atmosfera ? [{ label: tr.tipoAtmosfera, value: formData.tipo_atmosfera }] : []),
+          { label: tr.tratamientoFrio, value: formData.tratamiento_frio === "SI" ? tr.si : formData.tratamiento_frio === "NO" ? tr.no : formData.tratamiento_frio },
+          ...(formData.tratamiento_frio === "SI" && formData.tipo_atmosfera ? [{ label: tr.tipoAtmosfera, value: formData.tipo_atmosfera }] : []),
+          ...(formData.tratamiento_frio === "SI" && formData.tratamiento_frio_o2 ? [{ label: tr.o2, value: `${formData.tratamiento_frio_o2}%` }] : []),
+          ...(formData.tratamiento_frio === "SI" && formData.tratamiento_frio_co2 ? [{ label: tr.co2, value: `${formData.tratamiento_frio_co2}%` }] : []),
         ],
       },
       {
-        icon: "typcn:plane", title: tr.sectionNaviera,
-        cols: 3,
+        icon: isAereo ? "lucide:plane" : "lucide:ship",
+        title: isAereo ? tr.sectionAerolinea : tr.sectionNaviera,
+        cols: 4,
         items: [
-          { label: tr.booking, value: formData.booking },
-          { label: tr.viaje, value: formData.viaje },
+          { label: isAereo ? tr.aerolinea : tr.naviera, value: navieraNombre },
+          { label: isAereo ? tr.naveAerea : tr.nave, value: naveNombre },
+          { label: isAereo ? tr.numeroVuelo : tr.viaje, value: formData.viaje },
+          ...(formData.booking ? [{ label: tr.booking, value: formData.booking }] : []),
           ...(transitTime !== null ? [{ label: "TT", value: `${transitTime} días` }] : []),
         ],
       },
@@ -1551,7 +1972,7 @@ export function CrearReservaContent() {
         cols: 2,
         items: [
           { label: tr.planta, value: getDisplayValue(formData.planta_presentacion, plantas) },
-          ...(formData.citacion ? [{ label: tr.citacion, value: formData.citacion }] : []),
+          ...(formData.citacion ? [{ label: tr.citacion, value: formatDateTimeDisplay(formData.citacion) }] : []),
         ],
       },
       {
@@ -1559,12 +1980,54 @@ export function CrearReservaContent() {
         cols: 2,
         items: [
           { label: tr.deposito, value: getDisplayValue(formData.deposito, depositos) },
+          ...(formData.solicitud_ventana
+            ? [{
+                label: tr.solicitudVentana,
+                value:
+                  formData.solicitud_ventana === "LATE"
+                    ? tr.ventanaLate
+                    : formData.solicitud_ventana === "EXTRA_LATE"
+                      ? tr.ventanaExtraLate
+                      : tr.ventanaNormal,
+                accent:
+                  formData.solicitud_ventana === "LATE"
+                    ? ("amber" as const)
+                    : formData.solicitud_ventana === "EXTRA_LATE"
+                      ? ("red" as const)
+                      : undefined,
+              }]
+            : []),
+          ...(formData.inicio_stacking
+            ? [{ label: tr.inicioStacking, value: formatDateTimeDisplay(formData.inicio_stacking) }]
+            : []),
+          ...(formData.fin_stacking
+            ? [{ label: tr.finStacking, value: formatDateTimeDisplay(formData.fin_stacking) }]
+            : []),
+          ...(formData.corte_documental
+            ? [{ label: tr.corteDocumental, value: formatDateTimeDisplay(formData.corte_documental) }]
+            : []),
+          ...(formData.solicitud_ventana === "LATE" && formData.late_inicio
+            ? [{ label: tr.lateInicio, value: formatDateTimeDisplay(formData.late_inicio), separateRow: true, accent: "amber" as const }]
+            : []),
+          ...(formData.solicitud_ventana === "LATE" && formData.late_fin
+            ? [{ label: tr.lateFin, value: formatDateTimeDisplay(formData.late_fin), separateRow: true, accent: "amber" as const }]
+            : []),
+          ...(formData.solicitud_ventana === "EXTRA_LATE" && formData.xlate_inicio
+            ? [{ label: tr.xlateInicio, value: formatDateTimeDisplay(formData.xlate_inicio), separateRow: true, accent: "red" as const }]
+            : []),
+          ...(formData.solicitud_ventana === "EXTRA_LATE" && formData.xlate_fin
+            ? [{ label: tr.xlateFin, value: formatDateTimeDisplay(formData.xlate_fin), separateRow: true, accent: "red" as const }]
+            : []),
         ],
       },
-      ...(formData.observaciones ? [{
+      ...(formData.observaciones || formData.sin_observaciones ? [{
         icon: "typcn:document-text", title: tr.sectionObservaciones,
         cols: 1,
-        items: [{ label: tr.observaciones, value: formData.observaciones, wide: true }],
+        items: [{
+          label: tr.observaciones,
+          value: formData.sin_observaciones ? tr.sinObservaciones : formData.observaciones,
+          wide: true,
+        }],
       }] : []),
     ];
 
@@ -1609,17 +2072,25 @@ export function CrearReservaContent() {
                         .filter(Boolean).join(" · ") || tr.noCargoData}
                     </p>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-bold shrink-0 border border-white/10 ${esCfg.bg} ${esCfg.text}`}>
-                    <span className={`w-2.5 h-2.5 rounded-full ${esCfg.dot} shrink-0`} />
-                    {formData.estado_operacion || "PENDIENTE"}
-                  </span>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-bold border border-white/10 ${esCfg.bg} ${esCfg.text}`}>
+                      <span className={`w-2.5 h-2.5 rounded-full ${esCfg.dot} shrink-0`} />
+                      {formData.estado_operacion || "PENDIENTE"}
+                    </span>
+                    {ventanaCfg ? (
+                      <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-bold border ${ventanaCfg.bg} ${ventanaCfg.text} ${ventanaCfg.border}`}>
+                        <span className={`w-2.5 h-2.5 rounded-full ${ventanaCfg.dot} shrink-0`} />
+                        {ventanaCfg.label}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="h-px bg-white/15 mb-3" />
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-sky-200/80 mb-1">{tr.navieraNaveLabel}</p>
+                    <p className="text-sm font-semibold text-sky-200/80 mb-1">{isAereo ? tr.aerolineaNaveLabel : tr.navieraNaveLabel}</p>
                     <p className="text-lg font-semibold text-white truncate">
                       {[navieraNombre !== "-" ? navieraNombre : null, naveNombre !== "-" ? naveNombre : null].filter(Boolean).join(" · ") || "—"}
                     </p>
@@ -1664,6 +2135,37 @@ export function CrearReservaContent() {
               {sections.map((section, sIdx) => {
                 const visibles = section.items.filter((i) => i.value && i.value !== "-");
                 if (visibles.length === 0) return null;
+
+                type PreviewItem = (typeof visibles)[number];
+                const chunks: { separate: boolean; items: PreviewItem[]; accent?: "amber" | "red" }[] = [];
+                for (const item of visibles) {
+                  const separate = "separateRow" in item && Boolean(item.separateRow);
+                  const accent = "accent" in item ? item.accent : undefined;
+                  const last = chunks[chunks.length - 1];
+                  if (!last || last.separate !== separate) {
+                    chunks.push({ separate, items: [item], accent });
+                  } else {
+                    last.items.push(item);
+                    if (!last.accent && accent) last.accent = accent;
+                  }
+                }
+
+                const renderItem = (item: PreviewItem, iIdx: number) => {
+                  const accent = "accent" in item ? item.accent : undefined;
+                  const valueClass =
+                    accent === "amber"
+                      ? "inline-flex px-2.5 py-1 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-lg font-bold leading-snug"
+                      : accent === "red"
+                        ? "inline-flex px-2.5 py-1 rounded-md bg-red-100 text-red-800 border border-red-300 text-lg font-bold leading-snug"
+                        : "text-lg font-semibold text-brand-blue leading-snug";
+                  return (
+                    <div key={iIdx} className={"wide" in item && item.wide ? "col-span-full" : ""}>
+                      <p className="text-sm font-semibold text-brand-blue/65 mb-1">{item.label}</p>
+                      <p className={valueClass}>{item.value}</p>
+                    </div>
+                  );
+                };
+
                 return (
                   <div key={sIdx} className="rounded-lg border border-brand-blue/15 bg-[#F4F8FC] overflow-hidden shadow-sm">
                     <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-brand-blue/10 to-transparent border-b border-brand-blue/10">
@@ -1675,12 +2177,25 @@ export function CrearReservaContent() {
                     <div className={`px-4 pt-3.5 pb-4 grid gap-x-5 gap-y-4 ${
                       section.cols === 1 ? "grid-cols-1" : section.cols === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
                     }`}>
-                      {visibles.map((item, iIdx) => (
-                        <div key={iIdx} className={"wide" in item && item.wide ? "col-span-full" : ""}>
-                          <p className="text-sm font-semibold text-brand-blue/65 mb-1">{item.label}</p>
-                          <p className="text-lg font-semibold text-brand-blue leading-snug">{item.value}</p>
-                        </div>
-                      ))}
+                      {chunks.map((chunk, cIdx) => {
+                        if (!chunk.separate) {
+                          return chunk.items.map((item, iIdx) => renderItem(item, cIdx * 100 + iIdx));
+                        }
+                        const rowTone =
+                          chunk.accent === "amber"
+                            ? "border-amber-300/70 bg-amber-50/90"
+                            : chunk.accent === "red"
+                              ? "border-red-300/70 bg-red-50/90"
+                              : "border-brand-blue/10 bg-white/60";
+                        return (
+                          <div
+                            key={`sep-${cIdx}`}
+                            className={`col-span-full grid grid-cols-2 gap-x-5 gap-y-3 mt-1 px-3 py-3 rounded-lg border ${rowTone}`}
+                          >
+                            {chunk.items.map((item, iIdx) => renderItem(item, iIdx))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -1763,7 +2278,7 @@ export function CrearReservaContent() {
     general: tr.sectionGeneral,
     comercial: tr.sectionComercial,
     carga: tr.sectionCarga,
-    naviera: tr.sectionNaviera,
+    naviera: isAereo ? tr.sectionAerolinea : tr.sectionNaviera,
     planta: tr.sectionPlanta,
     deposito: tr.sectionDeposito,
     observaciones: tr.sectionObservaciones,
@@ -1773,7 +2288,7 @@ export function CrearReservaContent() {
     general: tr.sectionGeneralDesc,
     comercial: tr.sectionComercialDesc,
     carga: tr.sectionCargaDesc,
-    naviera: tr.sectionNavieraDesc,
+    naviera: isAereo ? tr.sectionAerolineaDesc : tr.sectionNavieraDesc,
     planta: tr.sectionPlantaDesc,
     deposito: tr.sectionDepositoDesc,
     observaciones: tr.sectionObservacionesDesc,
@@ -1919,7 +2434,7 @@ export function CrearReservaContent() {
     ),
     comercial: (
       <FieldGrid>
-        {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm, true)}
+        {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm, true, true)}
         {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago, true)}
         {renderSelect("consignatario", consignatarios, tr.consignatario)}
       </FieldGrid>
@@ -1948,7 +2463,7 @@ export function CrearReservaContent() {
           placeholder={tr.searchEspecie}
           disabled={loadingCatalogos}
         />
-        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true)}
+        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true, true)}
         {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
         <div>
           <label htmlFor="ventilacion" className={labelClass}>
@@ -1973,42 +2488,130 @@ export function CrearReservaContent() {
             disabled={loadingCatalogos || !!formData.tipo_atmosfera}
           />
         </div>
-        {renderCatalogoSelect("tratamiento_frio", "tratamiento_frio", tr.tratamientoFrio)}
-        {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera)}
-        <div>
-          <label htmlFor="tratamiento_frio_o2" className={labelClass}>{tr.o2}</label>
-          <input
-            id="tratamiento_frio_o2"
-            name="tratamiento_frio_o2"
-            type="number"
-            value={formData.tratamiento_frio_o2}
-            onChange={handleChange}
-            placeholder={tr.placeholderO2}
-            className={inputClass}
-            disabled={!formData.tipo_atmosfera}
-          />
+        <div className="min-w-0">
+          <p className={labelClass}>{tr.tratamientoFrio}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { value: "SI", label: tr.si },
+              { value: "NO", label: tr.no },
+            ] as const).map((opt) => {
+              const selected = formData.tratamiento_frio === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => {
+                      if (opt.value === "NO") {
+                        return {
+                          ...prev,
+                          tratamiento_frio: "NO",
+                          tipo_atmosfera: "",
+                          tratamiento_frio_o2: "",
+                          tratamiento_frio_co2: "",
+                        };
+                      }
+                      return { ...prev, tratamiento_frio: "SI" };
+                    });
+                  }}
+                  className={`px-3 py-2.5 rounded-lg border text-sm font-bold transition-all ${
+                    selected
+                      ? "bg-brand-blue text-white border-brand-blue shadow-sm"
+                      : "bg-white text-brand-blue border-brand-blue/15 hover:border-brand-blue/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div>
-          <label htmlFor="tratamiento_frio_co2" className={labelClass}>{tr.co2}</label>
-          <input
-            id="tratamiento_frio_co2"
-            name="tratamiento_frio_co2"
-            type="number"
-            value={formData.tratamiento_frio_co2}
-            onChange={handleChange}
-            placeholder={tr.placeholderCO2}
-            className={inputClass}
-            disabled={!formData.tipo_atmosfera}
-          />
-        </div>
+        {formData.tratamiento_frio === "SI" ? (
+          <>
+            {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera, false, true)}
+            <div>
+              <label htmlFor="tratamiento_frio_o2" className={labelClass}>{tr.o2}</label>
+              <input
+                id="tratamiento_frio_o2"
+                name="tratamiento_frio_o2"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                step={1}
+                value={formData.tratamiento_frio_o2}
+                onChange={handleChange}
+                placeholder={tr.placeholderO2}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="tratamiento_frio_co2" className={labelClass}>{tr.co2}</label>
+              <input
+                id="tratamiento_frio_co2"
+                name="tratamiento_frio_co2"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                step={1}
+                value={formData.tratamiento_frio_co2}
+                onChange={handleChange}
+                placeholder={tr.placeholderCO2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        ) : null}
       </FieldGrid>
     ),
     naviera: (
       <FieldGrid>
-        {renderSelect("naviera", navieras, tr.naviera, true)}
+        {isAereo ? (
+          <ComboboxInput
+            id="naviera"
+            label={tr.aerolinea}
+            labelExtra={reqMark}
+            labelClass={labelClass}
+            inputClass={inputClass}
+            value={navieraInput}
+            options={carriersFiltered}
+            maxSuggestions={80}
+            onSelect={(opt) => {
+              setNavieraInput(opt.nombre);
+              setFormData((prev) => ({ ...prev, naviera: opt.id, nave: "", viaje: "" }));
+              setNaveInput("");
+              setViajesSugeridos([]);
+            }}
+            onChange={(val) => {
+              setNavieraInput(val);
+              const q = val.trim().toUpperCase();
+              const match = q
+                ? carriersFiltered.find((n) => n.nombre.toUpperCase() === q)
+                : undefined;
+              setFormData((prev) => ({
+                ...prev,
+                naviera: match?.id ?? "",
+                nave: match && match.id === prev.naviera ? prev.nave : "",
+                viaje: match && match.id === prev.naviera ? prev.viaje : "",
+              }));
+              if (!match) {
+                setNaveInput("");
+                setViajesSugeridos([]);
+              }
+            }}
+            onAddNew={handleAddCarrier}
+            addNewLabel={(text) => `${tr.addNewAerolinea} "${text}"`}
+            addingNew={addingNaviera}
+            placeholder={tr.searchAerolinea}
+            disabled={loadingCatalogos}
+          />
+        ) : (
+          renderSelect("naviera", carriersFiltered, tr.naviera, true)
+        )}
         <ComboboxInput
           id="nave"
-          label={tr.nave}
+          label={isAereo ? tr.naveAerea : tr.nave}
           labelExtra={reqMark}
           labelClass={labelClass}
           inputClass={inputClass}
@@ -2025,7 +2628,7 @@ export function CrearReservaContent() {
             const q = val.trim().toUpperCase();
             const match = q
               ? navesFiltered.find((n) => n.nombre.toUpperCase() === q) ??
-                naves.find((n) => n.nombre.toUpperCase() === q)
+                navesPorModo.find((n) => n.nombre.toUpperCase() === q)
               : undefined;
             setViajesSugeridos((prev) => (match ? prev : []));
             setFormData((prev) => ({
@@ -2034,16 +2637,19 @@ export function CrearReservaContent() {
               viaje: match && match.id === prev.nave ? prev.viaje : "",
             }));
           }}
-          placeholder={tr.searchNave}
+          onAddNew={handleAddNave}
+          addNewLabel={(text) => `${isAereo ? tr.addNewNaveAerea : tr.addNewNave} "${text}"`}
+          addingNew={addingNave}
+          placeholder={isAereo ? tr.searchNaveAerea : tr.searchNave}
           disabled={loadingCatalogos}
         />
         <ComboboxInput
           id="viaje"
-          label={tr.viaje}
+          label={isAereo ? tr.numeroVuelo : tr.viaje}
           labelExtra={
             <>
               {reqMark}
-              {viajesSugeridos.length > 0 && (
+              {!isAereo && viajesSugeridos.length > 0 && (
                 <span className="ml-2 text-brand-blue font-normal normal-case">{tr.fromItinerary}</span>
               )}
             </>
@@ -2051,11 +2657,11 @@ export function CrearReservaContent() {
           labelClass={labelClass}
           inputClass={inputClass}
           value={formData.viaje}
-          options={viajesSugeridos.map((v) => ({ id: v, nombre: v }))}
+          options={isAereo ? [] : viajesSugeridos.map((v) => ({ id: v, nombre: v }))}
           maxSuggestions={80}
           onSelect={(opt) => setFormData((prev) => ({ ...prev, viaje: opt.nombre }))}
           onChange={(val) => setFormData((prev) => ({ ...prev, viaje: val }))}
-          placeholder={tr.searchViaje}
+          placeholder={isAereo ? tr.searchVuelo : tr.searchViaje}
           disabled={loadingCatalogos}
         />
         {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
@@ -2137,63 +2743,236 @@ export function CrearReservaContent() {
           disabled={loadingCatalogos}
         />
         <div>
-          <label htmlFor="citacion" className={labelClass}>{tr.citacion}</label>
-          <input id="citacion" name="citacion" type="datetime-local" value={formData.citacion} onChange={handleChange} className={inputClass} autoComplete="off" />
+          <ReservaDateTimeField
+            id="citacion"
+            label={tr.citacion}
+            value={formData.citacion}
+            onChange={(v) => setFormData((prev) => ({ ...prev, citacion: v }))}
+            datePlaceholder={tr.datePlaceholder}
+            inputClass={inputClass}
+            labelClass={labelClass}
+          />
         </div>
       </FieldGrid>
     ),
     deposito: (
-      <>
-        <p className="text-sm text-brand-blue/75 leading-snug rounded-lg border border-brand-blue/15 bg-white px-3 py-2">
-          <Icon icon="lucide:info" className="inline-block align-middle mr-1.5 text-brand-teal" width={16} height={16} aria-hidden />
-          {tr.depositoStackingAutoHint}
-        </p>
-        <FieldGrid>
-          <div className="sm:col-span-2 xl:col-span-3">
-            {renderSelect("deposito", depositos, tr.deposito)}
+      <div className="flex flex-col gap-3 min-h-0 overflow-auto">
+        <div className="sm:max-w-md">
+          {renderSelect("deposito", depositos, tr.deposito)}
+        </div>
+
+        <div className="rounded-xl border border-brand-blue/15 bg-white p-3 space-y-2.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue/70">{tr.solicitudVentana}</p>
+          <p className="text-xs text-brand-blue/55">{tr.solicitudVentanaHint}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { value: "NORMAL" as const, label: tr.ventanaNormal },
+                { value: "LATE" as const, label: tr.ventanaLate },
+                { value: "EXTRA_LATE" as const, label: tr.ventanaExtraLate },
+              ]
+            ).map((opt) => {
+              const selected = formData.solicitud_ventana === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => {
+                      if (opt.value === "NORMAL") {
+                        return {
+                          ...prev,
+                          solicitud_ventana: "NORMAL",
+                          late_inicio: "",
+                          late_fin: "",
+                          xlate_inicio: "",
+                          xlate_fin: "",
+                        };
+                      }
+                      if (opt.value === "LATE") {
+                        return {
+                          ...prev,
+                          solicitud_ventana: "LATE",
+                          xlate_inicio: "",
+                          xlate_fin: "",
+                        };
+                      }
+                      return {
+                        ...prev,
+                        solicitud_ventana: "EXTRA_LATE",
+                        late_inicio: "",
+                        late_fin: "",
+                      };
+                    });
+                  }}
+                  className={`px-2.5 py-2.5 rounded-lg border text-xs sm:text-sm font-bold transition-all ${
+                    selected
+                      ? "bg-brand-blue text-white border-brand-blue shadow-sm"
+                      : "bg-white text-brand-blue border-brand-blue/15 hover:border-brand-blue/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <label htmlFor="inicio_stacking" className={labelClass}>{tr.inicioStacking}</label>
-            <input id="inicio_stacking" name="inicio_stacking" type="datetime-local" value={formData.inicio_stacking} onChange={handleChange} className={inputClass} autoComplete="off" />
+        </div>
+
+        <div className="rounded-xl border border-brand-blue/15 bg-white p-3 space-y-2.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue/70">{tr.groupStacking}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <ReservaDateTimeField
+              id="inicio_stacking"
+              label={tr.inicioStacking}
+              value={formData.inicio_stacking}
+              onChange={(v) => setFormData((prev) => ({ ...prev, inicio_stacking: v }))}
+              datePlaceholder={tr.datePlaceholder}
+              inputClass={inputClass}
+              labelClass={labelClass}
+            />
+            <ReservaDateTimeField
+              id="fin_stacking"
+              label={tr.finStacking}
+              value={formData.fin_stacking}
+              onChange={(v) => setFormData((prev) => ({ ...prev, fin_stacking: v }))}
+              datePlaceholder={tr.datePlaceholder}
+              inputClass={inputClass}
+              labelClass={labelClass}
+            />
           </div>
-          <div>
-            <label htmlFor="fin_stacking" className={labelClass}>{tr.finStacking}</label>
-            <input id="fin_stacking" name="fin_stacking" type="datetime-local" value={formData.fin_stacking} onChange={handleChange} className={inputClass} autoComplete="off" />
+        </div>
+
+        <div className="rounded-xl border border-brand-blue/15 bg-white p-3 space-y-2.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue/70">{tr.groupCorteDocumental}</p>
+          <div className="sm:max-w-md">
+            <ReservaDateTimeField
+              id="corte_documental"
+              label={tr.corteDocumental}
+              value={formData.corte_documental}
+              onChange={(v) => setFormData((prev) => ({ ...prev, corte_documental: v }))}
+              datePlaceholder={tr.datePlaceholder}
+              inputClass={inputClass}
+              labelClass={labelClass}
+            />
           </div>
-          <div>
-            <label htmlFor="corte_documental" className={labelClass}>{tr.corteDocumental}</label>
-            <input id="corte_documental" name="corte_documental" type="datetime-local" value={formData.corte_documental} onChange={handleChange} className={inputClass} autoComplete="off" />
+        </div>
+
+        {formData.solicitud_ventana === "LATE" ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 space-y-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-amber-800/80">{tr.groupLate}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <ReservaDateTimeField
+                id="late_inicio"
+                label={tr.lateInicio}
+                value={formData.late_inicio}
+                onChange={(v) => setFormData((prev) => ({ ...prev, late_inicio: v }))}
+                datePlaceholder={tr.datePlaceholder}
+                inputClass={inputClass}
+                labelClass={labelClass}
+              />
+              <ReservaDateTimeField
+                id="late_fin"
+                label={tr.lateFin}
+                value={formData.late_fin}
+                onChange={(v) => setFormData((prev) => ({ ...prev, late_fin: v }))}
+                datePlaceholder={tr.datePlaceholder}
+                inputClass={inputClass}
+                labelClass={labelClass}
+              />
+            </div>
           </div>
-        </FieldGrid>
-      </>
+        ) : null}
+
+        {formData.solicitud_ventana === "EXTRA_LATE" ? (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-3 space-y-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-orange-800/80">{tr.groupExtraLate}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <ReservaDateTimeField
+                id="xlate_inicio"
+                label={tr.xlateInicio}
+                value={formData.xlate_inicio}
+                onChange={(v) => setFormData((prev) => ({ ...prev, xlate_inicio: v }))}
+                datePlaceholder={tr.datePlaceholder}
+                inputClass={inputClass}
+                labelClass={labelClass}
+              />
+              <ReservaDateTimeField
+                id="xlate_fin"
+                label={tr.xlateFin}
+                value={formData.xlate_fin}
+                onChange={(v) => setFormData((prev) => ({ ...prev, xlate_fin: v }))}
+                datePlaceholder={tr.datePlaceholder}
+                inputClass={inputClass}
+                labelClass={labelClass}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
     ),
     observaciones: (
-      <div className="flex flex-col min-h-0 h-full">
-        <label htmlFor="observaciones" className={labelClass}>{tr.observaciones}</label>
-        <textarea
-          id="observaciones"
-          name="observaciones"
-          value={formData.observaciones}
-          onChange={handleChange}
-          placeholder={tr.placeholderObservaciones}
-          className={`${inputClass} flex-1 min-h-0 resize-none`}
-        />
+      <div className="flex flex-col min-h-0 h-full gap-3">
+        <label className="inline-flex items-center gap-2.5 cursor-pointer select-none rounded-xl border border-brand-blue/15 bg-white px-3.5 py-3 w-fit hover:border-brand-blue/35 transition-colors">
+          <input
+            type="checkbox"
+            checked={formData.sin_observaciones}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setFormData((prev) => ({
+                ...prev,
+                sin_observaciones: checked,
+                observaciones: checked ? "" : prev.observaciones,
+              }));
+            }}
+            className="h-4 w-4 rounded border-brand-blue/40 text-brand-blue focus:ring-brand-blue/30"
+          />
+          <span className="text-sm font-semibold text-brand-blue">{tr.sinObservaciones}</span>
+        </label>
+        <div className="flex flex-col min-h-0 flex-1">
+          <label htmlFor="observaciones" className={labelClass}>{tr.observaciones}</label>
+          <textarea
+            id="observaciones"
+            name="observaciones"
+            value={formData.observaciones}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFormData((prev) => ({
+                ...prev,
+                observaciones: value,
+                sin_observaciones: value.trim() ? false : prev.sin_observaciones,
+              }));
+            }}
+            placeholder={tr.placeholderObservaciones}
+            disabled={formData.sin_observaciones}
+            className={`${inputClass} flex-1 min-h-0 resize-none disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100`}
+          />
+        </div>
       </div>
     ),
   };
 
   const activeKey = SECTION_ORDER[currentStep];
   const isLastStep = currentStep === SECTION_ORDER.length - 1;
-  const completedCount = Object.values(sectionValidation).filter(Boolean).length;
-
-  const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100);
+  const progressSections = SECTION_ORDER;
+  const completedCount = progressSections.filter((key) => sectionValidation[key]).length;
+  const progressPct = Math.round((completedCount / progressSections.length) * 100);
 
   return (
     <main className="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-[#E4EBF6]" role="main">
       <header className="relative shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white">
         <div className="px-4 sm:px-5 py-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
+            <button
+              type="button"
+              onClick={() => goBackOr(withBase("/reservas/mis-reservas"))}
+              title={tr.btnBack}
+              aria-label={tr.btnBack}
+              className="inline-flex items-center gap-1.5 shrink-0 px-2.5 sm:px-3 h-9 rounded-lg border border-white/25 bg-white/15 text-white text-sm font-semibold hover:bg-white/25 transition-colors"
+            >
+              <Icon icon="lucide:arrow-left" width={18} height={18} className="shrink-0" />
+              <span className="hidden sm:inline">{tr.btnBack}</span>
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0 hidden sm:flex">
               <Icon icon="lucide:ship" width={16} height={16} className="text-white" />
             </div>
             <div className="min-w-0">
@@ -2241,20 +3020,16 @@ export function CrearReservaContent() {
               {SECTION_ORDER.map((key, idx) => {
                 const isActive = idx === currentStep;
                 const isComplete = sectionValidation[key];
-                const isPast = idx < currentStep;
-                const canGo = isPast || isComplete || idx <= currentStep;
                 return (
                   <li key={key} className="flex-1 min-h-0">
                     <button
                       type="button"
-                      onClick={() => { if (canGo) setCurrentStep(idx); }}
+                      onClick={() => setCurrentStep(idx)}
                       aria-current={isActive ? "step" : undefined}
                       className={`w-full h-full text-left rounded-lg px-2.5 py-1.5 flex items-center gap-2 transition-colors ${
                         isActive
                           ? "bg-brand-blue text-white"
-                          : canGo
-                            ? "hover:bg-[#F4F8FC] text-brand-blue"
-                            : "text-brand-blue/40 cursor-default"
+                          : "hover:bg-[#F4F8FC] text-brand-blue"
                       }`}
                     >
                       <span
@@ -2288,18 +3063,17 @@ export function CrearReservaContent() {
                 {SECTION_ORDER.map((key, idx) => {
                   const isActive = idx === currentStep;
                   const isComplete = sectionValidation[key];
-                  const isPast = idx < currentStep;
                   return (
                     <button
                       key={key}
                       type="button"
-                      onClick={() => { if (isPast || isComplete || idx <= currentStep) setCurrentStep(idx); }}
+                      onClick={() => setCurrentStep(idx)}
                       className={`flex-1 h-8 rounded-md flex items-center justify-center transition-colors border ${
                         isActive
                           ? "bg-brand-blue border-brand-blue text-white"
                           : isComplete
                             ? "bg-brand-teal border-brand-teal text-white"
-                            : "bg-[#E4EBF6] border-brand-blue/15 text-brand-blue/55"
+                            : "bg-[#E4EBF6] border-brand-blue/15 text-brand-blue/55 hover:bg-[#F4F8FC] hover:text-brand-blue"
                       }`}
                       aria-label={sectionTitles[key]}
                       aria-current={isActive ? "step" : undefined}
@@ -2417,16 +3191,33 @@ export function CrearReservaContent() {
           >
             {tr.limpiar}
           </button>
-          {currentStep > 0 && (
+          <div
+            className="flex items-center rounded-lg border border-brand-blue/20 bg-[#F4F8FC] overflow-hidden shrink-0"
+            role="group"
+            aria-label={`${tr.btnPrev} / ${tr.btnNext}`}
+          >
             <button
               type="button"
-              onClick={() => setCurrentStep((s) => s - 1)}
-              className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-brand-blue bg-[#F4F8FC] border border-brand-blue/25 hover:bg-white transition-colors"
+              onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
+              disabled={currentStep === 0}
+              title={tr.btnPrev}
+              aria-label={tr.btnPrev}
+              className="w-10 h-10 inline-flex items-center justify-center text-brand-blue hover:bg-white transition-colors disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
-              <Icon icon="lucide:arrow-left" width={16} height={16} />
-              {tr.btnPrev}
+              <Icon icon="lucide:chevron-left" width={18} height={18} />
             </button>
-          )}
+            <span className="w-px h-6 bg-brand-blue/15" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setCurrentStep((s) => Math.min(SECTION_ORDER.length - 1, s + 1))}
+              disabled={isLastStep}
+              title={tr.btnNext}
+              aria-label={tr.btnNext}
+              className="w-10 h-10 inline-flex items-center justify-center text-brand-blue hover:bg-white transition-colors disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              <Icon icon="lucide:chevron-right" width={18} height={18} />
+            </button>
+          </div>
           {!isLastStep ? (
             <button
               type="button"
@@ -2440,7 +3231,7 @@ export function CrearReservaContent() {
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              disabled={submitting}
+              disabled={submitting || progressPct < 100}
               className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-semibold bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-sm hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (

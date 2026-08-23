@@ -10,6 +10,7 @@ const prefetchers: Record<string, PrefetchFn> = {
   "/inicio": () => import("@/components/inicio"),
   "/servicios": () => import("@/components/servicios"),
   "/sobre-nosotros": () => import("@/components/sobre-nosotros"),
+  "/tracking": () => import("@/components/tracking/TrackingContent"),
   "/registros": () => import("@/components/registros"),
   "/configuracion/clientes": () => import("@/components/clientes"),
   "/configuracion/asignar-clientes-empresas": () =>

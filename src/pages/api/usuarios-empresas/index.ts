@@ -1,6 +1,7 @@
 import type { APIRoute, AstroCookies } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isNombreClienteOculto } from "@/lib/clientesOcultos";
 
 function trim(s: string): string {
   return s.replace(/^\s+|\s+$/g, "");
@@ -59,15 +60,25 @@ export const GET: APIRoute = async ({ cookies }) => {
     return jsonResponse({ error: empresasRes.error.message }, 500);
   }
 
+  const empresas = ((empresasRes.data ?? []) as { id: string; nombre: string }[]).filter(
+    (e) => !isNombreClienteOculto(e.nombre),
+  );
+  const hiddenEmpresaIds = new Set(
+    ((empresasRes.data ?? []) as { id: string; nombre: string }[])
+      .filter((e) => isNombreClienteOculto(e.nombre))
+      .map((e) => e.id),
+  );
+
   const empresasPorUsuario: Record<string, string[]> = {};
   (ueRes.data ?? []).forEach((r: { usuario_id: string; empresa_id: string }) => {
+    if (hiddenEmpresaIds.has(r.empresa_id)) return;
     if (!empresasPorUsuario[r.usuario_id]) empresasPorUsuario[r.usuario_id] = [];
     empresasPorUsuario[r.usuario_id].push(r.empresa_id);
   });
 
   return jsonResponse({
     usuarios: usuariosRes.data ?? [],
-    empresas: empresasRes.data ?? [],
+    empresas,
     empresasPorUsuario,
   });
 };
