@@ -514,20 +514,20 @@ export function MisDocumentosContent() {
           <div className="min-w-0 flex-1">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRef}</p>
-                <p className="text-sm font-bold text-brand-blue truncate">{opRef(operacionActual)}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRef}</p>
+                <p className="text-[15.4px] font-bold text-brand-blue truncate">{opRef(operacionActual)}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRefExterna}</p>
-                <p className="text-sm font-semibold text-brand-blue/80 truncate">{operacionActual.referencia_externa || "—"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRefExterna}</p>
+                <p className="text-[15.4px] font-bold text-brand-blue truncate">{operacionActual.referencia_externa || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colBooking}</p>
-                <p className="text-sm font-semibold text-brand-blue/80 truncate">{operacionActual.booking || "—"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colBooking}</p>
+                <p className="text-[15.4px] font-bold text-brand-blue truncate">{operacionActual.booking || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colContenedor}</p>
-                <p className="text-sm font-semibold text-brand-blue/80 truncate">{operacionActual.contenedor || "—"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colContenedor}</p>
+                <p className="text-[15.4px] font-bold text-brand-blue truncate">{operacionActual.contenedor || "—"}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 mt-2">
@@ -558,7 +558,7 @@ export function MisDocumentosContent() {
         </div>
       )}
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-2`}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {visibleTipos.map((tipo) => {
           const doc = documentosPorTipo.get(tipo);
           const isUploading = uploading === tipo;
@@ -672,7 +672,7 @@ export function MisDocumentosContent() {
           <div
             className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
               hasSelection
-                ? "hidden lg:flex lg:w-[200px] xl:w-[220px] lg:shrink-0"
+                ? "hidden lg:flex lg:w-[280px] xl:w-[300px] lg:shrink-0"
                 : "w-full flex-1"
             }`}
           >
@@ -729,18 +729,17 @@ export function MisDocumentosContent() {
                                 : "hover:bg-[#F4F8FC] border-l-2 border-l-transparent"
                             }`}
                           >
-                            <p className={`text-sm font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                            <p className={`text-[1.1rem] font-bold break-all ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
                               {opRef(op)}
                             </p>
-                            <p className="text-xs text-neutral-500 truncate mt-0.5">
-                              <span className="text-neutral-400">{tr.colRefExterna}:</span>{" "}
+                            <p className={`text-[15.4px] font-bold break-all mt-0.5 ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>
                               {op.referencia_externa || "—"}
                             </p>
-                            <p className="text-xs text-neutral-500 truncate mt-0.5">
+                            <p className="text-[15.4px] text-neutral-500 break-all mt-0.5">
                               <span className="text-neutral-400">{tr.colBooking}:</span>{" "}
                               {op.booking || "—"}
                             </p>
-                            <p className="text-xs text-neutral-500 truncate mt-0.5">
+                            <p className="text-[15.4px] text-neutral-500 break-all mt-0.5">
                               <span className="text-neutral-400">{tr.colContenedor}:</span>{" "}
                               {op.contenedor || "—"}
                             </p>
@@ -767,7 +766,13 @@ export function MisDocumentosContent() {
                             className="w-full text-left p-3.5 transition-colors bg-white hover:bg-[#F4F8FC]"
                           >
                             <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-base font-bold text-brand-blue">{opRef(op)}</p>
+                              <div className="min-w-0">
+                                <p className="text-[1.1rem] font-bold text-brand-blue">{opRef(op)}</p>
+                                <p className="text-[15.4px] text-neutral-500 truncate mt-0.5">
+                                  <span className="text-neutral-400">{tr.colRefExterna}:</span>{" "}
+                                  {op.referencia_externa || "—"}
+                                </p>
+                              </div>
                               {docsBadge(op.id)}
                             </div>
                             <p className="text-base text-neutral-600 truncate">{op.cliente || "-"}</p>
@@ -788,18 +793,20 @@ export function MisDocumentosContent() {
                       <table className="w-full table-fixed text-left text-base">
                         <colgroup>
                           <col className="w-[8%]" />
-                          <col className="w-[15%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[14%]" />
+                          <col className="w-[11%]" />
                           <col className="w-[13%]" />
                           <col className="w-[11%]" />
+                          <col className="w-[12%]" />
+                          <col className="w-[12%]" />
                           <col className="w-[10%]" />
                           <col className="w-[9%]" />
-                          <col className="w-[8%]" />
+                          <col className="w-[7%]" />
+                          <col className="w-[7%]" />
                         </colgroup>
                         <thead>
                           <tr className="bg-[#F4F8FC] border-b border-brand-blue/10">
                             <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colRef}</th>
+                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colRefExterna}</th>
                             <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colCliente}</th>
                             <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colNaviera}</th>
                             <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colBooking}</th>
@@ -813,7 +820,7 @@ export function MisDocumentosContent() {
                         <tbody className="divide-y divide-brand-blue/10">
                           {pagedOperaciones.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="px-4 py-12 text-center text-neutral-400 text-base">
+                              <td colSpan={10} className="px-4 py-12 text-center text-neutral-400 text-base">
                                 {tr.noOperations}
                               </td>
                             </tr>
@@ -824,7 +831,8 @@ export function MisDocumentosContent() {
                                 onClick={() => handleSelectOperacion(op.id)}
                                 className="cursor-pointer transition-colors hover:bg-[#F4F8FC]"
                               >
-                                <td className="px-3 py-2.5 font-bold truncate text-brand-blue">{opRef(op)}</td>
+                                <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-brand-blue">{opRef(op)}</td>
+                                <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-brand-blue">{op.referencia_externa || "—"}</td>
                                 <td className="px-3 py-2.5 text-neutral-700 truncate">{op.cliente || "-"}</td>
                                 <td className="px-3 py-2.5 text-neutral-600 truncate">{op.naviera || "-"}</td>
                                 <td className="px-3 py-2.5 text-neutral-600 truncate">{op.booking || "-"}</td>
