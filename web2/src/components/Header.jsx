@@ -112,7 +112,9 @@ const Header = () => {
     const fetchDolarObservado = async () => {
       try {
         setLoadingDolar(true)
-        const response = await fetch('https://mindicador.cl/api/dolar')
+        // Proxy same-origin: evita CORS de mindicador.cl en el navegador
+        const response = await fetch('/api/dolar')
+        if (!response.ok) return
         const data = await response.json()
 
         if (data?.valor) {
