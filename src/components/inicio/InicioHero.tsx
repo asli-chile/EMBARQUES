@@ -189,11 +189,11 @@ export function InicioHero({
 
           {compact && isLoggedIn && (
             <div data-hero-item className="hidden lg:block">
-              <GlassCard className="p-5" reveal={false}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-brand-teal font-semibold mb-4">
+              <GlassCard className="p-6 sm:p-7" reveal={false}>
+                <p className="text-xs sm:text-sm uppercase tracking-[0.18em] text-brand-teal font-semibold mb-5">
                   Accesos rápidos
                 </p>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-3.5">
                   {(isCliente
                     ? [
                         { href: "/reservas/crear", icon: "lucide:plus-circle", label: "Nueva reserva" },
@@ -211,10 +211,10 @@ export function InicioHero({
                     <a
                       key={href}
                       href={withBase(href)}
-                      className="rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 transition-colors hover:border-brand-teal/30 hover:bg-white/[0.06] group"
+                      className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 min-h-[6.5rem] flex flex-col justify-center transition-colors hover:border-brand-teal/30 hover:bg-white/[0.06] group"
                     >
-                      <Icon icon={icon} className="text-brand-teal mb-2" width={18} height={18} />
-                      <p className="text-xs font-semibold text-white/85 group-hover:text-white">{label}</p>
+                      <Icon icon={icon} className="text-brand-teal mb-3" width={24} height={24} />
+                      <p className="text-sm font-semibold text-white/85 group-hover:text-white leading-snug">{label}</p>
                     </a>
                   ))}
                 </div>

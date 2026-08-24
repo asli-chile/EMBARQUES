@@ -170,7 +170,9 @@ export function InicioGuestLanding({
               : kpiConfig.map(({ key, descKey, dataKey, icon }) => (
                   <GlassCard key={key} className="p-5">
                     <Icon icon={icon} className="text-brand-teal mb-3" width={18} height={18} />
-                    <p className="inicio-stat-value text-3xl font-bold text-white">{kpiData[dataKey]}</p>
+                    <p className="inicio-stat-value text-3xl font-bold text-white tabular-nums">
+                      {kpiData[dataKey].toLocaleString(undefined)}
+                    </p>
                     <p className="text-xs text-white/50 mt-1">{t.inicio[key]}</p>
                     <p className="text-[10px] text-white/30">{t.inicio[descKey]}</p>
                   </GlassCard>

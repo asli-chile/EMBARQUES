@@ -7,13 +7,19 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
 import { shouldUseHeavyVisualEffects } from "@/lib/ui/devicePerf";
 import "@/styles/inicio.css";
-import type { KpiData } from "./inicio-data";
+import {
+  emptyKpiData,
+  monthKey,
+  type KpiData,
+} from "./inicio-data";
 import { InicioBackground } from "./InicioBackground";
 import { InicioHero } from "./InicioHero";
 import { InicioLoggedInHome } from "./InicioLoggedInHome";
 import { InicioGuestLanding } from "./InicioGuestLanding";
 import { InicioAuthSkeleton } from "./InicioSkeleton";
 import { InicioFooter, ScrollTopButton } from "./inicio-ui";
+
+const CLOSED_ESTADOS = new Set(["CANCELADO", "ARRIBADO", "ARRIBADA", "COMPLETADO", "COMPLETADA"]);
 
 export function InicioContent() {
   const { t } = useLocale();
@@ -22,12 +28,7 @@ export function InicioContent() {
   const mainRef = useRef<HTMLElement>(null);
   const bgParallaxRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [kpiData, setKpiData] = useState<KpiData>({
-    operacionesActivas: 0,
-    contenedores: 0,
-    proximosEtd: 0,
-    documentosPendientes: 0,
-  });
+  const [kpiData, setKpiData] = useState<KpiData>(emptyKpiData);
   const [loadingKpis, setLoadingKpis] = useState(true);
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
 
@@ -142,46 +143,46 @@ export function InicioContent() {
     const fetchKpiData = async () => {
       try {
         if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
-          setKpiData({
-            operacionesActivas: 0,
-            contenedores: 0,
-            proximosEtd: 0,
-            documentosPendientes: 0,
-          });
+          setKpiData(emptyKpiData());
           return;
         }
-        const today = new Date();
-        const nextWeek = new Date(today);
-        nextWeek.setDate(today.getDate() + 7);
-        const todayStr = today.toISOString().split("T")[0];
-        const nextWeekStr = nextWeek.toISOString().split("T")[0];
-        const estadosFinalizados = ["COMPLETADO", "CANCELADO", "ARRIBADO"];
+
+        const now = new Date();
+        const thisMonth = monthKey(now);
+        const prevMonth = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
         let opsQuery = supabase
           .from("operaciones")
-          .select("id, contenedor, etd, estado_operacion")
+          .select("id, contenedor, estado_operacion, created_at, etd")
           .is("deleted_at", null);
         opsQuery = applyOperacionesClienteFilter(opsQuery, { isCliente, isEjecutivo, empresaNombres });
         const { data: operaciones } = await opsQuery;
 
-        const { count: docCount } = await supabase.from("documentos").select("id", { count: "exact", head: true });
-
         const ops = operaciones || [];
-        const operacionesActivas = ops.filter(
-          (o) => !estadosFinalizados.includes(o.estado_operacion?.toUpperCase() || ""),
-        ).length;
-        const contenedoresUnicos = new Set(ops.map((o) => o.contenedor).filter(Boolean)).size;
-        const proximosEtd = ops.filter((o) => {
-          if (!o.etd) return false;
-          const etdDate = o.etd.split("T")[0];
-          return etdDate >= todayStr && etdDate <= nextWeekStr;
-        }).length;
+
+        let operacionesMesActual = 0;
+        let operacionesMesAnterior = 0;
+        let operacionesCompletadas = 0;
+
+        for (const o of ops) {
+          const estado = (o.estado_operacion ?? "").trim().toUpperCase();
+          if (CLOSED_ESTADOS.has(estado)) operacionesCompletadas += 1;
+
+          const raw = o.created_at || o.etd;
+          if (!raw) continue;
+          const d = new Date(raw.length === 10 ? `${raw}T12:00:00` : raw);
+          if (Number.isNaN(d.getTime())) continue;
+          const key = monthKey(d);
+          if (key === thisMonth) operacionesMesActual += 1;
+          if (key === prevMonth) operacionesMesAnterior += 1;
+        }
 
         setKpiData({
-          operacionesActivas,
-          contenedores: contenedoresUnicos,
-          proximosEtd,
-          documentosPendientes: docCount || 0,
+          operacionesTotal: ops.length,
+          contenedoresHistoricos: new Set(ops.map((o) => o.contenedor).filter(Boolean)).size,
+          operacionesMesActual,
+          operacionesMesAnterior,
+          operacionesCompletadas,
         });
       } catch {
         // mantener valores por defecto

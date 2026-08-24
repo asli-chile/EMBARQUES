@@ -1,9 +1,18 @@
 export interface KpiData {
-  operacionesActivas: number;
-  contenedores: number;
-  proximosEtd: number;
-  documentosPendientes: number;
+  operacionesTotal: number;
+  contenedoresHistoricos: number;
+  operacionesMesActual: number;
+  operacionesMesAnterior: number;
+  operacionesCompletadas: number;
 }
+
+export const emptyKpiData = (): KpiData => ({
+  operacionesTotal: 0,
+  contenedoresHistoricos: 0,
+  operacionesMesActual: 0,
+  operacionesMesAnterior: 0,
+  operacionesCompletadas: 0,
+});
 
 export const pillars = [
   {
@@ -73,8 +82,38 @@ export const clientQuickLinks = [
 ] as const;
 
 export const kpiConfig = [
-  { key: "kpiOperations" as const, descKey: "kpiOperationsDesc" as const, dataKey: "operacionesActivas" as const, icon: "lucide:ship" },
-  { key: "kpiContainers" as const, descKey: "kpiContainersDesc" as const, dataKey: "contenedores" as const, icon: "lucide:container" },
-  { key: "kpiEtd" as const, descKey: "kpiEtdDesc" as const, dataKey: "proximosEtd" as const, icon: "lucide:calendar-clock" },
-  { key: "kpiDocuments" as const, descKey: "kpiDocumentsDesc" as const, dataKey: "documentosPendientes" as const, icon: "lucide:file-text" },
+  {
+    key: "kpiOperations" as const,
+    descKey: "kpiOperationsDesc" as const,
+    dataKey: "operacionesTotal" as const,
+    icon: "lucide:ship",
+  },
+  {
+    key: "kpiContainers" as const,
+    descKey: "kpiContainersDesc" as const,
+    dataKey: "contenedoresHistoricos" as const,
+    icon: "lucide:container",
+  },
+  {
+    key: "kpiMonth" as const,
+    descKey: "kpiMonthDesc" as const,
+    dataKey: "operacionesMesActual" as const,
+    icon: "lucide:calendar-range",
+    compareKey: "operacionesMesAnterior" as const,
+  },
+  {
+    key: "kpiCompleted" as const,
+    descKey: "kpiCompletedDesc" as const,
+    dataKey: "operacionesCompletadas" as const,
+    icon: "lucide:check-circle-2",
+  },
 ] as const;
+
+export function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function pctChange(current: number, previous: number): number | null {
+  if (previous <= 0) return current > 0 ? 100 : null;
+  return Math.round(((current - previous) / previous) * 100);
+}

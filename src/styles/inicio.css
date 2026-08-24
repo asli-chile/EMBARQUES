@@ -1,7 +1,20 @@
 .inicio-surface {
   --inicio-display: "Syne", "Fira Sans", system-ui, sans-serif;
   --inicio-body: "Manrope", "Fira Sans", system-ui, sans-serif;
+  --inicio-scale: 1.2;
   font-family: var(--inicio-body);
+  /* Agranda tipografía, iconos y espaciado ~20% (incluye clases Tailwind en rem) */
+  zoom: var(--inicio-scale);
+}
+
+@supports not (zoom: 1) {
+  .inicio-surface {
+    font-size: 120%;
+  }
+
+  .inicio-surface :is(h1, h2, h3, p, span, a, button, label, li, td, th) {
+    font-size: 1.05em;
+  }
 }
 
 .inicio-surface h1,

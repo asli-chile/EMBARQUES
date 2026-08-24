@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { withBase } from "@/lib/basePath";
-import { kpiConfig, quickLinks, clientQuickLinks, type KpiData } from "./inicio-data";
+import { kpiConfig, pctChange, quickLinks, clientQuickLinks, type KpiData } from "./inicio-data";
 import { GlassCard, inicioStyles, SectionHeader } from "./inicio-ui";
 import { KpiSkeletonCard } from "./InicioSkeleton";
 
@@ -23,6 +23,7 @@ export function InicioLoggedInHome({
 }) {
   const { t } = useLocale();
   const links = isCliente ? clientQuickLinks : quickLinks;
+  const monthDelta = pctChange(kpiData.operacionesMesActual, kpiData.operacionesMesAnterior);
 
   return (
     <>
@@ -31,18 +32,19 @@ export function InicioLoggedInHome({
           <div className="flex items-end justify-between gap-4 mb-5 px-0.5">
             <div data-inicio-reveal>
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-teal mb-1.5">
-                Resumen operativo
+                {t.inicio.kpiTag}
               </p>
               <h2 className="inicio-display text-xl sm:text-2xl font-bold text-white">
-                Indicadores del día
+                {t.inicio.kpiTitle}
               </h2>
+              <p className="text-xs sm:text-sm text-white/40 mt-1">{t.inicio.kpiSubtitle}</p>
             </div>
             <a
               data-inicio-reveal
               href={withBase("/dashboard")}
               className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-white/45 hover:text-brand-teal transition-colors"
             >
-              Ver dashboard
+              {t.inicio.kpiCta}
               <Icon icon="lucide:arrow-up-right" width={14} height={14} />
             </a>
           </div>
@@ -50,9 +52,12 @@ export function InicioLoggedInHome({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {loadingKpis
               ? Array.from({ length: 4 }).map((_, i) => <KpiSkeletonCard key={i} />)
-              : kpiConfig.map(({ key, descKey, dataKey, icon }, i) => {
+              : kpiConfig.map(({ key, descKey, dataKey, icon, ...rest }, i) => {
                   const value = kpiData[dataKey];
                   const accent = kpiAccent[i];
+                  const compareKey = "compareKey" in rest ? rest.compareKey : undefined;
+                  const delta =
+                    compareKey === "operacionesMesAnterior" ? monthDelta : null;
                   return (
                     <GlassCard key={key} interactive className="p-5 sm:p-6">
                       <div
@@ -64,21 +69,40 @@ export function InicioLoggedInHome({
                         >
                           <Icon icon={icon} className={accent.icon} width={20} height={20} />
                         </div>
-                        {value > 0 ? (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-brand-teal/15 text-brand-teal border border-brand-teal/25">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-teal opacity-50" />
-                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-teal" />
-                            </span>
-                            Live
+                        {delta !== null ? (
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border ${
+                              delta >= 0
+                                ? "bg-brand-teal/15 text-brand-teal border-brand-teal/25"
+                                : "bg-rose-500/10 text-rose-300 border-rose-400/25"
+                            }`}
+                          >
+                            <Icon
+                              icon={delta >= 0 ? "lucide:trending-up" : "lucide:trending-down"}
+                              width={12}
+                              height={12}
+                            />
+                            {delta > 0 ? `+${delta}%` : `${delta}%`}
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white/5 text-white/40 border border-white/10">
+                            {t.inicio.kpiHistoricBadge}
+                          </span>
+                        )}
                       </div>
-                      <p className="inicio-stat-value relative text-4xl sm:text-[2.75rem] font-bold text-white leading-none tracking-tight">
-                        {value}
+                      <p className="inicio-stat-value relative text-4xl sm:text-[2.75rem] font-bold text-white leading-none tracking-tight tabular-nums">
+                        {value.toLocaleString(undefined)}
                       </p>
                       <p className="relative mt-2.5 text-sm font-semibold text-white/90">{t.inicio[key]}</p>
                       <p className="relative text-xs text-white/40 mt-0.5 leading-snug">{t.inicio[descKey]}</p>
+                      {compareKey ? (
+                        <p className="relative text-[11px] text-white/30 mt-2">
+                          {t.inicio.kpiVsPrevMonth}:{" "}
+                          <span className="text-white/50 tabular-nums">
+                            {kpiData.operacionesMesAnterior.toLocaleString(undefined)}
+                          </span>
+                        </p>
+                      ) : null}
                     </GlassCard>
                   );
                 })}
