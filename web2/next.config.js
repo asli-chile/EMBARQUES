@@ -87,39 +87,44 @@ const nextConfig = {
     }));
   },
   async rewrites() {
-    return [
-      ...embarquesDevViteRewrites(embarquesBase),
-      { source: "/logoasli.png", destination: `${embarquesBase}/logoasli.png` },
-      { source: "/embarques/favicon.ico", destination: `${embarquesBase}/favicon.ico` },
-      { source: "/fonts/:path*", destination: `${embarquesBase}/fonts/:path*` },
-      { source: "/embarques/:path*", destination: `${embarquesBase}/:path*` },
-      { source: "/api/:path*", destination: `${embarquesBase}/api/:path*` },
-      { source: "/auth", destination: `${embarquesBase}/auth/login` },
-      { source: "/indicadores", destination: `${embarquesBase}/indicadores` },
-      { source: "/dashboard/:path*", destination: `${embarquesBase}/dashboard/:path*` },
-      { source: "/documentos/:path*", destination: `${embarquesBase}/documentos/:path*` },
-      { source: "/facturas/:path*", destination: `${embarquesBase}/facturas/:path*` },
-      { source: "/facturar-preview/:path*", destination: `${embarquesBase}/facturar-preview/:path*` },
-      { source: "/itinerario/:path*", destination: `${embarquesBase}/itinerario/:path*` },
-      { source: "/itinerario-asli", destination: `${embarquesBase}/itinerario-asli` },
-      { source: "/mantenimiento/:path*", destination: `${embarquesBase}/mantenimiento/:path*` },
-      { source: "/profile/:path*", destination: `${embarquesBase}/profile/:path*` },
-      { source: "/registros/:path*", destination: `${embarquesBase}/registros/:path*` },
-      {
-        source: "/tablas-personalizadas/:path*",
-        destination: `${embarquesBase}/tablas-personalizadas/:path*`,
-      },
-      { source: "/transportes/:path*", destination: `${embarquesBase}/transportes/:path*` },
-      { source: "/vessel-diagnose/:path*", destination: `${embarquesBase}/vessel-diagnose/:path*` },
-      {
-        source: "/teaser-web-seminario",
-        destination: `${seminarioBase}/teaser-web-seminario`,
-      },
-      {
-        source: "/teaser-web-seminario/:path*",
-        destination: `${seminarioBase}/teaser-web-seminario/:path*`,
-      },
-    ];
+    return {
+      afterFiles: [
+        ...embarquesDevViteRewrites(embarquesBase),
+        { source: "/logoasli.png", destination: `${embarquesBase}/logoasli.png` },
+        { source: "/embarques/favicon.ico", destination: `${embarquesBase}/favicon.ico` },
+        { source: "/fonts/:path*", destination: `${embarquesBase}/fonts/:path*` },
+        { source: "/embarques/:path*", destination: `${embarquesBase}/:path*` },
+        { source: "/auth", destination: `${embarquesBase}/auth/login` },
+        { source: "/indicadores", destination: `${embarquesBase}/indicadores` },
+        { source: "/dashboard/:path*", destination: `${embarquesBase}/dashboard/:path*` },
+        { source: "/documentos/:path*", destination: `${embarquesBase}/documentos/:path*` },
+        { source: "/facturas/:path*", destination: `${embarquesBase}/facturas/:path*` },
+        { source: "/facturar-preview/:path*", destination: `${embarquesBase}/facturar-preview/:path*` },
+        { source: "/itinerario/:path*", destination: `${embarquesBase}/itinerario/:path*` },
+        { source: "/itinerario-asli", destination: `${embarquesBase}/itinerario-asli` },
+        { source: "/mantenimiento/:path*", destination: `${embarquesBase}/mantenimiento/:path*` },
+        { source: "/profile/:path*", destination: `${embarquesBase}/profile/:path*` },
+        { source: "/registros/:path*", destination: `${embarquesBase}/registros/:path*` },
+        {
+          source: "/tablas-personalizadas/:path*",
+          destination: `${embarquesBase}/tablas-personalizadas/:path*`,
+        },
+        { source: "/transportes/:path*", destination: `${embarquesBase}/transportes/:path*` },
+        { source: "/vessel-diagnose/:path*", destination: `${embarquesBase}/vessel-diagnose/:path*` },
+        {
+          source: "/teaser-web-seminario",
+          destination: `${seminarioBase}/teaser-web-seminario`,
+        },
+        {
+          source: "/teaser-web-seminario/:path*",
+          destination: `${seminarioBase}/teaser-web-seminario/:path*`,
+        },
+      ],
+      // Solo APIs no definidas en web2 (contact, dolar, shiptracking quedan locales)
+      fallback: [
+        { source: "/api/:path*", destination: `${embarquesBase}/api/:path*` },
+      ],
+    };
   },
 };
 
