@@ -610,36 +610,76 @@ export function MisDocumentosContent() {
 
   const docsPanel = hasSelection && operacionActual ? (
     <div className="space-y-3">
-      <div className={`rounded-2xl overflow-hidden shadow-sm border-2 ${progressPct === 100 ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50" : "border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 to-sky-50"}`}>
-        <div className="px-4 py-3 flex items-center gap-3">
-          <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${progressPct === 100 ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
-            <Icon icon={progressPct === 100 ? "lucide:check-circle" : "lucide:folder-open"} width={22} height={22} className={progressPct === 100 ? "text-emerald-600" : "text-brand-blue"} />
+      <div className={`rounded-2xl overflow-hidden shadow-md border-2 ${progressPct === 100 ? "border-emerald-400 bg-gradient-to-br from-emerald-50 via-white to-teal-50" : "border-brand-blue bg-gradient-to-br from-[#11224E] via-[#163066] to-[#007A7B]"}`}>
+        <div className={`px-4 py-3.5 flex items-start gap-3 ${progressPct === 100 ? "" : "text-white"}`}>
+          <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border ${
+            progressPct === 100
+              ? "bg-emerald-100 border-emerald-200"
+              : "bg-white/15 border-white/25"
+          }`}>
+            <Icon
+              icon={progressPct === 100 ? "lucide:check-circle" : "lucide:focus"}
+              width={24}
+              height={24}
+              className={progressPct === 100 ? "text-emerald-600" : "text-white"}
+            />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-extrabold uppercase tracking-wider ${
+                progressPct === 100
+                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  : "bg-white/20 text-white border border-white/30"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${progressPct === 100 ? "bg-emerald-500" : "bg-emerald-300"}`} />
+                {tr.workingOn}
+              </span>
+              {operacionActual.cliente ? (
+                <span className={`text-sm font-semibold truncate ${progressPct === 100 ? "text-neutral-600" : "text-white/80"}`}>
+                  {operacionActual.cliente}
+                </span>
+              ) : null}
+            </div>
+            <p className={`text-2xl sm:text-[1.65rem] font-extrabold tracking-tight truncate leading-none mb-2.5 ${
+              progressPct === 100 ? "text-emerald-800" : "text-white"
+            }`}>
+              {opRef(operacionActual)}
+            </p>
+            <div className={`grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 ${
+              progressPct === 100 ? "bg-white/70 border border-emerald-200/80" : "bg-black/20 border border-white/15"
+            }`}>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRef}</p>
-                <p className="text-[15.4px] font-bold text-brand-blue truncate">{opRef(operacionActual)}</p>
+                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colRefExterna}</p>
+                <p className={`text-sm font-bold truncate ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.referencia_externa || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colRefExterna}</p>
-                <p className="text-[15.4px] font-bold text-brand-blue truncate">{operacionActual.referencia_externa || "—"}</p>
+                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colBooking}</p>
+                <p className={`text-sm font-bold truncate font-mono ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.booking || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colBooking}</p>
-                <p className="text-[15.4px] font-bold text-brand-blue truncate">{operacionActual.booking || "—"}</p>
+                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colContenedor}</p>
+                <p className={`text-sm font-bold truncate font-mono ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.contenedor || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr.colContenedor}</p>
-                <p className="text-[15.4px] font-bold text-brand-blue truncate">{operacionActual.contenedor || "—"}</p>
+                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colNaviera}</p>
+                <p className={`text-sm font-bold truncate ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.naviera || "—"}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-2 bg-white/70 rounded-sm overflow-hidden border border-brand-blue/15">
-                <div className="h-full rounded-sm transition-all duration-500"
-                  style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#11224E,#007A7B)" }} />
+            <div className="flex items-center gap-2 mt-3">
+              <div className={`flex-1 h-2.5 rounded-sm overflow-hidden border ${
+                progressPct === 100 ? "bg-white/70 border-emerald-200" : "bg-white/15 border-white/20"
+              }`}>
+                <div
+                  className="h-full rounded-sm transition-all duration-500"
+                  style={{
+                    width: `${progressPct}%`,
+                    background: progressPct === 100
+                      ? "linear-gradient(to right,#10b981,#059669)"
+                      : "linear-gradient(to right,#34d399,#67e8f9)",
+                  }}
+                />
               </div>
-              <span className={`text-base font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
+              <span className={`text-base font-extrabold shrink-0 tabular-nums ${progressPct === 100 ? "text-emerald-700" : "text-white"}`}>
                 {docsCompletados}/{tiposAplicables} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
               </span>
             </div>
@@ -647,7 +687,11 @@ export function MisDocumentosContent() {
           <button
             type="button"
             onClick={() => setSelectedOperacion("")}
-            className="shrink-0 p-2 text-neutral-400 hover:text-neutral-700 hover:bg-white/70 rounded-lg transition-colors"
+            className={`shrink-0 p-2 rounded-lg transition-colors ${
+              progressPct === 100
+                ? "text-neutral-400 hover:text-neutral-700 hover:bg-white/70"
+                : "text-white/70 hover:text-white hover:bg-white/15"
+            }`}
             title={tr.closeSelection}
           >
             <Icon icon="lucide:x" width={18} height={18} />
@@ -882,24 +926,35 @@ export function MisDocumentosContent() {
                             key={op.id}
                             type="button"
                             onClick={() => handleSelectOperacion(op.id)}
-                            className={`w-full text-left px-2.5 py-2.5 transition-colors ${
+                            className={`w-full text-left px-2.5 py-2.5 transition-all relative ${
                               isActive
-                                ? "bg-brand-blue/8 border-l-2 border-l-brand-blue"
-                                : "hover:bg-[#F4F8FC] border-l-2 border-l-transparent"
+                                ? "bg-brand-blue text-white shadow-sm ring-1 ring-inset ring-brand-blue"
+                                : "hover:bg-[#F4F8FC] border-l-[3px] border-l-transparent text-neutral-800"
                             }`}
                           >
-                            <p className={`text-[1.1rem] font-bold break-all ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
-                              {opRef(op)}
-                            </p>
-                            <p className={`text-[15.4px] font-bold break-all mt-0.5 ${isActive ? "text-brand-blue" : "text-neutral-700"}`}>
+                            {isActive && (
+                              <span className="absolute inset-y-0 left-0 w-[3px] bg-emerald-400" aria-hidden />
+                            )}
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-[1.1rem] font-extrabold break-all ${isActive ? "text-white" : "text-neutral-800"}`}>
+                                {opRef(op)}
+                              </p>
+                              {isActive && (
+                                <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold uppercase tracking-wide bg-white/20 text-white border border-white/25">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                                  {tr.activeOp}
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-[15.4px] font-bold break-all mt-0.5 ${isActive ? "text-white/95" : "text-neutral-700"}`}>
                               {op.referencia_externa || "—"}
                             </p>
-                            <p className="text-[15.4px] text-neutral-500 break-all mt-0.5">
-                              <span className="text-neutral-400">{tr.colBooking}:</span>{" "}
+                            <p className={`text-[15.4px] break-all mt-0.5 ${isActive ? "text-white/75" : "text-neutral-500"}`}>
+                              <span className={isActive ? "text-white/55" : "text-neutral-400"}>{tr.colBooking}:</span>{" "}
                               {op.booking || "—"}
                             </p>
-                            <p className="text-[15.4px] text-neutral-500 break-all mt-0.5">
-                              <span className="text-neutral-400">{tr.colContenedor}:</span>{" "}
+                            <p className={`text-[15.4px] break-all mt-0.5 ${isActive ? "text-white/75" : "text-neutral-500"}`}>
+                              <span className={isActive ? "text-white/55" : "text-neutral-400"}>{tr.colContenedor}:</span>{" "}
                               {op.contenedor || "—"}
                             </p>
                           </button>
