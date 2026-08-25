@@ -22,7 +22,32 @@ type Operacion = {
   etd: string | null;
   booking_doc_url: string | null;
   created_at: string | null;
+  solicitud_reserva_no_aplica: boolean;
+  factura_gate_out_no_aplica: boolean;
 };
+
+/** Tipos que pueden marcarse como "No aplica" y salir del %. */
+const TIPOS_NO_APLICA = ["SOLICITUD_RESERVA", "FACTURA_GATE_OUT"] as const;
+type TipoNoAplica = (typeof TIPOS_NO_APLICA)[number];
+
+function isTipoNoAplicaEligible(tipo: string): tipo is TipoNoAplica {
+  return (TIPOS_NO_APLICA as readonly string[]).includes(tipo);
+}
+
+function isTipoMarcadoNoAplica(op: Operacion | undefined, tipo: string): boolean {
+  if (!op || !isTipoNoAplicaEligible(tipo)) return false;
+  if (tipo === "SOLICITUD_RESERVA") return !!op.solicitud_reserva_no_aplica;
+  return !!op.factura_gate_out_no_aplica;
+}
+
+function countTiposNoAplica(op: Operacion | undefined, visibleTipos: readonly string[]): number {
+  if (!op) return 0;
+  return visibleTipos.reduce((acc, tipo) => acc + (isTipoMarcadoNoAplica(op, tipo) ? 1 : 0), 0);
+}
+
+function colNoAplica(tipo: TipoNoAplica): "solicitud_reserva_no_aplica" | "factura_gate_out_no_aplica" {
+  return tipo === "SOLICITUD_RESERVA" ? "solicitud_reserva_no_aplica" : "factura_gate_out_no_aplica";
+}
 
 type Documento = {
   id: string;
@@ -118,6 +143,7 @@ export function MisDocumentosContent() {
   const reloadCounts = useCallback(async (ops: Operacion[]) => {
     if (!supabase || ops.length === 0) return;
     const ids = ops.map((o) => o.id);
+    const opsById = new Map(ops.map((o) => [o.id, o]));
     const docsData: { operacion_id: string; tipo: string }[] = [];
     const IN_CHUNK = 80;
     for (let i = 0; i < ids.length; i += IN_CHUNK) {
@@ -133,6 +159,8 @@ export function MisDocumentosContent() {
     const docsByOperacion = new Map<string, { count: number; hasBookingDoc: boolean }>();
     docsData.forEach((d) => {
       if (!visibleTiposSet.has(d.tipo)) return;
+      const op = opsById.get(d.operacion_id);
+      if (isTipoMarcadoNoAplica(op, d.tipo)) return;
       const current = docsByOperacion.get(d.operacion_id) ?? { count: 0, hasBookingDoc: false };
       current.count += 1;
       if (d.tipo === "BOOKING") current.hasBookingDoc = true;
@@ -153,13 +181,49 @@ export function MisDocumentosContent() {
   const fetchOperaciones = useCallback(async () => {
     if (!supabase || authLoading) return;
     setLoading(true);
-    let q = supabase
-      .from("operaciones")
-      .select("id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at")
-      .is("deleted_at", null);
+    const baseCols =
+      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at";
+    const withNaCols = `${baseCols}, solicitud_reserva_no_aplica, factura_gate_out_no_aplica`;
+
+    let q = supabase.from("operaciones").select(withNaCols).is("deleted_at", null);
     q = applyOperacionesClienteFilter(q, { isCliente, empresaNombres });
-    const { data } = await q.order("created_at", { ascending: false });
-    const ops: Operacion[] = data ?? [];
+    let { data, error: fetchError } = await q.order("created_at", { ascending: false });
+
+    // Fallback si la migración de no_aplica aún no está aplicada
+    if (fetchError) {
+      let q2 = supabase.from("operaciones").select(baseCols).is("deleted_at", null);
+      q2 = applyOperacionesClienteFilter(q2, { isCliente, empresaNombres });
+      const fallback = await q2.order("created_at", { ascending: false });
+      data = fallback.data;
+      fetchError = fallback.error;
+    }
+
+    if (fetchError) {
+      setError(fetchError.message);
+      setOperaciones([]);
+      setLoading(false);
+      return;
+    }
+
+    const ops: Operacion[] = (data ?? []).map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+        id: String(r.id),
+        ref_asli: String(r.ref_asli ?? ""),
+        referencia_externa: (r.referencia_externa as string | null) ?? null,
+        correlativo: Number(r.correlativo ?? 0),
+        cliente: String(r.cliente ?? ""),
+        naviera: String(r.naviera ?? ""),
+        booking: String(r.booking ?? ""),
+        contenedor: (r.contenedor as string | null) ?? null,
+        pod: String(r.pod ?? ""),
+        etd: (r.etd as string | null) ?? null,
+        booking_doc_url: (r.booking_doc_url as string | null) ?? null,
+        created_at: (r.created_at as string | null) ?? null,
+        solicitud_reserva_no_aplica: !!r.solicitud_reserva_no_aplica,
+        factura_gate_out_no_aplica: !!r.factura_gate_out_no_aplica,
+      };
+    });
     setOperaciones(ops);
     setLoading(false);
     await reloadCounts(ops);
@@ -178,7 +242,9 @@ export function MisDocumentosContent() {
     setDocCounts((prev) => {
       const next = new Map(prev);
       const op = operaciones.find((o) => o.id === selectedOperacion);
-      const visibleDocs = docs.filter((d) => visibleTiposSet.has(d.tipo));
+      const visibleDocs = docs.filter(
+        (d) => visibleTiposSet.has(d.tipo) && !isTipoMarcadoNoAplica(op, d.tipo),
+      );
       const hasBookingUrl = !!op?.booking_doc_url;
       const hasBookingDoc = docs.some((d) => d.tipo === "BOOKING");
       const syntheticExtra = hasBookingUrl && !hasBookingDoc ? 1 : 0;
@@ -308,8 +374,19 @@ export function MisDocumentosContent() {
   }, [documentos, operacionActual, visibleTipos]);
 
   const docsCompletados = useMemo(() => {
-    return [...documentosPorTipo.values()].filter(Boolean).length;
-  }, [documentosPorTipo]);
+    if (!operacionActual) {
+      return [...documentosPorTipo.values()].filter(Boolean).length;
+    }
+    return visibleTipos.reduce((acc, tipo) => {
+      if (isTipoMarcadoNoAplica(operacionActual, tipo)) return acc;
+      return acc + (documentosPorTipo.get(tipo) ? 1 : 0);
+    }, 0);
+  }, [documentosPorTipo, operacionActual, visibleTipos]);
+
+  const tiposAplicables = useMemo(() => {
+    if (!operacionActual) return visibleTipos.length;
+    return visibleTipos.length - countTiposNoAplica(operacionActual, visibleTipos);
+  }, [operacionActual, visibleTipos]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -398,6 +475,25 @@ export function MisDocumentosContent() {
   const closePreview = () => setPreviewDoc(null);
   const isPdf = (mimeType: string | null) => mimeType?.includes("pdf");
 
+  const handleToggleNoAplica = async (tipo: TipoNoAplica, value: boolean) => {
+    if (!supabase || !selectedOperacion || isCliente) return;
+    const col = colNoAplica(tipo);
+    setError(null);
+    const { error: updateError } = await supabase
+      .from("operaciones")
+      .update({ [col]: value })
+      .eq("id", selectedOperacion);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    const nextOps = operaciones.map((op) =>
+      op.id === selectedOperacion ? { ...op, [col]: value } : op,
+    );
+    setOperaciones(nextOps);
+    void reloadCounts(nextOps);
+  };
+
   const handleSelectOperacion = (id: string) => {
     setSelectedOperacion(id);
   };
@@ -419,13 +515,21 @@ export function MisDocumentosContent() {
   }
 
   const hasSelection = !!selectedOperacion && !!operacionActual;
-  const progressPct = Math.round((docsCompletados / visibleTipos.length) * 100);
+  const progressDenom = Math.max(tiposAplicables, 1);
+  const progressPct = tiposAplicables === 0
+    ? 100
+    : Math.round((docsCompletados / progressDenom) * 100);
   const totalTipos = visibleTipos.length;
 
   const docsBadge = (opId: string) => {
+    const op = operaciones.find((o) => o.id === opId);
+    const naCount = countTiposNoAplica(op, visibleTipos);
+    const denom = Math.max(totalTipos - naCount, 1);
     const count = docCounts.get(opId) ?? 0;
-    const completo = count >= totalTipos;
-    const pct = Math.min(100, Math.round((count / totalTipos) * 100));
+    const completo = totalTipos - naCount === 0 || count >= denom;
+    const pct = totalTipos - naCount === 0
+      ? 100
+      : Math.min(100, Math.round((count / denom) * 100));
     return (
       <span
         className={`inline-flex items-center gap-1 text-base font-extrabold px-2 py-0.5 rounded-sm border tabular-nums ${
@@ -436,7 +540,7 @@ export function MisDocumentosContent() {
               : "text-neutral-500 bg-neutral-100 border-neutral-200"
         }`}
       >
-        {count}/{totalTipos}
+        {count}/{totalTipos - naCount}
         <span className="opacity-70 font-semibold">({pct}%)</span>
       </span>
     );
@@ -536,7 +640,7 @@ export function MisDocumentosContent() {
                   style={{ width: `${progressPct}%`, background: progressPct === 100 ? "linear-gradient(to right,#10b981,#059669)" : "linear-gradient(to right,#11224E,#007A7B)" }} />
               </div>
               <span className={`text-base font-extrabold shrink-0 ${progressPct === 100 ? "text-emerald-700" : "text-brand-blue"}`}>
-                {docsCompletados}/{visibleTipos.length} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
+                {docsCompletados}/{tiposAplicables} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
               </span>
             </div>
           </div>
@@ -565,20 +669,75 @@ export function MisDocumentosContent() {
           const meta = TIPO_META[tipo];
           const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
           const tipoLabel = tr.tipoLabels[tipo as keyof typeof tr.tipoLabels] ?? meta.label;
+          const marcadoNoAplica = isTipoMarcadoNoAplica(operacionActual, tipo);
+          const puedeMarcarNoAplica = !isCliente && isTipoNoAplicaEligible(tipo);
 
           return (
             <div key={tipo} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-all ${
-              doc ? "border-emerald-300" : "border-brand-blue/15"
+              marcadoNoAplica
+                ? "border-neutral-300"
+                : doc
+                  ? "border-emerald-300"
+                  : "border-brand-blue/15"
             }`}>
-              <div className={`h-1.5 ${doc ? "bg-gradient-to-r from-emerald-400 to-teal-400" : "bg-gradient-to-r from-brand-blue/20 to-brand-blue/5"}`} />
+              <div className={`h-1.5 ${
+                marcadoNoAplica
+                  ? "bg-neutral-300"
+                  : doc
+                    ? "bg-gradient-to-r from-emerald-400 to-teal-400"
+                    : "bg-gradient-to-r from-brand-blue/20 to-brand-blue/5"
+              }`} />
               <div className="px-4 py-3 flex items-center gap-3 border-b border-brand-blue/10">
-                <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${doc ? "bg-emerald-100" : meta.color.split(" ")[1]}`}>
-                  <Icon icon={doc ? "lucide:check" : meta.icon} className={`w-4.5 h-4.5 ${doc ? "text-emerald-600" : meta.color.split(" ")[0]}`} width={18} height={18} />
+                <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  marcadoNoAplica
+                    ? "bg-neutral-100"
+                    : doc
+                      ? "bg-emerald-100"
+                      : meta.color.split(" ")[1]
+                }`}>
+                  <Icon
+                    icon={marcadoNoAplica ? "lucide:minus-circle" : doc ? "lucide:check" : meta.icon}
+                    className={`w-4.5 h-4.5 ${
+                      marcadoNoAplica
+                        ? "text-neutral-500"
+                        : doc
+                          ? "text-emerald-600"
+                          : meta.color.split(" ")[0]
+                    }`}
+                    width={18}
+                    height={18}
+                  />
                 </span>
                 <h3 className="text-base font-bold text-brand-blue leading-tight flex-1 min-w-0">{tipoLabel}</h3>
+                {marcadoNoAplica && (
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-500 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-sm">
+                    {tr.noAplica}
+                  </span>
+                )}
               </div>
-              <div className="p-3">
-                {doc ? (
+              <div className="p-3 space-y-2.5">
+                {puedeMarcarNoAplica && (
+                  <label
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-neutral-200 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors"
+                    title={tr.noAplicaHint}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={marcadoNoAplica}
+                      onChange={(e) => void handleToggleNoAplica(tipo, e.target.checked)}
+                      className="w-4 h-4 rounded-sm border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
+                    />
+                    <span className="text-sm font-semibold text-neutral-700">{tr.noAplica}</span>
+                    <span className="text-xs text-neutral-400 truncate hidden sm:inline">{tr.noAplicaHint}</span>
+                  </label>
+                )}
+
+                {marcadoNoAplica ? (
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-neutral-300 bg-neutral-50/80">
+                    <Icon icon="lucide:ban" className="w-5 h-5 text-neutral-400" />
+                    <p className="text-base text-neutral-500 font-medium">{tr.noAplicaHint}</p>
+                  </div>
+                ) : doc ? (
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#F4F8FC] border border-brand-blue/10">
                       <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}

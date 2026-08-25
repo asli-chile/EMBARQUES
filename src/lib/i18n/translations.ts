@@ -1435,6 +1435,8 @@ export const translations = {
       excelPreviewNotAvailable: "Vista previa no disponible para archivos Excel",
       downloadToView: "Descarga el archivo para visualizarlo en tu computadora",
       downloadFile: "Descargar archivo",
+      noAplica: "No aplica",
+      noAplicaHint: "No cuenta en el porcentaje de documentos",
     },
     crearInstructivo: {
       title: "Crear Instructivo de Embarque",
@@ -3849,6 +3851,8 @@ export const translations = {
       excelPreviewNotAvailable: "Preview not available for Excel files",
       downloadToView: "Download the file to view it on your computer",
       downloadFile: "Download file",
+      noAplica: "N/A",
+      noAplicaHint: "Does not count toward the documents percentage",
     },
     crearInstructivo: {
       title: "Create Shipping Instruction",
