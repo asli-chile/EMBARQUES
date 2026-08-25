@@ -72,7 +72,7 @@ export const equipoContactos = [
     cargo: 'Ejecutiva de Operaciones e Importaciones',
     foto: '/img/nina.png',
     bio: 'Profesional especializada en procesos de importación, dedicada a acompañar a nuestros clientes en cada etapa de la operación, desde la planificación inicial hasta la recepción final de la carga.',
-    idiomas: 'Habla español, inglés, italiano',
+    idiomas: 'Habla español, inglés, italiano, rumano y ruso',
     email: 'nina.scotti@asli.cl',
     whatsapp: '+5691566637',
     whatsappText: 'Hola, me interesa información sobre servicios de importación',
