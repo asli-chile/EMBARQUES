@@ -1,19 +1,16 @@
-import Head from 'next/head'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
+import Seo from '../src/components/Seo'
 import Tracking from '../src/components/Tracking'
 
 const TrackingPage = () => {
   return (
     <>
-      <Head>
-        <title>Tracking de Cargas — ASLI</title>
-        <meta
-          name="description"
-          content="Consulta el estado de tus cargas en tiempo real. Accede al seguimiento oficial de tu carga directamente con la naviera."
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
+      <Seo
+        title="Tracking de Cargas"
+        description="Consulta el estado de tus cargas en tiempo real. Accede al seguimiento oficial de tu carga directamente con la naviera."
+        path="/tracking"
+      />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">

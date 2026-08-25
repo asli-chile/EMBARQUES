@@ -1,18 +1,15 @@
-import Head from 'next/head'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
+import Seo from '../src/components/Seo'
 
 const PresentacionPage = () => {
   return (
     <>
-      <Head>
-        <title>Presentación — ASLI</title>
-        <meta
-          name="description"
-          content="Conoce más sobre ASLI — Asesorías y Servicios Logísticos Integrales. Descarga nuestra presentación corporativa."
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
+      <Seo
+        title="Presentación corporativa"
+        description="Conoce más sobre ASLI — Asesorías y Servicios Logísticos Integrales. Descarga nuestra presentación corporativa."
+        path="/presentacion"
+      />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">

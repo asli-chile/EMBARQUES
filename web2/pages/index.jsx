@@ -1,4 +1,3 @@
-import Head from 'next/head'
 import Header from '../src/components/Header'
 import Hero from '../src/components/Hero'
 import Estadisticas from '../src/components/Estadisticas'
@@ -8,6 +7,7 @@ import Proceso from '../src/components/Proceso'
 import Confianza from '../src/components/Confianza'
 import Ubicacion from '../src/components/Ubicacion'
 import Footer from '../src/components/Footer'
+import Seo, { buildHomeJsonLd } from '../src/components/Seo'
 
 /**
  * Home ASLI — landing conversional con scroll suave y reveals
@@ -15,14 +15,12 @@ import Footer from '../src/components/Footer'
 const Home = () => {
   return (
     <>
-      <Head>
-        <title>ASLI — Asesorías y Servicios Logísticos Integrales</title>
-        <meta
-          name="description"
-          content="ASLI — Asesorías y Servicios Logísticos Integrales Ltda. Exportación, importación, coordinación naviera y transporte terrestre especializado en fruta fresca y congelada. Curicó, Maule."
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-      </Head>
+      <Seo
+        title="ASLI — Asesoría logística, exportación e importación | Curicó"
+        description="Asesoría logística en Curicó para PYMEs y exportadores: exportación de fruta fresca, importación de mercancías, contenedores, carga aérea y marítima. ASLI, Maule."
+        path="/"
+        jsonLd={buildHomeJsonLd()}
+      />
       <div className="min-h-screen flex flex-col bg-[#F7F5F2]">
         <Header />
         <main className="flex-grow">

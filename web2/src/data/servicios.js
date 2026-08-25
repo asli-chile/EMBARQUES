@@ -5,6 +5,8 @@ export const servicios = [
     descripcion:
       'Te acompañamos de punta a punta: armamos la documentación, coordinamos con navieras y aduanas, y dejamos la operación lista para que tu carga salga sin sorpresas.',
     imagen: '/img/expo.webp',
+    alt: 'Asesoría en exportaciones ASLI — documentación, navieras y aduanas',
+    href: '/asesoria-exportadores-pymes',
   },
   {
     id: 2,
@@ -12,6 +14,8 @@ export const servicios = [
     descripcion:
       'Traemos tu producto con orden: trámites aduaneros, tiempos reales y coordinación logística para que sepas qué esperar en cada etapa del ingreso.',
     imagen: '/img/impo.webp',
+    alt: 'Asesoría en importaciones ASLI — ingreso de mercancías a Chile',
+    href: '/importacion-mercancias-chile',
   },
   {
     id: 3,
@@ -19,6 +23,8 @@ export const servicios = [
     descripcion:
       'Certificados, permisos y papelería aduanera sin laberinto. Revisamos requisitos y te guiamos para cumplir normativa sin perder días valiosos.',
     imagen: '/img/docs.webp',
+    alt: 'Asesoría documental y papelería aduanera ASLI',
+    href: '/servicios-aduaneros',
   },
   {
     id: 4,
@@ -26,6 +32,8 @@ export const servicios = [
     descripcion:
       'Conectamos tu carga con las principales navieras del mundo, eligiendo ruta y servicio según plazo, tipo de producto y presupuesto.',
     imagen: '/img/maritimo.webp',
+    alt: 'Transporte marítimo y coordinación naviera ASLI',
+    href: '/transporte-maritimo',
   },
   {
     id: 5,
@@ -33,6 +41,8 @@ export const servicios = [
     descripcion:
       'Para cargas urgentes o de alto valor: opciones aéreas con aerolíneas confiables y seguimiento cercano hasta la entrega.',
     imagen: '/img/aereo.webp',
+    alt: 'Transporte aéreo de carga — importaciones y exportaciones ASLI',
+    href: '/transporte-aereo-carga',
   },
   {
     id: 6,
@@ -40,6 +50,8 @@ export const servicios = [
     descripcion:
       'Movemos tu carga desde y hacia puertos y aeropuertos con una red terrestre confiable, coordinada con el resto de la operación.',
     imagen: '/img/camion.webp',
+    alt: 'Transporte terrestre hacia puertos y aeropuertos — ASLI',
+    href: '/asesoria-logistica-integral',
   },
   {
     id: 7,
@@ -47,6 +59,8 @@ export const servicios = [
     descripcion:
       'Administramos contenedores con foco en espacio, costo y tiempos de despacho, para que no se te vaya la rentabilidad en detalles operativos.',
     imagen: '/img/container.webp',
+    alt: 'Gestión e importación de contenedores ASLI',
+    href: '/gestion-contenedores',
   },
   {
     id: 8,
@@ -54,6 +68,8 @@ export const servicios = [
     descripcion:
       'Tramitación aduanera completa y cumplimiento normativo, con el objetivo de agilizar importaciones y exportaciones sin improvisar.',
     imagen: '/img/aduana.webp',
+    alt: 'Servicios aduaneros ASLI para importaciones y exportaciones',
+    href: '/servicios-aduaneros',
   },
   {
     id: 9,
@@ -61,6 +77,8 @@ export const servicios = [
     descripcion:
       'Una sola conversación para armar la solución completa: multimodal, documental y operativa, adaptada a tu temporada y a tu tipo de carga.',
     imagen: '/img/logistica.webp',
+    alt: 'Asesoría logística integral ASLI en Curicó, Maule',
+    href: '/asesoria-logistica-integral',
   },
 ]
 

@@ -1,8 +1,9 @@
 import { servicios } from '../data/servicios'
 import { useReveal } from '../hooks/useReveal'
+import { SHOW_COTIZADOR } from '../lib/features'
 
 function ServiceCard({ servicio, index }) {
-  const { ref, style } = useReveal('up', Math.min(index, 5) * 120)
+  const { ref, style } = useReveal('up', Math.min(index, 5) * 60)
 
   return (
     <div ref={ref} style={style}>
@@ -10,9 +11,10 @@ function ServiceCard({ servicio, index }) {
         <div className="relative h-36 sm:h-32 overflow-hidden">
           <img
             src={servicio.imagen}
-            alt=""
+            alt={servicio.alt || servicio.titulo}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-asli group-hover:scale-105"
             loading="lazy"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/40 to-transparent" />
           <span className="absolute bottom-2 left-3 font-display text-white/90 text-[0.7rem] tracking-[0.18em]">
@@ -27,7 +29,7 @@ function ServiceCard({ servicio, index }) {
             {servicio.descripcion}
           </p>
           <a
-            href="/servicios"
+            href={servicio.href || '/servicios'}
             className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320 ease-asli min-h-10"
           >
             Conocer más
@@ -83,9 +85,10 @@ const Servicios = ({ limit = null, showCta = true }) => {
               Ver todos los servicios
             </a>
             <a
-              href="https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios"
-              target="_blank"
-              rel="noopener noreferrer"
+              href={SHOW_COTIZADOR ? '/#cotizar' : 'https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios'}
+              {...(SHOW_COTIZADOR
+                ? {}
+                : { target: '_blank', rel: 'noopener noreferrer' })}
               className="btn-ghost-dark !py-3 sm:!py-2.5 !px-6 !text-sm w-full sm:w-auto justify-center"
             >
               Cotizar ahora

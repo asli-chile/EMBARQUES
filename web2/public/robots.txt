@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# ERP / rutas internas (proxy) — no útiles para SEO público
+Disallow: /embarques
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /seo-preview
+
+Sitemap: https://asli.cl/sitemap.xml

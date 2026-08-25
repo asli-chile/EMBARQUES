@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { goToHomeSection } from '../lib/scrollToHash'
+import { SHOW_COTIZADOR } from '../lib/features'
 
 function formatFechaHora(date) {
   const fecha = date.toLocaleDateString('es-CL', {
@@ -104,27 +105,38 @@ const Header = () => {
   useEffect(() => {
     const tick = () => setAhora(new Date())
     tick()
-    const id = window.setInterval(tick, 1000)
+    const id = window.setInterval(tick, 15_000)
     return () => window.clearInterval(id)
   }, [])
 
   useEffect(() => {
+    const CACHE_KEY = 'asli_dolar_v1'
     const fetchDolarObservado = async () => {
       try {
+        const cached = sessionStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          if (parsed?.valor && Date.now() - parsed.cachedAt < 30 * 60 * 1000) {
+            setDolarObservado({ valor: parsed.valor, fecha: parsed.fecha })
+            setLoadingDolar(false)
+            return
+          }
+        }
         setLoadingDolar(true)
         // Proxy same-origin: evita CORS de mindicador.cl en el navegador
         const response = await fetch('/api/dolar')
         if (!response.ok) return
         const data = await response.json()
-
+        let next = null
         if (data?.valor) {
-          setDolarObservado({ valor: data.valor, fecha: data.fecha })
+          next = { valor: data.valor, fecha: data.fecha }
         } else if (data?.serie?.length > 0) {
           const valorMasReciente = data.serie[0]
-          setDolarObservado({
-            valor: valorMasReciente.valor,
-            fecha: valorMasReciente.fecha,
-          })
+          next = { valor: valorMasReciente.valor, fecha: valorMasReciente.fecha }
+        }
+        if (next) {
+          setDolarObservado(next)
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...next, cachedAt: Date.now() }))
         }
       } catch {
         // silencioso
@@ -140,8 +152,10 @@ const Header = () => {
     { href: '/#historia', label: 'Historia', section: 'historia' },
     { href: '/#servicios', label: 'Servicios', section: 'servicios' },
     { href: '/#proceso', label: 'Cómo trabajamos', section: 'proceso' },
+    ...(SHOW_COTIZADOR ? [{ href: '/#cotizar', label: 'Cotizar', section: 'cotizar' }] : []),
     { href: '/#contacto', label: 'Contacto', section: 'contacto' },
     { href: '/servicios', label: 'Equipo' },
+    { href: '/tracking', label: 'Tracking' },
   ]
 
   const handleNavClick = (event, link) => {
@@ -179,6 +193,9 @@ const Header = () => {
               <img
                 src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
                 alt="ASLI"
+                width={176}
+                height={44}
+                decoding="async"
                 className="h-7 sm:h-10 md:h-11 w-auto object-contain"
               />
             </a>
@@ -197,12 +214,15 @@ const Header = () => {
               <img
                 src="/img/prochile-sin-fondo.png"
                 alt="ProChile"
+                width={160}
+                height={40}
+                decoding="async"
                 className="h-6 sm:h-9 md:h-10 w-auto object-contain"
               />
             </a>
           </div>
 
-          <div className="hidden lg:flex items-center gap-7">
+          <div className={`hidden lg:flex items-center ${SHOW_COTIZADOR ? 'gap-5' : 'gap-7'}`}>
             {navLinks.map((link) => (
               <a
                 key={link.href}

@@ -2,9 +2,11 @@
  * Hero — fachada ASLI como plano visual; tipografía compacta en mobile
  */
 import { useEffect, useState } from 'react'
+import { goToHomeSection } from '../lib/scrollToHash'
+import { SHOW_COTIZADOR } from '../lib/features'
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const DURATION = '1.35s'
+const DURATION = '0.7s'
 
 function useEnter(delay = 0) {
   const [on, setOn] = useState(false)
@@ -15,7 +17,7 @@ function useEnter(delay = 0) {
       setOn(true)
       return
     }
-    const id = window.setTimeout(() => setOn(true), 180 + delay)
+    const id = window.setTimeout(() => setOn(true), 40 + delay)
     return () => window.clearTimeout(id)
   }, [delay])
 
@@ -33,7 +35,11 @@ const Hero = () => {
   const image = useEnter(200)
 
   const handleServiciosClick = () => {
-    document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth' })
+    goToHomeSection('servicios')
+  }
+
+  const handleCotizarClick = () => {
+    goToHomeSection('cotizar')
   }
 
   return (
@@ -59,15 +65,15 @@ const Hero = () => {
           {/* Copy */}
           <div className="container-asli lg:col-span-5 lg:px-0 order-1">
             <p className="section-label !mb-1.5" style={title}>
-              Logística y comercio exterior
+              Asesoría logística · Curicó, Maule
             </p>
 
             <h1
               className="font-display text-asli-dark text-[clamp(1.9rem,7.5vw,3.2rem)] font-bold leading-[1.08] tracking-tight text-balance mb-2.5 sm:mb-3"
               style={title}
             >
-              En tu operación,{' '}
-              <span className="text-asli-primary">ASLI está en cada paso</span>
+              Asesoría logística para{' '}
+              <span className="text-asli-primary">exportar e importar</span>
             </h1>
 
             <p
@@ -75,17 +81,18 @@ const Hero = () => {
               style={text}
             >
               <span className="sm:hidden">
-                Equipo de Curicó con exportadores e importadores del agro: documentación,
-                navieras, aduanas y seguimiento.
+                ASLI en Curicó: exportación de fruta fresca, importación de mercancías,
+                contenedores, aéreo y marítimo — con documentación, navieras y aduanas.
               </span>
               <span className="hidden sm:inline">
-                Somos un equipo de Curicó que acompaña a exportadores e importadores — sobre
-                todo del agro — en cada etapa: documentación, navieras, aduanas y seguimiento.
-                Hablamos claro, respondemos rápido y operamos contigo, no solo para ti.
+                En tu operación, ASLI está en cada paso. Acompañamos a exportadores,
+                importadores y PYMEs — sobre todo del agro — en fruta fresca, contenedores,
+                carga aérea y marítima: documentación, navieras, aduanas y seguimiento desde
+                Curicó, Maule.
               </span>
             </p>
 
-            <div className="flex mb-4 lg:mb-0" style={cta}>
+            <div className="flex flex-col sm:flex-row gap-2.5 mb-4 lg:mb-0" style={cta}>
               <button
                 type="button"
                 onClick={handleServiciosClick}
@@ -94,6 +101,15 @@ const Hero = () => {
                 Ver servicios
                 <span aria-hidden="true">→</span>
               </button>
+              {SHOW_COTIZADOR ? (
+                <button
+                  type="button"
+                  onClick={handleCotizarClick}
+                  className="btn-ghost-dark !py-3 !px-4 sm:!px-7 !text-[0.9rem] w-full sm:w-auto justify-center"
+                >
+                  Cotizar
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -109,6 +125,10 @@ const Hero = () => {
               <img
                 src="/img/oficina.png"
                 alt="Oficinas ASLI en Curicó"
+                width={1252}
+                height={712}
+                fetchPriority="high"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover object-[center_32%] sm:object-[center_28%] lg:object-[center_30%]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/60 via-asli-dark/10 to-transparent" />

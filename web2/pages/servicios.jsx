@@ -1,8 +1,9 @@
-import Head from 'next/head'
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
+import Seo from '../src/components/Seo'
 import { servicios, equipoContactos } from '../src/data/servicios'
 import { useReveal } from '../src/hooks/useReveal'
+import { SHOW_COTIZADOR } from '../src/lib/features'
 
 function ContactCard({ persona, index }) {
   const { ref, style } = useReveal('up', Math.min(index, 4) * 160)
@@ -56,7 +57,7 @@ function ServiceTile({ servicio, index }) {
         <div className="relative h-44 overflow-hidden">
           <img
             src={servicio.imagen}
-            alt=""
+            alt={servicio.alt || servicio.titulo}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-asli group-hover:scale-105"
             loading="lazy"
           />
@@ -67,9 +68,18 @@ function ServiceTile({ servicio, index }) {
         </div>
         <div className="p-6">
           <h3 className="font-display text-xl font-bold text-asli-dark mb-2 tracking-tight">
-            {servicio.titulo}
+            <a href={servicio.href || '/servicios'} className="hover:text-asli-primary transition-colors">
+              {servicio.titulo}
+            </a>
           </h3>
-          <p className="text-asli-dark/80 text-sm leading-relaxed">{servicio.descripcion}</p>
+          <p className="text-asli-dark/80 text-sm leading-relaxed mb-4">{servicio.descripcion}</p>
+          <a
+            href={servicio.href || '/servicios'}
+            className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320"
+          >
+            Ver detalle
+            <span aria-hidden="true">→</span>
+          </a>
         </div>
       </article>
     </div>
@@ -79,14 +89,11 @@ function ServiceTile({ servicio, index }) {
 const ServiciosPage = () => {
   return (
     <>
-      <Head>
-        <title>Servicios — ASLI</title>
-        <meta
-          name="description"
-          content="Conoce todos nuestros servicios logísticos: exportaciones, importaciones, transporte marítimo, aéreo y terrestre, gestión de contenedores, servicios aduaneros y asesoría logística integral."
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
+      <Seo
+        title="Servicios logísticos: exportación, importación y aduanas"
+        description="Servicios ASLI: asesoría a exportadores y PYMEs, exportación de fruta fresca, importación de mercancías, contenedores, carga aérea y marítima, aduanas. Curicó, Maule."
+        path="/servicios"
+      />
 
       <div className="min-h-screen flex flex-col bg-[#F7F5F2]">
         <Header />
@@ -144,9 +151,10 @@ const ServiciosPage = () => {
                 Cuéntanos tu operación y te ayudamos a armar la mejor solución.
               </p>
               <a
-                href="https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios"
-                target="_blank"
-                rel="noopener noreferrer"
+                href={SHOW_COTIZADOR ? '/#cotizar' : 'https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios'}
+                {...(SHOW_COTIZADOR
+                  ? {}
+                  : { target: '_blank', rel: 'noopener noreferrer' })}
                 className="btn-primary"
               >
                 Cotizar aquí

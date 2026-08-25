@@ -1,4 +1,5 @@
 import { scrollToHash } from '../lib/scrollToHash'
+import { SHOW_COTIZADOR } from '../lib/features'
 
 /**
  * Footer — marca, servicios, contacto
@@ -32,6 +33,10 @@ const Footer = () => {
             <img
               src="/img/logoblanco.png"
               alt="ASLI"
+              width={176}
+              height={44}
+              loading="lazy"
+              decoding="async"
               className="h-11 mb-4 object-contain"
             />
             <p className="text-white/75 text-sm uppercase tracking-[0.14em] font-bold mb-3">
@@ -46,13 +51,33 @@ const Footer = () => {
             <h4 className="font-display text-white text-lg font-semibold mb-4">Servicios</h4>
             <ul className="space-y-2.5 text-base">
               <li>
-                <a href="/#servicios" className="hover:text-asli-primary transition-colors duration-320">
-                  Exportación e importación
+                <a href="/exportacion-fruta-fresca" className="hover:text-asli-primary transition-colors duration-320">
+                  Exportación de fruta fresca
                 </a>
               </li>
               <li>
-                <a href="/#servicios" className="hover:text-asli-primary transition-colors duration-320">
-                  Transporte multimodal
+                <a href="/importacion-mercancias-chile" className="hover:text-asli-primary transition-colors duration-320">
+                  Importación de mercancías
+                </a>
+              </li>
+              <li>
+                <a href="/asesoria-exportadores-pymes" className="hover:text-asli-primary transition-colors duration-320">
+                  Asesoría a PYMEs y exportadores
+                </a>
+              </li>
+              <li>
+                <a href="/gestion-contenedores" className="hover:text-asli-primary transition-colors duration-320">
+                  Gestión de contenedores
+                </a>
+              </li>
+              <li>
+                <a href="/transporte-aereo-carga" className="hover:text-asli-primary transition-colors duration-320">
+                  Carga aérea
+                </a>
+              </li>
+              <li>
+                <a href="/transporte-maritimo" className="hover:text-asli-primary transition-colors duration-320">
+                  Transporte marítimo
                 </a>
               </li>
               <li>
@@ -60,11 +85,13 @@ const Footer = () => {
                   Equipo especializado
                 </a>
               </li>
-              <li>
-                <a href="/#proceso" className="hover:text-asli-primary transition-colors duration-320">
-                  Cómo trabajamos
-                </a>
-              </li>
+              {SHOW_COTIZADOR ? (
+                <li>
+                  <a href="/#cotizar" className="hover:text-asli-primary transition-colors duration-320">
+                    Cotizador
+                  </a>
+                </li>
+              ) : null}
             </ul>
           </div>
 
@@ -77,8 +104,8 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="/#confianza" className="hover:text-asli-primary transition-colors duration-320">
-                  Red operativa
+                <a href="/tracking" className="hover:text-asli-primary transition-colors duration-320">
+                  Tracking de cargas
                 </a>
               </li>
               <li>
@@ -89,6 +116,11 @@ const Footer = () => {
               <li>
                 <a href="/presentacion" className="hover:text-asli-primary transition-colors duration-320">
                   Presentación
+                </a>
+              </li>
+              <li>
+                <a href="/asesoria-logistica-integral" className="hover:text-asli-primary transition-colors duration-320">
+                  Asesoría logística integral
                 </a>
               </li>
             </ul>

@@ -80,6 +80,14 @@ const nextConfig = {
       "/presentacion",
       "/servicios",
       "/tracking",
+      "/exportacion-fruta-fresca",
+      "/asesoria-exportadores-pymes",
+      "/importacion-mercancias-chile",
+      "/gestion-contenedores",
+      "/transporte-aereo-carga",
+      "/transporte-maritimo",
+      "/servicios-aduaneros",
+      "/asesoria-logistica-integral",
     ];
     return paths.map((source) => ({
       source,
