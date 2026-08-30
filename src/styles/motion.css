@@ -1,0 +1,350 @@
+/*
+  ────────────────────────────────────────────────────────────────────────────
+  SISTEMA DE MOTION DESIGN — EMBARQUES
+  ────────────────────────────────────────────────────────────────────────────
+  Fuente única de verdad de las animaciones de la interfaz.
+  El espejo en TypeScript está en `src/lib/ui/motion.ts` (mismos valores).
+
+  Reglas del sistema:
+  · Solo se animan `transform` y `opacity` (compositor GPU, 60 FPS estables).
+  · Nunca `linear` en animaciones principales: entrada suave, salida rápida.
+  · Movimientos pequeños (4–24 px) + escalas mínimas (0.97–1).
+  · "Animate meaningfully, not decoratively": aparición, desaparición,
+    cambio de estado, jerarquía y feedback. Nada decorativo.
+
+  Documentación: docs/MOTION-DESIGN.md
+  ────────────────────────────────────────────────────────────────────────────
+*/
+
+:root {
+  /* ── Duración ──
+     Escala corta a propósito: por encima de ~520 ms la UI se siente lenta. */
+  --motion-duration-instant: 90ms;   /* feedback táctil (press, hover) */
+  --motion-duration-fast: 160ms;     /* cambios de estado, colores */
+  --motion-duration-base: 240ms;     /* entrada/salida de elementos */
+  --motion-duration-slow: 360ms;     /* modales, paneles, vistas */
+  --motion-duration-slower: 520ms;   /* transición de página completa */
+
+  /* ── Easing ──
+     `enter` = desaceleración fuerte (llega y se asienta): sensación de inercia.
+     `exit`  = aceleración (se va rápido): la salida nunca debe hacer esperar. */
+  --motion-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-emphasis: cubic-bezier(0.34, 1.24, 0.64, 1); /* rebote apenas perceptible */
+
+  /* ── Delay ── */
+  --motion-delay-none: 0ms;
+  --motion-delay-short: 60ms;
+  --motion-delay-medium: 120ms;
+
+  /* ── Stagger ── separación entre hermanos de una lista o grupo */
+  --motion-stagger-tight: 30ms;
+  --motion-stagger-base: 45ms;
+  --motion-stagger-loose: 70ms;
+
+  /* ── Distancia ── desplazamiento de translateY/translateX */
+  --motion-distance-xs: 4px;
+  --motion-distance-sm: 8px;
+  --motion-distance-md: 14px;
+  --motion-distance-lg: 24px;
+
+  /* ── Escala ── */
+  --motion-scale-from: 0.97;
+  --motion-scale-press: 0.985;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1. APARICIÓN DE ELEMENTOS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes motion-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-enter-distance, var(--motion-distance-sm)), 0)
+      scale(var(--motion-enter-scale, 1));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/*
+  `backwards` en lugar de `both`: al terminar, el navegador descarta los estilos
+  de la animación y el elemento queda SIN `transform`. Es deliberado — un
+  `transform` residual crea un containing block y descolocaría a cualquier
+  hijo `position: fixed` (modales, drawers, toasts).
+*/
+.motion-enter {
+  animation: motion-enter var(--motion-duration-base) var(--motion-ease-enter) backwards;
+}
+
+.motion-enter-soft {
+  --motion-enter-distance: var(--motion-distance-xs);
+  animation: motion-enter var(--motion-duration-fast) var(--motion-ease-enter) backwards;
+}
+
+.motion-enter-lift {
+  --motion-enter-distance: var(--motion-distance-md);
+  --motion-enter-scale: var(--motion-scale-from);
+  animation: motion-enter var(--motion-duration-slow) var(--motion-ease-enter) backwards;
+}
+
+/*
+  Entrada solo con opacidad, para elementos que ya llevan un `transform` propio
+  (por ejemplo `-translate-y-1/2` de Tailwind): un keyframe con `transform` lo
+  sobrescribiría y el elemento saltaría de posición.
+*/
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.motion-fade {
+  animation: motion-fade var(--motion-duration-fast) var(--motion-ease-standard) backwards;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. STAGGER
+   El índice se pasa inline como `--motion-i` (ver `staggerStyle()` en
+   src/lib/ui/motion.ts, que además lo topea para que listas largas no
+   acumulen segundos de retraso).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.motion-stagger {
+  animation-delay: calc(var(--motion-i, 0) * var(--motion-stagger, var(--motion-stagger-base)));
+}
+
+.motion-stagger-tight {
+  --motion-stagger: var(--motion-stagger-tight);
+}
+
+.motion-stagger-loose {
+  --motion-stagger: var(--motion-stagger-loose);
+}
+
+/* Stagger automático para grupos pequeños y fijos (toolbars, chips, campos). */
+.motion-stagger-group > * {
+  animation: motion-enter var(--motion-duration-base) var(--motion-ease-enter) backwards;
+}
+.motion-stagger-group > *:nth-child(1) { animation-delay: 0ms; }
+.motion-stagger-group > *:nth-child(2) { animation-delay: calc(1 * var(--motion-stagger-base)); }
+.motion-stagger-group > *:nth-child(3) { animation-delay: calc(2 * var(--motion-stagger-base)); }
+.motion-stagger-group > *:nth-child(4) { animation-delay: calc(3 * var(--motion-stagger-base)); }
+.motion-stagger-group > *:nth-child(5) { animation-delay: calc(4 * var(--motion-stagger-base)); }
+.motion-stagger-group > *:nth-child(6) { animation-delay: calc(5 * var(--motion-stagger-base)); }
+.motion-stagger-group > *:nth-child(n + 7) { animation-delay: calc(6 * var(--motion-stagger-base)); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. TRANSICIÓN DE VISTA (PAGE TRANSITION)
+   La navegación del ERP recarga el documento, así que la salida de la vista
+   anterior la cubre `public/erp-busy.js` (velo + barra) y aquí solo se
+   orquesta la entrada: contenedor primero, contenido interno en cascada.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Contenedor de la vista: el mismo keyframe `motion-enter`, con la distancia
+   media y la duración más larga. */
+.motion-view {
+  --motion-enter-distance: var(--motion-distance-md);
+  animation: motion-enter var(--motion-duration-slower) var(--motion-ease-enter) backwards;
+  /* Sin `will-change`: la animación ocurre una vez y promover la capa de forma
+     permanente costaría más memoria de la que ahorra. */
+}
+
+/* Secciones internas de una vista: entran después del contenedor. */
+.motion-view-section {
+  animation: motion-enter var(--motion-duration-slow) var(--motion-ease-enter) backwards;
+  animation-delay: calc(
+    var(--motion-delay-short) + var(--motion-i, 0) * var(--motion-stagger-base)
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. OVERLAYS: BACKDROP + PANEL
+   Se usan como transiciones (no keyframes) para que el hook
+   `useOverlayTransition` controle entrada y salida con el mismo elemento.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.motion-backdrop {
+  opacity: 0;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.motion-backdrop[data-state="open"] {
+  opacity: 1;
+}
+
+.motion-panel {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-distance-md), 0) scale(var(--motion-scale-from));
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-slow) var(--motion-ease-enter);
+}
+.motion-panel[data-state="open"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+.motion-panel[data-state="closed"] {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-exit),
+    transform var(--motion-duration-fast) var(--motion-ease-exit);
+}
+
+/* Bottom sheet en móvil: el panel sube desde abajo, sin escala. */
+@media (max-width: 639px) {
+  .motion-panel-sheet {
+    transform: translate3d(0, 100%, 0) scale(1);
+  }
+  .motion-panel-sheet[data-state="open"] {
+    transform: translate3d(0, 0, 0);
+  }
+  .motion-panel-sheet[data-state="closed"] {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. FEEDBACK DE INTERACCIÓN
+   Sutil a propósito: se debe sentir, no ver.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/*
+  El hundido usa la propiedad `scale` y no `transform: scale()` a propósito:
+  `scale` se compone con `transform`, así que un botón con `-translate-y-1/2`
+  de Tailwind conserva su posición al presionarlo.
+*/
+.motion-interactive {
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    scale var(--motion-duration-instant) var(--motion-ease-standard);
+}
+.motion-interactive:active:not(:disabled) {
+  scale: var(--motion-scale-press);
+}
+.motion-interactive:disabled {
+  scale: 1;
+}
+
+/* Cards y filas seleccionables: mismo feedback, sin cambio de color forzado. */
+.motion-pressable {
+  transition: scale var(--motion-duration-instant) var(--motion-ease-standard);
+}
+.motion-pressable:active {
+  scale: var(--motion-scale-press);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. LOADING: SKELETON + SHIMMER
+   El shimmer barre con `transform` (no con `background-position`) para que
+   corra en el compositor y no repinte en cada frame.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes motion-shimmer {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.motion-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--motion-skeleton-base, rgba(17, 34, 78, 0.09));
+  isolation: isolate;
+}
+.motion-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--motion-skeleton-sheen, rgba(255, 255, 255, 0.55)) 50%,
+    transparent 100%
+  );
+  animation: motion-shimmer 1.5s var(--motion-ease-standard) infinite;
+}
+
+/* Variante sobre fondos oscuros (hero navy, drawer). */
+.motion-skeleton-on-dark {
+  --motion-skeleton-base: rgba(255, 255, 255, 0.14);
+  --motion-skeleton-sheen: rgba(255, 255, 255, 0.22);
+}
+
+/* Variante "superficie": ocupa el lugar de una card blanca sin oscurecerla. */
+.motion-skeleton-surface {
+  --motion-skeleton-base: rgba(255, 255, 255, 0.8);
+  --motion-skeleton-sheen: rgba(17, 34, 78, 0.05);
+}
+
+/*
+  Recarga sobre contenido ya visible: se atenúa en lugar de reemplazarse por un
+  skeleton. El dato viejo sigue siendo legible y la interfaz no se bloquea.
+*/
+.motion-refreshable {
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+.motion-refreshable[data-refreshing="true"] {
+  opacity: 0.6;
+}
+
+/* Para el spinner se usa `animate-spin` de Tailwind, que ya está en 28 archivos
+   del ERP. No se duplica aquí: `linear` es correcto para una rotación continua
+   (con easing se percibiría como un tirón) y Tailwind ya lo resuelve. */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. ACCESIBILIDAD
+   `prefers-reduced-motion`: se conserva la información (qué apareció, qué
+   cambió) y se elimina el movimiento.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-enter,
+  .motion-enter-soft,
+  .motion-enter-lift,
+  .motion-fade,
+  .motion-stagger-group > *,
+  .motion-view,
+  .motion-view-section {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .motion-panel,
+  .motion-panel-sheet,
+  .motion-backdrop {
+    transition-duration: 1ms;
+    transform: none;
+  }
+  .motion-panel[data-state="closed"],
+  .motion-panel-sheet[data-state="closed"] {
+    transform: none;
+  }
+
+  .motion-interactive,
+  .motion-pressable {
+    transition-property: background-color, border-color, color;
+  }
+  .motion-interactive:active:not(:disabled),
+  .motion-pressable:active {
+    transform: none;
+  }
+
+  .motion-skeleton::after {
+    animation: none;
+    opacity: 0.35;
+  }
+
+  .animate-spin {
+    animation-duration: 2s;
+  }
+}

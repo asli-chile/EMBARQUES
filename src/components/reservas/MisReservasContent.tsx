@@ -17,7 +17,10 @@ import autoTable from "jspdf-autotable";
 import { withBase } from "@/lib/basePath";
 import { goBackOr } from "@/lib/navigation";
 import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
-import { ESTADO_OPERACION_STYLES } from "@/lib/ui/estadoOperacion";
+import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
 const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 44px" };
@@ -99,8 +102,6 @@ type Operacion = {
   inicio_stacking: string | null;
   fin_stacking: string | null;
 };
-
-const estadoConfig = ESTADO_OPERACION_STYLES;
 
 type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "contenedor" | "estado_operacion" | "solicitud_ventana";
 type SortDirection = "asc" | "desc";
@@ -285,7 +286,7 @@ function buildEmailContent(op: Operacion) {
     ["Ref. ASLI", formatRefAsli(op.ref_asli, op.correlativo)],
     ["Ref. Externa", op.referencia_externa],
     ["Cliente", op.cliente],
-    ["Estado", op.estado_operacion],
+    ["Estado", etiquetaEstado(op.estado_operacion)],
   ]);
   htmlBody += renderHtmlTable("Carga", [
     ["Especie", op.especie],
@@ -385,7 +386,7 @@ type CardProps = {
 
 const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking, onContextMenu }: CardProps) {
   const [expanded, setExpanded] = useState(false);
-  const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+  const cfg = getEstadoOperacionStyle(op.estado_operacion);
   const transportLabel =
     op.tipo_reserva_transporte === "asli"
       ? tr.reservaAsliName
@@ -426,7 +427,7 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
         {cfg && (
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
-            {op.estado_operacion}
+            {etiquetaEstado(op.estado_operacion)}
           </span>
         )}
       </div>
@@ -601,7 +602,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   onContextMenu,
   onInlineSave,
 }: TableRowProps) {
-  const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+  const cfg = getEstadoOperacionStyle(op.estado_operacion);
   return (
     <tr
       style={ROW_CV}
@@ -711,7 +712,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         {cfg ? (
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
-            {op.estado_operacion}
+            {etiquetaEstado(op.estado_operacion)}
           </span>
         ) : <span className="text-brand-blue/30 text-xs">—</span>}
       </td>
@@ -770,7 +771,7 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-      <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+      <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4">
         <div className="flex items-center gap-3 mb-4">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sent ? "bg-emerald-100 border border-emerald-200" : "bg-brand-blue/10 border border-brand-blue/20"}`}>
             <Icon icon={sent ? "lucide:check-circle" : "lucide:mail"} width={20} height={20} className={sent ? "text-emerald-600" : "text-brand-blue"} />
@@ -879,7 +880,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
-      <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 w-full max-w-sm animate-fade-in overflow-hidden">
+      <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 w-full max-w-sm overflow-hidden">
         <div className="h-[3px] bg-gradient-to-r from-amber-400 to-amber-500" />
         <div className="p-6">
           <div className="flex items-center gap-3 mb-5">
@@ -993,6 +994,7 @@ export function MisReservasContent() {
   const { isCliente, isEjecutivo, isStaff, empresaNombres, isLoading: authLoading, user, profile } = useAuth();
   const canInlineEdit = isEjecutivo || isStaff;
   const tr = t.misReservas;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1031,7 +1033,7 @@ export function MisReservasContent() {
   }, []);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
 
     const scope = { isCliente, isEjecutivo, empresaNombres };
@@ -1051,6 +1053,7 @@ export function MisReservasContent() {
       .is("deleted_at", null);
 
     q = applyOperacionesClienteFilter(q, scope);
+    q = aplicarFiltroTemporada(q, temporadaActiva);
     const { data, error } = await q.order("created_at", { ascending: false });
 
     if (error) {
@@ -1059,7 +1062,7 @@ export function MisReservasContent() {
       setOperaciones((data ?? []) as Operacion[]);
     }
     setLoading(false);
-  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, isEjecutivo, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();
@@ -1678,7 +1681,7 @@ export function MisReservasContent() {
                 <label className={FILTER_LABEL}>{tr.colStatus}</label>
                 <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)} className={FILTER_FIELD}>
                   <option value="">{tr.allStates}</option>
-                  {estados.map((e) => <option key={e} value={e!}>{e}</option>)}
+                  {estados.map((e) => <option key={e} value={e!}>{etiquetaEstado(e)}</option>)}
                 </select>
               </div>
               <div className={isCliente ? "hidden" : ""}>
@@ -1922,7 +1925,7 @@ export function MisReservasContent() {
         const allAssigned = pendientes.length === 0;
         return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+          <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
                 <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />

@@ -9,8 +9,9 @@ import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
 import { NotificationsProvider } from "@/lib/notifications/NotificationsContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
 import { Toaster } from "sileo";
-import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useContext, useEffect, type ReactNode } from "react";
 import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
+import { getRouteChrome, type RouteChrome } from "@/lib/ui/routeChrome";
 import { prefetchFrequentRoutes } from "@/lib/routePrefetch";
 
 /** Cada ruta en su propio chunk: evita cargar MapLibre/xlsx/ag-grid en /inicio (crítico en Android + Vite dev). */
@@ -31,6 +32,9 @@ const LazyTrackingContent = lazy(() =>
 );
 const LazyRegistrosContent = lazy(() =>
   import("@/components/registros").then((m) => ({ default: m.RegistrosContent })),
+);
+const LazyTareasContent = lazy(() =>
+  import("@/components/tareas").then((m) => ({ default: m.TareasContent })),
 );
 const LazyClientesContent = lazy(() =>
   import("@/components/clientes").then((m) => ({ default: m.ClientesContent })),
@@ -53,6 +57,11 @@ const LazyTransportesConfigContent = lazy(() =>
 const LazyConsignatariosContent = lazy(() =>
   import("@/components/configuracion/ConsignatariosContent").then((m) => ({
     default: m.ConsignatariosContent,
+  })),
+);
+const LazyTemporadasContent = lazy(() =>
+  import("@/components/configuracion/TemporadasContent").then((m) => ({
+    default: m.TemporadasContent,
   })),
 );
 const LazyUsuariosContent = lazy(() =>
@@ -91,12 +100,32 @@ const LazyCrearInstructivoContent = lazy(() =>
 const LazyCartolasNuboxContent = lazy(() =>
   import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
 );
+/**
+ * El aspecto de la ruta se pasa por contexto y no como prop de cada `<Sus>`:
+ * hay una veintena de llamadas y el valor es el mismo para todas.
+ */
+const RouteChromeContext = createContext<RouteChrome>("module");
+
 function RouteFallback() {
-  return <ModuleSoftFallback />;
+  return <ModuleSoftFallback chrome={useContext(RouteChromeContext)} />;
 }
 
+/**
+ * Envoltorio de ruta: Suspense + transición de entrada de la vista.
+ *
+ * El `div.motion-view` se monta recién cuando el chunk del módulo resolvió, así
+ * que la animación coincide con el momento en que el skeleton da paso al
+ * contenido real. Sus secciones internas entran en cascada con
+ * `.motion-view-section` (ver docs/MOTION-DESIGN.md).
+ */
 function Sus({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <div className="motion-view flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+    </Suspense>
+  );
 }
 
 type AppShellProps = {
@@ -156,6 +185,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyRegistrosContent />
         </Sus>
       </ModuleWithVisitorInfo>
+    ) : pathname === "/tareas" ? (
+      <Sus>
+        <LazyTareasContent />
+      </Sus>
     ) : pathname === "/configuracion/clientes" ? (
       <ConfigGuard>
         <Sus>
@@ -190,6 +223,12 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ConfigGuard>
         <Sus>
           <LazyConsignatariosContent />
+        </Sus>
+      </ConfigGuard>
+    ) : pathname === "/configuracion/temporadas" ? (
+      <ConfigGuard allowAdmin={false}>
+        <Sus>
+          <LazyTemporadasContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/configuracion/formatos-documentos" ? (
@@ -270,7 +309,11 @@ export function AppShell({ children, pathname }: AppShellProps) {
             <div className="h-dvh max-w-full min-w-0 flex flex-col overflow-hidden">
               <Header />
               <NavBanner pathname={pathname} />
-              <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">{mainContent}</div>
+              <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+                <RouteChromeContext.Provider value={getRouteChrome(pathname)}>
+                  {mainContent}
+                </RouteChromeContext.Provider>
+              </div>
             </div>
             <AuthFormModalOverlay />
             <Toaster position="bottom-center" />

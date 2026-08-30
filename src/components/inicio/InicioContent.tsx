@@ -5,6 +5,8 @@ import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { shouldUseHeavyVisualEffects } from "@/lib/ui/devicePerf";
 import "@/styles/inicio.css";
 import {
@@ -18,13 +20,13 @@ import { InicioLoggedInHome } from "./InicioLoggedInHome";
 import { InicioGuestLanding } from "./InicioGuestLanding";
 import { InicioAuthSkeleton } from "./InicioSkeleton";
 import { InicioFooter, ScrollTopButton } from "./inicio-ui";
-
-const CLOSED_ESTADOS = new Set(["CANCELADO", "ARRIBADO", "ARRIBADA", "COMPLETADO", "COMPLETADA"]);
+import { esEstadoCerrado } from "@/lib/operaciones/estados";
 
 export function InicioContent() {
   const { t } = useLocale();
   const { profile, isExternalUser, isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
   const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const mainRef = useRef<HTMLElement>(null);
   const bgParallaxRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -40,7 +42,7 @@ export function InicioContent() {
     link.id = id;
     link.rel = "stylesheet";
     link.href =
-      "https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap";
+      "https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap";
     document.head.appendChild(link);
   }, []);
 
@@ -139,7 +141,7 @@ export function InicioContent() {
   }, [loadingKpis, isLoggedIn, authLoading]);
 
   useEffect(() => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     const fetchKpiData = async () => {
       try {
         if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
@@ -156,6 +158,7 @@ export function InicioContent() {
           .select("id, contenedor, estado_operacion, created_at, etd")
           .is("deleted_at", null);
         opsQuery = applyOperacionesClienteFilter(opsQuery, { isCliente, isEjecutivo, empresaNombres });
+        opsQuery = aplicarFiltroTemporada(opsQuery, temporadaActiva);
         const { data: operaciones } = await opsQuery;
 
         const ops = operaciones || [];
@@ -165,8 +168,7 @@ export function InicioContent() {
         let operacionesCompletadas = 0;
 
         for (const o of ops) {
-          const estado = (o.estado_operacion ?? "").trim().toUpperCase();
-          if (CLOSED_ESTADOS.has(estado)) operacionesCompletadas += 1;
+          if (esEstadoCerrado(o.estado_operacion)) operacionesCompletadas += 1;
 
           const raw = o.created_at || o.etd;
           if (!raw) continue;
@@ -192,7 +194,7 @@ export function InicioContent() {
     };
 
     fetchKpiData();
-  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, isEjecutivo, empresaNombres]);
 
   const handleScrollToTop = () => {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });

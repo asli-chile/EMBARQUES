@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { RoleForbidden } from "@/components/layout/RoleForbidden";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
 import { format, formatDistanceToNow, addDays, startOfDay, parseISO, isValid, differenceInCalendarDays } from "date-fns";
@@ -14,6 +16,7 @@ import { formatRefAsli } from "@/lib/refAsli";
 import MapLibreMap, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { esEstadoCerrado, etiquetaEstado, normalizarEstado } from "@/lib/operaciones/estados";
 
 type OperacionResumen = {
   id: string;
@@ -27,6 +30,7 @@ type OperacionResumen = {
   etd: string | null;
   eta: string | null;
   estado_operacion: string | null;
+  arribo_confirmado: boolean | null;
   booking: string | null;
   especie: string | null;
   segundas: string | null;
@@ -54,8 +58,6 @@ type PortMarker = {
 const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const REGION_LABELS = ["America", "Europa", "India y Medio Oriente", "Oceania", "Asia"] as const;
 type RegionLabel = (typeof REGION_LABELS)[number];
-
-const CLOSED_ESTADOS = new Set(["CANCELADO", "ARRIBADO", "ARRIBADA", "COMPLETADO", "COMPLETADA"]);
 
 function normEstado(value: string | null | undefined): string {
   return (value ?? "").trim().toUpperCase();
@@ -156,6 +158,7 @@ export function DashboardContent() {
   const { t, locale } = useLocale();
   const { isExternalUser, isLoading: authLoading, isCliente, isEjecutivo, isStaff, empresaNombres } = useAuth();
   const tr = t.dashboard;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [loading, setLoading] = useState(true);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
@@ -175,13 +178,14 @@ export function DashboardContent() {
       if (!supabase) throw new Error("Supabase not ready");
       let q = supabase.from("operaciones").select(selectCols).is("deleted_at", null);
       q = applyOperacionesClienteFilter(q, { isCliente, isEjecutivo, empresaNombres });
+      q = aplicarFiltroTemporada(q, temporadaActiva);
       return q;
     },
-    [supabase, isCliente, isEjecutivo, empresaNombres]
+    [supabase, isCliente, isEjecutivo, empresaNombres, temporadaActiva]
   );
 
   const fetchDashboardData = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
       setMapOperations([]);
       setLoading(false);
@@ -189,14 +193,14 @@ export function DashboardContent() {
     }
     setLoading(true);
     const allRes = await buildFilteredQuery(
-      "id, ref_asli, correlativo, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, booking, especie, segundas, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli, created_at"
+      "id, ref_asli, correlativo, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, arribo_confirmado, booking, especie, segundas, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli, created_at"
     ).limit(2000);
     const allData = (allRes.data ?? []) as OperacionResumen[];
     setMapOperations(allData);
 
     setLastFetchedAt(new Date());
     setLoading(false);
-  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres, buildFilteredQuery]);
+  }, [supabase, authLoading, temporadaLoading, isCliente, isEjecutivo, empresaNombres, buildFilteredQuery]);
 
   useEffect(() => {
     if (!authLoading) void fetchDashboardData();
@@ -297,15 +301,17 @@ export function DashboardContent() {
 
     for (const op of mapOperations) {
       total += 1;
-      const estado = normEstado(op.estado_operacion) || "SIN ESTADO";
+      const codigo = normalizarEstado(op.estado_operacion);
+      const estado = codigo ?? "SIN ESTADO";
+      const cerrada = esEstadoCerrado(op.estado_operacion);
       byStatus.set(estado, (byStatus.get(estado) ?? 0) + 1);
 
-      if (!CLOSED_ESTADOS.has(estado)) active += 1;
-      if (estado === "PENDIENTE" || estado === "SOLICITUD") pending += 1;
-      if (estado === "CONFIRMADA" || estado === "CONFIRMADO") confirmed += 1;
-      if (estado === "CANCELADO") cancelled += 1;
-      if (estado === "ARRIBADO" || estado === "ARRIBADA") arrived += 1;
-      if (estado === "ROLEADO") rolled += 1;
+      if (!cerrada) active += 1;
+      if (codigo === "SOLICITADA") pending += 1;
+      if (codigo === "RESERVA_CONFIRMADA") confirmed += 1;
+      if (codigo === "CANCELADA") cancelled += 1;
+      if (op.arribo_confirmado) arrived += 1;
+      if (codigo === "ROLEADA") rolled += 1;
       if (op.operacion_critica || normEstado(op.prioridad) === "ALTA") critical += 1;
 
       const etd = parseOpDate(op.etd);
@@ -332,29 +338,29 @@ export function DashboardContent() {
       const corte = parseOpDate(op.corte_documental);
       if (corte) {
         const corteDay = startOfDay(corte);
-        if (corteDay >= today && corteDay <= in3 && !CLOSED_ESTADOS.has(estado)) cutoffNext3 += 1;
+        if (corteDay >= today && corteDay <= in3 && !cerrada) cutoffNext3 += 1;
       }
 
       const stackingEnd = parseOpDate(op.fin_stacking);
       if (stackingEnd) {
         const stackDay = startOfDay(stackingEnd);
-        if (stackDay >= today && stackDay <= in3 && !CLOSED_ESTADOS.has(estado)) stackingClosing += 1;
+        if (stackDay >= today && stackDay <= in3 && !cerrada) stackingClosing += 1;
       }
 
       if (op.enviado_transporte) {
         if (op.transporte || op.contenedor) transportAssigned += 1;
         else transportPending += 1;
-      } else if (!CLOSED_ESTADOS.has(estado)) {
+      } else if (!cerrada) {
         notSentToTransport += 1;
       }
 
-      if (!op.booking_doc_url && !CLOSED_ESTADOS.has(estado)) noBookingDoc += 1;
+      if (!op.booking_doc_url && !cerrada) noBookingDoc += 1;
 
       if (
         op.enviado_transporte &&
         (op.transporte || op.contenedor) &&
         !op.numero_factura_asli &&
-        !CLOSED_ESTADOS.has(estado)
+        !cerrada
       ) {
         invoicePending += 1;
       }
@@ -576,20 +582,20 @@ export function DashboardContent() {
           <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         </div>
         <div className="relative shrink-0 bg-[#0A1328]/90 border-b border-cyan-400/20 h-14" />
-        <div className="relative p-4 flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:p-4 lg:gap-3 animate-pulse">
+        <div className="relative p-4 flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:p-4 lg:gap-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 h-28 lg:h-14">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-xl border border-cyan-300/20" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-[#101C36]/80 rounded-xl border border-cyan-300/20" />
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-3 lg:flex-1 lg:min-h-0">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-56 lg:h-auto" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-56 lg:h-auto" />
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-40 lg:h-32" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-40 lg:h-32" />
             ))}
           </div>
         </div>
@@ -811,16 +817,16 @@ export function DashboardContent() {
               {operationalKpis.statusItems.slice(0, 6).map((item) => {
                 const pct = operationalKpis.total > 0 ? Math.round((item.cantidad / operationalKpis.total) * 100) : 0;
                 const tone =
-                  item.estado === "CANCELADO" ? "bg-red-400"
-                    : item.estado === "PENDIENTE" || item.estado === "SOLICITUD" ? "bg-amber-400"
-                      : item.estado === "CONFIRMADA" || item.estado === "CONFIRMADO" ? "bg-emerald-400"
-                        : item.estado === "ROLEADO" ? "bg-violet-400"
-                          : item.estado.startsWith("ARRIB") ? "bg-sky-400"
+                  item.estado === "CANCELADA" ? "bg-red-400"
+                    : item.estado === "SOLICITADA" ? "bg-amber-400"
+                      : item.estado === "RESERVA_CONFIRMADA" ? "bg-emerald-400"
+                        : item.estado === "ROLEADA" ? "bg-violet-400"
+                          : item.estado === "ZARPADA" ? "bg-sky-400"
                             : "bg-cyan-400";
                 return (
                   <div key={item.estado}>
                     <div className="flex items-center justify-between gap-2 text-base mb-1">
-                      <span className="font-semibold text-cyan-50/95 truncate">{item.estado}</span>
+                      <span className="font-semibold text-cyan-50/95 truncate">{etiquetaEstado(item.estado) || item.estado}</span>
                       <span className="tabular-nums text-cyan-200/85 shrink-0 font-semibold">{item.cantidad}</span>
                     </div>
                     <div className="h-2 rounded-full bg-cyan-950/60 overflow-hidden">

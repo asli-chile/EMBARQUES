@@ -13,7 +13,10 @@ import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
 import { displayRefAsli } from "@/lib/refAsli";
-import { ESTADO_OPERACION_STYLES } from "@/lib/ui/estadoOperacion";
+import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 type Operacion = {
   id: string;
@@ -29,12 +32,11 @@ type Operacion = {
   created_at: string;
 };
 
-const estadoConfig = ESTADO_OPERACION_STYLES;
-
 export function PapeleraContent() {
   const { t } = useLocale();
   const { isCliente, isEjecutivo, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papelera;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -50,7 +52,7 @@ export function PapeleraContent() {
   }, []);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
 
     const scope = { isCliente, isEjecutivo, empresaNombres };
@@ -68,6 +70,7 @@ export function PapeleraContent() {
       .not("deleted_at", "is", null);
 
     q = applyOperacionesClienteFilter(q, scope);
+    q = aplicarFiltroTemporada(q, temporadaActiva);
     const { data, error } = await q.order("deleted_at", { ascending: false });
 
     if (error) {
@@ -76,7 +79,7 @@ export function PapeleraContent() {
       setOperaciones(data || []);
     }
     setLoading(false);
-  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, isEjecutivo, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();
@@ -299,7 +302,7 @@ export function PapeleraContent() {
               {/* Mobile cards */}
               <div className="md:hidden space-y-2">
                 {operaciones.map((op) => {
-                  const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+                  const cfg = getEstadoOperacionStyle(op.estado_operacion);
                   const sel = selectedIds.has(op.id);
                   return (
                     <div
@@ -326,7 +329,7 @@ export function PapeleraContent() {
                               {cfg && (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                  {op.estado_operacion}
+                                  {etiquetaEstado(op.estado_operacion)}
                                 </span>
                               )}
                             </div>
@@ -417,7 +420,7 @@ export function PapeleraContent() {
                     </thead>
                     <tbody className="divide-y divide-neutral-50">
                       {operaciones.map((op, idx) => {
-                        const cfg = op.estado_operacion ? estadoConfig[op.estado_operacion] : null;
+                        const cfg = getEstadoOperacionStyle(op.estado_operacion);
                         const sel = selectedIds.has(op.id);
                         return (
                           <tr
@@ -453,7 +456,7 @@ export function PapeleraContent() {
                               {cfg ? (
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
-                                  {op.estado_operacion}
+                                  {etiquetaEstado(op.estado_operacion)}
                                 </span>
                               ) : (
                                 <span className="text-neutral-400 text-base">-</span>

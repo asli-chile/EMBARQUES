@@ -8,6 +8,8 @@ import { es } from "date-fns/locale";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { modulePageBg, moduleHeroRounded, moduleCard } from "@/lib/ui/moduleStyles";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 type Operacion = {
   id: string;
@@ -29,6 +31,7 @@ export function PapeleraTransportesContent() {
   const { t, locale } = useLocale();
   const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papeleraTransportes;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +50,7 @@ export function PapeleraTransportesContent() {
   }, []);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
 
     let q = supabase
@@ -61,6 +64,7 @@ export function PapeleraTransportesContent() {
     if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
     }
+    q = aplicarFiltroTemporada(q, temporadaActiva);
 
     const { data, error } = await q.order("transporte_deleted_at", { ascending: false });
 
@@ -70,7 +74,7 @@ export function PapeleraTransportesContent() {
       setOperaciones(data || []);
     }
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();

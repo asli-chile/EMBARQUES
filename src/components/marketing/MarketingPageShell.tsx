@@ -5,7 +5,7 @@ import { InicioBackground } from "@/components/inicio/InicioBackground";
 import { InicioFooter, ScrollTopButton } from "@/components/inicio/inicio-ui";
 import "@/styles/inicio.css";
 
-/** Carga tipografías Syne/Manrope compartidas con Inicio. */
+/** Carga la tipografía condensada compartida con Inicio. */
 export function useInicioFonts() {
   useEffect(() => {
     const id = "inicio-fonts";
@@ -14,7 +14,7 @@ export function useInicioFonts() {
     link.id = id;
     link.rel = "stylesheet";
     link.href =
-      "https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap";
+      "https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap";
     document.head.appendChild(link);
   }, []);
 }

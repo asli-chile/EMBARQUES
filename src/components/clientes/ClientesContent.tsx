@@ -10,6 +10,9 @@ import {
   moduleCard,
   moduleToolbar,
 } from "@/lib/ui/moduleStyles";
+import { staggerStyle } from "@/lib/ui/motion";
+import { SkeletonRows } from "@/components/ui/Skeleton";
+import { ModalShell } from "@/components/ui/ModalShell";
 
 const API_CLIENTES = withBase("/api/clientes");
 
@@ -67,7 +70,13 @@ export function ClientesContent() {
   const [error, setError] = useState<string | null>(null);
   const [empresas, setEmpresas] = useState<{ id: string; nombre: string }[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /*
+   * `editingRow` guarda la fila en edición y `isEditOpen` la visibilidad. Están
+   * separados porque el modal sigue montado durante su animación de salida y
+   * necesita seguir leyendo la fila hasta que termine.
+   */
   const [editingRow, setEditingRow] = useState<ClienteRow | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<ClienteForm>(emptyForm());
   const [isSaving, setIsSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -162,9 +171,10 @@ export function ClientesContent() {
       descuento: row.descuento !== null ? String(row.descuento) : "",
       activo: row.activo,
     });
+    setIsEditOpen(true);
   };
 
-  const handleEditClose = () => { setEditingRow(null); };
+  const handleEditClose = () => { setIsEditOpen(false); };
 
   const handleEditSave = useCallback(async () => {
     if (!editingRow) return;
@@ -229,19 +239,19 @@ export function ClientesContent() {
     }
   };
 
-  if (loading && rowData.length === 0) {
-    return (
-      <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
-        <div className="flex-1 flex items-center justify-center text-neutral-500">Cargando clientes…</div>
-      </main>
-    );
-  }
+  /** Primera carga: no hay nada que mostrar todavía → skeleton en la zona de contenido. */
+  const isFirstLoad = loading && rowData.length === 0;
+  /** Recarga sobre datos ya visibles: se atenúa el contenido, no se bloquea la interfaz. */
+  const isRefreshing = loading && rowData.length > 0;
 
   return (
     <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
 
       {/* Hero gradient header */}
-      <div className={`flex-shrink-0 ${moduleHero}`}>
+      <div
+        className={`flex-shrink-0 motion-view-section ${moduleHero}`}
+        style={staggerStyle(0)}
+      >
         <div className="px-4 pt-5 pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -256,14 +266,14 @@ export function ClientesContent() {
             <div className="flex items-center gap-2 shrink-0">
               {selectedIds.size > 0 && (
                 <button type="button" onClick={() => void handleRemoveSelected()}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-base font-semibold text-red-100 bg-red-500/30 hover:bg-red-500/50 transition-colors">
+                  className="motion-enter-soft motion-interactive inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-base font-semibold text-red-100 bg-red-500/30 hover:bg-red-500/50">
                   <Icon icon="lucide:trash-2" width={13} height={13} />
                   <span className="hidden sm:inline">Eliminar ({selectedIds.size})</span>
                   <span className="sm:hidden">{selectedIds.size}</span>
                 </button>
               )}
               <button type="button" onClick={handleOpenAddModal}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold text-brand-blue bg-white hover:bg-white/90 transition-colors shadow-sm">
+                className="motion-interactive inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold text-brand-blue bg-white hover:bg-white/90 shadow-sm">
                 <Icon icon="lucide:plus" width={14} height={14} />
                 Agregar
               </button>
@@ -275,14 +285,14 @@ export function ClientesContent() {
               <span className="text-sm font-semibold">{rowData.length} cliente{rowData.length !== 1 ? "s" : ""}</span>
             </div>
             {rowData.filter((r) => r.activo).length > 0 && (
-              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+              <div className="motion-enter-soft flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
                 <Icon icon="lucide:check-circle" width={13} height={13} className="text-white/80" />
                 <span className="text-sm font-semibold">{rowData.filter((r) => r.activo).length} activo{rowData.filter((r) => r.activo).length !== 1 ? "s" : ""}</span>
               </div>
             )}
             {selectedIds.size > 0 && (
               <button type="button" onClick={() => setSelectedIds(new Set())}
-                className="flex items-center gap-1 bg-white/20 rounded-xl px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors">
+                className="motion-enter-soft motion-interactive flex items-center gap-1 bg-white/20 rounded-xl px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white">
                 <Icon icon="lucide:x" width={11} height={11} />
                 Desmarcar
               </button>
@@ -292,7 +302,10 @@ export function ClientesContent() {
       </div>
 
       {/* Search bar */}
-      <div className={`flex-shrink-0 ${moduleToolbar} px-4 py-2.5 flex items-center gap-2`}>
+      <div
+        className={`flex-shrink-0 motion-view-section ${moduleToolbar} px-4 py-2.5 flex items-center gap-2`}
+        style={staggerStyle(1)}
+      >
         <div className="relative flex-1">
           <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40" />
           <input
@@ -303,30 +316,38 @@ export function ClientesContent() {
             className={`${moduleInput} pl-9`}
           />
           {search && (
-            <button type="button" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-neutral-500">
+            <button type="button" onClick={() => setSearch("")} className="motion-fade motion-interactive absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-neutral-500">
               <Icon icon="lucide:x" width={12} height={12} />
             </button>
           )}
         </div>
         <button type="button" onClick={() => void fetchClientes()}
-          className="p-2.5 rounded-lg text-brand-blue bg-[#F4F8FC] border border-brand-blue/20 hover:bg-white transition-colors" title="Actualizar">
-          <Icon icon="lucide:refresh-cw" width={14} height={14} />
+          className="motion-interactive p-2.5 rounded-lg text-brand-blue bg-[#F4F8FC] border border-brand-blue/20 hover:bg-white disabled:opacity-60"
+          disabled={loading} title="Actualizar">
+          <Icon icon="lucide:refresh-cw" width={14} height={14} className={isRefreshing ? "animate-spin" : undefined} />
         </button>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="flex-shrink-0 mx-4 mt-3 px-4 py-2.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2" role="alert">
+        <div className="motion-enter flex-shrink-0 mx-4 mt-3 px-4 py-2.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2" role="alert">
           <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
           {error}
         </div>
       )}
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-4">
+      <div
+        className="flex-1 min-h-0 overflow-auto p-3 sm:p-4 motion-view-section motion-refreshable"
+        style={staggerStyle(2)}
+        data-refreshing={isRefreshing}
+        aria-busy={loading}
+      >
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-20 text-center">
+        {isFirstLoad ? (
+          <SkeletonRows rows={7} />
+        ) : filtered.length === 0 ? (
+          <div className="motion-enter-lift flex flex-col items-center gap-4 py-20 text-center">
             <div className="w-16 h-16 rounded-3xl bg-white border border-neutral-200 flex items-center justify-center shadow-sm">
               <Icon icon="lucide:briefcase" width={28} height={28} className="text-neutral-300" />
             </div>
@@ -343,22 +364,23 @@ export function ClientesContent() {
           <>
             {/* ── Mobile cards (< md) ── */}
             <div className="md:hidden space-y-2.5">
-              {filtered.map((row) => {
+              {filtered.map((row, index) => {
                 const isSelected = selectedIds.has(row.id);
                 const initials = row.nombre.slice(0, 2).toUpperCase();
                 return (
                   <div
                     key={row.id}
                     onClick={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next; })}
-                    className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all cursor-pointer active:scale-[0.99] ${
+                    style={staggerStyle(index)}
+                    className={`motion-enter motion-stagger motion-stagger-tight motion-pressable bg-white rounded-2xl border shadow-sm overflow-hidden cursor-pointer transition-[border-color,box-shadow] duration-fast ease-standard ${
                       isSelected ? "border-brand-blue ring-1 ring-brand-blue/30" : "border-brand-blue/15"
                     }`}
                   >
-                    <div className={`h-1 transition-colors ${isSelected ? "bg-brand-blue" : "bg-gradient-to-r from-brand-blue/20 to-teal-400/20"}`} />
+                    <div className={`h-1 transition-colors duration-fast ease-standard ${isSelected ? "bg-brand-blue" : "bg-gradient-to-r from-brand-blue/20 to-teal-400/20"}`} />
                     <div className="p-4">
                       {/* Header row */}
                       <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-sm font-bold transition-colors ${
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-sm font-bold transition-colors duration-fast ease-standard ${
                           isSelected ? "bg-brand-blue text-white" : "bg-brand-blue/10 text-brand-blue"
                         }`}>
                           {isSelected ? <Icon icon="lucide:check" width={16} height={16} /> : initials}
@@ -400,7 +422,7 @@ export function ClientesContent() {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleEditOpen(row); }}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors"
+                        className="motion-interactive w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15"
                       >
                         <Icon icon="lucide:pencil" width={13} height={13} />Editar
                       </button>
@@ -429,10 +451,14 @@ export function ClientesContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
-                  {filtered.map((row) => {
+                  {filtered.map((row, index) => {
                     const initials = row.nombre.slice(0, 2).toUpperCase();
                     return (
-                      <tr key={row.id} className={`transition-colors ${selectedIds.has(row.id) ? "bg-brand-blue/5" : "hover:bg-neutral-50"}`}>
+                      <tr
+                        key={row.id}
+                        style={staggerStyle(index)}
+                        className={`motion-enter motion-stagger motion-stagger-tight transition-colors duration-fast ease-standard ${selectedIds.has(row.id) ? "bg-brand-blue/5" : "hover:bg-neutral-50"}`}
+                      >
                         <td className="px-4 py-3">
                           <input type="checkbox" checked={selectedIds.has(row.id)}
                             onChange={() => setSelectedIds((prev) => { const next = new Set(prev); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next; })}
@@ -463,7 +489,7 @@ export function ClientesContent() {
                         </td>
                         <td className="px-4 py-3">
                           <button type="button" onClick={() => handleEditOpen(row)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-brand-blue hover:bg-brand-blue/10 transition-colors">
+                            className="motion-interactive inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-brand-blue hover:bg-brand-blue/10">
                             <Icon icon="lucide:pencil" width={12} height={12} />Editar
                           </button>
                         </td>
@@ -482,38 +508,33 @@ export function ClientesContent() {
       </div>
 
       {/* Add modal */}
-      {showAddModal && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="add-cliente-title"
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-center pt-3 pb-1 sm:hidden">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
-            </div>
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-neutral-200 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center">
-                  <Icon icon="lucide:plus" width={15} height={15} className="text-white" />
-                </div>
-                <h2 id="add-cliente-title" className="text-sm font-bold text-neutral-900">Agregar cliente</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-                aria-label="Cerrar"
-              >
-                <Icon icon="lucide:x" width={16} height={16} />
-              </button>
-            </div>
-            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto">
+      <ModalShell
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        icon="lucide:plus"
+        title="Agregar cliente"
+        labelledById="add-cliente-title"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="motion-interactive flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-300"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleAddSubmit()}
+              disabled={isAdding || !addForm.empresa_id}
+              className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {isAdding && <Icon icon="lucide:loader-2" width={14} height={14} className="animate-spin" />}
+              {isAdding ? "Agregando…" : "Agregar cliente"}
+            </button>
+          </>
+        }
+      >
               <div>
                 <label className={moduleLabel}>
                   Empresa <span className="text-red-500">*</span>
@@ -572,74 +593,48 @@ export function ClientesContent() {
                     onChange={(e) => setAddForm((f) => ({ ...f, activo: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-neutral-200 rounded-full peer peer-checked:bg-brand-blue transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                  <div className="w-9 h-5 bg-neutral-200 rounded-full peer peer-checked:bg-brand-blue transition-colors duration-fast ease-standard after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform after:duration-base after:ease-enter peer-checked:after:translate-x-4" />
                 </label>
                 <span className="text-sm font-medium text-neutral-700">{addForm.activo ? "Activo" : "Inactivo"}</span>
               </div>
               {addError && (
-                <p className="text-xs text-red-600 flex items-center gap-1" role="alert">
+                <p className="motion-enter text-xs text-red-600 flex items-center gap-1" role="alert">
                   <Icon icon="lucide:alert-circle" width={13} height={13} className="shrink-0" />
                   {addError}
                 </p>
               )}
-            </div>
-            <div className="flex gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-2 shrink-0">
+      </ModalShell>
+
+      {/* Edit modal */}
+      {editingRow && (
+        <ModalShell
+          isOpen={isEditOpen}
+          onClose={handleEditClose}
+          icon="lucide:pencil"
+          title="Editar cliente"
+          subtitle={editingRow.nombre}
+          labelledById="edit-cliente-title"
+          footer={
+            <>
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                onClick={handleEditClose}
+                className="motion-interactive flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-300"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={() => void handleAddSubmit()}
-                disabled={isAdding || !addForm.empresa_id}
+                onClick={() => void handleEditSave()}
+                disabled={isSaving}
                 className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {isAdding ? "Agregando…" : "Agregar cliente"}
+                {isSaving && <Icon icon="lucide:loader-2" width={14} height={14} className="animate-spin" />}
+                {isSaving ? "Guardando…" : "Guardar"}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit modal */}
-      {editingRow && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-cliente-title"
-          onClick={handleEditClose}
+            </>
+          }
         >
-          <div
-            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-center pt-3 pb-1 sm:hidden">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
-            </div>
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-neutral-200 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center">
-                  <Icon icon="lucide:pencil" width={15} height={15} className="text-white" />
-                </div>
-                <div>
-                  <h2 id="edit-cliente-title" className="text-sm font-bold text-neutral-900">Editar cliente</h2>
-                  <p className="text-xs text-neutral-500">{editingRow.nombre}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleEditClose}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-                aria-label="Cerrar"
-              >
-                <Icon icon="lucide:x" width={16} height={16} />
-              </button>
-            </div>
-            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className={moduleLabel}>Empresa</label>
                 <select
@@ -695,32 +690,13 @@ export function ClientesContent() {
                     onChange={(e) => setEditForm((f) => ({ ...f, activo: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-neutral-200 rounded-full peer peer-checked:bg-brand-blue transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                  <div className="w-9 h-5 bg-neutral-200 rounded-full peer peer-checked:bg-brand-blue transition-colors duration-fast ease-standard after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform after:duration-base after:ease-enter peer-checked:after:translate-x-4" />
                 </label>
                 <span className="text-sm font-medium text-neutral-700">
                   {editForm.activo ? "Activo" : "Inactivo"}
                 </span>
               </div>
-            </div>
-            <div className="flex gap-2 px-5 sm:px-6 pb-5 sm:pb-6 pt-2 shrink-0">
-              <button
-                type="button"
-                onClick={handleEditClose}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleEditSave()}
-                disabled={isSaving}
-                className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isSaving ? "Guardando…" : "Guardar"}
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </main>
   );

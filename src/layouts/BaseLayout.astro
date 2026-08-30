@@ -2,6 +2,7 @@
 import { AppShell } from "@/components/layout";
 import FaviconLinks from "@/components/layout/FaviconLinks.astro";
 import { stripBasePathname, withBase } from "@/lib/basePath";
+import { getRouteChrome, hasSkeletonBones, routeChromeBg } from "@/lib/ui/routeChrome";
 import "@/styles/globals.css";
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
 
 const { title = "EMBARQUES - Logística y Comercio Exterior", description = "Logística y Comercio Exterior" } = Astro.props;
 const pathname = stripBasePathname(Astro.url.pathname);
+const chrome = getRouteChrome(pathname);
+const showBones = hasSkeletonBones(chrome);
 ---
 
 <!DOCTYPE html>
@@ -36,36 +39,54 @@ const pathname = stripBasePathname(Astro.url.pathname);
   </head>
   <body class="h-screen max-w-full overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
     <!--
-      Loader pre-hidratación: shell claro (mismo fondo que módulos).
-      En navegaciones siguientes de la sesión se oculta al instante (sin pestañeo navy).
+      Loader pre-hidratación. `AppShell` es una isla sin SSR, así que hasta que
+      hidrata este div ES la página: si no se muestra, se ve el documento en
+      blanco y el esqueleto real aparece después de golpe.
+
+      Por eso se muestra SIEMPRE, también al refrescar. Antes se saltaba cuando
+      la sesión ya estaba "caliente", y eso era justamente lo que producía el
+      pestañeo azul.
+
+      Debe ser visualmente IDÉNTICO a `components/ui/ModuleSoftFallback.tsx`,
+      que es lo que se ve justo después de hidratar; si difieren, el relevo se
+      percibe como un parpadeo. Las barras superiores replican la geometría de
+      Header + NavBanner. Si cambias uno, cambia el otro.
     -->
     <div
       id="app-shell-loading"
-      class="fixed inset-0 z-[2147483647] flex flex-col overflow-hidden bg-[#D9E3F2]"
+      class:list={[
+        "fixed inset-0 z-[2147483647] flex flex-col overflow-hidden transition-opacity duration-fast ease-standard",
+        routeChromeBg[chrome],
+      ]}
       aria-busy="true"
       aria-live="polite"
     >
-      <div class="h-14 shrink-0 bg-neutral-700/95 border-b border-white/10" aria-hidden="true"></div>
+      <div class="h-12 min-h-12 md:h-[60px] md:min-h-[60px] shrink-0 bg-white pt-[env(safe-area-inset-top)]" aria-hidden="true"></div>
+      <div class="h-12 min-h-12 md:h-[56px] md:min-h-[56px] shrink-0 bg-neutral-700/95 border-b border-white/10" aria-hidden="true"></div>
       <div class="flex-1 min-h-0 flex flex-col">
-        <div class="shrink-0 bg-gradient-to-br from-brand-blue via-[#0d1c42] to-brand-dark-teal px-4 sm:px-6 pt-5 pb-4">
-          <div class="flex items-center gap-3.5">
-            <div class="h-12 w-12 rounded-lg bg-white/15 border border-white/20"></div>
-            <div class="min-w-0 flex-1 space-y-2">
-              <div class="h-7 w-44 max-w-[55%] rounded-md bg-white/20"></div>
-              <div class="h-4 w-28 max-w-[40%] rounded-md bg-white/12"></div>
+        {showBones && (
+          <>
+            <div class="shrink-0 bg-gradient-to-br from-brand-blue via-[#0d1c42] to-brand-dark-teal px-4 sm:px-6 pt-5 pb-4">
+              <div class="flex items-center gap-3.5">
+                <div class="motion-skeleton motion-skeleton-on-dark h-12 w-12 shrink-0 rounded-lg"></div>
+                <div class="min-w-0 flex-1 space-y-2">
+                  <div class="motion-skeleton motion-skeleton-on-dark h-7 w-40 max-w-[55%] rounded-md"></div>
+                  <div class="motion-skeleton motion-skeleton-on-dark h-4 w-28 max-w-[40%] rounded-md"></div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="shrink-0 border-b border-brand-blue/15 bg-[#E8F0FA]/95 px-3 sm:px-4 py-3">
-          <div class="flex flex-wrap gap-2">
-            <div class="h-10 w-24 rounded-lg bg-brand-blue/10"></div>
-            <div class="h-10 w-28 rounded-lg bg-brand-blue/10"></div>
-            <div class="h-10 w-20 rounded-lg bg-brand-blue/10"></div>
-          </div>
-        </div>
-        <div class="min-h-0 flex-1 p-3 sm:p-4">
-          <div class="h-full min-h-[200px] rounded-xl border border-brand-blue/15 bg-white/80 shadow-sm"></div>
-        </div>
+            <div class="shrink-0 border-b border-brand-blue/15 bg-[#E8F0FA]/95 px-3 sm:px-4 py-3">
+              <div class="flex flex-wrap gap-2">
+                <div class="motion-skeleton h-10 w-24 rounded-lg"></div>
+                <div class="motion-skeleton h-10 w-28 rounded-lg"></div>
+                <div class="motion-skeleton h-10 w-20 rounded-lg"></div>
+              </div>
+            </div>
+            <div class="min-h-0 flex-1 p-3 sm:p-4">
+              <div class="motion-skeleton motion-skeleton-surface h-full min-h-[200px] rounded-xl border border-brand-blue/15 shadow-sm"></div>
+            </div>
+          </>
+        )}
       </div>
       <p
         id="app-shell-loading-hint"
@@ -76,17 +97,6 @@ const pathname = stripBasePathname(Astro.url.pathname);
         (chrome://inspect). Revisa la consola y la pestaña Red por URLs en rojo.
       </p>
     </div>
-    <script is:inline>
-      (function () {
-        try {
-          if (sessionStorage.getItem("erp-shell-ready") === "1") {
-            var el = document.getElementById("app-shell-loading");
-            if (el) el.style.display = "none";
-            if (window.erpBusy) window.erpBusy.show();
-          }
-        } catch (_) {}
-      })();
-    </script>
     <AppShell client:load pathname={pathname}>
       <slot />
     </AppShell>
@@ -101,11 +111,16 @@ const pathname = stripBasePathname(Astro.url.pathname);
         }, 12000);
         function removeLoader() {
           clearTimeout(t);
-          try {
-            sessionStorage.setItem("erp-shell-ready", "1");
-          } catch (_) {}
           var el = document.getElementById("app-shell-loading");
-          if (el) el.remove();
+          if (el) {
+            /* Fundido en vez de corte seco: detrás queda el mismo esqueleto, así
+               que el relevo pasa desapercibido. 160ms = --motion-duration-fast. */
+            el.style.opacity = "0";
+            el.style.pointerEvents = "none";
+            setTimeout(function () {
+              el.remove();
+            }, 160);
+          }
           if (window.erpBusy) window.erpBusy.hide();
         }
         function bind() {

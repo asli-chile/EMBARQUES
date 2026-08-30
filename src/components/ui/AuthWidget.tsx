@@ -28,7 +28,7 @@ export function AuthWidget() {
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center w-11 h-11 rounded-full bg-neutral-100 animate-pulse"
+        className="motion-skeleton flex items-center justify-center w-11 h-11 rounded-full bg-neutral-100"
         aria-hidden
       />
     );

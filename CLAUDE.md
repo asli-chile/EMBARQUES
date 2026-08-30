@@ -12,6 +12,7 @@
 | Iconos | `@iconify/react` (prefijo `lucide:` y `typcn:`) |
 | Fechas | `date-fns` + locale `es` |
 | Routing | Astro file-based (`src/pages/**/*.astro`) |
+| Motion | Sistema propio en CSS (`src/styles/motion.css` + `src/lib/ui/motion.ts`) — ver [docs/MOTION-DESIGN.md](docs/MOTION-DESIGN.md) |
 
 ---
 
@@ -34,7 +35,7 @@ src/
 │   ├── documentos/          # Generación de documentos
 │   ├── itinerario/          # Itinerarios navieros
 │   ├── ui/                  # Componentes reutilizables (Combobox, etc.)
-│   └── layout/              # Sidebar, TopBar, etc.
+│   └── layout/              # AppShell, Header, NavBanner (+ su drawer), guards
 ├── pages/
 │   ├── index.astro           # Redirect a /inicio o /auth/login
 │   ├── dashboard.astro
@@ -61,7 +62,7 @@ src/
 │       ├── LocaleContext.tsx  # useLocale() hook
 │       └── translations.ts   # Claves ES/EN
 └── layouts/
-    └── BaseLayout.astro      # Layout raíz con Sidebar + TopBar
+    └── BaseLayout.astro      # Layout raíz: monta AppShell (Header + NavBanner)
 ```
 
 ---
@@ -371,9 +372,10 @@ Agregar nuevas claves siempre en **ambos** idiomas (`es` y `en`).
 
 ---
 
-## Navegación (Sidebar)
+## Navegación
 
-Archivo: `src/lib/site.ts`
+Los ítems se declaran en `src/lib/site.ts` y los renderiza el drawer de
+`src/components/layout/NavBanner.tsx` (no hay sidebar fijo).
 
 ```typescript
 {
@@ -411,6 +413,24 @@ Aplica RLS a la tabla `consignatarios`:
 - `superadmin`/`admin`: acceso total
 - `ejecutivo`/`operador`: solo lectura
 - `cliente`: sin acceso
+
+Temporadas (aplicar en orden):
+
+```
+supabase/migrations/20260829000004_temporadas.sql
+supabase/migrations/20260829000005_correlativo_por_temporada.sql
+supabase/migrations/20260829000006_temporadas_grant_service_role.sql
+supabase/migrations/20260829000007_temporada_2025_2026_renumerar.sql
+```
+
+- La primera crea el catálogo `temporadas` (nombre libre, una sola activa, escritura solo `superadmin`), deja `2025-2026` como activa y clasifica las operaciones existentes en ella.
+- La segunda cambia la numeración: `correlativo` y `ref_asli` pasan a ser por temporada, así cada temporada empieza en `A00001`. La unicidad deja de ser global y pasa a `(temporada, correlativo)` / `(temporada, ref_asli)`.
+- La tercera otorga los permisos de `service_role` que faltaban en las tablas nuevas.
+- La cuarta unifica los cuatro textos heredados de la importación (`CHERRY 25-26`, `2026`, `TEMP 25-26`, `2025-2026`) en `2025-2026` y renumera esa temporada desde `A00001` en orden de ingreso.
+
+Para revisar el estado de las temporadas en la base: `npm run db:temporadas-inventario`.
+
+Se pueden aplicar con `npm run db:migrate -- <archivo.sql>` si existe `DATABASE_URL` en `.env.local`, o pegando el SQL en el editor de Supabase.
 
 ---
 

@@ -718,6 +718,48 @@ Campos destacados:
 | `temporada` | text | YES | — |
 | `segundas` | text | YES | — |
 
+### `temporadas` (10 columnas)
+
+Catálogo de temporadas. El nombre es libre (ej. `2025-2026`, `Cereza 2026`) y es el valor que se guarda en `operaciones.temporada`. Solo `superadmin` puede escribir; cualquier usuario autenticado puede leer.
+
+| Columna | Tipo | Nullable | Default |
+|---------|------|----------|---------|
+| `id` | uuid | NO | `gen_random_uuid()` |
+| `nombre` | text | NO | — |
+| `descripcion` | text | YES | — |
+| `fecha_inicio` | date | YES | — |
+| `fecha_fin` | date | YES | — |
+| `activa` | boolean | NO | `false` |
+| `cerrada` | boolean | NO | `false` |
+| `orden` | integer | YES | — |
+| `created_at` | timestamp with time zone | NO | `now()` |
+| `updated_at` | timestamp with time zone | NO | `now()` |
+
+- Índice único sobre `lower(btrim(nombre))`: no se repiten nombres.
+- Trigger `temporadas_una_activa`: al marcar una temporada como activa, desmarca las demás. Solo puede haber una activa.
+- La temporada activa es la que reciben las operaciones nuevas.
+- Todos los módulos operativos (Dashboard, Inicio, Mis Reservas, Papelera, Tareas, Documentos, Transportes, Finanzas, Reportes) consultan solo la temporada activa: filtran por `operaciones.temporada` usando `aplicarFiltroTemporada` con el valor de `useTemporadaActiva`. Registros es la excepción: tiene selector propio y permite ver el histórico completo.
+- Tareas filtra a través de la relación (`operaciones.temporada` con join `!inner`), porque `operaciones_tareas` no guarda la temporada.
+
+### `temporadas_correlativos` (3 columnas)
+
+Contador de referencias por temporada. Solo lo escriben los triggers de `operaciones`; los usuarios autenticados solo pueden leerlo.
+
+| Columna | Tipo | Nullable | Default |
+|---------|------|----------|---------|
+| `temporada` | text | NO | — (PK) |
+| `ultimo` | integer | NO | `0` |
+| `updated_at` | timestamp with time zone | NO | `now()` |
+
+**Numeración de referencias (`correlativo` / `ref_asli`)**
+
+- La numeración es **por temporada**: la primera operación de cada temporada es `A00001`.
+- La unicidad es `(temporada, correlativo)` y `(temporada, ref_asli)`, no global: `A00001` existe una vez en cada temporada.
+- `correlativo` ya no usa la secuencia global; lo asigna el trigger `trg_operaciones_correlativo_temporada` mediante `private.siguiente_correlativo(temporada)`.
+- El contador nunca retrocede: si se borra una operación, su número queda consumido.
+- Si un insert no trae temporada, el trigger le asigna la temporada activa.
+- Mover una operación a otra temporada la renumera en la temporada de destino (cambia su `ref_asli`).
+
 ### `plantas` (11 columnas)
 
 | Columna | Tipo | Nullable | Default |

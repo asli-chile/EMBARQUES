@@ -40,13 +40,13 @@ export function AuthFormModalOverlay() {
       aria-label={isLogin ? tr.login : tr.signUp}
     >
       <div
-        className="absolute inset-0 bg-black/55 backdrop-blur-sm animate-auth-backdrop-in"
+        className="motion-fade absolute inset-0 bg-black/55 backdrop-blur-sm"
         aria-hidden
         onClick={closeAuthForm}
       />
 
       <div
-        className="relative w-full max-w-[420px] bg-white rounded-2xl shadow-mac-modal animate-auth-modal-in overflow-hidden"
+        className="motion-enter-lift relative w-full max-w-[420px] bg-white rounded-2xl shadow-mac-modal overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-[3px] w-full bg-gradient-to-r from-brand-blue via-brand-teal to-brand-blue" />

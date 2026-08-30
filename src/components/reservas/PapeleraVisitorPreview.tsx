@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
 
 const SAMPLE_ROWS = [
   { ref: "ASLI-2025-011", cliente: "Exportadora Frutícola Sur", especie: "Uvas",       naviera: "MSC",         nave: "MSC GULSUN",   booking: "MSCUSN1234567",  estado: "CANCELADO", deleted: "05-02-2025 14:32" },
@@ -169,7 +170,7 @@ export function PapeleraVisitorPreview() {
                               : "bg-neutral-100 text-neutral-500 border-neutral-200"
                           }`}>
                             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${row.estado === "CANCELADO" ? "bg-red-400" : "bg-neutral-400"}`} />
-                            {row.estado}
+                            {etiquetaEstado(row.estado)}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-[10px] text-neutral-400 whitespace-nowrap">{row.deleted}</td>

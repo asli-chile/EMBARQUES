@@ -4,6 +4,7 @@ import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
 
 const SAMPLE_ROWS = [
   { ref: "A00001", ingreso: "15-01-2025", ejecutivo: "María González", estado: "EN PROCESO", cliente: "Exportadora Frutícola Sur", especie: "Uvas", naviera: "MSC", etd: "10-02-2025", pod: "Filadelfia", eta: "08-03-2025", booking: "MSCUSN1234567" },
@@ -44,13 +45,14 @@ const COLS = [
 
 function EstadoBadge({ estado }: { estado: string }) {
   const cfg = getEstadoOperacionStyle(estado);
-  if (!cfg) return <span className="text-[11px] text-neutral-600">{estado}</span>;
+  const label = etiquetaEstado(estado);
+  if (!cfg) return <span className="text-[11px] text-neutral-600">{label}</span>;
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} aria-hidden />
-      {estado}
+      {label}
     </span>
   );
 }

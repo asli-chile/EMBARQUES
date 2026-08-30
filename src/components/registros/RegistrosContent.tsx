@@ -16,6 +16,8 @@ import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { modulePageBg } from "@/lib/ui/moduleStyles";
 import { formatRefAsli } from "@/lib/refAsli";
 import { EstadoOperacionCellRenderer } from "@/components/registros/EstadoOperacionCellRenderer";
+import { ESTADO_INICIAL, estadosEnOrden, etiquetaEstado } from "@/lib/operaciones/estados";
+import { listarTemporadas, TEMPORADA_TODAS, type Temporada } from "@/lib/temporadas";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -46,6 +48,9 @@ export type OperacionRow = {
   pallets: number | null;
   peso_bruto: number | null;
   peso_neto: number | null;
+  cajas_calibres: string;
+  total_cajas_25kg: number | null;
+  total_cajas_5kg: number | null;
   segundas: string;
   tipo_unidad: string;
   naviera: string;
@@ -61,6 +66,8 @@ export type OperacionRow = {
   dus: string;
   sps: string;
   numero_guia_despacho: string;
+  swb: string;
+  fob_invoice: number | null;
   planta_presentacion: string;
   citacion: string;
   llegada_planta: string;
@@ -85,6 +92,7 @@ export type OperacionRow = {
   patente_remolque: string;
   contenedor: string;
   sello: string;
+  sello_planta: string;
   tara: number | null;
   almacenamiento: number | null;
   tramo: string;
@@ -142,6 +150,9 @@ type DbOperacion = {
   pallets: number | null;
   peso_bruto: number | null;
   peso_neto: number | null;
+  cajas_calibres: Record<string, Record<string, number>> | null;
+  total_cajas_25kg: number | null;
+  total_cajas_5kg: number | null;
   segundas: string | null;
   tipo_unidad: string | null;
   naviera: string | null;
@@ -157,6 +168,8 @@ type DbOperacion = {
   dus: string | null;
   sps: string | null;
   numero_guia_despacho: string | null;
+  swb: string | null;
+  fob_invoice: number | null;
   planta_presentacion: string | null;
   citacion: string | null;
   llegada_planta: string | null;
@@ -181,6 +194,7 @@ type DbOperacion = {
   patente_remolque: string | null;
   contenedor: string | null;
   sello: string | null;
+  sello_planta: string | null;
   tara: number | null;
   almacenamiento: number | null;
   tramo: string | null;
@@ -229,6 +243,22 @@ function formatDate(value: string | null, _locale: string): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+}
+
+/**
+ * Convierte el desglose de calibres en una línea legible para la grilla.
+ * {"2.5KG":{"XL":384,"2J":1536}} -> "2.5KG: XL 384, 2J 1536"
+ */
+function formatCalibres(value: Record<string, Record<string, number>> | null): string {
+  if (!value) return "";
+  return Object.entries(value)
+    .map(([formato, calibres]) => {
+      const detalle = Object.entries(calibres)
+        .map(([calibre, cajas]) => `${calibre} ${cajas.toLocaleString("es-CL")}`)
+        .join(", ");
+      return `${formato}: ${detalle}`;
+    })
+    .join(" | ");
 }
 
 function formatDateTime(value: string | null, _locale: string): string {
@@ -528,6 +558,9 @@ function createToRow(locale: string) {
       pallets: db.pallets,
       peso_bruto: db.peso_bruto,
       peso_neto: db.peso_neto,
+      cajas_calibres: formatCalibres(db.cajas_calibres),
+      total_cajas_25kg: db.total_cajas_25kg,
+      total_cajas_5kg: db.total_cajas_5kg,
       segundas: db.segundas ?? "",
       tipo_unidad: db.tipo_unidad ?? "",
       naviera: db.naviera ?? "",
@@ -543,6 +576,8 @@ function createToRow(locale: string) {
       dus: db.dus ?? "",
       sps: db.sps ?? "",
       numero_guia_despacho: db.numero_guia_despacho ?? "",
+      swb: db.swb ?? "",
+      fob_invoice: db.fob_invoice,
       planta_presentacion: db.planta_presentacion ?? "",
       citacion: formatDateTime(db.citacion, locale),
       llegada_planta: formatDateTime(db.llegada_planta, locale),
@@ -567,6 +602,7 @@ function createToRow(locale: string) {
       patente_remolque: db.patente_remolque ?? "",
       contenedor: db.contenedor ?? "",
       sello: db.sello ?? "",
+      sello_planta: db.sello_planta ?? "",
       tara: db.tara,
       almacenamiento: db.almacenamiento,
       tramo: db.tramo ?? "",
@@ -600,7 +636,6 @@ function createToRow(locale: string) {
 }
 
 type CatalogosState = {
-  estado_operacion: string[];
   tipo_operacion: string[];
   incoterm: string[];
   forma_pago: string[];
@@ -624,7 +659,6 @@ type CatalogosState = {
 };
 
 const emptyCatalogos: CatalogosState = {
-  estado_operacion: [],
   tipo_operacion: [],
   incoterm: [],
   forma_pago: [],
@@ -651,10 +685,10 @@ const emptyCatalogos: CatalogosState = {
 const COLUMN_GROUPS = [
   { label: "Identificación y Control",     fields: ["temporada", "estado_operacion", "tipo_operacion", "semana", "ingreso"] },
   { label: "Cliente y Condiciones",        fields: ["ejecutivo", "cliente", "consignatario", "contrato", "incoterm", "forma_pago", "pais"] },
-  { label: "Carga / Mercadería",           fields: ["especie", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto", "segundas"] },
-  { label: "Unidad y Contenedor",          fields: ["tipo_unidad", "contenedor", "sello", "tara"] },
+  { label: "Carga / Mercadería",           fields: ["especie", "temperatura", "ventilacion", "tratamiento_frio", "tratamiento_frio_o2", "tratamiento_frio_co2", "tipo_atmosfera", "pallets", "peso_bruto", "peso_neto", "cajas_calibres", "total_cajas_25kg", "total_cajas_5kg", "segundas"] },
+  { label: "Unidad y Contenedor",          fields: ["tipo_unidad", "contenedor", "sello", "sello_planta", "tara"] },
   { label: "Naviera y Viaje",              fields: ["naviera", "nave", "viaje", "pol", "etd", "pod", "eta", "tt", "booking"] },
-  { label: "Documentación",               fields: ["aga", "dus", "sps", "numero_guia_despacho"] },
+  { label: "Documentación",               fields: ["aga", "dus", "sps", "numero_guia_despacho", "swb", "fob_invoice"] },
   { label: "Planta y Proceso",             fields: ["planta_presentacion", "citacion", "llegada_planta", "salida_planta"] },
   { label: "Stacking y Puerto",            fields: ["inicio_stacking", "fin_stacking", "ingreso_stacking", "corte_documental"] },
   { label: "Eventos Late / xLate",         fields: ["inf_late", "late_inicio", "late_fin", "xlate_inicio", "xlate_fin"] },
@@ -689,6 +723,9 @@ export function RegistrosContent() {
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const hiddenColumnsRef = useRef<Set<string>>(new Set());
   const [globalSearch, setGlobalSearch] = useState("");
+  const [temporadas, setTemporadas] = useState<Temporada[]>([]);
+  /** "" mientras se resuelve la temporada activa; TEMPORADA_TODAS para ver el histórico completo. */
+  const [temporadaSel, setTemporadaSel] = useState("");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
@@ -915,7 +952,6 @@ export function RegistrosContent() {
     const paisesUnicos = [...new Set(destinosData.map((d) => d.pais).filter(Boolean))].sort();
 
     setCatalogos({
-      estado_operacion: getByCategoria("estado_operacion"),
       tipo_operacion: getByCategoria("tipo_operacion"),
       incoterm: getByCategoria("incoterm"),
       forma_pago: getByCategoria("forma_pago"),
@@ -945,19 +981,32 @@ export function RegistrosContent() {
     });
   }, [supabase]);
 
+  const fetchTemporadas = useCallback(async () => {
+    if (!supabase) return;
+    const { temporadas: rows } = await listarTemporadas(supabase);
+    setTemporadas(rows);
+    setTemporadaSel((prev) => {
+      if (prev) return prev;
+      return rows.find((tp) => tp.activa)?.nombre ?? TEMPORADA_TODAS;
+    });
+  }, [supabase]);
+
   const fetchOperaciones = useCallback(async () => {
     if (!supabase) {
       setError(t.registros.supabaseError);
       setLoading(false);
       return;
     }
-    if (authLoading) return;
+    if (authLoading || !temporadaSel) return;
     setLoading(true);
     setError(null);
     let q = supabase
       .from("operaciones")
       .select("*")
       .is("deleted_at", null);
+    if (temporadaSel !== TEMPORADA_TODAS) {
+      q = q.eq("temporada", temporadaSel);
+    }
     if (empresaNombres.length > 0) {
       q = q.in("cliente", empresaNombres);
     } else if (isCliente || isEjecutivo) {
@@ -972,11 +1021,15 @@ export function RegistrosContent() {
       return;
     }
     setRowData((data ?? []).map(toRow));
-  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres, t.registros.supabaseError, toRow]);
+  }, [supabase, authLoading, isCliente, isEjecutivo, empresaNombres, temporadaSel, t.registros.supabaseError, toRow]);
 
   useEffect(() => {
     void fetchCatalogos();
   }, [fetchCatalogos]);
+
+  useEffect(() => {
+    void fetchTemporadas();
+  }, [fetchTemporadas]);
 
   useEffect(() => {
     if (!authLoading) void fetchOperaciones();
@@ -999,7 +1052,11 @@ export function RegistrosContent() {
       // ── 1. Identificación y Control ───────────────────────────────────────────
       { field: "ref_asli", headerName: t.registros.colRefAsli, sortable: true, width: columnWidths.refAsli, pinned: "left", lockPinned: true, suppressMovable: true },
       { field: "referencia_externa", headerName: t.registros.colRefExterna, sortable: true, editable: canEdit, width: columnWidths.refExterna, pinned: "left", lockPinned: true },
-      { field: "temporada", headerName: "Temporada", sortable: true, editable: canEdit, width: 120 },
+      {
+        field: "temporada", headerName: "Temporada", sortable: true, editable: canEdit, width: 120,
+        cellEditor: "agSelectCellEditor", cellEditorPopup: true,
+        cellEditorParams: { values: temporadas.map((tp) => tp.nombre) },
+      },
       {
         field: "estado_operacion",
         headerName: t.registros.colOperationStatus,
@@ -1009,7 +1066,8 @@ export function RegistrosContent() {
         cellRenderer: EstadoOperacionCellRenderer,
         cellEditor: "agSelectCellEditor",
         cellEditorPopup: true,
-        cellEditorParams: { values: catalogos.estado_operacion },
+        cellEditorParams: { values: estadosEnOrden() },
+        valueFormatter: (p: { value: unknown }) => etiquetaEstado(p.value as string | null),
       },
       {
         field: "tipo_operacion", headerName: t.registros.colOperationType, sortable: true, editable: canEdit, width: columnWidths.tipoOperacion,
@@ -1083,6 +1141,11 @@ export function RegistrosContent() {
       { field: "pallets", headerName: t.registros.colPallets, sortable: true, editable: canEdit, width: columnWidths.pallets },
       { field: "peso_bruto", headerName: t.registros.colGrossWeight, sortable: true, editable: canEdit, width: columnWidths.pesoBruto },
       { field: "peso_neto", headerName: t.registros.colNetWeight, sortable: true, editable: canEdit, width: columnWidths.pesoNeto },
+      // Solo lectura: el valor es un objeto anidado y editarlo como texto plano
+      // en una celda lo corrompería. Se carga por importación.
+      { field: "cajas_calibres", headerName: t.registros.colBoxesByCaliber, sortable: true, editable: false, width: columnWidths.cajasCalibres },
+      { field: "total_cajas_25kg", headerName: t.registros.colTotalBoxes25, sortable: true, editable: canEdit, width: columnWidths.totalCajas25kg },
+      { field: "total_cajas_5kg", headerName: t.registros.colTotalBoxes5, sortable: true, editable: canEdit, width: columnWidths.totalCajas5kg },
       { field: "segundas", headerName: "Segundas", sortable: true, editable: canEdit, width: 110 },
 
       // ── 4. Unidad y Contenedor ────────────────────────────────────────────────
@@ -1099,6 +1162,7 @@ export function RegistrosContent() {
         cellRenderer: contenedorCellRenderer,
       },
       { field: "sello", headerName: t.registros.colSeal, sortable: true, editable: canEdit, width: columnWidths.sello },
+      { field: "sello_planta", headerName: t.registros.colPlantSeal, sortable: true, editable: canEdit, width: columnWidths.selloPlanta },
       { field: "tara", headerName: t.registros.colTare, sortable: true, editable: canEdit, width: columnWidths.tara },
 
       // ── 5. Naviera y Viaje ────────────────────────────────────────────────────
@@ -1137,6 +1201,8 @@ export function RegistrosContent() {
       { field: "dus", headerName: t.registros.colDUS, sortable: true, editable: canEdit, width: columnWidths.dus },
       { field: "sps", headerName: t.registros.colSPS, sortable: true, editable: canEdit, width: columnWidths.sps },
       { field: "numero_guia_despacho", headerName: t.registros.colDispatchGuide, sortable: true, editable: canEdit, width: columnWidths.numeroGuiaDespacho },
+      { field: "swb", headerName: t.registros.colSWB, sortable: true, editable: canEdit, width: columnWidths.swb },
+      { field: "fob_invoice", headerName: t.registros.colFobInvoice, sortable: true, editable: canEdit, width: columnWidths.fobInvoice },
 
       // ── 7. Planta y Proceso ───────────────────────────────────────────────────
       {
@@ -1224,7 +1290,7 @@ export function RegistrosContent() {
         cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
     ],
-    [t.registros, booleanCellRenderer, contenedorCellRenderer, catalogos, canEdit]
+    [t.registros, booleanCellRenderer, contenedorCellRenderer, catalogos, canEdit, temporadas]
   );
 
   const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {
@@ -1301,15 +1367,22 @@ export function RegistrosContent() {
     []
   );
 
+  /** Temporada que reciben las operaciones nuevas: la del filtro o, si se ve el histórico, la activa. */
+  const temporadaParaNuevas = useMemo(() => {
+    if (temporadaSel && temporadaSel !== TEMPORADA_TODAS) return temporadaSel;
+    return temporadas.find((tp) => tp.activa)?.nombre ?? null;
+  }, [temporadaSel, temporadas]);
+
   const handleAddRow = useCallback(async () => {
     if (!supabase) return;
     const { data, error: err } = await supabase
       .from("operaciones")
       .insert({
         ejecutivo: "",
-        estado_operacion: "PENDIENTE",
+        estado_operacion: ESTADO_INICIAL,
         tipo_operacion: "EXPORTACIÓN",
         cliente: "NUEVO",
+        temporada: temporadaParaNuevas,
       })
       .select("*")
       .single();
@@ -1320,7 +1393,7 @@ export function RegistrosContent() {
     if (data) {
       gridRef.current?.api?.applyTransaction({ add: [toRow(data as DbOperacion)], addIndex: 0 });
     }
-  }, [supabase, toRow]);
+  }, [supabase, toRow, temporadaParaNuevas]);
 
   const handleRemoveSelected = useCallback(async () => {
     const selected = gridRef.current?.api?.getSelectedRows();
@@ -1345,54 +1418,110 @@ export function RegistrosContent() {
     return (gridRef.current?.api?.getSelectedRows() as OperacionRow[] | undefined) ?? [];
   }, []);
 
+  /**
+   * Separa las operaciones seleccionadas según si ya tienen un tipo de reserva
+   * de transporte asignado. Reasignar una operación ya enviada pisaría una
+   * decisión operativa, así que esas se informan y se dejan intactas.
+   */
+  const clasificarPorTipoTransporte = useCallback(
+    async (rows: OperacionRow[]) => {
+      if (!supabase) return null;
+      const { data, error: err } = await supabase
+        .from("operaciones")
+        .select("id, tipo_reserva_transporte")
+        .in("id", rows.map((r) => r.id));
+      if (err) {
+        setError(err.message);
+        return null;
+      }
+      const tipoPorId = new Map((data ?? []).map((o) => [o.id, o.tipo_reserva_transporte]));
+      const pendientes = rows.filter((r) => !tipoPorId.get(r.id));
+      const asignadas = rows
+        .filter((r) => tipoPorId.get(r.id))
+        .map((r) => ({ row: r, tipo: tipoPorId.get(r.id) as string }));
+      return { pendientes, asignadas };
+    },
+    [supabase]
+  );
+
+  /** Mensaje uniforme para ambos destinos de transporte. */
+  const mensajeEnvio = (enviadas: number, asignadas: { tipo: string }[], destino: string) => {
+    const partes: string[] = [];
+    if (enviadas > 0) partes.push(`${enviadas} operación${enviadas > 1 ? "es" : ""} enviada${enviadas > 1 ? "s" : ""} a ${destino}`);
+    const enAsli = asignadas.filter((a) => a.tipo === "asli").length;
+    const enExt = asignadas.filter((a) => a.tipo === "externa").length;
+    if (enAsli > 0) partes.push(`${enAsli} ya estaba${enAsli > 1 ? "n" : ""} en ASLI`);
+    if (enExt > 0) partes.push(`${enExt} ya estaba${enExt > 1 ? "n" : ""} en Externa`);
+    return partes.join(". ");
+  };
+
   const handleSendToAsli = useCallback(async () => {
     const selected = getSelectedRows();
     if (!selected.length || !supabase) return;
     setShowTransportModal(false);
-    const ids = selected.map((r) => r.id);
-    const { error: err } = await supabase
-      .from("operaciones")
-      .update({ enviado_transporte: true })
-      .in("id", ids);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    selected.forEach((row) => {
-      const node = gridRef.current?.api?.getRowNode(row.id);
-      if (node) {
-        node.setDataValue("enviado_transporte", true);
+
+    const clasificadas = await clasificarPorTipoTransporte(selected);
+    if (!clasificadas) return;
+    const { pendientes, asignadas } = clasificadas;
+
+    if (pendientes.length) {
+      const { error: err } = await supabase
+        .from("operaciones")
+        .update({ enviado_transporte: true, tipo_reserva_transporte: "asli" })
+        .in("id", pendientes.map((r) => r.id));
+      if (err) {
+        setError(err.message);
+        return;
       }
-    });
+      pendientes.forEach((row) => {
+        gridRef.current?.api?.getRowNode(row.id)?.setDataValue("enviado_transporte", true);
+      });
+    }
+
     gridRef.current?.api?.deselectAll();
-    const count = selected.length;
-    sileo.success({ title: `${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva ASLI` });
-  }, [supabase, getSelectedRows]);
+    sileo.success({ title: mensajeEnvio(pendientes.length, asignadas, "Reserva ASLI") });
+  }, [supabase, getSelectedRows, clasificarPorTipoTransporte]);
 
   const handleSendToExterna = useCallback(async () => {
     const selected = getSelectedRows();
     if (!selected.length || !supabase) return;
     setShowTransportModal(false);
-    const rows = selected.map((r) => ({
-      cliente: r.cliente || null,
-      booking: r.booking || null,
-      naviera: r.naviera || null,
-      nave: r.nave || null,
-      pod: r.pod || null,
-      etd: r.etd || null,
-      planta_presentacion: r.planta_presentacion || null,
-    }));
-    const { error: err } = await supabase
-      .from("transportes_reservas_ext")
-      .insert(rows);
-    if (err) {
-      setError(err.message);
-      return;
+
+    const clasificadas = await clasificarPorTipoTransporte(selected);
+    if (!clasificadas) return;
+    const { pendientes, asignadas } = clasificadas;
+
+    if (pendientes.length) {
+      const rows = pendientes.map((r) => ({
+        cliente: r.cliente || null,
+        booking: r.booking || null,
+        naviera: r.naviera || null,
+        nave: r.nave || null,
+        pod: r.pod || null,
+        etd: r.etd || null,
+        planta_presentacion: r.planta_presentacion || null,
+      }));
+      const { error: errInsert } = await supabase.from("transportes_reservas_ext").insert(rows);
+      if (errInsert) {
+        setError(errInsert.message);
+        return;
+      }
+      const { error: errUpdate } = await supabase
+        .from("operaciones")
+        .update({ enviado_transporte: true, tipo_reserva_transporte: "externa" })
+        .in("id", pendientes.map((r) => r.id));
+      if (errUpdate) {
+        setError(errUpdate.message);
+        return;
+      }
+      pendientes.forEach((row) => {
+        gridRef.current?.api?.getRowNode(row.id)?.setDataValue("enviado_transporte", true);
+      });
     }
+
     gridRef.current?.api?.deselectAll();
-    const count = selected.length;
-    sileo.success({ title: `${count} operación${count > 1 ? 'es' : ''} enviada${count > 1 ? 's' : ''} a Reserva Externa` });
-  }, [supabase, getSelectedRows]);
+    sileo.success({ title: mensajeEnvio(pendientes.length, asignadas, "Reserva Externa") });
+  }, [supabase, getSelectedRows, clasificarPorTipoTransporte]);
 
   const handleCellValueChanged = useCallback(
     async (e: { data: OperacionRow; colDef: { field?: string }; newValue: unknown; oldValue: unknown; node: { setDataValue: (field: string, value: unknown) => void } }) => {
@@ -1701,10 +1830,10 @@ export function RegistrosContent() {
         </div>
         <div className="flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15">
           <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
-            <div className="h-9 flex-1 rounded-lg bg-white border border-brand-blue/15 animate-pulse" />
-            <div className="h-9 w-20 rounded-lg bg-white border border-brand-blue/15 animate-pulse shrink-0" />
-            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 animate-pulse shrink-0" />
-            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 animate-pulse shrink-0" />
+            <div className="h-9 flex-1 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface" />
+            <div className="h-9 w-20 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface shrink-0" />
+            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface shrink-0" />
+            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface shrink-0" />
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3">
@@ -1712,11 +1841,11 @@ export function RegistrosContent() {
             <div className="h-10 bg-[#E8EEF7] border-b border-brand-blue/15" />
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className={`flex gap-3 px-3 py-2.5 border-b border-brand-blue/8 ${i % 2 === 1 ? "bg-[#F7FAFD]" : ""}`}>
-                <div className="h-4 w-16 rounded bg-brand-blue/10 animate-pulse" />
-                <div className="h-4 flex-1 max-w-[8rem] rounded bg-brand-blue/10 animate-pulse" />
-                <div className="h-4 flex-1 rounded bg-brand-blue/8 animate-pulse" />
-                <div className="h-4 flex-1 rounded bg-brand-blue/8 animate-pulse" />
-                <div className="h-4 w-20 rounded bg-brand-blue/10 animate-pulse" />
+                <div className="h-4 w-16 rounded bg-brand-blue/10 motion-skeleton" />
+                <div className="h-4 flex-1 max-w-[8rem] rounded bg-brand-blue/10 motion-skeleton" />
+                <div className="h-4 flex-1 rounded bg-brand-blue/8 motion-skeleton" />
+                <div className="h-4 flex-1 rounded bg-brand-blue/8 motion-skeleton" />
+                <div className="h-4 w-20 rounded bg-brand-blue/10 motion-skeleton" />
               </div>
             ))}
           </div>
@@ -1796,6 +1925,32 @@ export function RegistrosContent() {
                 <Icon icon="lucide:x" width={13} height={13} />
               </button>
             )}
+          </div>
+
+          <div className="relative shrink-0">
+            <Icon
+              icon="lucide:calendar-range"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-blue/45 w-3.5 h-3.5 pointer-events-none"
+            />
+            <select
+              value={temporadaSel}
+              onChange={(e) => setTemporadaSel(e.target.value)}
+              aria-label="Filtrar por temporada"
+              title="Filtrar por temporada"
+              className="appearance-none pl-8 pr-7 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm font-semibold text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all"
+            >
+              {temporadas.map((tp) => (
+                <option key={tp.id} value={tp.nombre}>
+                  {tp.nombre}
+                  {tp.activa ? " (activa)" : ""}
+                </option>
+              ))}
+              <option value={TEMPORADA_TODAS}>Todas las temporadas</option>
+            </select>
+            <Icon
+              icon="lucide:chevron-down"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-blue/45 w-3.5 h-3.5 pointer-events-none"
+            />
           </div>
 
           <button
@@ -2088,7 +2243,7 @@ export function RegistrosContent() {
       {/* Modal: confirmar agregar nuevo valor al catálogo */}
       {addNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+          <div className="motion-enter-lift bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
                 <Icon icon="lucide:plus-circle" width={20} height={20} className="text-amber-600" />
@@ -2125,7 +2280,7 @@ export function RegistrosContent() {
       {/* Modal selección tipo de transporte */}
       {showTransportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4 animate-fade-in">
+          <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
                 <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />

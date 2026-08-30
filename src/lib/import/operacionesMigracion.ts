@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ESTADO_INICIAL, normalizarEstado } from "@/lib/operaciones/estados";
 
 /**
  * Columnas permitidas en el JSON de migración (nombres como en public.operaciones).
@@ -278,7 +279,9 @@ export function construirPayloadInsert(raw: Record<string, unknown>): Record<str
   return {
     ...base,
     ejecutivo: typeof base.ejecutivo === "string" ? base.ejecutivo : "",
-    estado_operacion: typeof base.estado_operacion === "string" ? base.estado_operacion : "PENDIENTE",
+    estado_operacion: normalizarEstado(
+      typeof base.estado_operacion === "string" ? base.estado_operacion : null
+    ) ?? ESTADO_INICIAL,
     tipo_operacion: typeof base.tipo_operacion === "string" ? base.tipo_operacion : "EXPORTACIÓN",
     cliente: typeof base.cliente === "string" ? base.cliente : "NUEVO",
     origen_registro: typeof base.origen_registro === "string" ? base.origen_registro : "migracion_json",
@@ -329,7 +332,7 @@ export function obtenerDocumentacionMigracionJson(params: {
     etd: "2026-05-20",
     eta: "2026-06-05",
     especie: "Uvas",
-    estado_operacion: "PENDIENTE",
+    estado_operacion: ESTADO_INICIAL,
     tipo_operacion: "EXPORTACIÓN",
     origen_registro: "migracion_google_sheets",
   };

@@ -281,24 +281,39 @@ flex-1 bg-brand-blue min-h-0 overflow-auto
 
 *Estilo Mac: animaciones fluidas y suaves, sin exceso.*
 
+> **El movimiento tiene su propia guía:** [MOTION-DESIGN.md](./MOTION-DESIGN.md).
+> Ahí están los tokens (duración, easing, delay, stagger, distancia), las clases
+> de utilidad y los patrones de loading, modales y transición de vista. Este
+> documento cubre las formas y los colores; ese cubre el movimiento.
+
 ### Transiciones estándar
 
-- `transition-colors` — Cambios de color en hover/focus (suave, ~200ms implícito)
-- `transition-all duration-200` — Botones, iconos
-- `transition-all duration-300 ease-in-out` — Sidebar colapsar, elementos que se desplazan
+Usar los tokens de motion en lugar de duraciones sueltas:
 
-### Animaciones custom (`tailwind.config.ts`)
+- `transition-colors duration-fast ease-standard` — Cambios de color en hover/focus
+- `motion-interactive` — Botones y controles: color + hundido al presionar
+- `transition-transform duration-slow ease-enter` — Paneles y drawers que se desplazan
 
-| Nombre | Uso |
+### Animaciones (`src/styles/motion.css`)
+
+Todas las animaciones del ERP viven en un solo archivo. Son 6 keyframes en total
+y el inventario completo está en [MOTION-DESIGN.md](./MOTION-DESIGN.md#7-inventario-completo).
+
+| Clase | Uso |
 |--------|-----|
-| `animate-modal-in` | Entrada del contenido del modal (`cubic-bezier(0.32, 0.72, 0, 1)`) |
-| `animate-backdrop-in` | Entrada del overlay del modal |
+| `motion-enter` | Aparición de un elemento |
+| `motion-enter-lift` | Aparición de bloques grandes: modales, cards, contenido que reemplaza un skeleton |
+| `motion-fade` | Aparición de elementos que ya llevan un `transform` propio |
 
-Mantener curvas tipo Mac: `ease-out` o `cubic-bezier` para sensación premium.
+Las curvas están centralizadas: `ease-enter` para entradas, `ease-exit` para
+salidas. No escribir `cubic-bezier` a mano en los componentes, ni agregar
+keyframes nuevos sin revisar el inventario.
 
 ### Loading
 
-- `animate-pulse` — Placeholders y estados de carga
+- `motion-skeleton` — Skeleton con shimmer (o los componentes de `ui/Skeleton.tsx`)
+- `animate-spin` — Spinner
+- `animate-pulse` — **Solo** puntos de estado "en vivo", nunca skeletons
 
 ---
 

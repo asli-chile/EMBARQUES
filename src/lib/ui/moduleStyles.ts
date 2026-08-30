@@ -1,6 +1,10 @@
 /**
  * Clases visuales compartidas del ERP (estilo Mis Reservas / Dashboard).
  * Fondo tintado azul + tipografía legible + acentos brand-blue.
+ *
+ * Motion: los controles interactivos llevan `motion-interactive`, que unifica
+ * la transición de color y el hundido mínimo al presionar.
+ * Ver src/styles/motion.css y docs/MOTION-DESIGN.md.
  */
 
 export const modulePageBg = "bg-[#D9E3F2]";
@@ -24,17 +28,17 @@ export const moduleLabel =
   "block text-base font-semibold text-brand-blue mb-1.5";
 
 export const moduleInput =
-  "w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all";
+  "w-full px-3.5 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-[color,background-color,border-color,box-shadow] duration-fast ease-standard";
 
 export const moduleBtnPrimary =
-  "inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
+  "motion-interactive inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
 
 /** Botón blanco sobre hero navy (no combinar con moduleBtnPrimary: text-white gana en Tailwind). */
 export const moduleBtnOnHero =
-  "inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40";
+  "motion-interactive inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 shadow-sm focus:outline-none focus:ring-2 focus:ring-white/40";
 
 export const moduleBtnSecondary =
-  "inline-flex items-center gap-1.5 px-3.5 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-white rounded-lg text-base font-semibold text-brand-blue/80 transition-colors";
+  "motion-interactive inline-flex items-center gap-1.5 px-3.5 py-2.5 border border-brand-blue/20 bg-[#F4F8FC] hover:bg-white rounded-lg text-base font-semibold text-brand-blue/80";
 
 export const moduleSectionTitle =
   "text-base font-bold text-brand-blue tracking-wide";

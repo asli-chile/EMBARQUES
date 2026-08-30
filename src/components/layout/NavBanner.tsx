@@ -7,6 +7,8 @@ import { withBase } from "@/lib/basePath";
 import { getVisibleSidebarItems, resolveSidebarLabel, sidebarAccessFromAuth } from "@/lib/sidebarFilter";
 import { AuthModal, type AuthUser } from "@/components/ui/AuthModal";
 import { prefetchRoute } from "@/lib/routePrefetch";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { staggerStyle } from "@/lib/ui/motion";
 
 function navPrefetchHandlers(href: string) {
   return {
@@ -21,12 +23,12 @@ const PINNED_NAV = [
   { labelKey: "tracking" as const, href: "/tracking" },
 ];
 
-// Ítems del menú público con descripción e ícono para el drawer moderno
+// Ítems del menú público para el drawer
 const PUBLIC_NAV_CARDS = [
-  { labelKey: "inicio"       as const, href: "/inicio",         icon: "lucide:home",        desc: "Página principal y bienvenida" },
-  { labelKey: "servicios"    as const, href: "/servicios",      icon: "lucide:briefcase",   desc: "Conoce nuestros servicios logísticos" },
-  { labelKey: "sobreNosotros"as const, href: "/sobre-nosotros", icon: "lucide:users",        desc: "Quiénes somos y nuestra misión" },
-  { labelKey: "tracking"     as const, href: "/tracking",       icon: "lucide:ship",        desc: "Posición de naves y operaciones en el mapa" },
+  { labelKey: "inicio"        as const, href: "/inicio" },
+  { labelKey: "servicios"     as const, href: "/servicios" },
+  { labelKey: "sobreNosotros" as const, href: "/sobre-nosotros" },
+  { labelKey: "tracking"      as const, href: "/tracking" },
 ];
 
 type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
@@ -35,36 +37,12 @@ type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {
   allowedEmails?: readonly string[];
 };
 
-// Metadatos visuales de cada módulo (ícono + descripción)
-const SIDEBAR_META: Record<string, { icon: string; desc: string }> = {
-  dashboard:             { icon: "lucide:layout-dashboard", desc: "Resumen y estadísticas generales" },
-  tracking:              { icon: "lucide:ship",             desc: "Posición de naves y operaciones en el mapa" },
-  registros:             { icon: "lucide:clipboard-list",   desc: "Operaciones y registros de carga" },
-  reservas:              { icon: "lucide:package",           desc: "Gestión de reservas de exportación" },
-  "crear-reserva":       { icon: "lucide:plus-circle",       desc: "Nueva solicitud de reserva" },
-  "mis-reservas":        { icon: "lucide:list",              desc: "Ver y gestionar mis reservas" },
-  papelera:              { icon: "lucide:trash-2",           desc: "Reservas eliminadas" },
-  transportes:           { icon: "lucide:truck",             desc: "Módulo de transportes terrestres" },
-  "reserva-asli":        { icon: "lucide:clipboard-check",   desc: "Asignar unidad y chofer ASLI" },
-  "reserva-ext":         { icon: "lucide:external-link",     desc: "Reservas con transporte externo" },
-  "papelera-transportes":{ icon: "lucide:trash-2",           desc: "Transportes eliminados" },
-  documentos:            { icon: "lucide:file-text",         desc: "Documentos de exportación" },
-  "mis-documentos":      { icon: "lucide:folder-open",       desc: "Ver documentos generados" },
-  configuracion:         { icon: "lucide:settings",          desc: "Configuración del sistema" },
-  usuarios:              { icon: "lucide:users",             desc: "Gestión de usuarios y roles" },
-  clientes:              { icon: "lucide:building-2",        desc: "Empresas clientes" },
-  "asignar-clientes-empresas": { icon: "lucide:link",        desc: "Asignar clientes a empresas" },
-  "asignar-ejecutivos":        { icon: "lucide:user-cog",    desc: "Asignar ejecutivos a clientes" },
-  "configuracion-transportes": { icon: "lucide:truck",       desc: "Empresas y tarifas de transporte" },
-  consignatarios:        { icon: "lucide:contact",           desc: "Consignatarios y notify parties" },
-  "formatos-documentos": { icon: "lucide:layout-template",  desc: "Plantillas de documentos" },
-};
-
 type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
   const { user, profile, isExternalUser, isSuperadmin, isAdmin, isEjecutivo, isCliente, isStaff } = useAuth();
+  const { temporadaActiva } = useTemporadaActiva();
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
   const authUser: AuthUser | null = user
@@ -140,8 +118,8 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
   // ── Drawer público (invitados) ───────────────────────────────────────────
   const publicDrawerContent = (
-    <nav className="flex flex-col gap-2.5">
-      {PUBLIC_NAV_CARDS.map(({ labelKey, href, icon, desc }) => {
+    <nav className="flex flex-col">
+      {PUBLIC_NAV_CARDS.map(({ labelKey, href }) => {
         const isActive = pathname === href;
         return (
           <a
@@ -149,99 +127,85 @@ export function NavBanner({ pathname }: NavBannerProps) {
             href={withBase(href)}
             onClick={() => setDrawerOpen(false)}
             {...navPrefetchHandlers(href)}
-            className={`flex items-center gap-3.5 w-full text-left px-3.5 py-3.5 rounded-xl border transition-all duration-200 ${
+            className={`relative flex items-center w-full text-left pl-4 pr-3 py-3 text-base transition-colors duration-200 ${
               isActive
-                ? "bg-white/15 border-white/25 text-white"
-                : "bg-white/5 border-white/10 text-neutral-200 hover:bg-white/10 hover:border-white/20 hover:text-white"
+                ? "text-white font-semibold bg-white/10"
+                : "text-neutral-300 hover:text-white hover:bg-white/5"
             }`}
             aria-current={isActive ? "page" : undefined}
           >
-            <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${isActive ? "bg-brand-blue/30" : "bg-white/8"}`}>
-              <Icon icon={icon} width={22} height={22} className={isActive ? "text-white" : "text-neutral-300"} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold leading-tight">{t.nav[labelKey]}</p>
-              <p className="text-sm text-neutral-300/80 mt-1 leading-snug">{desc}</p>
-            </div>
-            {isActive && <Icon icon="lucide:check-circle" width={18} height={18} className="text-brand-olive ml-auto shrink-0" />}
+            {isActive && (
+              <span className="absolute left-0 inset-y-0 w-[3px] bg-brand-olive" aria-hidden />
+            )}
+            <span className="truncate">{t.nav[labelKey]}</span>
           </a>
         );
       })}
     </nav>
   );
 
-  // ── Drawer con sidebarItems (estilo cards modernas) ──────────────────────
+  // ── Drawer con sidebarItems (lista minimalista) ──────────────────────────
   const sidebarDrawerContent = (
-    <nav className="flex flex-col gap-2.5">
+    <nav className="flex flex-col">
       {visibleSidebarItems.map((item) => {
         const hasChildren  = "children" in item && !!item.children?.length;
         const hasHref      = "href" in item && item.href;
         const isExpanded   = expandedId === item.id;
         const isActive     = hasHref && pathname === item.href;
         const isParentActive = hasChildren && item.children!.some((c) => c.href === pathname);
-        const meta = SIDEBAR_META[item.id] ?? { icon: "lucide:circle", desc: "" };
 
-        const cardBase = "flex items-center gap-3.5 w-full text-left px-3.5 py-3.5 rounded-xl border transition-all duration-200";
-        const cardActive = `${cardBase} bg-white/15 border-white/25 text-white`;
-        const cardNormal = `${cardBase} bg-white/5 border-white/10 text-neutral-200 hover:bg-white/10 hover:border-white/20 hover:text-white`;
-
-        const cardContent = (active: boolean) => (
-          <>
-            <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${active ? "bg-brand-blue/30" : "bg-white/8"}`}>
-              <Icon icon={meta.icon} width={22} height={22} className={active ? "text-white" : "text-neutral-300"} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold leading-tight">{labelFor(item.labelKey)}</p>
-              {meta.desc && <p className="text-sm text-neutral-300/80 mt-1 leading-snug">{meta.desc}</p>}
-            </div>
-          </>
+        const rowBase = "relative flex items-center w-full text-left pl-4 pr-3 py-3 text-base transition-colors duration-200";
+        const rowActive = `${rowBase} text-white font-semibold bg-white/10`;
+        const rowParentOpen = `${rowBase} text-white font-semibold`;
+        const rowNormal = `${rowBase} text-neutral-300 hover:text-white hover:bg-white/5`;
+        const activeBar = (
+          <span className="absolute left-0 inset-y-0 w-[3px] bg-brand-olive" aria-hidden />
         );
 
         return (
-          <div key={item.id} className="flex flex-col gap-1.5">
+          <div key={item.id} className="flex flex-col">
             {hasHref ? (
               <a href={withBase(item.href!)} onClick={() => setDrawerOpen(false)}
                 {...navPrefetchHandlers(item.href!)}
-                className={isActive ? cardActive : cardNormal}
+                className={isActive ? rowActive : rowNormal}
                 aria-current={isActive ? "page" : undefined}
               >
-                {cardContent(!!isActive)}
-                {isActive && <Icon icon="lucide:check-circle" width={18} height={18} className="text-brand-olive ml-auto shrink-0" />}
+                {isActive && activeBar}
+                <span className="truncate">{labelFor(item.labelKey)}</span>
               </a>
             ) : (
               <button type="button"
                 onClick={() => setExpandedId((p) => p === item.id ? null : item.id)}
-                className={isParentActive ? cardActive : cardNormal}
+                className={isParentActive ? rowParentOpen : rowNormal}
                 aria-expanded={isExpanded}
               >
-                {cardContent(!!isParentActive)}
+                {isParentActive && activeBar}
+                <span className="truncate">{labelFor(item.labelKey)}</span>
                 <Icon icon={isExpanded ? "lucide:chevron-up" : "lucide:chevron-down"}
-                  width={18} height={18} className="ml-auto shrink-0 opacity-70" />
+                  width={16} height={16} className="ml-auto shrink-0 text-white/40" />
               </button>
             )}
 
             {/* Hijos expandidos */}
             {hasChildren && isExpanded && (
-              <div className="flex flex-col gap-1.5 pl-3 ml-4 border-l-2 border-white/20">
-                {item.children!.map((child) => {
-                  const childMeta = SIDEBAR_META[child.id] ?? { icon: "lucide:minus", desc: "" };
+              <div className="flex flex-col pb-1">
+                {item.children!.map((child, childIndex) => {
                   const isChildActive = pathname === child.href;
                   return (
                     <a key={child.id} href={child.href ? withBase(child.href) : "#"} onClick={() => setDrawerOpen(false)}
                       {...(child.href ? navPrefetchHandlers(child.href) : {})}
-                      className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-200 ${
+                      style={staggerStyle(childIndex)}
+                      className={`motion-enter motion-stagger motion-stagger-tight relative flex items-center pl-8 pr-3 py-2.5 text-[15px] transition-colors duration-fast ease-standard ${
                         isChildActive
-                          ? "bg-brand-olive/20 border-brand-olive/40 text-white"
-                          : "bg-white/5 border-white/8 text-neutral-300 hover:bg-white/10 hover:text-white hover:border-white/15"
+                          ? "text-white font-semibold bg-white/10"
+                          : "text-neutral-400 hover:text-white hover:bg-white/5"
                       }`}
                       aria-current={isChildActive ? "page" : undefined}
                     >
-                      <Icon icon={childMeta.icon} width={18} height={18} className="shrink-0 opacity-80" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold leading-tight">{labelFor(child.labelKey)}</p>
-                        {childMeta.desc && <p className="text-sm text-neutral-400 mt-1 leading-snug">{childMeta.desc}</p>}
-                      </div>
-                      {isChildActive && <Icon icon="lucide:check" width={16} height={16} className="text-brand-olive ml-auto shrink-0" />}
+                      {isChildActive && (
+                        <span className="absolute left-0 inset-y-0 w-[3px] bg-brand-olive" aria-hidden />
+                      )}
+                      <span className="truncate">{labelFor(child.labelKey)}</span>
                     </a>
                   );
                 })}
@@ -269,7 +233,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
             <button
               type="button"
               onClick={() => setDrawerOpen((p) => !p)}
-              className={`flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 ${
+              className={`motion-interactive flex items-center justify-center w-11 h-11 rounded-lg border ${
                 drawerOpen
                   ? "text-white bg-white/15 border-white/25"
                   : "text-neutral-300 hover:text-white hover:bg-white/10 border-transparent"
@@ -286,7 +250,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
               return (
                 <a key={href} href={withBase(href)}
                   {...navPrefetchHandlers(href)}
-                  className={`px-3 py-2 text-sm md:text-lg font-semibold uppercase tracking-wide rounded-lg transition-all duration-200 ${
+                  className={`motion-interactive px-3 py-2 text-sm md:text-lg font-semibold uppercase tracking-wide rounded-lg ${
                     isActive
                       ? "text-white bg-white/15 border border-white/20 shadow-sm"
                       : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent"
@@ -300,9 +264,20 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
           {/* Derecha: usuario — oculto en móvil (está en el drawer) */}
           <div className="hidden sm:flex items-center gap-2">
+            {temporadaActiva && (
+              <a
+                href={withBase("/registros")}
+                {...navPrefetchHandlers("/registros")}
+                className="motion-interactive flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/25"
+                title={`Los módulos muestran solo la temporada ${temporadaActiva}. En Registros puedes ver el histórico completo.`}
+              >
+                <Icon icon="lucide:calendar-range" width={14} height={14} className="text-white/60 shrink-0" />
+                <span className="text-sm font-semibold text-white/90 max-w-[160px] truncate">{temporadaActiva}</span>
+              </a>
+            )}
             {!isExternalUser && displayName && (
               <button type="button" onClick={() => setShowUserModal(true)}
-                className="flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/25 transition-all duration-200"
+                className="motion-interactive flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/25"
               >
                 <span className="w-8 h-8 rounded-full bg-brand-blue flex items-center justify-center text-white text-base font-black uppercase shrink-0">
                   {displayName[0]}
@@ -320,7 +295,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
         <>
           <div className="flex items-center gap-1">
             <button type="button" onClick={() => setDrawerOpen((p) => !p)}
-              className={`flex items-center justify-center w-11 h-11 rounded-lg border transition-all duration-200 ${
+              className={`motion-interactive flex items-center justify-center w-11 h-11 rounded-lg border ${
                 drawerOpen ? "text-white bg-white/15 border-white/25" : "text-neutral-300 hover:text-white hover:bg-white/10 border-transparent"
               }`}
               aria-label={drawerOpen ? "Cerrar menú" : "Abrir menú"}
@@ -335,7 +310,7 @@ export function NavBanner({ pathname }: NavBannerProps) {
                 return (
                   <a key={href} href={withBase(href)}
                     {...navPrefetchHandlers(href)}
-                    className={`px-3.5 py-2 text-lg font-semibold uppercase tracking-wide rounded-lg transition-all duration-200 ${
+                    className={`motion-interactive px-3.5 py-2 text-lg font-semibold uppercase tracking-wide rounded-lg ${
                       isActive
                         ? "text-white bg-white/15 border border-white/20 shadow-sm"
                         : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent"
@@ -355,35 +330,42 @@ export function NavBanner({ pathname }: NavBannerProps) {
 
     {/* ── Drawer hamburguesa (logueado y no logueado) ─────────────────────── */}
     <>
-      {drawerOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-40"
-          onClick={() => setDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {/*
+        Siempre montado: si se desmontara al cerrar, el velo se cortaría de golpe
+        mientras el drawer todavía se está deslizando hacia afuera.
+      */}
+      <div
+        className={`motion-backdrop fixed inset-0 bg-black/50 backdrop-blur-[2px] z-40 ${
+          drawerOpen ? "" : "pointer-events-none"
+        }`}
+        data-state={drawerOpen ? "open" : "closed"}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
 
       <div
         ref={drawerRef}
-        className={`fixed inset-y-0 left-0 z-50 w-[min(100vw,20rem)] bg-brand-blue/95 backdrop-blur-md border-r border-white/10 shadow-2xl shadow-black/50 flex flex-col transition-transform duration-300 ease-out pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
-          drawerOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 w-[min(100vw,17.5rem)] bg-brand-blue border-r border-white/10 shadow-xl shadow-black/30 flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
+          drawerOpen
+            ? "translate-x-0 duration-slow ease-enter"
+            : "-translate-x-full duration-fast ease-exit"
         }`}
         role="dialog"
         aria-modal="true"
         aria-label="Menú de navegación"
       >
         {/* Cabecera del drawer */}
-        <div className="flex items-center justify-between px-3 pt-3 pb-1 flex-shrink-0">
-          <p className="text-sm font-semibold uppercase tracking-wider text-white/70 px-1">
+        <div className="flex items-center justify-between pl-4 pr-2 pt-3 pb-2 flex-shrink-0">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/45">
             {isLoggedIn ? "Menú" : "Navegación"}
           </p>
           <button
             type="button"
             onClick={() => setDrawerOpen(false)}
-            className="flex items-center justify-center w-11 h-11 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-white/60 hover:text-white transition-colors"
             aria-label="Cerrar menú"
           >
-            <Icon icon="lucide:x" width={22} height={22} />
+            <Icon icon="lucide:x" width={20} height={20} />
           </button>
         </div>
 
@@ -391,34 +373,32 @@ export function NavBanner({ pathname }: NavBannerProps) {
         {isLoggedIn && !isExternalUser && displayName && (
           <button type="button"
             onClick={() => { setShowUserModal(true); setDrawerOpen(false); }}
-            className="flex items-center gap-3.5 mx-3 mt-1 mb-2 px-3.5 py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left flex-shrink-0"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors duration-200 text-left flex-shrink-0"
           >
-            <span className="w-11 h-11 rounded-full bg-brand-blue flex items-center justify-center text-white text-base font-black uppercase shrink-0">
+            <span className="w-9 h-9 rounded-full border border-white/25 flex items-center justify-center text-white text-sm font-semibold uppercase shrink-0">
               {displayName[0]}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold text-white truncate">{displayName}</p>
-              <p className="text-sm text-neutral-300/80 truncate mt-0.5">{user!.email}</p>
+              <p className="text-sm font-medium text-white truncate">{displayName}</p>
+              <p className="text-xs text-white/45 truncate mt-0.5">{user!.email}</p>
             </div>
-            <Icon icon="lucide:info" width={18} height={18} className="text-white/50 shrink-0" />
           </button>
         )}
 
-        {isLoggedIn && <div className="mx-3 mb-2 border-t border-white/10 flex-shrink-0" />}
+        {isLoggedIn && <div className="mx-4 my-1 border-t border-white/10 flex-shrink-0" />}
 
         {/* Items de navegación */}
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-3 pt-2 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide py-2">
           {isLoggedIn ? sidebarDrawerContent : publicDrawerContent}
         </div>
 
         {/* Footer: idioma */}
-        <div className="flex-shrink-0 border-t border-white/10 px-3 py-3.5">
+        <div className="flex-shrink-0 border-t border-white/10 px-4 py-3">
           <button type="button" onClick={handleLocaleToggle}
-            className="flex items-center gap-3 w-full px-3.5 py-3 rounded-lg text-base text-neutral-200 hover:text-white hover:bg-white/10 transition-all duration-200"
+            className="flex items-center w-full text-sm text-white/60 hover:text-white transition-colors duration-200"
           >
-            <Icon icon="lucide:globe" width={20} height={20} className="shrink-0 opacity-80" />
             <span>{locale === "es" ? "Cambiar a Inglés" : "Switch to Spanish"}</span>
-            <span className="ml-auto text-sm font-bold px-2.5 py-1 rounded-full bg-white/10 border border-white/10">
+            <span className="ml-auto text-xs tracking-wider text-white/40">
               {locale === "es" ? "EN" : "ES"}
             </span>
           </button>

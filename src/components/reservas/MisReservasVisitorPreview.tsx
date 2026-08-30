@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
 
 const SAMPLE_ROWS = [
   { ref: "ASLI-2025-001", cliente: "Exportadora Frutícola Sur", especie: "Uvas",      naviera: "MSC",        nave: "MSC GULSUN",  pol: "San Antonio", pod: "Filadelfia",   etd: "10-02-2025", eta: "15-03-2025", tt: 33, booking: "MSCUSN1234567",  estado: "EN PROCESO"  },
@@ -231,7 +232,7 @@ export function MisReservasVisitorPreview() {
                           <td className="px-3 py-2">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${style.badge}`}>
                               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${style.dot}`} />
-                              {row.estado}
+                              {etiquetaEstado(row.estado)}
                             </span>
                           </td>
                           <td className="px-3 py-2">

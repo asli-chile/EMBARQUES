@@ -9,6 +9,8 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { loadXlsxJsStyle } from "@/lib/load-xlsx-js-style";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import {
   moduleCard,
   moduleCardAccent,
@@ -129,6 +131,7 @@ export function FacturacionContent() {
   const { t, locale } = useLocale();
   const { user, isCliente, empresaNombres, isLoading: authLoading, profile } = useAuth();
   const tr = t.facturacion;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [monedas, setMonedas] = useState<string[]>(MONEDAS_DEFAULT);
@@ -146,7 +149,7 @@ export function FacturacionContent() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
 
     let qOp = supabase
@@ -157,6 +160,7 @@ export function FacturacionContent() {
       .eq("enviado_transporte", true)
       .or("tipo_reserva_transporte.eq.asli,tipo_reserva_transporte.is.null");
     if (empresaNombres.length > 0) qOp = qOp.in("cliente", empresaNombres);
+    qOp = aplicarFiltroTemporada(qOp, temporadaActiva);
 
     const [operacionesRes, monedasRes, costosRes] = await Promise.all([
       qOp.order("created_at", { ascending: false }),
@@ -169,7 +173,7 @@ export function FacturacionContent() {
     if (monedasDB.length > 0) setMonedas(monedasDB);
     setCostosExtra((costosRes.data ?? []) as CostoExtra[]);
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchData();

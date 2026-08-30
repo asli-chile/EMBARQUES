@@ -14,6 +14,15 @@ import {
   moduleInput,
   modulePageBg,
 } from "@/lib/ui/moduleStyles";
+import {
+  ESTADO_META,
+  estadosEnOrden,
+  etiquetaEstado,
+  normalizarEstado,
+  type GrupoEstado,
+} from "@/lib/operaciones/estados";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 type Factura = {
   id: string;
@@ -55,37 +64,6 @@ function fmtMonto(m: number | null, moneda: string | null) {
   return `${moneda || ""} ${m.toLocaleString("es-CL", { minimumFractionDigits: 2 })}`.trim();
 }
 
-function getEstadoLabel(
-  estado: string,
-  tr: {
-    stateAbierta: string;
-    stateCerrada: string;
-    statePendiente: string;
-    stateCancelada: string;
-    stateEnProceso: string;
-    stateEnTransito: string;
-    stateArribado: string;
-    stateCompletado: string;
-    stateRoleado: string;
-  },
-) {
-  const normalized = (estado || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-  if (normalized === "abierta") return tr.stateAbierta;
-  if (normalized === "cerrada") return tr.stateCerrada;
-  if (normalized === "pendiente") return tr.statePendiente;
-  if (normalized === "cancelada") return tr.stateCancelada;
-  if (normalized === "en proceso") return tr.stateEnProceso;
-  if (normalized === "en transito") return tr.stateEnTransito;
-  if (normalized === "arribado") return tr.stateArribado;
-  if (normalized === "completado") return tr.stateCompletado;
-  if (normalized === "roleado") return tr.stateRoleado;
-  return estado;
-}
-
 const FACTURA_FIELDS_TO_CLEAR = {
   numero_factura_asli: null,
   factura_transporte: null,
@@ -104,6 +82,7 @@ export function FacturasTransporteContent() {
   const { isCliente, empresaNombres } = useAuth();
   const { t } = useLocale();
   const tr = t.facturasTransporte;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -120,6 +99,7 @@ export function FacturasTransporteContent() {
   const empresasKey = useMemo(() => empresaNombres.join(","), [empresaNombres]);
 
   const fetchData = useCallback(async () => {
+    if (temporadaLoading) return;
     setLoading(true);
     let query = supabase
       .from("operaciones")
@@ -135,11 +115,12 @@ export function FacturasTransporteContent() {
     if (isCliente && empresaNombres?.length) {
       query = query.in("cliente", empresaNombres);
     }
+    query = aplicarFiltroTemporada(query, temporadaActiva);
 
     const { data } = await query;
     setFacturas(data ?? []);
     setLoading(false);
-  }, [supabase, showAll, isCliente, empresasKey]);
+  }, [supabase, showAll, isCliente, empresasKey, temporadaLoading, temporadaActiva]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
@@ -236,16 +217,20 @@ export function FacturasTransporteContent() {
     }
   }, [deleteTarget, supabase, fetchData]);
 
-  const estadoColor: Record<string, string> = {
-    abierta: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    cerrada: "bg-neutral-100 text-neutral-500 border-neutral-200",
-    pendiente: "bg-amber-50 text-amber-700 border-amber-200",
-    cancelada: "bg-red-50 text-red-600 border-red-200",
-    "en proceso": "bg-blue-50 text-blue-700 border-blue-200",
-    "en transito": "bg-violet-50 text-violet-700 border-violet-200",
-    arribado: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    completado: "bg-neutral-100 text-neutral-600 border-neutral-200",
-    roleado: "bg-orange-50 text-orange-700 border-orange-200",
+  const estadoColor: Record<GrupoEstado, string> = {
+    COMERCIAL: "bg-amber-50 text-amber-700 border-amber-200",
+    COORDINACION: "bg-blue-50 text-blue-700 border-blue-200",
+    TRANSITO: "bg-violet-50 text-violet-700 border-violet-200",
+    DOCUMENTAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    CIERRE: "bg-neutral-100 text-neutral-500 border-neutral-200",
+    EXCEPCION: "bg-red-50 text-red-600 border-red-200",
+  };
+
+  const estadoBadgeClass = (estado: string | null) => {
+    const codigo = normalizarEstado(estado);
+    return codigo
+      ? estadoColor[ESTADO_META[codigo].grupo]
+      : "bg-neutral-100 text-neutral-500 border-neutral-200";
   };
 
   return (
@@ -315,10 +300,9 @@ export function FacturasTransporteContent() {
             className={`${moduleInput} min-w-[130px]`}
           >
             <option value="all">{tr.allStates}</option>
-            <option value="abierta">{tr.stateAbierta}</option>
-            <option value="cerrada">{tr.stateCerrada}</option>
-            <option value="pendiente">{tr.statePendiente}</option>
-            <option value="cancelada">{tr.stateCancelada}</option>
+            {estadosEnOrden().map((e) => (
+              <option key={e} value={e}>{etiquetaEstado(e)}</option>
+            ))}
           </select>
           <input
             type="date"
@@ -370,8 +354,8 @@ export function FacturasTransporteContent() {
                             {f.numero_factura_asli}
                           </span>
                         )}
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoColor[(f.estado_operacion || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()] ?? "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
-                          {getEstadoLabel(f.estado_operacion, tr)}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoBadgeClass(f.estado_operacion)}`}>
+                          {etiquetaEstado(f.estado_operacion)}
                         </span>
                       </div>
                       {!isCliente && (
@@ -486,8 +470,8 @@ export function FacturasTransporteContent() {
                           ) : <span className="text-amber-500 text-base flex items-center gap-1"><Icon icon="lucide:clock" width={11} />{tr.pendiente}</span>}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoColor[(f.estado_operacion || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()] ?? "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
-                            {getEstadoLabel(f.estado_operacion, tr)}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoBadgeClass(f.estado_operacion)}`}>
+                            {etiquetaEstado(f.estado_operacion)}
                           </span>
                         </td>
                         {!isCliente && (

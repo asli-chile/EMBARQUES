@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
+import { useOverlayTransition } from "@/hooks/useOverlayTransition";
 
 export type AuthUser = {
   name: string;
@@ -18,44 +18,12 @@ type AuthModalProps = {
 
 const WELCOME_TITLE = "Bienvenido al sistema";
 const WELCOME_SUBTITLE = "Gestión de asesorías y servicios logísticos integrales.";
-const CLOSE_ANIMATION_MS = 250;
 
 export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
   const { t } = useLocale();
-  const [isExiting, setIsExiting] = useState(false);
-  const prevOpenRef = useRef(false);
+  const { isMounted, state, close } = useOverlayTransition({ isOpen, onClose });
 
-  const handleClose = useCallback(() => {
-    if (isExiting) return;
-    setIsExiting(true);
-    setTimeout(() => onClose(), CLOSE_ANIMATION_MS);
-  }, [isExiting, onClose]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") handleClose();
-  };
-
-  useEffect(() => {
-    prevOpenRef.current = isOpen;
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      setIsExiting(false);
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const justOpened = isOpen && !prevOpenRef.current;
-  const animationClass =
-    justOpened || !isExiting ? "animate-auth-modal-in" : "animate-modal-out";
-  const backdropClass =
-    justOpened || !isExiting ? "animate-auth-backdrop-in" : "";
+  if (!isMounted) return null;
 
   const { name, email, level } = user;
 
@@ -65,15 +33,16 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
-      onKeyDown={handleKeyDown}
     >
       <div
-        className={`absolute inset-0 bg-black/50 backdrop-blur-sm ${backdropClass}`}
-        onClick={handleClose}
+        className="motion-backdrop absolute inset-0 bg-black/50 backdrop-blur-sm"
+        data-state={state}
+        onClick={close}
         aria-hidden
       />
       <div
-        className={`relative flex flex-col md:flex-row w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-mac-modal border border-neutral-200/80 bg-white ${animationClass}`}
+        className="motion-panel relative flex flex-col md:flex-row w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-mac-modal border border-neutral-200/80 bg-white"
+        data-state={state}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Panel izquierdo: marca y bienvenida (mismo que login/registro) */}
@@ -143,8 +112,8 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
             </div>
             <button
               type="button"
-              onClick={handleClose}
-              className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+              onClick={close}
+              className="motion-interactive p-2 rounded-lg text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               aria-label="Cerrar"
             >
               <Icon icon="lucide:x" width={20} height={20} />

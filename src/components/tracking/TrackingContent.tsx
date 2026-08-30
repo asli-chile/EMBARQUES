@@ -13,6 +13,13 @@ import {
 import { ManualTrackingCoordsModal } from "@/components/tracking/ManualTrackingCoordsModal";
 import { getApiOriginPrefix } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
+import {
+  ESTADO_META,
+  esEstadoCerrado,
+  etiquetaEstado,
+  normalizarEstado,
+  type GrupoEstado,
+} from "@/lib/operaciones/estados";
 
 type TrackingResult = {
   id: string;
@@ -53,20 +60,19 @@ type AisSearchRow = {
   area?: string | null;
 };
 
-const estadoColors: Record<string, string> = {
-  PENDIENTE: "bg-amber-100 text-amber-800 border-amber-200",
-  EN_PROCESO: "bg-blue-100 text-blue-800 border-blue-200",
-  ZARPE: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  EN_TRANSITO: "bg-violet-100 text-violet-800 border-violet-200",
-  ARRIBADO: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  COMPLETADO: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  CANCELADO: "bg-red-100 text-red-800 border-red-200",
+const estadoColors: Record<GrupoEstado, string> = {
+  COMERCIAL: "bg-amber-100 text-amber-800 border-amber-200",
+  COORDINACION: "bg-blue-100 text-blue-800 border-blue-200",
+  TRANSITO: "bg-violet-100 text-violet-800 border-violet-200",
+  DOCUMENTAL: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  CIERRE: "bg-neutral-100 text-neutral-700 border-neutral-200",
+  EXCEPCION: "bg-red-100 text-red-800 border-red-200",
 };
 
 function getEstadoStyle(estado: string | null): string {
-  if (!estado) return "bg-neutral-100 text-neutral-700 border-neutral-200";
-  const key = estado.toUpperCase().replace(/\s+/g, "_");
-  return estadoColors[key] ?? "bg-neutral-100 text-neutral-700 border-neutral-200";
+  const codigo = normalizarEstado(estado);
+  if (!codigo) return "bg-neutral-100 text-neutral-700 border-neutral-200";
+  return estadoColors[ESTADO_META[codigo].grupo];
 }
 
 function formatDate(dateStr: string | null, locale: "es" | "en"): string {
@@ -114,12 +120,7 @@ function hasNaveForManualGroupSync(op: Pick<TrackingResult, "nave"> | null): boo
 }
 
 function isOperacionActivaEnMapa(estado: string | null): boolean {
-  const e = (estado ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/\s+/g, "_");
-  return !["COMPLETADO", "CANCELADO", "ARRIBADO"].includes(e);
+  return !esEstadoCerrado(estado);
 }
 
 /** Alineado con la RPC: trim, minúsculas y espacios internos colapsados. */
@@ -780,7 +781,7 @@ export function TrackingContent() {
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium ${getEstadoStyle(op.estado_operacion)}`}
                               >
-                                {op.estado_operacion ?? "—"}
+                                {etiquetaEstado(op.estado_operacion) || "—"}
                               </span>
                             </div>
                             <div className="text-xs text-neutral-600 space-y-1">

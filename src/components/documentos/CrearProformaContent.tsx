@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
 import JSZip from "jszip";
@@ -920,6 +922,7 @@ async function applyTagsToXlsx(buffer: ArrayBuffer, lookup: Map<string, string>)
 export function CrearProformaContent() {
   const supabase = useMemo(() => { try { return createClient(); } catch { return null; } }, []);
   const { user, isCliente, isEjecutivo, isAdmin, isSuperadmin, isLoading, empresaNombres } = useAuth();
+  const { temporadaActiva } = useTemporadaActiva();
 
   const [tab, setTab] = useState<Tab>("Mercadería");
   const [header, setHeader] = useState<ProformaHeader>(emptyHeader());
@@ -1473,11 +1476,12 @@ export function CrearProformaContent() {
       if (isCliente && empresaNombres.length > 0) {
         q = q.in("cliente", empresaNombres);
       }
+      q = aplicarFiltroTemporada(q, temporadaActiva);
       const { data } = await q;
       setOpResults(data ?? []);
       setOpLoading(false);
     }, 300);
-  }, [opQuery, supabase, isCliente, empresaNombres]);
+  }, [opQuery, supabase, isCliente, empresaNombres, temporadaActiva]);
 
   const linkOperation = useCallback(async (opBrief: OperacionOption) => {
     if (!supabase) return;

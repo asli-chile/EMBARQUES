@@ -18,39 +18,21 @@ const config: Config = {
         "brand-gray": "#6B7280",
         "brand-red": "#B91C1C",
       },
-      keyframes: {
-        "fade-in-up": {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
-        "modal-in": {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-        "modal-out": {
-          "0%": { opacity: "1" },
-          "100%": { opacity: "0" },
-        },
-        "sidebar-in": {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(0)" },
-        },
-        "auth-modal-in": {
-          "0%": { opacity: "0", transform: "scale(0.97)" },
-          "100%": { opacity: "1", transform: "scale(1)" },
-        },
-        "auth-backdrop-in": {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
+      /* Las animaciones viven en src/styles/motion.css, no aquí: un solo lugar
+         donde buscarlas. Esto solo expone los tokens como utilidades de Tailwind
+         (`duration-fast`, `ease-enter`…). Ver docs/MOTION-DESIGN.md */
+      transitionTimingFunction: {
+        enter: "var(--motion-ease-enter)",
+        exit: "var(--motion-ease-exit)",
+        standard: "var(--motion-ease-standard)",
+        emphasis: "var(--motion-ease-emphasis)",
       },
-      animation: {
-        "fade-in-up": "fade-in-up 0.35s ease-out both",
-        "modal-in": "modal-in 0.22s ease-out both",
-        "modal-out": "modal-out 0.2s ease-in forwards",
-        "sidebar-in": "sidebar-in 0.25s ease-out forwards",
-        "auth-modal-in": "auth-modal-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
-        "auth-backdrop-in": "auth-backdrop-in 0.2s ease-out both",
+      transitionDuration: {
+        instant: "var(--motion-duration-instant)",
+        fast: "var(--motion-duration-fast)",
+        base: "var(--motion-duration-base)",
+        slow: "var(--motion-duration-slow)",
+        slower: "var(--motion-duration-slower)",
       },
       boxShadow: {
         "mac-modal":

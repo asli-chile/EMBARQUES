@@ -116,7 +116,7 @@ export function NotificationsBell() {
             onClick={() => setAbierto(false)}
             aria-hidden
           />
-          <div className="fixed inset-x-0 bottom-0 z-[200] md:absolute md:inset-auto md:right-0 md:top-10 md:w-80 max-h-[75vh] md:max-h-[min(28rem,70vh)] bg-white rounded-t-2xl md:rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-neutral-200 overflow-hidden flex flex-col animate-[modal-in_0.15s_ease-out] pb-[env(safe-area-inset-bottom)]">
+          <div className="motion-enter fixed inset-x-0 bottom-0 z-[200] md:absolute md:inset-auto md:right-0 md:top-10 md:w-80 max-h-[75vh] md:max-h-[min(28rem,70vh)] bg-white rounded-t-2xl md:rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-neutral-200 overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom)]">
             <div className="md:hidden flex justify-center pt-2 pb-1" aria-hidden>
               <span className="w-10 h-1 rounded-full bg-neutral-200" />
             </div>

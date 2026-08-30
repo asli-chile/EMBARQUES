@@ -24,6 +24,7 @@ CREATE TRIGGER consignatarios_updated_at
 -- ─── Políticas ──────────────────────────────────────────────────────────────
 
 -- Superadmin y admin: acceso total
+DROP POLICY IF EXISTS "consignatarios_admin_all" ON public.consignatarios;
 CREATE POLICY "consignatarios_admin_all"
   ON public.consignatarios
   FOR ALL
@@ -45,6 +46,7 @@ CREATE POLICY "consignatarios_admin_all"
   );
 
 -- Ejecutivo y operador: solo lectura
+DROP POLICY IF EXISTS "consignatarios_ejecutivo_read" ON public.consignatarios;
 CREATE POLICY "consignatarios_ejecutivo_read"
   ON public.consignatarios
   FOR SELECT

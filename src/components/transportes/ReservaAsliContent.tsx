@@ -15,6 +15,9 @@ import {
 } from "@/lib/ui/moduleStyles";
 import { format } from "date-fns";
 import { sileo } from "sileo";
+import { ESTADO_META, etiquetaEstado, normalizarEstado } from "@/lib/operaciones/estados";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 type Operacion = {
   id: string;
@@ -155,6 +158,7 @@ export function ReservaAsliContent() {
   const { t } = useLocale();
   const { user, isCliente, isSuperadmin, isAdmin, empresaNombres, isLoading: authLoading, profile } = useAuth();
   const canManageTransport = isSuperadmin || isAdmin;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const tr = t.transporteAsli;
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -184,6 +188,7 @@ export function ReservaAsliContent() {
   const [instrSavedUrl, setInstrSavedUrl] = useState<string | null>(null);
   const [instrSaveError, setInstrSaveError] = useState<string | null>(null);
   const [instrUploading, setInstrUploading] = useState(false);
+  const [confirmReplaceInstr, setConfirmReplaceInstr] = useState(false);
   const instrFileInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = useMemo(() => {
@@ -195,7 +200,7 @@ export function ReservaAsliContent() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
 
     let qOp = supabase
@@ -208,6 +213,7 @@ export function ReservaAsliContent() {
     if (empresaNombres.length > 0) {
       qOp = qOp.in("cliente", empresaNombres);
     }
+    qOp = aplicarFiltroTemporada(qOp, temporadaActiva);
     const [operacionesRes, empresasRes, tramosRes] = await Promise.all([
       qOp.order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
@@ -218,7 +224,7 @@ export function ReservaAsliContent() {
     setEmpresasTransporte((empresasRes.data ?? []) as TransporteEmpresa[]);
     setTramos((tramosRes.data ?? []) as Tramo[]);
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres]);
 
   useEffect(() => {
     if (!authLoading) void fetchData();
@@ -1078,27 +1084,29 @@ export function ReservaAsliContent() {
                       <div className={moduleCardAccent} />
                       <div className="px-4 py-3 flex items-center justify-between gap-3">
                         <span className={moduleSectionTitle}>Estado de la Operación</span>
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border ${
-                          ["CANCELADO", "CANCELADA", "canceLADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                        {(() => {
+                          const codigo = normalizarEstado(selectedOperacion.estado_operacion);
+                          const cancelada = codigo === "CANCELADA";
+                          const avanzada = codigo
+                            ? ESTADO_META[codigo].orden >= ESTADO_META.RESERVA_CONFIRMADA.orden && !cancelada
+                            : false;
+                          const badgeClass = cancelada
                             ? "bg-red-50 text-red-700 border-red-200"
-                            : ["CONFIRMADA", "CONFIRMADO", "ARRIBADO", "COMPLETADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
+                            : avanzada
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : ["PENDIENTE", "SOLICITUD", "ROLEADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
-                                ? "bg-amber-50 text-amber-700 border-amber-200"
-                                : "bg-neutral-100 text-neutral-600 border-neutral-200"
-                        }`}>
-                          <Icon
-                            icon={
-                              ["CANCELADO", "CANCELADA", "canceLADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
-                                ? "lucide:x-circle"
-                                : ["CONFIRMADA", "CONFIRMADO", "ARRIBADO", "COMPLETADO"].includes((selectedOperacion.estado_operacion ?? "").toUpperCase())
-                                  ? "lucide:check-circle"
-                                  : "lucide:clock"
-                            }
-                            width={13} height={13}
-                          />
-                          {selectedOperacion.estado_operacion}
-                        </span>
+                              : "bg-amber-50 text-amber-700 border-amber-200";
+                          const icono = cancelada
+                            ? "lucide:x-circle"
+                            : avanzada
+                              ? "lucide:check-circle"
+                              : "lucide:clock";
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border ${badgeClass}`}>
+                              <Icon icon={icono} width={13} height={13} />
+                              {etiquetaEstado(selectedOperacion.estado_operacion)}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -1114,21 +1122,36 @@ export function ReservaAsliContent() {
                           <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className={moduleSectionTitle}>Instructivo de Embarque</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={moduleSectionTitle}>Instructivo de Embarque</p>
+                            {instrSavedUrl && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Icon icon="lucide:check" className="w-3 h-3" />
+                                Cargado
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-neutral-400 mt-0.5">
-                            {instrSavedUrl ? `${instrFilename} · subido` : "Sube el instructivo preparado (Excel o PDF)"}
+                            {instrSavedUrl
+                              ? "Ya hay un instructivo guardado para esta operación"
+                              : "Sube el instructivo preparado (Excel o PDF)"}
                           </p>
                         </div>
                       </div>
 
                       {/* Archivo guardado */}
                       {instrSavedUrl && (
-                        <div className="px-4 py-2.5 border-b border-violet-100 bg-violet-50 flex items-center gap-2 flex-wrap">
-                          <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600 flex-shrink-0" />
-                          <span className="text-xs font-semibold text-violet-700 flex-1 truncate">{instrFilename}</span>
+                        <div className="px-4 py-3 border-b border-emerald-100 bg-emerald-50/70 flex items-center gap-3 flex-wrap">
+                          <span className="w-9 h-9 rounded-xl bg-white border border-emerald-200 flex items-center justify-center flex-shrink-0">
+                            <Icon icon="lucide:file-check-2" className="w-5 h-5 text-emerald-600" />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-emerald-900 truncate">{instrFilename}</p>
+                            <p className="text-[10px] text-emerald-700 mt-0.5">Guardado en Documentos</p>
+                          </div>
                           <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 underline hover:text-violet-900 whitespace-nowrap">
-                            <Icon icon="lucide:download" className="w-3 h-3" />
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors whitespace-nowrap">
+                            <Icon icon="lucide:download" className="w-3.5 h-3.5" />
                             Descargar
                           </a>
                         </div>
@@ -1157,7 +1180,10 @@ export function ReservaAsliContent() {
                         <button
                           type="button"
                           disabled={instrUploading}
-                          onClick={() => instrFileInputRef.current?.click()}
+                          onClick={() => {
+                            if (instrSavedUrl) setConfirmReplaceInstr(true);
+                            else instrFileInputRef.current?.click();
+                          }}
                           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-300 text-violet-700 bg-white hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {instrUploading
@@ -1548,6 +1574,45 @@ export function ReservaAsliContent() {
                 className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmReplaceInstr && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-mac-modal max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:triangle-alert" width={18} height={18} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-neutral-900">Reemplazar instructivo</h3>
+                <p className="text-xs text-neutral-500">Ya hay un instructivo cargado</p>
+              </div>
+            </div>
+            <p className="text-sm text-neutral-700 mb-2">
+              El archivo actual se reemplazará por el que subas y no se podrá recuperar.
+            </p>
+            <p className="text-sm font-semibold text-neutral-900 mb-6 break-words">{instrFilename}</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmReplaceInstr(false)}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmReplaceInstr(false);
+                  instrFileInputRef.current?.click();
+                }}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+              >
+                Elegir archivo
               </button>
             </div>
           </div>

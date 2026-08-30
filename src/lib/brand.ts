@@ -131,24 +131,5 @@ export const layout = {
   },
 } as const;
 
-// ─── ANIMACIONES ────────────────────────────────────────────────────────────
-
-export const animations = {
-  /** Curva tipo Mac para sensación premium */
-  easing: {
-    smooth: "ease-out" as const,
-    inOut: "ease-in-out" as const,
-    bezier: "cubic-bezier(0.32, 0.72, 0, 1)" as const,
-  },
-  /** Clases Tailwind */
-  modalIn: "animate-modal-in",
-  modalOut: "animate-modal-out",
-  sidebarIn: "animate-sidebar-in",
-} as const;
-
-// ─── PRINCIPIO DE DISEÑO ────────────────────────────────────────────────────
-
-export const designPrinciple = {
-  forms: "Cuadrado tipo Windows — bordes rectos o ligeramente redondeados (rounded, rounded-sm)",
-  animations: "Fluidas tipo Mac — ease-out, cubic-bezier, transiciones suaves",
-} as const;
+// Los tokens de animación viven en src/lib/ui/motion.ts y src/styles/motion.css.
+// Ver docs/MOTION-DESIGN.md

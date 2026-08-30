@@ -2,6 +2,7 @@ import { RoleForbidden } from "./RoleForbidden";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { ModuleInfoPlaceholder } from "./ModuleInfoPlaceholder";
+import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
 import { RegistrosVisitorPreview } from "@/components/registros/RegistrosVisitorPreview";
 import { CrearReservaVisitorPreview } from "@/components/reservas/CrearReservaVisitorPreview";
 import { MisReservasVisitorPreview } from "@/components/reservas/MisReservasVisitorPreview";
@@ -81,11 +82,7 @@ export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitor
   const { t } = useLocale();
 
   if (isLoading) {
-    return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-50 p-6 flex items-center justify-center" role="main">
-        <p className="text-neutral-500">Cargando…</p>
-      </main>
-    );
+    return <ModuleSoftFallback />;
   }
 
   if (isExternalUser) {

@@ -48,8 +48,8 @@ export function ConfirmDialog({
   const resolvedIcon = icon ?? s.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
-      <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-sm animate-fade-in">
+    <div className="motion-fade fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
+      <div className="motion-enter-lift bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-sm">
         <div className="flex items-start gap-4 mb-4">
           <div className={`flex-shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center ${s.iconBg}`}>
             <Icon icon={resolvedIcon} width={20} height={20} className={s.iconColor} />
@@ -63,14 +63,14 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className={`flex-1 px-4 py-2 text-sm font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${s.btnCls}`}
+            className={`motion-interactive flex-1 px-4 py-2 text-sm font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-1 ${s.btnCls}`}
           >
             {confirmLabel}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2 text-sm font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors focus:outline-none"
+            className="motion-interactive flex-1 px-4 py-2 text-sm font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 focus:outline-none"
           >
             {cancelLabel}
           </button>

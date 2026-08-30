@@ -9,7 +9,7 @@ const PREVIEW_SECTIONS = [
     label: "General",
     fields: [
       { label: "Tipo de operación", value: "EXPORTACIÓN" },
-      { label: "Estado", value: "PENDIENTE" },
+      { label: "Estado", value: "Solicitada" },
       { label: "Ejecutivo", value: "María González" },
       { label: "Cliente", value: "Exportadora Frutícola Sur" },
     ],
@@ -138,7 +138,7 @@ export function CrearReservaVisitorPreview() {
               <div className="flex items-center gap-2 ml-auto">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  PENDIENTE
+                  SOLICITADA
                 </span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-[11px] font-medium text-neutral-500">
                   <Icon icon="lucide:rotate-ccw" width={11} height={11} />
@@ -190,7 +190,7 @@ export function CrearReservaVisitorPreview() {
                   <div className="p-3 grid grid-cols-3 gap-3">
                     {[
                       { label: "Tipo operación",  value: "EXPORTACIÓN",              type: "select" },
-                      { label: "Estado",           value: "PENDIENTE",                type: "badge"  },
+                      { label: "Estado",           value: "Solicitada",               type: "badge"  },
                       { label: "Ejecutivo",        value: "María González",           type: "select" },
                       { label: "Cliente",          value: "Exportadora Frutícola Sur",type: "select", span: true },
                       { label: "Ref. ASLI",        value: "ASLI-2025-012",            type: "text"   },

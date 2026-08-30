@@ -44,6 +44,9 @@ export const columnWidths = {
   pesoBruto: 130,
   pesoNeto: 130,
   tipoUnidad: 130,
+  cajasCalibres: 260,
+  totalCajas25kg: 140,
+  totalCajas5kg: 130,
 
   // ─── NAVIERA / EMBARQUE ────────────────────────────────────────────────────
   naviera: 150,
@@ -61,6 +64,8 @@ export const columnWidths = {
   dus: 100,
   sps: 100,
   numeroGuiaDespacho: 160,
+  swb: 175,
+  fobInvoice: 150,
 
   // ─── PLANTA / STACKING ─────────────────────────────────────────────────────
   plantaPresentacion: 175,
@@ -93,6 +98,7 @@ export const columnWidths = {
   patenteRemolque: 155,
   contenedor: 140,
   sello: 110,
+  selloPlanta: 130,
   tara: 90,
 
   // ─── COSTOS TRANSPORTE ─────────────────────────────────────────────────────

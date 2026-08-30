@@ -1,8 +1,31 @@
+/**
+ * Inicio — lenguaje visual alineado a asli.cl:
+ * fondo crema, superficies blancas, texto navy, acentos teal/oliva
+ * y formas rectangulares de radio bajo.
+ */
+
 .inicio-surface {
-  --inicio-display: "Syne", "Fira Sans", system-ui, sans-serif;
-  --inicio-body: "Manrope", "Fira Sans", system-ui, sans-serif;
+  /* "DIN Condensed" solo existe si está instalada en el sistema; Oswald es el
+     respaldo web con métricas condensadas equivalentes. */
+  --inicio-display:
+    "DIN Condensed", "DIN Condensed Bold", "Oswald", "Fira Sans", system-ui,
+    sans-serif;
+  --inicio-body: var(--inicio-display);
   --inicio-scale: 1.2;
+
+  --inicio-cream: #f6eee8;
+  --inicio-navy: #11224e;
+  --inicio-teal: #007a7b;
+  --inicio-ink-soft: rgba(17, 34, 78, 0.72);
+  --inicio-ink-mute: rgba(17, 34, 78, 0.55);
+  --inicio-ink-faint: rgba(17, 34, 78, 0.38);
+  --inicio-line: rgba(17, 34, 78, 0.12);
+  --inicio-line-strong: rgba(17, 34, 78, 0.2);
+
   font-family: var(--inicio-body);
+  font-weight: 700;
+  background-color: var(--inicio-cream);
+  color: var(--inicio-navy);
   /* Agranda tipografía, iconos y espaciado ~20% (incluye clases Tailwind en rem) */
   zoom: var(--inicio-scale);
 }
@@ -21,50 +44,134 @@
 .inicio-surface h2,
 .inicio-surface .inicio-display {
   font-family: var(--inicio-display);
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.inicio-gradient-text {
-  background: linear-gradient(135deg, #ffffff 0%, #a8e6e6 45%, #007a7b 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* ── Texto ─────────────────────────────────────────────────────────────── */
+
+.inicio-ink {
+  color: var(--inicio-navy);
 }
 
-.inicio-glass {
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.09) 0%,
-    rgba(255, 255, 255, 0.03) 45%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 20px 50px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(16px);
+.inicio-ink-soft {
+  color: var(--inicio-ink-soft);
 }
 
-.inicio-glass:hover {
-  border-color: rgba(0, 122, 123, 0.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 24px 60px rgba(0, 0, 0, 0.32),
-    0 0 0 1px rgba(0, 122, 123, 0.08);
+.inicio-ink-mute {
+  color: var(--inicio-ink-mute);
 }
 
-.inicio-shine::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    120deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    transparent 38%,
-    transparent 100%
-  );
-  pointer-events: none;
+.inicio-ink-faint {
+  color: var(--inicio-ink-faint);
+}
+
+.inicio-accent-text {
+  color: var(--inicio-teal);
+}
+
+/* ── Superficies ───────────────────────────────────────────────────────── */
+
+.inicio-card {
+  background: #ffffff;
+  border: 1px solid var(--inicio-line);
+  box-shadow: 0 1px 2px rgba(17, 34, 78, 0.06);
+  transition:
+    border-color 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.inicio-card-interactive:hover {
+  border-color: rgba(0, 122, 123, 0.45);
+  box-shadow: 0 8px 24px rgba(17, 34, 78, 0.1);
+}
+
+.inicio-tile {
+  background: rgba(246, 238, 232, 0.7);
+  border: 1px solid var(--inicio-line);
+  transition:
+    border-color 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.inicio-tile:hover {
+  border-color: rgba(0, 122, 123, 0.4);
+  background: #ffffff;
+}
+
+.inicio-band {
+  background: #ffffff;
+  border-block: 1px solid var(--inicio-line);
+}
+
+.inicio-line {
+  border-color: var(--inicio-line);
+}
+
+.inicio-icon-box {
+  background: rgba(0, 122, 123, 0.1);
+  border: 1px solid rgba(0, 122, 123, 0.22);
+  color: var(--inicio-teal);
+}
+
+.inicio-chip {
+  background: rgba(0, 122, 123, 0.08);
+  border: 1px solid rgba(0, 122, 123, 0.18);
+  color: var(--inicio-ink-soft);
+}
+
+.inicio-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* ── Botones ───────────────────────────────────────────────────────────── */
+
+.inicio-btn-primary {
+  background: var(--inicio-teal);
+  color: #ffffff;
+  border: 1px solid var(--inicio-teal);
+  transition:
+    background-color 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.inicio-btn-primary:hover {
+  background: #006062;
+  box-shadow: 0 8px 24px rgba(0, 122, 123, 0.22);
+}
+
+.inicio-btn-ghost {
+  background: transparent;
+  color: var(--inicio-navy);
+  border: 1px solid var(--inicio-line-strong);
+  transition:
+    background-color 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.inicio-btn-ghost:hover {
+  background: #ffffff;
+  border-color: rgba(0, 122, 123, 0.45);
+}
+
+/* ── Datos ─────────────────────────────────────────────────────────────── */
+
+.inicio-stat-value {
+  font-family: var(--inicio-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  color: var(--inicio-navy);
+}
+
+/*
+  Skeleton del módulo Inicio. Reutiliza `.motion-skeleton` del sistema de motion
+  (misma técnica de shimmer) y solo ajusta el borde propio de esta pantalla.
+  Ver docs/MOTION-DESIGN.md
+*/
+.inicio-skeleton-bone {
+  border: 1px solid rgba(17, 34, 78, 0.06);
 }
 
 .inicio-aurora {
@@ -80,69 +187,8 @@
   }
 }
 
-.inicio-noise {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
-}
-
-.inicio-btn-primary {
-  background: linear-gradient(135deg, #008789 0%, #007a7b 50%, #006668 100%);
-  box-shadow: 0 12px 32px rgba(0, 122, 123, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.inicio-btn-primary:hover {
-  filter: brightness(1.06);
-  box-shadow: 0 16px 40px rgba(0, 122, 123, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-
-.inicio-stat-value {
-  font-family: var(--inicio-display);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-}
-
-/* Skeleton shimmer */
-.inicio-skeleton-bone {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.inicio-skeleton-bone::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 45%,
-    rgba(168, 230, 230, 0.12) 55%,
-    transparent 100%
-  );
-  animation: inicio-skeleton-shimmer 1.35s ease-in-out infinite;
-}
-
-@keyframes inicio-skeleton-shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .inicio-skeleton-bone::after {
-    animation: none;
-  }
   .inicio-aurora {
     animation: none;
   }
-}
-
-.inicio-kpi-ring {
-  background: conic-gradient(
-    from 210deg,
-    rgba(0, 122, 123, 0.55),
-    rgba(168, 230, 230, 0.15),
-    transparent 70%
-  );
 }

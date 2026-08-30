@@ -25,6 +25,13 @@ import {
   draftToReservaStackingDatetimeFields,
   pickItinerarioForStackingSync,
 } from "@/lib/stacking-reserva-sync";
+import {
+  ESTADO_INICIAL,
+  ESTADO_META,
+  estadosEnOrden,
+  etiquetaEstado,
+  normalizarEstado,
+} from "@/lib/operaciones/estados";
 
 type ReservaDateFieldProps = {
   id: string;
@@ -233,7 +240,7 @@ type FormData = {
 
 const initialFormData: FormData = {
   tipo_operacion: "",
-  estado_operacion: "PENDIENTE",
+  estado_operacion: ESTADO_INICIAL,
   ejecutivo: "",
   cliente: "",
   dueno_reserva: "ASLI",
@@ -1180,7 +1187,7 @@ export function CrearReservaContent() {
 
     const payload = {
       tipo_operacion: formData.tipo_operacion || null,
-      estado_operacion: formData.estado_operacion || "PENDIENTE",
+      estado_operacion: normalizarEstado(formData.estado_operacion) ?? ESTADO_INICIAL,
       ejecutivo: formData.ejecutivo
         ? ejecutivos.find((e) => e.id === formData.ejecutivo)?.nombre
         : null,
@@ -1913,12 +1920,17 @@ export function CrearReservaContent() {
     const especieNombre = getDisplayValue(formData.especie, especies);
 
     const estadoColors: Record<string, { bg: string; text: string; dot: string }> = {
-      PENDIENTE:   { bg: "bg-amber-400/20", text: "text-amber-200",   dot: "bg-amber-300" },
-      ABIERTA:     { bg: "bg-sky-400/20",   text: "text-sky-100",     dot: "bg-sky-300" },
-      CERRADA:     { bg: "bg-white/15",     text: "text-white/80",    dot: "bg-white/60" },
-      CANCELADA:   { bg: "bg-red-400/20",   text: "text-red-200",     dot: "bg-red-300" },
+      COMERCIAL:    { bg: "bg-amber-400/20", text: "text-amber-200", dot: "bg-amber-300" },
+      COORDINACION: { bg: "bg-sky-400/20",   text: "text-sky-100",   dot: "bg-sky-300" },
+      TRANSITO:     { bg: "bg-violet-400/20", text: "text-violet-200", dot: "bg-violet-300" },
+      DOCUMENTAL:   { bg: "bg-emerald-400/20", text: "text-emerald-100", dot: "bg-emerald-300" },
+      CIERRE:       { bg: "bg-white/15",     text: "text-white/80",  dot: "bg-white/60" },
+      EXCEPCION:    { bg: "bg-red-400/20",   text: "text-red-200",   dot: "bg-red-300" },
     };
-    const esCfg = estadoColors[formData.estado_operacion ?? ""] ?? { bg: "bg-amber-400/20", text: "text-amber-200", dot: "bg-amber-300" };
+    const estadoCodigo = normalizarEstado(formData.estado_operacion);
+    const esCfg =
+      (estadoCodigo ? estadoColors[ESTADO_META[estadoCodigo].grupo] : null) ??
+      { bg: "bg-amber-400/20", text: "text-amber-200", dot: "bg-amber-300" };
 
     const ventanaCfg =
       formData.solicitud_ventana === "LATE"
@@ -2075,7 +2087,7 @@ export function CrearReservaContent() {
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-bold border border-white/10 ${esCfg.bg} ${esCfg.text}`}>
                       <span className={`w-2.5 h-2.5 rounded-full ${esCfg.dot} shrink-0`} />
-                      {formData.estado_operacion || "PENDIENTE"}
+                      {etiquetaEstado(formData.estado_operacion) || etiquetaEstado(ESTADO_INICIAL)}
                     </span>
                     {ventanaCfg ? (
                       <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-bold border ${ventanaCfg.bg} ${ventanaCfg.text} ${ventanaCfg.border}`}>
@@ -2332,20 +2344,20 @@ export function CrearReservaContent() {
         <div>
           <p className={labelClass}>{tr.estadoOperacion}</p>
           <div className="flex flex-wrap gap-2">
-            {(catalogos.estado_operacion ?? []).map((item) => {
-              const selected = formData.estado_operacion === item.valor;
+            {estadosEnOrden().map((codigo) => {
+              const selected = normalizarEstado(formData.estado_operacion) === codigo;
               return (
                 <button
-                  key={item.id}
+                  key={codigo}
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, estado_operacion: item.valor }))}
+                  onClick={() => setFormData((prev) => ({ ...prev, estado_operacion: codigo }))}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border transition-colors ${
                     selected
                       ? "bg-brand-blue text-white border-brand-blue"
                       : "bg-white text-brand-blue/80 border-brand-blue/20 hover:border-brand-blue/50"
                   }`}
                 >
-                  {item.valor}
+                  {ESTADO_META[codigo].etiqueta}
                 </button>
               );
             })}

@@ -61,10 +61,11 @@ public/       → Assets estáticos
 **Objetivo: mantener un estándar visual coherente.** Estilo **cuadrado tipo Windows** + **animaciones tipo Mac**. Consultar [docs/ESTILOS-VISUALES.md](../docs/ESTILOS-VISUALES.md).
 
 - Formas: bordes rectos o `rounded`/`rounded-sm`; evitar radios muy grandes.
-- Animaciones: fluidas, `transition-colors`, `cubic-bezier` o `ease-out`.
+- Animaciones: usar el sistema de motion, no valores sueltos. Consultar [docs/MOTION-DESIGN.md](../docs/MOTION-DESIGN.md).
 - Usar `brand-blue` para elementos primarios (títulos, links, botones).
 - Usar escala `neutral` para fondos, bordes y texto secundario.
 - Formularios: `rounded-lg`, `px-4 py-2.5`, `border-neutral-200`, focus ring `brand-blue/30`.
-- Modales y cards destacadas: `rounded-2xl`, `shadow-mac-modal`, `p-6`.
-- Transiciones: `transition-colors` en elementos interactivos.
+- Modales y cards destacadas: `rounded-2xl`, `shadow-mac-modal`, `p-6`. Usar `ModalShell` (`components/ui/ModalShell.tsx`) para modales nuevos.
+- Transiciones: `motion-interactive` en elementos interactivos; `duration-*`/`ease-*` de los tokens en el resto. Animar solo `transform` y `opacity`.
+- Loading: skeletons de `components/ui/Skeleton.tsx`. Nunca reemplazar todo el módulo por un texto "Cargando…".
 - **Página Itinerario:** usar siempre el total de la pantalla sin bordes; sin márgenes/padding exterior en el contenido principal; solo el mínimo necesario (p. ej. `px-4`/`py-4`) donde haga falta para legibilidad.

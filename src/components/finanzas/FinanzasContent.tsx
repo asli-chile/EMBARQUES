@@ -13,6 +13,9 @@ import {
   modulePageBg,
   moduleSectionTitle,
 } from "@/lib/ui/moduleStyles";
+import { estadosEnOrden, etiquetaEstado } from "@/lib/operaciones/estados";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 type DbOperacion = {
   id: string;
@@ -42,6 +45,7 @@ type ResumenCliente = {
 export function FinanzasContent() {
   const { t, locale } = useLocale();
   const { isCliente, isLoading: authLoading, isSuperadmin, isAdmin, isEjecutivo, profile, empresaNombres } = useAuth();
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const canViewFinanzas =
     isSuperadmin || isAdmin || isEjecutivo || profile?.rol === "operador";
@@ -87,15 +91,7 @@ export function FinanzasContent() {
   const [rows, setRows] = useState<DbOperacion[]>([]);
   const [clientesOpts, setClientesOpts] = useState<string[]>([]);
 
-  const ESTADOS_OPTS = [
-    "PENDIENTE",
-    "EN PROCESO",
-    "EN TRÁNSITO",
-    "ARRIBADO",
-    "COMPLETADO",
-    "CANCELADO",
-    "ROLEADO",
-  ] as const;
+  const ESTADOS_OPTS = estadosEnOrden();
 
   const supabase = useMemo(() => {
     try {
@@ -106,7 +102,7 @@ export function FinanzasContent() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
     setError(null);
 
@@ -118,14 +114,18 @@ export function FinanzasContent() {
     if (empresaNombres.length > 0) {
       baseQuery = baseQuery.in("cliente", empresaNombres);
     }
+    baseQuery = aplicarFiltroTemporada(baseQuery, temporadaActiva);
+
+    let clientesQuery = supabase
+      .from("operaciones")
+      .select("cliente")
+      .is("deleted_at", null)
+      .not("cliente", "is", null);
+    clientesQuery = aplicarFiltroTemporada(clientesQuery, temporadaActiva);
 
     const [opsRes, clientesRes] = await Promise.all([
       baseQuery.order("ingreso", { ascending: false }),
-      supabase
-        .from("operaciones")
-        .select("cliente")
-        .is("deleted_at", null)
-        .not("cliente", "is", null),
+      clientesQuery,
     ]);
 
     if (opsRes.error) {
@@ -148,7 +148,7 @@ export function FinanzasContent() {
 
     setClientesOpts(clientes);
     setLoading(false);
-  }, [supabase, authLoading, isCliente, empresaNombres, locale]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres, locale]);
 
   useEffect(() => {
     void loadData();
@@ -289,17 +289,17 @@ export function FinanzasContent() {
   if (loading && !rows.length) {
     return (
       <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-3 sm:p-4 lg:p-5`}>
-        <div className="w-full max-w-[1600px] mx-auto space-y-4 animate-pulse">
-          <div className="h-24 bg-brand-blue/20 rounded-2xl" />
+        <div className="w-full max-w-[1600px] mx-auto space-y-4">
+          <div className="motion-skeleton h-24 bg-brand-blue/20 rounded-2xl" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-brand-blue/15 p-3 h-20"
+                className="motion-skeleton motion-skeleton-surface bg-white rounded-2xl border border-brand-blue/15 p-3 h-20"
               />
             ))}
           </div>
-          <div className="bg-white rounded-2xl border border-brand-blue/15 h-64" />
+          <div className="motion-skeleton motion-skeleton-surface bg-white rounded-2xl border border-brand-blue/15 h-64" />
         </div>
       </main>
     );
@@ -400,7 +400,7 @@ export function FinanzasContent() {
                 <option value="">{tr.allStates}</option>
                 {ESTADOS_OPTS.map((e) => (
                   <option key={e} value={e}>
-                    {e}
+                    {etiquetaEstado(e)}
                   </option>
                 ))}
               </select>
@@ -484,7 +484,7 @@ export function FinanzasContent() {
                               })
                             : "—"}
                         </td>
-                        <td className="py-2 pr-2">{r.estado_operacion || "—"}</td>
+                        <td className="py-2 pr-2">{etiquetaEstado(r.estado_operacion) || "—"}</td>
                         <td className="py-2 pr-2 text-right font-medium text-emerald-600">
                           {formatCurrency(r.monto_facturado ?? 0)}
                         </td>

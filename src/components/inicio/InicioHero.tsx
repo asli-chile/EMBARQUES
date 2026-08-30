@@ -3,7 +3,7 @@ import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import type { AuthProfile } from "@/lib/auth/AuthContext";
-import { GlassCard, GhostButton, PrimaryButton } from "./inicio-ui";
+import { GlassCard, GhostButton, PrimaryButton, inicioButtonBase } from "./inicio-ui";
 
 type InicioCopy = {
   heroTitle: string;
@@ -35,7 +35,7 @@ export function InicioHero({
 
   return (
     <header
-      className={`relative z-10 text-white ${compact ? "pt-8 pb-6 sm:pt-11 sm:pb-8" : "min-h-[min(92vh,880px)] flex items-center py-16 sm:py-24"}`}
+      className={`relative z-10 inicio-ink ${compact ? "pt-8 pb-6 sm:pt-11 sm:pb-8" : "min-h-[min(92vh,880px)] flex items-center py-16 sm:py-24"}`}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
         <div className={`grid gap-10 lg:gap-14 items-center ${compact ? "lg:grid-cols-[1.15fr_0.85fr]" : "lg:grid-cols-[1.05fr_0.95fr]"}`}>
@@ -43,23 +43,23 @@ export function InicioHero({
             {isLoggedIn && profile ? (
               <div
                 data-hero-item
-                className="inline-flex items-center gap-2.5 mb-6 pl-1.5 pr-4 py-1.5 rounded-full inicio-glass text-sm"
+                className="inicio-card inline-flex items-center gap-2.5 mb-6 pl-1.5 pr-4 py-1.5 rounded-md text-sm"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-teal/40 to-brand-teal/10 text-brand-teal font-semibold text-xs border border-brand-teal/30">
+                <span className="flex h-8 w-8 items-center justify-center rounded bg-brand-teal/10 text-brand-teal font-semibold text-xs border border-brand-teal/25">
                   {profile.nombre.charAt(0).toUpperCase()}
                 </span>
-                <span className="text-white/80">
-                  Hola, <span className="font-semibold text-white">{firstName}</span>
+                <span className="inicio-ink-soft">
+                  Hola, <span className="font-semibold inicio-ink">{firstName}</span>
                 </span>
-                <span className="hidden sm:inline h-3 w-px bg-white/15" />
-                <span className="hidden sm:inline text-[11px] uppercase tracking-wider text-white/40">
+                <span className="hidden sm:inline h-3 w-px bg-brand-blue/15" />
+                <span className="hidden sm:inline text-[11px] uppercase tracking-wider inicio-ink-faint">
                   {new Date().toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
               </div>
             ) : (
               <div
                 data-hero-item
-                className="inline-flex items-center gap-2.5 mb-6 px-4 py-2 rounded-full inicio-glass text-xs font-medium uppercase tracking-[0.18em] text-white/60"
+                className="inline-flex items-center gap-2.5 mb-6 text-xs font-semibold uppercase tracking-[0.14em] inicio-ink-mute"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-teal opacity-40" />
@@ -72,11 +72,11 @@ export function InicioHero({
             {!compact && (
               <img
                 data-hero-item
-                src={brand.logoWhite}
+                src={brand.logo}
                 alt={brand.companyTitle}
                 width={480}
                 height={120}
-                className="h-12 sm:h-14 w-auto object-contain mb-8 opacity-95"
+                className="h-12 sm:h-14 w-auto object-contain mb-8"
                 loading="eager"
               />
             )}
@@ -88,17 +88,17 @@ export function InicioHero({
               {isLoggedIn ? (
                 <>
                   Tu operación,{" "}
-                  <span className="inicio-gradient-text">en un solo lugar</span>
+                  <span className="inicio-accent-text">en un solo lugar</span>
                 </>
               ) : (
                 <>
                   Gestión logística{" "}
-                  <span className="inicio-gradient-text">integral</span>
+                  <span className="inicio-accent-text">integral</span>
                 </>
               )}
             </h1>
 
-            <p data-hero-item className={`mt-5 text-white/55 max-w-lg leading-relaxed ${compact ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>
+            <p data-hero-item className={`mt-5 inicio-ink-mute max-w-lg leading-relaxed ${compact ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>
               {isLoggedIn ? (
                 isCliente ? (
                   <>Panel centralizado para tus reservas, documentos y el estado de tus embarques.</>
@@ -151,17 +151,11 @@ export function InicioHero({
                 )
               ) : (
                 <>
-                  <AuthFormTrigger
-                    mode="login"
-                    className="inline-flex items-center justify-center gap-2.5 py-3 px-6 rounded-2xl inicio-btn-primary text-white font-semibold text-sm transition-all duration-300"
-                  >
+                  <AuthFormTrigger mode="login" className={`${inicioButtonBase} inicio-btn-primary`}>
                     <Icon icon="lucide:log-in" width={18} height={18} />
                     Ingresar
                   </AuthFormTrigger>
-                  <AuthFormTrigger
-                    mode="registro"
-                    className="inline-flex items-center justify-center gap-2.5 py-3 px-6 rounded-2xl border border-white/15 bg-white/[0.04] text-white/90 font-medium text-sm backdrop-blur-sm transition-all duration-300 hover:bg-white/[0.08]"
-                  >
+                  <AuthFormTrigger mode="registro" className={`${inicioButtonBase} inicio-btn-ghost font-medium`}>
                     <Icon icon="lucide:user-plus" width={18} height={18} />
                     Solicitar acceso
                   </AuthFormTrigger>
@@ -170,7 +164,7 @@ export function InicioHero({
             </div>
 
             {!isLoggedIn && !compact && (
-              <div data-hero-item className="mt-10 flex flex-wrap gap-6 text-xs text-white/35">
+              <div data-hero-item className="mt-10 flex flex-wrap gap-6 text-xs inicio-ink-faint">
                 <span className="inline-flex items-center gap-2">
                   <Icon icon="lucide:shield-check" width={14} height={14} className="text-brand-teal" />
                   Datos en la nube
@@ -190,7 +184,7 @@ export function InicioHero({
           {compact && isLoggedIn && (
             <div data-hero-item className="hidden lg:block">
               <GlassCard className="p-6 sm:p-7" reveal={false}>
-                <p className="text-xs sm:text-sm uppercase tracking-[0.18em] text-brand-teal font-semibold mb-5">
+                <p className="text-xs sm:text-sm uppercase tracking-[0.14em] inicio-accent-text font-semibold mb-5">
                   Accesos rápidos
                 </p>
                 <div className="grid grid-cols-2 gap-3.5">
@@ -211,10 +205,10 @@ export function InicioHero({
                     <a
                       key={href}
                       href={withBase(href)}
-                      className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 min-h-[6.5rem] flex flex-col justify-center transition-colors hover:border-brand-teal/30 hover:bg-white/[0.06] group"
+                      className="inicio-tile rounded-md p-5 min-h-[6.5rem] flex flex-col justify-center group"
                     >
                       <Icon icon={icon} className="text-brand-teal mb-3" width={24} height={24} />
-                      <p className="text-sm font-semibold text-white/85 group-hover:text-white leading-snug">{label}</p>
+                      <p className="text-sm font-semibold inicio-ink leading-snug">{label}</p>
                     </a>
                   ))}
                 </div>
@@ -227,35 +221,32 @@ export function InicioHero({
               <GlassCard className="p-6 sm:p-7" reveal={false}>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-brand-teal font-semibold">Flujo operativo</p>
-                    <p className="text-white/45 text-sm mt-1">De la reserva al documento final</p>
+                    <p className="text-[11px] uppercase tracking-[0.14em] inicio-accent-text font-semibold">Flujo operativo</p>
+                    <p className="inicio-ink-mute text-sm mt-1">De la reserva al documento final</p>
                   </div>
-                  <div className="h-10 w-10 rounded-xl bg-brand-teal/15 flex items-center justify-center border border-brand-teal/25">
-                    <Icon icon="lucide:route" className="text-brand-teal" width={20} height={20} />
+                  <div className="inicio-icon-box h-10 w-10 rounded-md flex items-center justify-center">
+                    <Icon icon="lucide:route" width={20} height={20} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   {flowSteps.map(({ icon, label, sub }, i) => (
-                    <div
-                      key={label}
-                      className="relative rounded-2xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:border-brand-teal/25 hover:bg-white/[0.05]"
-                    >
-                      <span className="absolute top-3 right-3 text-[10px] font-bold text-white/15 tabular-nums">
+                    <div key={label} className="inicio-tile relative rounded-md p-4">
+                      <span className="absolute top-3 right-3 text-[10px] font-bold inicio-ink-faint tabular-nums">
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-teal/20 to-brand-teal/5 border border-brand-teal/20 flex items-center justify-center mb-3">
-                        <Icon icon={icon} className="text-brand-teal" width={20} height={20} />
+                      <div className="inicio-icon-box w-10 h-10 rounded-md flex items-center justify-center mb-3">
+                        <Icon icon={icon} width={20} height={20} />
                       </div>
-                      <p className="text-sm font-semibold text-white/90">{label}</p>
-                      <p className="text-[11px] text-white/40 mt-0.5">{sub}</p>
+                      <p className="text-sm font-semibold inicio-ink">{label}</p>
+                      <p className="text-[11px] inicio-ink-mute mt-0.5">{sub}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-white/8 flex items-center justify-between text-xs">
-                  <span className="text-white/40">Exportadores · Región del Maule</span>
-                  <span className="inline-flex items-center gap-1 text-brand-teal font-medium">
+                <div className="mt-5 pt-4 border-t inicio-line flex items-center justify-between text-xs">
+                  <span className="inicio-ink-mute">Exportadores · Región del Maule</span>
+                  <span className="inline-flex items-center gap-1 inicio-accent-text font-medium">
                     Ver módulos
                     <Icon icon="lucide:arrow-right" width={14} height={14} />
                   </span>

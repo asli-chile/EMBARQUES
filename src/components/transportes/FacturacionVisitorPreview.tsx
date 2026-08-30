@@ -64,7 +64,7 @@ export function FacturacionVisitorPreview() {
                   <p className="text-white font-semibold text-sm">Proforma TRA0042</p>
                   <p className="text-white/60 text-xs">A07016 · Agrícola Valle · $4.800 USD</p>
                 </div>
-                <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">PENDIENTE</span>
+                <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">SOLICITADA</span>
               </div>
 
               <div className="flex flex-col gap-3 flex-1">

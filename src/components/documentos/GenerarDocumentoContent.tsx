@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
@@ -240,6 +242,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
   const allTags = useMemo(() => tagGroups.flatMap((g) => g.tags), [tagGroups]);
 
   const { empresaNombres, isCliente, isLoading: authLoading } = useAuth();
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [formatos, setFormatos] = useState<FormatoDocumento[]>([]);
@@ -269,7 +272,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
 
     let q = supabase
@@ -278,6 +281,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
       .is("deleted_at", null)
       .order("correlativo", { ascending: false });
     if (isCliente && empresaNombres.length > 0) q = q.in("cliente", empresaNombres);
+    q = aplicarFiltroTemporada(q, temporadaActiva);
 
     const [opsRes, fmtRes] = await Promise.all([
       q,
@@ -289,7 +293,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
     if (opsRes.error) { setError(opsRes.error.message); return; }
     setOperaciones((opsRes.data ?? []) as Operacion[]);
     setFormatos((fmtRes.data ?? []) as FormatoDocumento[]);
-  }, [supabase, authLoading, empresaNombres, isCliente, tipoDoc]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, empresaNombres, isCliente, tipoDoc]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 

@@ -15,6 +15,7 @@ export const siteConfig = {
   ] as const,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
+    { labelKey: "tareas", id: "tareas", href: "/tareas", staffOnly: true },
     {
       labelKey: "reservas",
       id: "reservas",
@@ -60,6 +61,7 @@ export const siteConfig = {
         { labelKey: "configuracionTransportes", id: "configuracion-transportes", href: "/configuracion/transportes" },
         { labelKey: "consignatarios", id: "consignatarios", href: "/configuracion/consignatarios" },
         { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
+        { labelKey: "temporadas", id: "temporadas", href: "/configuracion/temporadas", superadminOnly: true },
       ],
     },
     { labelKey: "tracking", id: "tracking", href: "/tracking" },

@@ -6,6 +6,9 @@
   "scripts": {
     "create-admin": "node scripts/create-admin-user.mjs",
     "db:fix-clientes-403": "node scripts/run-fix-clientes-403.mjs",
+    "db:migrate": "node scripts/apply-migration.mjs",
+    "db:temporadas-inventario": "node scripts/temporadas-inventario.mjs",
+    "db:temporadas-mover": "node scripts/temporadas-mover-operaciones.mjs",
     "seed:operaciones": "node scripts/csv-to-operaciones-sql.mjs",
     "import:migracion-legacy": "node --env-file=.env scripts/import-migracion-legacy-json.mjs",
     "import:migracion-legacy:dry": "node --env-file=.env scripts/import-migracion-legacy-json.mjs --dry-run",

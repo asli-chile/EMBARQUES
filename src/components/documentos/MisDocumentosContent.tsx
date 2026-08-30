@@ -3,6 +3,8 @@ import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter } from "@/lib/auth/operacionesClienteScope";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -115,6 +117,7 @@ export function MisDocumentosContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.misDocumentos;
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const visibleTipos = isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO;
   const visibleTiposSet = useMemo(() => new Set<string>(visibleTipos), [visibleTipos]);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -179,7 +182,7 @@ export function MisDocumentosContent() {
   useEffect(() => { reloadCountsRef.current = reloadCounts; }, [reloadCounts]);
 
   const fetchOperaciones = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
     const baseCols =
       "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at";
@@ -187,12 +190,14 @@ export function MisDocumentosContent() {
 
     let q = supabase.from("operaciones").select(withNaCols).is("deleted_at", null);
     q = applyOperacionesClienteFilter(q, { isCliente, empresaNombres });
+    q = aplicarFiltroTemporada(q, temporadaActiva);
     let { data, error: fetchError } = await q.order("created_at", { ascending: false });
 
     // Fallback si la migración de no_aplica aún no está aplicada
     if (fetchError) {
       let q2 = supabase.from("operaciones").select(baseCols).is("deleted_at", null);
       q2 = applyOperacionesClienteFilter(q2, { isCliente, empresaNombres });
+      q2 = aplicarFiltroTemporada(q2, temporadaActiva);
       const fallback = await q2.order("created_at", { ascending: false });
       data = fallback.data;
       fetchError = fallback.error;
@@ -227,7 +232,7 @@ export function MisDocumentosContent() {
     setOperaciones(ops);
     setLoading(false);
     await reloadCounts(ops);
-  }, [supabase, authLoading, isCliente, empresaNombres, reloadCounts]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres, reloadCounts]);
 
   const fetchDocumentos = useCallback(async () => {
     if (!supabase || !selectedOperacion) return;

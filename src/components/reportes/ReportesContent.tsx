@@ -13,6 +13,15 @@ import {
   modulePageBg,
   moduleSectionTitle,
 } from "@/lib/ui/moduleStyles";
+import {
+  ESTADO_META,
+  estadosEnOrden,
+  etiquetaEstado,
+  normalizarEstado,
+  type GrupoEstado,
+} from "@/lib/operaciones/estados";
+import { aplicarFiltroTemporada } from "@/lib/temporadas";
+import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
 type DbOperacion = {
   id: string;
@@ -44,39 +53,30 @@ type AggregateByKey = {
   totalMargenReal: number;
 };
 
-const ESTADOS_OPTS = [
-  "PENDIENTE",
-  "EN PROCESO",
-  "EN TRÁNSITO",
-  "ARRIBADO",
-  "COMPLETADO",
-  "CANCELADO",
-  "ROLEADO",
-] as const;
+const ESTADOS_OPTS = estadosEnOrden();
 
-const ESTADO_CONFIG: Record<string, { color: string; bg: string; dot: string }> = {
-  PENDIENTE:     { color: "text-amber-700",   bg: "bg-amber-50",   dot: "bg-amber-400" },
-  "EN PROCESO":  { color: "text-blue-700",    bg: "bg-blue-50",    dot: "bg-blue-400" },
-  "EN TRÁNSITO": { color: "text-indigo-700",  bg: "bg-indigo-50",  dot: "bg-indigo-400" },
-  ARRIBADO:      { color: "text-cyan-700",    bg: "bg-cyan-50",    dot: "bg-cyan-400" },
-  COMPLETADO:    { color: "text-emerald-700", bg: "bg-emerald-50", dot: "bg-emerald-500" },
-  CANCELADO:     { color: "text-red-700",     bg: "bg-red-50",     dot: "bg-red-400" },
-  ROLEADO:       { color: "text-orange-700",  bg: "bg-orange-50",  dot: "bg-orange-400" },
+const ESTADO_CONFIG: Record<GrupoEstado, { color: string; bg: string; dot: string }> = {
+  COMERCIAL:    { color: "text-amber-700",   bg: "bg-amber-50",   dot: "bg-amber-400" },
+  COORDINACION: { color: "text-blue-700",    bg: "bg-blue-50",    dot: "bg-blue-400" },
+  TRANSITO:     { color: "text-indigo-700",  bg: "bg-indigo-50",  dot: "bg-indigo-400" },
+  DOCUMENTAL:   { color: "text-emerald-700", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+  CIERRE:       { color: "text-neutral-600", bg: "bg-neutral-50", dot: "bg-neutral-400" },
+  EXCEPCION:    { color: "text-red-700",     bg: "bg-red-50",     dot: "bg-red-400" },
 };
 
-const ESTADO_BAR: Record<string, string> = {
-  PENDIENTE:     "bg-amber-400",
-  "EN PROCESO":  "bg-blue-400",
-  "EN TRÁNSITO": "bg-indigo-400",
-  ARRIBADO:      "bg-cyan-400",
-  COMPLETADO:    "bg-emerald-500",
-  CANCELADO:     "bg-red-400",
-  ROLEADO:       "bg-orange-400",
+const ESTADO_BAR: Record<GrupoEstado, string> = {
+  COMERCIAL:    "bg-amber-400",
+  COORDINACION: "bg-blue-400",
+  TRANSITO:     "bg-indigo-400",
+  DOCUMENTAL:   "bg-emerald-500",
+  CIERRE:       "bg-neutral-400",
+  EXCEPCION:    "bg-red-400",
 };
 
 export function ReportesContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading, isSuperadmin, isAdmin, isEjecutivo, profile } = useAuth();
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const canViewReportes =
     isSuperadmin || isAdmin || isEjecutivo || profile?.rol === "operador";
@@ -101,7 +101,7 @@ export function ReportesContent() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!supabase || authLoading) return;
+    if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
     setError(null);
 
@@ -117,6 +117,9 @@ export function ReportesContent() {
       clientesQ = clientesQ.in("cliente", empresaNombres);
       navierasQ = navierasQ.in("cliente", empresaNombres);
     }
+    baseQuery = aplicarFiltroTemporada(baseQuery, temporadaActiva);
+    clientesQ = aplicarFiltroTemporada(clientesQ, temporadaActiva);
+    navierasQ = aplicarFiltroTemporada(navierasQ, temporadaActiva);
 
     const [opsRes, clientesRes, navierasRes] = await Promise.all([
       baseQuery.order("ingreso", { ascending: false }),
@@ -132,7 +135,7 @@ export function ReportesContent() {
     setClientesOpts([...new Set((clientesRes.data ?? []).map((r: any) => r.cliente).filter(Boolean))].sort((a, b) => a.localeCompare(b, sortLocale, { sensitivity: "base" })));
     setNavierasOpts([...new Set((navierasRes.data ?? []).map((r: any) => r.naviera).filter(Boolean))].sort((a, b) => a.localeCompare(b, sortLocale, { sensitivity: "base" })));
     setLoading(false);
-  }, [supabase, authLoading, empresaNombres, locale]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, empresaNombres, locale]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -255,14 +258,14 @@ export function ReportesContent() {
   if (loading && !rows.length) {
     return (
       <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-        <div className="max-w-[1600px] mx-auto space-y-4 animate-pulse">
-          <div className="h-24 bg-brand-blue/20 rounded-2xl" />
+        <div className="max-w-[1600px] mx-auto space-y-4">
+          <div className="motion-skeleton h-24 bg-brand-blue/20 rounded-2xl" />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-24 bg-white rounded-2xl border border-brand-blue/15" />)}
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="motion-skeleton motion-skeleton-surface h-24 bg-white rounded-2xl border border-brand-blue/15" />)}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="h-56 bg-white rounded-2xl border border-brand-blue/15" />
-            <div className="h-56 bg-white rounded-2xl border border-brand-blue/15" />
+            <div className="motion-skeleton motion-skeleton-surface h-56 bg-white rounded-2xl border border-brand-blue/15" />
+            <div className="motion-skeleton motion-skeleton-surface h-56 bg-white rounded-2xl border border-brand-blue/15" />
           </div>
         </div>
       </main>
@@ -330,7 +333,7 @@ export function ReportesContent() {
       </div>
 
       <div className="p-3 sm:p-4 lg:p-5">
-      <div className="max-w-[1600px] mx-auto space-y-4 animate-fade-in-up">
+      <div className="motion-enter max-w-[1600px] mx-auto space-y-4">
 
         {/* ── Filtros ── */}
         <div className={`${moduleCard} p-4`}>
@@ -375,7 +378,7 @@ export function ReportesContent() {
               <select value={filters.estado} onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
                 className={moduleInput}>
                 <option value="">{tr.allStates}</option>
-                {ESTADOS_OPTS.map((e) => <option key={e} value={e}>{e}</option>)}
+                {ESTADOS_OPTS.map((e) => <option key={e} value={e}>{etiquetaEstado(e)}</option>)}
               </select>
             </div>
             <div>
@@ -440,15 +443,17 @@ export function ReportesContent() {
                 </div>
                 <div className="p-4 space-y-2.5">
                   {byStatus.map(([estado, count]) => {
-                    const cfg = ESTADO_CONFIG[estado] ?? { color: "text-neutral-600", bg: "bg-neutral-50", dot: "bg-neutral-400" };
-                    const bar = ESTADO_BAR[estado] ?? "bg-neutral-400";
+                    const codigo = normalizarEstado(estado);
+                    const grupo = codigo ? ESTADO_META[codigo].grupo : null;
+                    const cfg = grupo ? ESTADO_CONFIG[grupo] : { color: "text-neutral-600", bg: "bg-neutral-50", dot: "bg-neutral-400" };
+                    const bar = grupo ? ESTADO_BAR[grupo] : "bg-neutral-400";
                     const pct = filteredRows.length > 0 ? (count / filteredRows.length) * 100 : 0;
                     return (
                       <div key={estado} className="space-y-1">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                            <span className="text-base text-neutral-700 truncate font-medium">{estado}</span>
+                            <span className="text-base text-neutral-700 truncate font-medium">{etiquetaEstado(estado) || estado}</span>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className={`text-sm font-semibold px-2 py-0.5 rounded-lg ${cfg.bg} ${cfg.color}`}>{count}</span>

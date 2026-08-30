@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth/AuthContext";
+import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
 
 type ConfigGuardProps = {
   children: React.ReactNode;
@@ -19,11 +20,7 @@ export function ConfigGuard({ children, forbiddenMessage, allowAdmin = true }: C
     "No tienes acceso a Configuración. Solo administradores pueden gestionarla.";
 
   if (isLoading) {
-    return (
-      <main className="flex-1 min-h-0 overflow-auto bg-neutral-100 p-6 flex items-center justify-center" role="main">
-        <p className="text-neutral-500">Cargando…</p>
-      </main>
-    );
+    return <ModuleSoftFallback />;
   }
 
   if (!profile) {
