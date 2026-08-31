@@ -110,7 +110,7 @@ const Header = () => {
   }, [])
 
   useEffect(() => {
-    const CACHE_KEY = 'asli_dolar_v1'
+    const CACHE_KEY = 'asli_dolar_v2'
     const fetchDolarObservado = async () => {
       try {
         const cached = sessionStorage.getItem(CACHE_KEY)
@@ -123,21 +123,15 @@ const Header = () => {
           }
         }
         setLoadingDolar(true)
-        // Proxy same-origin: evita CORS de mindicador.cl en el navegador
+        // Proxy same-origin: la API del Banco Central no admite CORS desde el navegador
         const response = await fetch('/api/dolar')
         if (!response.ok) return
         const data = await response.json()
-        let next = null
-        if (data?.valor) {
-          next = { valor: data.valor, fecha: data.fecha }
-        } else if (data?.serie?.length > 0) {
-          const valorMasReciente = data.serie[0]
-          next = { valor: valorMasReciente.valor, fecha: valorMasReciente.fecha }
-        }
-        if (next) {
-          setDolarObservado(next)
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...next, cachedAt: Date.now() }))
-        }
+        if (!data?.valor) return
+
+        const next = { valor: data.valor, fecha: data.fecha }
+        setDolarObservado(next)
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...next, cachedAt: Date.now() }))
       } catch {
         // silencioso
       } finally {

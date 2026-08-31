@@ -1,59 +1,92 @@
 /**
- * Proxy del dólar observado para asli.cl.
- * Evita CORS y tolera caídas de mindicador.cl con un fallback.
+ * Dólar observado desde la Base de Datos Estadísticos (BDE) del Banco Central de Chile.
+ * Única fuente admitida. Si la BDE no responde, el endpoint falla en vez de
+ * sustituir el valor por un tipo de cambio de mercado.
  *
- * Respuesta normalizada: { valor, fecha, fuente }
+ * Serie: F073.TCO.PRE.Z.D — "Tipo de cambio nominal (dólar observado $CLP/USD)".
+ * Requiere BCCH_API_TOKEN (se obtiene gratis en https://si3.bcentral.cl/siete/ES/Siete/API).
+ *
+ * Respuesta normalizada: { valor, fecha, fuente: 'bcentral' }
  */
-const MINDICADOR_URL = 'https://mindicador.cl/api/dolar'
-const FALLBACK_URL = 'https://open.er-api.com/v6/latest/USD'
+const BCCH_ENDPOINT = 'https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx'
+const SERIE_DOLAR_OBSERVADO = 'F073.TCO.PRE.Z.D'
 const CACHE_TTL_MS = 30 * 60 * 1000
+
+// La BDE publica un valor por día hábil. La ventana cubre feriados largos.
+const DIAS_VENTANA = 10
 
 let cache = { at: 0, payload: null }
 
-function withTimeout(ms) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), ms)
-  return { signal: controller.signal, clear: () => clearTimeout(timer) }
+function isoDate(date) {
+  return date.toISOString().slice(0, 10)
 }
 
-async function fetchJson(url, ms = 7000) {
-  const t = withTimeout(ms)
+/** La BDE devuelve las fechas como DD-MM-YYYY. */
+function parseFechaBde(indexDateString) {
+  const [dia, mes, anio] = String(indexDateString).split('-')
+  if (!dia || !mes || !anio) return null
+  return `${anio}-${mes}-${dia}`
+}
+
+function buildUrl(token) {
+  const hasta = new Date()
+  const desde = new Date(hasta)
+  desde.setDate(desde.getDate() - DIAS_VENTANA)
+
+  const params = new URLSearchParams({
+    token,
+    function: 'GetSeries',
+    timeseries: SERIE_DOLAR_OBSERVADO,
+    firstdate: isoDate(desde),
+    lastdate: isoDate(hasta),
+  })
+  return `${BCCH_ENDPOINT}?${params}`
+}
+
+async function fetchJson(url, ms) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ms)
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json' },
-      signal: t.signal,
+      signal: controller.signal,
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return await res.json()
   } finally {
-    t.clear()
+    clearTimeout(timer)
   }
 }
 
-function fromMindicator(data) {
-  if (data?.serie?.length > 0) {
-    const latest = data.serie[0]
+/**
+ * Toma la última observación publicada. Los días sin publicación llegan como
+ * value "NaN" con statusCode distinto de "OK" y deben descartarse.
+ */
+function fromBancoCentral(data) {
+  if (data?.Codigo !== 0 && data?.Codigo !== undefined) {
+    throw new Error(data?.Descripcion || `BDE Codigo ${data.Codigo}`)
+  }
+
+  const obs = data?.Series?.Obs
+  if (!Array.isArray(obs)) return null
+
+  for (let i = obs.length - 1; i >= 0; i -= 1) {
+    const item = obs[i]
+    if (item?.statusCode !== 'OK') continue
+    const valor = Number(item.value)
+    if (!Number.isFinite(valor)) continue
+
+    const fecha = parseFechaBde(item.indexDateString)
+    if (!fecha) continue
+
     return {
-      valor: latest.valor,
-      fecha: latest.fecha,
-      fuente: 'mindicador',
-      serie: data.serie.slice(0, 5),
+      valor: Math.round(valor * 100) / 100,
+      fecha,
+      fuente: 'bcentral',
     }
   }
-  if (typeof data?.valor === 'number') {
-    return { valor: data.valor, fecha: data.fecha ?? new Date().toISOString(), fuente: 'mindicador' }
-  }
-  return null
-}
 
-function fromOpenErApi(data) {
-  const clp = data?.rates?.CLP
-  if (typeof clp !== 'number' || !Number.isFinite(clp)) return null
-  return {
-    valor: Math.round(clp * 100) / 100,
-    fecha: data.time_last_update_utc || new Date().toISOString(),
-    fuente: 'exchangerate',
-  }
+  return null
 }
 
 export default async function handler(req, res) {
@@ -62,50 +95,44 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  const token = process.env.BCCH_API_TOKEN
+  if (!token) {
+    return res.status(500).json({
+      error: 'bcch_token_missing',
+      message: 'Falta BCCH_API_TOKEN para consultar la API del Banco Central',
+    })
+  }
+
   const now = Date.now()
   if (cache.payload && now - cache.at < CACHE_TTL_MS) {
     res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
     res.setHeader('X-Cache', 'HIT')
+    res.setHeader('X-Fuente', 'bcentral')
     return res.status(200).json(cache.payload)
   }
 
-  // 1) mindicador (dólar observado Chile)
   try {
-    const data = await fetchJson(MINDICADOR_URL, 6000)
-    const payload = fromMindicator(data)
+    const data = await fetchJson(buildUrl(token), 8000)
+    const payload = fromBancoCentral(data)
     if (payload) {
       cache = { at: now, payload }
       res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
       res.setHeader('X-Cache', 'MISS')
-      res.setHeader('X-Fuente', 'mindicador')
+      res.setHeader('X-Fuente', 'bcentral')
       return res.status(200).json(payload)
     }
   } catch {
-    // continuar a fallback
-  }
-
-  // 2) fallback USD→CLP (mercado)
-  try {
-    const data = await fetchJson(FALLBACK_URL, 7000)
-    const payload = fromOpenErApi(data)
-    if (payload) {
-      cache = { at: now, payload }
-      res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
-      res.setHeader('X-Cache', 'MISS')
-      res.setHeader('X-Fuente', 'exchangerate')
-      return res.status(200).json(payload)
-    }
-  } catch {
-    // continuar a stale
+    // Cae al valor cacheado, que también proviene de la BDE.
   }
 
   if (cache.payload) {
     res.setHeader('X-Cache', 'STALE')
+    res.setHeader('X-Fuente', 'bcentral')
     return res.status(200).json(cache.payload)
   }
 
   return res.status(503).json({
     error: 'dolar_unavailable',
-    message: 'No se pudo obtener el tipo de cambio',
+    message: 'La API del Banco Central no devolvió el dólar observado',
   })
 }
