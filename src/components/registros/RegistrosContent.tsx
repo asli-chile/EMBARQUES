@@ -1493,6 +1493,7 @@ export function RegistrosContent() {
 
     if (pendientes.length) {
       const rows = pendientes.map((r) => ({
+        operacion_id: r.id,
         cliente: r.cliente || null,
         booking: r.booking || null,
         naviera: r.naviera || null,

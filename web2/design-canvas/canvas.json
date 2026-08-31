@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 4600, "title": "A · Consola de Operaciones" },
+    { "file": "Editorial.dc.html", "x": 1620, "y": 0, "w": 1440, "h": 5600, "title": "B · Editorial Cinético" },
+    { "file": "Humano.dc.html", "x": 3240, "y": 0, "w": 1440, "h": 4800, "title": "C · Cálido / Humano" }
+  ],
+  "annotations": [
+    { "id": "intro", "x": 0, "y": -170, "w": 980, "text": "ASLI — 3 rupturas de diseño para la home (mockups estáticos), totalmente distintas al sitio actual. Cada una con tipografía y paleta propias; solo el ADN cromático de ASLI (teal / navy / verde) se mantiene como hilo. Elige una y la llevo a alta fidelidad en el artboard principal." }
+  ],
+  "launch": { "view": "canvas" }
+}

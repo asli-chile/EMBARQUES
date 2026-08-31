@@ -48,6 +48,15 @@
   letter-spacing: -0.02em;
 }
 
+/* Título del hero: se estira verticalmente para ganar presencia sin subir el
+   tamaño de fuente ni ocupar más ancho. Va en un span interno porque el <h1>
+   usa transform para la animación de entrada. */
+.inicio-hero-title-stretch {
+  display: inline-block;
+  transform: scaleY(1.18);
+  transform-origin: left center;
+}
+
 /* ── Texto ─────────────────────────────────────────────────────────────── */
 
 .inicio-ink {

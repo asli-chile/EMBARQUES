@@ -48,6 +48,21 @@ Fuente: `lib/brand.ts` — `colors` y `colorPalette`. VS Code muestra un cuadrit
 | `brand-gray` | <span style="display:inline-block;width:14px;height:14px;background:#6B7280;border:1px solid #333;vertical-align:middle;border-radius:2px;"></span> | `#6B7280` | Gris: texto secundario, bordes |
 | `brand-red` | <span style="display:inline-block;width:14px;height:14px;background:#B91C1C;border:1px solid #333;vertical-align:middle;border-radius:2px;"></span> | `#B91C1C` | Rojo: errores, alertas |
 
+### Superficies del dashboard (tema oscuro)
+
+El dashboard es la única pantalla con fondo oscuro: es un panel de monitoreo pensado para verse en pantalla grande y a distancia. Sus superficies están tokenizadas en `tailwind.config.ts` para no repetir hexadecimales sueltos en el componente.
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `dash-bg` | `#060B17` | Fondo de la página completa |
+| `dash-header` | `#0A1328` | Barra superior y overlays sobre el mapa |
+| `dash-surface` | `#0D1830` | Fondo de cards y skeletons |
+| `dash-surface-hover` | `#12203C` | Hover de las tarjetas KPI (que son enlaces) |
+| `dash-control` | `#111E38` | Botones y controles del header |
+| `dash-control-hover` | `#172748` | Hover de esos controles |
+
+Los acentos usan la escala `cyan-*` de Tailwind (más `emerald`, `amber`, `red` y `violet` para estados), no hexadecimales propios. Si necesitas un color nuevo aquí, agrégalo como token antes de usarlo.
+
 ### Escala neutra
 
 | Token | Uso |

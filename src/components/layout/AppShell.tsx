@@ -15,8 +15,8 @@ import { getRouteChrome, type RouteChrome } from "@/lib/ui/routeChrome";
 import { prefetchFrequentRoutes } from "@/lib/routePrefetch";
 
 /** Cada ruta en su propio chunk: evita cargar MapLibre/xlsx/ag-grid en /inicio (crítico en Android + Vite dev). */
-const LazyDashboardContent = lazy(() =>
-  import("@/components/dashboard").then((m) => ({ default: m.DashboardContent })),
+const LazyDashboardPanel = lazy(() =>
+  import("@/components/dashboard").then((m) => ({ default: m.DashboardPanel })),
 );
 const LazyInicioContent = lazy(() =>
   import("@/components/inicio").then((m) => ({ default: m.InicioContent })),
@@ -161,7 +161,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
   const mainContent =
     pathname === "/dashboard" ? (
       <Sus>
-        <LazyDashboardContent />
+        <LazyDashboardPanel />
       </Sus>
     ) : pathname === "/inicio" ? (
       <Sus>

@@ -274,6 +274,30 @@ export function ReservaAsliContent() {
   const isPendiente = (op: Operacion) =>
     !op.transporte || !op.chofer || !op.patente_camion || !op.contenedor || !op.tramo;
 
+  /**
+   * Estado que corresponde a la operación después de guardar la asignación.
+   *
+   * FLUJO-DE-TRABAJO.md §4.10 asigna `CARGA_COORDINADA` cuando la unidad queda
+   * identificada. Solo avanza: si la operación ya está más adelante en el flujo
+   * (o es una excepción como CANCELADA / ROLEADA) se deja como está, para no
+   * retroceder una operación que ya zarpó al reeditar un dato de transporte.
+   */
+  const estadoTrasAsignar = (
+    estadoActual: string | null,
+    datos: { transporte: string; chofer: string; patente_camion: string; contenedor: string; tramo: string }
+  ): string | null => {
+    const asignacionCompleta = Boolean(
+      datos.transporte && datos.chofer && datos.patente_camion && datos.contenedor && datos.tramo
+    );
+    if (!asignacionCompleta) return null;
+
+    const codigo = normalizarEstado(estadoActual);
+    if (codigo && ESTADO_META[codigo].grupo === "EXCEPCION") return null;
+    if (codigo && ESTADO_META[codigo].orden >= ESTADO_META.CARGA_COORDINADA.orden) return null;
+
+    return "CARGA_COORDINADA";
+  };
+
   const filteredOperaciones = useMemo(() => {
     let list = operaciones;
     if (filterPending) list = list.filter(isPendiente);
@@ -677,6 +701,15 @@ export function ReservaAsliContent() {
       observaciones: formData.observaciones || null,
     };
 
+    const nuevoEstado = estadoTrasAsignar(selectedOperacion?.estado_operacion ?? null, {
+      transporte: formData.transporte,
+      chofer: formData.chofer,
+      patente_camion: formData.patente_camion,
+      contenedor: formData.contenedor,
+      tramo: formData.tramo,
+    });
+    if (nuevoEstado) updates.estado_operacion = nuevoEstado;
+
     const { error: err } = await supabase
       .from("operaciones")
       .update(updates)
@@ -687,7 +720,12 @@ export function ReservaAsliContent() {
     if (err) {
       setError(err.message);
     } else {
-      sileo.success({ title: "Reserva de transporte guardada exitosamente" });
+      sileo.success({
+        title: "Reserva de transporte guardada exitosamente",
+        description: nuevoEstado
+          ? `La operación pasó a ${etiquetaEstado(nuevoEstado)}.`
+          : undefined,
+      });
       void fetchData();
 
       // Notificar al equipo

@@ -1311,7 +1311,7 @@ export function MisReservasContent() {
       const { error: updateError } = await supabase.from("operaciones").update({ enviado_transporte: true, tipo_reserva_transporte: "externa" }).in("id", toSend.map((op) => op.id));
       if (updateError) { setActionLoading(false); sileo.error({ title: updateError.message }); return; }
 
-      const rows = toSend.map((op) => ({ cliente: op.cliente || null, booking: op.booking || null, naviera: op.naviera || null, nave: op.nave || null, pod: op.pod || null, etd: op.etd || null }));
+      const rows = toSend.map((op) => ({ operacion_id: op.id, cliente: op.cliente || null, booking: op.booking || null, naviera: op.naviera || null, nave: op.nave || null, pod: op.pod || null, etd: op.etd || null }));
       const { error: insertError } = await supabase.from("transportes_reservas_ext").insert(rows);
       if (insertError) { setActionLoading(false); sileo.error({ title: insertError.message }); return; }
     }

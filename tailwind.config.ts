@@ -17,6 +17,13 @@ const config: Config = {
         "brand-olive": "#669900",
         "brand-gray": "#6B7280",
         "brand-red": "#B91C1C",
+        /* Superficies del dashboard (tema oscuro). Ver docs/ESTILOS-VISUALES.md */
+        "dash-bg": "#060B17",
+        "dash-header": "#0A1328",
+        "dash-surface": "#0D1830",
+        "dash-surface-hover": "#12203C",
+        "dash-control": "#111E38",
+        "dash-control-hover": "#172748",
       },
       /* Las animaciones viven en src/styles/motion.css, no aquí: un solo lugar
          donde buscarlas. Esto solo expone los tokens como utilidades de Tailwind

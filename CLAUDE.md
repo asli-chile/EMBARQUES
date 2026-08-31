@@ -245,6 +245,17 @@ Tabla de listas de valores del sistema (monedas, tipos de carga, etc.).
 
 ---
 
+## Dashboard
+
+`/dashboard` monta `DashboardPanel`, que resuelve el acceso por rol (usuario externo → `DashboardVisitorContent`; sin rol → `RoleForbidden`) y alterna entre dos vistas con las pestañas de `DashboardViewTabs`:
+
+| Vista | Componente | Para qué sirve |
+|-------|-----------|----------------|
+| **En curso** | `DashboardContent` | Operación del día: alertas de corte documental y fin de stacking, próximos zarpes a 7 días, transporte pendiente, mapa de puertos. Filtra por la temporada activa. |
+| **Histórico** | `DashboardHistoricoContent` | Volumen acumulado con selector de temporada: operaciones, contenedores, pallets, kilos netos y cajas, más desglose por mes de zarpe, tipo de unidad y especie. Excluye las canceladas, porque nunca movieron carga. |
+
+Las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas operaciones lo tienen cargado) y un guion cuando nadie lo llenó. Es deliberado: `pallets`, `peso_neto` y las cajas de 25/5 kg están casi vacíos en producción, y un cero se leería como un error del dashboard en vez de como un vacío de captura.
+
 ## Módulo de Transportes
 
 ### Flujo completo
@@ -429,6 +440,36 @@ supabase/migrations/20260829000007_temporada_2025_2026_renumerar.sql
 - La cuarta unifica los cuatro textos heredados de la importación (`CHERRY 25-26`, `2026`, `TEMP 25-26`, `2025-2026`) en `2025-2026` y renumera esa temporada desde `A00001` en orden de ingreso.
 
 Para revisar el estado de las temporadas en la base: `npm run db:temporadas-inventario`.
+
+Dashboard:
+
+```
+supabase/migrations/20260830000001_dashboard_resumen_rpc.sql
+```
+
+Crea la función `public.dashboard_resumen(p_temporada, p_empresas)`, que devuelve en un solo JSON todos los agregados del dashboard (KPIs, estados, próximos zarpes, top clientes/navieras/especies, conteo por puerto, vía marítima/aérea y zarpes por semana), más los índices de `etd`, `corte_documental` y `fin_stacking` que sostienen sus filtros de fecha.
+
+Es `SECURITY INVOKER`: las políticas RLS de `operaciones` siguen aplicando al usuario que llama, y los parámetros solo replican los filtros que el frontend ya hacía. **Mientras no se aplique, el dashboard sigue calculando los agregados en el navegador**; el cambio de `DashboardContent.tsx` para consumir la función queda pendiente de verificar la migración contra la base.
+
+Dueño de reserva:
+
+```
+supabase/migrations/20260831000001_dueno_reserva_catalogo.sql
+```
+
+Convierte el campo "Dueño de reserva" de `Crear reserva` en un catálogo de base de datos: siembra `catalogos` con `categoria = 'dueno_reserva'` (ASLI, CHILFRESH, SURLOGISTICA), incorpora cualquier otro valor que ya exista en `operaciones.dueno_reserva` y agrega la política de `INSERT` sobre `catalogos` para el personal interno (`superadmin`, `admin`, `ejecutivo`, `operador`), que antes solo tenía lectura.
+
+**Mientras no se aplique, el combobox aparecerá vacío** (no hay valores sembrados) y el alta de empresas nuevas fallará por RLS.
+
+Transportes:
+
+```
+supabase/migrations/20260831000002_reservas_ext_operacion_id.sql
+```
+
+Agrega `transportes_reservas_ext.operacion_id` (FK a `operaciones`, `ON DELETE SET NULL`) con su índice, y hace backfill del histórico por número de booking **solo cuando ese booking identifica una única operación viva**; si hay ambigüedad la deja en `NULL` a propósito.
+
+Antes el cruce entre la reserva externa y su operación se hacía comparando el texto del booking con `.limit(1)`, de modo que dos embarques con el mismo booking podían intercambiar instructivo y PDF de booking. **Mientras no se aplique, las reservas externas nuevas no guardarán el vínculo** y la pantalla las tratará como reservas manuales (datos del embarque editables a mano, como antes).
 
 Se pueden aplicar con `npm run db:migrate -- <archivo.sql>` si existe `DATABASE_URL` en `.env.local`, o pegando el SQL en el editor de Supabase.
 

@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <style>
+    :root{
+      --paper:#F5EEE3; --paper2:#EFE6D6; --ink:#2A2118; --teal:#0C6B63; --olive:#5B6B3A; --clay:#B5552E; --gold:#C99A3E;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    h1,h2,h3,h4{font-family:"Newsreader","Georgia",serif;margin:0;font-weight:500;letter-spacing:-.01em;line-height:1.1;color:var(--ink)}
+    p{margin:0;color:#4A3F31}
+    a{color:var(--teal);text-decoration:none}
+    a:hover{color:var(--clay)}
+    em{font-style:italic;color:var(--clay)}
+    .wrap{max-width:1180px;margin:0 auto;padding:0 46px}
+    .label{font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--olive)}
+    .btn{display:inline-flex;align-items:center;gap:9px;font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:15px;
+      padding:14px 26px;border-radius:999px;border:1px solid var(--ink);transition:.2s}
+    .btn-p{background:var(--teal);border-color:var(--teal);color:var(--paper)}
+    .btn-p:hover{background:var(--ink);border-color:var(--ink)}
+    .btn-g:hover{background:var(--ink);color:var(--paper)}
+  </style>
+</helmet>
+
+<div style="background:var(--paper)">
+
+  <!-- NAV -->
+  <header style="position:sticky;top:0;z-index:30;background:rgba(245,238,227,.9);backdrop-filter:blur(10px);border-bottom:1px solid rgba(42,33,24,.14)">
+    <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:76px">
+      <div style="display:flex;align-items:baseline;gap:12px">
+        <div style="font-family:'Newsreader',serif;font-weight:600;font-size:24px;letter-spacing:-.02em">ASLI</div>
+        <span style="font-family:'Newsreader',serif;font-style:italic;font-size:15px;color:var(--olive)">logística &amp; comercio exterior</span>
+      </div>
+      <nav class="label" style="display:flex;gap:26px;color:var(--ink)">
+        <a style="color:inherit">Historia</a><a style="color:inherit">Servicios</a><a style="color:inherit">Proceso</a><a style="color:inherit">Equipo</a><a style="color:inherit">Tracking</a>
+      </nav>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="label" style="border:1px solid rgba(42,33,24,.25);padding:6px 12px;border-radius:999px;color:var(--ink)">USD $945,30</span>
+        <a class="btn btn-p">Conversemos</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="wrap" style="padding:76px 46px 68px;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center">
+    <div>
+      <span class="label">Asesoría logística · Curicó, Maule · desde 2021</span>
+      <h1 style="font-size:60px;margin-top:22px;font-weight:400">
+        En tu operación,<br>ASLI está en <em>cada paso</em>.
+      </h1>
+      <p style="font-size:18px;line-height:1.7;max-width:32rem;margin-top:24px">
+        Acompañamos a exportadores, importadores y PYMEs del agro — fruta fresca, contenedores,
+        carga aérea y marítima. Documentación, navieras, aduanas y seguimiento, con trato humano
+        y respuestas cuando las necesitas.
+      </p>
+      <div style="display:flex;gap:12px;margin-top:32px">
+        <a class="btn btn-p">Ver servicios →</a>
+        <a class="btn btn-g">Nuestra historia</a>
+      </div>
+    </div>
+    <div style="position:relative">
+      <div style="aspect-ratio:4/5;border-radius:220px 220px 24px 24px;overflow:hidden;background:linear-gradient(160deg,#0C6B63,#5B6B3A 60%,#C99A3E);position:relative">
+        <div style="position:absolute;inset:0;background:radial-gradient(120% 60% at 30% 20%,rgba(255,255,255,.22),transparent 55%)"></div>
+        <div style="position:absolute;left:26px;bottom:24px;color:var(--paper)">
+          <div style="font-family:'Newsreader',serif;font-size:20px;font-weight:600">Curicó · Región del Maule</div>
+          <div style="font-size:13px;opacity:.85;margin-top:2px">Nuestra base operativa</div>
+        </div>
+        <div style="position:absolute;right:20px;top:18px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)">[ foto fachada ]</div>
+      </div>
+      <div style="position:absolute;-webkit-backdrop-filter:blur(4px);left:-28px;bottom:52px;background:var(--paper);border:1px solid rgba(42,33,24,.15);border-radius:18px;padding:16px 20px;box-shadow:0 18px 40px rgba(42,33,24,.14)">
+        <div class="label" style="color:var(--olive)">Desde</div>
+        <div style="font-family:'Newsreader',serif;font-size:32px;font-weight:600;color:var(--teal)">2021</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section style="background:var(--paper2);border-top:1px solid rgba(42,33,24,.12);border-bottom:1px solid rgba(42,33,24,.12)">
+    <div class="wrap" style="padding:40px 46px;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;text-align:center">
+      <div><div style="font-family:'Newsreader',serif;font-size:40px;font-weight:600;color:var(--teal)">2021</div><div class="label" style="margin-top:6px">Fundación</div></div>
+      <div><div style="font-family:'Newsreader',serif;font-size:40px;font-weight:600;color:var(--teal)">9</div><div class="label" style="margin-top:6px">Líneas de servicio</div></div>
+      <div><div style="font-family:'Newsreader',serif;font-size:40px;font-weight:600;color:var(--teal)">15+</div><div class="label" style="margin-top:6px">Navieras y aerolíneas</div></div>
+      <div><div style="font-family:'Newsreader',serif;font-size:40px;font-weight:600;color:var(--teal)">24/7</div><div class="label" style="margin-top:6px">Operación conectada</div></div>
+    </div>
+  </section>
+
+  <!-- HISTORIA / quote -->
+  <section class="wrap" style="padding:88px 46px;display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:start">
+    <div>
+      <span class="label">Nuestra historia</span>
+      <h2 style="font-size:38px;margin-top:16px;font-weight:400">
+        Nacimos en Curicó para acercar la <em>logística grande</em> a quien exporta de verdad
+      </h2>
+    </div>
+    <div>
+      <div style="display:flex;gap:18px;align-items:center">
+        <div style="width:66px;height:66px;border-radius:999px;background:linear-gradient(150deg,var(--clay),var(--gold));flex-shrink:0"></div>
+        <div>
+          <div style="font-family:'Newsreader',serif;font-size:18px;font-weight:600">Mario Basáez</div>
+          <div class="label">Fundador y Gerente General</div>
+        </div>
+      </div>
+      <p style="font-family:'Newsreader',serif;font-size:26px;line-height:1.4;font-weight:400;margin-top:22px;color:var(--ink)">
+        "Asesorar, acompañar y respaldar a los exportadores, ayudándolos a operar con el mismo
+        estándar de las grandes compañías."
+      </p>
+      <p style="margin-top:20px;font-size:16px;line-height:1.75">
+        Para muchos productores medianos, la logística no es solo un costo — es la barrera que frena
+        el crecimiento. Por eso ASLI existe como equipo cercano y experto: explicamos en lenguaje claro,
+        armamos la ruta multimodal, cuidamos aduanas y certificados, y seguimos hasta el destino.
+      </p>
+    </div>
+  </section>
+
+  <!-- SERVICIOS -->
+  <section style="background:var(--paper2)">
+    <div class="wrap" style="padding:80px 46px">
+      <span class="label">Lo que hacemos por ti</span>
+      <h2 style="font-size:40px;margin-top:14px;font-weight:400;max-width:22ch">Servicios logísticos con <em>acompañamiento real</em></h2>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px">
+        <article style="background:var(--paper);border:1px solid rgba(42,33,24,.13);border-radius:22px;padding:28px">
+          <div style="font-family:'Newsreader',serif;font-style:italic;font-size:24px;color:var(--clay)">01</div>
+          <h3 style="font-size:21px;margin-top:8px;font-weight:600">Asesoría en Exportaciones</h3>
+          <p style="font-size:14px;margin-top:10px">Documentación, navieras y aduanas coordinadas — carga lista para salir sin sorpresas.</p>
+        </article>
+        <article style="background:var(--paper);border:1px solid rgba(42,33,24,.13);border-radius:22px;padding:28px">
+          <div style="font-family:'Newsreader',serif;font-style:italic;font-size:24px;color:var(--clay)">02</div>
+          <h3 style="font-size:21px;margin-top:8px;font-weight:600">Asesoría en Importaciones</h3>
+          <p style="font-size:14px;margin-top:10px">Trámites aduaneros, tiempos reales y coordinación de ingreso etapa por etapa.</p>
+        </article>
+        <article style="background:var(--paper);border:1px solid rgba(42,33,24,.13);border-radius:22px;padding:28px">
+          <div style="font-family:'Newsreader',serif;font-style:italic;font-size:24px;color:var(--clay)">03</div>
+          <h3 style="font-size:21px;margin-top:8px;font-weight:600">Asesoría Documental</h3>
+          <p style="font-size:14px;margin-top:10px">Certificados, permisos y papelería aduanera sin laberinto.</p>
+        </article>
+        <article style="background:var(--paper);border:1px solid rgba(42,33,24,.13);border-radius:22px;padding:28px">
+          <div style="font-family:'Newsreader',serif;font-style:italic;font-size:24px;color:var(--clay)">04</div>
+          <h3 style="font-size:21px;margin-top:8px;font-weight:600">Transporte Marítimo</h3>
+          <p style="font-size:14px;margin-top:10px">Las principales navieras del mundo, según plazo, producto y presupuesto.</p>
+        </article>
+        <article style="background:var(--paper);border:1px solid rgba(42,33,24,.13);border-radius:22px;padding:28px">
+          <div style="font-family:'Newsreader',serif;font-style:italic;font-size:24px;color:var(--clay)">05</div>
+          <h3 style="font-size:21px;margin-top:8px;font-weight:600">Transporte Aéreo</h3>
+          <p style="font-size:14px;margin-top:10px">Cargas urgentes o de alto valor, con seguimiento cercano hasta la entrega.</p>
+        </article>
+        <article style="background:var(--teal);color:var(--paper);border:1px solid var(--teal);border-radius:22px;padding:28px;display:flex;flex-direction:column;justify-content:space-between">
+          <div>
+            <div style="font-family:'Newsreader',serif;font-style:italic;font-size:24px;color:var(--gold)">+4</div>
+            <h3 style="font-size:21px;margin-top:8px;font-weight:600;color:var(--paper)">Contenedores, aduanas, terrestre, integral</h3>
+          </div>
+          <div style="font-weight:600;font-size:14px;margin-top:16px;color:var(--gold)">Ver los 9 servicios →</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESO -->
+  <section class="wrap" style="padding:84px 46px">
+    <div style="text-align:center;max-width:38rem;margin:0 auto">
+      <span class="label">Cómo trabajamos</span>
+      <h2 style="font-size:36px;margin-top:14px;font-weight:400">Un método simple, <em>con personas detrás</em></h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:48px">
+      <div style="text-align:center">
+        <div style="width:56px;height:56px;border-radius:999px;border:1px solid var(--teal);color:var(--teal);font-family:'Newsreader',serif;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto">1</div>
+        <h3 style="font-size:22px;margin-top:16px;font-weight:600">Escuchamos</h3>
+        <p style="font-size:14.5px;margin-top:8px">Qué cargas, a dónde van, en qué plazos. Lo traducimos a un plan operable.</p>
+      </div>
+      <div style="text-align:center">
+        <div style="width:56px;height:56px;border-radius:999px;border:1px solid var(--teal);color:var(--teal);font-family:'Newsreader',serif;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto">2</div>
+        <h3 style="font-size:22px;margin-top:16px;font-weight:600">Coordinamos</h3>
+        <p style="font-size:14.5px;margin-top:8px">La ruta multimodal con documentación, aduanas y proveedores alineados.</p>
+      </div>
+      <div style="text-align:center">
+        <div style="width:56px;height:56px;border-radius:999px;border:1px solid var(--teal);color:var(--teal);font-family:'Newsreader',serif;font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto">3</div>
+        <h3 style="font-size:22px;margin-top:16px;font-weight:600">Operamos</h3>
+        <p style="font-size:14.5px;margin-top:8px">Seguimiento hasta el destino, con contacto directo cuando algo se mueve.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap" style="padding:0 46px 88px">
+    <div style="background:var(--ink);color:var(--paper);border-radius:28px;padding:60px 52px;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center">
+      <div>
+        <span class="label" style="color:var(--gold)">Contacto</span>
+        <h2 style="font-size:38px;margin-top:14px;color:var(--paper);font-weight:400">Hablemos de tu <em style="color:var(--gold)">próxima operación</em></h2>
+        <p style="color:rgba(245,238,227,.8);font-size:16px;margin-top:14px;max-width:30rem">
+          Cuéntanos qué necesitas exportar o importar. Revisamos tu caso y te proponemos un camino concreto — sin compromiso.
+        </p>
+        <div style="display:flex;gap:12px;margin-top:26px">
+          <a class="btn" style="background:var(--paper);border-color:var(--paper);color:var(--ink)">Escribir por WhatsApp</a>
+          <a class="btn" style="color:var(--paper);border-color:rgba(245,238,227,.4)">Google Maps</a>
+        </div>
+      </div>
+      <div style="border-left:1px solid rgba(245,238,227,.2);padding-left:32px">
+        <div class="label" style="color:var(--gold)">Dirección</div>
+        <div style="font-family:'Newsreader',serif;font-size:18px;margin-top:6px;color:var(--paper)">Longitudinal Sur Km. 186<br>3340000 Curicó, Maule</div>
+        <div class="label" style="color:var(--gold);margin-top:20px">Contacto</div>
+        <div style="font-family:'Newsreader',serif;font-size:18px;margin-top:6px;color:var(--paper)">Mario Basáez</div>
+        <div style="color:var(--gold);font-size:15px;margin-top:2px">+56 9 6839 4225</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="background:var(--paper2);border-top:1px solid rgba(42,33,24,.12)">
+    <div class="wrap" style="padding:52px 46px 30px;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px">
+      <div>
+        <div style="font-family:'Newsreader',serif;font-weight:600;font-size:24px">ASLI</div>
+        <div class="label" style="margin-top:10px">Logística y Comercio Exterior</div>
+        <div style="font-family:'Newsreader',serif;font-style:italic;font-size:19px;color:var(--clay);margin-top:12px">Nuestro límite es tu destino</div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:14px;color:var(--ink)">Servicios</div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:14px">
+          <a style="color:inherit">Exportación de fruta fresca</a><a style="color:inherit">Importación de mercancías</a><a style="color:inherit">Contenedores</a><a style="color:inherit">Aéreo y marítimo</a>
+        </div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:14px;color:var(--ink)">Empresa</div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:14px">
+          <a style="color:inherit">Historia</a><a style="color:inherit">Tracking</a><a style="color:inherit">Equipo</a><a style="color:inherit">Contacto</a>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1180px;margin:0 auto;padding:18px 46px;border-top:1px solid rgba(42,33,24,.12);font-size:13px;color:#6B5D4A">© 2026 ASLI — Asesorías y Servicios Logísticos Integrales Ltda.</div>
+  </footer>
+
+</div>
+</x-dc>
+</body>
+</html>

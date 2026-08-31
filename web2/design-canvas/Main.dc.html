@@ -1,0 +1,239 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#080B0A; --panel:#0E1413; --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.16);
+      --teal:#2DD4BF; --teal-d:#0E7C7B; --lime:#A3E635; --ink:#E9F1EF; --mut:#7C8A87;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);
+      font-family:"Space Grotesk",system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    h1,h2,h3,h4{font-family:"Space Grotesk",sans-serif;margin:0;letter-spacing:-.02em;color:#fff;font-weight:600}
+    p{margin:0;color:var(--mut)}
+    a{color:var(--teal);text-decoration:none}
+    a:hover{color:var(--lime)}
+    .mono{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.13em;text-transform:uppercase}
+    .wrap{max-width:1280px;margin:0 auto;padding:0 40px}
+    .grid-bg{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:52px 52px}
+    .btn{display:inline-flex;align-items:center;gap:9px;font-family:"JetBrains Mono",monospace;font-weight:600;font-size:12px;
+      letter-spacing:.08em;text-transform:uppercase;padding:14px 22px;border:1px solid var(--line2);border-radius:3px;transition:.2s}
+    .btn-p{background:var(--teal);color:#04211E;border-color:var(--teal)}
+    .btn-p:hover{background:var(--lime);border-color:var(--lime);color:#132000}
+    .btn-g{background:transparent;color:var(--ink)}
+    .btn-g:hover{border-color:var(--teal);color:var(--teal)}
+    .tick{color:var(--teal)}
+  </style>
+</helmet>
+
+<div style="background:var(--bg)">
+
+  <!-- NAV -->
+  <header style="position:sticky;top:0;z-index:30;background:rgba(8,11,10,.8);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:64px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="mono tick" style="font-size:13px;font-weight:600">◆ ASLI</span>
+        <span class="mono" style="color:var(--mut)">/ ops.comercio-exterior</span>
+      </div>
+      <nav class="mono" style="display:flex;gap:24px;color:var(--ink);font-weight:500">
+        <a style="color:inherit">historia</a><a style="color:inherit">servicios</a><a style="color:inherit">proceso</a><a style="color:inherit">equipo</a><a style="color:inherit">tracking</a>
+      </nav>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="mono" style="color:var(--mut);border:1px solid var(--line);padding:5px 9px;border-radius:3px">USD 945.30 <span class="tick">▲</span></span>
+        <a class="btn btn-p">cotizar</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="grid-bg" style="border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:72px 40px 64px;display:grid;grid-template-columns:1.15fr .85fr;gap:52px;align-items:center">
+      <div>
+        <span class="mono tick">// asesoría logística · lat -34.97 lon -71.20 · curicó</span>
+        <h1 style="font-size:66px;line-height:1.02;font-weight:700;margin-top:22px;letter-spacing:-.03em">
+          Tu carga, del<br>origen al destino,<br><span style="color:var(--teal)">bajo control.</span>
+        </h1>
+        <p style="font-size:17px;line-height:1.6;max-width:32rem;margin-top:22px;color:#A9B6B3">
+          Sistema de acompañamiento para exportadores e importadores del agro: fruta fresca,
+          contenedores, aéreo y marítimo. Documentación, navieras, aduanas y seguimiento en una sola operación.
+        </p>
+        <div style="display:flex;gap:12px;margin-top:30px">
+          <a class="btn btn-p">iniciar operación →</a>
+          <a class="btn btn-g">ver servicios</a>
+        </div>
+      </div>
+
+      <!-- ops panel -->
+      <div style="background:var(--panel);border:1px solid var(--line2);border-radius:6px;overflow:hidden">
+        <div class="mono" style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);color:var(--mut)">
+          <span>embarques_activos</span><span class="tick">● live</span>
+        </div>
+        <div style="padding:6px 0">
+          <div style="display:grid;grid-template-columns:56px 1fr auto;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);align-items:center" class="mono">
+            <span class="tick">CL01</span><span style="color:var(--ink);text-transform:none;font-size:12px">Curicó → San Antonio → Filadelfia</span><span style="color:var(--lime)">EN RUTA</span>
+          </div>
+          <div style="display:grid;grid-template-columns:56px 1fr auto;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);align-items:center" class="mono">
+            <span class="tick">CL02</span><span style="color:var(--ink);text-transform:none;font-size:12px">Curicó → SCL → Miami · aéreo</span><span style="color:var(--teal)">DOCS OK</span>
+          </div>
+          <div style="display:grid;grid-template-columns:56px 1fr auto;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);align-items:center" class="mono">
+            <span class="tick">CL03</span><span style="color:var(--ink);text-transform:none;font-size:12px">Shanghái → Valparaíso → Curicó</span><span style="color:var(--mut)">ADUANA</span>
+          </div>
+          <div style="display:grid;grid-template-columns:56px 1fr auto;gap:12px;padding:11px 16px;align-items:center" class="mono">
+            <span class="tick">CL04</span><span style="color:var(--ink);text-transform:none;font-size:12px">Curicó → Callao · reefer</span><span style="color:var(--lime)">STACKING</span>
+          </div>
+        </div>
+        <div class="mono" style="padding:12px 16px;border-top:1px solid var(--line);color:var(--mut);font-size:10px">datos ilustrativos · panel de ejemplo</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAT readout -->
+  <div style="border-bottom:1px solid var(--line);background:var(--panel)">
+    <div class="wrap" style="display:grid;grid-template-columns:repeat(4,1fr);padding:0 40px">
+      <div style="padding:24px 0;border-right:1px solid var(--line)"><div class="mono" style="color:var(--mut)">fundación</div><div style="font-size:26px;font-weight:700;color:var(--teal);margin-top:6px">2021</div></div>
+      <div style="padding:24px 0 24px 24px;border-right:1px solid var(--line)"><div class="mono" style="color:var(--mut)">líneas de servicio</div><div style="font-size:26px;font-weight:700;color:var(--teal);margin-top:6px">09</div></div>
+      <div style="padding:24px 0 24px 24px;border-right:1px solid var(--line)"><div class="mono" style="color:var(--mut)">navieras + aerolíneas</div><div style="font-size:26px;font-weight:700;color:var(--teal);margin-top:6px">15+</div></div>
+      <div style="padding:24px 0 24px 24px"><div class="mono" style="color:var(--mut)">operación conectada</div><div style="font-size:26px;font-weight:700;color:var(--teal);margin-top:6px">24/7</div></div>
+    </div>
+  </div>
+
+  <!-- TRUST -->
+  <div style="border-bottom:1px solid var(--line);padding:18px 0;overflow:hidden">
+    <div class="wrap" style="display:flex;gap:40px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:var(--mut)">
+      <span class="tick">carriers —</span>
+      <span>MAERSK</span><span>MSC</span><span>CMA-CGM</span><span>COSCO</span><span>ZIM</span><span>LATAM-CARGO</span><span>ONE</span><span>OOCL</span><span>WAN-HAI</span><span>YANG-MING</span>
+    </div>
+  </div>
+
+  <!-- SERVICIOS as table -->
+  <section class="wrap" style="padding:76px 40px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
+      <h2 style="font-size:38px;font-weight:700;letter-spacing:-.03em">Módulos de servicio</h2>
+      <span class="mono tick">[ 09 activos ]</span>
+    </div>
+    <div style="border-top:1px solid var(--line2)">
+      <div class="svc-row" style="display:grid;grid-template-columns:70px 1.1fr 1.6fr 90px;gap:20px;padding:22px 4px;border-bottom:1px solid var(--line);align-items:center">
+        <span class="mono tick">01</span>
+        <h3 style="font-size:19px;font-weight:600">Asesoría en Exportaciones</h3>
+        <p style="font-size:14px">Documentación, navieras y aduanas coordinadas — carga lista para salir sin sorpresas.</p>
+        <span class="mono" style="color:var(--mut);text-align:right">→</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1.1fr 1.6fr 90px;gap:20px;padding:22px 4px;border-bottom:1px solid var(--line);align-items:center">
+        <span class="mono tick">02</span>
+        <h3 style="font-size:19px;font-weight:600">Asesoría en Importaciones</h3>
+        <p style="font-size:14px">Trámites aduaneros, tiempos reales y coordinación de ingreso etapa por etapa.</p>
+        <span class="mono" style="color:var(--mut);text-align:right">→</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1.1fr 1.6fr 90px;gap:20px;padding:22px 4px;border-bottom:1px solid var(--line);align-items:center">
+        <span class="mono tick">03</span>
+        <h3 style="font-size:19px;font-weight:600">Transporte Marítimo</h3>
+        <p style="font-size:14px">Ruta y servicio según plazo, tipo de producto y presupuesto.</p>
+        <span class="mono" style="color:var(--mut);text-align:right">→</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1.1fr 1.6fr 90px;gap:20px;padding:22px 4px;border-bottom:1px solid var(--line);align-items:center">
+        <span class="mono tick">04</span>
+        <h3 style="font-size:19px;font-weight:600">Transporte Aéreo</h3>
+        <p style="font-size:14px">Cargas urgentes o de alto valor, con seguimiento cercano hasta la entrega.</p>
+        <span class="mono" style="color:var(--mut);text-align:right">→</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1.1fr 1.6fr 90px;gap:20px;padding:22px 4px;border-bottom:1px solid var(--line);align-items:center">
+        <span class="mono tick">05</span>
+        <h3 style="font-size:19px;font-weight:600">Gestión de Contenedores</h3>
+        <p style="font-size:14px">Espacio, costo y tiempos de despacho bajo control.</p>
+        <span class="mono" style="color:var(--mut);text-align:right">→</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 1.1fr 1.6fr 90px;gap:20px;padding:22px 4px;border-bottom:1px solid var(--line);align-items:center">
+        <span class="mono tick">+4</span>
+        <h3 style="font-size:19px;font-weight:600;color:var(--teal)">Documental · Terrestre · Aduanas · Integral</h3>
+        <p style="font-size:14px">Ver el catálogo completo de módulos.</p>
+        <span class="mono tick" style="text-align:right">ver →</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORIA / quote -->
+  <section style="border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel)">
+    <div class="wrap" style="padding:72px 40px;display:grid;grid-template-columns:.85fr 1.15fr;gap:52px">
+      <div>
+        <span class="mono tick">// log 2021 — curicó</span>
+        <h2 style="font-size:30px;font-weight:700;margin-top:14px;line-height:1.2">La PyME agroexportadora merece el estándar de las grandes compañías.</h2>
+      </div>
+      <div style="border-left:1px solid var(--line2);padding-left:28px">
+        <p style="font-size:21px;line-height:1.5;color:var(--ink);font-weight:500">
+          "Asesorar, acompañar y respaldar a los exportadores, ayudándolos a operar con el mismo estándar de las grandes compañías."
+        </p>
+        <div class="mono tick" style="margin-top:16px">mario basáez · fundador y gerente general</div>
+        <p style="margin-top:20px;font-size:14.5px;line-height:1.7">
+          Documentación confusa, tiempos poco claros y poca persona a quien llamar. ASLI existe como
+          equipo cercano y experto: lenguaje claro, ruta multimodal, aduanas y certificados, seguimiento hasta el destino.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESO timeline -->
+  <section class="wrap" style="padding:76px 40px">
+    <h2 style="font-size:32px;font-weight:700;margin-bottom:36px">Secuencia de operación</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line)">
+      <div style="padding:28px;border-right:1px solid var(--line)">
+        <div class="mono tick">step_01</div>
+        <h3 style="font-size:20px;font-weight:600;margin-top:10px">Escuchamos</h3>
+        <p style="font-size:13.5px;margin-top:8px">Qué cargas, a dónde van, en qué plazos. Lo traducimos a un plan operable.</p>
+      </div>
+      <div style="padding:28px;border-right:1px solid var(--line)">
+        <div class="mono tick">step_02</div>
+        <h3 style="font-size:20px;font-weight:600;margin-top:10px">Coordinamos</h3>
+        <p style="font-size:13.5px;margin-top:8px">Ruta multimodal con documentación, aduanas y proveedores alineados.</p>
+      </div>
+      <div style="padding:28px">
+        <div class="mono tick">step_03</div>
+        <h3 style="font-size:20px;font-weight:600;margin-top:10px">Operamos</h3>
+        <p style="font-size:13.5px;margin-top:8px">Seguimiento hasta el destino, con contacto directo cuando algo se mueve.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA terminal -->
+  <section class="wrap" style="padding:0 40px 76px">
+    <div class="grid-bg" style="border:1px solid var(--line2);border-radius:6px;padding:56px 44px;background:var(--panel)">
+      <span class="mono tick">$ asli --nueva-operacion</span>
+      <h2 style="font-size:40px;font-weight:700;margin-top:16px;max-width:20ch">Hablemos de tu próxima operación</h2>
+      <p style="font-size:16px;margin-top:12px;max-width:34rem">Cuéntanos qué necesitas exportar o importar. Revisamos tu caso y te proponemos un camino concreto — sin compromiso.</p>
+      <div style="display:flex;gap:12px;margin-top:26px">
+        <a class="btn btn-p">whatsapp →</a>
+        <a class="btn btn-g">+56 9 6839 4225</a>
+        <a class="btn btn-g">google maps</a>
+      </div>
+      <div class="mono" style="margin-top:26px;color:var(--mut)">longitudinal sur km. 186 · 3340000 curicó · maule</div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="border-top:1px solid var(--line);padding:44px 40px 28px">
+    <div class="wrap" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:24px">
+      <div>
+        <span class="mono tick" style="font-size:13px;font-weight:600">◆ ASLI</span>
+        <div class="mono" style="color:var(--mut);margin-top:8px">logística y comercio exterior</div>
+        <div class="mono" style="color:var(--lime);margin-top:6px">nuestro límite es tu destino</div>
+      </div>
+      <div class="mono" style="display:flex;gap:44px;color:var(--mut)">
+        <div style="display:flex;flex-direction:column;gap:8px"><a style="color:inherit">exportación fruta fresca</a><a style="color:inherit">importación mercancías</a><a style="color:inherit">contenedores</a></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><a style="color:inherit">historia</a><a style="color:inherit">tracking</a><a style="color:inherit">equipo</a></div>
+      </div>
+    </div>
+    <div class="mono" style="max-width:1280px;margin:28px auto 0;padding-top:18px;border-top:1px solid var(--line);color:var(--mut);font-size:10px">© 2026 asli — asesorías y servicios logísticos integrales ltda.</div>
+  </footer>
+
+</div>
+</x-dc>
+</body>
+</html>

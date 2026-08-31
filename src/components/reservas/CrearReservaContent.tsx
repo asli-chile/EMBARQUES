@@ -28,7 +28,6 @@ import {
 import {
   ESTADO_INICIAL,
   ESTADO_META,
-  estadosEnOrden,
   etiquetaEstado,
   normalizarEstado,
 } from "@/lib/operaciones/estados";
@@ -196,6 +195,10 @@ function isOperacionAerea(tipoOperacion: string): boolean {
     .replace(/[\u0300-\u036f]/g, "");
   return v.includes("AERE");
 }
+
+// Respaldo del catálogo `dueno_reserva`: si la tabla `catalogos` todavía no
+// tiene valores sembrados, el combobox igual ofrece las empresas históricas.
+const DUENOS_RESERVA_FALLBACK = ["ASLI", "CHILFRESH", "SURLOGISTICA"];
 
 type FormData = {
   tipo_operacion: string;
@@ -382,6 +385,8 @@ export function CrearReservaContent() {
   // Estados para el combobox de destino (POD)
   const [podInput, setPodInput] = useState("");
   const [addingDestino, setAddingDestino] = useState(false);
+
+  const [addingDuenoReserva, setAddingDuenoReserva] = useState(false);
 
   const [showPreview, setShowPreview] = useState(false);
   const [copias, setCopias] = useState(1);
@@ -994,6 +999,48 @@ export function CrearReservaContent() {
       "";
     if (nombre) setNaveInput(nombre);
   }, [formData.nave, navesFiltered, naves]);
+
+  // Dueño de reserva: catálogo editable. El valor guardado en la operación es el
+  // texto, no el id, así que el combobox trabaja directamente sobre el nombre.
+  const duenosReserva = useMemo<SelectOption[]>(() => {
+    const desdeCatalogo = (catalogos.dueno_reserva ?? []).map((item) => ({
+      id: item.id,
+      nombre: item.valor,
+    }));
+    const nombres = new Set(desdeCatalogo.map((o) => o.nombre.toUpperCase()));
+    const faltantes = DUENOS_RESERVA_FALLBACK.filter((n) => !nombres.has(n)).map((n) => ({
+      id: `fallback-${n}`,
+      nombre: n,
+    }));
+    return [...desdeCatalogo, ...faltantes];
+  }, [catalogos.dueno_reserva]);
+
+  const handleAddDuenoReserva = async (text: string) => {
+    if (!supabase || !text.trim()) return;
+    setAddingDuenoReserva(true);
+    const valor = text.trim().toUpperCase();
+    // El valor se deja seleccionado igual: la reserva guarda el texto, así que
+    // un fallo al persistir el catálogo no debe bloquear la operación.
+    setFormData((prev) => ({ ...prev, dueno_reserva: valor }));
+    const { data, error: insertError } = await supabase
+      .from("catalogos")
+      .insert({ categoria: "dueno_reserva", valor, orden: 100, activo: true })
+      .select("id, valor, descripcion")
+      .single();
+    if (!insertError && data) {
+      setCatalogos((prev) => ({
+        ...prev,
+        dueno_reserva: [
+          ...(prev.dueno_reserva ?? []),
+          { id: data.id, valor: data.valor, descripcion: data.descripcion },
+        ],
+      }));
+    } else if (insertError) {
+      console.error("Error adding dueño de reserva:", insertError);
+      setError(tr.addDuenoReservaError);
+    }
+    setAddingDuenoReserva(false);
+  };
 
   const handleAddPlanta = async (text: string) => {
     if (!supabase || !text.trim()) return;
@@ -2341,26 +2388,16 @@ export function CrearReservaContent() {
             })}
           </div>
         </div>
+        {/* El estado no se elige al crear: una reserva nueva nace siempre en el
+            primer estado del flujo y avanza después desde Registros. */}
         <div>
           <p className={labelClass}>{tr.estadoOperacion}</p>
-          <div className="flex flex-wrap gap-2">
-            {estadosEnOrden().map((codigo) => {
-              const selected = normalizarEstado(formData.estado_operacion) === codigo;
-              return (
-                <button
-                  key={codigo}
-                  type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, estado_operacion: codigo }))}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border transition-colors ${
-                    selected
-                      ? "bg-brand-blue text-white border-brand-blue"
-                      : "bg-white text-brand-blue/80 border-brand-blue/20 hover:border-brand-blue/50"
-                  }`}
-                >
-                  {ESTADO_META[codigo].etiqueta}
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border bg-brand-blue text-white border-brand-blue">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
+              {ESTADO_META[ESTADO_INICIAL].etiqueta}
+            </span>
+            <span className="text-xs text-brand-blue/55">{tr.estadoInicialHint}</span>
           </div>
         </div>
         <FieldGrid>
@@ -2419,26 +2456,21 @@ export function CrearReservaContent() {
           </div>
           {!isCliente && (
             <div className="min-w-0 sm:col-span-2 xl:col-span-1">
-              <p className={labelClass}>{tr.duenoReserva}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {(["ASLI", "CHILFRESH", "SURLOGISTICA"] as const).map((owner) => {
-                  const selected = formData.dueno_reserva === owner;
-                  return (
-                    <button
-                      key={owner}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, dueno_reserva: owner }))}
-                      className={`px-2 py-2 rounded-lg border text-xs font-bold truncate transition-all ${
-                        selected
-                          ? "bg-brand-teal text-white border-brand-teal shadow-sm"
-                          : "bg-white text-brand-blue border-brand-blue/15 hover:border-brand-blue/40"
-                      }`}
-                    >
-                      {owner}
-                    </button>
-                  );
-                })}
-              </div>
+              <ComboboxInput
+                id="dueno_reserva"
+                label={tr.duenoReserva}
+                labelClass={labelClass}
+                inputClass={inputClass}
+                value={formData.dueno_reserva}
+                options={duenosReserva}
+                onSelect={(opt) => setFormData((prev) => ({ ...prev, dueno_reserva: opt.nombre }))}
+                onChange={(val) => setFormData((prev) => ({ ...prev, dueno_reserva: val }))}
+                onAddNew={handleAddDuenoReserva}
+                addNewLabel={(text) => `${tr.addNewDuenoReserva} "${text}"`}
+                addingNew={addingDuenoReserva}
+                placeholder={tr.searchDuenoReserva}
+                disabled={loadingCatalogos}
+              />
             </div>
           )}
         </FieldGrid>

@@ -6,9 +6,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
-import { RoleForbidden } from "@/components/layout/RoleForbidden";
-import { DashboardVisitorContent } from "./DashboardVisitorContent";
-import { format, formatDistanceToNow, addDays, startOfDay, parseISO, isValid, differenceInCalendarDays } from "date-fns";
+import { DashboardViewTabs, type DashboardView } from "./DashboardViewTabs";
+import { format, formatDistanceToNow, addDays, startOfDay, startOfWeek, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { withBase } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
@@ -24,16 +23,12 @@ type OperacionResumen = {
   correlativo: number | null;
   cliente: string | null;
   naviera: string | null;
-  nave: string | null;
   pol: string | null;
   pod: string | null;
   etd: string | null;
-  eta: string | null;
   estado_operacion: string | null;
   arribo_confirmado: boolean | null;
-  booking: string | null;
   especie: string | null;
-  segundas: string | null;
   contenedor: string | null;
   booking_doc_url: string | null;
   enviado_transporte: boolean | null;
@@ -43,8 +38,9 @@ type OperacionResumen = {
   operacion_critica: boolean | null;
   prioridad: string | null;
   numero_factura_asli: string | null;
-  created_at?: string;
 };
+
+type TransportMode = "maritimo" | "aereo";
 
 type PortMarker = {
   key: string;
@@ -56,10 +52,32 @@ type PortMarker = {
 };
 
 const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-const REGION_LABELS = ["America", "Europa", "India y Medio Oriente", "Oceania", "Asia"] as const;
-type RegionLabel = (typeof REGION_LABELS)[number];
 
-function normEstado(value: string | null | undefined): string {
+const REGION_KEYS = ["america", "europa", "indiaMedioOriente", "oceania", "asia", "otros"] as const;
+type RegionKey = (typeof REGION_KEYS)[number];
+
+/**
+ * Cajas geográficas [lngMin, lngMax, latMin, latMax] evaluadas en orden.
+ * Única fuente de verdad para agrupar destinos por región: si el puerto no
+ * tiene coordenadas conocidas cae en "otros" en lugar de desaparecer.
+ */
+const REGION_BOXES: Array<{ key: RegionKey; box: [number, number, number, number] }> = [
+  { key: "america", box: [-170, -30, -60, 75] },
+  { key: "europa", box: [-15, 40, 35, 72] },
+  { key: "indiaMedioOriente", box: [30, 80, 5, 40] },
+  { key: "oceania", box: [110, 180, -50, 0] },
+  { key: "asia", box: [80, 150, -10, 55] },
+];
+
+function regionFromCoordinates(lng: number, lat: number): RegionKey {
+  for (const { key, box } of REGION_BOXES) {
+    const [lngMin, lngMax, latMin, latMax] = box;
+    if (lng >= lngMin && lng <= lngMax && lat >= latMin && lat <= latMax) return key;
+  }
+  return "otros";
+}
+
+function normText(value: string | null | undefined): string {
   return (value ?? "").trim().toUpperCase();
 }
 
@@ -77,92 +95,21 @@ function opRefLabel(op: OperacionResumen): string {
   return formatRefAsli(op.ref_asli, op.correlativo) ?? "—";
 }
 
-function classifyRegionFromPodName(pod: string): RegionLabel | null {
-  const text = pod.toUpperCase();
+type Props = {
+  view: DashboardView;
+  onViewChange: (view: DashboardView) => void;
+};
 
-  if (
-    text.includes("INDIA") ||
-    text.includes("NHAVA") ||
-    text.includes("MUNDRA") ||
-    text.includes("DUBAI") ||
-    text.includes("JEBEL") ||
-    text.includes("DOHA") ||
-    text.includes("KUWAIT") ||
-    text.includes("JEDDAH") ||
-    text.includes("DAMMAM") ||
-    text.includes("OMAN") ||
-    text.includes("MUSCAT") ||
-    text.includes("BANDAR")
-  ) {
-    return "India y Medio Oriente";
-  }
-  if (
-    text.includes("AUSTRALIA") ||
-    text.includes("SYDNEY") ||
-    text.includes("MELBOURNE") ||
-    text.includes("BRISBANE") ||
-    text.includes("AUCKLAND") ||
-    text.includes("WELLINGTON") ||
-    text.includes("TAURANGA") ||
-    text.includes("LYTTELTON")
-  ) {
-    return "Oceania";
-  }
-  if (
-    text.includes("ROTTERDAM") ||
-    text.includes("HAMBURG") ||
-    text.includes("HAMBURGO") ||
-    text.includes("ANTWERP") ||
-    text.includes("VALENCIA") ||
-    text.includes("BARCELONA") ||
-    text.includes("LONDON") ||
-    text.includes("SOUTHAMPTON") ||
-    text.includes("GENOVA") ||
-    text.includes("LIVORNO")
-  ) {
-    return "Europa";
-  }
-  if (
-    text.includes("SHANGHAI") ||
-    text.includes("NINGBO") ||
-    text.includes("QINGDAO") ||
-    text.includes("SHENZHEN") ||
-    text.includes("HONG KONG") ||
-    text.includes("BUSAN") ||
-    text.includes("SINGAPORE") ||
-    text.includes("YOKOHAMA") ||
-    text.includes("TOKYO") ||
-    text.includes("MANILA") ||
-    text.includes("JAKARTA")
-  ) {
-    return "Asia";
-  }
-  if (
-    text.includes("PHILADELPHIA") ||
-    text.includes("NEW YORK") ||
-    text.includes("LOS ANGELES") ||
-    text.includes("BALBOA") ||
-    text.includes("BUENAVENTURA") ||
-    text.includes("CALLAO") ||
-    text.includes("CARTAGENA") ||
-    text.includes("SAN ANTONIO") ||
-    text.includes("VALPARAISO")
-  ) {
-    return "America";
-  }
-
-  return null;
-}
-
-export function DashboardContent() {
+export function DashboardContent({ view, onViewChange }: Props) {
   const { t, locale } = useLocale();
-  const { isExternalUser, isLoading: authLoading, isCliente, isEjecutivo, isStaff, empresaNombres } = useAuth();
+  const { isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
   const tr = t.dashboard;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [loading, setLoading] = useState(true);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [mapOperations, setMapOperations] = useState<OperacionResumen[]>([]);
+  const [carrierModes, setCarrierModes] = useState<Map<string, TransportMode>>(new Map());
   const mapRef = useRef<MapRef | null>(null);
 
   const supabase = useMemo(() => {
@@ -192,11 +139,21 @@ export function DashboardContent() {
       return;
     }
     setLoading(true);
-    const allRes = await buildFilteredQuery(
-      "id, ref_asli, correlativo, cliente, naviera, nave, pol, pod, etd, eta, estado_operacion, arribo_confirmado, booking, especie, segundas, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli, created_at"
-    ).limit(2000);
-    const allData = (allRes.data ?? []) as OperacionResumen[];
-    setMapOperations(allData);
+    const [opsRes, carriersRes] = await Promise.all([
+      buildFilteredQuery(
+        "id, ref_asli, correlativo, cliente, naviera, pol, pod, etd, estado_operacion, arribo_confirmado, especie, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli"
+      ).limit(2000),
+      supabase.from("navieras").select("nombre, modo_transporte"),
+    ]);
+
+    setMapOperations((opsRes.data ?? []) as unknown as OperacionResumen[]);
+
+    const modes = new Map<string, TransportMode>();
+    for (const row of (carriersRes.data ?? []) as Array<{ nombre: string | null; modo_transporte: string | null }>) {
+      const key = normText(row.nombre);
+      if (key) modes.set(key, row.modo_transporte === "aereo" ? "aereo" : "maritimo");
+    }
+    setCarrierModes(modes);
 
     setLastFetchedAt(new Date());
     setLoading(false);
@@ -280,8 +237,7 @@ export function DashboardContent() {
     let etdTomorrow = 0;
     let cutoffNext3 = 0;
     let stackingClosing = 0;
-      let transportPending = 0;
-    let transportAssigned = 0;
+    let transportPending = 0;
     let notSentToTransport = 0;
     let noBookingDoc = 0;
     let critical = 0;
@@ -312,7 +268,7 @@ export function DashboardContent() {
       if (codigo === "CANCELADA") cancelled += 1;
       if (op.arribo_confirmado) arrived += 1;
       if (codigo === "ROLEADA") rolled += 1;
-      if (op.operacion_critica || normEstado(op.prioridad) === "ALTA") critical += 1;
+      if (op.operacion_critica || normText(op.prioridad) === "ALTA") critical += 1;
 
       const etd = parseOpDate(op.etd);
       if (etd) {
@@ -330,7 +286,7 @@ export function DashboardContent() {
             pod: op.pod ?? "—",
             etd: etdDay,
             days,
-            critico: !!(op.operacion_critica || normEstado(op.prioridad) === "ALTA"),
+            critico: !!(op.operacion_critica || normText(op.prioridad) === "ALTA"),
           });
         }
       }
@@ -348,8 +304,7 @@ export function DashboardContent() {
       }
 
       if (op.enviado_transporte) {
-        if (op.transporte || op.contenedor) transportAssigned += 1;
-        else transportPending += 1;
+        if (!op.transporte && !op.contenedor) transportPending += 1;
       } else if (!cerrada) {
         notSentToTransport += 1;
       }
@@ -386,7 +341,6 @@ export function DashboardContent() {
       cutoffNext3,
       stackingClosing,
       transportPending,
-      transportAssigned,
       notSentToTransport,
       noBookingDoc,
       critical,
@@ -407,50 +361,62 @@ export function DashboardContent() {
       .sort((a, b) => b.cantidad - a.cantidad || a.cliente.localeCompare(b.cliente));
   }, [mapOperations]);
 
+  /** Vía real según `navieras.modo_transporte`; sin naviera conocida queda sin clasificar. */
   const transportDistribution = useMemo(() => {
     let maritima = 0;
     let aereo = 0;
+    let desconocida = 0;
     for (const op of mapOperations) {
-      // Regla pragmática: si tiene datos navieros, cuenta como marítima; de lo contrario, aéreo.
-      if (op.naviera || op.nave || op.pol || op.pod) maritima += 1;
-      else aereo += 1;
+      const mode = carrierModes.get(normText(op.naviera));
+      if (mode === "maritimo") maritima += 1;
+      else if (mode === "aereo") aereo += 1;
+      else desconocida += 1;
     }
-    const total = maritima + aereo;
-    return { maritima, aereo, total };
-  }, [mapOperations]);
+    const clasificadas = maritima + aereo;
+    return { maritima, aereo, desconocida, clasificadas, total: mapOperations.length };
+  }, [mapOperations, carrierModes]);
 
   const donutProgress =
-    transportDistribution.total > 0 ? (transportDistribution.maritima / transportDistribution.total) * 100 : 0;
+    transportDistribution.clasificadas > 0
+      ? (transportDistribution.maritima / transportDistribution.clasificadas) * 100
+      : 0;
 
   const regionDistribution = useMemo(() => {
-    const counts: Record<RegionLabel, number> = {
-      America: 0,
-      Europa: 0,
-      "India y Medio Oriente": 0,
-      Oceania: 0,
-      Asia: 0,
-    };
-
+    const counts = new Map<RegionKey, number>();
     for (const op of mapOperations) {
       if (!op.pod) continue;
-
-      let region: RegionLabel | null = null;
       const coords = getPortCoordinates(op.pod);
-      if (coords) {
-        const [lng, lat] = coords;
-        if (lng >= -170 && lng <= -30 && lat >= -60 && lat <= 75) region = "America";
-        else if (lng >= -15 && lng <= 40 && lat >= 35 && lat <= 72) region = "Europa";
-        else if (lng >= 35 && lng <= 80 && lat >= 5 && lat <= 36) region = "India y Medio Oriente";
-        else if (lng >= 110 && lng <= 180 && lat >= -50 && lat <= 0) region = "Oceania";
-        else if (lng >= 85 && lng <= 150 && lat >= -10 && lat <= 55) region = "Asia";
-      }
-      if (!region) region = classifyRegionFromPodName(op.pod);
-      if (region) counts[region] += 1;
+      const region: RegionKey = coords ? regionFromCoordinates(coords[0], coords[1]) : "otros";
+      counts.set(region, (counts.get(region) ?? 0) + 1);
     }
-
-    const items = REGION_LABELS.map((region) => ({ region, count: counts[region] }));
+    const items = REGION_KEYS.map((region) => ({ region, count: counts.get(region) ?? 0 })).filter(
+      (item) => item.count > 0
+    );
     const max = Math.max(...items.map((i) => i.count), 1);
     return { items, max };
+  }, [mapOperations]);
+
+  /** Zarpes agrupados por semana ISO para las próximas 6 semanas. */
+  const weeklyDepartures = useMemo(() => {
+    const today = startOfDay(new Date());
+    const firstWeek = startOfWeek(today, { weekStartsOn: 1 });
+    const buckets = Array.from({ length: 6 }, (_, i) => ({
+      start: addDays(firstWeek, i * 7),
+      count: 0,
+    }));
+    const horizonEnd = addDays(firstWeek, 6 * 7);
+
+    for (const op of mapOperations) {
+      const etd = parseOpDate(op.etd);
+      if (!etd) continue;
+      const day = startOfDay(etd);
+      if (day < today || day >= horizonEnd) continue;
+      const index = Math.floor(differenceInCalendarDays(day, firstWeek) / 7);
+      if (buckets[index]) buckets[index].count += 1;
+    }
+
+    const max = Math.max(...buckets.map((b) => b.count), 1);
+    return { buckets, max };
   }, [mapOperations]);
 
   const speciesStats = useMemo(() => {
@@ -463,9 +429,7 @@ export function DashboardContent() {
     const ranked = Array.from(countBySpecies.entries())
       .map(([especie, cantidad]) => ({ especie, cantidad }))
       .sort((a, b) => b.cantidad - a.cantidad || a.especie.localeCompare(b.especie));
-    const distinct = ranked.length;
-    const top = ranked[0] ?? null;
-    return { distinct, top, ranked };
+    return { distinct: ranked.length, ranked };
   }, [mapOperations]);
 
   const topNavieras = useMemo(() => {
@@ -478,12 +442,9 @@ export function DashboardContent() {
     const ranked = Array.from(byNaviera.entries())
       .map(([naviera, cantidad]) => ({ naviera, cantidad }))
       .sort((a, b) => b.cantidad - a.cantidad || a.naviera.localeCompare(b.naviera, "es"));
-    const total = ranked.reduce((acc, item) => acc + item.cantidad, 0);
     return {
-      ranked,
-      total,
-      top: ranked[0] ?? null,
-      topItems: ranked.slice(0, 8),
+      distinct: ranked.length,
+      topItems: ranked.slice(0, 5),
       max: Math.max(...ranked.map((item) => item.cantidad), 1),
     };
   }, [mapOperations]);
@@ -517,28 +478,14 @@ export function DashboardContent() {
     return leaders;
   }, [mapOperations]);
 
-  const speciesFunnelItems = useMemo(() => speciesStats.ranked.slice(0, 8), [speciesStats.ranked]);
-  const speciesLeaderByEspecie = useMemo(
+  const topSpecies = useMemo(
     () =>
-      speciesStats.ranked
-        .map((item) => {
-          const leader = speciesTopPodByEspecie.get(item.especie);
-          if (!leader) return null;
-          return {
-            especie: item.especie,
-            totalEspecie: item.cantidad,
-            pod: leader.pod,
-            podCantidad: leader.cantidad,
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is { especie: string; totalEspecie: number; pod: string; podCantidad: number } => item !== null
-        ),
+      speciesStats.ranked.slice(0, 5).map((item) => ({
+        ...item,
+        pod: speciesTopPodByEspecie.get(item.especie)?.pod ?? null,
+      })),
     [speciesStats.ranked, speciesTopPodByEspecie]
   );
-  const speciesLeaderPodItems = useMemo(() => speciesLeaderByEspecie.slice(0, 8), [speciesLeaderByEspecie]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -564,38 +511,28 @@ export function DashboardContent() {
     );
   }, [portMarkers]);
 
-  if (!authLoading && isExternalUser) {
-    return <DashboardVisitorContent />;
-  }
-
-  if (!authLoading && !isStaff && !isCliente) {
-    return (
-      <RoleForbidden message="Tu cuenta no tiene un rol asignado para ver el dashboard. Pide a un administrador que te asigne cliente u operador." />
-    );
-  }
-
   if (loading) {
     return (
-      <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-[#060B17]">
+      <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-dash-bg">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
           <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         </div>
-        <div className="relative shrink-0 bg-[#0A1328]/90 border-b border-cyan-400/20 h-14" />
+        <div className="relative shrink-0 bg-dash-header/90 border-b border-cyan-400/20 h-14" />
         <div className="relative p-4 flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:p-4 lg:gap-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 h-28 lg:h-14">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-[#101C36]/80 rounded-xl border border-cyan-300/20" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-dash-surface/80 rounded-xl border border-cyan-300/20" />
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-3 lg:flex-1 lg:min-h-0">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-56 lg:h-auto" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-dash-surface/80 rounded-xl border border-cyan-300/20 h-56 lg:h-auto" />
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-[#101C36]/80 rounded-xl border border-cyan-300/20 h-40 lg:h-32" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-dash-surface/80 rounded-xl border border-cyan-300/20 h-40 lg:h-32" />
             ))}
           </div>
         </div>
@@ -693,12 +630,19 @@ export function DashboardContent() {
 
   const upcomingRows = operationalKpis.upcoming.slice(0, 5);
   const topClients = clientsWithOperationCount.slice(0, 5);
-  const topNav = topNavieras.topItems.slice(0, 5);
-  const topSpecies = speciesFunnelItems.slice(0, 5);
-  const topSpeciesPod = speciesLeaderPodItems.slice(0, 5);
+  const topNav = topNavieras.topItems;
+
+  const regionLabels: Record<RegionKey, string> = {
+    america: tr.regionAmerica,
+    europa: tr.regionEurope,
+    indiaMedioOriente: tr.regionIndiaMiddleEast,
+    oceania: tr.regionOceania,
+    asia: tr.regionAsia,
+    otros: tr.regionOther,
+  };
 
   return (
-    <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-[#060B17] text-base">
+    <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-dash-bg text-base">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
@@ -706,7 +650,7 @@ export function DashboardContent() {
       </div>
 
       {/* Header */}
-      <div className="relative shrink-0 z-10 bg-[#0A1328]/90 border-b border-cyan-400/20 backdrop-blur">
+      <div className="relative shrink-0 z-10 bg-dash-header/90 border-b border-cyan-400/20 backdrop-blur">
         <div className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-cyan-100 tracking-tight leading-tight">{tr.title}</h1>
@@ -718,18 +662,19 @@ export function DashboardContent() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <DashboardViewTabs view={view} onChange={onViewChange} />
             <a href={withBase("/reservas/crear")}
               className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors">
               <Icon icon="lucide:plus" className="w-5 h-5" />
               <span className="hidden sm:inline">{isCliente ? t.sidebar.solicitarReserva : t.sidebar.crearReserva}</span>
             </a>
             <a href={withBase("/reservas/mis-reservas")}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-medium text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors">
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-medium text-cyan-100 bg-dash-control/85 border border-cyan-300/25 rounded-lg hover:bg-dash-control-hover transition-colors">
               <Icon icon="lucide:list" className="w-5 h-5" />
               {t.sidebar.misReservas}
             </a>
             <button type="button" onClick={() => void fetchDashboardData()}
-              className="p-2.5 text-cyan-200/70 hover:text-cyan-100 bg-[#111E38]/85 border border-cyan-300/25 rounded-lg hover:bg-[#172748] transition-colors"
+              className="p-2.5 text-cyan-200/70 hover:text-cyan-100 bg-dash-control/85 border border-cyan-300/25 rounded-lg hover:bg-dash-control-hover transition-colors"
               title={tr.refresh}>
               <Icon icon="lucide:refresh-cw" className="w-5 h-5" />
             </button>
@@ -745,7 +690,7 @@ export function DashboardContent() {
             <a
               key={kpi.key}
               href={kpi.href}
-              className={`rounded-xl border ${kpi.ring} bg-[#0D1830]/90 px-3.5 py-3.5 hover:bg-[#12203C] transition-colors min-w-0`}
+              className={`rounded-xl border ${kpi.ring} bg-dash-surface/90 px-3.5 py-3.5 hover:bg-dash-surface-hover transition-colors min-w-0`}
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-cyan-200/80 leading-snug line-clamp-2">{kpi.label}</p>
@@ -760,7 +705,7 @@ export function DashboardContent() {
         {/* Fila media: zarpes | estados | mapa — en móvil cada bloque tiene su altura; en desktop llenan la fila */}
         <div className="grid grid-cols-1 gap-4 lg:flex-1 lg:min-h-[280px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)] lg:gap-3">
           {/* Zarpes */}
-          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
+          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-center justify-between gap-2">
               <p className="text-base font-bold text-cyan-100 truncate">{tr.upcomingDepartures}</p>
               <a href={opsHref} className="text-sm font-semibold text-cyan-300/90 hover:text-cyan-200">{tr.viewAll}</a>
@@ -772,7 +717,7 @@ export function DashboardContent() {
                 </div>
               ) : (
                 <table className="w-full text-left text-base">
-                  <thead className="sticky top-0 bg-[#0D1830]">
+                  <thead className="sticky top-0 bg-dash-surface">
                     <tr className="text-sm text-cyan-300/60 border-b border-cyan-300/10">
                       <th className="px-4 py-2.5 font-bold">{tr.colRef}</th>
                       <th className="px-4 py-2.5 font-bold hidden sm:table-cell">{tr.colClient}</th>
@@ -809,7 +754,7 @@ export function DashboardContent() {
           </div>
 
           {/* Estados */}
-          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
+          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15">
               <p className="text-base font-bold text-cyan-100">{tr.byStatus}</p>
             </div>
@@ -853,7 +798,7 @@ export function DashboardContent() {
           </div>
 
           {/* Mapa */}
-          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 rounded-xl border border-cyan-300/20 bg-[#0D1830]/70 overflow-hidden">
+          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 rounded-xl border border-cyan-300/20 bg-dash-surface/70 overflow-hidden">
             <MapLibreMap
               ref={mapRef}
               initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
@@ -875,13 +820,17 @@ export function DashboardContent() {
                 );
               })}
             </MapLibreMap>
+            <div className="absolute bottom-2 left-2 z-10 flex items-center gap-3 rounded-sm bg-dash-header/85 px-2.5 py-1.5 text-sm text-cyan-100/85 backdrop-blur">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />{tr.mapOrigins}</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{tr.mapDestinations}</span>
+            </div>
           </div>
         </div>
 
         {/* Fila inferior */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-3 lg:shrink-0 lg:min-h-[200px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-3 lg:shrink-0 lg:min-h-[200px]">
           {/* Clientes */}
-          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
+          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
               <p className="text-base font-bold text-cyan-200/90">{tr.activeClients}</p>
               <p className="text-2xl font-bold text-cyan-200 tabular-nums">{activeClientsCount}</p>
@@ -900,29 +849,63 @@ export function DashboardContent() {
             </ul>
           </div>
 
+          {/* Zarpes por semana */}
+          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
+            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-cyan-200/90">{tr.weeklyDepartures}</p>
+              <p className="text-sm text-cyan-300/65">{tr.weeklyDeparturesHint}</p>
+            </div>
+            <div className="px-4 py-3 flex items-end gap-2 lg:flex-1 lg:min-h-0">
+              {weeklyDepartures.buckets.map((bucket) => {
+                const height = (bucket.count / weeklyDepartures.max) * 100;
+                return (
+                  <div key={bucket.start.toISOString()} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                    <span className="text-sm font-semibold text-cyan-100/85 tabular-nums">{bucket.count}</span>
+                    <div className="w-full h-16 lg:h-full flex items-end bg-cyan-950/45 rounded-sm overflow-hidden">
+                      <div
+                        className="w-full bg-sky-400/80 rounded-sm"
+                        style={{ height: `${bucket.count > 0 ? Math.max(height, 6) : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-cyan-300/60 tabular-nums">
+                      {format(bucket.start, "d MMM", { locale: locale === "es" ? es : undefined })}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Vía + región */}
-          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col p-4 gap-3 lg:min-h-0">
+          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col p-4 gap-3 lg:min-h-0">
+            <div className="flex items-baseline justify-between gap-2 shrink-0">
+              <p className="text-base font-bold text-cyan-200/90">{tr.byMode}</p>
+              <p className="text-sm text-cyan-300/65 truncate">{tr.byRegion}</p>
+            </div>
             <div className="flex items-center gap-3 shrink-0">
               <div
                 className="relative h-16 w-16 rounded-full shrink-0"
                 style={{ background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)` }}
               >
-                <div className="absolute inset-[9px] rounded-full bg-[#0D1830] flex items-center justify-center">
+                <div className="absolute inset-[9px] rounded-full bg-dash-surface flex items-center justify-center">
                   <span className="text-sm font-bold text-cyan-100">{transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}</span>
                 </div>
               </div>
               <div className="text-base space-y-1.5 min-w-0">
-                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 mr-2" />Marítima {transportDistribution.maritima}</p>
-                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />Aéreo {transportDistribution.aereo}</p>
+                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 mr-2" />{tr.maritime} {transportDistribution.maritima}</p>
+                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />{tr.air} {transportDistribution.aereo}</p>
+                {transportDistribution.desconocida > 0 && (
+                  <p className="text-cyan-100/55 truncate text-sm"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-500 mr-2" />{tr.modeUnknown} {transportDistribution.desconocida}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-              {regionDistribution.items.filter((i) => i.count > 0).slice(0, 5).map((item) => {
+              {regionDistribution.items.slice(0, 5).map((item) => {
                 const width = (item.count / regionDistribution.max) * 100;
                 return (
                   <div key={item.region}>
                     <div className="flex justify-between text-base text-cyan-100/90 mb-1">
-                      <span className="truncate">{item.region}</span>
+                      <span className="truncate">{regionLabels[item.region]}</span>
                       <span className="tabular-nums text-cyan-200/80 font-semibold">{item.count}</span>
                     </div>
                     <div className="h-2 bg-cyan-950/50 rounded-full overflow-hidden">
@@ -935,10 +918,10 @@ export function DashboardContent() {
           </div>
 
           {/* Navieras */}
-          <div className="rounded-xl border border-cyan-300/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
+          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
               <p className="text-base font-bold text-cyan-200/90">{tr.topCarriers}</p>
-              <p className="text-2xl font-bold text-cyan-200 tabular-nums">{topNavieras.ranked.length}</p>
+              <p className="text-2xl font-bold text-cyan-200 tabular-nums">{topNavieras.distinct}</p>
             </div>
             <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topNav.length === 0 ? (
@@ -960,27 +943,24 @@ export function DashboardContent() {
           </div>
 
           {/* Especies / POD */}
-          <div className="rounded-xl border border-fuchsia-400/20 bg-[#0D1830]/90 overflow-hidden flex flex-col lg:min-h-0">
+          <div className="rounded-xl border border-fuchsia-400/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-fuchsia-300/15 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-fuchsia-200/90">Especies</p>
+              <p className="text-base font-bold text-fuchsia-200/90">{tr.species}</p>
               <p className="text-2xl font-bold text-fuchsia-200 tabular-nums">{speciesStats.distinct}</p>
             </div>
             <div className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topSpecies.length === 0 ? (
-                <p className="text-base text-cyan-100/40">—</p>
+                <p className="text-base text-cyan-100/40">{tr.noData}</p>
               ) : (
-                topSpecies.map((item, idx) => {
-                  const pod = topSpeciesPod.find((s) => s.especie === item.especie)?.pod;
-                  return (
-                    <div key={item.especie} className="flex items-center justify-between gap-2 text-base">
-                      <span className="text-cyan-50/95 truncate min-w-0">
-                        {idx + 1}. {item.especie}
-                        {pod ? <span className="text-emerald-300/85"> · {pod}</span> : null}
-                      </span>
-                      <span className="tabular-nums text-fuchsia-200 font-semibold shrink-0">{item.cantidad}</span>
-                    </div>
-                  );
-                })
+                topSpecies.map((item, idx) => (
+                  <div key={item.especie} className="flex items-center justify-between gap-2 text-base">
+                    <span className="text-cyan-50/95 truncate min-w-0">
+                      {idx + 1}. {item.especie}
+                      {item.pod ? <span className="text-emerald-300/85"> · {item.pod}</span> : null}
+                    </span>
+                    <span className="tabular-nums text-fuchsia-200 font-semibold shrink-0">{item.cantidad}</span>
+                  </div>
+                ))
               )}
             </div>
           </div>

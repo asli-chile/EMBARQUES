@@ -19,6 +19,8 @@ import { sileo } from "sileo";
 
 type ReservaExt = {
   id: string;
+  /** Operación de origen. Null en reservas antiguas o creadas a mano aquí. */
+  operacion_id: string | null;
   cliente: string | null;
   booking: string | null;
   naviera: string | null;
@@ -89,6 +91,24 @@ type Tramo = {
 };
 
 type SelectOption = { id: string; nombre: string };
+
+/** Datos del embarque que vienen de `operaciones` y aquí solo se muestran. */
+type OperacionVinculada = {
+  id: string;
+  ref_asli: string | null;
+  correlativo: number | null;
+  cliente: string | null;
+  booking: string | null;
+  booking_doc_url: string | null;
+  naviera: string | null;
+  nave: string | null;
+  pod: string | null;
+  etd: string | null;
+  planta_presentacion: string | null;
+};
+
+const OPERACION_VINCULADA_COLS =
+  "id, ref_asli, correlativo, cliente, booking, booking_doc_url, naviera, nave, pod, etd, planta_presentacion";
 
 type FormData = {
   cliente: string;
@@ -227,6 +247,9 @@ export function ReservaExtContent() {
   const [addingDestino, setAddingDestino] = useState(false);
 
   const [bookingDocUrl, setBookingDocUrl] = useState<string | null>(null);
+  // Operación de origen de la reserva seleccionada. Cuando existe, los datos
+  // del embarque son derivados: se leen de `operaciones` y no se editan aquí.
+  const [opVinculada, setOpVinculada] = useState<OperacionVinculada | null>(null);
   // Instructivo
   const [instrFilename, setInstrFilename] = useState<string>("");
   const [instrSavedUrl, setInstrSavedUrl] = useState<string | null>(null);
@@ -307,33 +330,26 @@ export function ReservaExtContent() {
     setInstrSaveError(null);
 
     if (!selectedId || !supabase) return;
+    const operacionId = reservas.find((r) => r.id === selectedId)?.operacion_id ?? null;
     void (async () => {
-      // Intento 1: buscar en tabla documentos vía operaciones (cuando existe booking coincidente)
-      if (formData.booking) {
-        const { data: opRow } = await supabase
-          .from("operaciones")
-          .select("id")
-          .eq("booking", formData.booking)
+      // Intento 1: el instructivo registrado contra la operación vinculada
+      if (operacionId) {
+        const { data } = await supabase
+          .from("documentos")
+          .select("nombre_archivo, url")
+          .eq("operacion_id", operacionId)
+          .eq("tipo", "INSTRUCTIVO_EMBARQUE")
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        if (opRow?.id) {
-          const { data } = await supabase
-            .from("documentos")
-            .select("nombre_archivo, url")
-            .eq("operacion_id", opRow.id)
-            .eq("tipo", "INSTRUCTIVO_EMBARQUE")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (data) {
-            setInstrSavedUrl(data.url);
-            setInstrFilename(data.nombre_archivo);
-            return;
-          }
+        if (data) {
+          setInstrSavedUrl(data.url);
+          setInstrFilename(data.nombre_archivo);
+          return;
         }
       }
       // Intento 2: buscar directamente en storage bajo el id de la reserva ext
-      // (reservas sin operaciones coincidente guardan el archivo aquí)
+      // (reservas sin operación vinculada guardan el archivo aquí)
       const { data: storageFiles } = await supabase.storage
         .from("documentos")
         .list(`${selectedId}/INSTRUCTIVO_EMBARQUE`);
@@ -371,18 +387,33 @@ export function ReservaExtContent() {
     setEquipoInput(r.patente_camion ?? "");
     setError(null);
     setBookingDocUrl(null);
+    setOpVinculada(null);
     // Instructivo — se resetea via useEffect en selectedId
-    // Buscar el PDF de booking en operaciones por número de booking
-    if (r.booking && supabase) {
+    // Datos del embarque y PDF del booking: se leen de la operación vinculada,
+    // no del texto del booking, para no confundir dos embarques homónimos.
+    if (r.operacion_id && supabase) {
       void supabase
         .from("operaciones")
-        .select("booking_doc_url")
-        .eq("booking", r.booking)
-        .not("booking_doc_url", "is", null)
-        .limit(1)
-        .single()
+        .select(OPERACION_VINCULADA_COLS)
+        .eq("id", r.operacion_id)
+        .maybeSingle()
         .then(({ data }) => {
-          setBookingDocUrl((data as { booking_doc_url: string | null } | null)?.booking_doc_url ?? null);
+          const op = data as OperacionVinculada | null;
+          if (!op) return;
+          setOpVinculada(op);
+          setBookingDocUrl(op.booking_doc_url);
+          // La operación es la fuente de verdad: si allí corrigieron nave, POD
+          // o ETD, la reserva se actualiza al abrirla.
+          setFormData((prev) => ({
+            ...prev,
+            cliente: op.cliente ?? "",
+            booking: op.booking ?? "",
+            naviera: op.naviera ?? "",
+            nave: op.nave ?? "",
+            pod: op.pod ?? "",
+            etd: op.etd ?? "",
+            planta_presentacion: op.planta_presentacion ?? prev.planta_presentacion,
+          }));
         });
     }
 
@@ -424,6 +455,7 @@ export function ReservaExtContent() {
     setIsNew(true);
     setFormData(initialFormData);
     setBookingDocUrl(null);
+    setOpVinculada(null);
     setEmpresaTransporteId("");
     setEmpresaTransporteInput("");
     setChoferInput("");
@@ -431,13 +463,12 @@ export function ReservaExtContent() {
     setChoferes([]);
     setEquipos([]);
     setError(null);
-    setInstrPhase("idle");
-    setInstrBlob(null);
+    setPodInput("");
     setInstrFilename("");
-    setInstrDraftUrl(undefined);
-    setInstrError("");
     setInstrSavedUrl(null);
     setInstrSaveError(null);
+    setConfirmReplaceInstr(false);
+    if (instrFileInputRef.current) instrFileInputRef.current.value = "";
     setMobilePanel("form");
   };
 
@@ -816,12 +847,12 @@ export function ReservaExtContent() {
       const { error: upErr } = await supabase.storage.from("documentos").upload(storagePath, file, { upsert: true });
       if (upErr) throw new Error(`Error al subir: ${upErr.message}`);
       const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(storagePath);
-      if (formData.booking) {
-        const { data: opRow } = await supabase.from("operaciones").select("id").eq("booking", formData.booking).is("deleted_at", null).limit(1).maybeSingle();
-        if (opRow?.id) {
-          await supabase.from("documentos").delete().eq("operacion_id", opRow.id).eq("tipo", "INSTRUCTIVO_EMBARQUE");
+      {
+        const operacionId = opVinculada?.id ?? null;
+        if (operacionId) {
+          await supabase.from("documentos").delete().eq("operacion_id", operacionId).eq("tipo", "INSTRUCTIVO_EMBARQUE");
           await supabase.from("documentos").insert({
-            operacion_id: opRow.id,
+            operacion_id: operacionId,
             tipo: "INSTRUCTIVO_EMBARQUE",
             nombre_archivo: file.name,
             url: urlData.publicUrl,
@@ -1268,7 +1299,51 @@ export function ReservaExtContent() {
                           <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
                         </span>
                         <h2 className={moduleSectionTitle}>{tr.sectionOp}</h2>
+                        {opVinculada && (
+                          <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            <Icon icon="lucide:link" width={12} height={12} />
+                            {opVinculada.ref_asli ??
+                              (opVinculada.correlativo != null
+                                ? `A${String(opVinculada.correlativo).padStart(5, "0")}`
+                                : tr.linkedOp)}
+                          </span>
+                        )}
                       </div>
+                      {opVinculada ? (
+                        <div className="p-4 space-y-3">
+                          <p className="text-xs text-neutral-500">{tr.linkedOpHint}</p>
+                          <dl className="grid grid-cols-2 gap-3">
+                            {[
+                              { label: tr.clientLabel, value: opVinculada.cliente },
+                              { label: tr.bookingLabel, value: opVinculada.booking },
+                              { label: tr.navieraLabel, value: opVinculada.naviera },
+                              { label: tr.naveLabel, value: opVinculada.nave },
+                              { label: tr.podLabel, value: opVinculada.pod },
+                              { label: tr.etdLabel, value: formatDate(opVinculada.etd) },
+                            ].map(({ label, value }) => (
+                              <div key={label}>
+                                <dt className={labelClass}>{label}</dt>
+                                <dd className="text-sm font-semibold text-brand-blue truncate">
+                                  {value || "-"}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                          <div>
+                            <label className={labelClass}>{tr.warehouse}</label>
+                            <select
+                              value={formData.deposito}
+                              onChange={(e) => handleChange("deposito", e.target.value)}
+                              className={inputClass}
+                            >
+                              <option value="">{tr.selectDeposito}</option>
+                              {depositos.map((d) => (
+                                <option key={d.id} value={d.nombre}>{d.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
                       <div className="p-4 grid grid-cols-2 gap-3">
                         {renderInput(tr.clientLabel, "cliente", "text", tr.clientPlaceholder)}
                         {renderInput(tr.bookingLabel, "booking", "text", tr.bookingPlaceholder)}
@@ -1334,6 +1409,7 @@ export function ReservaExtContent() {
                           </select>
                         </div>
                       </div>
+                      )}
                     </div>
 
                     {/* Transporte */}

@@ -35,7 +35,7 @@ export function InicioHero({
 
   return (
     <header
-      className={`relative z-10 inicio-ink ${compact ? "pt-8 pb-6 sm:pt-11 sm:pb-8" : "min-h-[min(92vh,880px)] flex items-center py-16 sm:py-24"}`}
+      className={`relative z-10 inicio-ink ${compact ? "pt-8 pb-6 sm:pt-11 sm:pb-8" : "min-h-full flex items-center py-12 sm:py-16"}`}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
         <div className={`grid gap-10 lg:gap-14 items-center ${compact ? "lg:grid-cols-[1.15fr_0.85fr]" : "lg:grid-cols-[1.05fr_0.95fr]"}`}>
@@ -85,17 +85,19 @@ export function InicioHero({
               data-hero-item
               className={`inicio-display font-extrabold leading-[1.05] ${compact ? "text-3xl sm:text-4xl lg:text-[2.75rem]" : "text-4xl sm:text-5xl lg:text-[3.25rem]"}`}
             >
-              {isLoggedIn ? (
-                <>
-                  Tu operación,{" "}
-                  <span className="inicio-accent-text">en un solo lugar</span>
-                </>
-              ) : (
-                <>
-                  Gestión logística{" "}
-                  <span className="inicio-accent-text">integral</span>
-                </>
-              )}
+              <span className="inicio-hero-title-stretch">
+                {isLoggedIn ? (
+                  <>
+                    Tu operación,{" "}
+                    <span className="inicio-accent-text">en un solo lugar</span>
+                  </>
+                ) : (
+                  <>
+                    Gestión logística{" "}
+                    <span className="inicio-accent-text">integral</span>
+                  </>
+                )}
+              </span>
             </h1>
 
             <p data-hero-item className={`mt-5 inicio-ink-mute max-w-lg leading-relaxed ${compact ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>
