@@ -19,6 +19,7 @@ import {
 } from "@/lib/ui/moduleStyles";
 import { ComboboxInput, type ComboboxOption } from "@/components/ui/ComboboxInput";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
+import { findOrCreateNave } from "@/lib/catalogos/findOrCreateNave";
 import { sileo } from "sileo";
 
 // -- Types --------------------------------------------------------------------
@@ -1390,32 +1391,32 @@ export function CrearProformaContent() {
       if (!nombre) return;
       setAddingNave(true);
       try {
-        const { data, error } = await supabase
-          .from("naves")
-          .insert({ nombre, activo: true })
-          .select("id, nombre")
-          .single();
-        if (error) {
-          sileo.error({ title: "No se pudo crear la nave", description: error.message });
+        const nav = navierasOpts.find(
+          (n) => n.nombre.toUpperCase() === header.naviera.trim().toUpperCase()
+        );
+        const result = await findOrCreateNave(supabase, {
+          nombre,
+          navieraId: nav?.id,
+        });
+        if ("error" in result) {
+          sileo.error({ title: "No se pudo agregar la nave", description: result.error });
           return;
         }
-        if (data) {
-          setNavesOpts((prev) =>
-            [...prev, data as ComboboxOption].sort((a, b) => a.nombre.localeCompare(b.nombre))
-          );
-          const nav = navierasOpts.find(
-            (n) => n.nombre.toUpperCase() === header.naviera.trim().toUpperCase()
-          );
-          if (nav) {
-            await supabase.from("navieras_naves").insert({ naviera_id: nav.id, nave_id: data.id });
-            setNavesByNaviera((prev) => ({
-              ...prev,
-              [nav.id]: [...(prev[nav.id] ?? []), data.id],
-            }));
-          }
-          setHeader((h) => ({ ...h, nave: data.nombre }));
-          sileo.success({ title: "Nave agregada al catálogo" });
+        const data = result.nave;
+        setNavesOpts((prev) => {
+          if (prev.some((n) => n.id === data.id)) return prev;
+          return [...prev, data as ComboboxOption].sort((a, b) => a.nombre.localeCompare(b.nombre));
+        });
+        if (nav) {
+          setNavesByNaviera((prev) => ({
+            ...prev,
+            [nav.id]: [...new Set([...(prev[nav.id] ?? []), data.id])],
+          }));
         }
+        setHeader((h) => ({ ...h, nave: data.nombre }));
+        sileo.success({
+          title: result.created ? "Nave agregada al catálogo" : "Nave vinculada a la naviera",
+        });
       } finally {
         setAddingNave(false);
       }

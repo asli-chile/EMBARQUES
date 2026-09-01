@@ -67,6 +67,12 @@ export const siteConfig = {
     { labelKey: "tracking", id: "tracking", href: "/tracking" },
   ],
   authIcon: icons.auth,
+  /** Contacto para solicitar usuario y contraseña en la plataforma */
+  accessRequest: {
+    email: "rodrigo.caceres@asli.cl",
+    phone: "+56 9 6839 4225",
+    mailtoSubject: "Solicitud de acceso EMBARQUES",
+  },
   user: {
     name: "Usuario",
     email: "usuario@ejemplo.com",

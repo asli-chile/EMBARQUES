@@ -5,6 +5,7 @@ import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { FormSelect } from "@/components/ui/FormSelect";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { findOrCreateNave } from "@/lib/catalogos/findOrCreateNave";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
@@ -199,6 +200,7 @@ function isOperacionAerea(tipoOperacion: string): boolean {
 // Respaldo del catálogo `dueno_reserva`: si la tabla `catalogos` todavía no
 // tiene valores sembrados, el combobox igual ofrece las empresas históricas.
 const DUENOS_RESERVA_FALLBACK = ["ASLI", "CHILFRESH", "SURLOGISTICA"];
+const PLANTA_POR_INFORMAR_LABEL = "POR INFORMAR";
 
 type FormData = {
   tipo_operacion: string;
@@ -227,6 +229,7 @@ type FormData = {
   eta: string;
   booking: string;
   planta_presentacion: string;
+  planta_por_informar: boolean;
   citacion: string;
   deposito: string;
   inicio_stacking: string;
@@ -268,6 +271,7 @@ const initialFormData: FormData = {
   eta: "",
   booking: "",
   planta_presentacion: "",
+  planta_por_informar: false,
   citacion: "",
   deposito: "",
   inicio_stacking: "",
@@ -337,8 +341,17 @@ export function CrearReservaContent() {
   const { user, profile, empresaNombres, isSuperadmin, isCliente } = useAuth();
   const pageTitle = isCliente ? tr.titleCliente : tr.title;
   const pageSubtitle = isCliente ? tr.subtitleCliente : tr.subtitle;
+  const sectionOrder = useMemo<SectionKey[]>(
+    () => (isCliente ? SECTION_ORDER.filter((key) => key !== "deposito") : SECTION_ORDER),
+    [isCliente],
+  );
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [currentStep, setCurrentStep] = useState(0);
+  useEffect(() => {
+    if (currentStep >= sectionOrder.length) {
+      setCurrentStep(Math.max(0, sectionOrder.length - 1));
+    }
+  }, [currentStep, sectionOrder.length]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -916,11 +929,17 @@ export function CrearReservaContent() {
         formData.pod &&
         formData.etd
       ),
-      planta: Boolean(formData.planta_presentacion),
-      deposito: Boolean(formData.solicitud_ventana),
+      planta: Boolean(formData.planta_presentacion) || formData.planta_por_informar,
+      deposito: isCliente ? true : Boolean(formData.solicitud_ventana),
       observaciones: formData.sin_observaciones || Boolean(formData.observaciones.trim()),
     };
-  }, [formData, naveInput]);
+  }, [formData, isCliente, naveInput]);
+
+  const plantaNombreGuardado = useMemo(() => {
+    if (formData.planta_por_informar) return PLANTA_POR_INFORMAR_LABEL;
+    if (!formData.planta_presentacion) return null;
+    return plantas.find((p) => p.id === formData.planta_presentacion)?.nombre ?? null;
+  }, [formData.planta_por_informar, formData.planta_presentacion, plantas]);
 
   const naveNombreSeleccionado = useMemo(() => {
     if (formData.nave) {
@@ -975,9 +994,13 @@ export function CrearReservaContent() {
 
   // Sincronizar plantaInput cuando cambia el valor del form (ej. carga de datos de prueba)
   useEffect(() => {
+    if (formData.planta_por_informar) {
+      setPlantaInput("");
+      return;
+    }
     const nombre = plantas.find((p) => p.id === formData.planta_presentacion)?.nombre ?? "";
     setPlantaInput(nombre);
-  }, [formData.planta_presentacion, plantas]);
+  }, [formData.planta_presentacion, formData.planta_por_informar, plantas]);
 
   // Sincronizar especieInput cuando cambia el valor del form
   useEffect(() => {
@@ -1126,40 +1149,34 @@ export function CrearReservaContent() {
   const handleAddNave = async (text: string) => {
     if (!supabase || !text.trim()) return;
     setAddingNave(true);
-    const nombre = text.trim().toUpperCase();
-    const { data, error: insertError } = await supabase
-      .from("naves")
-      .insert({ nombre, activo: true, modo_transporte: modoTransporte })
-      .select("id, nombre, modo_transporte")
-      .single();
-    if (!insertError && data) {
-      const row: TransportOption = {
-        id: data.id,
-        nombre: data.nombre,
-        modo_transporte: data.modo_transporte === "aereo" ? "aereo" : "maritimo",
-      };
-      setNaves((prev) => [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-      setNavesFiltered((prev) => {
-        if (prev.some((n) => n.id === row.id)) return prev;
-        return [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre));
-      });
-      if (formData.naviera) {
-        const { error: linkError } = await supabase.from("navieras_naves").insert({
-          naviera_id: formData.naviera,
-          nave_id: row.id,
-          activo: true,
-        });
-        if (linkError && process.env.NODE_ENV === "development") {
-          console.error("Error linking nave to carrier:", linkError);
-        }
-      }
-      setFormData((prev) => ({ ...prev, nave: row.id, viaje: "" }));
-      setNaveInput(row.nombre);
-      setViajesSugeridos([]);
-    } else if (insertError) {
-      console.error("Error adding nave:", insertError);
-      setError(insertError.message);
+    const result = await findOrCreateNave(supabase, {
+      nombre: text,
+      navieraId: formData.naviera || undefined,
+      modoTransporte,
+    });
+    if ("error" in result) {
+      console.error("Error adding nave:", result.error);
+      setError(result.error);
+      setAddingNave(false);
+      return;
     }
+
+    const row: TransportOption = {
+      id: result.nave.id,
+      nombre: result.nave.nombre,
+      modo_transporte: result.nave.modo_transporte === "aereo" ? "aereo" : "maritimo",
+    };
+    setNaves((prev) => {
+      if (prev.some((n) => n.id === row.id)) return prev;
+      return [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    });
+    setNavesFiltered((prev) => {
+      if (prev.some((n) => n.id === row.id)) return prev;
+      return [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    });
+    setFormData((prev) => ({ ...prev, nave: row.id, viaje: "" }));
+    setNaveInput(row.nombre);
+    setViajesSugeridos([]);
     setAddingNave(false);
   };
 
@@ -1281,9 +1298,7 @@ export function CrearReservaContent() {
       eta: formData.eta || null,
       tt: transitTime,
       booking: formData.booking || null,
-      planta_presentacion: formData.planta_presentacion
-        ? plantas.find((p) => p.id === formData.planta_presentacion)?.nombre
-        : null,
+      planta_presentacion: plantaNombreGuardado,
       citacion: formData.citacion.trim() || null,
       deposito: formData.deposito
         ? depositos.find((d) => d.id === formData.deposito)?.nombre
@@ -2030,11 +2045,11 @@ export function CrearReservaContent() {
         icon: "typcn:home", title: tr.sectionPlanta,
         cols: 2,
         items: [
-          { label: tr.planta, value: getDisplayValue(formData.planta_presentacion, plantas) },
+          { label: tr.planta, value: plantaNombreGuardado ?? "—" },
           ...(formData.citacion ? [{ label: tr.citacion, value: formatDateTimeDisplay(formData.citacion) }] : []),
         ],
       },
-      {
+      ...(isCliente ? [] : [{
         icon: "typcn:location", title: tr.sectionDeposito,
         cols: 2,
         items: [
@@ -2078,7 +2093,7 @@ export function CrearReservaContent() {
             ? [{ label: tr.xlateFin, value: formatDateTimeDisplay(formData.xlate_fin), separateRow: true, accent: "red" as const }]
             : []),
         ],
-      },
+      }]),
       ...(formData.observaciones || formData.sin_observaciones ? [{
         icon: "typcn:document-text", title: tr.sectionObservaciones,
         cols: 1,
@@ -2764,28 +2779,60 @@ export function CrearReservaContent() {
     ),
     planta: (
       <FieldGrid>
-        <ComboboxInput
-          id="planta_presentacion"
-          label={tr.planta}
-          labelExtra={reqMark}
-          labelClass={labelClass}
-          inputClass={inputClass}
-          value={plantaInput}
-          options={plantas}
-          onSelect={(opt) => {
-            setPlantaInput(opt.nombre);
-            setFormData((prev) => ({ ...prev, planta_presentacion: opt.id }));
-          }}
-          onChange={(val) => {
-            setPlantaInput(val);
-            setFormData((prev) => ({ ...prev, planta_presentacion: "" }));
-          }}
-          onAddNew={handleAddPlanta}
-          addNewLabel={(text) => `${tr.addNewPlanta} "${text}"`}
-          addingNew={addingPlanta}
-          placeholder={tr.searchPlanta}
-          disabled={loadingCatalogos}
-        />
+        <div className="sm:col-span-2 xl:col-span-3 2xl:col-span-4 space-y-2.5">
+          <ComboboxInput
+            id="planta_presentacion"
+            label={tr.planta}
+            labelExtra={reqMark}
+            labelClass={labelClass}
+            inputClass={inputClass}
+            value={plantaInput}
+            options={plantas}
+            onSelect={(opt) => {
+              setPlantaInput(opt.nombre);
+              setFormData((prev) => ({
+                ...prev,
+                planta_presentacion: opt.id,
+                planta_por_informar: false,
+              }));
+            }}
+            onChange={(val) => {
+              setPlantaInput(val);
+              setFormData((prev) => ({
+                ...prev,
+                planta_presentacion: "",
+                planta_por_informar: false,
+              }));
+            }}
+            onAddNew={handleAddPlanta}
+            addNewLabel={(text) => `${tr.addNewPlanta} "${text}"`}
+            addingNew={addingPlanta}
+            placeholder={tr.searchPlanta}
+            disabled={loadingCatalogos || formData.planta_por_informar}
+          />
+          <div className="rounded-xl border border-brand-blue/15 bg-white p-3 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-blue/70">{tr.plantaPorInformarTitle}</p>
+            <p className="text-xs text-brand-blue/55">{tr.plantaPorInformarHint}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setPlantaInput("");
+                setFormData((prev) => ({
+                  ...prev,
+                  planta_presentacion: "",
+                  planta_por_informar: !prev.planta_por_informar,
+                }));
+              }}
+              className={`w-full sm:w-auto px-4 py-2.5 rounded-lg border text-sm font-bold transition-all ${
+                formData.planta_por_informar
+                  ? "bg-brand-blue text-white border-brand-blue shadow-sm"
+                  : "bg-white text-brand-blue border-brand-blue/15 hover:border-brand-blue/40"
+              }`}
+            >
+              {tr.plantaPorInformar}
+            </button>
+          </div>
+        </div>
         <div>
           <ReservaDateTimeField
             id="citacion"
@@ -2995,9 +3042,9 @@ export function CrearReservaContent() {
     ),
   };
 
-  const activeKey = SECTION_ORDER[currentStep];
-  const isLastStep = currentStep === SECTION_ORDER.length - 1;
-  const progressSections = SECTION_ORDER;
+  const activeKey = sectionOrder[currentStep];
+  const isLastStep = currentStep === sectionOrder.length - 1;
+  const progressSections = sectionOrder;
   const completedCount = progressSections.filter((key) => sectionValidation[key]).length;
   const progressPct = Math.round((completedCount / progressSections.length) * 100);
 
@@ -3022,7 +3069,7 @@ export function CrearReservaContent() {
             <div className="min-w-0">
               <h1 className="text-lg font-bold leading-tight truncate tracking-tight" title={pageSubtitle}>{pageTitle}</h1>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-200/80">
-                {tr.stepLabel} {currentStep + 1} {tr.stepOf} {SECTION_ORDER.length} · {sectionTitles[activeKey]}
+                {tr.stepLabel} {currentStep + 1} {tr.stepOf} {sectionOrder.length} · {sectionTitles[activeKey]}
               </p>
             </div>
           </div>
@@ -3052,7 +3099,7 @@ export function CrearReservaContent() {
         <div className="h-0.5 bg-white/10">
           <div
             className="h-full bg-brand-teal transition-all duration-500 ease-out"
-            style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.4)) / SECTION_ORDER.length) * 100, 6)}%` }}
+            style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.4)) / sectionOrder.length) * 100, 6)}%` }}
           />
         </div>
       </header>
@@ -3061,7 +3108,7 @@ export function CrearReservaContent() {
         <div className="h-full min-h-0 w-full px-3 sm:px-4 py-2.5 grid gap-3 xl:grid-cols-[200px_minmax(0,1fr)]">
           <nav className="hidden xl:flex min-h-0" aria-label={tr.stepsPanelTitle}>
             <ol className="w-full rounded-xl border border-brand-blue/15 bg-white p-1.5 shadow-sm flex flex-col">
-              {SECTION_ORDER.map((key, idx) => {
+              {sectionOrder.map((key, idx) => {
                 const isActive = idx === currentStep;
                 const isComplete = sectionValidation[key];
                 return (
@@ -3104,7 +3151,7 @@ export function CrearReservaContent() {
           <div className="min-w-0 min-h-0 h-full flex flex-col gap-2">
             <div className="xl:hidden shrink-0 rounded-xl border border-brand-blue/15 bg-white p-2 shadow-sm">
               <div className="flex items-center gap-1.5">
-                {SECTION_ORDER.map((key, idx) => {
+                {sectionOrder.map((key, idx) => {
                   const isActive = idx === currentStep;
                   const isComplete = sectionValidation[key];
                   return (
@@ -3253,7 +3300,7 @@ export function CrearReservaContent() {
             <span className="w-px h-6 bg-brand-blue/15" aria-hidden />
             <button
               type="button"
-              onClick={() => setCurrentStep((s) => Math.min(SECTION_ORDER.length - 1, s + 1))}
+              onClick={() => setCurrentStep((s) => Math.min(sectionOrder.length - 1, s + 1))}
               disabled={isLastStep}
               title={tr.btnNext}
               aria-label={tr.btnNext}

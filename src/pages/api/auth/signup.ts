@@ -1,21 +1,18 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/lib/auth/password";
 
-const SUPABASE_NOT_CONFIGURED =
-  "Autenticación no configurada. Configura PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY en .env";
+const json = (data: { success: boolean; error?: string; message?: string }, status: number) =>
+  new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 
 function isSupabaseConfigured(): boolean {
   return !!(
     import.meta.env.PUBLIC_SUPABASE_URL?.trim() &&
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY?.trim()
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
   );
 }
 
-const json = (data: { success: boolean; error?: string; redirect?: string }, status: number) =>
-  new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
-
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request }) => {
   let email: string | null = null;
   let password: string | null = null;
   let name: string | null = null;
@@ -40,29 +37,50 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (password.length < PASSWORD_MIN_LENGTH)
     return json({ success: false, error: PASSWORD_MIN_LENGTH_MESSAGE }, 400);
 
-  if (!isSupabaseConfigured()) return json({ success: false, error: SUPABASE_NOT_CONFIGURED }, 500);
+  if (!isSupabaseConfigured()) {
+    return json(
+      {
+        success: false,
+        error: "Servicio no configurado. Contacta al administrador.",
+      },
+      500,
+    );
+  }
 
   try {
-    const supabase = createClient(cookies);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name || undefined } },
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.functions.invoke("access-request", {
+      body: { name, email, password },
     });
 
     if (error) {
-      const msg =
-        error.message.includes("already registered") || error.message.includes("already been registered")
-          ? "Este correo ya está registrado"
-          : error.message.includes("Signups not allowed") || error.message.includes("signup")
-            ? "Registro deshabilitado. Contacta al administrador o habilita signups en Supabase."
-            : error.message;
-      return json({ success: false, error: msg }, 400);
+      const msg = error.message?.includes("FunctionsFetchError")
+        ? "No se pudo enviar la solicitud. La función de correo no está disponible."
+        : error.message || "Error al enviar la solicitud";
+      return json({ success: false, error: msg }, 502);
     }
 
-    return json({ success: true, redirect: "/auth/login?registered=true" }, 200);
+    const result = data as { success?: boolean; error?: string } | null;
+    if (!result?.success) {
+      return json(
+        {
+          success: false,
+          error: result?.error || "No se pudo enviar la solicitud de acceso",
+        },
+        502,
+      );
+    }
+
+    return json(
+      {
+        success: true,
+        message:
+          "Solicitud enviada. Te contactaremos por correo cuando tu acceso esté listo.",
+      },
+      200,
+    );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error inesperado al crear la cuenta";
+    const msg = err instanceof Error ? err.message : "Error inesperado al enviar la solicitud";
     return json({ success: false, error: msg }, 500);
   }
 };
