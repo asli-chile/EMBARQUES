@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
 import { useLocale } from "@/lib/i18n";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 
 export function RegistroForm() {
   const { t } = useLocale();
@@ -105,7 +106,7 @@ export function RegistroForm() {
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
               disabled={isPending}
               placeholder={t.auth.placeholderPassword}
               className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"

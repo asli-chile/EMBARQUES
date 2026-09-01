@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isPasswordLongEnough, PASSWORD_MIN_LENGTH_MESSAGE_NEW } from "@/lib/auth/password";
 
 function isSupabaseConfigured(): boolean {
   return !!(
@@ -82,9 +83,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
-  if (!newPassword || newPassword.length < 6) {
+  if (!isPasswordLongEnough(newPassword)) {
     return new Response(
-      JSON.stringify({ success: false, error: "La nueva contraseña debe tener al menos 6 caracteres" }),
+      JSON.stringify({ success: false, error: PASSWORD_MIN_LENGTH_MESSAGE_NEW }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }

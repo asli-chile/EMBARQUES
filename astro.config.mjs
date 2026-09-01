@@ -21,10 +21,14 @@ export default defineConfig({
   adapter: vercel({
     devToolbar: { enabled: false },
   }),
-  // Desactiva la comprobación de Origin para evitar 403 "Cross-site POST form submissions are forbidden"
-  // en Vercel/serverless (el Origin del request puede no coincidir). Para reactivar: define ORIGIN en Vercel.
+  // CSRF + proxy (asli.cl/embarques vía Vercel): confía en X-Forwarded-* solo para estos hosts.
+  // Sin esto, checkOrigin compara el Origin del navegador contra la URL interna del server → 403 en POST.
   security: {
-    checkOrigin: false,
+    allowedDomains: [
+      { hostname: "www.asli.cl", protocol: "https" },
+      { hostname: "asli.cl", protocol: "https" },
+      { hostname: "**.vercel.app", protocol: "https" },
+    ],
   },
   vite: {
     // Acceso desde celular/tablet en la misma Wi‑Fi.

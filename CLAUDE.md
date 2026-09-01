@@ -410,6 +410,34 @@ PUBLIC_SUPABASE_ANON_KEY=eyJ...
 
 Definidas en `.env` (no commitear). Accesibles en el cliente con prefijo `PUBLIC_`.
 
+### CSRF y proxy en Vercel
+
+Astro valida el encabezado `Origin` en POST (`security.checkOrigin`, activo por defecto). Detrás del proxy de Vercel, la URL interna del servidor no coincide con la del navegador, así que hay que declarar los dominios permitidos en `astro.config.mjs`:
+
+```js
+security: {
+  allowedDomains: [
+    { hostname: "www.asli.cl", protocol: "https" },
+    { hostname: "asli.cl", protocol: "https" },
+    { hostname: "**.vercel.app", protocol: "https" }, // previews
+  ],
+},
+```
+
+**Nota:** Astro solo aplica `checkOrigin` a POST con `Content-Type` de formulario (`application/x-www-form-urlencoded`, `multipart/form-data`, `text/plain`). Los endpoints JSON (`/api/auth/*`, `/api/admin/*`) no quedan cubiertos por esta protección; la sesión sigue siendo la barrera principal.
+
+Si en Vercel definiste una variable `ORIGIN`, usa el formato completo: `https://www.asli.cl` (con `https://`, sin barra final). Si el sitio también se abre como `https://asli.cl` sin `www`, conviene redirigir siempre al canónico o mantener ambos en `allowedDomains` (como arriba).
+
+---
+
+## Política de Contraseñas
+
+El mínimo es de **12 caracteres**, definido en un solo lugar: `src/lib/auth/password.ts`. Ese módulo exporta la constante, los mensajes de error y los placeholders, y lo consumen tanto las rutas API (`signup`, `create-user`, `activate-user`, `reset-user`, `change-password`) como los formularios (`UsuariosContent.tsx`, `RegistroForm.tsx`).
+
+Al cambiar el mínimo, editar **solo** `PASSWORD_MIN_LENGTH`; el resto se deriva. Las únicas cadenas que hay que ajustar aparte son `placeholderPassword` en `src/lib/i18n/translations.ts` (versiones `es` y `en`), porque el sistema de traducciones no admite valores calculados.
+
+Complemento recomendado en Supabase Dashboard (Auth → Policies): activar la detección de contraseñas filtradas, que compara contra bases de datos de brechas conocidas y no requiere cambios en el código.
+
 ---
 
 ## Migraciones Pendientes
@@ -470,6 +498,16 @@ supabase/migrations/20260831000002_reservas_ext_operacion_id.sql
 Agrega `transportes_reservas_ext.operacion_id` (FK a `operaciones`, `ON DELETE SET NULL`) con su índice, y hace backfill del histórico por número de booking **solo cuando ese booking identifica una única operación viva**; si hay ambigüedad la deja en `NULL` a propósito.
 
 Antes el cruce entre la reserva externa y su operación se hacía comparando el texto del booking con `.limit(1)`, de modo que dos embarques con el mismo booking podían intercambiar instructivo y PDF de booking. **Mientras no se aplique, las reservas externas nuevas no guardarán el vínculo** y la pantalla las tratará como reservas manuales (datos del embarque editables a mano, como antes).
+
+Seguridad:
+
+```
+supabase/migrations/20260831000002_revoke_anon_operaciones_clientes.sql
+```
+
+Revoca los `GRANT ALL ... TO anon` que las migraciones iniciales dejaron sobre `operaciones` y `clientes`. Hoy RLS ya bloquea a `anon` en ambas tablas (no queda ninguna política dirigida a ese rol), pero mientras los GRANT sigan vigentes, RLS es la **única** barrera: si alguien lo desactiva por error o crea una política sin `TO authenticated`, esas tablas quedarían legibles y escribibles con la anon key, que es pública por diseño.
+
+`authenticated` y `service_role` conservan sus privilegios, así que **aplicarla no cambia nada en el funcionamiento del ERP**. Para verificar que quedó aplicada, la propia migración incluye la consulta al final: no debe devolver filas.
 
 Se pueden aplicar con `npm run db:migrate -- <archivo.sql>` si existe `DATABASE_URL` en `.env.local`, o pegando el SQL en el editor de Supabase.
 

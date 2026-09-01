@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/lib/auth/password";
 
 const ROLES = ["superadmin", "admin", "ejecutivo", "operador", "cliente", "usuario"] as const;
 
@@ -91,9 +92,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
-  if (password.length < 6) {
+  if (password.length < PASSWORD_MIN_LENGTH) {
     return new Response(
-      JSON.stringify({ success: false, error: "La contraseña debe tener al menos 6 caracteres" }),
+      JSON.stringify({ success: false, error: PASSWORD_MIN_LENGTH_MESSAGE }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }

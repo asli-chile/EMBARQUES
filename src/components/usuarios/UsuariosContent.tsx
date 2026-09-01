@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
+import {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MIN_LENGTH_MESSAGE_NEW,
+  PASSWORD_PLACEHOLDER,
+  PASSWORD_PLACEHOLDER_SHORT,
+} from "@/lib/auth/password";
 import { useLocale } from "@/lib/i18n";
 import { FormSelect } from "@/components/ui/FormSelect";
 import {
@@ -567,7 +573,7 @@ export function UsuariosContent() {
   const handleResetSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!resettingUser || resetPassword.length < 6) return;
+      if (!resettingUser || resetPassword.length < PASSWORD_MIN_LENGTH) return;
       setResetError(null);
       setIsResetting(true);
       try {
@@ -596,7 +602,7 @@ export function UsuariosContent() {
   const handleActivateSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!activatingUser || activatePassword.length < 6) return;
+      if (!activatingUser || activatePassword.length < PASSWORD_MIN_LENGTH) return;
       setActivateError(null);
       setIsActivating(true);
       try {
@@ -658,8 +664,8 @@ export function UsuariosContent() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!editingUser || !changePasswordVerified) return;
-      if (changePasswordNew.length < 6) {
-        setChangePasswordError("La nueva contraseña debe tener al menos 6 caracteres");
+      if (changePasswordNew.length < PASSWORD_MIN_LENGTH) {
+        setChangePasswordError(PASSWORD_MIN_LENGTH_MESSAGE_NEW);
         return;
       }
       if (changePasswordNew !== changePasswordConfirm) {
@@ -1172,11 +1178,11 @@ export function UsuariosContent() {
                     id="create-password"
                     type={showPassword ? "text" : "password"}
                     required
-                    minLength={6}
+                    minLength={PASSWORD_MIN_LENGTH}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                     className={`${moduleInput} pr-10`}
-                    placeholder="Mín. 6 caracteres"
+                    placeholder={PASSWORD_PLACEHOLDER_SHORT}
                   />
                   <button
                     type="button"
@@ -1358,18 +1364,18 @@ export function UsuariosContent() {
             <form onSubmit={handleActivateSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
                 <label htmlFor="activate-password" className={moduleLabel}>
-                  Contraseña (mín. 6 caracteres)
+                  Contraseña (mín. {PASSWORD_MIN_LENGTH} caracteres)
                 </label>
                 <div className="relative">
                   <input
                     id="activate-password"
                     type={showActivatePassword ? "text" : "password"}
                     required
-                    minLength={6}
+                    minLength={PASSWORD_MIN_LENGTH}
                     value={activatePassword}
                     onChange={(e) => setActivatePassword(e.target.value)}
                     className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={PASSWORD_PLACEHOLDER}
                   />
                   <button
                     type="button"
@@ -1398,7 +1404,7 @@ export function UsuariosContent() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isActivating || activatePassword.length < 6}
+                  disabled={isActivating || activatePassword.length < PASSWORD_MIN_LENGTH}
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 >
                   {isActivating ? "Activando…" : "Crear cuenta y vincular"}
@@ -1443,18 +1449,18 @@ export function UsuariosContent() {
             <form onSubmit={handleResetSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
                 <label htmlFor="reset-password" className={moduleLabel}>
-                  Nueva contraseña (mín. 6 caracteres)
+                  Nueva contraseña (mín. {PASSWORD_MIN_LENGTH} caracteres)
                 </label>
                 <div className="relative">
                   <input
                     id="reset-password"
                     type={showResetPassword ? "text" : "password"}
                     required
-                    minLength={6}
+                    minLength={PASSWORD_MIN_LENGTH}
                     value={resetPassword}
                     onChange={(e) => setResetPassword(e.target.value)}
                     className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={PASSWORD_PLACEHOLDER}
                   />
                   <button
                     type="button"
@@ -1483,7 +1489,7 @@ export function UsuariosContent() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isResetting || resetPassword.length < 6}
+                  disabled={isResetting || resetPassword.length < PASSWORD_MIN_LENGTH}
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
                 >
                   {isResetting ? "Reseteando…" : "Resetear y guardar contraseña"}
@@ -1633,17 +1639,17 @@ export function UsuariosContent() {
                           <>
                             <p className="text-xs font-medium text-emerald-600">Contraseña actual verificada</p>
                             <label htmlFor="edit-change-new" className={moduleLabel}>
-                              Nueva contraseña (mín. 6 caracteres)
+                              Nueva contraseña (mín. {PASSWORD_MIN_LENGTH} caracteres)
                             </label>
                             <div className="relative">
                               <input
                                 id="edit-change-new"
                                 type={showChangePasswordNew ? "text" : "password"}
-                                minLength={6}
+                                minLength={PASSWORD_MIN_LENGTH}
                                 value={changePasswordNew}
                                 onChange={(e) => setChangePasswordNew(e.target.value)}
                                 className={`${moduleInput} pr-9`}
-                                placeholder="Mínimo 6 caracteres"
+                                placeholder={PASSWORD_PLACEHOLDER}
                                 autoComplete="new-password"
                               />
                               <button
@@ -1661,7 +1667,7 @@ export function UsuariosContent() {
                             <input
                               id="edit-change-confirm"
                               type="password"
-                              minLength={6}
+                              minLength={PASSWORD_MIN_LENGTH}
                               value={changePasswordConfirm}
                               onChange={(e) => setChangePasswordConfirm(e.target.value)}
                               className={moduleInput}
@@ -1690,7 +1696,7 @@ export function UsuariosContent() {
                                 }}
                                 disabled={
                                   isChangingPassword ||
-                                  changePasswordNew.length < 6 ||
+                                  changePasswordNew.length < PASSWORD_MIN_LENGTH ||
                                   changePasswordNew !== changePasswordConfirm
                                 }
                                 className={`${moduleBtnPrimary} text-sm disabled:opacity-50`}

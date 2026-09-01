@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
+import { PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/lib/auth/password";
 
 const SUPABASE_NOT_CONFIGURED =
   "Autenticación no configurada. Configura PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY en .env";
@@ -36,8 +37,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (!email) return json({ success: false, error: "Correo requerido" }, 400);
   if (!password?.trim()) return json({ success: false, error: "Contraseña requerida" }, 400);
-  if (password.length < 6)
-    return json({ success: false, error: "La contraseña debe tener al menos 6 caracteres" }, 400);
+  if (password.length < PASSWORD_MIN_LENGTH)
+    return json({ success: false, error: PASSWORD_MIN_LENGTH_MESSAGE }, 400);
 
   if (!isSupabaseConfigured()) return json({ success: false, error: SUPABASE_NOT_CONFIGURED }, 500);
 
