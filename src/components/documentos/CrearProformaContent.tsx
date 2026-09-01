@@ -1394,7 +1394,7 @@ export function CrearProformaContent() {
         const nav = navierasOpts.find(
           (n) => n.nombre.toUpperCase() === header.naviera.trim().toUpperCase()
         );
-        const result = await findOrCreateNave(supabase, {
+        const result = await findOrCreateNave({
           nombre,
           navieraId: nav?.id,
         });

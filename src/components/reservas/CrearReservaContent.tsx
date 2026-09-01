@@ -6,6 +6,7 @@ import { FormSelect } from "@/components/ui/FormSelect";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { findOrCreateNave } from "@/lib/catalogos/findOrCreateNave";
+import { findOrCreateNaviera } from "@/lib/catalogos/findOrCreateNaviera";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
@@ -1122,34 +1123,37 @@ export function CrearReservaContent() {
   };
 
   const handleAddCarrier = async (text: string) => {
-    if (!supabase || !text.trim()) return;
+    if (!text.trim()) return;
     setAddingNaviera(true);
-    const nombre = text.trim().toUpperCase();
-    const { data, error: insertError } = await supabase
-      .from("navieras")
-      .insert({ nombre, activo: true, modo_transporte: modoTransporte })
-      .select("id, nombre, modo_transporte")
-      .single();
-    if (!insertError && data) {
-      const row: TransportOption = {
-        id: data.id,
-        nombre: data.nombre,
-        modo_transporte: data.modo_transporte === "aereo" ? "aereo" : "maritimo",
-      };
-      setNavieras((prev) => [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-      setFormData((prev) => ({ ...prev, naviera: row.id }));
-      setNavieraInput(row.nombre);
-    } else if (insertError) {
-      console.error("Error adding carrier:", insertError);
-      setError(insertError.message);
+    const result = await findOrCreateNaviera({
+      nombre: text,
+      modoTransporte,
+    });
+    if ("error" in result) {
+      console.error("Error adding carrier:", result.error);
+      setError(result.error);
+      setAddingNaviera(false);
+      return;
     }
+
+    const row: TransportOption = {
+      id: result.naviera.id,
+      nombre: result.naviera.nombre,
+      modo_transporte: result.naviera.modo_transporte === "aereo" ? "aereo" : "maritimo",
+    };
+    setNavieras((prev) => {
+      if (prev.some((n) => n.id === row.id)) return prev;
+      return [...prev, row].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    });
+    setFormData((prev) => ({ ...prev, naviera: row.id }));
+    setNavieraInput(row.nombre);
     setAddingNaviera(false);
   };
 
   const handleAddNave = async (text: string) => {
-    if (!supabase || !text.trim()) return;
+    if (!text.trim()) return;
     setAddingNave(true);
-    const result = await findOrCreateNave(supabase, {
+    const result = await findOrCreateNave({
       nombre: text,
       navieraId: formData.naviera || undefined,
       modoTransporte,
