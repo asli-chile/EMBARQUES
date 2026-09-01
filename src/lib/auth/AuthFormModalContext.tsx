@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 
@@ -31,6 +32,20 @@ export function AuthFormModalProvider({ children }: { children: ReactNode }) {
   const closeAuthForm = useCallback(() => {
     setOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") !== "login") return;
+
+    openAuthForm("login");
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("auth");
+    const next = url.searchParams.get("next");
+    const clean = `${url.pathname}${next ? `?next=${encodeURIComponent(next)}` : ""}${url.hash}`;
+    window.history.replaceState({}, "", clean);
+  }, [openAuthForm]);
 
   return (
     <AuthFormModalContext.Provider

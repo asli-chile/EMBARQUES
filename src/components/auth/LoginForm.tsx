@@ -27,9 +27,13 @@ export function LoginForm() {
       });
       const data = await res.json();
       setIsPending(false);
-      if (data.success && data.redirect) {
+      if (data.success) {
         window.erpBusy?.show();
-        window.location.href = withBase(data.redirect);
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        const target =
+          next && next.startsWith("/") && !next.startsWith("//") ? next : data.redirect ?? "/inicio";
+        window.location.href = withBase(target);
         return;
       }
       window.erpBusy?.hide();

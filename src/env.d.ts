@@ -1,5 +1,13 @@
 /// <reference types="astro/client" />
 
+import type { PageSession } from "@/lib/auth/resolvePageSession";
+
+declare namespace App {
+  interface Locals {
+    session?: PageSession;
+  }
+}
+
 interface Window {
   erpBusy?: { show: () => void; hide: () => void };
 }
