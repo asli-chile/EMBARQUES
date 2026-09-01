@@ -9,6 +9,7 @@ import {
 } from "react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -48,8 +49,12 @@ const ICONO_POR_TIPO: Record<string, string> = {
 
 const MAX_NOTIFICACIONES = 50;
 
+function safeRemoveChannel(supabase: SupabaseClient, channel: RealtimeChannel) {
+  void supabase.removeChannel(channel).catch(() => {});
+}
+
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const leidasRef = useRef<Set<string>>(new Set());
   const supabaseRef = useRef<SupabaseClient | null>(null);
@@ -86,63 +91,54 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   // ── Suscripción Realtime ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!user) {
-      setNotificaciones([]);
+    const authId = user?.id;
+
+    if (isLoading || !authId) {
+      if (!authId) setNotificaciones([]);
       return;
     }
 
-    const authId = user.id;
-    let active = true;
+    const supabase = createClient();
+    supabaseRef.current = supabase;
 
-    import("@/lib/supabase/client").then(({ createClient }) => {
-      if (!active) return;
+    void cargarHistorial(supabase, authId);
 
-      const supabase = createClient();
-      supabaseRef.current = supabase;
+    const channel = supabase
+      .channel(`notificaciones:${authId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notificaciones" },
+        (payload) => {
+          const nueva = payload.new as Omit<Notificacion, "leida">;
 
-      // Cargar historial
-      void cargarHistorial(supabase, authId);
-
-      // Suscribir a nuevas notificaciones en tiempo real
-      const channel = supabase
-        .channel("notificaciones-global")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notificaciones" },
-          (payload) => {
-            const nueva = payload.new as Omit<Notificacion, "leida">;
-
-            // Mostrar toast solo a quienes NO crearon la notificación
-            if (nueva.creado_por_auth_id !== authId) {
-              const icono = ICONO_POR_TIPO[nueva.tipo] ?? "🔔";
-              sileo.info({
-                title: `${icono} ${nueva.titulo}`,
-                description: nueva.mensaje,
-              });
-            }
-
-            setNotificaciones((prev) => {
-              if (prev.some((n) => n.id === nueva.id)) return prev;
-              return [
-                { ...nueva, leida: nueva.creado_por_auth_id === authId },
-                ...prev,
-              ].slice(0, MAX_NOTIFICACIONES);
+          if (nueva.creado_por_auth_id !== authId) {
+            const icono = ICONO_POR_TIPO[nueva.tipo] ?? "🔔";
+            sileo.info({
+              title: `${icono} ${nueva.titulo}`,
+              description: nueva.mensaje,
             });
-          },
-        )
-        .subscribe();
+          }
 
-      channelRef.current = channel;
-    });
+          setNotificaciones((prev) => {
+            if (prev.some((n) => n.id === nueva.id)) return prev;
+            return [
+              { ...nueva, leida: nueva.creado_por_auth_id === authId },
+              ...prev,
+            ].slice(0, MAX_NOTIFICACIONES);
+          });
+        },
+      )
+      .subscribe();
+
+    channelRef.current = channel;
 
     return () => {
-      active = false;
-      if (channelRef.current && supabaseRef.current) {
-        void supabaseRef.current.removeChannel(channelRef.current);
+      safeRemoveChannel(supabase, channel);
+      if (channelRef.current === channel) {
         channelRef.current = null;
       }
     };
-  }, [user, cargarHistorial]);
+  }, [user?.id, isLoading, cargarHistorial]);
 
   // ── Marcar leída ─────────────────────────────────────────────────────────
   const marcarLeida = useCallback(
