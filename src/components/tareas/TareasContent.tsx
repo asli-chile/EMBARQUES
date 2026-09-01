@@ -12,10 +12,16 @@ import {
   moduleHeroRounded,
   moduleInput,
   modulePageBg,
-  moduleSectionTitle,
 } from "@/lib/ui/moduleStyles";
 import { formatRefAsli } from "@/lib/refAsli";
-import { etiquetaEstado } from "@/lib/operaciones/estados";
+import {
+  estadoAvanceRecomendado,
+  etiquetaEstado,
+  esEstadoCerrado,
+  normalizarEstado,
+  type EstadoOperacion,
+} from "@/lib/operaciones/estados";
+import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import {
@@ -96,6 +102,33 @@ function textoPlazo(fechaLimite: string | null): string {
   return `Faltan ${dias} ${dias === 1 ? "día" : "días"}`;
 }
 
+const ORDEN_URGENCIA: UrgenciaTarea[] = ["vencida", "hoy", "proxima", "sin_fecha", "cerrada"];
+
+function pesoUrgencia(u: UrgenciaTarea): number {
+  return ORDEN_URGENCIA.indexOf(u);
+}
+
+type GrupoOperacion = {
+  operacionId: string;
+  ref: string;
+  cliente: string;
+  estadoOperacion: string;
+  tareas: TareaRow[];
+  progreso: { completadas: number; total: number };
+  urgenciaMax: UrgenciaTarea;
+  siguienteEstado: EstadoOperacion | null;
+  faseCompleta: boolean;
+};
+
+function progresoFase(tareasOperacion: TareaRow[], estadoOperacion: string | null): { completadas: number; total: number } {
+  const codigo = normalizarEstado(estadoOperacion);
+  const deFase = tareasOperacion.filter((t) => normalizarEstado(t.estado_origen) === codigo);
+  return {
+    total: deFase.length,
+    completadas: deFase.filter((t) => !esTareaAbierta(t.estado)).length,
+  };
+}
+
 export function TareasContent() {
   const { profile, isStaff, isLoading: authLoading } = useAuth();
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
@@ -106,6 +139,7 @@ export function TareasContent() {
   const [soloMias, setSoloMias] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [guardando, setGuardando] = useState<string | null>(null);
+  const [avanzandoOperacion, setAvanzandoOperacion] = useState<string | null>(null);
   const [nombresUsuarios, setNombresUsuarios] = useState<Record<string, string>>({});
   const [verAyuda, setVerAyuda] = useState(false);
 
@@ -181,6 +215,40 @@ export function TareasContent() {
     [supabase],
   );
 
+  const avanzarOperacion = useCallback(
+    async (grupo: GrupoOperacion) => {
+      if (!supabase || !grupo.siguienteEstado) return;
+      setAvanzandoOperacion(grupo.operacionId);
+
+      const { error: err } = await supabase
+        .from("operaciones")
+        .update({ estado_operacion: grupo.siguienteEstado })
+        .eq("id", grupo.operacionId);
+
+      setAvanzandoOperacion(null);
+
+      if (err) {
+        sileo.error({ title: "No se pudo avanzar la operación", description: err.message });
+        return;
+      }
+
+      const etiqueta = etiquetaEstado(grupo.siguienteEstado);
+      setTareas((prev) =>
+        prev.map((t) =>
+          t.operacion_id === grupo.operacionId && t.operaciones
+            ? {
+                ...t,
+                operaciones: { ...t.operaciones, estado_operacion: grupo.siguienteEstado },
+              }
+            : t,
+        ),
+      );
+      sileo.success({ title: `${grupo.ref} pasó a ${etiqueta}` });
+      await cargar();
+    },
+    [supabase, cargar],
+  );
+
   const nombreResponsable = useCallback(
     (t: TareaRow): string => {
       if (t.responsable_externo) return t.responsable_externo;
@@ -191,12 +259,10 @@ export function TareasContent() {
     [nombresUsuarios, profile?.id],
   );
 
-  const filtradas = useMemo(() => {
+  const tareasFiltradasBase = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
 
     return tareas.filter((t) => {
-      const abierta = esTareaAbierta(t.estado);
-      if (!verCerradas && !abierta) return false;
       if (soloMias && t.responsable_usuario_id !== profile?.id) return false;
 
       if (q) {
@@ -207,7 +273,11 @@ export function TareasContent() {
 
       return true;
     });
-  }, [tareas, verCerradas, soloMias, busqueda, profile?.id]);
+  }, [tareas, soloMias, busqueda, profile?.id]);
+
+  const filtradas = useMemo(() => {
+    return tareasFiltradasBase.filter((t) => verCerradas || esTareaAbierta(t.estado));
+  }, [tareasFiltradasBase, verCerradas]);
 
   const kpis = useMemo(() => {
     let vencidas = 0;
@@ -227,21 +297,59 @@ export function TareasContent() {
     return { vencidas, hoy, semana, mias, abiertas: vencidas + hoy + semana };
   }, [tareas, profile?.id]);
 
-  const grupos = useMemo(() => {
-    const orden: UrgenciaTarea[] = ["vencida", "hoy", "proxima", "sin_fecha", "cerrada"];
-    const mapa = new Map<UrgenciaTarea, TareaRow[]>();
+  const gruposOperacion = useMemo(() => {
+    const idsOperacion = [...new Set(tareasFiltradasBase.map((t) => t.operacion_id))];
+    const grupos: GrupoOperacion[] = [];
 
-    for (const t of filtradas) {
-      const u = urgenciaTarea(t.estado, t.fecha_limite);
-      const actual = mapa.get(u);
-      if (actual) actual.push(t);
-      else mapa.set(u, [t]);
+    for (const operacionId of idsOperacion) {
+      const todasOperacion = tareas.filter((t) => t.operacion_id === operacionId);
+      const primera = todasOperacion[0];
+      if (!primera) continue;
+
+      const estadoOperacion = primera.operaciones?.estado_operacion ?? "";
+      const progreso = progresoFase(todasOperacion, estadoOperacion);
+      const faseCompleta = progreso.total === 0 || progreso.completadas === progreso.total;
+      const siguienteEstado = estadoAvanceRecomendado(estadoOperacion);
+      const puedeMostrarAvance =
+        faseCompleta && siguienteEstado !== null && !esEstadoCerrado(estadoOperacion);
+      const tareasVisibles = filtradas.filter((t) => t.operacion_id === operacionId);
+
+      if (tareasVisibles.length === 0 && !puedeMostrarAvance) continue;
+
+      const urgenciaMax =
+        tareasVisibles.length > 0
+          ? tareasVisibles.reduce<UrgenciaTarea>(
+              (peor, t) => {
+                const u = urgenciaTarea(t.estado, t.fecha_limite);
+                return pesoUrgencia(u) < pesoUrgencia(peor) ? u : peor;
+              },
+              "cerrada",
+            )
+          : "cerrada";
+
+      grupos.push({
+        operacionId,
+        ref: formatRefAsli(primera.operaciones?.ref_asli, primera.operaciones?.correlativo) ?? "—",
+        cliente: primera.operaciones?.cliente ?? "",
+        estadoOperacion,
+        tareas: [...tareasVisibles].sort(
+          (a, b) =>
+            pesoUrgencia(urgenciaTarea(a.estado, a.fecha_limite)) -
+            pesoUrgencia(urgenciaTarea(b.estado, b.fecha_limite)),
+        ),
+        progreso,
+        urgenciaMax,
+        siguienteEstado,
+        faseCompleta,
+      });
     }
 
-    return orden
-      .map((u) => ({ urgencia: u, tareas: mapa.get(u) ?? [] }))
-      .filter((g) => g.tareas.length > 0);
-  }, [filtradas]);
+    return grupos.sort((a, b) => {
+      const diff = pesoUrgencia(a.urgenciaMax) - pesoUrgencia(b.urgenciaMax);
+      if (diff !== 0) return diff;
+      return a.ref.localeCompare(b.ref);
+    });
+  }, [filtradas, tareas, tareasFiltradasBase]);
 
   if (!isStaff && !authLoading && profile === null) {
     return (
@@ -291,9 +399,9 @@ export function TareasContent() {
                 ese estado, con su responsable y su fecha límite.
               </p>
               <p>
-                <strong className="text-white">Completar una tarea no mueve la operación.</strong> Solo apaga
-                el recordatorio. El estado se sigue cambiando en Registros, y ese cambio es el que genera el
-                lote de tareas siguiente.
+                <strong className="text-white">Completar una tarea apaga el recordatorio.</strong> Cuando
+                termines todas las de la fase actual, usa <strong className="text-white">Avanzar</strong> en
+                la tarjeta de la operación para pasar al siguiente estado sin ir a Registros.
               </p>
               <p>
                 <strong className="text-white">El plazo se cuenta desde que la operación entró al estado</strong>,
@@ -350,7 +458,8 @@ export function TareasContent() {
               Ver cerradas
             </label>
             <span className="ml-auto text-base text-neutral-500">
-              {filtradas.length} {filtradas.length === 1 ? "tarea" : "tareas"}
+              {filtradas.length} {filtradas.length === 1 ? "tarea" : "tareas"} · {gruposOperacion.length}{" "}
+              {gruposOperacion.length === 1 ? "operación" : "operaciones"}
             </span>
           </div>
         </section>
@@ -365,7 +474,7 @@ export function TareasContent() {
           <div className={`${moduleCard} px-4 py-10 text-center text-base text-neutral-500`}>
             Cargando tareas...
           </div>
-        ) : grupos.length === 0 ? (
+        ) : gruposOperacion.length === 0 ? (
           <div className={`${moduleCard} px-4 py-10 text-center`}>
             <Icon icon="lucide:check-circle-2" width={28} height={28} className="mx-auto text-emerald-500" />
             <p className="text-base text-brand-blue/80 mt-2 font-semibold">No hay tareas pendientes</p>
@@ -375,27 +484,94 @@ export function TareasContent() {
             </p>
           </div>
         ) : (
-          grupos.map((grupo) => {
-            const cfg = URGENCIA_STYLE[grupo.urgencia];
+          gruposOperacion.map((grupo) => {
+            const estadoStyle = getEstadoOperacionStyle(grupo.estadoOperacion);
+            const etiquetaEstadoActual = etiquetaEstado(grupo.estadoOperacion);
+            const puedeAvanzar =
+              grupo.faseCompleta &&
+              grupo.siguienteEstado !== null &&
+              !esEstadoCerrado(grupo.estadoOperacion);
+            const avanzando = avanzandoOperacion === grupo.operacionId;
+            const pctProgreso =
+              grupo.progreso.total > 0
+                ? Math.round((grupo.progreso.completadas / grupo.progreso.total) * 100)
+                : 100;
+
             return (
-              <section key={grupo.urgencia} className={moduleCard}>
+              <section key={grupo.operacionId} className={moduleCard}>
                 <div className={moduleCardAccent} />
-                <div className="px-4 py-3 border-b border-brand-blue/10 flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
-                  <div className="min-w-0">
-                    <h2 className={moduleSectionTitle}>{cfg.etiqueta}</h2>
-                    <p className="text-base text-neutral-500">{cfg.explicacion}</p>
+                <div className="px-4 py-3 border-b border-brand-blue/10">
+                  <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h2 className="text-lg font-bold text-brand-blue">{grupo.ref}</h2>
+                        {grupo.cliente && (
+                          <span className="text-base text-neutral-600 truncate max-w-[280px]">{grupo.cliente}</span>
+                        )}
+                        {estadoStyle && (
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-sm font-semibold ${estadoStyle.bg} ${estadoStyle.text} ${estadoStyle.border}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${estadoStyle.dot}`} aria-hidden />
+                            {etiquetaEstadoActual}
+                          </span>
+                        )}
+                      </div>
+
+                      {grupo.progreso.total > 0 ? (
+                        <div className="mt-2 max-w-md">
+                          <div className="flex items-center justify-between gap-2 text-sm text-neutral-600">
+                            <span>
+                              {grupo.progreso.completadas} de {grupo.progreso.total} tareas de esta fase
+                            </span>
+                            <span className="font-semibold tabular-nums">{pctProgreso}%</span>
+                          </div>
+                          <div className="mt-1 h-1.5 rounded-full bg-brand-blue/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-brand-blue transition-all duration-300"
+                              style={{ width: `${pctProgreso}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-sm text-neutral-500">Sin tareas pendientes en esta fase</p>
+                      )}
+                    </div>
+
+                    {grupo.siguienteEstado && (
+                      <button
+                        type="button"
+                        disabled={!puedeAvanzar || avanzando}
+                        title={
+                          puedeAvanzar
+                            ? undefined
+                            : "Completa todas las tareas de esta fase para avanzar"
+                        }
+                        onClick={() => void avanzarOperacion(grupo)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-base font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                      >
+                        <Icon icon="lucide:arrow-right-circle" width={15} height={15} />
+                        {avanzando
+                          ? "Avanzando..."
+                          : `Avanzar a ${etiquetaEstado(grupo.siguienteEstado)}`}
+                      </button>
+                    )}
                   </div>
-                  <span className="ml-auto text-base font-semibold text-neutral-500 shrink-0">
-                    {grupo.tareas.length}
-                  </span>
                 </div>
 
                 <ul className="divide-y divide-brand-blue/10">
-                  {grupo.tareas.map((t) => {
-                    const ref = formatRefAsli(t.operaciones?.ref_asli, t.operaciones?.correlativo) ?? "—";
+                  {grupo.tareas.length === 0 ? (
+                    <li className="px-4 py-3 text-base text-emerald-700 bg-emerald-50/50">
+                      <Icon icon="lucide:check-circle-2" width={16} height={16} className="inline mr-1.5 -mt-0.5" />
+                      Todas las tareas de esta fase están listas. Avanza la operación para generar el siguiente
+                      lote.
+                    </li>
+                  ) : (
+                    grupo.tareas.map((t) => {
                     const abierta = esTareaAbierta(t.estado);
                     const ocupado = guardando === t.id;
+                    const urgencia = urgenciaTarea(t.estado, t.fecha_limite);
+                    const cfg = URGENCIA_STYLE[urgencia];
 
                     return (
                       <li key={t.id} className="px-4 py-3">
@@ -404,10 +580,6 @@ export function TareasContent() {
                             <p className="text-base font-semibold text-brand-blue">{t.titulo}</p>
 
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-base text-neutral-600">
-                              <span className="font-bold text-brand-blue">{ref}</span>
-                              {t.operaciones?.cliente && (
-                                <span className="truncate max-w-[240px]">{t.operaciones.cliente}</span>
-                              )}
                               <span className="inline-flex items-center gap-1">
                                 <Icon icon="lucide:user" width={12} height={12} />
                                 {nombreResponsable(t)}
@@ -419,7 +591,9 @@ export function TareasContent() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-sm font-semibold border ${cfg.badge}`}>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-sm font-semibold border ${cfg.badge}`}
+                              >
                                 {textoPlazo(t.fecha_limite)}
                               </span>
                               {t.estado_origen && (
@@ -463,7 +637,8 @@ export function TareasContent() {
                         </div>
                       </li>
                     );
-                  })}
+                    })
+                  )}
                 </ul>
               </section>
             );

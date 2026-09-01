@@ -125,3 +125,69 @@ export function esEstadoCerrado(estado: string | null | undefined): boolean {
 export function estadosEnOrden(): EstadoOperacion[] {
   return [...ESTADOS_OPERACION].sort((a, b) => ESTADO_META[a].orden - ESTADO_META[b].orden);
 }
+
+/** Atajos además del avance secuencial (+1 orden). Espejo de operaciones_estados_transiciones. */
+const ATAJOS_TRANSICION: Partial<Record<EstadoOperacion, EstadoOperacion[]>> = {
+  SOLICITADA: ["RESERVA_SOLICITADA", "RESERVA_CONFIRMADA"],
+  DOCUMENTACION_EN_REVISION: ["DOCUMENTACION_PENDIENTE"],
+  RESERVA_CONFIRMADA: ["ROLEADA"],
+  EMBARQUE_EN_COORDINACION: ["ROLEADA"],
+  CARGA_COORDINADA: ["ROLEADA"],
+  CARGADA: ["ROLEADA"],
+  ROLEADA: ["RESERVA_SOLICITADA", "RESERVA_CONFIRMADA"],
+};
+
+/** Destinos de avance preferidos al cerrar una fase desde Tareas (sin excepciones). */
+const HITOS_AVANCE: EstadoOperacion[] = [
+  "RESERVA_CONFIRMADA",
+  "EMBARQUE_EN_COORDINACION",
+  "CARGA_COORDINADA",
+  "CARGADA",
+  "ZARPADA",
+  "DOCUMENTACION_PENDIENTE",
+  "DOCUMENTACION_EN_REVISION",
+  "VB_DOCUMENTAL",
+  "DUS_LEGALIZADO",
+  "FULLSET_ENVIADO",
+  "DOCUMENTACION_FISICA_ENVIADA",
+  "OPERACION_CERRADA",
+];
+
+/** Transiciones permitidas desde un estado (avance y atajos). */
+export function transicionesDesde(desde: string | null | undefined): EstadoOperacion[] {
+  const codigo = normalizarEstado(desde);
+  if (!codigo || esEstadoCerrado(codigo)) return [];
+
+  const ordenActual = ESTADO_META[codigo].orden;
+  const result: EstadoOperacion[] = [];
+
+  if (ordenActual < 15) {
+    const siguiente = estadosEnOrden().find((e) => ESTADO_META[e].orden === ordenActual + 1);
+    if (siguiente) result.push(siguiente);
+  }
+
+  for (const destino of ATAJOS_TRANSICION[codigo] ?? []) {
+    if (!result.includes(destino)) result.push(destino);
+  }
+
+  return result.sort((a, b) => ESTADO_META[a].orden - ESTADO_META[b].orden);
+}
+
+/**
+ * Próximo estado sugerido al avanzar desde Tareas.
+ * Prefiere el hito más lejano permitido (p. ej. SOLICITADA → RESERVA_CONFIRMADA).
+ */
+export function estadoAvanceRecomendado(desde: string | null | undefined): EstadoOperacion | null {
+  const codigo = normalizarEstado(desde);
+  if (!codigo || esEstadoCerrado(codigo)) return null;
+
+  const ordenActual = ESTADO_META[codigo].orden;
+  const permitidos = transicionesDesde(codigo).filter((h) => ESTADO_META[h].orden > ordenActual);
+  if (permitidos.length === 0) return null;
+
+  const hitos = permitidos.filter((h) => HITOS_AVANCE.includes(h));
+  if (hitos.length > 0) return hitos[hitos.length - 1];
+
+  const avance = permitidos.filter((h) => ESTADO_META[h].grupo !== "EXCEPCION");
+  return avance.length > 0 ? avance[avance.length - 1] : permitidos[permitidos.length - 1];
+}
