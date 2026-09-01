@@ -2,20 +2,18 @@ import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
-
-const VISITED_KEY = "_visit_counted";
+import { parseVisitCount, VISIT_COUNTED_KEY } from "@/lib/visitCounter";
 
 /**
  * Contador persistente de visitas totales.
  * - Incrementa 1 vez por sesión de navegador para CUALQUIER visitante (anon o auth).
- * - La UI solo es visible para superadmin.
+ * - La UI solo es visible para superadmin (≥ sm).
  */
 export function VisitCounterBadge() {
   const { isSuperadmin } = useAuth();
   const [total, setTotal] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const counted = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const supabase = useMemo(() => {
@@ -35,8 +33,9 @@ export function VisitCounterBadge() {
         .select("total")
         .eq("id", 1)
         .single();
-      if (!error && data && typeof data.total === "number") {
-        setTotal(data.total);
+      if (!error && data) {
+        const parsed = parseVisitCount(data.total);
+        if (parsed !== null) setTotal(parsed);
       }
     } catch {
       /* ignore */
@@ -45,32 +44,32 @@ export function VisitCounterBadge() {
     }
   }, [supabase]);
 
-  // Contar visita: todos los usuarios, una vez por sesión de navegador
+  // Contar visita: todos los visitantes, una vez por sesión de navegador
   useEffect(() => {
-    if (!supabase || counted.current) return;
+    if (!supabase) return;
+    if (sessionStorage.getItem(VISIT_COUNTED_KEY)) return;
 
-    const alreadyCounted = sessionStorage.getItem(VISITED_KEY);
-    if (alreadyCounted) {
-      counted.current = true;
-      return;
-    }
+    let cancelled = false;
 
-    counted.current = true;
-    void supabase
-      .rpc("incrementar_visitas")
-      .then(({ data, error }) => {
-        if (!error && data != null) {
-          sessionStorage.setItem(VISITED_KEY, "1");
-          // Si el superadmin está mirando, refleja el valor nuevo de inmediato
-          if (typeof data === "number") setTotal(data);
-        } else {
-          // Si falló el RPC, permitir reintento en la próxima carga
-          counted.current = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("incrementar_visitas");
+      if (cancelled) return;
+
+      const parsed = parseVisitCount(data);
+      if (error || parsed === null) {
+        if (import.meta.env.DEV) {
+          console.warn("[visitas] incrementar_visitas falló:", error?.message ?? "respuesta inválida");
         }
-      })
-      .catch(() => {
-        counted.current = false;
-      });
+        return;
+      }
+
+      sessionStorage.setItem(VISIT_COUNTED_KEY, "1");
+      setTotal((prev) => (prev === null ? parsed : prev));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [supabase]);
 
   // Superadmin: cargar total al montar / al pasar a superadmin
@@ -88,7 +87,7 @@ export function VisitCounterBadge() {
     return () => window.clearInterval(id);
   }, [isSuperadmin, supabase, fetchTotal]);
 
-  // Realtime (si está habilitado en la tabla)
+  // Realtime (requiere migración 20260901000001_conteo_visitas_realtime.sql)
   useEffect(() => {
     if (!isSuperadmin || !supabase) return;
     const channel = supabase
@@ -97,13 +96,13 @@ export function VisitCounterBadge() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "conteo_visitas" },
         (payload) => {
-          const next = (payload.new as { total?: number } | null)?.total;
-          if (typeof next === "number") setTotal(next);
+          const parsed = parseVisitCount((payload.new as { total?: unknown } | null)?.total);
+          if (parsed !== null) setTotal(parsed);
         },
       )
       .subscribe();
     return () => {
-      void supabase.removeChannel(channel);
+      void supabase.removeChannel(channel).catch(() => {});
     };
   }, [isSuperadmin, supabase]);
 
