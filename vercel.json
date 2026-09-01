@@ -3,11 +3,10 @@
   "installCommand": "npm ci",
   "buildCommand": "astro build",
   "framework": "astro",
-"redirects": [
+  "rewrites": [
     {
       "source": "/favicon.ico",
-      "destination": "/embarques/favicon.ico",
-      "permanent": false
+      "destination": "/embarques/favicon.ico"
     }
   ]
 }
