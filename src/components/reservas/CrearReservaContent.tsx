@@ -201,6 +201,8 @@ function isOperacionAerea(tipoOperacion: string): boolean {
 // Respaldo del catálogo `dueno_reserva`: si la tabla `catalogos` todavía no
 // tiene valores sembrados, el combobox igual ofrece las empresas históricas.
 const DUENOS_RESERVA_FALLBACK = ["ASLI", "CHILFRESH", "SURLOGISTICA"];
+/** Opciones visibles para clientes: no ven contratos reales (CHILFRESH, SURLOGISTICA, etc.). */
+const DUENOS_RESERVA_CLIENTE = ["ASLI", "EXTERNO"] as const;
 const PLANTA_POR_INFORMAR_LABEL = "POR INFORMAR";
 
 type FormData = {
@@ -1039,6 +1041,14 @@ export function CrearReservaContent() {
     return [...desdeCatalogo, ...faltantes];
   }, [catalogos.dueno_reserva]);
 
+  useEffect(() => {
+    if (!isCliente) return;
+    const actual = formData.dueno_reserva.trim().toUpperCase();
+    if (actual !== "ASLI" && actual !== "EXTERNO") {
+      setFormData((prev) => ({ ...prev, dueno_reserva: "ASLI" }));
+    }
+  }, [isCliente, formData.dueno_reserva]);
+
   const handleAddDuenoReserva = async (text: string) => {
     if (!supabase || !text.trim()) return;
     setAddingDuenoReserva(true);
@@ -1260,7 +1270,11 @@ export function CrearReservaContent() {
         ? ejecutivos.find((e) => e.id === formData.ejecutivo)?.nombre
         : null,
       cliente: clienteNombre,
-      dueno_reserva: formData.dueno_reserva || "ASLI",
+      dueno_reserva: isCliente
+        ? formData.dueno_reserva.trim().toUpperCase() === "EXTERNO"
+          ? "EXTERNO"
+          : "ASLI"
+        : formData.dueno_reserva || "ASLI",
       consignatario: formData.consignatario
         ? consignatarios.find((c) => c.id === formData.consignatario)?.nombre
         : null,
@@ -2473,7 +2487,21 @@ export function CrearReservaContent() {
               </p>
             ) : null}
           </div>
-          {!isCliente && (
+          {isCliente ? (
+            <div className="min-w-0 sm:col-span-2 xl:col-span-1">
+              <label htmlFor="dueno_reserva" className={labelClass}>
+                {tr.duenoReserva}
+              </label>
+              <FormSelect
+                id="dueno_reserva"
+                name="dueno_reserva"
+                value={formData.dueno_reserva}
+                disabled={loadingCatalogos}
+                options={DUENOS_RESERVA_CLIENTE.map((nombre) => ({ value: nombre, label: nombre }))}
+                onChange={(value) => setFormData((prev) => ({ ...prev, dueno_reserva: value }))}
+              />
+            </div>
+          ) : (
             <div className="min-w-0 sm:col-span-2 xl:col-span-1">
               <ComboboxInput
                 id="dueno_reserva"
