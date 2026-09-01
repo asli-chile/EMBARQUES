@@ -49,11 +49,24 @@ export type TemporadaActiva = {
   temporadaLoading: boolean;
 };
 
-export function useTemporadaActiva(): TemporadaActiva {
-  const [temporadaActiva, setTemporadaActiva] = useState<string | null>(cache?.nombre ?? null);
-  const [temporadaLoading, setTemporadaLoading] = useState(!cache);
+type UseTemporadaActivaOptions = {
+  /** Si false, no consulta Supabase (p. ej. visitante sin sesión). */
+  enabled?: boolean;
+};
+
+export function useTemporadaActiva(options?: UseTemporadaActivaOptions): TemporadaActiva {
+  const enabled = options?.enabled ?? true;
+  const [temporadaActiva, setTemporadaActiva] = useState<string | null>(
+    enabled ? (cache?.nombre ?? null) : null
+  );
+  const [temporadaLoading, setTemporadaLoading] = useState(enabled && !cache);
 
   useEffect(() => {
+    if (!enabled) {
+      setTemporadaActiva(null);
+      setTemporadaLoading(false);
+      return;
+    }
     if (cache) {
       setTemporadaActiva(cache.nombre);
       setTemporadaLoading(false);
@@ -68,7 +81,7 @@ export function useTemporadaActiva(): TemporadaActiva {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [enabled]);
 
   return { temporadaActiva, temporadaLoading };
 }

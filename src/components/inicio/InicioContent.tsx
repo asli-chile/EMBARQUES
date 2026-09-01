@@ -26,7 +26,7 @@ export function InicioContent() {
   const { t } = useLocale();
   const { profile, isExternalUser, isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
   const isLoggedIn = !authLoading && !isExternalUser && profile !== null;
-  const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
+  const { temporadaActiva, temporadaLoading } = useTemporadaActiva({ enabled: isLoggedIn });
   const mainRef = useRef<HTMLElement>(null);
   const bgParallaxRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -142,6 +142,11 @@ export function InicioContent() {
 
   useEffect(() => {
     if (!supabase || authLoading || temporadaLoading) return;
+    if (!isLoggedIn) {
+      setKpiData(emptyKpiData());
+      setLoadingKpis(false);
+      return;
+    }
     const fetchKpiData = async () => {
       try {
         if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
@@ -194,7 +199,7 @@ export function InicioContent() {
     };
 
     fetchKpiData();
-  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, isEjecutivo, empresaNombres]);
+  }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, isEjecutivo, empresaNombres, isLoggedIn]);
 
   const handleScrollToTop = () => {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });

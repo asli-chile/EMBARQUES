@@ -41,8 +41,9 @@ type NavBannerProps = { pathname: string };
 
 export function NavBanner({ pathname }: NavBannerProps) {
   const { locale, setLocale, t } = useLocale();
-  const { user, profile, isExternalUser, isSuperadmin, isAdmin, isEjecutivo, isCliente, isStaff } = useAuth();
-  const { temporadaActiva } = useTemporadaActiva();
+  const { user, profile, isExternalUser, isSuperadmin, isAdmin, isEjecutivo, isCliente, isStaff, isLoading: authLoading } = useAuth();
+  const isLoggedIn = !!user;
+  const { temporadaActiva } = useTemporadaActiva({ enabled: !authLoading && isLoggedIn });
   const displayName = profile?.nombre || user?.name || user?.email || null;
 
   const authUser: AuthUser | null = user
@@ -59,7 +60,6 @@ export function NavBanner({ pathname }: NavBannerProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const drawerRef = useRef<HTMLDivElement>(null);
-  const isLoggedIn = !!user;
 
   const sidebarLabels = t.sidebar as Record<string, string>;
   const labelFor = (labelKey: string) => resolveSidebarLabel(labelKey, sidebarLabels, isCliente);
