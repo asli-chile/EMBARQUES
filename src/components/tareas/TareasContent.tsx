@@ -192,6 +192,76 @@ export function TareasContent() {
     void cargar();
   }, [authLoading, cargar]);
 
+  const avanzarOperacionCore = useCallback(
+    async (
+      operacionId: string,
+      estadoOperacion: string,
+      siguienteEstado: EstadoOperacion,
+      ref: string,
+      cerrarPendientes: boolean,
+    ) => {
+      if (!supabase) return false;
+      setAvanzandoOperacion(operacionId);
+
+      const codigoFase = normalizarEstado(estadoOperacion);
+      const pendientes = cerrarPendientes
+        ? tareas.filter(
+            (t) =>
+              t.operacion_id === operacionId &&
+              normalizarEstado(t.estado_origen) === codigoFase &&
+              esTareaAbierta(t.estado),
+          )
+        : [];
+
+      if (pendientes.length > 0) {
+        const { error: errTareas } = await supabase
+          .from("operaciones_tareas")
+          .update({ estado: "COMPLETADA" })
+          .in(
+            "id",
+            pendientes.map((t) => t.id),
+          );
+
+        if (errTareas) {
+          setAvanzandoOperacion(null);
+          sileo.error({ title: "No se pudieron cerrar las tareas", description: errTareas.message });
+          return false;
+        }
+      }
+
+      const { error: err } = await supabase
+        .from("operaciones")
+        .update({ estado_operacion: siguienteEstado })
+        .eq("id", operacionId);
+
+      setAvanzandoOperacion(null);
+
+      if (err) {
+        sileo.error({ title: "No se pudo avanzar la operación", description: err.message });
+        return false;
+      }
+
+      const etiqueta = etiquetaEstado(siguienteEstado);
+      setTareas((prev) =>
+        prev.map((t) => {
+          if (t.operacion_id !== operacionId) return t;
+          const completada = pendientes.some((p) => p.id === t.id);
+          return {
+            ...t,
+            estado: completada ? "COMPLETADA" : t.estado,
+            operaciones: t.operaciones
+              ? { ...t.operaciones, estado_operacion: siguienteEstado }
+              : t.operaciones,
+          };
+        }),
+      );
+      sileo.success({ title: `${ref} pasó a ${etiqueta}` });
+      await cargar();
+      return true;
+    },
+    [supabase, cargar, tareas],
+  );
+
   const cambiarEstado = useCallback(
     async (tarea: TareaRow, nuevo: EstadoTarea) => {
       if (!supabase) return;
@@ -209,71 +279,46 @@ export function TareasContent() {
         return;
       }
 
-      setTareas((prev) => prev.map((t) => (t.id === tarea.id ? { ...t, estado: nuevo } : t)));
-      sileo.success({ title: `Tarea marcada como ${ESTADO_TAREA_ETIQUETA[nuevo].toLowerCase()}` });
-    },
-    [supabase],
-  );
+      const estadoOperacion = tarea.operaciones?.estado_operacion ?? "";
+      const ref = formatRefAsli(tarea.operaciones?.ref_asli, tarea.operaciones?.correlativo) ?? "—";
+      const actualizadas = tareas.map((t) => (t.id === tarea.id ? { ...t, estado: nuevo } : t));
+      setTareas(actualizadas);
 
-  const avanzarOperacion = useCallback(
-    async (grupo: GrupoOperacion) => {
-      if (!supabase || !grupo.siguienteEstado) return;
-      setAvanzandoOperacion(grupo.operacionId);
+      if (nuevo === "COMPLETADA") {
+        const progreso = progresoFase(
+          actualizadas.filter((t) => t.operacion_id === tarea.operacion_id),
+          estadoOperacion,
+        );
+        const siguiente = estadoAvanceRecomendado(estadoOperacion);
+        const debeAvanzar =
+          progreso.total >= 2 &&
+          progreso.completadas === progreso.total &&
+          siguiente !== null &&
+          !esEstadoCerrado(estadoOperacion);
 
-      const codigoFase = normalizarEstado(grupo.estadoOperacion);
-      const pendientes = tareas.filter(
-        (t) =>
-          t.operacion_id === grupo.operacionId &&
-          normalizarEstado(t.estado_origen) === codigoFase &&
-          esTareaAbierta(t.estado),
-      );
-
-      if (pendientes.length > 0) {
-        const { error: errTareas } = await supabase
-          .from("operaciones_tareas")
-          .update({ estado: "COMPLETADA" })
-          .in(
-            "id",
-            pendientes.map((t) => t.id),
-          );
-
-        if (errTareas) {
-          setAvanzandoOperacion(null);
-          sileo.error({ title: "No se pudieron cerrar las tareas", description: errTareas.message });
+        if (debeAvanzar) {
+          await avanzarOperacionCore(tarea.operacion_id, estadoOperacion, siguiente, ref, false);
           return;
         }
       }
 
-      const { error: err } = await supabase
-        .from("operaciones")
-        .update({ estado_operacion: grupo.siguienteEstado })
-        .eq("id", grupo.operacionId);
-
-      setAvanzandoOperacion(null);
-
-      if (err) {
-        sileo.error({ title: "No se pudo avanzar la operación", description: err.message });
-        return;
-      }
-
-      const etiqueta = etiquetaEstado(grupo.siguienteEstado);
-      setTareas((prev) =>
-        prev.map((t) => {
-          if (t.operacion_id !== grupo.operacionId) return t;
-          const completada = pendientes.some((p) => p.id === t.id);
-          return {
-            ...t,
-            estado: completada ? "COMPLETADA" : t.estado,
-            operaciones: t.operaciones
-              ? { ...t.operaciones, estado_operacion: grupo.siguienteEstado }
-              : t.operaciones,
-          };
-        }),
-      );
-      sileo.success({ title: `${grupo.ref} pasó a ${etiqueta}` });
-      await cargar();
+      sileo.success({ title: `Tarea marcada como ${ESTADO_TAREA_ETIQUETA[nuevo].toLowerCase()}` });
     },
-    [supabase, cargar, tareas],
+    [supabase, tareas, avanzarOperacionCore],
+  );
+
+  const avanzarOperacion = useCallback(
+    async (grupo: GrupoOperacion) => {
+      if (!grupo.siguienteEstado) return;
+      await avanzarOperacionCore(
+        grupo.operacionId,
+        grupo.estadoOperacion,
+        grupo.siguienteEstado,
+        grupo.ref,
+        true,
+      );
+    },
+    [avanzarOperacionCore],
   );
 
   const nombreResponsable = useCallback(
@@ -426,9 +471,10 @@ export function TareasContent() {
                 ese estado, con su responsable y su fecha límite.
               </p>
               <p>
-                <strong className="text-white">Completar una tarea apaga el recordatorio.</strong> También
-                puedes usar <strong className="text-white">Avanzar</strong>: cierra las tareas pendientes de
-                la fase y mueve la operación al siguiente estado sin ir a Registros.
+                <strong className="text-white">Completar una tarea apaga el recordatorio.</strong> Si la fase
+                tiene dos o más tareas y completas la última, la operación avanza sola al siguiente estado.
+                También puedes usar <strong className="text-white">Avanzar</strong> para cerrar todo de una
+                vez sin ir a Registros.
               </p>
               <p>
                 <strong className="text-white">El plazo se cuenta desde que la operación entró al estado</strong>,
