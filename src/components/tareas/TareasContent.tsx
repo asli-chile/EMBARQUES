@@ -220,6 +220,30 @@ export function TareasContent() {
       if (!supabase || !grupo.siguienteEstado) return;
       setAvanzandoOperacion(grupo.operacionId);
 
+      const codigoFase = normalizarEstado(grupo.estadoOperacion);
+      const pendientes = tareas.filter(
+        (t) =>
+          t.operacion_id === grupo.operacionId &&
+          normalizarEstado(t.estado_origen) === codigoFase &&
+          esTareaAbierta(t.estado),
+      );
+
+      if (pendientes.length > 0) {
+        const { error: errTareas } = await supabase
+          .from("operaciones_tareas")
+          .update({ estado: "COMPLETADA" })
+          .in(
+            "id",
+            pendientes.map((t) => t.id),
+          );
+
+        if (errTareas) {
+          setAvanzandoOperacion(null);
+          sileo.error({ title: "No se pudieron cerrar las tareas", description: errTareas.message });
+          return;
+        }
+      }
+
       const { error: err } = await supabase
         .from("operaciones")
         .update({ estado_operacion: grupo.siguienteEstado })
@@ -234,19 +258,22 @@ export function TareasContent() {
 
       const etiqueta = etiquetaEstado(grupo.siguienteEstado);
       setTareas((prev) =>
-        prev.map((t) =>
-          t.operacion_id === grupo.operacionId && t.operaciones
-            ? {
-                ...t,
-                operaciones: { ...t.operaciones, estado_operacion: grupo.siguienteEstado },
-              }
-            : t,
-        ),
+        prev.map((t) => {
+          if (t.operacion_id !== grupo.operacionId) return t;
+          const completada = pendientes.some((p) => p.id === t.id);
+          return {
+            ...t,
+            estado: completada ? "COMPLETADA" : t.estado,
+            operaciones: t.operaciones
+              ? { ...t.operaciones, estado_operacion: grupo.siguienteEstado }
+              : t.operaciones,
+          };
+        }),
       );
       sileo.success({ title: `${grupo.ref} pasó a ${etiqueta}` });
       await cargar();
     },
-    [supabase, cargar],
+    [supabase, cargar, tareas],
   );
 
   const nombreResponsable = useCallback(
@@ -399,9 +426,9 @@ export function TareasContent() {
                 ese estado, con su responsable y su fecha límite.
               </p>
               <p>
-                <strong className="text-white">Completar una tarea apaga el recordatorio.</strong> Cuando
-                termines todas las de la fase actual, usa <strong className="text-white">Avanzar</strong> en
-                la tarjeta de la operación para pasar al siguiente estado sin ir a Registros.
+                <strong className="text-white">Completar una tarea apaga el recordatorio.</strong> También
+                puedes usar <strong className="text-white">Avanzar</strong>: cierra las tareas pendientes de
+                la fase y mueve la operación al siguiente estado sin ir a Registros.
               </p>
               <p>
                 <strong className="text-white">El plazo se cuenta desde que la operación entró al estado</strong>,
@@ -487,10 +514,8 @@ export function TareasContent() {
           gruposOperacion.map((grupo) => {
             const estadoStyle = getEstadoOperacionStyle(grupo.estadoOperacion);
             const etiquetaEstadoActual = etiquetaEstado(grupo.estadoOperacion);
-            const puedeAvanzar =
-              grupo.faseCompleta &&
-              grupo.siguienteEstado !== null &&
-              !esEstadoCerrado(grupo.estadoOperacion);
+            const puedeAvanzar = grupo.siguienteEstado !== null && !esEstadoCerrado(grupo.estadoOperacion);
+            const pendientesFase = grupo.progreso.total - grupo.progreso.completadas;
             const avanzando = avanzandoOperacion === grupo.operacionId;
             const pctProgreso =
               grupo.progreso.total > 0
@@ -543,9 +568,9 @@ export function TareasContent() {
                         type="button"
                         disabled={!puedeAvanzar || avanzando}
                         title={
-                          puedeAvanzar
-                            ? undefined
-                            : "Completa todas las tareas de esta fase para avanzar"
+                          pendientesFase > 0
+                            ? `Cierra ${pendientesFase} ${pendientesFase === 1 ? "tarea pendiente" : "tareas pendientes"} y avanza la operación`
+                            : "Avanza la operación al siguiente estado"
                         }
                         onClick={() => void avanzarOperacion(grupo)}
                         className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-base font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
