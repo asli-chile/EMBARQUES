@@ -80,6 +80,8 @@ const nextConfig = {
       "/presentacion",
       "/servicios",
       "/tracking",
+      "/stacking",
+      "/stacking/pil",
       "/exportacion-fruta-fresca",
       "/asesoria-exportadores-pymes",
       "/importacion-mercancias-chile",
