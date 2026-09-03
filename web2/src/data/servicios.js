@@ -122,9 +122,9 @@ export const equipoContactos = [
   {
     id: 'rocio',
     area: 'Certificación OEA',
-    nombre: 'Rocio Villareal',
+    nombre: 'Rocio Villarroel',
     cargo: 'Subgerente de Seguridad Alimentaria',
-    foto: '/img/rocio.png',
+    foto: '/img/rocio-villarroel.png',
     bio: 'Acompaña a exportadoras de frutas en el cumplimiento normativo para la certificación OEA, con beneficios de menor inspección y mayor agilidad aduanera.',
     idiomas: null,
     email: 'rocio.villarroel@asli.cl',

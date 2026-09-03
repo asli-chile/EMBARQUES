@@ -32,7 +32,7 @@ const equipo = [
   { nombre: "Poliana Cisternas", cargo: "cargoComercial" as const, imagen: "/team/poliana-cisternas.jpg" },
   { nombre: "Stefanie Cordova", cargo: "cargoAdminFinanzas" as const, imagen: "/team/stefanie-cordova.png" },
   { nombre: "Ricardo Lazo", cargo: "cargoComercioExterior" as const, imagen: "/team/ricardo-lazo.png" },
-  { nombre: "Rocio Villareal", cargo: "cargoSeguridad" as const, imagen: "/team/rocio-villareal.png" },
+  { nombre: "Rocio Villarroel", cargo: "cargoSeguridad" as const, imagen: "/team/rocio-villarroel.png" },
   { nombre: "Rodrigo Castillo", cargo: "cargoEjecutivoComercialzonal" as const, imagen: "/team/rodrigo-castillo.webp" },
   { nombre: "Alex Cárdenas", cargo: "cargoTransportes" as const, imagen: "/team/alex-cardenas.png" },
   { nombre: "Nina Scotti", cargo: "cargoEjecutivaComercial" as const, imagen: "/team/nina-scotti.png" },
