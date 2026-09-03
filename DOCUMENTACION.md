@@ -755,7 +755,7 @@ const result = await sendEmail({
 ### Prerrequisitos
 
 - Google Service Account con Domain-Wide Delegation habilitado
-- Scopes requeridos: `gmail.send`, `gmail.settings.basic`
+- Scopes requeridos: `gmail.send`, `gmail.settings.basic`, y `gmail.readonly` para stacking PIL
 - Secrets configurados en Supabase Dashboard → Edge Functions → Secrets
 
 ---

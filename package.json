@@ -23,7 +23,8 @@
     "build:web2": "npm run build --prefix web2",
     "preview": "astro preview",
     "lint": "eslint .",
-    "deploy:function:send-email": "supabase functions deploy send-email"
+    "deploy:function:send-email": "supabase functions deploy send-email",
+    "deploy:function:stacking-pil-sync": "supabase functions deploy stacking-pil-sync"
   },
   "dependencies": {
     "@astrojs/node": "^9.0.4",

@@ -45,3 +45,19 @@ Además de `GOOGLE_SERVICE_ACCOUNT`, puedes definir en **Project Settings → Ed
 | `GMAIL_SHARED_FROM_NAME` | Nombre visible en `From` para ese buzón (por defecto `ASLI`). |
 
 La cuenta de servicio de Google debe tener **delegación de dominio** para poder impersonar ese buzón (mismo alcance que el resto de @asli.cl).
+
+---
+
+## Edge Function `stacking-pil-sync`
+
+Lee el último correo de stacking PIL en `rodrigo.caceres@asli.cl` (Gmail Workspace, misma cuenta de servicio que `send-email`) y sube el PDF al bucket `stacking-navieras`.
+
+Scopes extra en Google Admin → Delegación de dominio:
+
+- `https://www.googleapis.com/auth/gmail.readonly`
+
+Secret opcional: `STACKING_SYNC_TOKEN`.
+
+```bash
+npx supabase functions deploy stacking-pil-sync --project-ref yerufjewdvzijfzdpaai
+```
