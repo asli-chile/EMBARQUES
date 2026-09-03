@@ -150,6 +150,7 @@ const Header = () => {
     { href: '/#contacto', label: 'Contacto', section: 'contacto' },
     { href: '/servicios', label: 'Equipo' },
     { href: '/tracking', label: 'Tracking' },
+    { href: '/stacking', label: 'Stacking' },
   ]
 
   const handleNavClick = (event, link) => {

@@ -89,15 +89,42 @@ function fromBancoCentral(data) {
   return null
 }
 
+function readBcchToken() {
+  const fromEnv = String(process.env.BCCH_API_TOKEN || '').trim()
+  if (fromEnv) return fromEnv
+
+  // Next.js interpola `$` en .env.local. Si el token del Banco Central
+  // lo contiene, process.env llega vacío; leemos la línea cruda en local.
+  try {
+    const fs = require('fs')
+    const path = require('path')
+    const file = path.join(process.cwd(), '.env.local')
+    if (!fs.existsSync(file)) return ''
+    const line = fs
+      .readFileSync(file, 'utf8')
+      .split(/\r?\n/)
+      .find((row) => /^\s*BCCH_API_TOKEN=/.test(row) && !row.trim().startsWith('#'))
+    if (!line) return ''
+    let value = line.replace(/^\s*BCCH_API_TOKEN=/, '').trim()
+    const quote = value[0]
+    if ((quote === "'" || quote === '"') && value.endsWith(quote) && value.length >= 2) {
+      value = value.slice(1, -1)
+    }
+    return value.trim()
+  } catch {
+    return ''
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const token = process.env.BCCH_API_TOKEN
+  const token = readBcchToken()
   if (!token) {
-    return res.status(500).json({
+    return res.status(200).json({
       error: 'bcch_token_missing',
       message: 'Falta BCCH_API_TOKEN para consultar la API del Banco Central',
     })
@@ -131,7 +158,7 @@ export default async function handler(req, res) {
     return res.status(200).json(cache.payload)
   }
 
-  return res.status(503).json({
+  return res.status(200).json({
     error: 'dolar_unavailable',
     message: 'La API del Banco Central no devolvió el dólar observado',
   })
