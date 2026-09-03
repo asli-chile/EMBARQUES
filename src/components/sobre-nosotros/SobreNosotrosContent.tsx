@@ -27,16 +27,16 @@ const metricas = [
 ] as const;
 
 const equipo = [
-  { nombre: "Mario Basaez", cargo: "cargoFundador" as const, imagen: "/team/mario-basaez.png" },
-  { nombre: "Hans Vasquez", cargo: "cargoOperaciones" as const, imagen: "/team/hans-vasquez.png" },
-  { nombre: "Poliana Cisternas", cargo: "cargoComercial" as const, imagen: "/team/poliana-cisternas.jpg" },
-  { nombre: "Stefanie Cordova", cargo: "cargoAdminFinanzas" as const, imagen: "/team/stefanie-cordova.png" },
-  { nombre: "Ricardo Lazo", cargo: "cargoComercioExterior" as const, imagen: "/team/ricardo-lazo.png" },
-  { nombre: "Rocio Villarroel", cargo: "cargoSeguridad" as const, imagen: "/team/rocio-villarroel.png" },
-  { nombre: "Rodrigo Castillo", cargo: "cargoEjecutivoComercialzonal" as const, imagen: "/team/rodrigo-castillo.webp" },
-  { nombre: "Alex Cárdenas", cargo: "cargoTransportes" as const, imagen: "/team/alex-cardenas.png" },
-  { nombre: "Nina Scotti", cargo: "cargoEjecutivaComercial" as const, imagen: "/team/nina-scotti.png" },
-  { nombre: "Rodrigo Cáceres", cargo: "cargoCustomerServices" as const, imagen: "/team/rodrigo-caceres.png" },
+  { nombre: "Mario Basaez", cargo: "cargoFundador" as const },
+  { nombre: "Hans Vasquez", cargo: "cargoOperaciones" as const },
+  { nombre: "Poliana Cisternas", cargo: "cargoComercial" as const },
+  { nombre: "Stefanie Cordova", cargo: "cargoAdminFinanzas" as const },
+  { nombre: "Ricardo Lazo", cargo: "cargoComercioExterior" as const },
+  { nombre: "Rocio Villarroel", cargo: "cargoSeguridad" as const },
+  { nombre: "Rodrigo Castillo", cargo: "cargoEjecutivoComercialzonal" as const },
+  { nombre: "Alex Cárdenas", cargo: "cargoTransportes" as const },
+  { nombre: "Nina Scotti", cargo: "cargoEjecutivaComercial" as const },
+  { nombre: "Rodrigo Cáceres", cargo: "cargoCustomerServices" as const },
 ] as const;
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
@@ -244,20 +244,10 @@ export function SobreNosotrosContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <SectionHeader tag={tr.equipoTag} title={tr.equipoTitle} subtitle={tr.equipoSubtitle} />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {equipo.map(({ nombre, cargo, imagen }) => (
+            {equipo.map(({ nombre, cargo }) => (
               <GlassCard key={nombre} interactive className="p-4 sm:p-5 text-center">
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 overflow-hidden rounded-md border border-brand-blue/12 bg-brand-cream">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Icon icon="lucide:user" className="text-brand-blue/25" width={32} height={32} />
-                  </div>
-                  <img
-                    src={withBase(imagen)}
-                    alt={nombre}
-                    className="relative z-[1] w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 flex items-center justify-center rounded-md border border-brand-blue/12 bg-brand-cream">
+                  <Icon icon="lucide:user" className="text-brand-blue/25" width={32} height={32} />
                 </div>
                 <h3 className="text-sm font-bold inicio-ink mb-0.5">{nombre}</h3>
                 <p className="inicio-ink-mute text-xs leading-snug">{tr[cargo as keyof typeof tr]}</p>

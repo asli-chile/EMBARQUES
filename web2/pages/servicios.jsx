@@ -12,16 +12,9 @@ function ContactCard({ persona, index }) {
     <div ref={ref} style={style}>
       <article className="card-soft p-6 md:p-8 flex flex-col h-full">
         <p className="section-label !mb-4">{persona.area}</p>
-        <div className="flex items-center gap-4 mb-5">
-          <img
-            src={persona.foto}
-            alt={persona.nombre}
-            className="w-20 h-20 object-cover rounded-full border-2 border-asli-primary"
-          />
-          <div>
-            <h3 className="font-display text-lg font-bold text-asli-dark">{persona.nombre}</h3>
-            <p className="text-asli-primary text-sm font-semibold">{persona.cargo}</p>
-          </div>
+        <div className="mb-5">
+          <h3 className="font-display text-lg font-bold text-asli-dark">{persona.nombre}</h3>
+          <p className="text-asli-primary text-sm font-semibold">{persona.cargo}</p>
         </div>
         <p className="text-muted-strong text-base leading-relaxed mb-3 flex-grow">{persona.bio}</p>
         {persona.idiomas && (
