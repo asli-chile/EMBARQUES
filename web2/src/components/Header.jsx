@@ -182,8 +182,8 @@ const Header = () => {
       }`}
     >
       <nav className="container-asli">
-        <div className="flex items-center justify-between h-14 sm:h-[4.5rem] gap-2 sm:gap-3">
-          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+        <div className="flex items-center justify-between h-14 sm:h-[4.5rem] gap-4 sm:gap-6 xl:gap-8">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 shrink-0">
             <a href="/" className="flex items-center min-w-0" aria-label="ASLI - Inicio">
               <img
                 src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
@@ -217,7 +217,11 @@ const Header = () => {
             </a>
           </div>
 
-          <div className={`hidden lg:flex items-center ${SHOW_COTIZADOR ? 'gap-5' : 'gap-7'}`}>
+          <div
+            className={`hidden lg:flex items-center justify-center flex-1 min-w-0 ${
+              SHOW_COTIZADOR ? 'gap-5 xl:gap-7' : 'gap-6 xl:gap-8'
+            }`}
+          >
             {navLinks.map((link) => (
               <a
                 key={link.href}
