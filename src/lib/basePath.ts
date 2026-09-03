@@ -23,7 +23,7 @@ function encodePathSegments(path: string): string {
  */
 export function withBase(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
-  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  const base = (import.meta.env?.BASE_URL ?? "/").replace(/\/$/, "");
   let out: string;
   if (!base) out = p;
   else if (p === base || p.startsWith(`${base}/`)) out = p;
@@ -32,7 +32,7 @@ export function withBase(path: string): string {
 }
 
 export function stripBasePathname(pathname: string): string {
-  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  const base = (import.meta.env?.BASE_URL ?? "/").replace(/\/$/, "");
   if (!base) return pathname;
   if (pathname === base || pathname === `${base}/`) return "/";
   if (pathname.startsWith(`${base}/`)) return pathname.slice(base.length) || "/";
@@ -44,7 +44,7 @@ export function getApiOriginPrefix(): string {
   if (typeof import.meta !== "undefined" && import.meta.env?.PUBLIC_API_URL) {
     return String(import.meta.env.PUBLIC_API_URL).replace(/\/$/, "");
   }
-  const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  const basePath = (import.meta.env?.BASE_URL ?? "/").replace(/\/$/, "");
   if (typeof window !== "undefined") {
     return basePath;
   }

@@ -46,11 +46,13 @@ Deno.serve(async (req) => {
     if (!profileEmail) return json({ success: false, error: "No se encontró el email del usuario" });
 
     // ── 3. Leer cuerpo de la solicitud ────────────────────────────────────
-    const { to, subject, body, attachments, sendFrom } = await req.json() as {
+    const { to, subject, body, attachments, sendFrom, skipSignature } = await req.json() as {
       to: string; subject: string; body: string;
       attachments?: { name: string; content: string; mimeType: string }[];
       /** Solo "informaciones": envía desde buzón corporativo (delegación Google). */
       sendFrom?: string;
+      /** Si true, no se adjunta la firma HTML del buzón Gmail (p. ej. informativos con footer de marca). */
+      skipSignature?: boolean;
     };
     if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" });
 
@@ -88,19 +90,21 @@ Deno.serve(async (req) => {
 
     // ── 5. Obtener firma del usuario desde Gmail settings (timeout 3s) ────
     let signatureHtml = "";
-    try {
-      const sigController = new AbortController();
-      const sigTimeout = setTimeout(() => sigController.abort(), 3000);
-      const sigRes = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/settings/sendAs/${encodeURIComponent(senderEmail)}`,
-        { headers: { Authorization: `Bearer ${accessToken}` }, signal: sigController.signal }
-      );
-      clearTimeout(sigTimeout);
-      if (sigRes.ok) {
-        const sigData = await sigRes.json() as { signature?: string };
-        signatureHtml = sigData.signature ?? "";
-      }
-    } catch { /* si falla o timeout, se envía sin firma */ }
+    if (!skipSignature) {
+      try {
+        const sigController = new AbortController();
+        const sigTimeout = setTimeout(() => sigController.abort(), 3000);
+        const sigRes = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/settings/sendAs/${encodeURIComponent(senderEmail)}`,
+          { headers: { Authorization: `Bearer ${accessToken}` }, signal: sigController.signal }
+        );
+        clearTimeout(sigTimeout);
+        if (sigRes.ok) {
+          const sigData = await sigRes.json() as { signature?: string };
+          signatureHtml = sigData.signature ?? "";
+        }
+      } catch { /* si falla o timeout, se envía sin firma */ }
+    }
 
     // ── 6. Enviar vía Gmail API como el ejecutivo ──────────────────────────
     const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments, signatureHtml);

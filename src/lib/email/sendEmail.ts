@@ -16,6 +16,11 @@ export async function sendEmail(params: {
    * con delegación de dominio en Google Workspace. Otros módulos omiten esto y usan el correo del usuario.
    */
   sendFrom?: "informaciones";
+  /**
+   * Si true, no se adjunta la firma de Gmail del buzón.
+   * Usar en informativos con footer de marca propio.
+   */
+  skipSignature?: boolean;
 }): Promise<{ success: boolean; sender?: string; error?: string }> {
   try {
     const supabase = createClient();

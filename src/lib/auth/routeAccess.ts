@@ -37,6 +37,7 @@ const ROUTE_RULES: Record<string, RouteRule> = {
   "/dashboard": { kind: "operational" },
   "/tareas": { kind: "staff" },
   "/registros": { kind: "staff" },
+  "/comunicaciones/informativos": { kind: "staff" },
   "/reservas/crear": { kind: "operational" },
   "/reservas/mis-reservas": { kind: "operational" },
   "/reservas/papelera": { kind: "staff" },

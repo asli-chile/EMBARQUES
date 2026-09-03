@@ -1,0 +1,1 @@
+export { InformativosContent } from "./InformativosContent";

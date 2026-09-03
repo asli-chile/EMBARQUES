@@ -100,6 +100,9 @@ const LazyCrearInstructivoContent = lazy(() =>
 const LazyCartolasNuboxContent = lazy(() =>
   import("@/components/cartolas-nubox/CartolasNuboxContent").then((m) => ({ default: m.CartolasNuboxContent })),
 );
+const LazyInformativosContent = lazy(() =>
+  import("@/components/comunicaciones").then((m) => ({ default: m.InformativosContent })),
+);
 /**
  * El aspecto de la ruta se pasa por contexto y no como prop de cada `<Sus>`:
  * hay una veintena de llamadas y el valor es el mismo para todas.
@@ -297,6 +300,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
           <LazyCartolasNuboxContent />
         </Sus>
       </CartolasNuboxGuard>
+    ) : pathname === "/comunicaciones/informativos" ? (
+      <Sus>
+        <LazyInformativosContent />
+      </Sus>
     ) : (
       children
     );

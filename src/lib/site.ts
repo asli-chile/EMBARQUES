@@ -44,6 +44,19 @@ export const siteConfig = {
     },
     { labelKey: "registros", id: "registros", href: "/registros", staffOnly: true },
     {
+      labelKey: "comunicaciones",
+      id: "comunicaciones",
+      staffOnly: true,
+      children: [
+        {
+          labelKey: "informativos",
+          id: "informativos",
+          href: "/comunicaciones/informativos",
+          staffOnly: true,
+        },
+      ],
+    },
+    {
       labelKey: "cartolasNubox",
       id: "cartolas-nubox",
       href: "/cartolas-nubox",
