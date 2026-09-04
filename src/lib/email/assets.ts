@@ -1,6 +1,7 @@
 /** URLs de assets para HTML de correo. */
 
-export const EMAIL_PUBLIC_ORIGIN_FALLBACK = "https://asli.cl";
+/** Usar www: asli.cl hace 308 y Gmail/Outlook a menudo no cargan imágenes con redirect. */
+export const EMAIL_PUBLIC_ORIGIN_FALLBACK = "https://www.asli.cl";
 
 export function getEmailPublicOrigin(): string {
   const configured =
@@ -13,8 +14,14 @@ export function getEmailPublicOrigin(): string {
       : ""
     ).trim();
 
-  if (configured) return configured.replace(/\/$/, "");
-  return EMAIL_PUBLIC_ORIGIN_FALLBACK;
+  const raw = (configured || EMAIL_PUBLIC_ORIGIN_FALLBACK).replace(/\/$/, "");
+  try {
+    const u = new URL(raw);
+    if (u.hostname === "asli.cl") u.hostname = "www.asli.cl";
+    return u.origin;
+  } catch {
+    return EMAIL_PUBLIC_ORIGIN_FALLBACK;
+  }
 }
 
 export function getEmailAssetBasePath(): string {
