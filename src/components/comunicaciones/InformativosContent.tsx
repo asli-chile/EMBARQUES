@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { sendEmail } from "@/lib/email/sendEmail";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/email/informativos/agenda";
 import {
   createBlock,
+  createBlankStudioDocument,
   createDefaultStudioDocument,
   createExportacionesVietnamDocument,
   STUDIO_PRESETS,
@@ -25,10 +26,12 @@ import type { BlockKind, StudioBlock, StudioDocument } from "@/emails/studio/typ
 import {
   nombreDesdeEmail,
   parseDestinatarios,
+  PREVIEW_SELECT_MSG,
   primerNombre,
   renderStudioHtml,
 } from "@/lib/email/informativos/render";
 import { modulePageBg } from "@/lib/ui/moduleStyles";
+import { DATA_ROW_ICON_OPTIONS, dataRowIconSrc } from "@/lib/email/assets";
 
 const input =
   "w-full rounded border border-brand-blue/20 bg-white px-2 py-1 text-[12px] text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-1 focus:ring-brand-blue/30";
@@ -41,6 +44,82 @@ const btnPrimary =
 
 type Panel = "compose" | "send" | "agenda";
 
+function DataRowIconPicker({
+  value,
+  onChange,
+  labelText,
+  valueText,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  labelText: string;
+  valueText: string;
+}) {
+  const current = (value || "").trim().toLowerCase();
+  const previewSrc = dataRowIconSrc(current, false);
+  const previewLabel = (labelText || "DATO").replace(/:$/, "");
+  const previewValue = valueText || "…";
+
+  return (
+    <div className="space-y-1.5">
+      <div className="grid max-h-52 grid-cols-4 gap-1 overflow-y-auto pr-0.5">
+        {DATA_ROW_ICON_OPTIONS.map((opt) => {
+          const src = opt.value ? dataRowIconSrc(opt.value, false) : "";
+          const active = current === opt.value;
+          return (
+            <button
+              key={opt.value || "none"}
+              type="button"
+              title={opt.label}
+              onClick={() => onChange(opt.value)}
+              className={`flex flex-col items-center gap-1 rounded border px-1 py-1.5 text-center transition-colors ${
+                active
+                  ? "border-brand-blue bg-brand-blue/10 ring-1 ring-brand-blue/30"
+                  : "border-brand-blue/15 bg-white hover:bg-brand-blue/5"
+              }`}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded bg-[#f0f4f9]">
+                {src ? (
+                  <img src={src} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+                ) : (
+                  <span className="text-[10px] font-semibold text-brand-blue/40">—</span>
+                )}
+              </span>
+              <span className="text-[9px] font-semibold leading-tight text-brand-blue/75">
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="overflow-hidden rounded border border-brand-blue/15 bg-white">
+        <p className="border-b border-brand-blue/10 bg-[#f7f9fc] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brand-blue/45">
+          Vista previa fila
+        </p>
+        <div className="flex items-stretch text-[11px]">
+          {previewSrc ? (
+            <div className="flex w-10 shrink-0 items-center justify-center border-r border-slate-200 px-1 py-1.5">
+              <img
+                src={previewSrc}
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
+              />
+            </div>
+          ) : null}
+          <div className="w-[88px] shrink-0 border-r border-transparent px-2 py-1.5 font-bold text-[#002d69]">
+            {previewLabel}:
+          </div>
+          <div className="min-w-0 flex-1 truncate px-2 py-1.5 text-brand-blue/90">
+            {previewValue}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function propFields(
   block: StudioBlock,
 ): {
@@ -49,6 +128,7 @@ function propFields(
   multiline?: boolean;
   hint?: string;
   options?: { value: string; label: string }[];
+  control?: "iconPicker";
 }[] {
   switch (block.kind) {
     case "greeting":
@@ -99,7 +179,9 @@ function propFields(
       return [
         {
           key: "icon",
-          label: "Ícono (calendar | pin | product | document | cold | vacío)",
+          label: "Ícono",
+          control: "iconPicker",
+          hint: "Elige el ícono; abajo ves cómo queda la fila.",
         },
         { key: "label", label: "Etiqueta (ej. DESTINO)" },
         { key: "value", label: "Valor", multiline: true },
@@ -130,7 +212,8 @@ function propFields(
 }
 
 export function InformativosContent() {
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading, isSuperadmin } = useAuth();
+  const canSendInformativos = isSuperadmin;
   const [doc, setDoc] = useState<StudioDocument>(() => createDefaultStudioDocument());
   const [selectedId, setSelectedId] = useState<string | null>(() => {
     const d = createDefaultStudioDocument();
@@ -140,6 +223,7 @@ export function InformativosContent() {
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>("compose");
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
 
   const [destRaw, setDestRaw] = useState("");
   const [resolved, setResolved] = useState<DestinatarioAgenda[]>([]);
@@ -204,7 +288,7 @@ export function InformativosContent() {
   useEffect(() => {
     let dead = false;
     setPreviewError(null);
-    void renderStudioHtml(doc, previewNombre)
+    void renderStudioHtml(doc, previewNombre, { interactive: true })
       .then((html) => {
         if (!dead) setPreviewHtml(html);
       })
@@ -218,6 +302,40 @@ export function InformativosContent() {
       dead = true;
     };
   }, [doc, previewNombre]);
+
+  useEffect(() => {
+    const onMessage = (ev: MessageEvent) => {
+      const data = ev.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type !== PREVIEW_SELECT_MSG || typeof data.id !== "string") return;
+      setSelectedId(data.id);
+      setPanel("compose");
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    document
+      .getElementById(`studio-block-nav-${selectedId}`)
+      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedId]);
+
+  const syncPreviewSelection = useCallback(() => {
+    const root = previewIframeRef.current?.contentDocument;
+    if (!root) return;
+    root.querySelectorAll("[data-studio-block-id]").forEach((el) => {
+      el.classList.toggle(
+        "is-selected",
+        el.getAttribute("data-studio-block-id") === selectedId,
+      );
+    });
+  }, [selectedId]);
+
+  useEffect(() => {
+    syncPreviewSelection();
+  }, [syncPreviewSelection, previewHtml]);
 
   useEffect(() => {
     if (panel === "agenda" || panel === "send") {
@@ -344,6 +462,14 @@ export function InformativosContent() {
   };
 
   const sendList = async (list: DestinatarioAgenda[]) => {
+    if (!canSendInformativos) {
+      sileo.error({
+        title: "Envío en desarrollo",
+        description:
+          "Por seguridad, solo Rodrigo Cáceres puede enviar estos correos. Puedes componer plantillas y usar la agenda con normalidad.",
+      });
+      return;
+    }
     if (!doc.asunto.trim()) {
       sileo.error({ title: "Falta asunto" });
       return;
@@ -479,6 +605,25 @@ export function InformativosContent() {
           </button>
           <button
             type="button"
+            className={btn}
+            title="Vaciar asunto, preview y bloques"
+            onClick={() => {
+              if (
+                doc.blocks.length > 0 &&
+                !window.confirm("¿Dejar la plantilla en blanco? Se perderán los bloques actuales.")
+              ) {
+                return;
+              }
+              const next = createBlankStudioDocument();
+              setDoc(next);
+              setSelectedId(null);
+              setPanel("compose");
+            }}
+          >
+            En blanco
+          </button>
+          <button
+            type="button"
             className={panel === "compose" ? btnPrimary : btn}
             onClick={() => setPanel("compose")}
           >
@@ -537,7 +682,27 @@ export function InformativosContent() {
             ))}
           </div>
 
-          <p className={label}>Bloques ({doc.blocks.length})</p>
+          <div className="mb-1 flex items-center gap-1">
+            <p className={`${label} mb-0`}>Bloques ({doc.blocks.length})</p>
+            <button
+              type="button"
+              className={btn + " ml-auto !py-0.5 !text-[10px]"}
+              title="Vaciar plantilla"
+              onClick={() => {
+                if (
+                  doc.blocks.length > 0 &&
+                  !window.confirm("¿Dejar la plantilla en blanco?")
+                ) {
+                  return;
+                }
+                const next = createBlankStudioDocument();
+                setDoc(next);
+                setSelectedId(null);
+              }}
+            >
+              Vaciar
+            </button>
+          </div>
           <ul className="space-y-0.5">
             {doc.blocks.map((b, idx) => {
               const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
@@ -548,7 +713,7 @@ export function InformativosContent() {
                 b.props.template?.slice(0, 28) ||
                 "";
               return (
-                <li key={b.id}>
+                <li key={b.id} id={`studio-block-nav-${b.id}`}>
                   <button
                     type="button"
                     className={`w-full rounded px-1.5 py-1 text-left text-[11px] font-medium ${
@@ -618,7 +783,14 @@ export function InformativosContent() {
                 propFields(selected).map((f) => (
                   <div key={f.key}>
                     <label className={label}>{f.label}</label>
-                    {f.options ? (
+                    {f.control === "iconPicker" ? (
+                      <DataRowIconPicker
+                        value={selected.props.icon ?? ""}
+                        labelText={selected.props.label ?? ""}
+                        valueText={selected.props.value ?? ""}
+                        onChange={(v) => updateProps(selected.id, "icon", v)}
+                      />
+                    ) : f.options ? (
                       <select
                         className={input}
                         value={selected.props[f.key] || f.options[0]?.value || ""}
@@ -657,6 +829,9 @@ export function InformativosContent() {
         <section className="flex min-h-[360px] flex-col bg-[#e8eef5] lg:min-h-0">
           <div className="flex flex-shrink-0 items-center gap-2 border-b border-brand-blue/10 bg-white px-2 py-1">
             <span className="text-[10px] font-semibold text-brand-blue/55">Preview</span>
+            <span className="hidden text-[9px] text-brand-blue/40 sm:inline">
+              clic en un bloque para editarlo
+            </span>
             <input
               className={input + " max-w-[140px]"}
               value={previewNombre}
@@ -670,9 +845,11 @@ export function InformativosContent() {
           <div className="min-h-0 flex-1 overflow-auto p-2">
             {previewHtml ? (
               <iframe
+                ref={previewIframeRef}
                 title="preview"
                 className="h-full min-h-[400px] w-full rounded border-0 bg-white shadow-sm"
                 srcDoc={previewHtml}
+                onLoad={syncPreviewSelection}
               />
             ) : (
               <p className="p-4 text-[11px] text-brand-blue/50">Generando preview…</p>
@@ -699,6 +876,20 @@ export function InformativosContent() {
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
+              {!canSendInformativos ? (
+                <div
+                  className="rounded border border-amber-300/80 bg-amber-50 px-3 py-2.5 text-[12px] leading-5 text-amber-950"
+                  role="status"
+                >
+                  <p className="font-bold">Envío en desarrollo</p>
+                  <p className="mt-1 text-amber-900/90">
+                    Por seguridad, solo <strong>Rodrigo Cáceres</strong> puede enviar
+                    correos informativos por ahora. Puedes armar plantillas, revisar el
+                    preview, gestionar la agenda y conocer el sistema; el botón de envío
+                    se habilitará más adelante.
+                  </p>
+                </div>
+              ) : null}
               <div className="space-y-1 rounded border border-brand-blue/15 bg-[#f7f9fc] p-2">
                 <div className="flex items-center gap-2">
                   <p className={label + " mb-0"}>Grupos</p>
@@ -797,8 +988,21 @@ export function InformativosContent() {
               <button
                 type="button"
                 className={btn}
-                disabled={sending}
+                disabled={sending || !canSendInformativos}
+                title={
+                  canSendInformativos
+                    ? undefined
+                    : "Solo Rodrigo Cáceres puede enviar mientras está en desarrollo"
+                }
                 onClick={() => {
+                  if (!canSendInformativos) {
+                    sileo.error({
+                      title: "Envío en desarrollo",
+                      description:
+                        "Por seguridad, solo Rodrigo Cáceres puede enviar estos correos.",
+                    });
+                    return;
+                  }
                   const email = (profile?.email ?? user?.email ?? "").trim();
                   if (!email) {
                     sileo.error({ title: "Sin email de sesión" });
@@ -820,8 +1024,21 @@ export function InformativosContent() {
               <button
                 type="button"
                 className={btnPrimary}
-                disabled={sending || selectedList.length === 0}
+                disabled={sending || selectedList.length === 0 || !canSendInformativos}
+                title={
+                  canSendInformativos
+                    ? undefined
+                    : "Solo Rodrigo Cáceres puede enviar mientras está en desarrollo"
+                }
                 onClick={() => {
+                  if (!canSendInformativos) {
+                    sileo.error({
+                      title: "Envío en desarrollo",
+                      description:
+                        "Por seguridad, solo Rodrigo Cáceres puede enviar estos correos.",
+                    });
+                    return;
+                  }
                   if (confirm(`¿Enviar ${selectedList.length}?`)) {
                     void sendList(selectedList);
                   }

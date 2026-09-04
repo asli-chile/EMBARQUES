@@ -56,6 +56,18 @@ Deno.serve(async (req) => {
     };
     if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" });
 
+    // Informativos (buzón compartido): solo superadmin mientras el módulo está en desarrollo.
+    if (sendFrom === "informaciones") {
+      const rol = String(perfil?.rol ?? "").trim().toLowerCase();
+      if (rol !== "superadmin") {
+        return json({
+          success: false,
+          error:
+            "El envío de informativos está en desarrollo. Por seguridad, solo Rodrigo Cáceres puede enviar estos correos.",
+        });
+      }
+    }
+
     const sharedMailbox = (Deno.env.get("GMAIL_SHARED_FROM_EMAIL") ?? "informaciones@asli.cl").trim().toLowerCase();
     const sharedFromName = (Deno.env.get("GMAIL_SHARED_FROM_NAME") ?? "ASLI").trim() || "ASLI";
 

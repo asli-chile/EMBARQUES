@@ -17,7 +17,11 @@ import {
   Tailwind,
   Text,
 } from "react-email";
-import { emailAssetUrls, resolveEmailAssetTokens } from "@/lib/email/assets";
+import {
+  dataRowIconSrc,
+  emailAssetUrls,
+  resolveEmailAssetTokens,
+} from "@/lib/email/assets";
 import {
   mergePlantilla,
   resolveSaludo,
@@ -191,19 +195,7 @@ function BlockView({
         </Section>
       );
     case "dataRow": {
-      const iconKey = (p.icon || "").trim().toLowerCase();
-      const iconSrc =
-        iconKey === "calendar"
-          ? assets.iconCalendar
-          : iconKey === "pin"
-            ? assets.iconPin
-            : iconKey === "product"
-              ? assets.iconProduct
-              : iconKey === "document"
-                ? assets.iconDocument
-                : iconKey === "cold"
-                  ? assets.iconCold
-                  : "";
+      const iconSrc = dataRowIconSrc(p.icon, preferPublic);
       return (
         <Section style={{ margin: 0 }}>
           <table
@@ -337,12 +329,32 @@ export type ComposerEmailProps = {
   doc: StudioDocument;
   nombre: string;
   preferPublicAssets?: boolean;
+  /** Envuelve bloques con data-studio-block-id para selección en preview. */
+  interactive?: boolean;
 };
+
+function BlockShell({
+  id,
+  interactive,
+  children,
+}: {
+  id: string;
+  interactive?: boolean;
+  children: React.ReactNode;
+}) {
+  if (!interactive) return <>{children}</>;
+  return (
+    <div data-studio-block-id={id} style={{ cursor: "pointer" }}>
+      {children}
+    </div>
+  );
+}
 
 export function ComposerEmail({
   doc,
   nombre,
   preferPublicAssets = false,
+  interactive = false,
 }: ComposerEmailProps) {
   const headers = doc.blocks.filter((b) => b.kind === "headerAsli");
   const footers = doc.blocks.filter((b) => b.kind === "footerAsli");
@@ -380,30 +392,33 @@ export function ComposerEmail({
             }}
           >
             {headers.map((block) => (
-              <BlockView
-                key={block.id}
-                block={block}
-                nombre={nombre}
-                preferPublic={preferPublicAssets}
-              />
-            ))}
-            <Section style={{ padding: "20px 18px 24px 18px" }}>
-              {bodyBlocks.map((block) => (
+              <BlockShell key={block.id} id={block.id} interactive={interactive}>
                 <BlockView
-                  key={block.id}
                   block={block}
                   nombre={nombre}
                   preferPublic={preferPublicAssets}
                 />
+              </BlockShell>
+            ))}
+            <Section style={{ padding: "20px 18px 24px 18px" }}>
+              {bodyBlocks.map((block) => (
+                <BlockShell key={block.id} id={block.id} interactive={interactive}>
+                  <BlockView
+                    block={block}
+                    nombre={nombre}
+                    preferPublic={preferPublicAssets}
+                  />
+                </BlockShell>
               ))}
             </Section>
             {footers.map((block) => (
-              <BlockView
-                key={block.id}
-                block={block}
-                nombre={nombre}
-                preferPublic={preferPublicAssets}
-              />
+              <BlockShell key={block.id} id={block.id} interactive={interactive}>
+                <BlockView
+                  block={block}
+                  nombre={nombre}
+                  preferPublic={preferPublicAssets}
+                />
+              </BlockShell>
             ))}
           </Container>
         </Body>

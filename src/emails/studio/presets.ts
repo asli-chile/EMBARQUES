@@ -110,6 +110,15 @@ export function createDefaultStudioDocument(): StudioDocument {
   return createExportacionesVietnamDocument();
 }
 
+/** Documento vacío para empezar desde cero. */
+export function createBlankStudioDocument(): StudioDocument {
+  return {
+    asunto: "",
+    previewText: "",
+    blocks: [],
+  };
+}
+
 /** Plantilla: Actualización exportaciones (Vietnam / Systems Approach). */
 export function createExportacionesVietnamDocument(): StudioDocument {
   return {
