@@ -5,7 +5,10 @@ import {
   type Destinatario,
 } from "@/lib/email/informativos/render";
 
-export const GRUPO_INFORMACIONES_ASLI = "Informaciones ASLI";
+export type InformacionesGrupo = {
+  id: string;
+  nombre: string;
+};
 
 export type InformacionesContacto = {
   id: string;
@@ -13,6 +16,7 @@ export type InformacionesContacto = {
   email: string;
   empresa: string | null;
   activo: boolean;
+  grupos?: string[];
 };
 
 export type DestinatarioAgenda = Destinatario & {
@@ -24,9 +28,16 @@ function supabase() {
   return createClient();
 }
 
-export async function getGrupoIdByNombre(
-  nombre = GRUPO_INFORMACIONES_ASLI,
-): Promise<string | null> {
+export async function listGrupos(): Promise<InformacionesGrupo[]> {
+  const { data, error } = await supabase()
+    .from("informaciones_grupos")
+    .select("id, nombre")
+    .order("nombre", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as InformacionesGrupo[];
+}
+
+export async function getGrupoIdByNombre(nombre: string): Promise<string | null> {
   const { data, error } = await supabase()
     .from("informaciones_grupos")
     .select("id")
@@ -37,7 +48,7 @@ export async function getGrupoIdByNombre(
 }
 
 export async function listContactosGrupo(
-  nombreGrupo = GRUPO_INFORMACIONES_ASLI,
+  nombreGrupo: string,
 ): Promise<InformacionesContacto[]> {
   const grupoId = await getGrupoIdByNombre(nombreGrupo);
   if (!grupoId) return [];
@@ -61,6 +72,35 @@ export async function listContactosGrupo(
   return rows;
 }
 
+/** Une contactos de varios grupos (sin duplicar email). */
+export async function listContactosDeGrupos(
+  nombresGrupos: string[],
+): Promise<InformacionesContacto[]> {
+  const byEmail = new Map<string, InformacionesContacto>();
+  for (const nombre of nombresGrupos) {
+    const rows = await listContactosGrupo(nombre);
+    for (const c of rows) {
+      const key = c.email.toLowerCase();
+      const prev = byEmail.get(key);
+      if (!prev) {
+        byEmail.set(key, { ...c, grupos: [nombre] });
+      } else {
+        const grupos = new Set([...(prev.grupos ?? []), nombre]);
+        byEmail.set(key, { ...prev, grupos: [...grupos] });
+      }
+    }
+  }
+  return [...byEmail.values()].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, "es"),
+  );
+}
+
+/** Todos los contactos activos, con nombres de grupos. */
+export async function listAgendaCompleta(): Promise<InformacionesContacto[]> {
+  const grupos = await listGrupos();
+  return listContactosDeGrupos(grupos.map((g) => g.nombre));
+}
+
 export function contactosToDestinatarios(
   contactos: InformacionesContacto[],
 ): DestinatarioAgenda[] {
@@ -72,7 +112,6 @@ export function contactosToDestinatarios(
   }));
 }
 
-/** Busca contactos de la agenda por email (sin tocar usuarios). */
 export async function lookupContactosByEmails(
   emails: string[],
 ): Promise<Map<string, InformacionesContacto>> {
@@ -93,11 +132,26 @@ export async function lookupContactosByEmails(
   return map;
 }
 
+export async function ensureGrupo(nombre: string): Promise<string> {
+  const trimmed = nombre.trim().replace(/\s+/g, " ");
+  if (!trimmed) throw new Error("Nombre de grupo vacío");
+  const existing = await getGrupoIdByNombre(trimmed);
+  if (existing) return existing;
+
+  const { data, error } = await supabase()
+    .from("informaciones_grupos")
+    .insert({ nombre: trimmed })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 export async function upsertContacto(input: {
   nombre: string;
   email: string;
   empresa?: string | null;
-  grupoNombre?: string;
+  grupoNombre: string;
 }): Promise<InformacionesContacto> {
   const email = input.email.toLowerCase().trim();
   const nombre = input.nombre.trim();
@@ -115,16 +169,14 @@ export async function upsertContacto(input: {
 
   if (error) throw error;
 
-  const grupoId = await getGrupoIdByNombre(input.grupoNombre ?? GRUPO_INFORMACIONES_ASLI);
-  if (grupoId) {
-    const { error: memErr } = await supabase()
-      .from("informaciones_grupo_miembros")
-      .upsert(
-        { grupo_id: grupoId, contacto_id: data.id },
-        { onConflict: "grupo_id,contacto_id" },
-      );
-    if (memErr) throw memErr;
-  }
+  const grupoId = await ensureGrupo(input.grupoNombre);
+  const { error: memErr } = await supabase()
+    .from("informaciones_grupo_miembros")
+    .upsert(
+      { grupo_id: grupoId, contacto_id: data.id },
+      { onConflict: "grupo_id,contacto_id" },
+    );
+  if (memErr) throw memErr;
 
   return data as InformacionesContacto;
 }
@@ -137,27 +189,17 @@ export async function setContactoActivo(id: string, activo: boolean): Promise<vo
   if (error) throw error;
 }
 
-export async function updateContacto(
-  id: string,
-  patch: { nombre?: string; email?: string; empresa?: string | null },
-): Promise<void> {
-  const payload: Record<string, string | null> = {};
-  if (patch.nombre != null) payload.nombre = patch.nombre.trim();
-  if (patch.email != null) payload.email = patch.email.toLowerCase().trim();
-  if (patch.empresa !== undefined) payload.empresa = patch.empresa?.trim() || null;
-  const { error } = await supabase()
-    .from("informaciones_contactos")
-    .update(payload)
-    .eq("id", id);
-  if (error) throw error;
-}
-
-/** Líneas: nombre;email;empresa  |  nombre,email,empresa  |  email solo */
+/** Líneas: nombre;email;empresa  |  nombre;email;empresa;grupo */
 export function parseContactosImport(raw: string): {
-  rows: { nombre: string; email: string; empresa: string | null }[];
+  rows: { nombre: string; email: string; empresa: string | null; grupo?: string }[];
   errores: string[];
 } {
-  const rows: { nombre: string; email: string; empresa: string | null }[] = [];
+  const rows: {
+    nombre: string;
+    email: string;
+    empresa: string | null;
+    grupo?: string;
+  }[] = [];
   const errores: string[] = [];
   const seen = new Set<string>();
 
@@ -166,10 +208,11 @@ export function parseContactosImport(raw: string): {
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith("#"))
     .entries()) {
-    const parts = line.split(/[;\t,]/).map((p) => p.trim()).filter(Boolean);
+    const parts = line.split(/[;\t]/).map((p) => p.trim()).filter(Boolean);
     let email = "";
     let nombre = "";
     let empresa: string | null = null;
+    let grupo: string | undefined;
 
     if (parts.length === 1) {
       email = parts[0];
@@ -184,6 +227,7 @@ export function parseContactosImport(raw: string): {
       const rest = parts.filter((_, j) => j !== emailIdx);
       nombre = rest[0] ?? nombreDesdeEmail(email);
       empresa = rest[1] ?? null;
+      grupo = rest[2];
     }
 
     const emailNorm = email.toLowerCase().replace(/^mailto:/i, "");
@@ -191,12 +235,14 @@ export function parseContactosImport(raw: string): {
       errores.push(`L${i + 1}: email inválido`);
       continue;
     }
-    if (seen.has(emailNorm)) continue;
-    seen.add(emailNorm);
+    const key = `${emailNorm}|${(grupo ?? "").toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     rows.push({
       nombre: nombre.trim() || nombreDesdeEmail(emailNorm),
       email: emailNorm,
       empresa,
+      grupo,
     });
   }
 
@@ -205,18 +251,21 @@ export function parseContactosImport(raw: string): {
 
 export async function importContactosToGrupo(
   raw: string,
-  grupoNombre = GRUPO_INFORMACIONES_ASLI,
+  grupoNombreDefault: string,
 ): Promise<{ ok: number; errores: string[] }> {
   const { rows, errores } = parseContactosImport(raw);
   let ok = 0;
   for (const row of rows) {
     try {
-      await upsertContacto({ ...row, grupoNombre });
+      await upsertContacto({
+        nombre: row.nombre,
+        email: row.email,
+        empresa: row.empresa,
+        grupoNombre: row.grupo?.trim() || grupoNombreDefault,
+      });
       ok += 1;
     } catch (e) {
-      errores.push(
-        `${row.email}: ${e instanceof Error ? e.message : "error"}`,
-      );
+      errores.push(`${row.email}: ${e instanceof Error ? e.message : "error"}`);
     }
   }
   return { ok, errores };

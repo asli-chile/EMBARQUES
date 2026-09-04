@@ -4,14 +4,16 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { sendEmail } from "@/lib/email/sendEmail";
 import {
   contactosToDestinatarios,
-  GRUPO_INFORMACIONES_ASLI,
   importContactosToGrupo,
-  listContactosGrupo,
+  listAgendaCompleta,
+  listContactosDeGrupos,
+  listGrupos,
   lookupContactosByEmails,
   setContactoActivo,
   upsertContacto,
   type DestinatarioAgenda,
   type InformacionesContacto,
+  type InformacionesGrupo,
 } from "@/lib/email/informativos/agenda";
 import {
   createBlock,
@@ -94,26 +96,47 @@ export function InformativosContent() {
   const [destRaw, setDestRaw] = useState("");
   const [resolved, setResolved] = useState<DestinatarioAgenda[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [useGrupoAsli, setUseGrupoAsli] = useState(false);
+  const [grupos, setGrupos] = useState<InformacionesGrupo[]>([]);
+  const [gruposSeleccionados, setGruposSeleccionados] = useState<Set<string>>(
+    new Set(),
+  );
   const [grupoLoading, setGrupoLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
   const [agenda, setAgenda] = useState<InformacionesContacto[]>([]);
   const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaFiltroGrupo, setAgendaFiltroGrupo] = useState<string>("");
   const [importRaw, setImportRaw] = useState("");
+  const [importGrupo, setImportGrupo] = useState("");
   const [newNombre, setNewNombre] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newEmpresa, setNewEmpresa] = useState("");
+  const [newGrupo, setNewGrupo] = useState("");
   const [agendaBusy, setAgendaBusy] = useState(false);
 
   const selected = doc.blocks.find((b) => b.id === selectedId) ?? null;
   const parsed = useMemo(() => parseDestinatarios(destRaw), [destRaw]);
   const selectedList = resolved.filter((d) => picked.has(d.email));
+  const agendaVisible = useMemo(() => {
+    if (!agendaFiltroGrupo) return agenda;
+    return agenda.filter((c) => c.grupos?.includes(agendaFiltroGrupo));
+  }, [agenda, agendaFiltroGrupo]);
+
+  const reloadGrupos = useCallback(async () => {
+    try {
+      const rows = await listGrupos();
+      setGrupos(rows);
+      setImportGrupo((cur) => cur || rows[0]?.nombre || "");
+      setNewGrupo((cur) => cur || rows[0]?.nombre || "");
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const reloadAgenda = useCallback(async () => {
     setAgendaLoading(true);
     try {
-      const rows = await listContactosGrupo(GRUPO_INFORMACIONES_ASLI);
+      const rows = await listAgendaCompleta();
       setAgenda(rows);
     } catch (e) {
       console.error(e);
@@ -125,6 +148,10 @@ export function InformativosContent() {
       setAgendaLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    void reloadGrupos();
+  }, [reloadGrupos]);
 
   useEffect(() => {
     let dead = false;
@@ -145,19 +172,23 @@ export function InformativosContent() {
   }, [doc, previewNombre]);
 
   useEffect(() => {
-    if (panel === "agenda") void reloadAgenda();
-  }, [panel, reloadAgenda]);
+    if (panel === "agenda" || panel === "send") {
+      void reloadGrupos();
+      if (panel === "agenda") void reloadAgenda();
+    }
+  }, [panel, reloadAgenda, reloadGrupos]);
 
-  /** Destinatarios: pegado + opcional grupo; nombres solo desde agenda (nunca usuarios). */
+  /** Destinatarios: grupos marcados + pegado; nombres solo desde agenda. */
   useEffect(() => {
     let dead = false;
     void (async () => {
       try {
         const byEmail = new Map<string, DestinatarioAgenda>();
+        const seleccion = [...gruposSeleccionados];
 
-        if (useGrupoAsli) {
+        if (seleccion.length) {
           setGrupoLoading(true);
-          const contactos = await listContactosGrupo(GRUPO_INFORMACIONES_ASLI);
+          const contactos = await listContactosDeGrupos(seleccion);
           for (const d of contactosToDestinatarios(contactos)) {
             byEmail.set(d.email, d);
           }
@@ -203,7 +234,7 @@ export function InformativosContent() {
     return () => {
       dead = true;
     };
-  }, [destRaw, useGrupoAsli]);
+  }, [destRaw, gruposSeleccionados]);
 
   const addPreset = (kind: BlockKind) => {
     const block = createBlock(kind);
@@ -285,9 +316,15 @@ export function InformativosContent() {
       sileo.error({ title: "Pega la lista primero" });
       return;
     }
+    const grupo = importGrupo.trim() || grupos[0]?.nombre;
+    if (!grupo) {
+      sileo.error({ title: "Elige un grupo" });
+      return;
+    }
     setAgendaBusy(true);
     try {
-      const r = await importContactosToGrupo(importRaw, GRUPO_INFORMACIONES_ASLI);
+      const r = await importContactosToGrupo(importRaw, grupo);
+      await reloadGrupos();
       await reloadAgenda();
       setImportRaw("");
       if (r.errores.length) {
@@ -309,16 +346,23 @@ export function InformativosContent() {
   };
 
   const onAddOne = async () => {
+    const grupo = newGrupo.trim() || grupos[0]?.nombre;
+    if (!grupo) {
+      sileo.error({ title: "Elige un grupo" });
+      return;
+    }
     setAgendaBusy(true);
     try {
       await upsertContacto({
         nombre: newNombre,
         email: newEmail,
         empresa: newEmpresa || null,
+        grupoNombre: grupo,
       });
       setNewNombre("");
       setNewEmail("");
       setNewEmpresa("");
+      await reloadGrupos();
       await reloadAgenda();
       sileo.success({ title: "Contacto guardado" });
     } catch (e) {
@@ -542,18 +586,40 @@ export function InformativosContent() {
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
-              <label className="flex items-center gap-2 rounded border border-brand-blue/15 bg-[#f7f9fc] px-2 py-2 text-[12px] font-semibold text-brand-blue">
-                <input
-                  type="checkbox"
-                  className="accent-[#11224E]"
-                  checked={useGrupoAsli}
-                  onChange={(e) => setUseGrupoAsli(e.target.checked)}
-                />
-                Grupo {GRUPO_INFORMACIONES_ASLI}
-                {grupoLoading ? (
-                  <span className="text-[10px] font-normal text-brand-blue/50">…</span>
-                ) : null}
-              </label>
+              <div className="space-y-1 rounded border border-brand-blue/15 bg-[#f7f9fc] p-2">
+                <div className="flex items-center gap-2">
+                  <p className={label + " mb-0"}>Grupos</p>
+                  {grupoLoading ? (
+                    <span className="text-[10px] text-brand-blue/50">…</span>
+                  ) : null}
+                </div>
+                {grupos.length === 0 ? (
+                  <p className="text-[11px] text-brand-blue/45">Sin grupos cargados.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {grupos.map((g) => (
+                      <li key={g.id}>
+                        <label className="flex items-center gap-2 text-[12px] font-semibold text-brand-blue">
+                          <input
+                            type="checkbox"
+                            className="accent-[#11224E]"
+                            checked={gruposSeleccionados.has(g.nombre)}
+                            onChange={() => {
+                              setGruposSeleccionados((prev) => {
+                                const n = new Set(prev);
+                                if (n.has(g.nombre)) n.delete(g.nombre);
+                                else n.add(g.nombre);
+                                return n;
+                              });
+                            }}
+                          />
+                          {g.nombre}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <p className="text-[11px] text-brand-blue/60">
                 Opcional: pega emails extra (uno por línea). Nombre desde la agenda o del correo —
                 no usa Usuarios ERP.
@@ -610,7 +676,7 @@ export function InformativosContent() {
                 </ul>
               ) : (
                 <p className="text-[11px] text-brand-blue/45">
-                  Marca el grupo o pega emails para armar la lista.
+                  Marca uno o más grupos, o pega emails.
                 </p>
               )}
             </div>
@@ -660,12 +726,14 @@ export function InformativosContent() {
           <div
             className="flex h-full w-full max-w-lg flex-col border-l border-brand-blue/15 bg-white shadow-xl"
             role="dialog"
-            aria-label="Agenda Informaciones ASLI"
+            aria-label="Agenda de informaciones"
           >
             <div className="flex items-center gap-2 border-b border-brand-blue/10 px-3 py-2">
               <div>
                 <p className="text-[12px] font-bold text-brand-blue">Agenda</p>
-                <p className="text-[10px] text-brand-blue/50">{GRUPO_INFORMACIONES_ASLI}</p>
+                <p className="text-[10px] text-brand-blue/50">
+                  {grupos.length} grupos · contactos separados
+                </p>
               </div>
               <button
                 type="button"
@@ -678,7 +746,7 @@ export function InformativosContent() {
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
               <div className="space-y-1 rounded border border-brand-blue/12 p-2">
                 <p className={label}>Alta rápida</p>
-                <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                   <input
                     className={input}
                     placeholder="Nombre"
@@ -697,11 +765,24 @@ export function InformativosContent() {
                     value={newEmpresa}
                     onChange={(e) => setNewEmpresa(e.target.value)}
                   />
+                  <select
+                    className={input}
+                    value={newGrupo}
+                    onChange={(e) => setNewGrupo(e.target.value)}
+                  >
+                    {grupos.map((g) => (
+                      <option key={g.id} value={g.nombre}>
+                        {g.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <button
                   type="button"
                   className={btnPrimary}
-                  disabled={agendaBusy || !newNombre.trim() || !newEmail.trim()}
+                  disabled={
+                    agendaBusy || !newNombre.trim() || !newEmail.trim() || !newGrupo
+                  }
                   onClick={() => void onAddOne()}
                 >
                   Guardar en grupo
@@ -711,29 +792,53 @@ export function InformativosContent() {
               <div className="space-y-1 rounded border border-brand-blue/12 p-2">
                 <p className={label}>Pegar lista</p>
                 <p className="text-[10px] text-brand-blue/50">
-                  Una por línea: <code>nombre;email;empresa</code> (también coma o tab)
+                  Una por línea: <code>nombre;email;empresa</code> o con 4to campo grupo
                 </p>
+                <select
+                  className={input}
+                  value={importGrupo}
+                  onChange={(e) => setImportGrupo(e.target.value)}
+                >
+                  {grupos.map((g) => (
+                    <option key={g.id} value={g.nombre}>
+                      Importar a: {g.nombre}
+                    </option>
+                  ))}
+                </select>
                 <textarea
-                  className={input + " min-h-[120px] font-mono text-[11px]"}
+                  className={input + " min-h-[100px] font-mono text-[11px]"}
                   value={importRaw}
                   onChange={(e) => setImportRaw(e.target.value)}
-                  placeholder={"Carmen Pérez;carmen@fruta.cl;Fruta Sur\nrodrigo@asli.cl"}
+                  placeholder={"Carmen Pérez;carmen@fruta.cl;Fruta Sur"}
                 />
                 <button
                   type="button"
                   className={btnPrimary}
-                  disabled={agendaBusy || !importRaw.trim()}
+                  disabled={agendaBusy || !importRaw.trim() || !importGrupo}
                   onClick={() => void onImport()}
                 >
-                  Importar a {GRUPO_INFORMACIONES_ASLI}
+                  Importar
                 </button>
               </div>
 
               <div>
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
                   <p className={label + " mb-0"}>
-                    Contactos ({agenda.length})
+                    Contactos ({agendaVisible.length}
+                    {agendaFiltroGrupo ? ` · ${agendaFiltroGrupo}` : ""})
                   </p>
+                  <select
+                    className={input + " w-auto max-w-[220px]"}
+                    value={agendaFiltroGrupo}
+                    onChange={(e) => setAgendaFiltroGrupo(e.target.value)}
+                  >
+                    <option value="">Todos los grupos</option>
+                    {grupos.map((g) => (
+                      <option key={g.id} value={g.nombre}>
+                        {g.nombre}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     className={btn}
@@ -745,13 +850,11 @@ export function InformativosContent() {
                 </div>
                 {agendaLoading ? (
                   <p className="text-[11px] text-brand-blue/45">Cargando…</p>
-                ) : agenda.length === 0 ? (
-                  <p className="text-[11px] text-brand-blue/45">
-                    Aún no hay contactos. Pega tu lista arriba.
-                  </p>
+                ) : agendaVisible.length === 0 ? (
+                  <p className="text-[11px] text-brand-blue/45">Sin contactos en este filtro.</p>
                 ) : (
                   <ul className="max-h-[50vh] overflow-auto rounded border border-brand-blue/15 text-[11px]">
-                    {agenda.map((c) => (
+                    {agendaVisible.map((c) => (
                       <li
                         key={c.id}
                         className="flex items-start gap-2 border-b border-brand-blue/8 px-2 py-1.5 last:border-0"
@@ -762,6 +865,11 @@ export function InformativosContent() {
                           {c.empresa ? (
                             <p className="truncate text-[10px] text-brand-blue/45">
                               {c.empresa}
+                            </p>
+                          ) : null}
+                          {c.grupos?.length ? (
+                            <p className="truncate text-[10px] text-brand-blue/55">
+                              {c.grupos.join(" · ")}
                             </p>
                           ) : null}
                         </div>
