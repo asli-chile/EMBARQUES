@@ -43,39 +43,87 @@ type Panel = "compose" | "send" | "agenda";
 
 function propFields(
   block: StudioBlock,
-): { key: string; label: string; multiline?: boolean }[] {
+): {
+  key: string;
+  label: string;
+  multiline?: boolean;
+  hint?: string;
+  options?: { value: string; label: string }[];
+}[] {
   switch (block.kind) {
     case "greeting":
-      return [{ key: "template", label: "Plantilla" }];
+      return [
+        {
+          key: "saludoMode",
+          label: "Trato (Estimado / Estimada)",
+          options: [
+            { value: "auto", label: "Auto según el nombre del destinatario" },
+            { value: "Estimado", label: "Forzar Estimado" },
+            { value: "Estimada", label: "Forzar Estimada" },
+          ],
+          hint: "Con «Auto», {{saludo}} cambia por persona al enviar.",
+        },
+        {
+          key: "template",
+          label: "Plantilla del saludo",
+          multiline: true,
+          hint: "Ej: {{saludo}} {{nombre}},  —  o texto fijo: Estimados clientes,",
+        },
+      ];
     case "heading":
       return [
-        { key: "text", label: "Texto" },
-        { key: "as", label: "Tag (h1|h2|h3)" },
+        { key: "text", label: "Texto del título", multiline: true },
+        { key: "as", label: "Nivel (h1 | h2 | h3)" },
       ];
     case "text":
-      return [{ key: "text", label: "Texto (**negrita**)", multiline: true }];
+      return [
+        {
+          key: "text",
+          label: "Texto del párrafo",
+          multiline: true,
+          hint: "**negrita**, {{nombre}}, {{saludo}}. Saltos de línea OK.",
+        },
+      ];
     case "button":
       return [
-        { key: "label", label: "Etiqueta" },
-        { key: "href", label: "URL" },
+        { key: "label", label: "Texto del botón" },
+        { key: "href", label: "URL del enlace" },
       ];
     case "image":
       return [
-        { key: "src", label: "URL imagen" },
-        { key: "alt", label: "Alt" },
-        { key: "width", label: "Ancho px" },
+        { key: "src", label: "URL de la imagen" },
+        { key: "alt", label: "Texto alternativo" },
+        { key: "width", label: "Ancho (px)" },
       ];
     case "dataRow":
       return [
-        { key: "label", label: "Etiqueta" },
+        {
+          key: "icon",
+          label: "Ícono (calendar | pin | product | document | cold | vacío)",
+        },
+        { key: "label", label: "Etiqueta (ej. DESTINO)" },
         { key: "value", label: "Valor", multiline: true },
       ];
     case "headerAsli":
-      return [{ key: "logoUrl", label: "URL logo (vacío = ASLI)" }];
+      return [{ key: "logoUrl", label: "URL logo (vacío = logo ASLI)" }];
     case "footerAsli":
-      return [{ key: "logoUrl", label: "URL logo (vacío = ASLI)" }];
+      return [
+        { key: "logoUrl", label: "URL logo (vacío = logo ASLI)" },
+        { key: "tagline", label: "Línea bajo el logo" },
+        { key: "address1", label: "Dirección línea 1" },
+        { key: "address2", label: "Dirección línea 2" },
+      ];
     case "html":
-      return [{ key: "html", label: "HTML + class Tailwind", multiline: true }];
+      return [
+        {
+          key: "html",
+          label: "HTML + class Tailwind",
+          multiline: true,
+          hint: "{{nombre}} y {{saludo}} disponibles",
+        },
+      ];
+    case "divider":
+      return [];
     default:
       return [];
   }
@@ -238,8 +286,33 @@ export function InformativosContent() {
 
   const addPreset = (kind: BlockKind) => {
     const block = createBlock(kind);
-    setDoc((d) => ({ ...d, blocks: [...d.blocks, block] }));
+    setDoc((d) => {
+      if (!selectedId) {
+        return { ...d, blocks: [...d.blocks, block] };
+      }
+      const i = d.blocks.findIndex((b) => b.id === selectedId);
+      if (i < 0) return { ...d, blocks: [...d.blocks, block] };
+      const blocks = [...d.blocks];
+      blocks.splice(i + 1, 0, block);
+      return { ...d, blocks };
+    });
     setSelectedId(block.id);
+  };
+
+  const duplicateBlock = (id: string) => {
+    setDoc((d) => {
+      const i = d.blocks.findIndex((b) => b.id === id);
+      if (i < 0) return d;
+      const copy = {
+        ...d.blocks[i],
+        id: `b_${Math.random().toString(36).slice(2, 10)}`,
+        props: { ...d.blocks[i].props },
+      };
+      const blocks = [...d.blocks];
+      blocks.splice(i + 1, 0, copy);
+      setSelectedId(copy.id);
+      return { ...d, blocks };
+    });
   };
 
   const updateProps = (id: string, key: string, value: string) => {
@@ -429,27 +502,10 @@ export function InformativosContent() {
       </header>
 
       <div
-        className={`grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[150px_200px_minmax(220px,280px)_minmax(0,1fr)] lg:overflow-hidden ${
+        className={`grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[minmax(220px,260px)_minmax(260px,320px)_minmax(0,1fr)] lg:overflow-hidden ${
           panel !== "compose" ? "pointer-events-none opacity-40" : ""
         }`}
       >
-        <aside className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
-          <p className={label}>Presets</p>
-          <div className="flex flex-col gap-0.5">
-            {STUDIO_PRESETS.map((p) => (
-              <button
-                key={p.kind}
-                type="button"
-                title={p.description}
-                className="rounded px-1.5 py-1 text-left text-[11px] font-medium text-brand-blue/85 hover:bg-brand-blue/8"
-                onClick={() => addPreset(p.kind)}
-              >
-                + {p.label}
-              </button>
-            ))}
-          </div>
-        </aside>
-
         <aside className="border-b border-brand-blue/10 bg-[#f7f9fc] p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
           <div className="mb-2 space-y-1">
             <label className={label}>Asunto</label>
@@ -465,11 +521,32 @@ export function InformativosContent() {
               onChange={(e) => setDoc({ ...doc, previewText: e.target.value })}
             />
           </div>
+
+          <p className={label}>Agregar componente</p>
+          <div className="mb-3 grid grid-cols-2 gap-0.5">
+            {STUDIO_PRESETS.map((p) => (
+              <button
+                key={p.kind}
+                type="button"
+                title={p.description}
+                className="rounded border border-brand-blue/15 bg-white px-1.5 py-1 text-left text-[10px] font-semibold text-brand-blue/85 hover:bg-brand-blue/8"
+                onClick={() => addPreset(p.kind)}
+              >
+                + {p.label}
+              </button>
+            ))}
+          </div>
+
           <p className={label}>Bloques ({doc.blocks.length})</p>
           <ul className="space-y-0.5">
-            {doc.blocks.map((b) => {
+            {doc.blocks.map((b, idx) => {
               const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
               const active = b.id === selectedId;
+              const summary =
+                b.props.label ||
+                b.props.text?.slice(0, 28) ||
+                b.props.template?.slice(0, 28) ||
+                "";
               return (
                 <li key={b.id}>
                   <button
@@ -481,7 +558,17 @@ export function InformativosContent() {
                     }`}
                     onClick={() => setSelectedId(b.id)}
                   >
+                    <span className="opacity-50">{idx + 1}. </span>
                     {meta?.label ?? b.kind}
+                    {summary ? (
+                      <span
+                        className={`mt-0.5 block truncate text-[10px] font-normal ${
+                          active ? "text-white/70" : "text-brand-blue/45"
+                        }`}
+                      >
+                        {summary}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               );
@@ -492,7 +579,7 @@ export function InformativosContent() {
         <section className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
           {!selected ? (
             <p className="text-[11px] text-brand-blue/45">
-              Elige un bloque a la izquierda o agrega un preset.
+              Elige un bloque o agrega un componente a la izquierda.
             </p>
           ) : (
             <div className="space-y-2">
@@ -501,6 +588,14 @@ export function InformativosContent() {
                   {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
                 </p>
                 <div className="ml-auto flex shrink-0 gap-0.5">
+                  <button
+                    type="button"
+                    className={btn}
+                    title="Duplicar"
+                    onClick={() => duplicateBlock(selected.id)}
+                  >
+                    Dup
+                  </button>
                   <button type="button" className={btn} onClick={() => move(selected.id, -1)}>
                     ↑
                   </button>
@@ -512,31 +607,49 @@ export function InformativosContent() {
                   </button>
                 </div>
               </div>
-              {propFields(selected).map((f) => (
-                <div key={f.key}>
-                  <label className={label}>{f.label}</label>
-                  {f.multiline ? (
-                    <textarea
-                      className={input + " min-h-[100px] font-mono text-[11px] leading-4"}
-                      value={selected.props[f.key] ?? ""}
-                      onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
-                      spellCheck={selected.kind !== "html"}
-                    />
-                  ) : (
-                    <input
-                      className={input}
-                      value={selected.props[f.key] ?? ""}
-                      onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
-                    />
-                  )}
-                </div>
-              ))}
-              {selected.kind === "html" ? (
-                <p className="text-[10px] leading-4 text-brand-blue/50">
-                  HTML con class Tailwind, <code className="text-[10px]">{"{{nombre}}"}</code> y{" "}
-                  <code className="text-[10px]">{"{{saludo}}"}</code> (Estimado/Estimada).
+              <p className="text-[10px] text-brand-blue/45">
+                {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.description}
+              </p>
+              {propFields(selected).length === 0 ? (
+                <p className="text-[11px] text-brand-blue/50">
+                  Este bloque no tiene campos (solo estructura visual).
                 </p>
-              ) : null}
+              ) : (
+                propFields(selected).map((f) => (
+                  <div key={f.key}>
+                    <label className={label}>{f.label}</label>
+                    {f.options ? (
+                      <select
+                        className={input}
+                        value={selected.props[f.key] || f.options[0]?.value || ""}
+                        onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+                      >
+                        {f.options.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : f.multiline ? (
+                      <textarea
+                        className={input + " min-h-[120px] font-mono text-[11px] leading-4"}
+                        value={selected.props[f.key] ?? ""}
+                        onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+                        spellCheck={selected.kind !== "html"}
+                      />
+                    ) : (
+                      <input
+                        className={input}
+                        value={selected.props[f.key] ?? ""}
+                        onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+                      />
+                    )}
+                    {f.hint ? (
+                      <p className="mt-0.5 text-[10px] leading-4 text-brand-blue/45">{f.hint}</p>
+                    ) : null}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </section>

@@ -71,13 +71,21 @@ export function saludoDesdeNombre(nombre: string): SaludoFormal {
   return "Estimado";
 }
 
+export function resolveSaludo(
+  mode: string | undefined,
+  nombre: string,
+): SaludoFormal {
+  if (mode === "Estimado" || mode === "Estimada") return mode;
+  return saludoDesdeNombre(nombre);
+}
+
 export function mergePlantilla(
   text: string,
   vars: { nombre: string; saludo?: SaludoFormal },
 ): string {
   const saludo = vars.saludo ?? saludoDesdeNombre(vars.nombre);
+  // Solo sustituye placeholders; no reescribe un "Estimado/Estimada" escrito a mano.
   return text
-    .replace(/\bEstimad[oa]\s*\{\{\s*nombre\s*\}\}/gi, `${saludo} ${vars.nombre}`)
     .replace(/\{\{\s*saludo\s*\}\}/gi, saludo)
     .replace(/\{\{\s*nombre\s*\}\}/gi, vars.nombre);
 }

@@ -18,7 +18,10 @@ import {
   Text,
 } from "react-email";
 import { emailAssetUrls, resolveEmailAssetTokens } from "@/lib/email/assets";
-import { mergePlantilla, saludoDesdeNombre } from "@/lib/email/informativos/saludo";
+import {
+  mergePlantilla,
+  resolveSaludo,
+} from "@/lib/email/informativos/saludo";
 import { ASLI_TAILWIND, type StudioBlock, type StudioDocument } from "./types";
 
 function boldParts(text: string): React.ReactNode {
@@ -29,11 +32,16 @@ function boldParts(text: string): React.ReactNode {
   });
 }
 
-function merge(text: string, nombre: string, preferPublic = false): string {
+function merge(
+  text: string,
+  nombre: string,
+  preferPublic = false,
+  saludoMode?: string,
+): string {
   return resolveEmailAssetTokens(
     mergePlantilla(text, {
       nombre,
-      saludo: saludoDesdeNombre(nombre),
+      saludo: resolveSaludo(saludoMode, nombre),
     }),
     preferPublic,
   );
@@ -80,9 +88,12 @@ function BlockView({
         </Section>
       );
     case "greeting": {
-      const saludo = saludoDesdeNombre(nombre);
-      const raw = merge(p.template || "{{saludo}} {{nombre}},", nombre, preferPublic);
-      const text = raw.replace(/^(Estimad[oa])\b/i, saludo);
+      const text = merge(
+        p.template || "{{saludo}} {{nombre}},",
+        nombre,
+        preferPublic,
+        p.saludoMode,
+      );
       return (
         <Text
           style={{
@@ -111,7 +122,9 @@ function BlockView({
           {merge(p.text || "", nombre, preferPublic)}
         </Heading>
       );
-    case "text":
+    case "text": {
+      const merged = merge(p.text || "", nombre, preferPublic);
+      const lines = merged.split(/\n/);
       return (
         <Text
           style={{
@@ -121,9 +134,15 @@ function BlockView({
             color: "#18181b",
           }}
         >
-          {boldParts(merge(p.text || "", nombre, preferPublic))}
+          {lines.map((line, i) => (
+            <React.Fragment key={i}>
+              {i > 0 ? <br /> : null}
+              {boldParts(line)}
+            </React.Fragment>
+          ))}
         </Text>
       );
+    }
     case "button":
       return (
         <Section style={{ margin: "20px 0", textAlign: "center" }}>
@@ -171,23 +190,95 @@ function BlockView({
           />
         </Section>
       );
-    case "dataRow":
+    case "dataRow": {
+      const iconKey = (p.icon || "").trim().toLowerCase();
+      const iconSrc =
+        iconKey === "calendar"
+          ? assets.iconCalendar
+          : iconKey === "pin"
+            ? assets.iconPin
+            : iconKey === "product"
+              ? assets.iconProduct
+              : iconKey === "document"
+                ? assets.iconDocument
+                : iconKey === "cold"
+                  ? assets.iconCold
+                  : "";
       return (
-        <Section
-          style={{
-            borderBottom: "1px solid #E2E8F0",
-            margin: 0,
-            padding: "10px 0",
-          }}
-        >
-          <Text style={{ margin: 0, fontSize: "15px", lineHeight: "22px", color: "#18181b" }}>
-            <span style={{ fontWeight: 700, color: "#002d69", textTransform: "uppercase" }}>
-              {(p.label || "DATO").replace(/:$/, "")}:
-            </span>{" "}
-            <span>{merge(p.value || "", nombre, preferPublic)}</span>
-          </Text>
+        <Section style={{ margin: 0 }}>
+          <table
+            role="presentation"
+            width="100%"
+            cellPadding={0}
+            cellSpacing={0}
+            style={{
+              borderCollapse: "collapse",
+              width: "100%",
+              borderTop: "1px solid #e2e8f0",
+              borderBottom: "1px solid #e2e8f0",
+            }}
+          >
+            <tbody>
+              <tr>
+                {iconSrc ? (
+                  <td
+                    width={40}
+                    valign="middle"
+                    style={{
+                      width: "40px",
+                      padding: "8px 10px 8px 0",
+                      borderRight: "1px solid #e2e8f0",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    <Img
+                      src={iconSrc}
+                      width={32}
+                      height={32}
+                      alt=""
+                      style={{
+                        display: "block",
+                        border: 0,
+                        width: "32px",
+                        height: "32px",
+                        margin: "0 auto",
+                      }}
+                    />
+                  </td>
+                ) : null}
+                <td
+                  width={118}
+                  valign="middle"
+                  style={{
+                    width: "118px",
+                    padding: iconSrc ? "8px 8px 8px 12px" : "8px 8px 8px 0",
+                    verticalAlign: "middle",
+                    fontSize: "13px",
+                    lineHeight: "18px",
+                    fontWeight: 700,
+                    color: "#002d69",
+                  }}
+                >
+                  {(p.label || "DATO").replace(/:$/, "")}:
+                </td>
+                <td
+                  valign="middle"
+                  style={{
+                    padding: "8px 0",
+                    verticalAlign: "middle",
+                    fontSize: "13px",
+                    lineHeight: "18px",
+                    color: "#18181b",
+                  }}
+                >
+                  {merge(p.value || "", nombre, preferPublic)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </Section>
       );
+    }
     case "footerAsli":
       return (
         <Section style={{ backgroundColor: "#0B1A3D", padding: "16px 18px" }}>
@@ -208,7 +299,7 @@ function BlockView({
                   color: "#ffffff",
                 }}
               >
-                Logística y Comercio Exterior
+                {p.tagline || "Logística y Comercio Exterior"}
               </Text>
             </Column>
             <Column style={{ width: "3px", verticalAlign: "middle" }}>
@@ -225,9 +316,9 @@ function BlockView({
                   color: "#ffffff",
                 }}
               >
-                Longitudinal Sur Km 186,
+                {p.address1 || "Longitudinal Sur Km 186,"}
                 <br />
-                Curicó, Chile
+                {p.address2 || "Curicó, Chile"}
               </Text>
             </Column>
           </Row>

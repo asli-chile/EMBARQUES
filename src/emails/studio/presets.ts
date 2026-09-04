@@ -20,7 +20,7 @@ export const STUDIO_PRESETS: PresetDef[] = [
     kind: "greeting",
     label: "Saludo {{saludo}}",
     description: "Estimado/Estimada según el nombre + {{nombre}}",
-    defaults: { template: "{{saludo}} {{nombre}}," },
+    defaults: { template: "{{saludo}} {{nombre}},", saludoMode: "auto" },
   },
   {
     kind: "heading",
@@ -64,14 +64,23 @@ export const STUDIO_PRESETS: PresetDef[] = [
   {
     kind: "dataRow",
     label: "Fila dato",
-    description: "Etiqueta + valor (estilo informativo)",
-    defaults: { label: "DESTINO", value: "Vietnam" },
+    description: "Ícono + etiqueta + valor (editable)",
+    defaults: {
+      icon: "pin",
+      label: "DESTINO",
+      value: "Vietnam",
+    },
   },
   {
     kind: "footerAsli",
     label: "Footer ASLI",
     description: "Pie de marca con logo",
-    defaults: {},
+    defaults: {
+      logoUrl: "",
+      tagline: "Logística y Comercio Exterior",
+      address1: "Longitudinal Sur Km 186,",
+      address2: "Curicó, Chile",
+    },
   },
   {
     kind: "html",
@@ -125,9 +134,36 @@ export function createExportacionesVietnamDocument(): StudioDocument {
         },
       },
       {
-        ...createBlock("html"),
+        ...createBlock("dataRow"),
         props: {
-          html: VIETNAM_DATOS_HTML,
+          icon: "calendar",
+          label: "ANUNCIO",
+          value: "27 de agosto de 2026",
+        },
+      },
+      {
+        ...createBlock("dataRow"),
+        props: { icon: "pin", label: "DESTINO", value: "Vietnam" },
+      },
+      {
+        ...createBlock("dataRow"),
+        props: { icon: "product", label: "PRODUCTO", value: "Cerezas frescas" },
+      },
+      {
+        ...createBlock("dataRow"),
+        props: {
+          icon: "document",
+          label: "MEDIDA",
+          value: "Systems Approach como alternativa al tratamiento de frío",
+        },
+      },
+      {
+        ...createBlock("dataRow"),
+        props: {
+          icon: "cold",
+          label: "TRATAMIENTO DE FRÍO",
+          value:
+            "aplicable a fruta proveniente de zonas con presencia de mosca de la fruta, según las condiciones establecidas en el protocolo.",
         },
       },
       {
@@ -138,55 +174,15 @@ export function createExportacionesVietnamDocument(): StudioDocument {
       },
       {
         ...createBlock("text"),
-        props: {
-          text: "Saludos cordiales,",
-        },
+        props: { text: "Saludos cordiales," },
       },
       {
-        ...createBlock("html"),
+        ...createBlock("text"),
         props: {
-          html: `<p style="margin:4px 0 0 0;font-size:14px;line-height:20px;"><strong>Equipo ASLI</strong><br/>Logística &amp; Comercio Exterior</p>`,
+          text: "**Equipo ASLI**\nLogística & Comercio Exterior",
         },
       },
       createBlock("footerAsli"),
     ],
   };
 }
-
-const VIETNAM_DATOS_HTML = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;border-collapse:collapse;width:100%;">
-  <tr>
-    <td width="40" valign="middle" style="width:40px;padding:8px 10px 8px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;vertical-align:middle;">
-      <img src="{{asset:/email/icons/calendar.png}}" width="32" height="32" alt="" style="display:block;border:0;outline:none;width:32px;height:32px;margin:0 auto;" />
-    </td>
-    <td width="118" valign="middle" style="width:118px;padding:8px 8px 8px 12px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;font-weight:700;color:#002d69;white-space:nowrap;">ANUNCIO:</td>
-    <td valign="middle" style="padding:8px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;color:#18181b;">27 de agosto de 2026</td>
-  </tr>
-  <tr>
-    <td width="40" valign="middle" style="width:40px;padding:8px 10px 8px 0;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;vertical-align:middle;">
-      <img src="{{asset:/email/icons/pin.png}}" width="32" height="32" alt="" style="display:block;border:0;outline:none;width:32px;height:32px;margin:0 auto;" />
-    </td>
-    <td width="118" valign="middle" style="width:118px;padding:8px 8px 8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;font-weight:700;color:#002d69;white-space:nowrap;">DESTINO:</td>
-    <td valign="middle" style="padding:8px 0;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;color:#18181b;">Vietnam</td>
-  </tr>
-  <tr>
-    <td width="40" valign="middle" style="width:40px;padding:8px 10px 8px 0;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;vertical-align:middle;">
-      <img src="{{asset:/email/icons/product.png}}" width="32" height="32" alt="" style="display:block;border:0;outline:none;width:32px;height:32px;margin:0 auto;" />
-    </td>
-    <td width="118" valign="middle" style="width:118px;padding:8px 8px 8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;font-weight:700;color:#002d69;white-space:nowrap;">PRODUCTO:</td>
-    <td valign="middle" style="padding:8px 0;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;color:#18181b;">Cerezas frescas</td>
-  </tr>
-  <tr>
-    <td width="40" valign="middle" style="width:40px;padding:8px 10px 8px 0;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;vertical-align:middle;">
-      <img src="{{asset:/email/icons/document.png}}" width="32" height="32" alt="" style="display:block;border:0;outline:none;width:32px;height:32px;margin:0 auto;" />
-    </td>
-    <td width="118" valign="middle" style="width:118px;padding:8px 8px 8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;font-weight:700;color:#002d69;white-space:nowrap;">MEDIDA:</td>
-    <td valign="middle" style="padding:8px 0;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;color:#18181b;">Systems Approach como alternativa al tratamiento de fr&iacute;o</td>
-  </tr>
-  <tr>
-    <td width="40" valign="middle" style="width:40px;padding:8px 10px 8px 0;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;vertical-align:middle;">
-      <img src="{{asset:/email/icons/cold.png}}" width="32" height="32" alt="" style="display:block;border:0;outline:none;width:32px;height:32px;margin:0 auto;" />
-    </td>
-    <td width="118" valign="middle" style="width:118px;padding:8px 8px 8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:12px;line-height:16px;font-weight:700;color:#002d69;">TRATAMIENTO DE FR&Iacute;O:</td>
-    <td valign="middle" style="padding:8px 0;border-bottom:1px solid #e2e8f0;vertical-align:middle;font-size:13px;line-height:18px;color:#18181b;">aplicable a fruta proveniente de zonas con presencia de mosca de la fruta, seg&uacute;n las condiciones establecidas en el protocolo.</td>
-  </tr>
-</table>`;
