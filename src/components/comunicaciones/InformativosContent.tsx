@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { sendEmail } from "@/lib/email/sendEmail";
@@ -264,13 +264,22 @@ function AlignPicker({
   );
 }
 
+const ALIGNABLE_KINDS = new Set<BlockKind>([
+  "greeting",
+  "heading",
+  "text",
+  "button",
+  "image",
+  "dataRow",
+]);
+
 export function InformativosContent() {
   const { user, profile, isLoading, isSuperadmin } = useAuth();
   const canSendInformativos = isSuperadmin;
   const [doc, setDoc] = useState<StudioDocument>(() => createDefaultStudioDocument());
-  const [selectedId, setSelectedId] = useState<string | null>(() => {
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
     const d = createDefaultStudioDocument();
-    return d.blocks[0]?.id ?? null;
+    return d.blocks[0]?.id ? [d.blocks[0].id] : [];
   });
   const [previewNombre, setPreviewNombre] = useState("Carmen");
   const [previewHtml, setPreviewHtml] = useState("");
@@ -299,7 +308,66 @@ export function InformativosContent() {
   const [newGrupo, setNewGrupo] = useState("");
   const [agendaBusy, setAgendaBusy] = useState(false);
 
+  const selectedId = selectedIds[selectedIds.length - 1] ?? null;
   const selected = doc.blocks.find((b) => b.id === selectedId) ?? null;
+  const multiSelected = selectedIds.length > 1;
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const alignableSelected = useMemo(
+    () => doc.blocks.filter((b) => selectedSet.has(b.id) && ALIGNABLE_KINDS.has(b.kind)),
+    [doc.blocks, selectedSet],
+  );
+
+  const selectOnly = useCallback((id: string | null) => {
+    setSelectedIds(id ? [id] : []);
+  }, []);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((x) => x !== id);
+        return next;
+      }
+      return [...prev, id];
+    });
+  }, []);
+
+  const selectRangeTo = useCallback(
+    (id: string) => {
+      const ids = doc.blocks.map((b) => b.id);
+      const to = ids.indexOf(id);
+      if (to < 0) {
+        selectOnly(id);
+        return;
+      }
+      const fromId = selectedIds[selectedIds.length - 1];
+      const from = fromId ? ids.indexOf(fromId) : to;
+      if (from < 0) {
+        selectOnly(id);
+        return;
+      }
+      const [a, b] = from <= to ? [from, to] : [to, from];
+      setSelectedIds(ids.slice(a, b + 1));
+    },
+    [doc.blocks, selectedIds, selectOnly],
+  );
+
+  const onBlockNavClick = useCallback(
+    (id: string, e: MouseEvent) => {
+      if (e.shiftKey) {
+        e.preventDefault();
+        selectRangeTo(id);
+        return;
+      }
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        toggleSelect(id);
+        return;
+      }
+      selectOnly(id);
+    },
+    [selectOnly, selectRangeTo, toggleSelect],
+  );
+
   const parsed = useMemo(() => parseDestinatarios(destRaw), [destRaw]);
   const selectedList = resolved.filter((d) => picked.has(d.email));
   const agendaVisible = useMemo(() => {
@@ -361,12 +429,12 @@ export function InformativosContent() {
       const data = ev.data;
       if (!data || typeof data !== "object") return;
       if (data.type !== PREVIEW_SELECT_MSG || typeof data.id !== "string") return;
-      setSelectedId(data.id);
+      selectOnly(data.id);
       setPanel("compose");
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [selectOnly]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -379,12 +447,10 @@ export function InformativosContent() {
     const root = previewIframeRef.current?.contentDocument;
     if (!root) return;
     root.querySelectorAll("[data-studio-block-id]").forEach((el) => {
-      el.classList.toggle(
-        "is-selected",
-        el.getAttribute("data-studio-block-id") === selectedId,
-      );
+      const id = el.getAttribute("data-studio-block-id");
+      el.classList.toggle("is-selected", !!id && selectedSet.has(id));
     });
-  }, [selectedId]);
+  }, [selectedSet]);
 
   useEffect(() => {
     syncPreviewSelection();
@@ -467,7 +533,7 @@ export function InformativosContent() {
       blocks.splice(i + 1, 0, block);
       return { ...d, blocks };
     });
-    setSelectedId(block.id);
+    selectOnly(block.id);
   };
 
   const duplicateBlock = (id: string) => {
@@ -481,7 +547,7 @@ export function InformativosContent() {
       };
       const blocks = [...d.blocks];
       blocks.splice(i + 1, 0, copy);
-      setSelectedId(copy.id);
+      selectOnly(copy.id);
       return { ...d, blocks };
     });
   };
@@ -491,6 +557,18 @@ export function InformativosContent() {
       ...d,
       blocks: d.blocks.map((b) =>
         b.id === id ? { ...b, props: { ...b.props, [key]: value } } : b,
+      ),
+    }));
+  };
+
+  const updateAlignMany = (ids: string[], align: string) => {
+    const idSet = new Set(ids);
+    setDoc((d) => ({
+      ...d,
+      blocks: d.blocks.map((b) =>
+        idSet.has(b.id) && ALIGNABLE_KINDS.has(b.kind)
+          ? { ...b, props: { ...b.props, align } }
+          : b,
       ),
     }));
   };
@@ -511,7 +589,14 @@ export function InformativosContent() {
       const blocks = d.blocks.filter((b) => b.id !== id);
       return { ...d, blocks };
     });
-    setSelectedId((cur) => (cur === id ? null : cur));
+    setSelectedIds((cur) => cur.filter((x) => x !== id));
+  };
+
+  const removeSelected = () => {
+    if (selectedIds.length === 0) return;
+    const idSet = new Set(selectedIds);
+    setDoc((d) => ({ ...d, blocks: d.blocks.filter((b) => !idSet.has(b.id)) }));
+    setSelectedIds([]);
   };
 
   const sendList = async (list: DestinatarioAgenda[]) => {
@@ -650,7 +735,7 @@ export function InformativosContent() {
             onClick={() => {
               const next = createExportacionesVietnamDocument();
               setDoc(next);
-              setSelectedId(next.blocks[0]?.id ?? null);
+              selectOnly(next.blocks[0]?.id ?? null);
               setPanel("compose");
             }}
           >
@@ -669,7 +754,7 @@ export function InformativosContent() {
               }
               const next = createBlankStudioDocument();
               setDoc(next);
-              setSelectedId(null);
+              selectOnly(null);
               setPanel("compose");
             }}
           >
@@ -739,6 +824,15 @@ export function InformativosContent() {
             <p className={`${label} mb-0`}>Bloques ({doc.blocks.length})</p>
             <button
               type="button"
+              className={btn + " !py-0.5 !text-[10px]"}
+              title="Seleccionar todos"
+              disabled={doc.blocks.length === 0}
+              onClick={() => setSelectedIds(doc.blocks.map((b) => b.id))}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
               className={btn + " ml-auto !py-0.5 !text-[10px]"}
               title="Vaciar plantilla"
               onClick={() => {
@@ -750,16 +844,20 @@ export function InformativosContent() {
                 }
                 const next = createBlankStudioDocument();
                 setDoc(next);
-                setSelectedId(null);
+                selectOnly(null);
               }}
             >
               Vaciar
             </button>
           </div>
+          <p className="mb-1 text-[9px] leading-3 text-brand-blue/40">
+            Clic = uno · Ctrl/Cmd = sumar · Shift = rango
+          </p>
           <ul className="space-y-0.5">
             {doc.blocks.map((b, idx) => {
               const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
-              const active = b.id === selectedId;
+              const active = selectedSet.has(b.id);
+              const isFocus = b.id === selectedId;
               const summary =
                 b.props.label ||
                 b.props.text?.slice(0, 28) ||
@@ -767,27 +865,45 @@ export function InformativosContent() {
                 "";
               return (
                 <li key={b.id} id={`studio-block-nav-${b.id}`}>
-                  <button
-                    type="button"
-                    className={`w-full rounded px-1.5 py-1 text-left text-[11px] font-medium ${
+                  <div
+                    className={`flex items-stretch gap-0.5 rounded ${
                       active
-                        ? "bg-brand-blue text-white"
+                        ? isFocus
+                          ? "bg-brand-blue text-white"
+                          : "bg-brand-blue/75 text-white"
                         : "text-brand-blue/80 hover:bg-brand-blue/8"
                     }`}
-                    onClick={() => setSelectedId(b.id)}
                   >
-                    <span className="opacity-50">{idx + 1}. </span>
-                    {meta?.label ?? b.kind}
-                    {summary ? (
-                      <span
-                        className={`mt-0.5 block truncate text-[10px] font-normal ${
-                          active ? "text-white/70" : "text-brand-blue/45"
-                        }`}
-                      >
-                        {summary}
-                      </span>
-                    ) : null}
-                  </button>
+                    <label
+                      className="flex cursor-pointer items-center px-1"
+                      title="Marcar para selección múltiple"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-[#11224E]"
+                        checked={active}
+                        onChange={() => toggleSelect(b.id)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 px-1 py-1 text-left text-[11px] font-medium"
+                      onClick={(e) => onBlockNavClick(b.id, e)}
+                    >
+                      <span className="opacity-50">{idx + 1}. </span>
+                      {meta?.label ?? b.kind}
+                      {summary ? (
+                        <span
+                          className={`mt-0.5 block truncate text-[10px] font-normal ${
+                            active ? "text-white/70" : "text-brand-blue/45"
+                          }`}
+                        >
+                          {summary}
+                        </span>
+                      ) : null}
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -795,9 +911,71 @@ export function InformativosContent() {
         </aside>
 
         <section className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
-          {!selected ? (
+          {multiSelected ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <p className="text-[11px] font-bold text-brand-blue">
+                  {selectedIds.length} bloques seleccionados
+                </p>
+                <button
+                  type="button"
+                  className={btn + " ml-auto"}
+                  onClick={() => selectOnly(selectedId)}
+                >
+                  Solo 1
+                </button>
+                <button type="button" className={btn} onClick={() => setSelectedIds([])}>
+                  Limpiar
+                </button>
+                <button type="button" className={btn} onClick={removeSelected} title="Eliminar seleccionados">
+                  ✕
+                </button>
+              </div>
+              {alignableSelected.length > 0 ? (
+                <div>
+                  <label className={label}>
+                    Alinear {alignableSelected.length} bloque
+                    {alignableSelected.length === 1 ? "" : "s"}
+                  </label>
+                  <AlignPicker
+                    value={
+                      alignableSelected.every(
+                        (b) => (b.props.align || "left") === (alignableSelected[0].props.align || "left"),
+                      )
+                        ? alignableSelected[0].props.align || "left"
+                        : ""
+                    }
+                    onChange={(v) =>
+                      updateAlignMany(
+                        alignableSelected.map((b) => b.id),
+                        v,
+                      )
+                    }
+                  />
+                  <p className="mt-0.5 text-[10px] text-brand-blue/45">
+                    Aplica a saludo, título, párrafo, botón, imagen y fila dato.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-brand-blue/50">
+                  Ningún bloque seleccionado admite alineación.
+                </p>
+              )}
+              <ul className="max-h-40 space-y-0.5 overflow-auto text-[10px] text-brand-blue/55">
+                {doc.blocks
+                  .filter((b) => selectedSet.has(b.id))
+                  .map((b) => (
+                    <li key={b.id}>
+                      · {STUDIO_PRESETS.find((x) => x.kind === b.kind)?.label ?? b.kind}
+                      {ALIGNABLE_KINDS.has(b.kind) ? "" : " (sin alinear)"}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : !selected ? (
             <p className="text-[11px] text-brand-blue/45">
-              Elige un bloque o agrega un componente a la izquierda.
+              Elige un bloque o agrega un componente a la izquierda. Marca varios con
+              checkbox o Ctrl/Cmd para alinearlos juntos.
             </p>
           ) : (
             <div className="space-y-2">
