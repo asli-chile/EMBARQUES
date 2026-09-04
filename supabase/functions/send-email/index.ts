@@ -216,16 +216,33 @@ function b64url(input: string | Uint8Array): string {
   return str.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-/** RFC 2047 encoded-word para Subject / display-name con tildes. */
+/** RFC 2047 encoded-word para Subject / display-name con tildes.
+ *  Partimos por caracteres Unicode (no por trozos de Base64) para no
+ *  cortar secuencias UTF-8 a la mitad — eso corrompía "exportación" etc.
+ */
 function encodeRfc2047(text: string): string {
   const clean = text.replace(/[\r\n]+/g, " ").trim();
   if (!/[^\x00-\x7F]/.test(clean)) return clean;
-  const b64 = btoa(bytesToBinary(new TextEncoder().encode(clean)));
-  // Partir en trozos para no superar ~75 chars por línea de header
+
+  const encodeChunk = (s: string) =>
+    `=?UTF-8?B?${btoa(bytesToBinary(new TextEncoder().encode(s)))}?=`;
+
+  // Un solo encoded-word si cabe (~75 chars de header). Si no, trozos de texto.
+  const full = encodeChunk(clean);
+  if (full.length <= 75) return full;
+
   const chunks: string[] = [];
-  for (let i = 0; i < b64.length; i += 45) {
-    chunks.push(`=?UTF-8?B?${b64.slice(i, i + 45)}?=`);
+  let buf = "";
+  for (const ch of clean) {
+    const trial = buf + ch;
+    if (encodeChunk(trial).length > 75 && buf) {
+      chunks.push(encodeChunk(buf));
+      buf = ch;
+    } else {
+      buf = trial;
+    }
   }
+  if (buf) chunks.push(encodeChunk(buf));
   return chunks.join(" ");
 }
 
