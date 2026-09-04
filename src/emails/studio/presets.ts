@@ -72,6 +72,7 @@ export const STUDIO_PRESETS: PresetDef[] = [
       icon: "pin",
       label: "DESTINO",
       value: "Vietnam",
+      align: "left",
     },
   },
   {

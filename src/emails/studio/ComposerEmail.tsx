@@ -208,6 +208,85 @@ function BlockView({
       );
     case "dataRow": {
       const iconSrc = dataRowIconSrc(p.icon, preferPublic);
+      const labelText = `${(p.label || "DATO").replace(/:$/, "")}:`;
+      const valueText = merge(p.value || "", nombre, preferPublic);
+      const cellPad = iconSrc ? "8px 8px 8px 12px" : "8px 8px 8px 0";
+
+      if (align !== "left") {
+        return (
+          <Section style={{ margin: 0 }}>
+            <table
+              role="presentation"
+              width="100%"
+              cellPadding={0}
+              cellSpacing={0}
+              style={{
+                borderCollapse: "collapse",
+                width: "100%",
+                borderTop: "1px solid #e2e8f0",
+                borderBottom: "1px solid #e2e8f0",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    valign="middle"
+                    style={{
+                      padding: "8px 0",
+                      verticalAlign: "middle",
+                      textAlign: align,
+                      fontSize: "13px",
+                      lineHeight: "18px",
+                      color: "#18181b",
+                    }}
+                  >
+                    {iconSrc ? (
+                      <Img
+                        src={iconSrc}
+                        width={28}
+                        height={28}
+                        alt=""
+                        style={{
+                          display: "inline-block",
+                          border: 0,
+                          width: "28px",
+                          height: "28px",
+                          verticalAlign: "middle",
+                          marginRight: "8px",
+                        }}
+                      />
+                    ) : null}
+                    <Text
+                      style={{
+                        display: "inline",
+                        margin: 0,
+                        fontSize: "13px",
+                        lineHeight: "18px",
+                        fontWeight: 700,
+                        color: "#002d69",
+                      }}
+                    >
+                      {labelText}{" "}
+                    </Text>
+                    <Text
+                      style={{
+                        display: "inline",
+                        margin: 0,
+                        fontSize: "13px",
+                        lineHeight: "18px",
+                        color: "#18181b",
+                      }}
+                    >
+                      {valueText}
+                    </Text>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+        );
+      }
+
       return (
         <Section style={{ margin: 0 }}>
           <table
@@ -255,15 +334,16 @@ function BlockView({
                   valign="middle"
                   style={{
                     width: "118px",
-                    padding: iconSrc ? "8px 8px 8px 12px" : "8px 8px 8px 0",
+                    padding: cellPad,
                     verticalAlign: "middle",
                     fontSize: "13px",
                     lineHeight: "18px",
                     fontWeight: 700,
                     color: "#002d69",
+                    textAlign: "left",
                   }}
                 >
-                  {(p.label || "DATO").replace(/:$/, "")}:
+                  {labelText}
                 </td>
                 <td
                   valign="middle"
@@ -273,9 +353,10 @@ function BlockView({
                     fontSize: "13px",
                     lineHeight: "18px",
                     color: "#18181b",
+                    textAlign: "left",
                   }}
                 >
-                  {merge(p.value || "", nombre, preferPublic)}
+                  {valueText}
                 </td>
               </tr>
             </tbody>

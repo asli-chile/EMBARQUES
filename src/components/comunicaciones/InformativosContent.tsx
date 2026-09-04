@@ -200,6 +200,7 @@ function propFields(
         },
         { key: "label", label: "Etiqueta (ej. DESTINO)" },
         { key: "value", label: "Valor", multiline: true },
+        { ...ALIGN_FIELD, control: "align" },
       ];
     case "headerAsli":
       return [{ key: "logoUrl", label: "URL logo (vacío = logo ASLI)" }];
