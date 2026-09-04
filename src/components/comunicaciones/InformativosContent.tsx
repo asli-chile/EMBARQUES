@@ -1,3 +1,4 @@
+import { Icon } from "@iconify/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -19,7 +20,7 @@ import {
   createBlock,
   createBlankStudioDocument,
   createDefaultStudioDocument,
-  createExportacionesVietnamDocument,
+  STUDIO_DOCUMENT_TEMPLATES,
   STUDIO_PRESETS,
 } from "@/emails/studio/presets";
 import type { BlockKind, StudioBlock, StudioDocument } from "@/emails/studio/types";
@@ -30,17 +31,36 @@ import {
   primerNombre,
   renderStudioHtml,
 } from "@/lib/email/informativos/render";
-import { modulePageBg } from "@/lib/ui/moduleStyles";
 import { DATA_ROW_ICON_OPTIONS, dataRowIconSrc } from "@/lib/email/assets";
 
+/** Tokens UI — studio tipo Canva (claros, compactos). */
 const input =
-  "w-full rounded border border-brand-blue/20 bg-white px-2 py-1 text-[12px] text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-1 focus:ring-brand-blue/30";
+  "w-full rounded-lg border border-[#d5dde8] bg-white px-2.5 py-1.5 text-[12px] text-[#1a2744] placeholder:text-[#1a2744]/40 shadow-sm focus:border-[#11224E]/35 focus:outline-none focus:ring-2 focus:ring-[#11224E]/12";
 const label =
-  "mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-brand-blue/55";
+  "mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5a6b85]";
 const btn =
-  "inline-flex items-center gap-1 rounded border border-brand-blue/20 bg-white px-2 py-1 text-[11px] font-semibold text-brand-blue/80 hover:bg-brand-blue/5 disabled:opacity-40";
+  "inline-flex items-center justify-center gap-1 rounded-lg border border-[#d5dde8] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#1a2744]/85 shadow-sm hover:bg-[#f3f6fb] disabled:opacity-40";
 const btnPrimary =
-  "inline-flex items-center gap-1 rounded bg-brand-blue px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-blue/90 disabled:opacity-40";
+  "inline-flex items-center justify-center gap-1 rounded-lg bg-[#11224E] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:bg-[#0d1a3d] disabled:opacity-40";
+const btnGhost =
+  "inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-[#1a2744]/70 hover:bg-black/5 disabled:opacity-40";
+const panelTab =
+  "rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors";
+const boardBg =
+  "bg-[#d8e0ea] [background-image:radial-gradient(circle,_#b8c4d4_1px,_transparent_1px)] [background-size:16px_16px]";
+
+const PRESET_ICONS: Record<BlockKind, string> = {
+  headerAsli: "lucide:panel-top",
+  greeting: "lucide:hand",
+  heading: "lucide:heading",
+  text: "lucide:type",
+  button: "lucide:rectangle-horizontal",
+  divider: "lucide:minus",
+  image: "lucide:image",
+  dataRow: "lucide:rows-3",
+  footerAsli: "lucide:panel-bottom",
+  html: "lucide:code-2",
+};
 
 type Panel = "compose" | "send" | "agenda";
 
@@ -72,28 +92,28 @@ function DataRowIconPicker({
               type="button"
               title={opt.label}
               onClick={() => onChange(opt.value)}
-              className={`flex flex-col items-center gap-1 rounded border px-1 py-1.5 text-center transition-colors ${
+              className={`group flex flex-col items-center gap-1 rounded-xl border px-1 py-1.5 text-center transition ${
                 active
-                  ? "border-brand-blue bg-brand-blue/10 ring-1 ring-brand-blue/30"
-                  : "border-brand-blue/15 bg-white hover:bg-brand-blue/5"
+                  ? "border-[#11224E]/40 bg-[#eef2f8] ring-1 ring-[#11224E]/25"
+                  : "border-[#e2e8f0] bg-white hover:border-[#11224E]/20 hover:bg-[#f8fafc]"
               }`}
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded bg-[#f0f4f9]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f0f4f9]">
                 {src ? (
                   <img src={src} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
                 ) : (
-                  <span className="text-[10px] font-semibold text-brand-blue/40">—</span>
+                  <span className="text-[10px] font-semibold text-[#5a6b85]/50">—</span>
                 )}
               </span>
-              <span className="text-[9px] font-semibold leading-tight text-brand-blue/75">
+              <span className="text-[9px] font-semibold leading-tight text-[#1a2744]/75">
                 {opt.label}
               </span>
             </button>
           );
         })}
       </div>
-      <div className="overflow-hidden rounded border border-brand-blue/15 bg-white">
-        <p className="border-b border-brand-blue/10 bg-[#f7f9fc] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brand-blue/45">
+      <div className="overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+        <p className="border-b border-[#e8eef5] bg-[#f8fafc] px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-[#5a6b85]">
           Vista previa fila
         </p>
         <div className="flex items-stretch text-[11px]">
@@ -108,10 +128,10 @@ function DataRowIconPicker({
               />
             </div>
           ) : null}
-          <div className="w-[88px] shrink-0 border-r border-transparent px-2 py-1.5 font-bold text-[#002d69]">
+          <div className="w-[88px] shrink-0 px-2 py-1.5 font-bold text-[#002d69]">
             {previewLabel}:
           </div>
-          <div className="min-w-0 flex-1 truncate px-2 py-1.5 text-brand-blue/90">
+          <div className="min-w-0 flex-1 truncate px-2 py-1.5 text-[#1a2744]/90">
             {previewValue}
           </div>
         </div>
@@ -120,7 +140,12 @@ function DataRowIconPicker({
   );
 }
 
-const ALIGN_FIELD = {
+const ALIGN_FIELD: {
+  key: string;
+  label: string;
+  options: { value: string; label: string }[];
+  control: "align";
+} = {
   key: "align",
   label: "Alineación",
   options: [
@@ -128,7 +153,8 @@ const ALIGN_FIELD = {
     { value: "center", label: "Centro" },
     { value: "right", label: "Derecha" },
   ],
-} as const;
+  control: "align",
+};
 
 function propFields(
   block: StudioBlock,
@@ -159,13 +185,13 @@ function propFields(
           multiline: true,
           hint: "Ej: {{saludo}} {{nombre}},  —  o texto fijo: Estimados clientes,",
         },
-        { ...ALIGN_FIELD, control: "align" },
+        ALIGN_FIELD,
       ];
     case "heading":
       return [
         { key: "text", label: "Texto del título", multiline: true },
         { key: "as", label: "Nivel (h1 | h2 | h3)" },
-        { ...ALIGN_FIELD, control: "align" },
+        ALIGN_FIELD,
       ];
     case "text":
       return [
@@ -175,20 +201,20 @@ function propFields(
           multiline: true,
           hint: "**negrita**, {{nombre}}, {{saludo}}. Saltos de línea OK.",
         },
-        { ...ALIGN_FIELD, control: "align" },
+        ALIGN_FIELD,
       ];
     case "button":
       return [
         { key: "label", label: "Texto del botón" },
         { key: "href", label: "URL del enlace" },
-        { ...ALIGN_FIELD, control: "align" },
+        ALIGN_FIELD,
       ];
     case "image":
       return [
         { key: "src", label: "URL de la imagen" },
         { key: "alt", label: "Texto alternativo" },
         { key: "width", label: "Ancho (px)" },
-        { ...ALIGN_FIELD, control: "align" },
+        ALIGN_FIELD,
       ];
     case "dataRow":
       return [
@@ -200,7 +226,7 @@ function propFields(
         },
         { key: "label", label: "Etiqueta (ej. DESTINO)" },
         { key: "value", label: "Valor", multiline: true },
-        { ...ALIGN_FIELD, control: "align" },
+        ALIGN_FIELD,
       ];
     case "headerAsli":
       return [{ key: "logoUrl", label: "URL logo (vacío = logo ASLI)" }];
@@ -241,7 +267,7 @@ function AlignPicker({
     { value: "right", label: "Der.", title: "Derecha" },
   ] as const;
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 rounded-xl bg-[#eef2f8] p-1">
       {opts.map((o) => {
         const active = current === o.value;
         return (
@@ -249,10 +275,10 @@ function AlignPicker({
             key={o.value}
             type="button"
             title={o.title}
-            className={`flex-1 rounded border px-2 py-1.5 text-[11px] font-semibold ${
+            className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition ${
               active
-                ? "border-brand-blue bg-brand-blue text-white"
-                : "border-brand-blue/20 bg-white text-brand-blue/80 hover:bg-brand-blue/5"
+                ? "bg-[#11224E] text-white shadow-sm"
+                : "text-[#1a2744]/75 hover:bg-white/80"
             }`}
             onClick={() => onChange(o.value)}
           >
@@ -714,33 +740,269 @@ export function InformativosContent() {
 
   if (isLoading) {
     return (
-      <main className={`flex flex-1 ${modulePageBg} p-3 text-[12px] text-brand-blue/60`}>
-        Cargando…
+      <main className={`flex flex-1 ${boardBg} p-3 text-[12px] text-[#5a6b85]`}>
+        Cargando estudio…
       </main>
     );
   }
 
-  return (
-    <main className={`relative flex h-full min-h-0 flex-1 flex-col ${modulePageBg}`}>
-      <header className="z-10 flex flex-shrink-0 items-center gap-2 border-b border-brand-blue/10 bg-white px-3 py-1.5">
-        <h1 className="text-[13px] font-bold text-brand-blue">Informativos</h1>
-        <span className="hidden text-[10px] text-brand-blue/40 sm:inline">
-          bloques · agenda propia · React Email
-        </span>
-        <div className="ml-auto flex items-center gap-1">
+  const inspectorBody = multiSelected ? (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1">
+        <p className="text-[12px] font-bold text-[#11224E]">
+          {selectedIds.length} seleccionados
+        </p>
+        <button
+          type="button"
+          className={btnGhost + " ml-auto"}
+          onClick={() => selectOnly(selectedId)}
+        >
+          Solo 1
+        </button>
+        <button type="button" className={btnGhost} onClick={() => setSelectedIds([])}>
+          Limpiar
+        </button>
+        <button
+          type="button"
+          className={btnGhost}
+          onClick={removeSelected}
+          title="Eliminar seleccionados"
+        >
+          <Icon icon="lucide:trash-2" width={14} />
+        </button>
+      </div>
+      {alignableSelected.length > 0 ? (
+        <div>
+          <label className={label}>
+            Alinear {alignableSelected.length} bloque
+            {alignableSelected.length === 1 ? "" : "s"}
+          </label>
+          <AlignPicker
+            value={
+              alignableSelected.every(
+                (b) =>
+                  (b.props.align || "left") ===
+                  (alignableSelected[0].props.align || "left"),
+              )
+                ? alignableSelected[0].props.align || "left"
+                : ""
+            }
+            onChange={(v) =>
+              updateAlignMany(
+                alignableSelected.map((b) => b.id),
+                v,
+              )
+            }
+          />
+          <p className="mt-1 text-[10px] leading-4 text-[#5a6b85]">
+            Aplica a saludo, título, párrafo, botón, imagen y fila dato.
+          </p>
+        </div>
+      ) : (
+        <p className="text-[11px] text-[#5a6b85]">
+          Ningún bloque seleccionado admite alineación.
+        </p>
+      )}
+      <ul className="max-h-40 space-y-0.5 overflow-auto rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-2 text-[10px] text-[#5a6b85]">
+        {doc.blocks
+          .filter((b) => selectedSet.has(b.id))
+          .map((b) => (
+            <li key={b.id} className="flex items-center gap-1.5">
+              <Icon
+                icon={PRESET_ICONS[b.kind] ?? "lucide:box"}
+                width={12}
+                className="shrink-0 opacity-60"
+              />
+              {STUDIO_PRESETS.find((x) => x.kind === b.kind)?.label ?? b.kind}
+              {!ALIGNABLE_KINDS.has(b.kind) ? (
+                <span className="opacity-50">· sin alinear</span>
+              ) : null}
+            </li>
+          ))}
+      </ul>
+    </div>
+  ) : !selected ? (
+    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef2f8] text-[#11224E]/50">
+        <Icon icon="lucide:mouse-pointer-click" width={22} />
+      </div>
+      <p className="max-w-[200px] text-[12px] leading-5 text-[#5a6b85]">
+        Elige un bloque en Capas o en el lienzo. Marca varios para alinearlos juntos.
+      </p>
+    </div>
+  ) : (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#eef2f8] text-[#11224E]">
+            <Icon icon={PRESET_ICONS[selected.kind] ?? "lucide:box"} width={14} />
+          </span>
+          <p className="truncate text-[12px] font-bold text-[#11224E]">
+            {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
+          </p>
+        </div>
+        <div className="ml-auto flex shrink-0 gap-0.5">
           <button
             type="button"
-            className={btn}
-            title="Cargar plantilla Vietnam / Systems Approach"
-            onClick={() => {
-              const next = createExportacionesVietnamDocument();
+            className={btnGhost}
+            title="Duplicar"
+            onClick={() => duplicateBlock(selected.id)}
+          >
+            <Icon icon="lucide:copy" width={14} />
+          </button>
+          <button
+            type="button"
+            className={btnGhost}
+            onClick={() => move(selected.id, -1)}
+            title="Subir"
+          >
+            <Icon icon="lucide:arrow-up" width={14} />
+          </button>
+          <button
+            type="button"
+            className={btnGhost}
+            onClick={() => move(selected.id, 1)}
+            title="Bajar"
+          >
+            <Icon icon="lucide:arrow-down" width={14} />
+          </button>
+          <button
+            type="button"
+            className={btnGhost}
+            onClick={() => remove(selected.id)}
+            title="Eliminar"
+          >
+            <Icon icon="lucide:x" width={14} />
+          </button>
+        </div>
+      </div>
+      <p className="text-[10px] leading-4 text-[#5a6b85]">
+        {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.description}
+      </p>
+      {propFields(selected).length === 0 ? (
+        <p className="text-[11px] text-[#5a6b85]">
+          Este bloque no tiene campos (solo estructura visual).
+        </p>
+      ) : (
+        propFields(selected).map((f) => (
+          <div key={f.key}>
+            <label className={label}>{f.label}</label>
+            {f.control === "iconPicker" ? (
+              <DataRowIconPicker
+                value={selected.props.icon ?? ""}
+                labelText={selected.props.label ?? ""}
+                valueText={selected.props.value ?? ""}
+                onChange={(v) => updateProps(selected.id, "icon", v)}
+              />
+            ) : f.control === "align" ? (
+              <AlignPicker
+                value={selected.props.align ?? "left"}
+                onChange={(v) => updateProps(selected.id, "align", v)}
+              />
+            ) : f.options ? (
+              <select
+                className={input}
+                value={selected.props[f.key] || f.options[0]?.value || ""}
+                onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+              >
+                {f.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            ) : f.multiline ? (
+              <textarea
+                className={input + " min-h-[120px] font-mono text-[11px] leading-4"}
+                value={selected.props[f.key] ?? ""}
+                onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+                spellCheck={selected.kind !== "html"}
+              />
+            ) : (
+              <input
+                className={input}
+                value={selected.props[f.key] ?? ""}
+                onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+              />
+            )}
+            {f.hint ? (
+              <p className="mt-1 text-[10px] leading-4 text-[#5a6b85]">{f.hint}</p>
+            ) : null}
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  return (
+    <main className="relative flex h-full min-h-0 flex-1 flex-col bg-[#cfd8e6]">
+      {/* Top bar */}
+      <header className="z-10 flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[#c5d0e0] bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#11224E] text-white shadow-sm">
+            <Icon icon="lucide:mail" width={16} />
+          </span>
+          <div>
+            <h1 className="text-[13px] font-bold leading-tight text-[#11224E]">
+              Informativos
+            </h1>
+            <p className="hidden text-[10px] text-[#5a6b85] sm:block">
+              Estudio de diseño · ASLI
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-auto flex rounded-xl bg-[#eef2f8] p-0.5">
+          {(
+            [
+              ["compose", "Componer", "lucide:pen-tool"],
+              ["agenda", "Agenda", "lucide:book-user"],
+              ["send", "Enviar", "lucide:send"],
+            ] as const
+          ).map(([id, text, icon]) => (
+            <button
+              key={id}
+              type="button"
+              className={`${panelTab} flex items-center gap-1 ${
+                panel === id
+                  ? "bg-white text-[#11224E] shadow-sm"
+                  : "text-[#5a6b85] hover:text-[#11224E]"
+              }`}
+              onClick={() => setPanel(id)}
+            >
+              <Icon icon={icon} width={13} />
+              {text}
+            </button>
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-1">
+          <select
+            className={input + " !w-[min(100%,200px)] cursor-pointer sm:!w-[220px]"}
+            defaultValue=""
+            title="Cargar plantilla de prueba"
+            aria-label="Cargar plantilla"
+            onChange={(e) => {
+              const id = e.target.value;
+              e.target.value = "";
+              const tpl = STUDIO_DOCUMENT_TEMPLATES.find((t) => t.id === id);
+              if (!tpl) return;
+              const next = tpl.create();
               setDoc(next);
               selectOnly(next.blocks[0]?.id ?? null);
               setPanel("compose");
+              sileo.success({ title: `Plantilla: ${tpl.label}` });
             }}
           >
-            Plantilla Vietnam
-          </button>
+            <option value="" disabled>
+              Plantillas…
+            </option>
+            {STUDIO_DOCUMENT_TEMPLATES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             className={btn}
@@ -748,7 +1010,9 @@ export function InformativosContent() {
             onClick={() => {
               if (
                 doc.blocks.length > 0 &&
-                !window.confirm("¿Dejar la plantilla en blanco? Se perderán los bloques actuales.")
+                !window.confirm(
+                  "¿Dejar la plantilla en blanco? Se perderán los bloques actuales.",
+                )
               ) {
                 return;
               }
@@ -758,351 +1022,250 @@ export function InformativosContent() {
               setPanel("compose");
             }}
           >
-            En blanco
-          </button>
-          <button
-            type="button"
-            className={panel === "compose" ? btnPrimary : btn}
-            onClick={() => setPanel("compose")}
-          >
-            Componer
-          </button>
-          <button
-            type="button"
-            className={panel === "agenda" ? btnPrimary : btn}
-            onClick={() => setPanel("agenda")}
-          >
-            Agenda
-          </button>
-          <button
-            type="button"
-            className={panel === "send" ? btnPrimary : btn}
-            onClick={() => setPanel("send")}
-          >
-            Enviar
+            <Icon icon="lucide:file-plus" width={13} />
+            <span className="hidden sm:inline">En blanco</span>
           </button>
         </div>
       </header>
 
+      {/* Studio body: left | canvas | right */}
       <div
-        className={`grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[minmax(220px,260px)_minmax(260px,320px)_minmax(0,1fr)] lg:overflow-hidden ${
+        className={`flex min-h-0 flex-1 flex-col overflow-auto lg:flex-row lg:overflow-hidden ${
           panel !== "compose" ? "pointer-events-none opacity-40" : ""
         }`}
       >
-        <aside className="border-b border-brand-blue/10 bg-[#f7f9fc] p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
-          <div className="mb-2 space-y-1">
-            <label className={label}>Asunto</label>
-            <input
-              className={input}
-              value={doc.asunto}
-              onChange={(e) => setDoc({ ...doc, asunto: e.target.value })}
-            />
-            <label className={label}>Preview inbox</label>
-            <input
-              className={input}
-              value={doc.previewText}
-              onChange={(e) => setDoc({ ...doc, previewText: e.target.value })}
-            />
+        {/* Left rail */}
+        <aside className="flex w-full flex-col border-b border-[#c5d0e0] bg-white lg:w-[248px] lg:shrink-0 lg:border-b-0 lg:border-r">
+          <div className="border-b border-[#e8eef5] px-3 py-2.5">
+            <p className={label + " mb-2"}>Agregar</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {STUDIO_PRESETS.map((p) => (
+                <button
+                  key={p.kind}
+                  type="button"
+                  title={p.description}
+                  className="group flex flex-col items-center gap-1 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-1 py-2 transition hover:border-[#11224E]/25 hover:bg-white hover:shadow-sm"
+                  onClick={() => addPreset(p.kind)}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#11224E] shadow-sm ring-1 ring-[#e2e8f0] group-hover:ring-[#11224E]/20">
+                    <Icon icon={PRESET_ICONS[p.kind] ?? "lucide:plus"} width={15} />
+                  </span>
+                  <span className="max-w-full truncate text-[9px] font-semibold leading-tight text-[#1a2744]/75">
+                    {p.label.replace(" {{saludo}}", "").replace("ASLI", "").trim() ||
+                      p.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <p className={label}>Agregar componente</p>
-          <div className="mb-3 grid grid-cols-2 gap-0.5">
-            {STUDIO_PRESETS.map((p) => (
+          <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
+            <div className="mb-1.5 flex items-center gap-1 px-1">
+              <p className={`${label} mb-0`}>Capas</p>
+              <span className="rounded-full bg-[#eef2f8] px-1.5 py-0.5 text-[9px] font-bold text-[#5a6b85]">
+                {doc.blocks.length}
+              </span>
               <button
-                key={p.kind}
                 type="button"
-                title={p.description}
-                className="rounded border border-brand-blue/15 bg-white px-1.5 py-1 text-left text-[10px] font-semibold text-brand-blue/85 hover:bg-brand-blue/8"
-                onClick={() => addPreset(p.kind)}
+                className={btnGhost + " ml-auto !py-0.5 !text-[10px]"}
+                title="Seleccionar todos"
+                disabled={doc.blocks.length === 0}
+                onClick={() => setSelectedIds(doc.blocks.map((b) => b.id))}
               >
-                + {p.label}
+                Todos
               </button>
-            ))}
-          </div>
-
-          <div className="mb-1 flex items-center gap-1">
-            <p className={`${label} mb-0`}>Bloques ({doc.blocks.length})</p>
-            <button
-              type="button"
-              className={btn + " !py-0.5 !text-[10px]"}
-              title="Seleccionar todos"
-              disabled={doc.blocks.length === 0}
-              onClick={() => setSelectedIds(doc.blocks.map((b) => b.id))}
-            >
-              Todos
-            </button>
-            <button
-              type="button"
-              className={btn + " ml-auto !py-0.5 !text-[10px]"}
-              title="Vaciar plantilla"
-              onClick={() => {
-                if (
-                  doc.blocks.length > 0 &&
-                  !window.confirm("¿Dejar la plantilla en blanco?")
-                ) {
-                  return;
-                }
-                const next = createBlankStudioDocument();
-                setDoc(next);
-                selectOnly(null);
-              }}
-            >
-              Vaciar
-            </button>
-          </div>
-          <p className="mb-1 text-[9px] leading-3 text-brand-blue/40">
-            Clic = uno · Ctrl/Cmd = sumar · Shift = rango
-          </p>
-          <ul className="space-y-0.5">
-            {doc.blocks.map((b, idx) => {
-              const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
-              const active = selectedSet.has(b.id);
-              const isFocus = b.id === selectedId;
-              const summary =
-                b.props.label ||
-                b.props.text?.slice(0, 28) ||
-                b.props.template?.slice(0, 28) ||
-                "";
-              return (
-                <li key={b.id} id={`studio-block-nav-${b.id}`}>
-                  <div
-                    className={`flex items-stretch gap-0.5 rounded ${
-                      active
-                        ? isFocus
-                          ? "bg-brand-blue text-white"
-                          : "bg-brand-blue/75 text-white"
-                        : "text-brand-blue/80 hover:bg-brand-blue/8"
-                    }`}
-                  >
-                    <label
-                      className="flex cursor-pointer items-center px-1"
-                      title="Marcar para selección múltiple"
-                      onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                className={btnGhost + " !py-0.5 !text-[10px]"}
+                title="Vaciar plantilla"
+                onClick={() => {
+                  if (
+                    doc.blocks.length > 0 &&
+                    !window.confirm("¿Dejar la plantilla en blanco?")
+                  ) {
+                    return;
+                  }
+                  const next = createBlankStudioDocument();
+                  setDoc(next);
+                  selectOnly(null);
+                }}
+              >
+                Vaciar
+              </button>
+            </div>
+            <p className="mb-1.5 px-1 text-[9px] leading-3 text-[#5a6b85]/80">
+              Clic · Ctrl/Cmd sumar · Shift rango
+            </p>
+            <ul className="min-h-0 flex-1 space-y-0.5 overflow-auto pr-0.5">
+              {doc.blocks.map((b, idx) => {
+                const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
+                const active = selectedSet.has(b.id);
+                const isFocus = b.id === selectedId;
+                const summary =
+                  b.props.label ||
+                  b.props.text?.slice(0, 24) ||
+                  b.props.template?.slice(0, 24) ||
+                  "";
+                return (
+                  <li key={b.id} id={`studio-block-nav-${b.id}`}>
+                    <div
+                      className={`flex items-stretch gap-0.5 rounded-lg transition ${
+                        active
+                          ? isFocus
+                            ? "bg-[#11224E] text-white shadow-sm"
+                            : "bg-[#11224E]/80 text-white"
+                          : "text-[#1a2744]/80 hover:bg-[#eef2f8]"
+                      }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="accent-[#11224E]"
-                        checked={active}
-                        onChange={() => toggleSelect(b.id)}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 px-1 py-1 text-left text-[11px] font-medium"
-                      onClick={(e) => onBlockNavClick(b.id, e)}
-                    >
-                      <span className="opacity-50">{idx + 1}. </span>
-                      {meta?.label ?? b.kind}
-                      {summary ? (
-                        <span
-                          className={`mt-0.5 block truncate text-[10px] font-normal ${
-                            active ? "text-white/70" : "text-brand-blue/45"
-                          }`}
-                        >
-                          {summary}
+                      <label
+                        className="flex cursor-pointer items-center pl-1.5"
+                        title="Marcar"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-[#11224E]"
+                          checked={active}
+                          onChange={() => toggleSelect(b.id)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-start gap-1.5 px-1.5 py-1.5 text-left"
+                        onClick={(e) => onBlockNavClick(b.id, e)}
+                      >
+                        <Icon
+                          icon={PRESET_ICONS[b.kind] ?? "lucide:box"}
+                          width={13}
+                          className={`mt-0.5 shrink-0 ${active ? "opacity-80" : "opacity-50"}`}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[11px] font-semibold">
+                            <span className="opacity-50">{idx + 1}. </span>
+                            {meta?.label ?? b.kind}
+                          </span>
+                          {summary ? (
+                            <span
+                              className={`mt-0.5 block truncate text-[9px] font-normal ${
+                                active ? "text-white/65" : "text-[#5a6b85]"
+                              }`}
+                            >
+                              {summary}
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
-                    </button>
-                  </div>
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+              {doc.blocks.length === 0 ? (
+                <li className="px-2 py-6 text-center text-[11px] text-[#5a6b85]">
+                  Sin capas. Agrega un componente.
                 </li>
-              );
-            })}
-          </ul>
+              ) : null}
+            </ul>
+          </div>
         </aside>
 
-        <section className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
-          {multiSelected ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <p className="text-[11px] font-bold text-brand-blue">
-                  {selectedIds.length} bloques seleccionados
-                </p>
-                <button
-                  type="button"
-                  className={btn + " ml-auto"}
-                  onClick={() => selectOnly(selectedId)}
-                >
-                  Solo 1
-                </button>
-                <button type="button" className={btn} onClick={() => setSelectedIds([])}>
-                  Limpiar
-                </button>
-                <button type="button" className={btn} onClick={removeSelected} title="Eliminar seleccionados">
-                  ✕
-                </button>
+        {/* Center canvas */}
+        <section className={`relative flex min-h-[420px] min-w-0 flex-1 flex-col lg:min-h-0 ${boardBg}`}>
+          <div className="pointer-events-none absolute inset-x-0 top-3 z-[1] flex justify-center">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur">
+              <Icon icon="lucide:user" width={13} className="text-[#5a6b85]" />
+              <input
+                className="w-[110px] border-0 bg-transparent text-[11px] font-semibold text-[#11224E] outline-none"
+                value={previewNombre}
+                onChange={(e) => setPreviewNombre(e.target.value)}
+                aria-label="Nombre preview"
+                title="Nombre para personalizar el preview"
+              />
+              <span className="hidden text-[9px] text-[#5a6b85] sm:inline">
+                · clic en el correo para editar
+              </span>
+              {previewError ? (
+                <span className="max-w-[160px] truncate text-[10px] text-red-600">
+                  {previewError}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 pt-14">
+            <div className="mx-auto w-full max-w-[680px]">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#5a6b85]/80">
+                  Artboard · email
+                </span>
+                <span className="text-[10px] text-[#5a6b85]/70">650px</span>
               </div>
-              {alignableSelected.length > 0 ? (
-                <div>
-                  <label className={label}>
-                    Alinear {alignableSelected.length} bloque
-                    {alignableSelected.length === 1 ? "" : "s"}
-                  </label>
-                  <AlignPicker
-                    value={
-                      alignableSelected.every(
-                        (b) => (b.props.align || "left") === (alignableSelected[0].props.align || "left"),
-                      )
-                        ? alignableSelected[0].props.align || "left"
-                        : ""
-                    }
-                    onChange={(v) =>
-                      updateAlignMany(
-                        alignableSelected.map((b) => b.id),
-                        v,
-                      )
-                    }
+              <div className="overflow-hidden rounded-xl bg-white shadow-[0_12px_40px_-12px_rgba(17,34,78,0.35)] ring-1 ring-black/5">
+                {previewHtml ? (
+                  <iframe
+                    ref={previewIframeRef}
+                    title="preview"
+                    className="block h-[min(72vh,900px)] min-h-[480px] w-full border-0 bg-white"
+                    srcDoc={previewHtml}
+                    onLoad={syncPreviewSelection}
                   />
-                  <p className="mt-0.5 text-[10px] text-brand-blue/45">
-                    Aplica a saludo, título, párrafo, botón, imagen y fila dato.
+                ) : (
+                  <p className="p-10 text-center text-[12px] text-[#5a6b85]">
+                    Generando preview…
                   </p>
-                </div>
-              ) : (
-                <p className="text-[11px] text-brand-blue/50">
-                  Ningún bloque seleccionado admite alineación.
-                </p>
-              )}
-              <ul className="max-h-40 space-y-0.5 overflow-auto text-[10px] text-brand-blue/55">
-                {doc.blocks
-                  .filter((b) => selectedSet.has(b.id))
-                  .map((b) => (
-                    <li key={b.id}>
-                      · {STUDIO_PRESETS.find((x) => x.kind === b.kind)?.label ?? b.kind}
-                      {ALIGNABLE_KINDS.has(b.kind) ? "" : " (sin alinear)"}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          ) : !selected ? (
-            <p className="text-[11px] text-brand-blue/45">
-              Elige un bloque o agrega un componente a la izquierda. Marca varios con
-              checkbox o Ctrl/Cmd para alinearlos juntos.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <p className="truncate text-[11px] font-bold text-brand-blue">
-                  {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
-                </p>
-                <div className="ml-auto flex shrink-0 gap-0.5">
-                  <button
-                    type="button"
-                    className={btn}
-                    title="Duplicar"
-                    onClick={() => duplicateBlock(selected.id)}
-                  >
-                    Dup
-                  </button>
-                  <button type="button" className={btn} onClick={() => move(selected.id, -1)}>
-                    ↑
-                  </button>
-                  <button type="button" className={btn} onClick={() => move(selected.id, 1)}>
-                    ↓
-                  </button>
-                  <button type="button" className={btn} onClick={() => remove(selected.id)}>
-                    ✕
-                  </button>
-                </div>
+                )}
               </div>
-              <p className="text-[10px] text-brand-blue/45">
-                {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.description}
-              </p>
-              {propFields(selected).length === 0 ? (
-                <p className="text-[11px] text-brand-blue/50">
-                  Este bloque no tiene campos (solo estructura visual).
-                </p>
-              ) : (
-                propFields(selected).map((f) => (
-                  <div key={f.key}>
-                    <label className={label}>{f.label}</label>
-                    {f.control === "iconPicker" ? (
-                      <DataRowIconPicker
-                        value={selected.props.icon ?? ""}
-                        labelText={selected.props.label ?? ""}
-                        valueText={selected.props.value ?? ""}
-                        onChange={(v) => updateProps(selected.id, "icon", v)}
-                      />
-                    ) : f.control === "align" ? (
-                      <AlignPicker
-                        value={selected.props.align ?? "left"}
-                        onChange={(v) => updateProps(selected.id, "align", v)}
-                      />
-                    ) : f.options ? (
-                      <select
-                        className={input}
-                        value={selected.props[f.key] || f.options[0]?.value || ""}
-                        onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
-                      >
-                        {f.options.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : f.multiline ? (
-                      <textarea
-                        className={input + " min-h-[120px] font-mono text-[11px] leading-4"}
-                        value={selected.props[f.key] ?? ""}
-                        onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
-                        spellCheck={selected.kind !== "html"}
-                      />
-                    ) : (
-                      <input
-                        className={input}
-                        value={selected.props[f.key] ?? ""}
-                        onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
-                      />
-                    )}
-                    {f.hint ? (
-                      <p className="mt-0.5 text-[10px] leading-4 text-brand-blue/45">{f.hint}</p>
-                    ) : null}
-                  </div>
-                ))
-              )}
             </div>
-          )}
+          </div>
         </section>
 
-        <section className="flex min-h-[360px] flex-col bg-[#e8eef5] lg:min-h-0">
-          <div className="flex flex-shrink-0 items-center gap-2 border-b border-brand-blue/10 bg-white px-2 py-1">
-            <span className="text-[10px] font-semibold text-brand-blue/55">Preview</span>
-            <span className="hidden text-[9px] text-brand-blue/40 sm:inline">
-              clic en un bloque para editarlo
-            </span>
-            <input
-              className={input + " max-w-[140px]"}
-              value={previewNombre}
-              onChange={(e) => setPreviewNombre(e.target.value)}
-              aria-label="Nombre preview"
-            />
-            {previewError ? (
-              <span className="truncate text-[10px] text-red-600">{previewError}</span>
-            ) : null}
+        {/* Right inspector */}
+        <aside className="flex w-full flex-col border-t border-[#c5d0e0] bg-white lg:w-[300px] lg:shrink-0 lg:border-l lg:border-t-0">
+          <div className="border-b border-[#e8eef5] px-3 py-2.5">
+            <p className={label}>Documento</p>
+            <div className="space-y-2">
+              <div>
+                <label className="mb-0.5 block text-[10px] font-medium text-[#5a6b85]">
+                  Asunto
+                </label>
+                <input
+                  className={input}
+                  value={doc.asunto}
+                  onChange={(e) => setDoc({ ...doc, asunto: e.target.value })}
+                  placeholder="Asunto del correo"
+                />
+              </div>
+              <div>
+                <label className="mb-0.5 block text-[10px] font-medium text-[#5a6b85]">
+                  Preview inbox
+                </label>
+                <input
+                  className={input}
+                  value={doc.previewText}
+                  onChange={(e) => setDoc({ ...doc, previewText: e.target.value })}
+                  placeholder="Texto corto en bandeja"
+                />
+              </div>
+            </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto p-2">
-            {previewHtml ? (
-              <iframe
-                ref={previewIframeRef}
-                title="preview"
-                className="h-full min-h-[400px] w-full rounded border-0 bg-white shadow-sm"
-                srcDoc={previewHtml}
-                onLoad={syncPreviewSelection}
-              />
-            ) : (
-              <p className="p-4 text-[11px] text-brand-blue/50">Generando preview…</p>
-            )}
+          <div className="min-h-0 flex-1 overflow-auto px-3 py-3">
+            <p className={label}>Propiedades</p>
+            {inspectorBody}
           </div>
-        </section>
+        </aside>
       </div>
 
       {panel === "send" ? (
-        <div className="absolute inset-0 z-20 flex justify-end bg-brand-blue/20 backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-20 flex justify-end bg-[#11224E]/25 backdrop-blur-[2px]">
           <div
-            className="flex h-full w-full max-w-md flex-col border-l border-brand-blue/15 bg-white shadow-xl"
+            className="flex h-full w-full max-w-md flex-col border-l border-[#c5d0e0] bg-white shadow-2xl"
             role="dialog"
             aria-label="Enviar informativo"
           >
-            <div className="flex items-center gap-2 border-b border-brand-blue/10 px-3 py-2">
-              <p className="text-[12px] font-bold text-brand-blue">Enviar</p>
+            <div className="flex items-center gap-2 border-b border-[#e8eef5] px-3 py-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef2f8] text-[#11224E]">
+                <Icon icon="lucide:send" width={14} />
+              </span>
+              <p className="text-[13px] font-bold text-[#11224E]">Enviar</p>
               <button
                 type="button"
                 className={btn + " ml-auto"}
@@ -1288,16 +1451,19 @@ export function InformativosContent() {
       ) : null}
 
       {panel === "agenda" ? (
-        <div className="absolute inset-0 z-20 flex justify-end bg-brand-blue/20 backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-20 flex justify-end bg-[#11224E]/25 backdrop-blur-[2px]">
           <div
-            className="flex h-full w-full max-w-lg flex-col border-l border-brand-blue/15 bg-white shadow-xl"
+            className="flex h-full w-full max-w-lg flex-col border-l border-[#c5d0e0] bg-white shadow-2xl"
             role="dialog"
             aria-label="Agenda de informaciones"
           >
-            <div className="flex items-center gap-2 border-b border-brand-blue/10 px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-[#e8eef5] px-3 py-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef2f8] text-[#11224E]">
+                <Icon icon="lucide:book-user" width={14} />
+              </span>
               <div>
-                <p className="text-[12px] font-bold text-brand-blue">Agenda</p>
-                <p className="text-[10px] text-brand-blue/50">
+                <p className="text-[13px] font-bold text-[#11224E]">Agenda</p>
+                <p className="text-[10px] text-[#5a6b85]">
                   {grupos.length} grupos · contactos separados
                 </p>
               </div>
