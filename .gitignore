@@ -48,6 +48,7 @@ supabase/.temp/
 docs/info alma/
 docs/obsidian-vault/
 public/DETALLE.xlsx
+contacts_corregidos.csv
 
 # Configuración local de MCP (puede contener credenciales; las reglas sí se versionan)
 .cursor/mcp.json

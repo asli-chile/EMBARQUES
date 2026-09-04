@@ -16,7 +16,11 @@ export async function renderStudioHtml(
   );
 }
 
-export type Destinatario = { email: string; nombre: string };
+export type Destinatario = {
+  email: string;
+  nombre: string;
+  empresa?: string | null;
+};
 
 export function nombreDesdeEmail(email: string): string {
   const local = (email.split("@")[0] ?? "").trim();

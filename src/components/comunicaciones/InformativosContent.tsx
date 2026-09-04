@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { createClient } from "@/lib/supabase/client";
 import { sendEmail } from "@/lib/email/sendEmail";
+import {
+  contactosToDestinatarios,
+  GRUPO_INFORMACIONES_ASLI,
+  importContactosToGrupo,
+  listContactosGrupo,
+  lookupContactosByEmails,
+  setContactoActivo,
+  upsertContacto,
+  type DestinatarioAgenda,
+  type InformacionesContacto,
+} from "@/lib/email/informativos/agenda";
 import {
   createBlock,
   createDefaultStudioDocument,
@@ -15,7 +25,6 @@ import {
   parseDestinatarios,
   primerNombre,
   renderStudioHtml,
-  type Destinatario,
 } from "@/lib/email/informativos/render";
 import { modulePageBg } from "@/lib/ui/moduleStyles";
 
@@ -27,6 +36,8 @@ const btn =
   "inline-flex items-center gap-1 rounded border border-brand-blue/20 bg-white px-2 py-1 text-[11px] font-semibold text-brand-blue/80 hover:bg-brand-blue/5 disabled:opacity-40";
 const btnPrimary =
   "inline-flex items-center gap-1 rounded bg-brand-blue px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-blue/90 disabled:opacity-40";
+
+type Panel = "compose" | "send" | "agenda";
 
 function propFields(
   block: StudioBlock,
@@ -78,15 +89,42 @@ export function InformativosContent() {
   const [previewNombre, setPreviewNombre] = useState("Carmen");
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [panel, setPanel] = useState<Panel>("compose");
+
   const [destRaw, setDestRaw] = useState("");
-  const [resolved, setResolved] = useState<Destinatario[]>([]);
+  const [resolved, setResolved] = useState<DestinatarioAgenda[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [useGrupoAsli, setUseGrupoAsli] = useState(false);
+  const [grupoLoading, setGrupoLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
+
+  const [agenda, setAgenda] = useState<InformacionesContacto[]>([]);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [importRaw, setImportRaw] = useState("");
+  const [newNombre, setNewNombre] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newEmpresa, setNewEmpresa] = useState("");
+  const [agendaBusy, setAgendaBusy] = useState(false);
 
   const selected = doc.blocks.find((b) => b.id === selectedId) ?? null;
   const parsed = useMemo(() => parseDestinatarios(destRaw), [destRaw]);
   const selectedList = resolved.filter((d) => picked.has(d.email));
+
+  const reloadAgenda = useCallback(async () => {
+    setAgendaLoading(true);
+    try {
+      const rows = await listContactosGrupo(GRUPO_INFORMACIONES_ASLI);
+      setAgenda(rows);
+    } catch (e) {
+      console.error(e);
+      sileo.error({
+        title: "No se pudo cargar la agenda",
+        description: e instanceof Error ? e.message : "Error",
+      });
+    } finally {
+      setAgendaLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let dead = false;
@@ -107,46 +145,65 @@ export function InformativosContent() {
   }, [doc, previewNombre]);
 
   useEffect(() => {
+    if (panel === "agenda") void reloadAgenda();
+  }, [panel, reloadAgenda]);
+
+  /** Destinatarios: pegado + opcional grupo; nombres solo desde agenda (nunca usuarios). */
+  useEffect(() => {
     let dead = false;
     void (async () => {
-      if (!parsed.destinatarios.length) {
-        setResolved([]);
-        setPicked(new Set());
-        return;
-      }
       try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("usuarios")
-          .select("email, nombre")
-          .in(
-            "email",
+        const byEmail = new Map<string, DestinatarioAgenda>();
+
+        if (useGrupoAsli) {
+          setGrupoLoading(true);
+          const contactos = await listContactosGrupo(GRUPO_INFORMACIONES_ASLI);
+          for (const d of contactosToDestinatarios(contactos)) {
+            byEmail.set(d.email, d);
+          }
+        }
+
+        if (parsed.destinatarios.length) {
+          const map = await lookupContactosByEmails(
             parsed.destinatarios.map((d) => d.email),
           );
-        const map = new Map(
-          (data ?? []).map((r) => [
-            String(r.email).toLowerCase(),
-            primerNombre(String(r.nombre ?? "")),
-          ]),
-        );
+          for (const d of parsed.destinatarios) {
+            const found = map.get(d.email);
+            byEmail.set(d.email, {
+              email: d.email,
+              nombre: found
+                ? primerNombre(found.nombre)
+                : d.nombre || nombreDesdeEmail(d.email),
+              empresa: found?.empresa ?? null,
+              contactoId: found?.id,
+            });
+          }
+        }
+
         if (dead) return;
-        const next = parsed.destinatarios.map((d) => ({
-          email: d.email,
-          nombre: map.get(d.email) || d.nombre,
-        }));
+        const next = [...byEmail.values()].sort((a, b) =>
+          a.email.localeCompare(b.email),
+        );
         setResolved(next);
         setPicked(new Set(next.map((d) => d.email)));
-      } catch {
+      } catch (e) {
+        console.error(e);
         if (!dead) {
-          setResolved(parsed.destinatarios);
-          setPicked(new Set(parsed.destinatarios.map((d) => d.email)));
+          const fallback = parsed.destinatarios.map((d) => ({
+            email: d.email,
+            nombre: d.nombre,
+          }));
+          setResolved(fallback);
+          setPicked(new Set(fallback.map((d) => d.email)));
         }
+      } finally {
+        if (!dead) setGrupoLoading(false);
       }
     })();
     return () => {
       dead = true;
     };
-  }, [destRaw]);
+  }, [destRaw, useGrupoAsli]);
 
   const addPreset = (kind: BlockKind) => {
     const block = createBlock(kind);
@@ -182,7 +239,7 @@ export function InformativosContent() {
     setSelectedId((cur) => (cur === id ? null : cur));
   };
 
-  const sendList = async (list: Destinatario[]) => {
+  const sendList = async (list: DestinatarioAgenda[]) => {
     if (!doc.asunto.trim()) {
       sileo.error({ title: "Falta asunto" });
       return;
@@ -223,6 +280,57 @@ export function InformativosContent() {
     else sileo.error({ title: `Ok ${ok} / fallos ${fail}`, description: lastError });
   };
 
+  const onImport = async () => {
+    if (!importRaw.trim()) {
+      sileo.error({ title: "Pega la lista primero" });
+      return;
+    }
+    setAgendaBusy(true);
+    try {
+      const r = await importContactosToGrupo(importRaw, GRUPO_INFORMACIONES_ASLI);
+      await reloadAgenda();
+      setImportRaw("");
+      if (r.errores.length) {
+        sileo.error({
+          title: `Importados ${r.ok}`,
+          description: r.errores.slice(0, 4).join(" · "),
+        });
+      } else {
+        sileo.success({ title: `Importados ${r.ok} contactos` });
+      }
+    } catch (e) {
+      sileo.error({
+        title: "Error al importar",
+        description: e instanceof Error ? e.message : "Error",
+      });
+    } finally {
+      setAgendaBusy(false);
+    }
+  };
+
+  const onAddOne = async () => {
+    setAgendaBusy(true);
+    try {
+      await upsertContacto({
+        nombre: newNombre,
+        email: newEmail,
+        empresa: newEmpresa || null,
+      });
+      setNewNombre("");
+      setNewEmail("");
+      setNewEmpresa("");
+      await reloadAgenda();
+      sileo.success({ title: "Contacto guardado" });
+    } catch (e) {
+      sileo.error({
+        title: "No se pudo guardar",
+        description: e instanceof Error ? e.message : "Error",
+      });
+    } finally {
+      setAgendaBusy(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <main className={`flex flex-1 ${modulePageBg} p-3 text-[12px] text-brand-blue/60`}>
@@ -236,7 +344,7 @@ export function InformativosContent() {
       <header className="z-10 flex flex-shrink-0 items-center gap-2 border-b border-brand-blue/10 bg-white px-3 py-1.5">
         <h1 className="text-[13px] font-bold text-brand-blue">Informativos</h1>
         <span className="hidden text-[10px] text-brand-blue/40 sm:inline">
-          bloques · Tailwind · React Email
+          bloques · agenda propia · React Email
         </span>
         <div className="ml-auto flex items-center gap-1">
           <button
@@ -247,30 +355,40 @@ export function InformativosContent() {
               const next = createExportacionesVietnamDocument();
               setDoc(next);
               setSelectedId(next.blocks[0]?.id ?? null);
-              setSendOpen(false);
+              setPanel("compose");
             }}
           >
             Plantilla Vietnam
           </button>
           <button
             type="button"
-            className={!sendOpen ? btnPrimary : btn}
-            onClick={() => setSendOpen(false)}
+            className={panel === "compose" ? btnPrimary : btn}
+            onClick={() => setPanel("compose")}
           >
             Componer
           </button>
           <button
             type="button"
-            className={sendOpen ? btnPrimary : btn}
-            onClick={() => setSendOpen(true)}
+            className={panel === "agenda" ? btnPrimary : btn}
+            onClick={() => setPanel("agenda")}
+          >
+            Agenda
+          </button>
+          <button
+            type="button"
+            className={panel === "send" ? btnPrimary : btn}
+            onClick={() => setPanel("send")}
           >
             Enviar
           </button>
         </div>
       </header>
 
-      {/* Estudio siempre montado (no se destruye al abrir Enviar) */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[150px_200px_minmax(220px,280px)_minmax(0,1fr)] lg:overflow-hidden">
+      <div
+        className={`grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[150px_200px_minmax(220px,280px)_minmax(0,1fr)] lg:overflow-hidden ${
+          panel !== "compose" ? "pointer-events-none opacity-40" : ""
+        }`}
+      >
         <aside className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
           <p className={label}>Presets</p>
           <div className="flex flex-col gap-0.5">
@@ -406,8 +524,7 @@ export function InformativosContent() {
         </section>
       </div>
 
-      {/* Panel Enviar: overlay lateral, no reemplaza el estudio */}
-      {sendOpen ? (
+      {panel === "send" ? (
         <div className="absolute inset-0 z-20 flex justify-end bg-brand-blue/20 backdrop-blur-[1px]">
           <div
             className="flex h-full w-full max-w-md flex-col border-l border-brand-blue/15 bg-white shadow-xl"
@@ -419,17 +536,30 @@ export function InformativosContent() {
               <button
                 type="button"
                 className={btn + " ml-auto"}
-                onClick={() => setSendOpen(false)}
+                onClick={() => setPanel("compose")}
               >
-                Volver a componer
+                Volver
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
+              <label className="flex items-center gap-2 rounded border border-brand-blue/15 bg-[#f7f9fc] px-2 py-2 text-[12px] font-semibold text-brand-blue">
+                <input
+                  type="checkbox"
+                  className="accent-[#11224E]"
+                  checked={useGrupoAsli}
+                  onChange={(e) => setUseGrupoAsli(e.target.checked)}
+                />
+                Grupo {GRUPO_INFORMACIONES_ASLI}
+                {grupoLoading ? (
+                  <span className="text-[10px] font-normal text-brand-blue/50">…</span>
+                ) : null}
+              </label>
               <p className="text-[11px] text-brand-blue/60">
-                Pega emails (uno por línea). Nombre desde ERP o del correo.
+                Opcional: pega emails extra (uno por línea). Nombre desde la agenda o del correo —
+                no usa Usuarios ERP.
               </p>
               <textarea
-                className={input + " min-h-[100px] font-mono"}
+                className={input + " min-h-[80px] font-mono"}
                 value={destRaw}
                 onChange={(e) => setDestRaw(e.target.value)}
                 placeholder="persona@empresa.cl"
@@ -438,11 +568,11 @@ export function InformativosContent() {
                 <p className="text-[10px] text-red-600">{parsed.errores.join(" · ")}</p>
               ) : null}
               {resolved.length > 0 ? (
-                <ul className="max-h-56 overflow-auto rounded border border-brand-blue/15 text-[11px]">
+                <ul className="max-h-72 overflow-auto rounded border border-brand-blue/15 text-[11px]">
                   {resolved.map((d) => (
                     <li
                       key={d.email}
-                      className="flex items-center gap-2 border-b border-brand-blue/8 px-2 py-1 last:border-0"
+                      className="flex items-center gap-2 border-b border-brand-blue/8 px-2 py-1.5 last:border-0"
                     >
                       <input
                         type="checkbox"
@@ -457,9 +587,12 @@ export function InformativosContent() {
                           });
                         }}
                       />
-                      <span className="min-w-0 flex-1 truncate text-neutral-600">
-                        {d.email}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-brand-blue/90">{d.email}</p>
+                        {d.empresa ? (
+                          <p className="truncate text-[10px] text-brand-blue/45">{d.empresa}</p>
+                        ) : null}
+                      </div>
                       <input
                         className={input + " w-28"}
                         value={d.nombre}
@@ -475,7 +608,11 @@ export function InformativosContent() {
                     </li>
                   ))}
                 </ul>
-              ) : null}
+              ) : (
+                <p className="text-[11px] text-brand-blue/45">
+                  Marca el grupo o pega emails para armar la lista.
+                </p>
+              )}
             </div>
             <div className="flex flex-shrink-0 gap-2 border-t border-brand-blue/10 p-3">
               <button
@@ -513,6 +650,147 @@ export function InformativosContent() {
               >
                 {sending ? "…" : `Enviar (${selectedList.length})`}
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {panel === "agenda" ? (
+        <div className="absolute inset-0 z-20 flex justify-end bg-brand-blue/20 backdrop-blur-[1px]">
+          <div
+            className="flex h-full w-full max-w-lg flex-col border-l border-brand-blue/15 bg-white shadow-xl"
+            role="dialog"
+            aria-label="Agenda Informaciones ASLI"
+          >
+            <div className="flex items-center gap-2 border-b border-brand-blue/10 px-3 py-2">
+              <div>
+                <p className="text-[12px] font-bold text-brand-blue">Agenda</p>
+                <p className="text-[10px] text-brand-blue/50">{GRUPO_INFORMACIONES_ASLI}</p>
+              </div>
+              <button
+                type="button"
+                className={btn + " ml-auto"}
+                onClick={() => setPanel("compose")}
+              >
+                Volver
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
+              <div className="space-y-1 rounded border border-brand-blue/12 p-2">
+                <p className={label}>Alta rápida</p>
+                <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
+                  <input
+                    className={input}
+                    placeholder="Nombre"
+                    value={newNombre}
+                    onChange={(e) => setNewNombre(e.target.value)}
+                  />
+                  <input
+                    className={input}
+                    placeholder="email@empresa.cl"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                  />
+                  <input
+                    className={input}
+                    placeholder="Empresa"
+                    value={newEmpresa}
+                    onChange={(e) => setNewEmpresa(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={agendaBusy || !newNombre.trim() || !newEmail.trim()}
+                  onClick={() => void onAddOne()}
+                >
+                  Guardar en grupo
+                </button>
+              </div>
+
+              <div className="space-y-1 rounded border border-brand-blue/12 p-2">
+                <p className={label}>Pegar lista</p>
+                <p className="text-[10px] text-brand-blue/50">
+                  Una por línea: <code>nombre;email;empresa</code> (también coma o tab)
+                </p>
+                <textarea
+                  className={input + " min-h-[120px] font-mono text-[11px]"}
+                  value={importRaw}
+                  onChange={(e) => setImportRaw(e.target.value)}
+                  placeholder={"Carmen Pérez;carmen@fruta.cl;Fruta Sur\nrodrigo@asli.cl"}
+                />
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={agendaBusy || !importRaw.trim()}
+                  onClick={() => void onImport()}
+                >
+                  Importar a {GRUPO_INFORMACIONES_ASLI}
+                </button>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <p className={label + " mb-0"}>
+                    Contactos ({agenda.length})
+                  </p>
+                  <button
+                    type="button"
+                    className={btn}
+                    disabled={agendaLoading}
+                    onClick={() => void reloadAgenda()}
+                  >
+                    Recargar
+                  </button>
+                </div>
+                {agendaLoading ? (
+                  <p className="text-[11px] text-brand-blue/45">Cargando…</p>
+                ) : agenda.length === 0 ? (
+                  <p className="text-[11px] text-brand-blue/45">
+                    Aún no hay contactos. Pega tu lista arriba.
+                  </p>
+                ) : (
+                  <ul className="max-h-[50vh] overflow-auto rounded border border-brand-blue/15 text-[11px]">
+                    {agenda.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-start gap-2 border-b border-brand-blue/8 px-2 py-1.5 last:border-0"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-brand-blue">{c.nombre}</p>
+                          <p className="truncate text-neutral-600">{c.email}</p>
+                          {c.empresa ? (
+                            <p className="truncate text-[10px] text-brand-blue/45">
+                              {c.empresa}
+                            </p>
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          className={btn}
+                          title="Desactivar (no borra)"
+                          onClick={() => {
+                            void (async () => {
+                              try {
+                                await setContactoActivo(c.id, false);
+                                await reloadAgenda();
+                              } catch (e) {
+                                sileo.error({
+                                  title: "No se pudo desactivar",
+                                  description:
+                                    e instanceof Error ? e.message : "Error",
+                                });
+                              }
+                            })();
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </div>
