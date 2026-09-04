@@ -84,6 +84,9 @@ export default defineConfig({
         "ag-grid-community",
         "ag-grid-react",
         "exceljs",
+        "react-email",
+        "@react-email/render",
+        "html-react-parser",
       ],
       exclude: ["xlsx", "xlsx-js-style"],
       esbuildOptions: {

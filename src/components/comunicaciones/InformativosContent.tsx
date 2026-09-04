@@ -1,664 +1,522 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Icon } from "@iconify/react";
+import { useEffect, useMemo, useState } from "react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { sendEmail } from "@/lib/email/sendEmail";
 import {
-  INFORMATIVO_ICON_IDS,
-  INFORMATIVO_ICON_LABELS,
-  createDefaultInformativoDraft,
-  newFilaId,
-  parseDestinatarios,
-  renderInformativoHtml,
-  type InformativoFila,
-  type InformativoIconId,
-  type InformativoPayload,
-  type InformativoPlantillaDraft,
-  type InformativoPlantillaRow,
-} from "@/lib/email/informativos";
+  createBlock,
+  createDefaultStudioDocument,
+  createExportacionesVietnamDocument,
+  STUDIO_PRESETS,
+} from "@/emails/studio/presets";
+import type { BlockKind, StudioBlock, StudioDocument } from "@/emails/studio/types";
 import {
-  moduleBtnPrimary,
-  moduleBtnSecondary,
-  moduleCard,
-  moduleCardAccent,
-  moduleHeroRounded,
-  moduleInput,
-  moduleLabel,
-  modulePageBg,
-} from "@/lib/ui/moduleStyles";
+  nombreDesdeEmail,
+  parseDestinatarios,
+  primerNombre,
+  renderStudioHtml,
+  type Destinatario,
+} from "@/lib/email/informativos/render";
+import { modulePageBg } from "@/lib/ui/moduleStyles";
 
-type SendProgress = {
-  total: number;
-  done: number;
-  ok: number;
-  fail: number;
-  lastError?: string;
-};
+const input =
+  "w-full rounded border border-brand-blue/20 bg-white px-2 py-1 text-[12px] text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-1 focus:ring-brand-blue/30";
+const label =
+  "mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-brand-blue/55";
+const btn =
+  "inline-flex items-center gap-1 rounded border border-brand-blue/20 bg-white px-2 py-1 text-[11px] font-semibold text-brand-blue/80 hover:bg-brand-blue/5 disabled:opacity-40";
+const btnPrimary =
+  "inline-flex items-center gap-1 rounded bg-brand-blue px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-blue/90 disabled:opacity-40";
 
-function updatePayload(
-  draft: InformativoPlantillaDraft,
-  patch: Partial<InformativoPayload>,
-): InformativoPlantillaDraft {
-  return { ...draft, payload: { ...draft.payload, ...patch } };
+function propFields(
+  block: StudioBlock,
+): { key: string; label: string; multiline?: boolean }[] {
+  switch (block.kind) {
+    case "greeting":
+      return [{ key: "template", label: "Plantilla" }];
+    case "heading":
+      return [
+        { key: "text", label: "Texto" },
+        { key: "as", label: "Tag (h1|h2|h3)" },
+      ];
+    case "text":
+      return [{ key: "text", label: "Texto (**negrita**)", multiline: true }];
+    case "button":
+      return [
+        { key: "label", label: "Etiqueta" },
+        { key: "href", label: "URL" },
+      ];
+    case "image":
+      return [
+        { key: "src", label: "URL imagen" },
+        { key: "alt", label: "Alt" },
+        { key: "width", label: "Ancho px" },
+      ];
+    case "dataRow":
+      return [
+        { key: "label", label: "Etiqueta" },
+        { key: "value", label: "Valor", multiline: true },
+      ];
+    case "headerAsli":
+      return [{ key: "logoUrl", label: "URL logo (vacío = ASLI)" }];
+    case "footerAsli":
+      return [{ key: "logoUrl", label: "URL logo (vacío = ASLI)" }];
+    case "html":
+      return [{ key: "html", label: "HTML + class Tailwind", multiline: true }];
+    default:
+      return [];
+  }
 }
 
 export function InformativosContent() {
-  const { user, profile, isLoading: authLoading } = useAuth();
-  const [draft, setDraft] = useState<InformativoPlantillaDraft>(() =>
-    createDefaultInformativoDraft(),
-  );
+  const { user, profile, isLoading } = useAuth();
+  const [doc, setDoc] = useState<StudioDocument>(() => createDefaultStudioDocument());
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    const d = createDefaultStudioDocument();
+    return d.blocks[0]?.id ?? null;
+  });
   const [previewNombre, setPreviewNombre] = useState("Carmen");
-  const [destinatariosRaw, setDestinatariosRaw] = useState(
-    "carmen@ejemplo.com,Carmen\nnina@ejemplo.com,Nina Scotti",
-  );
-  const [savedList, setSavedList] = useState<InformativoPlantillaRow[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [loadingList, setLoadingList] = useState(true);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [destRaw, setDestRaw] = useState("");
+  const [resolved, setResolved] = useState<Destinatario[]>([]);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
-  const [progress, setProgress] = useState<SendProgress | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
 
-  const previewHtml = useMemo(
-    () => renderInformativoHtml(draft.payload, { nombre: previewNombre }),
-    [draft.payload, previewNombre],
-  );
-
-  const parsed = useMemo(
-    () => parseDestinatarios(destinatariosRaw),
-    [destinatariosRaw],
-  );
-
-  const loadPlantillas = useCallback(async () => {
-    setLoadingList(true);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("informativos_plantillas")
-        .select("id, nombre, asunto, payload, created_by, created_at, updated_at")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      setSavedList((data ?? []) as InformativoPlantillaRow[]);
-    } catch (e) {
-      console.error(e);
-      sileo.error({
-        title: "No se pudieron cargar las plantillas",
-        description:
-          e instanceof Error ? e.message : "Revisa que la migración esté aplicada.",
-      });
-    } finally {
-      setLoadingList(false);
-    }
-  }, []);
+  const selected = doc.blocks.find((b) => b.id === selectedId) ?? null;
+  const parsed = useMemo(() => parseDestinatarios(destRaw), [destRaw]);
+  const selectedList = resolved.filter((d) => picked.has(d.email));
 
   useEffect(() => {
-    void loadPlantillas();
-  }, [loadPlantillas]);
+    let dead = false;
+    setPreviewError(null);
+    void renderStudioHtml(doc, previewNombre)
+      .then((html) => {
+        if (!dead) setPreviewHtml(html);
+      })
+      .catch((e) => {
+        console.error(e);
+        if (!dead) {
+          setPreviewError(e instanceof Error ? e.message : "Error al renderizar");
+        }
+      });
+    return () => {
+      dead = true;
+    };
+  }, [doc, previewNombre]);
 
-  const setParrafo = (index: number, value: string) => {
-    const parrafos = [...draft.payload.parrafos];
-    parrafos[index] = value;
-    setDraft(updatePayload(draft, { parrafos }));
+  useEffect(() => {
+    let dead = false;
+    void (async () => {
+      if (!parsed.destinatarios.length) {
+        setResolved([]);
+        setPicked(new Set());
+        return;
+      }
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("usuarios")
+          .select("email, nombre")
+          .in(
+            "email",
+            parsed.destinatarios.map((d) => d.email),
+          );
+        const map = new Map(
+          (data ?? []).map((r) => [
+            String(r.email).toLowerCase(),
+            primerNombre(String(r.nombre ?? "")),
+          ]),
+        );
+        if (dead) return;
+        const next = parsed.destinatarios.map((d) => ({
+          email: d.email,
+          nombre: map.get(d.email) || d.nombre,
+        }));
+        setResolved(next);
+        setPicked(new Set(next.map((d) => d.email)));
+      } catch {
+        if (!dead) {
+          setResolved(parsed.destinatarios);
+          setPicked(new Set(parsed.destinatarios.map((d) => d.email)));
+        }
+      }
+    })();
+    return () => {
+      dead = true;
+    };
+  }, [destRaw]);
+
+  const addPreset = (kind: BlockKind) => {
+    const block = createBlock(kind);
+    setDoc((d) => ({ ...d, blocks: [...d.blocks, block] }));
+    setSelectedId(block.id);
   };
 
-  const addParrafo = () => {
-    setDraft(updatePayload(draft, { parrafos: [...draft.payload.parrafos, ""] }));
+  const updateProps = (id: string, key: string, value: string) => {
+    setDoc((d) => ({
+      ...d,
+      blocks: d.blocks.map((b) =>
+        b.id === id ? { ...b, props: { ...b.props, [key]: value } } : b,
+      ),
+    }));
   };
 
-  const removeParrafo = (index: number) => {
-    setDraft(
-      updatePayload(draft, {
-        parrafos: draft.payload.parrafos.filter((_, i) => i !== index),
-      }),
-    );
-  };
-
-  const setFila = (id: string, patch: Partial<InformativoFila>) => {
-    setDraft(
-      updatePayload(draft, {
-        filas: draft.payload.filas.map((f) => (f.id === id ? { ...f, ...patch } : f)),
-      }),
-    );
-  };
-
-  const addFila = () => {
-    setDraft(
-      updatePayload(draft, {
-        filas: [
-          ...draft.payload.filas,
-          { id: newFilaId(), icon: "document", label: "NUEVO", value: "" },
-        ],
-      }),
-    );
-  };
-
-  const removeFila = (id: string) => {
-    setDraft(
-      updatePayload(draft, {
-        filas: draft.payload.filas.filter((f) => f.id !== id),
-      }),
-    );
-  };
-
-  const resetBase = () => {
-    setDraft(createDefaultInformativoDraft());
-    setSelectedId(null);
-  };
-
-  const loadSaved = (row: InformativoPlantillaRow) => {
-    setSelectedId(row.id);
-    setDraft({
-      nombre: row.nombre,
-      asunto: row.asunto,
-      payload: row.payload,
+  const move = (id: string, dir: -1 | 1) => {
+    setDoc((d) => {
+      const i = d.blocks.findIndex((b) => b.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= d.blocks.length) return d;
+      const blocks = [...d.blocks];
+      [blocks[i], blocks[j]] = [blocks[j], blocks[i]];
+      return { ...d, blocks };
     });
   };
 
-  const savePlantilla = async () => {
-    if (!draft.nombre.trim()) {
-      sileo.error({ title: "Pon un nombre a la plantilla" });
+  const remove = (id: string) => {
+    setDoc((d) => {
+      const blocks = d.blocks.filter((b) => b.id !== id);
+      return { ...d, blocks };
+    });
+    setSelectedId((cur) => (cur === id ? null : cur));
+  };
+
+  const sendList = async (list: Destinatario[]) => {
+    if (!doc.asunto.trim()) {
+      sileo.error({ title: "Falta asunto" });
       return;
     }
-    setSaving(true);
-    try {
-      const supabase = createClient();
-      const row = {
-        nombre: draft.nombre.trim(),
-        asunto: draft.asunto.trim(),
-        payload: draft.payload,
-        created_by: user?.id ?? null,
-        updated_at: new Date().toISOString(),
-      };
-      if (selectedId) {
-        const { error } = await supabase
-          .from("informativos_plantillas")
-          .update(row)
-          .eq("id", selectedId);
-        if (error) throw error;
-        sileo.success({ title: "Plantilla actualizada" });
-      } else {
-        const { data, error } = await supabase
-          .from("informativos_plantillas")
-          .insert(row)
-          .select("id")
-          .single();
-        if (error) throw error;
-        setSelectedId(data.id);
-        sileo.success({ title: "Plantilla guardada" });
-      }
-      await loadPlantillas();
-    } catch (e) {
-      sileo.error({
-        title: "Error al guardar",
-        description: e instanceof Error ? e.message : "Error desconocido",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveAsNew = async () => {
-    setSelectedId(null);
-    setDraft({ ...draft, nombre: `${draft.nombre.trim() || "Informativo"} (copia)` });
-    // next tick save would need selectedId null — user clicks Guardar
-    sileo.info({ title: "Lista como nueva", description: "Pulsa Guardar para crear una copia." });
-  };
-
-  const deleteSelected = async () => {
-    if (!selectedId) return;
-    if (!confirm("¿Eliminar esta plantilla guardada?")) return;
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("informativos_plantillas")
-        .delete()
-        .eq("id", selectedId);
-      if (error) throw error;
-      setSelectedId(null);
-      sileo.success({ title: "Plantilla eliminada" });
-      await loadPlantillas();
-    } catch (e) {
-      sileo.error({
-        title: "No se pudo eliminar",
-        description: e instanceof Error ? e.message : "Error desconocido",
-      });
-    }
-  };
-
-  const sendToList = async (list: { email: string; nombre: string }[]) => {
-    if (!draft.asunto.trim()) {
-      sileo.error({ title: "Falta el asunto del correo" });
-      return;
-    }
-    if (list.length === 0) {
-      sileo.error({ title: "No hay destinatarios válidos" });
+    if (!list.length) {
+      sileo.error({ title: "Sin destinatarios" });
       return;
     }
     setSending(true);
-    const prog: SendProgress = { total: list.length, done: 0, ok: 0, fail: 0 };
-    setProgress({ ...prog });
-
+    let ok = 0;
+    let fail = 0;
+    let lastError = "";
     for (const dest of list) {
-      const html = renderInformativoHtml(draft.payload, {
-        nombre: dest.nombre,
-        preferPublicAssets: true,
-      });
-      const result = await sendEmail({
-        to: dest.email,
-        subject: draft.asunto,
-        body: html,
-        sendFrom: "informaciones",
-        skipSignature: true,
-      });
-      prog.done += 1;
-      if (result.success) prog.ok += 1;
-      else {
-        prog.fail += 1;
-        prog.lastError = result.error;
+      try {
+        const html = await renderStudioHtml(doc, dest.nombre, {
+          preferPublicAssets: true,
+        });
+        const r = await sendEmail({
+          to: dest.email,
+          subject: doc.asunto,
+          body: html,
+          sendFrom: "informaciones",
+          skipSignature: true,
+        });
+        if (r.success) ok += 1;
+        else {
+          fail += 1;
+          lastError = r.error ?? "";
+        }
+      } catch (e) {
+        fail += 1;
+        lastError = e instanceof Error ? e.message : "Error";
       }
-      setProgress({ ...prog });
-      // pequeña pausa para no saturar Gmail API
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 300));
     }
-
     setSending(false);
-    if (prog.fail === 0) {
-      sileo.success({
-        title: `Enviado a ${prog.ok} destinatario${prog.ok === 1 ? "" : "s"}`,
-        description: "Desde informaciones@asli.cl",
-      });
-    } else {
-      sileo.error({
-        title: `Completado con errores (${prog.ok} ok, ${prog.fail} fallos)`,
-        description: prog.lastError,
-      });
-    }
+    if (fail === 0) sileo.success({ title: `Enviado ×${ok}` });
+    else sileo.error({ title: `Ok ${ok} / fallos ${fail}`, description: lastError });
   };
 
-  const sendTest = async () => {
-    const email = (profile?.email ?? user?.email ?? "").trim();
-    if (!email) {
-      sileo.error({ title: "No hay email de sesión para prueba" });
-      return;
-    }
-    const nombre =
-      previewNombre.trim() ||
-      profile?.nombre?.split(" ")[0] ||
-      email.split("@")[0];
-    await sendToList([{ email, nombre }]);
-  };
-
-  const sendAll = async () => {
-    if (parsed.errores.length) {
-      sileo.error({
-        title: "Hay filas inválidas en la lista",
-        description: parsed.errores.slice(0, 3).join(" · "),
-      });
-      return;
-    }
-    if (
-      !confirm(
-        `¿Enviar ${parsed.destinatarios.length} correo(s) desde informaciones@asli.cl?`,
-      )
-    ) {
-      return;
-    }
-    await sendToList(parsed.destinatarios);
-  };
-
-  if (authLoading) {
+  if (isLoading) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4`}>
-        <p className="text-brand-blue/70">Cargando…</p>
+      <main className={`flex flex-1 ${modulePageBg} p-3 text-[12px] text-brand-blue/60`}>
+        Cargando…
       </main>
     );
   }
 
   return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-      <div className="mx-auto max-w-[1400px] space-y-4">
-        <div className={`${moduleHeroRounded} p-5 sm:p-6`}>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Informativos</h1>
-          <p className="mt-1 text-white/80 text-sm sm:text-base max-w-2xl">
-            Edita la plantilla ASLI, personaliza el nombre con{" "}
-            <code className="text-white/95 bg-white/10 px-1 rounded">{"{{nombre}}"}</code> y
-            envía desde <strong>informaciones@asli.cl</strong>.
-          </p>
+    <main className={`relative flex h-full min-h-0 flex-1 flex-col ${modulePageBg}`}>
+      <header className="z-10 flex flex-shrink-0 items-center gap-2 border-b border-brand-blue/10 bg-white px-3 py-1.5">
+        <h1 className="text-[13px] font-bold text-brand-blue">Informativos</h1>
+        <span className="hidden text-[10px] text-brand-blue/40 sm:inline">
+          bloques · Tailwind · React Email
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            className={btn}
+            title="Cargar plantilla Vietnam / Systems Approach"
+            onClick={() => {
+              const next = createExportacionesVietnamDocument();
+              setDoc(next);
+              setSelectedId(next.blocks[0]?.id ?? null);
+              setSendOpen(false);
+            }}
+          >
+            Plantilla Vietnam
+          </button>
+          <button
+            type="button"
+            className={!sendOpen ? btnPrimary : btn}
+            onClick={() => setSendOpen(false)}
+          >
+            Componer
+          </button>
+          <button
+            type="button"
+            className={sendOpen ? btnPrimary : btn}
+            onClick={() => setSendOpen(true)}
+          >
+            Enviar
+          </button>
         </div>
+      </header>
 
-        <div className={`${moduleCard}`}>
-          <div className={moduleCardAccent} />
-          <div className="p-4 sm:p-5 flex flex-col lg:flex-row gap-3 lg:items-end">
-            <div className="flex-1 min-w-0">
-              <label className={moduleLabel}>Plantillas guardadas</label>
-              <select
-                className={moduleInput}
-                value={selectedId ?? ""}
-                disabled={loadingList}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  if (!id) {
-                    resetBase();
-                    return;
-                  }
-                  const row = savedList.find((r) => r.id === id);
-                  if (row) loadSaved(row);
-                }}
-              >
-                <option value="">— Nueva / base —</option>
-                {savedList.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={moduleBtnSecondary} onClick={resetBase}>
-                Plantilla base
-              </button>
+      {/* Estudio siempre montado (no se destruye al abrir Enviar) */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-auto lg:grid-cols-[150px_200px_minmax(220px,280px)_minmax(0,1fr)] lg:overflow-hidden">
+        <aside className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
+          <p className={label}>Presets</p>
+          <div className="flex flex-col gap-0.5">
+            {STUDIO_PRESETS.map((p) => (
               <button
+                key={p.kind}
                 type="button"
-                className={moduleBtnSecondary}
-                onClick={() => void saveAsNew()}
-                disabled={!selectedId}
+                title={p.description}
+                className="rounded px-1.5 py-1 text-left text-[11px] font-medium text-brand-blue/85 hover:bg-brand-blue/8"
+                onClick={() => addPreset(p.kind)}
               >
-                Guardar como nueva
+                + {p.label}
               </button>
-              <button
-                type="button"
-                className={moduleBtnPrimary}
-                onClick={() => void savePlantilla()}
-                disabled={saving}
-              >
-                {saving ? "Guardando…" : selectedId ? "Actualizar" : "Guardar"}
-              </button>
-              {selectedId ? (
-                <button
-                  type="button"
-                  className={moduleBtnSecondary}
-                  onClick={() => void deleteSelected()}
-                >
-                  Eliminar
-                </button>
+            ))}
+          </div>
+        </aside>
+
+        <aside className="border-b border-brand-blue/10 bg-[#f7f9fc] p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
+          <div className="mb-2 space-y-1">
+            <label className={label}>Asunto</label>
+            <input
+              className={input}
+              value={doc.asunto}
+              onChange={(e) => setDoc({ ...doc, asunto: e.target.value })}
+            />
+            <label className={label}>Preview inbox</label>
+            <input
+              className={input}
+              value={doc.previewText}
+              onChange={(e) => setDoc({ ...doc, previewText: e.target.value })}
+            />
+          </div>
+          <p className={label}>Bloques ({doc.blocks.length})</p>
+          <ul className="space-y-0.5">
+            {doc.blocks.map((b) => {
+              const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
+              const active = b.id === selectedId;
+              return (
+                <li key={b.id}>
+                  <button
+                    type="button"
+                    className={`w-full rounded px-1.5 py-1 text-left text-[11px] font-medium ${
+                      active
+                        ? "bg-brand-blue text-white"
+                        : "text-brand-blue/80 hover:bg-brand-blue/8"
+                    }`}
+                    onClick={() => setSelectedId(b.id)}
+                  >
+                    {meta?.label ?? b.kind}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
+
+        <section className="border-b border-brand-blue/10 bg-white p-2 lg:min-h-0 lg:overflow-auto lg:border-b-0 lg:border-r">
+          {!selected ? (
+            <p className="text-[11px] text-brand-blue/45">
+              Elige un bloque a la izquierda o agrega un preset.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <p className="truncate text-[11px] font-bold text-brand-blue">
+                  {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
+                </p>
+                <div className="ml-auto flex shrink-0 gap-0.5">
+                  <button type="button" className={btn} onClick={() => move(selected.id, -1)}>
+                    ↑
+                  </button>
+                  <button type="button" className={btn} onClick={() => move(selected.id, 1)}>
+                    ↓
+                  </button>
+                  <button type="button" className={btn} onClick={() => remove(selected.id)}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+              {propFields(selected).map((f) => (
+                <div key={f.key}>
+                  <label className={label}>{f.label}</label>
+                  {f.multiline ? (
+                    <textarea
+                      className={input + " min-h-[100px] font-mono text-[11px] leading-4"}
+                      value={selected.props[f.key] ?? ""}
+                      onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+                      spellCheck={selected.kind !== "html"}
+                    />
+                  ) : (
+                    <input
+                      className={input}
+                      value={selected.props[f.key] ?? ""}
+                      onChange={(e) => updateProps(selected.id, f.key, e.target.value)}
+                    />
+                  )}
+                </div>
+              ))}
+              {selected.kind === "html" ? (
+                <p className="text-[10px] leading-4 text-brand-blue/50">
+                  HTML con class Tailwind, <code className="text-[10px]">{"{{nombre}}"}</code> y{" "}
+                  <code className="text-[10px]">{"{{saludo}}"}</code> (Estimado/Estimada).
+                </p>
               ) : null}
             </div>
+          )}
+        </section>
+
+        <section className="flex min-h-[360px] flex-col bg-[#e8eef5] lg:min-h-0">
+          <div className="flex flex-shrink-0 items-center gap-2 border-b border-brand-blue/10 bg-white px-2 py-1">
+            <span className="text-[10px] font-semibold text-brand-blue/55">Preview</span>
+            <input
+              className={input + " max-w-[140px]"}
+              value={previewNombre}
+              onChange={(e) => setPreviewNombre(e.target.value)}
+              aria-label="Nombre preview"
+            />
+            {previewError ? (
+              <span className="truncate text-[10px] text-red-600">{previewError}</span>
+            ) : null}
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {/* Editor */}
-          <div className={`${moduleCard}`}>
-            <div className={moduleCardAccent} />
-            <div className="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-auto">
-              <div>
-                <label className={moduleLabel}>Nombre de plantilla</label>
-                <input
-                  className={moduleInput}
-                  value={draft.nombre}
-                  onChange={(e) => setDraft({ ...draft, nombre: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={moduleLabel}>Asunto</label>
-                <input
-                  className={moduleInput}
-                  value={draft.asunto}
-                  onChange={(e) => setDraft({ ...draft, asunto: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={moduleLabel}>
-                  Saludo (usa {"{{nombre}}"})
-                </label>
-                <input
-                  className={moduleInput}
-                  value={draft.payload.saludo}
-                  onChange={(e) =>
-                    setDraft(updatePayload(draft, { saludo: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label className={moduleLabel + " mb-0"}>Párrafos</label>
-                  <button type="button" className={moduleBtnSecondary} onClick={addParrafo}>
-                    + Párrafo
-                  </button>
-                </div>
-                <p className="text-xs text-neutral-500">
-                  Negrita con <code>**texto**</code>
-                </p>
-                {draft.payload.parrafos.map((p, i) => (
-                  <div key={i} className="flex gap-2">
-                    <textarea
-                      className={moduleInput + " min-h-[4.5rem]"}
-                      value={p}
-                      onChange={(e) => setParrafo(i, e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="shrink-0 text-red-600 hover:text-red-800 px-1"
-                      title="Quitar"
-                      onClick={() => removeParrafo(i)}
-                    >
-                      <Icon icon="typcn:times" width={20} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <label className={moduleLabel + " mb-0"}>Filas de datos</label>
-                  <button type="button" className={moduleBtnSecondary} onClick={addFila}>
-                    + Fila
-                  </button>
-                </div>
-                {draft.payload.filas.map((fila) => (
-                  <div
-                    key={fila.id}
-                    className="rounded-xl border border-brand-blue/15 bg-[#F4F8FC] p-3 space-y-2"
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-xs font-semibold text-brand-blue/70">
-                          Ícono
-                        </label>
-                        <select
-                          className={moduleInput}
-                          value={fila.icon}
-                          onChange={(e) =>
-                            setFila(fila.id, {
-                              icon: e.target.value as InformativoIconId,
-                            })
-                          }
-                        >
-                          {INFORMATIVO_ICON_IDS.map((id) => (
-                            <option key={id} value={id}>
-                              {INFORMATIVO_ICON_LABELS[id]}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="text-xs font-semibold text-brand-blue/70">
-                          Etiqueta
-                        </label>
-                        <input
-                          className={moduleInput}
-                          value={fila.label}
-                          onChange={(e) => setFila(fila.id, { label: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    {fila.icon === "custom" ? (
-                      <div>
-                        <label className="text-xs font-semibold text-brand-blue/70">
-                          URL del ícono
-                        </label>
-                        <input
-                          className={moduleInput}
-                          value={fila.iconUrl ?? ""}
-                          onChange={(e) => setFila(fila.id, { iconUrl: e.target.value })}
-                          placeholder="https://…"
-                        />
-                      </div>
-                    ) : null}
-                    <div>
-                      <label className="text-xs font-semibold text-brand-blue/70">
-                        Valor
-                      </label>
-                      <textarea
-                        className={moduleInput + " min-h-[3.2rem]"}
-                        value={fila.value}
-                        onChange={(e) => setFila(fila.id, { value: e.target.value })}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="text-sm text-red-600 font-semibold"
-                      onClick={() => removeFila(fila.id)}
-                    >
-                      Quitar fila
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <label className={moduleLabel}>Cierre</label>
-                <textarea
-                  className={moduleInput + " min-h-[4.5rem]"}
-                  value={draft.payload.cierre}
-                  onChange={(e) =>
-                    setDraft(updatePayload(draft, { cierre: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className={moduleLabel}>Firma (nombre)</label>
-                  <input
-                    className={moduleInput}
-                    value={draft.payload.firmaNombre}
-                    onChange={(e) =>
-                      setDraft(updatePayload(draft, { firmaNombre: e.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className={moduleLabel}>Firma (cargo)</label>
-                  <input
-                    className={moduleInput}
-                    value={draft.payload.firmaCargo}
-                    onChange={(e) =>
-                      setDraft(updatePayload(draft, { firmaCargo: e.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={moduleLabel}>Imagen hero (URL opcional)</label>
-                <input
-                  className={moduleInput}
-                  value={draft.payload.imagenHero ?? ""}
-                  onChange={(e) =>
-                    setDraft(
-                      updatePayload(draft, {
-                        imagenHero: e.target.value || undefined,
-                      }),
-                    )
-                  }
-                  placeholder="https://…"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className={`${moduleCard} flex flex-col min-h-[480px]`}>
-            <div className={moduleCardAccent} />
-            <div className="p-4 border-b border-brand-blue/10 flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[140px]">
-                <label className={moduleLabel}>Vista previa — nombre</label>
-                <input
-                  className={moduleInput}
-                  value={previewNombre}
-                  onChange={(e) => setPreviewNombre(e.target.value)}
-                />
-              </div>
-              <span className="text-xs text-neutral-500 pb-2">
-                Así se verá con {"{{nombre}}"} reemplazado
-              </span>
-            </div>
-            <div className="flex-1 bg-[#f1f1f1] overflow-auto p-2 sm:p-4">
+          <div className="min-h-0 flex-1 overflow-auto p-2">
+            {previewHtml ? (
               <iframe
-                title="Vista previa informativo"
-                className="w-full min-h-[560px] bg-white rounded shadow-sm border-0"
+                title="preview"
+                className="h-full min-h-[400px] w-full rounded border-0 bg-white shadow-sm"
                 srcDoc={previewHtml}
               />
-            </div>
+            ) : (
+              <p className="p-4 text-[11px] text-brand-blue/50">Generando preview…</p>
+            )}
           </div>
-        </div>
-
-        {/* Destinatarios + envío */}
-        <div className={`${moduleCard}`}>
-          <div className={moduleCardAccent} />
-          <div className="p-4 sm:p-5 space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-brand-blue">Destinatarios</h2>
-              <p className="text-sm text-neutral-600 mt-1">
-                Una línea por persona: <code>email,nombre</code> o{" "}
-                <code>nombre,email</code>. El saludo usará el nombre de cada fila.
-              </p>
-            </div>
-            <textarea
-              className={moduleInput + " min-h-[8rem] font-mono text-sm"}
-              value={destinatariosRaw}
-              onChange={(e) => setDestinatariosRaw(e.target.value)}
-              placeholder={"carmen@cliente.cl,Carmen\nnina@cliente.cl,Nina"}
-            />
-            <div className="flex flex-wrap items-center gap-3 text-sm text-brand-blue/80">
-              <span>
-                Válidos: <strong>{parsed.destinatarios.length}</strong>
-              </span>
-              {parsed.errores.length > 0 ? (
-                <span className="text-red-600">
-                  Errores: {parsed.errores.length} (revisa el formato)
-                </span>
-              ) : null}
-              {progress ? (
-                <span>
-                  Envío: {progress.done}/{progress.total} · ok {progress.ok} · fallos{" "}
-                  {progress.fail}
-                </span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={moduleBtnSecondary}
-                disabled={sending}
-                onClick={() => void sendTest()}
-              >
-                Enviar prueba a mí
-              </button>
-              <button
-                type="button"
-                className={moduleBtnPrimary}
-                disabled={sending || parsed.destinatarios.length === 0}
-                onClick={() => void sendAll()}
-              >
-                {sending
-                  ? "Enviando…"
-                  : `Enviar a ${parsed.destinatarios.length || "…"}`}
-              </button>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
+
+      {/* Panel Enviar: overlay lateral, no reemplaza el estudio */}
+      {sendOpen ? (
+        <div className="absolute inset-0 z-20 flex justify-end bg-brand-blue/20 backdrop-blur-[1px]">
+          <div
+            className="flex h-full w-full max-w-md flex-col border-l border-brand-blue/15 bg-white shadow-xl"
+            role="dialog"
+            aria-label="Enviar informativo"
+          >
+            <div className="flex items-center gap-2 border-b border-brand-blue/10 px-3 py-2">
+              <p className="text-[12px] font-bold text-brand-blue">Enviar</p>
+              <button
+                type="button"
+                className={btn + " ml-auto"}
+                onClick={() => setSendOpen(false)}
+              >
+                Volver a componer
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
+              <p className="text-[11px] text-brand-blue/60">
+                Pega emails (uno por línea). Nombre desde ERP o del correo.
+              </p>
+              <textarea
+                className={input + " min-h-[100px] font-mono"}
+                value={destRaw}
+                onChange={(e) => setDestRaw(e.target.value)}
+                placeholder="persona@empresa.cl"
+              />
+              {parsed.errores.length > 0 ? (
+                <p className="text-[10px] text-red-600">{parsed.errores.join(" · ")}</p>
+              ) : null}
+              {resolved.length > 0 ? (
+                <ul className="max-h-56 overflow-auto rounded border border-brand-blue/15 text-[11px]">
+                  {resolved.map((d) => (
+                    <li
+                      key={d.email}
+                      className="flex items-center gap-2 border-b border-brand-blue/8 px-2 py-1 last:border-0"
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-[#11224E]"
+                        checked={picked.has(d.email)}
+                        onChange={() => {
+                          setPicked((prev) => {
+                            const n = new Set(prev);
+                            if (n.has(d.email)) n.delete(d.email);
+                            else n.add(d.email);
+                            return n;
+                          });
+                        }}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-neutral-600">
+                        {d.email}
+                      </span>
+                      <input
+                        className={input + " w-28"}
+                        value={d.nombre}
+                        onChange={(e) => {
+                          const nombre = e.target.value;
+                          setResolved((prev) =>
+                            prev.map((x) =>
+                              x.email === d.email ? { ...x, nombre } : x,
+                            ),
+                          );
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <div className="flex flex-shrink-0 gap-2 border-t border-brand-blue/10 p-3">
+              <button
+                type="button"
+                className={btn}
+                disabled={sending}
+                onClick={() => {
+                  const email = (profile?.email ?? user?.email ?? "").trim();
+                  if (!email) {
+                    sileo.error({ title: "Sin email de sesión" });
+                    return;
+                  }
+                  void sendList([
+                    {
+                      email,
+                      nombre:
+                        previewNombre ||
+                        primerNombre(profile?.nombre ?? "") ||
+                        nombreDesdeEmail(email),
+                    },
+                  ]);
+                }}
+              >
+                Prueba a mí
+              </button>
+              <button
+                type="button"
+                className={btnPrimary}
+                disabled={sending || selectedList.length === 0}
+                onClick={() => {
+                  if (confirm(`¿Enviar ${selectedList.length}?`)) {
+                    void sendList(selectedList);
+                  }
+                }}
+              >
+                {sending ? "…" : `Enviar (${selectedList.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

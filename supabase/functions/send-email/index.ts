@@ -194,21 +194,51 @@ async function getServiceAccountToken(
   return data.access_token;
 }
 
+function bytesToBinary(bytes: Uint8Array): string {
+  const chunkSize = 8192;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(
+      ...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)),
+    );
+  }
+  return binary;
+}
+
 function b64url(input: string | Uint8Array): string {
   let str: string;
   if (typeof input === "string") {
-    // El contenido es ASCII/latin1 (JWT payload, MIME email) — btoa directo, sin encodeURIComponent
+    // JWT / ASCII — btoa directo
     str = btoa(input);
   } else {
-    // Uint8Array en chunks para evitar stack overflow con arrays grandes
-    const chunkSize = 8192;
-    let binary = "";
-    for (let i = 0; i < input.length; i += chunkSize) {
-      binary += String.fromCharCode(...input.subarray(i, Math.min(i + chunkSize, input.length)));
-    }
-    str = btoa(binary);
+    str = btoa(bytesToBinary(input));
   }
   return str.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+/** RFC 2047 encoded-word para Subject / display-name con tildes. */
+function encodeRfc2047(text: string): string {
+  const clean = text.replace(/[\r\n]+/g, " ").trim();
+  if (!/[^\x00-\x7F]/.test(clean)) return clean;
+  const b64 = btoa(bytesToBinary(new TextEncoder().encode(clean)));
+  // Partir en trozos para no superar ~75 chars por línea de header
+  const chunks: string[] = [];
+  for (let i = 0; i < b64.length; i += 45) {
+    chunks.push(`=?UTF-8?B?${b64.slice(i, i + 45)}?=`);
+  }
+  return chunks.join(" ");
+}
+
+function encodeMimeAddress(name: string, email: string): string {
+  const n = name.replace(/[\r\n]+/g, " ").trim();
+  if (!n) return email;
+  if (!/[^\x00-\x7F]/.test(n) && !/[<>\\"]/.test(n)) return `${n} <${email}>`;
+  return `${encodeRfc2047(n)} <${email}>`;
+}
+
+function encodeBase64Mime(text: string): string {
+  const b64 = btoa(bytesToBinary(new TextEncoder().encode(text)));
+  return b64.match(/.{1,76}/g)?.join("\r\n") ?? b64;
 }
 
 function buildRawEmail(
@@ -233,32 +263,36 @@ function buildRawEmail(
     : bodyHtmlContent;
 
   const headers = [
-    `From: ${fromName} <${fromEmail}>`,
+    `From: ${encodeMimeAddress(fromName, fromEmail)}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeRfc2047(subject)}`,
     `MIME-Version: 1.0`,
+  ];
+
+  const altParts = [
+    `--${altBoundary}`,
+    `Content-Type: text/plain; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
+    ``,
+    encodeBase64Mime(plainText),
+    `--${altBoundary}`,
+    `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
+    ``,
+    encodeBase64Mime(htmlPart),
+    `--${altBoundary}--`,
   ];
 
   let raw: string;
 
   if (!hasAtt) {
-    // Sin adjuntos: multipart/alternative (plain + html)
     raw = [
       ...headers,
       `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
       ``,
-      `--${altBoundary}`,
-      `Content-Type: text/plain; charset=UTF-8`,
-      ``,
-      plainText,
-      `--${altBoundary}`,
-      `Content-Type: text/html; charset=UTF-8`,
-      ``,
-      htmlPart,
-      `--${altBoundary}--`,
+      ...altParts,
     ].join("\r\n");
   } else {
-    // Con adjuntos: multipart/mixed > multipart/alternative + adjuntos
     const parts: string[] = [
       ...headers,
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
@@ -266,15 +300,7 @@ function buildRawEmail(
       `--${boundary}`,
       `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
       ``,
-      `--${altBoundary}`,
-      `Content-Type: text/plain; charset=UTF-8`,
-      ``,
-      plainText,
-      `--${altBoundary}`,
-      `Content-Type: text/html; charset=UTF-8`,
-      ``,
-      htmlPart,
-      `--${altBoundary}--`,
+      ...altParts,
     ];
 
     for (const att of attachments) {
@@ -292,6 +318,6 @@ function buildRawEmail(
     raw = parts.join("\r\n");
   }
 
-  // Encode as UTF-8 bytes so btoa doesn't fail on non-Latin1 chars (em dash, smart quotes, etc.)
+  // El MIME ya va en ASCII (headers RFC2047 + bodies base64); bytes UTF-8 por seguridad
   return b64url(new TextEncoder().encode(raw));
 }
