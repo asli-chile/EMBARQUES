@@ -51,6 +51,15 @@ function merge(
   );
 }
 
+function resolveTextAlign(
+  raw: string | undefined,
+): "left" | "center" | "right" {
+  const v = (raw || "left").trim().toLowerCase();
+  if (v === "center" || v === "centro") return "center";
+  if (v === "right" || v === "derecha") return "right";
+  return "left";
+}
+
 function BlockView({
   block,
   nombre,
@@ -62,6 +71,7 @@ function BlockView({
 }) {
   const p = block.props;
   const assets = emailAssetUrls(preferPublic);
+  const align = resolveTextAlign(p.align);
 
   switch (block.kind) {
     case "headerAsli":
@@ -105,6 +115,7 @@ function BlockView({
             fontSize: "14px",
             lineHeight: "22px",
             color: "#18181b",
+            textAlign: align,
           }}
         >
           {text}
@@ -121,6 +132,7 @@ function BlockView({
             fontWeight: 700,
             lineHeight: "28px",
             color: "#11224E",
+            textAlign: align,
           }}
         >
           {merge(p.text || "", nombre, preferPublic)}
@@ -136,6 +148,7 @@ function BlockView({
             fontSize: "14px",
             lineHeight: "22px",
             color: "#18181b",
+            textAlign: align,
           }}
         >
           {lines.map((line, i) => (
@@ -149,7 +162,7 @@ function BlockView({
     }
     case "button":
       return (
-        <Section style={{ margin: "20px 0", textAlign: "center" }}>
+        <Section style={{ margin: "20px 0", textAlign: align }}>
           <Button
             href={p.href || "https://asli.cl"}
             style={{
@@ -179,14 +192,13 @@ function BlockView({
       );
     case "image":
       return (
-        <Section style={{ margin: "0 0 16px 0" }}>
+        <Section style={{ margin: "0 0 16px 0", textAlign: align }}>
           <Img
             src={p.src || assets.logo}
             alt={p.alt || ""}
             width={Number(p.width) || 160}
             style={{
-              display: "block",
-              margin: "0 auto",
+              display: "inline-block",
               border: 0,
               maxWidth: "100%",
               height: "auto",

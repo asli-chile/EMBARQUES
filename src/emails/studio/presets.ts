@@ -20,13 +20,13 @@ export const STUDIO_PRESETS: PresetDef[] = [
     kind: "greeting",
     label: "Saludo {{saludo}}",
     description: "Estimado/Estimada según el nombre + {{nombre}}",
-    defaults: { template: "{{saludo}} {{nombre}},", saludoMode: "auto" },
+    defaults: { template: "{{saludo}} {{nombre}},", saludoMode: "auto", align: "left" },
   },
   {
     kind: "heading",
     label: "Heading",
     description: "Título (Heading)",
-    defaults: { text: "Informativo ASLI", as: "h2" },
+    defaults: { text: "Informativo ASLI", as: "h2", align: "left" },
   },
   {
     kind: "text",
@@ -34,6 +34,7 @@ export const STUDIO_PRESETS: PresetDef[] = [
     description: "Text — admite **negrita**",
     defaults: {
       text: "Escribe el mensaje. Puedes usar **negrita**.",
+      align: "left",
     },
   },
   {
@@ -43,6 +44,7 @@ export const STUDIO_PRESETS: PresetDef[] = [
     defaults: {
       label: "Ver más",
       href: "https://asli.cl",
+      align: "center",
     },
   },
   {
@@ -59,6 +61,7 @@ export const STUDIO_PRESETS: PresetDef[] = [
       src: "",
       alt: "ASLI",
       width: "160",
+      align: "center",
     },
   },
   {

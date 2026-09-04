@@ -120,6 +120,16 @@ function DataRowIconPicker({
   );
 }
 
+const ALIGN_FIELD = {
+  key: "align",
+  label: "Alineación",
+  options: [
+    { value: "left", label: "Izquierda" },
+    { value: "center", label: "Centro" },
+    { value: "right", label: "Derecha" },
+  ],
+} as const;
+
 function propFields(
   block: StudioBlock,
 ): {
@@ -128,7 +138,7 @@ function propFields(
   multiline?: boolean;
   hint?: string;
   options?: { value: string; label: string }[];
-  control?: "iconPicker";
+  control?: "iconPicker" | "align";
 }[] {
   switch (block.kind) {
     case "greeting":
@@ -149,11 +159,13 @@ function propFields(
           multiline: true,
           hint: "Ej: {{saludo}} {{nombre}},  —  o texto fijo: Estimados clientes,",
         },
+        { ...ALIGN_FIELD, control: "align" },
       ];
     case "heading":
       return [
         { key: "text", label: "Texto del título", multiline: true },
         { key: "as", label: "Nivel (h1 | h2 | h3)" },
+        { ...ALIGN_FIELD, control: "align" },
       ];
     case "text":
       return [
@@ -163,17 +175,20 @@ function propFields(
           multiline: true,
           hint: "**negrita**, {{nombre}}, {{saludo}}. Saltos de línea OK.",
         },
+        { ...ALIGN_FIELD, control: "align" },
       ];
     case "button":
       return [
         { key: "label", label: "Texto del botón" },
         { key: "href", label: "URL del enlace" },
+        { ...ALIGN_FIELD, control: "align" },
       ];
     case "image":
       return [
         { key: "src", label: "URL de la imagen" },
         { key: "alt", label: "Texto alternativo" },
         { key: "width", label: "Ancho (px)" },
+        { ...ALIGN_FIELD, control: "align" },
       ];
     case "dataRow":
       return [
@@ -209,6 +224,43 @@ function propFields(
     default:
       return [];
   }
+}
+
+function AlignPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const current = (value || "left").toLowerCase();
+  const opts = [
+    { value: "left", label: "Izq.", title: "Izquierda" },
+    { value: "center", label: "Centro", title: "Centrar" },
+    { value: "right", label: "Der.", title: "Derecha" },
+  ] as const;
+  return (
+    <div className="flex gap-1">
+      {opts.map((o) => {
+        const active = current === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            title={o.title}
+            className={`flex-1 rounded border px-2 py-1.5 text-[11px] font-semibold ${
+              active
+                ? "border-brand-blue bg-brand-blue text-white"
+                : "border-brand-blue/20 bg-white text-brand-blue/80 hover:bg-brand-blue/5"
+            }`}
+            onClick={() => onChange(o.value)}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function InformativosContent() {
@@ -789,6 +841,11 @@ export function InformativosContent() {
                         labelText={selected.props.label ?? ""}
                         valueText={selected.props.value ?? ""}
                         onChange={(v) => updateProps(selected.id, "icon", v)}
+                      />
+                    ) : f.control === "align" ? (
+                      <AlignPicker
+                        value={selected.props.align ?? "left"}
+                        onChange={(v) => updateProps(selected.id, "align", v)}
                       />
                     ) : f.options ? (
                       <select
