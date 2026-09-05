@@ -29,6 +29,7 @@ import {
 } from "@/lib/email/informativos/saludo";
 import { CATALOG_KINDS, renderCatalogBlock } from "./catalogRender";
 import { ASLI_TAILWIND, type StudioBlock, type StudioDocument } from "./types";
+import { ASLI_FOOTER } from "./asliFooter";
 import { resolveStudioColor, softTintFromColor } from "./colors";
 
 function boldParts(text: string): React.ReactNode {
@@ -1127,9 +1128,58 @@ function BlockView({
       const accentBar = resolveStudioColor(p.color, "#C8102E");
       const fVariant = (p.variant || "split").toLowerCase();
       const logo = p.logoUrl || assets.logoWhite;
-      const tagline = p.tagline || "Logística y Comercio Exterior";
-      const addr1 = p.address1 || "Dirección de ejemplo 123,";
-      const addr2 = p.address2 || "Ciudad, País";
+      const tagline = p.tagline || ASLI_FOOTER.tagline;
+      const addr1 = p.address1 || ASLI_FOOTER.address1;
+      const addr2 = p.address2 || ASLI_FOOTER.address2;
+      const contactName = p.contactName || ASLI_FOOTER.contactName;
+      const contactPhone = p.contactPhone || ASLI_FOOTER.contactPhone;
+      const contactHref = p.contactHref || ASLI_FOOTER.contactHref;
+      /* Alto contraste sobre navy (#0B1A3D): visible en preview claro y en studio neón oscuro */
+      const labelStyle: React.CSSProperties = {
+        margin: "0 0 4px 0",
+        fontSize: "9px",
+        fontWeight: 700,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: "#b8c7e8",
+      };
+      const bodyStyle: React.CSSProperties = {
+        margin: 0,
+        fontSize: "12px",
+        lineHeight: "18px",
+        color: "#ffffff",
+        fontWeight: 600,
+      };
+      const phoneStyle: React.CSSProperties = {
+        margin: "2px 0 0 0",
+        fontSize: "12px",
+        lineHeight: "18px",
+        color: "#2dd4bf",
+        textDecoration: "none",
+        fontWeight: 600,
+      };
+
+      const addressBlock = (
+        <>
+          <Text style={labelStyle}>Dirección</Text>
+          <Text style={bodyStyle}>
+            {addr1}
+            <br />
+            {addr2}
+          </Text>
+        </>
+      );
+      const contactBlock = (
+        <>
+          <Text style={{ ...labelStyle, marginTop: "12px" }}>Contacto</Text>
+          <Text style={bodyStyle}>{contactName}</Text>
+          <Text style={phoneStyle}>
+            <Link href={contactHref} style={phoneStyle}>
+              {contactPhone}
+            </Link>
+          </Text>
+        </>
+      );
 
       if (fVariant === "compact") {
         return (
@@ -1148,13 +1198,18 @@ function BlockView({
             <Text
               style={{
                 margin: "6px 0 0 0",
-                fontSize: "10px",
-                lineHeight: "15px",
-                color: "rgba(255,255,255,0.7)",
+                fontSize: "11px",
+                lineHeight: "16px",
+                color: "#ffffff",
                 textAlign: "center",
               }}
             >
-              {addr1} {addr2}
+              {addr1} · {addr2}
+            </Text>
+            <Text style={{ ...phoneStyle, textAlign: "center", marginTop: "4px" }}>
+              <Link href={contactHref} style={{ ...phoneStyle, textAlign: "center" }}>
+                {contactName} · {contactPhone}
+              </Link>
             </Text>
             <Section
               style={{
@@ -1200,33 +1255,19 @@ function BlockView({
             >
               {tagline}
             </Text>
-            <Text
-              style={{
-                margin: "8px 0 0 0",
-                fontSize: "10px",
-                lineHeight: "15px",
-                color: "rgba(255,255,255,0.75)",
-                textAlign: "center",
-              }}
-            >
+            <Text style={{ ...labelStyle, marginTop: "14px", textAlign: "center" }}>Dirección</Text>
+            <Text style={{ ...bodyStyle, textAlign: "center" }}>
               {addr1}
               <br />
               {addr2}
             </Text>
-            {(p.link1 || p.link2) ? (
-              <Text style={{ margin: "10px 0 0 0", fontSize: "11px", textAlign: "center" }}>
-                {p.link1 ? (
-                  <Link href={p.href1 || "https://asli.cl"} style={{ color: "#fff", margin: "0 8px", textDecoration: "underline" }}>
-                    {p.link1}
-                  </Link>
-                ) : null}
-                {p.link2 ? (
-                  <Link href={p.href2 || "https://asli.cl"} style={{ color: "#fff", margin: "0 8px", textDecoration: "underline" }}>
-                    {p.link2}
-                  </Link>
-                ) : null}
-              </Text>
-            ) : null}
+            <Text style={{ ...labelStyle, marginTop: "12px", textAlign: "center" }}>Contacto</Text>
+            <Text style={{ ...bodyStyle, textAlign: "center" }}>{contactName}</Text>
+            <Text style={{ ...phoneStyle, textAlign: "center" }}>
+              <Link href={contactHref} style={{ ...phoneStyle, textAlign: "center" }}>
+                {contactPhone}
+              </Link>
+            </Text>
             <Section style={{ backgroundColor: accentBar, height: "4px", lineHeight: "4px", marginTop: "14px" }}>
               <Text style={{ margin: 0, fontSize: "1px", lineHeight: "4px", color: accentBar }}>
                 &nbsp;
@@ -1237,35 +1278,18 @@ function BlockView({
       }
 
       if (fVariant === "twocol" || fVariant === "two-col") {
-        const links = (p.menu || "Servicios|Tracking|Contacto|Privacidad")
-          .split(/[|·•]/)
-          .map((s) => s.trim())
-          .filter(Boolean);
         return (
           <Section style={{ backgroundColor: "#0B1A3D", padding: "18px" }}>
             <Row>
               <Column style={{ width: "48%", verticalAlign: "top", paddingRight: "10px" }}>
                 <Img src={logo} width="96" alt="ASLI" style={{ display: "block", border: 0 }} />
-                <Text style={{ margin: "8px 0 0 0", fontSize: "11px", color: "rgba(255,255,255,0.8)", lineHeight: "16px" }}>
+                <Text style={{ margin: "8px 0 0 0", fontSize: "11px", color: "rgba(255,255,255,0.9)", lineHeight: "16px" }}>
                   {tagline}
-                </Text>
-                <Text style={{ margin: "8px 0 0 0", fontSize: "10px", color: "rgba(255,255,255,0.65)", lineHeight: "15px" }}>
-                  {addr1}
-                  <br />
-                  {addr2}
                 </Text>
               </Column>
               <Column style={{ width: "52%", verticalAlign: "top", paddingLeft: "10px" }}>
-                <Text style={{ margin: "0 0 8px 0", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff" }}>
-                  Enlaces
-                </Text>
-                {links.map((l, i) => (
-                  <Text key={i} style={{ margin: "0 0 6px 0", fontSize: "12px" }}>
-                    <Link href={p.href || "https://asli.cl"} style={{ color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
-                      {l}
-                    </Link>
-                  </Text>
-                ))}
+                {addressBlock}
+                {contactBlock}
               </Column>
             </Row>
             <Section style={{ backgroundColor: accentBar, height: "3px", lineHeight: "3px", marginTop: "14px" }}>
@@ -1275,10 +1299,11 @@ function BlockView({
         );
       }
 
+      // split (default): logo | dirección + contacto
       return (
         <Section style={{ backgroundColor: "#0B1A3D", padding: "16px 18px" }}>
           <Row>
-            <Column style={{ width: "48%", verticalAlign: "middle", paddingRight: "10px" }}>
+            <Column style={{ width: "42%", verticalAlign: "top", paddingRight: "10px" }}>
               <Img
                 src={logo}
                 width="96"
@@ -1287,8 +1312,8 @@ function BlockView({
               />
               <Text
                 style={{
-                  margin: "6px 0 0 0",
-                  fontSize: "8px",
+                  margin: "8px 0 0 0",
+                  fontSize: "9px",
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
                   color: "#ffffff",
@@ -1301,26 +1326,14 @@ function BlockView({
               <div
                 style={{
                   width: "3px",
-                  height: "40px",
+                  height: "72px",
                   backgroundColor: accentBar,
                 }}
               />
             </Column>
-            <Column style={{ width: "48%", verticalAlign: "middle", paddingLeft: "10px" }}>
-              <Text
-                style={{
-                  margin: 0,
-                  fontSize: "10px",
-                  lineHeight: "15px",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  color: "#ffffff",
-                }}
-              >
-                {addr1}
-                <br />
-                {addr2}
-              </Text>
+            <Column style={{ width: "54%", verticalAlign: "top", paddingLeft: "12px" }}>
+              {addressBlock}
+              {contactBlock}
             </Column>
           </Row>
         </Section>

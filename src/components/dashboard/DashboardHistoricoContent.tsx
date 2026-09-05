@@ -10,6 +10,8 @@ import { aplicarFiltroTemporada, listarTemporadas, type Temporada } from "@/lib/
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { normalizarEstado } from "@/lib/operaciones/estados";
 import { DashboardViewTabs, type DashboardView } from "./DashboardViewTabs";
+import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
+import type { NeonTheme } from "@/lib/ui/neonTheme";
 
 type OperacionVolumen = {
   etd: string | null;
@@ -26,6 +28,8 @@ type OperacionVolumen = {
 type Props = {
   view: DashboardView;
   onViewChange: (view: DashboardView) => void;
+  theme?: NeonTheme;
+  onThemeChange?: (theme: NeonTheme) => void;
 };
 
 /** Anotado como `string` a propósito: con el literal, el genérico de PostgREST hace explotar la inferencia. */
@@ -46,7 +50,12 @@ function parseEtd(value: string | null): Date | null {
   }
 }
 
-export function DashboardHistoricoContent({ view, onViewChange }: Props) {
+export function DashboardHistoricoContent({
+  view,
+  onViewChange,
+  theme = "dark",
+  onThemeChange,
+}: Props) {
   const { t, locale } = useLocale();
   const tr = t.dashboard;
   const { isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
@@ -261,29 +270,29 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
   ];
 
   return (
-    <main className="relative flex-1 min-h-0 overflow-y-auto flex flex-col bg-dash-bg text-base">
-      <div className="absolute inset-0 pointer-events-none">
+    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto text-base">
+      <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
       </div>
 
-      <div className="relative shrink-0 z-10 bg-dash-header/90 border-b border-cyan-400/20 backdrop-blur">
-        <div className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex w-full items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-cyan-100 tracking-tight leading-tight">{tr.historicTitle}</h1>
-            <p className="text-sm text-cyan-300/70 truncate mt-1">
+            <h1 className="dash-title text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{tr.historicTitle}</h1>
+            <p className="dash-subtitle mt-1 truncate text-sm">
               {tr.volumeCancelledExcluded}
               {totales.sinEtd > 0 && <> · {fmt(totales.sinEtd)} {tr.volumeNoEtd}</>}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <DashboardViewTabs view={view} onChange={onViewChange} />
             <label className="sr-only" htmlFor="dashboard-temporada">{tr.season}</label>
             <select
               id="dashboard-temporada"
               value={temporadaSel ?? ""}
               onChange={(e) => setTemporadaSel(e.target.value || null)}
-              className="px-3 py-2 text-base font-medium text-cyan-100 bg-dash-control/85 border border-cyan-300/25 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+              className="dash-control rounded-lg px-3 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
             >
               {temporadas.map((tp) => (
                 <option key={tp.id} value={tp.nombre} className="text-neutral-800">
@@ -294,11 +303,12 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
             <button
               type="button"
               onClick={() => void fetchVolumen()}
-              className="p-2.5 text-cyan-200/70 hover:text-cyan-100 bg-dash-control/85 border border-cyan-300/25 rounded-lg hover:bg-dash-control-hover transition-colors"
+              className="dash-control rounded-lg p-2.5 transition-colors"
               title={tr.refresh}
             >
-              <Icon icon="lucide:refresh-cw" className="w-5 h-5" />
+              <Icon icon="lucide:refresh-cw" className="h-5 w-5" />
             </button>
+            <NeonThemeToggle theme={theme} onThemeChange={onThemeChange} />
           </div>
         </div>
       </div>
@@ -316,35 +326,35 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
         <div className="relative flex flex-col gap-4 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
             {kpis.map((kpi) => (
-              <div key={kpi.key} className={`rounded-xl border ${kpi.ring} bg-dash-surface/90 px-3.5 py-3.5 min-w-0`}>
+              <div key={kpi.key} className="dash-card rounded-xl px-3.5 py-3.5 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-cyan-200/80 leading-snug line-clamp-2">{kpi.label}</p>
+                  <p className="text-sm font-semibold text-dash-fg leading-snug line-clamp-2">{kpi.label}</p>
                   <Icon icon={kpi.icon} width={18} height={18} className={`shrink-0 mt-0.5 ${kpi.accent}`} />
                 </div>
                 <p className={`text-3xl sm:text-4xl font-bold tabular-nums leading-none mt-2.5 ${kpi.accent}`}>{kpi.value}</p>
-                {kpi.hint && <p className="text-sm text-cyan-100/55 leading-snug line-clamp-2 mt-2">{kpi.hint}</p>}
+                {kpi.hint && <p className="text-sm text-dash-muted leading-snug line-clamp-2 mt-2">{kpi.hint}</p>}
               </div>
             ))}
           </div>
 
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden">
+          <div className="dash-card rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-cyan-100">{tr.volumeByMonth}</p>
+              <p className="text-base font-bold text-dash-fg">{tr.volumeByMonth}</p>
               {totales.cobertura.pallets > 0 && (
-                <p className="text-sm text-cyan-300/65">
+                <p className="text-sm text-dash-muted">
                   {tr.volumeAvgPallets}: {totales.palletsPorOperacion.toLocaleString(intl, { maximumFractionDigits: 1 })}
                 </p>
               )}
             </div>
             {porMes.items.length === 0 ? (
-              <p className="px-4 py-10 text-center text-base text-cyan-100/55">{tr.noData}</p>
+              <p className="px-4 py-10 text-center text-base text-dash-muted">{tr.noData}</p>
             ) : (
               <div className="px-4 py-4 flex items-end gap-2 overflow-x-auto">
                 {porMes.items.map((item) => {
                   const height = (item.operaciones / porMes.max) * 100;
                   return (
                     <div key={item.inicio.toISOString()} className="flex-1 min-w-[3rem] flex flex-col items-center gap-1.5">
-                      <span className="text-sm font-semibold text-cyan-100/85 tabular-nums">{item.operaciones}</span>
+                      <span className="text-sm font-semibold text-dash-fg/85 tabular-nums">{item.operaciones}</span>
                       <div className="w-full h-40 flex items-end bg-cyan-950/45 rounded-sm overflow-hidden">
                         <div
                           className="w-full bg-sky-400/80 rounded-sm"
@@ -356,7 +366,7 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
                           }
                         />
                       </div>
-                      <span className="text-xs text-cyan-300/60 whitespace-nowrap">
+                      <span className="text-xs text-dash-muted whitespace-nowrap">
                         {format(item.inicio, "MMM yy", { locale: locale === "es" ? es : undefined })}
                       </span>
                     </div>
@@ -367,19 +377,19 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden">
+            <div className="dash-card rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-cyan-300/15">
-                <p className="text-base font-bold text-cyan-200/90">{tr.volumeByUnitType}</p>
+                <p className="text-base font-bold text-dash-fg">{tr.volumeByUnitType}</p>
               </div>
               <div className="px-4 py-3 space-y-2.5">
                 {porTipoUnidad.items.length === 0 ? (
-                  <p className="text-base text-cyan-100/40">{tr.noData}</p>
+                  <p className="text-base text-dash-muted">{tr.noData}</p>
                 ) : (
                   porTipoUnidad.items.map((item) => (
                     <div key={item.tipo}>
                       <div className="flex justify-between gap-2 text-base mb-1">
-                        <span className="text-cyan-50/95 truncate">{item.tipo}</span>
-                        <span className="tabular-nums text-cyan-200/90 shrink-0 font-semibold">{fmt(item.cantidad)}</span>
+                        <span className="text-dash-fg truncate">{item.tipo}</span>
+                        <span className="tabular-nums text-dash-fg shrink-0 font-semibold">{fmt(item.cantidad)}</span>
                       </div>
                       <div className="h-2 bg-cyan-950/45 rounded-full overflow-hidden">
                         <div
@@ -393,18 +403,18 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
               </div>
             </div>
 
-            <div className="rounded-xl border border-fuchsia-400/20 bg-dash-surface/90 overflow-hidden">
+            <div className="dash-card rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-fuchsia-300/15">
                 <p className="text-base font-bold text-fuchsia-200/90">{tr.volumeBySpecies}</p>
               </div>
               <div className="px-4 py-3 space-y-2.5">
                 {porEspecie.items.length === 0 ? (
-                  <p className="text-base text-cyan-100/40">{tr.noData}</p>
+                  <p className="text-base text-dash-muted">{tr.noData}</p>
                 ) : (
                   porEspecie.items.map((item) => (
                     <div key={item.especie}>
                       <div className="flex justify-between gap-2 text-base mb-1">
-                        <span className="text-cyan-50/95 truncate">{item.especie}</span>
+                        <span className="text-dash-fg truncate">{item.especie}</span>
                         <span className="tabular-nums text-fuchsia-200 shrink-0 font-semibold">
                           {fmt(item.operaciones)}
                           {item.pallets > 0 && <> · {fmt(item.pallets)} {tr.volumePallets.toLowerCase()}</>}

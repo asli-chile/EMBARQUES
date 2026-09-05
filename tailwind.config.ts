@@ -17,17 +17,20 @@ const config: Config = {
         "brand-olive": "#669900",
         "brand-gray": "#6B7280",
         "brand-red": "#B91C1C",
-        /* Superficies del dashboard (tema oscuro). Ver docs/ESTILOS-VISUALES.md */
-        "dash-bg": "#060B17",
-        "dash-header": "#0A1328",
-        "dash-surface": "#0D1830",
-        "dash-surface-hover": "#12203C",
-        "dash-control": "#111E38",
-        "dash-control-hover": "#172748",
+        /* Hex vía CSS vars del .dash-neon[data-theme] (dashboard-neon.css) */
+        dash: {
+          bg: "var(--dash-bg)",
+          header: "var(--dash-header)",
+          surface: "var(--dash-surface)",
+          "surface-hover": "var(--dash-surface-hover)",
+          control: "var(--dash-control)",
+          "control-hover": "var(--dash-control-hover)",
+          fg: "var(--dash-fg)",
+          muted: "var(--dash-muted)",
+          neon: "var(--dash-neon)",
+          "neon-hot": "var(--dash-neon-hot)",
+        },
       },
-      /* Las animaciones viven en src/styles/motion.css, no aquí: un solo lugar
-         donde buscarlas. Esto solo expone los tokens como utilidades de Tailwind
-         (`duration-fast`, `ease-enter`…). Ver docs/MOTION-DESIGN.md */
       transitionTimingFunction: {
         enter: "var(--motion-ease-enter)",
         exit: "var(--motion-ease-exit)",

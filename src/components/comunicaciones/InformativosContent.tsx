@@ -42,20 +42,20 @@ import {
 } from "@/lib/email/informativos/render";
 import { DATA_ROW_ICON_OPTIONS, dataRowIconSrc } from "@/lib/email/assets";
 import { STUDIO_COLOR_OPTIONS, resolveStudioColor } from "@/emails/studio/colors";
+import {
+  readNeonTheme,
+  type NeonTheme,
+} from "@/lib/ui/neonTheme";
+import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
+import "@/styles/informativos-studio.css";
 
-/** Tokens UI — studio tipo Canva (claros, compactos). */
-const input =
-  "w-full rounded-lg border border-[#d5dde8] bg-white px-2.5 py-1.5 text-[12px] text-[#1a2744] placeholder:text-[#1a2744]/40 shadow-sm focus:border-[#11224E]/35 focus:outline-none focus:ring-2 focus:ring-[#11224E]/12";
-const label =
-  "mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5a6b85]";
-const btn =
-  "inline-flex items-center justify-center gap-1 rounded-lg border border-[#d5dde8] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#1a2744]/85 shadow-sm hover:bg-[#f3f6fb] disabled:opacity-40";
-const btnPrimary =
-  "inline-flex items-center justify-center gap-1 rounded-lg bg-[#11224E] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:bg-[#0d1a3d] disabled:opacity-40";
-const btnGhost =
-  "inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-[#1a2744]/70 hover:bg-black/5 disabled:opacity-40";
-const boardBg =
-  "bg-[#d8e0ea] [background-image:radial-gradient(circle,_#b8c4d4_1px,_transparent_1px)] [background-size:16px_16px]";
+/** Tokens UI — neón ASLI (variables en informativos-studio.css). */
+const input = "inf-input";
+const label = "inf-label";
+const btn = "inf-btn";
+const btnPrimary = "inf-btn-primary";
+const btnGhost = "inf-btn-ghost";
+const boardBg = "inf-board";
 
 const PRESET_ICONS: Record<BlockKind, string> = {
   headerAsli: "lucide:panel-top",
@@ -463,15 +463,16 @@ function propFields(
             { value: "split", label: "Dividido (logo | dirección)" },
             { value: "centered", label: "Centrado" },
             { value: "compact", label: "Compacto" },
-            { value: "oneCol", label: "Una columna (React Email)" },
-            { value: "twoCol", label: "Dos columnas (React Email)" },
+            { value: "oneCol", label: "Una columna" },
+            { value: "twoCol", label: "Dos columnas" },
           ],
         },
         { key: "logoUrl", label: "URL logo (vacío = logo ASLI)" },
         { key: "tagline", label: "Línea bajo el logo" },
         { key: "address1", label: "Dirección línea 1" },
         { key: "address2", label: "Dirección línea 2" },
-        { key: "menu", label: "Enlaces (twoCol, con | )" },
+        { key: "contactName", label: "Contacto (nombre)" },
+        { key: "contactPhone", label: "Teléfono" },
         {
           ...COLOR_FIELD,
           label: "Color acento",
@@ -1225,7 +1226,7 @@ function StudioPanelTabs({
   ];
 
   return (
-    <div className="flex items-center gap-1 rounded-xl bg-[#0B1A3D]/[0.06] p-1 ring-1 ring-[#11224E]/10">
+    <div className="flex items-center gap-1 rounded-xl bg-[var(--inf-neon-soft)] p-1 ring-1 ring-[color-mix(in_srgb,var(--inf-neon)_28%,transparent)]">
       {tabs.map((tab) => {
         const active = panel === tab.id;
         return (
@@ -1236,8 +1237,8 @@ function StudioPanelTabs({
             onClick={() => onPanel(tab.id)}
             className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
               active
-                ? "bg-[#11224E] text-white shadow-sm"
-                : "text-[#5a6b85] hover:bg-white hover:text-[#11224E]"
+                ? "inf-chip-active"
+                : "text-[var(--inf-muted)] hover:bg-[var(--inf-surface)] hover:text-[var(--inf-fg)]"
             }`}
           >
             <Icon icon={tab.icon} width={13} />
@@ -1423,8 +1424,8 @@ function LibraryAddPanel({
   }, [q, allItems, groups, activeGroup]);
 
   return (
-    <div className="flex min-h-0 flex-col border-b border-[#e8eef5]">
-      <div className="px-2.5 pb-1.5 pt-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 px-2.5 pb-1.5 pt-2">
         <div className="mb-2 flex items-center justify-between px-0.5">
           <p className={label + " mb-0"}>Elementos</p>
           <span className="text-[9px] font-semibold text-[#5a6b85]/80">
@@ -1448,7 +1449,7 @@ function LibraryAddPanel({
       </div>
 
       {!q ? (
-        <div className="flex gap-1 overflow-x-auto px-2.5 pb-2 scrollbar-thin">
+        <div className="flex shrink-0 gap-1 overflow-x-auto px-2.5 pb-2 scrollbar-thin">
           {groups.map(({ group }) => {
             const active = activeGroup === group.id;
             return (
@@ -1458,9 +1459,7 @@ function LibraryAddPanel({
                 title={group.label}
                 onClick={() => setActiveGroup(group.id)}
                 className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
-                  active
-                    ? "bg-[#11224E] text-white shadow-sm"
-                    : "bg-[#eef2f8] text-[#1a2744]/75 hover:bg-[#e2e8f0]"
+                  active ? "inf-chip-active" : "inf-chip-idle"
                 }`}
               >
                 <Icon icon={group.icon} width={11} />
@@ -1470,14 +1469,14 @@ function LibraryAddPanel({
           })}
         </div>
       ) : (
-        <p className="px-3 pb-1.5 text-[9px] font-semibold text-[#5a6b85]">
+        <p className="shrink-0 px-3 pb-1.5 text-[9px] font-semibold text-[#5a6b85]">
           Resultados de búsqueda
         </p>
       )}
 
-      <div className="max-h-[340px] overflow-y-auto px-2 pb-2.5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2.5">
         {visibleItems.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#d5dde8] bg-[#f8fafc] px-3 py-6 text-center text-[11px] text-[#5a6b85]">
+          <p className="rounded-xl border border-dashed border-[var(--inf-border)] bg-[var(--inf-surface-soft)] px-3 py-6 text-center text-[11px] text-[var(--inf-muted)]">
             Sin coincidencias. Prueba otra palabra.
           </p>
         ) : (
@@ -1488,19 +1487,19 @@ function LibraryAddPanel({
                 type="button"
                 title={`${item.label} — ${item.description}`}
                 onClick={() => onAdd(item)}
-                className="group flex flex-col overflow-hidden rounded-xl border border-[#e2e8f0] bg-white text-left shadow-[0_1px_0_rgba(17,34,78,0.04)] transition hover:-translate-y-0.5 hover:border-[#11224E]/25 hover:shadow-[0_8px_18px_-12px_rgba(17,34,78,0.45)]"
+                className="inf-tile group flex flex-col overflow-hidden rounded-xl text-left transition"
               >
-                <div className="relative h-[58px] bg-[#f3f6fb]">
+                <div className="inf-tile-preview relative h-[58px]">
                   <LibraryTilePreview kind={item.kind} />
-                  <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-md bg-white/90 text-[#11224E] opacity-0 shadow-sm ring-1 ring-[#e2e8f0] transition group-hover:opacity-100">
+                  <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-md bg-[var(--inf-surface)] text-[var(--inf-neon)] opacity-0 shadow-sm ring-1 ring-[var(--inf-border)] transition group-hover:opacity-100">
                     <Icon icon="lucide:plus" width={12} />
                   </span>
                 </div>
-                <div className="border-t border-[#eef2f8] px-2 py-1.5">
-                  <p className="truncate text-[10px] font-bold leading-tight text-[#11224E]">
+                <div className="border-t border-[var(--inf-border-soft)] px-2 py-1.5">
+                  <p className="truncate text-[10px] font-bold leading-tight text-[var(--inf-fg)]">
                     {item.label}
                   </p>
-                  <p className="mt-0.5 truncate text-[9px] leading-tight text-[#5a6b85]">
+                  <p className="mt-0.5 truncate text-[9px] leading-tight text-[var(--inf-muted)]">
                     {item.description}
                   </p>
                 </div>
@@ -1509,8 +1508,8 @@ function LibraryAddPanel({
           </div>
         )}
       </div>
-      <p className="border-t border-[#eef2f8] px-3 py-1.5 text-[9px] leading-4 text-[#5a6b85]/85">
-        Un clic agrega. El estilo (variante, color, imagen) se cambia a la derecha en Propiedades.
+      <p className="shrink-0 border-t border-[var(--inf-border-soft)] px-3 py-1.5 text-[9px] leading-4 text-[var(--inf-muted)]">
+        Un clic agrega. Edita en el preview o en Propiedades.
       </p>
     </div>
   );
@@ -1573,9 +1572,14 @@ export function InformativosContent() {
   const [previewKey, setPreviewKey] = useState(0);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>("compose");
-  const [capasOpen, setCapasOpen] = useState(true);
+  const [capasOpen, setCapasOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [studioTheme, setStudioTheme] = useState<NeonTheme>("dark");
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    setStudioTheme(readNeonTheme());
+  }, []);
 
   const [destRaw, setDestRaw] = useState("");
   const [resolved, setResolved] = useState<DestinatarioAgenda[]>([]);
@@ -2332,7 +2336,7 @@ export function InformativosContent() {
         Sin bloque activo
       </p>
       <p className="relative mx-auto mt-1.5 max-w-[200px] text-[11px] leading-5 text-[#5a6b85]">
-        Elige un bloque en Capas o en el lienzo. Marca varios para alinearlos juntos.
+        Haz clic en el preview para editar. Capas queda abajo si necesitas selección múltiple.
       </p>
       <div className="relative mt-4 flex flex-wrap justify-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-lg bg-[#11224E]/[0.05] px-2 py-1 text-[9px] font-semibold text-[#11224E]/80 ring-1 ring-[#11224E]/10">
@@ -2447,7 +2451,7 @@ export function InformativosContent() {
                 />
               )}
               {f.hint ? (
-                <p className="mt-1.5 text-[10px] leading-4 text-[#5a6b85]">{f.hint}</p>
+                  <p className="mt-1.5 text-[10px] leading-4 text-[var(--inf-muted)]">{f.hint}</p>
               ) : null}
             </div>
           ))}
@@ -2457,12 +2461,16 @@ export function InformativosContent() {
   );
 
   return (
-    <main className="relative flex h-full min-h-0 flex-1 flex-col bg-[#cfd8e6]">
-      <div className="z-10 flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[#c5d0e0] bg-white/95 px-3 py-1.5">
+    <main
+      className={`inf-studio relative flex h-full min-h-0 flex-1 flex-col ${
+        studioTheme === "dark" ? "inf-studio--dark" : ""
+      }`}
+    >
+      <div className="inf-toolbar z-10 flex flex-shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <StudioPanelTabs panel={panel} onPanel={setPanel} />
         {panel === "compose" ? (
           <>
-            <p className="hidden text-[11px] font-semibold text-[#5a6b85] sm:inline">
+            <p className="inf-muted hidden text-[11px] font-semibold sm:inline">
               Plantilla
             </p>
             <div className="flex min-w-0 items-center gap-1">
@@ -2505,25 +2513,25 @@ export function InformativosContent() {
 
             <div className="mx-auto flex min-w-0 justify-center">
               {selected && !multiSelected ? (
-                <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-[#e2e8f0] bg-[#f7f9fc] py-1 pl-1.5 pr-1 shadow-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-sm">
+                <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-[var(--inf-border)] bg-[var(--inf-surface-soft)] py-1 pl-1.5 pr-1 shadow-[var(--inf-glow)]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--inf-navy)] to-[var(--inf-navy-2)] text-white shadow-[var(--inf-glow)]">
                     <Icon
                       icon={PRESET_ICONS[selected.kind] ?? "lucide:box"}
                       width={14}
                     />
                   </span>
                   <div className="min-w-0 max-w-[140px] flex-1 sm:max-w-[180px]">
-                    <p className="truncate text-[11px] font-bold leading-tight text-[#11224E]">
+                    <p className="truncate text-[11px] font-bold leading-tight text-[var(--inf-fg)]">
                       {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
                     </p>
-                    <p className="truncate text-[9px] leading-tight text-[#5a6b85]">
+                    <p className="truncate text-[9px] leading-tight text-[var(--inf-muted)]">
                       {
                         STUDIO_PRESETS.find((x) => x.kind === selected.kind)
                           ?.description
                       }
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-white p-0.5 ring-1 ring-[#e2e8f0]">
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-[var(--inf-surface)] p-0.5 ring-1 ring-[var(--inf-border)]">
                     <button
                       type="button"
                       className={btnGhost + " !px-1.5 !py-1.5"}
@@ -2552,7 +2560,7 @@ export function InformativosContent() {
                       type="button"
                       className={
                         btnGhost +
-                        " !px-1.5 !py-1.5 text-[#C8102E] hover:bg-[#C8102E]/10"
+                        " !px-1.5 !py-1.5 text-[var(--inf-neon-hot)] hover:bg-[var(--inf-neon-soft)]"
                       }
                       title="Eliminar (Delete)"
                       onClick={(e) => {
@@ -2566,7 +2574,7 @@ export function InformativosContent() {
                   </div>
                 </div>
               ) : multiSelected ? (
-                <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-[#11224E] to-[#0B1A3D] py-1 pl-1.5 pr-1 text-white shadow-md">
+                <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--inf-navy)] to-[var(--inf-navy-2)] py-1 pl-1.5 pr-1 text-white shadow-[var(--inf-glow)]">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
                     <Icon icon="lucide:layers" width={14} />
                   </span>
@@ -2595,7 +2603,7 @@ export function InformativosContent() {
                     </button>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 rounded-lg bg-[#C8102E] px-2 py-1.5 text-[10px] font-semibold text-white hover:bg-[#a50d26]"
+                      className="inline-flex items-center gap-1 rounded-lg bg-[var(--inf-neon-hot)] px-2 py-1.5 text-[10px] font-semibold text-white shadow-[var(--inf-glow-hot)] hover:brightness-110"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -2611,12 +2619,17 @@ export function InformativosContent() {
               ) : null}
             </div>
 
-            <div className="ml-auto flex items-center">
+            <div className="ml-auto flex items-center gap-1.5">
+              <NeonThemeToggle
+                theme={studioTheme}
+                onThemeChange={setStudioTheme}
+                buttonClassName="inf-theme-toggle inline-flex h-8 w-8 items-center justify-center rounded-lg"
+              />
               <button
                 type="button"
                 className={
                   btnPrimary +
-                  " !rounded-xl !px-3.5 !py-2 shadow-[0_6px_16px_-6px_rgba(17,34,78,0.55)]"
+                  " !rounded-xl !px-3.5 !py-2"
                 }
                 title="Ir a enviar"
                 onClick={() => setPanel("send")}
@@ -2627,12 +2640,17 @@ export function InformativosContent() {
             </div>
           </>
         ) : panel === "agenda" ? (
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center gap-1.5">
+            <NeonThemeToggle
+              theme={studioTheme}
+              onThemeChange={setStudioTheme}
+              buttonClassName="inf-theme-toggle inline-flex h-8 w-8 items-center justify-center rounded-lg"
+            />
             <button
               type="button"
               className={
                 btnPrimary +
-                " !rounded-xl !px-3.5 !py-2 shadow-[0_6px_16px_-6px_rgba(17,34,78,0.55)]"
+                " !rounded-xl !px-3.5 !py-2"
               }
               title="Ir a enviar"
               onClick={() => setPanel("send")}
@@ -2641,7 +2659,15 @@ export function InformativosContent() {
               Enviar
             </button>
           </div>
-        ) : null}
+        ) : (
+          <div className="ml-auto flex items-center">
+            <NeonThemeToggle
+              theme={studioTheme}
+              onThemeChange={setStudioTheme}
+              buttonClassName="inf-theme-toggle inline-flex h-8 w-8 items-center justify-center rounded-lg"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -2650,31 +2676,36 @@ export function InformativosContent() {
       {/* Studio body: left | canvas | right */}
       <div className="flex min-h-0 flex-1 flex-col overflow-auto lg:flex-row lg:overflow-hidden">
         {/* Left rail */}
-        <aside className="flex w-full flex-col border-b border-[#c5d0e0] bg-white lg:w-[248px] lg:shrink-0 lg:border-b-0 lg:border-r">
+        <aside className="inf-panel flex h-full max-h-[420px] w-full flex-col border-b lg:max-h-none lg:w-[248px] lg:shrink-0 lg:border-b-0 lg:border-r">
           <LibraryAddPanel onAdd={addLibraryItem} />
 
           <div
-            className={`flex flex-col px-2 py-2 ${
-              capasOpen ? "min-h-0 flex-1" : "shrink-0 border-t border-[#eef2f8]"
+            className={`inf-capas-bar mt-auto flex shrink-0 flex-col border-t px-2 py-1.5 ${
+              capasOpen ? "max-h-[38%] min-h-0" : ""
             }`}
           >
-            <div className="mb-0 flex items-center gap-1 px-1">
+            <div className="flex items-center gap-1 px-0.5">
               <button
                 type="button"
-                className="flex min-w-0 flex-1 items-center gap-1 rounded-lg py-0.5 text-left hover:bg-[#f3f6fb]"
+                className="flex min-w-0 flex-1 items-center gap-1 rounded-lg py-1 text-left hover:bg-[var(--inf-neon-soft)]"
                 title={capasOpen ? "Minimizar Capas" : "Expandir Capas"}
                 aria-expanded={capasOpen}
                 onClick={() => setCapasOpen((v) => !v)}
               >
                 <Icon
-                  icon={capasOpen ? "lucide:chevron-down" : "lucide:chevron-right"}
+                  icon={capasOpen ? "lucide:chevron-up" : "lucide:chevron-down"}
                   width={14}
-                  className="shrink-0 text-[#5a6b85]"
+                  className="shrink-0 text-[var(--inf-muted)]"
                 />
                 <p className={`${label} mb-0`}>Capas</p>
-                <span className="rounded-full bg-[#eef2f8] px-1.5 py-0.5 text-[9px] font-bold text-[#5a6b85]">
+                <span className="rounded-full bg-[var(--inf-surface)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--inf-muted)] ring-1 ring-[var(--inf-border)]">
                   {doc.blocks.length}
                 </span>
+                {!capasOpen ? (
+                  <span className="ml-auto truncate text-[9px] font-medium text-[var(--inf-muted)]">
+                    Clic en preview
+                  </span>
+                ) : null}
               </button>
               {capasOpen ? (
                 <>
@@ -2700,8 +2731,8 @@ export function InformativosContent() {
             </div>
             {capasOpen ? (
               <>
-                <p className="mb-1.5 mt-1 px-1 text-[9px] leading-3 text-[#5a6b85]/80">
-                  Clic · Ctrl/Cmd sumar · Shift rango · Del borrar · Ctrl Z/X/C/V
+                <p className="mb-1 mt-0.5 px-1 text-[9px] leading-3 text-[var(--inf-muted)]">
+                  Opcional · Ctrl sumar · Shift rango · Del
                 </p>
                 <ul className="min-h-0 flex-1 space-y-0.5 overflow-auto pr-0.5">
                   {doc.blocks.map((b, idx) => {
@@ -2719,9 +2750,9 @@ export function InformativosContent() {
                           className={`flex items-stretch gap-0.5 rounded-lg transition ${
                             active
                               ? isFocus
-                                ? "bg-[#11224E] text-white shadow-sm"
-                                : "bg-[#11224E]/80 text-white"
-                              : "text-[#1a2744]/80 hover:bg-[#eef2f8]"
+                                ? "inf-chip-active"
+                                : "bg-[color-mix(in_srgb,var(--inf-navy)_80%,var(--inf-neon))] text-white"
+                              : "text-[var(--inf-fg-soft)] hover:bg-[var(--inf-neon-soft)]"
                           }`}
                         >
                           <label
@@ -2754,7 +2785,7 @@ export function InformativosContent() {
                               {summary ? (
                                 <span
                                   className={`mt-0.5 block truncate text-[9px] font-normal ${
-                                    active ? "text-white/65" : "text-[#5a6b85]"
+                                    active ? "text-white/65" : "text-[var(--inf-muted)]"
                                   }`}
                                 >
                                   {summary}
@@ -2767,7 +2798,7 @@ export function InformativosContent() {
                     );
                   })}
                   {doc.blocks.length === 0 ? (
-                    <li className="px-2 py-6 text-center text-[11px] text-[#5a6b85]">
+                    <li className="px-2 py-4 text-center text-[11px] text-[var(--inf-muted)]">
                       Sin capas. Agrega un componente.
                     </li>
                   ) : null}
@@ -2780,16 +2811,16 @@ export function InformativosContent() {
         {/* Center canvas */}
         <section className={`relative flex min-h-[420px] min-w-0 flex-1 flex-col lg:min-h-0 ${boardBg}`}>
           <div className="pointer-events-none absolute inset-x-0 top-3 z-[1] flex justify-center">
-            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 shadow-md backdrop-blur">
-              <Icon icon="lucide:user" width={13} className="text-[#5a6b85]" />
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-[var(--inf-border)] bg-[color-mix(in_srgb,var(--inf-surface)_90%,transparent)] px-3 py-1.5 shadow-[var(--inf-glow)] backdrop-blur">
+              <Icon icon="lucide:user" width={13} className="text-[var(--inf-muted)]" />
               <input
-                className="w-[110px] border-0 bg-transparent text-[11px] font-semibold text-[#11224E] outline-none"
+                className="w-[110px] border-0 bg-transparent text-[11px] font-semibold text-[var(--inf-fg)] outline-none"
                 value={previewNombre}
                 onChange={(e) => setPreviewNombre(e.target.value)}
                 aria-label="Nombre preview"
                 title="Nombre para personalizar el preview"
               />
-              <span className="hidden text-[9px] text-[#5a6b85] sm:inline">
+              <span className="inf-muted hidden text-[9px] sm:inline">
                 · clic en el correo para editar
               </span>
               {previewError ? (
@@ -2803,12 +2834,12 @@ export function InformativosContent() {
           <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 pt-14">
             <div className="mx-auto w-full max-w-[680px]">
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#5a6b85]/80">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--inf-muted)]">
                   Artboard · email
                 </span>
-                <span className="text-[10px] text-[#5a6b85]/70">650px</span>
+                <span className="text-[10px] text-[var(--inf-muted)]">650px</span>
               </div>
-              <div className="overflow-hidden rounded-xl bg-white shadow-[0_12px_40px_-12px_rgba(17,34,78,0.35)] ring-1 ring-black/5">
+              <div className="inf-artboard-frame overflow-hidden rounded-xl bg-[var(--inf-surface)] shadow-[var(--inf-shadow)] ring-1 ring-[var(--inf-border)]">
                 {previewHtml ? (
                   <iframe
                     key={previewKey}
@@ -2819,7 +2850,7 @@ export function InformativosContent() {
                     onLoad={syncPreviewSelection}
                   />
                 ) : (
-                  <p className="p-10 text-center text-[12px] text-[#5a6b85]">
+                  <p className="p-10 text-center text-[12px] text-[var(--inf-muted)]">
                     Generando preview…
                   </p>
                 )}
@@ -2830,7 +2861,7 @@ export function InformativosContent() {
 
         {/* Right inspector — minimizable a la derecha */}
         <aside
-          className={`relative flex flex-col overflow-hidden border-t border-[#c5d0e0] bg-[#e8eef6] transition-[width] duration-200 ease-out lg:shrink-0 lg:border-l lg:border-t-0 ${
+          className={`inf-panel-soft relative flex flex-col overflow-hidden border-t transition-[width] duration-200 ease-out lg:shrink-0 lg:border-l lg:border-t-0 ${
             inspectorOpen
               ? "w-full lg:w-[308px]"
               : "w-full lg:w-[48px]"
@@ -2842,7 +2873,7 @@ export function InformativosContent() {
                 type="button"
                 title="Expandir panel"
                 aria-expanded={false}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#11224E] text-white shadow-sm hover:bg-[#0d1a3d]"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--inf-navy)] text-white shadow-[var(--inf-glow)] hover:brightness-110"
                 onClick={() => setInspectorOpen(true)}
               >
                 <Icon icon="lucide:panel-right-open" width={16} />
@@ -2850,7 +2881,7 @@ export function InformativosContent() {
               <button
                 type="button"
                 title="Documento"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#11224E] shadow-sm ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb]"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--inf-surface)] text-[var(--inf-neon)] shadow-sm ring-1 ring-[var(--inf-border)] hover:bg-[var(--inf-neon-soft)]"
                 onClick={() => setInspectorOpen(true)}
               >
                 <Icon icon="lucide:mail-open" width={15} />
@@ -2858,13 +2889,13 @@ export function InformativosContent() {
               <button
                 type="button"
                 title="Propiedades"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#11224E] shadow-sm ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb]"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--inf-surface)] text-[var(--inf-neon)] shadow-sm ring-1 ring-[var(--inf-border)] hover:bg-[var(--inf-neon-soft)]"
                 onClick={() => setInspectorOpen(true)}
               >
                 <Icon icon="lucide:sliders-horizontal" width={15} />
               </button>
               <p
-                className="mt-2 hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5a6b85]/70 lg:block"
+                className="mt-2 hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--inf-muted)] lg:block"
                 style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
               >
                 Inspector
@@ -2874,19 +2905,19 @@ export function InformativosContent() {
             <>
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.85),transparent_70%)]"
+            className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--inf-neon)_18%,transparent),transparent_70%)]"
           />
-          <div className="relative shrink-0 border-b border-[#d0dae8]/90 px-3 pb-3.5 pt-3">
+          <div className="relative shrink-0 border-b border-[var(--inf-border)] px-3 pb-3.5 pt-3">
             <div className="mb-3 flex items-center gap-2.5">
-              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-[0_6px_14px_-4px_rgba(17,34,78,0.55)]">
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--inf-navy)] to-[var(--inf-navy-2)] text-white shadow-[var(--inf-glow)]">
                 <Icon icon="lucide:mail-open" width={14} />
-                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#C8102E] ring-2 ring-[#e8eef6]" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--inf-neon-hot)] ring-2 ring-[var(--inf-panel-2)]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-bold leading-tight tracking-tight text-[#11224E]">
+                <p className="text-[12px] font-bold leading-tight tracking-tight text-[var(--inf-fg)]">
                   Documento
                 </p>
-                <p className="text-[9px] font-medium text-[#5a6b85]">
+                <p className="text-[9px] font-medium text-[var(--inf-muted)]">
                   Cómo se verá en la bandeja
                 </p>
               </div>
@@ -2894,7 +2925,7 @@ export function InformativosContent() {
                 type="button"
                 title="Minimizar panel"
                 aria-expanded={true}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#5a6b85] shadow-sm ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb] hover:text-[#11224E]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--inf-surface)] text-[var(--inf-muted)] shadow-sm ring-1 ring-[var(--inf-border)] hover:bg-[var(--inf-neon-soft)] hover:text-[var(--inf-neon)]"
                 onClick={() => setInspectorOpen(false)}
               >
                 <Icon icon="lucide:panel-right-close" width={15} />
@@ -2902,10 +2933,10 @@ export function InformativosContent() {
             </div>
 
             {/* Mini preview estilo bandeja */}
-            <div className="mb-2.5 overflow-hidden rounded-xl bg-[#11224E] p-[1px] shadow-[0_10px_24px_-12px_rgba(17,34,78,0.55)]">
-              <div className="rounded-[11px] bg-gradient-to-b from-[#16305f] to-[#0f1d42] px-2.5 py-2">
+            <div className="mb-2.5 overflow-hidden rounded-xl bg-[var(--inf-navy)] p-[1px] shadow-[var(--inf-glow)]">
+              <div className="rounded-[11px] bg-gradient-to-b from-[color-mix(in_srgb,var(--inf-navy)_70%,var(--inf-neon))] to-[var(--inf-navy-2)] px-2.5 py-2">
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#C8102E]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--inf-neon-hot)] shadow-[var(--inf-glow-hot)]" />
                   <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/45">
                     Inbox preview
                   </span>
@@ -2919,47 +2950,41 @@ export function InformativosContent() {
               </div>
             </div>
 
-            <div className="space-y-2 rounded-2xl border border-white/80 bg-white/90 p-2.5 shadow-[0_8px_20px_-14px_rgba(17,34,78,0.4)] backdrop-blur-sm">
+            <div className="space-y-2 rounded-2xl border border-[var(--inf-border)] bg-[var(--inf-surface)] p-2.5 shadow-[var(--inf-shadow)]">
               <div>
                 <label className="mb-1 flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#5a6b85]">
+                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--inf-muted)]">
                     <Icon icon="lucide:text-cursor-input" width={11} />
                     Asunto
                   </span>
-                  <span className="tabular-nums text-[9px] font-medium text-[#5a6b85]/70">
+                  <span className="tabular-nums text-[9px] font-medium text-[var(--inf-muted)]">
                     {doc.asunto.length}
                   </span>
                 </label>
                 <input
-                  className={
-                    input +
-                    " !rounded-xl !border-[#e2e8f0] !bg-[#f7f9fc] !py-2 focus:!bg-white"
-                  }
+                  className={input + " !rounded-xl !py-2"}
                   value={doc.asunto}
                   onChange={(e) => setDoc({ ...doc, asunto: e.target.value })}
                   placeholder="Asunto del correo"
                 />
               </div>
-              <div className="rounded-xl bg-[#f4f7fb] p-2 ring-1 ring-[#e2e8f0]/80">
+              <div className="rounded-xl bg-[var(--inf-surface-soft)] p-2 ring-1 ring-[var(--inf-border-soft)]">
                 <label className="mb-1 flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#5a6b85]">
+                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--inf-muted)]">
                     <Icon icon="lucide:eye" width={11} />
                     Preview inbox
                   </span>
-                  <span className="tabular-nums text-[9px] font-medium text-[#5a6b85]/70">
+                  <span className="tabular-nums text-[9px] font-medium text-[var(--inf-muted)]">
                     {doc.previewText.length}
                   </span>
                 </label>
                 <input
-                  className={
-                    input +
-                    " !rounded-xl !border-[#dce3ee] !bg-white !py-2 !shadow-none"
-                  }
+                  className={input + " !rounded-xl !py-2 !shadow-none"}
                   value={doc.previewText}
                   onChange={(e) => setDoc({ ...doc, previewText: e.target.value })}
                   placeholder="Texto corto en bandeja"
                 />
-                <p className="mt-1.5 flex items-start gap-1 text-[9px] leading-4 text-[#5a6b85]/85">
+                <p className="mt-1.5 flex items-start gap-1 text-[9px] leading-4 text-[var(--inf-muted)]">
                   <Icon
                     icon="lucide:info"
                     width={10}
@@ -2973,27 +2998,27 @@ export function InformativosContent() {
 
           <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-3 pt-3.5">
             <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[#11224E] shadow-[0_4px_10px_-6px_rgba(17,34,78,0.45)] ring-1 ring-[#d5dde8]/90">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--inf-surface)] text-[var(--inf-neon)] shadow-[var(--inf-glow)] ring-1 ring-[var(--inf-border)]">
                 <Icon icon="lucide:sliders-horizontal" width={13} />
               </span>
               <div className="min-w-0">
-                <p className="text-[12px] font-bold tracking-tight text-[#11224E]">
+                <p className="text-[12px] font-bold tracking-tight text-[var(--inf-fg)]">
                   Propiedades
                 </p>
-                <p className="text-[9px] font-medium text-[#5a6b85]">
+                <p className="text-[9px] font-medium text-[var(--inf-muted)]">
                   Ajustes del bloque activo
                 </p>
               </div>
               {selected && !multiSelected ? (
-                <span className="ml-auto max-w-[96px] truncate rounded-lg bg-[#11224E] px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
+                <span className="ml-auto max-w-[96px] truncate rounded-lg bg-[var(--inf-navy)] px-2 py-1 text-[9px] font-semibold text-white shadow-[var(--inf-glow)]">
                   {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
                 </span>
               ) : multiSelected ? (
-                <span className="ml-auto rounded-lg bg-[#C8102E] px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
+                <span className="ml-auto rounded-lg bg-[var(--inf-neon-hot)] px-2 py-1 text-[9px] font-semibold text-white shadow-[var(--inf-glow-hot)]">
                   {selectedIds.length} sel.
                 </span>
               ) : (
-                <span className="ml-auto rounded-lg bg-white/80 px-2 py-1 text-[9px] font-semibold text-[#5a6b85] ring-1 ring-[#d5dde8]">
+                <span className="ml-auto rounded-lg bg-[var(--inf-surface)] px-2 py-1 text-[9px] font-semibold text-[var(--inf-muted)] ring-1 ring-[var(--inf-border)]">
                   Ninguno
                 </span>
               )}
@@ -3009,11 +3034,11 @@ export function InformativosContent() {
 
       {panel === "send" ? (
           <div
-            className="flex h-full min-h-0 w-full flex-col bg-white"
+            className="inf-panel flex h-full min-h-0 w-full flex-col"
             role="region"
             aria-label="Enviar informativo"
           >
-            <div className="flex items-center gap-2 border-b border-[#e8eef5] px-3 py-2.5">
+            <div className="flex items-center gap-2 border-b border-[var(--inf-border)] px-3 py-2.5">
               <button
                 type="button"
                 className={btnGhost + " !px-2"}
@@ -3022,10 +3047,10 @@ export function InformativosContent() {
               >
                 <Icon icon="lucide:arrow-left" width={14} />
               </button>
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#11224E] text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--inf-navy)] text-white shadow-[var(--inf-glow)]">
                 <Icon icon="lucide:send" width={14} />
               </span>
-              <p className="text-[13px] font-bold text-[#11224E]">Enviar</p>
+              <p className="text-[13px] font-bold text-[var(--inf-fg)]">Enviar</p>
             </div>
             <div className="mx-auto min-h-0 w-full max-w-xl flex-1 space-y-3 overflow-auto p-4">
               {!canSendInformativos ? (
@@ -3212,17 +3237,17 @@ export function InformativosContent() {
 
       {panel === "agenda" ? (
           <div
-            className="flex h-full min-h-0 w-full flex-col bg-white"
+            className="inf-panel flex h-full min-h-0 w-full flex-col"
             role="region"
             aria-label="Agenda de informaciones"
           >
-            <div className="flex items-center gap-2 border-b border-[#e8eef5] px-3 py-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef2f8] text-[#11224E]">
+            <div className="flex items-center gap-2 border-b border-[var(--inf-border)] px-3 py-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--inf-neon-soft)] text-[var(--inf-neon)] ring-1 ring-[var(--inf-border)]">
                 <Icon icon="lucide:book-user" width={14} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-[#11224E]">Agenda</p>
-                <p className="text-[10px] text-[#5a6b85]">
+                <p className="text-[13px] font-bold text-[var(--inf-fg)]">Agenda</p>
+                <p className="text-[10px] text-[var(--inf-muted)]">
                   {grupos.length} grupos · contactos separados
                 </p>
               </div>

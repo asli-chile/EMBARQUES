@@ -1,4 +1,5 @@
 import { newBlockId, type BlockKind, type StudioBlock, type StudioDocument } from "./types";
+import { ASLI_FOOTER_PROPS } from "./asliFooter";
 import {
   REACT_EMAIL_CATALOG_ITEMS,
 } from "./catalogLibrary";
@@ -157,14 +158,12 @@ export const STUDIO_PRESETS: PresetDef[] = [
   {
     kind: "footerAsli",
     label: "Footer ASLI",
-    description: "Pie de marca con logo",
+    description: "Pie de marca con dirección y contacto",
     defaults: {
       variant: "split",
       logoUrl: "",
-      tagline: "Logística y Comercio Exterior",
-      address1: "Dirección de ejemplo 123,",
-      address2: "Ciudad, País",
       color: "#C8102E",
+      ...ASLI_FOOTER_PROPS,
     },
   },
   {
@@ -623,25 +622,25 @@ export const STUDIO_LIBRARY: StudioLibraryItem[] = [
     id: "footer-split",
     kind: "footerAsli",
     label: "Footer dividido",
-    description: "Logo | dirección",
+    description: "Logo | dirección ASLI",
     icon: "lucide:panel-bottom",
-    props: { variant: "split" },
+    props: { variant: "split", ...ASLI_FOOTER_PROPS },
   },
   {
     id: "footer-centered",
     kind: "footerAsli",
     label: "Footer centrado",
-    description: "Logo al centro",
+    description: "Logo + dirección/contacto",
     icon: "lucide:align-center",
-    props: { variant: "centered" },
+    props: { variant: "centered", ...ASLI_FOOTER_PROPS },
   },
   {
     id: "footer-compact",
     kind: "footerAsli",
     label: "Footer compacto",
-    description: "Una línea + acento",
+    description: "Dirección + teléfono",
     icon: "lucide:minus",
-    props: { variant: "compact" },
+    props: { variant: "compact", ...ASLI_FOOTER_PROPS },
   },
   ...REACT_EMAIL_CATALOG_ITEMS,
 ];

@@ -1,4 +1,5 @@
 import type { BlockKind } from "./types";
+import { ASLI_FOOTER_PROPS } from "./asliFooter";
 
 export type CatalogLibraryItem = {
   id: string;
@@ -52,17 +53,17 @@ export const REACT_EMAIL_CATALOG_ITEMS: CatalogLibraryItem[] = [
     id: "footer-one-col",
     kind: "footerAsli",
     label: "Footer una columna",
-    description: "Centrado · una columna",
+    description: "Dirección + contacto centrados",
     icon: "lucide:panel-bottom",
-    props: { variant: "oneCol" },
+    props: { variant: "oneCol", ...ASLI_FOOTER_PROPS },
   },
   {
     id: "footer-two-col",
     kind: "footerAsli",
     label: "Footer dos columnas",
-    description: "Marca + links",
+    description: "Marca + dirección/contacto",
     icon: "lucide:columns-2",
-    props: { variant: "twoCol" },
+    props: { variant: "twoCol", ...ASLI_FOOTER_PROPS },
   },
 
   // Container / Section

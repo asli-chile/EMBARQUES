@@ -19,7 +19,7 @@ export function DashboardViewTabs({ view, onChange }: Props) {
   ];
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-cyan-300/25 bg-dash-control/85 p-1">
+    <div className="dash-control flex items-center gap-1 rounded-lg p-1">
       {tabs.map((tab) => {
         const active = tab.id === view;
         return (
@@ -28,10 +28,10 @@ export function DashboardViewTabs({ view, onChange }: Props) {
             type="button"
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
-            className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-base font-semibold motion-interactive focus:outline-none focus:ring-2 focus:ring-cyan-300/40 ${
+            className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-base font-semibold motion-interactive focus:outline-none focus:ring-2 focus:ring-dash-neon/40 ${
               active
-                ? "bg-cyan-500/25 text-cyan-50 border border-cyan-300/40"
-                : "text-cyan-200/70 border border-transparent hover:text-cyan-100 hover:bg-dash-control-hover"
+                ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40"
+                : "text-dash-muted border border-transparent hover:text-dash-fg hover:bg-dash-control-hover"
             }`}
           >
             <Icon icon={tab.icon} className="w-4 h-4" />

@@ -2,6 +2,8 @@ import { Icon } from "@iconify/react";
 import { useLocale } from "@/lib/i18n";
 import { VisitorSidebarQuickAccess } from "@/components/layout/VisitorSidebarQuickAccess";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
+import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
+import type { NeonTheme } from "@/lib/ui/neonTheme";
 
 const FEATURES = [
   { icon: "lucide:layers",          text: "KPIs en tiempo real: operaciones activas, zarpes y documentos" },
@@ -38,13 +40,22 @@ const ESTADO_COLOR: Record<string, string> = {
   "Arribado":    "bg-emerald-100 text-emerald-700",
 };
 
-export function DashboardVisitorContent() {
+export function DashboardVisitorContent({
+  theme = "dark",
+  onThemeChange,
+}: {
+  theme?: NeonTheme;
+  onThemeChange?: (theme: NeonTheme) => void;
+} = {}) {
   const { t } = useLocale();
   const v = t.visitor.dashboard;
 
   return (
-    <main className="flex-1 min-h-0 overflow-auto flex flex-col bg-neutral-100" role="main">
-      <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-4 gap-3 max-w-[1400px] mx-auto w-full">
+    <main className="dash-page flex min-h-0 flex-1 flex-col overflow-auto" role="main">
+      <div className="dash-toolbar flex items-center justify-end px-3 py-2">
+        <NeonThemeToggle theme={theme} onThemeChange={onThemeChange} />
+      </div>
+      <div className="mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col gap-3 p-3 sm:p-4">
         <div className="flex-shrink-0">
           <VisitorSidebarQuickAccess currentHref="/dashboard" />
         </div>

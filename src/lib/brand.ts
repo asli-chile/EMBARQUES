@@ -21,7 +21,7 @@ export const brand = {
    */
   companyShort: "ASLI",
   /** Línea típica de pie en correos HTML */
-  emailFooterLine: "ASLI · Curicó, Chile",
+  emailFooterLine: "ASLI · Longitudinal Sur Km. 186, Curicó",
 } as const;
 
 // ─── TIPOGRAFÍA ─────────────────────────────────────────────────────────────

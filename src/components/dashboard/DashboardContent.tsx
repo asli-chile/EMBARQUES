@@ -15,6 +15,8 @@ import { formatRefAsli } from "@/lib/refAsli";
 import MapLibreMap, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
+import type { NeonTheme } from "@/lib/ui/neonTheme";
 import { esEstadoCerrado, etiquetaEstado, normalizarEstado } from "@/lib/operaciones/estados";
 
 type OperacionResumen = {
@@ -51,7 +53,10 @@ type PortMarker = {
   type: "origen" | "destino";
 };
 
-const DASHBOARD_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DASHBOARD_MAP_STYLE_DARK =
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DASHBOARD_MAP_STYLE_LIGHT =
+  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 const REGION_KEYS = ["america", "europa", "indiaMedioOriente", "oceania", "asia", "otros"] as const;
 type RegionKey = (typeof REGION_KEYS)[number];
@@ -98,9 +103,16 @@ function opRefLabel(op: OperacionResumen): string {
 type Props = {
   view: DashboardView;
   onViewChange: (view: DashboardView) => void;
+  theme?: NeonTheme;
+  onThemeChange?: (theme: NeonTheme) => void;
 };
 
-export function DashboardContent({ view, onViewChange }: Props) {
+export function DashboardContent({
+  view,
+  onViewChange,
+  theme = "dark",
+  onThemeChange,
+}: Props) {
   const { t, locale } = useLocale();
   const { isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
   const tr = t.dashboard;
@@ -513,26 +525,26 @@ export function DashboardContent({ view, onViewChange }: Props) {
 
   if (loading) {
     return (
-      <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-dash-bg">
-        <div className="absolute inset-0 pointer-events-none">
+      <main className="dash-page relative flex flex-1 min-h-0 flex-col overflow-y-auto lg:overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
           <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         </div>
-        <div className="relative shrink-0 bg-dash-header/90 border-b border-cyan-400/20 h-14" />
+        <div className="dash-toolbar relative shrink-0 h-14" />
         <div className="relative p-4 flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:p-4 lg:gap-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 h-28 lg:h-14">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-dash-surface/80 rounded-xl border border-cyan-300/20" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl" />
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-3 lg:flex-1 lg:min-h-0">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-dash-surface/80 rounded-xl border border-cyan-300/20 h-56 lg:h-auto" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl h-56 lg:h-auto" />
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark bg-dash-surface/80 rounded-xl border border-cyan-300/20 h-40 lg:h-32" />
+              <div key={i} className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl h-40 lg:h-32" />
             ))}
           </div>
         </div>
@@ -642,42 +654,43 @@ export function DashboardContent({ view, onViewChange }: Props) {
   };
 
   return (
-    <main className="relative flex-1 min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col bg-dash-bg text-base">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute top-16 right-0 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto text-base lg:overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute right-0 top-16 h-80 w-80 rounded-full bg-dash-neon-hot/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-dash-neon/15 blur-3xl" />
       </div>
 
       {/* Header */}
-      <div className="relative shrink-0 z-10 bg-dash-header/90 border-b border-cyan-400/20 backdrop-blur">
-        <div className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex w-full items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-cyan-100 tracking-tight leading-tight">{tr.title}</h1>
-            <p className="text-sm text-cyan-300/70 truncate mt-1">
+            <h1 className="dash-title text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{tr.title}</h1>
+            <p className="dash-subtitle mt-1 truncate text-sm">
               {format(new Date(), "EEE d MMM yyyy", { locale: locale === "es" ? es : undefined })}
               {lastFetchedAt && getLastUpdatedText() && (
                 <> · {tr.lastUpdated} {getLastUpdatedText()}</>
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <DashboardViewTabs view={view} onChange={onViewChange} />
             <a href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-cyan-50 bg-cyan-500/20 border border-cyan-300/40 rounded-lg hover:bg-cyan-500/30 transition-colors">
-              <Icon icon="lucide:plus" className="w-5 h-5" />
+              className="dash-cta inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base transition-colors">
+              <Icon icon="lucide:plus" className="h-5 w-5" />
               <span className="hidden sm:inline">{isCliente ? t.sidebar.solicitarReserva : t.sidebar.crearReserva}</span>
             </a>
             <a href={withBase("/reservas/mis-reservas")}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-medium text-cyan-100 bg-dash-control/85 border border-cyan-300/25 rounded-lg hover:bg-dash-control-hover transition-colors">
-              <Icon icon="lucide:list" className="w-5 h-5" />
+              className="dash-control hidden items-center gap-1.5 rounded-lg px-3.5 py-2 text-base font-medium transition-colors sm:inline-flex">
+              <Icon icon="lucide:list" className="h-5 w-5" />
               {t.sidebar.misReservas}
             </a>
             <button type="button" onClick={() => void fetchDashboardData()}
-              className="p-2.5 text-cyan-200/70 hover:text-cyan-100 bg-dash-control/85 border border-cyan-300/25 rounded-lg hover:bg-dash-control-hover transition-colors"
+              className="dash-control rounded-lg p-2.5 transition-colors"
               title={tr.refresh}>
-              <Icon icon="lucide:refresh-cw" className="w-5 h-5" />
+              <Icon icon="lucide:refresh-cw" className="h-5 w-5" />
             </button>
+            <NeonThemeToggle theme={theme} onThemeChange={onThemeChange} />
           </div>
         </div>
       </div>
@@ -690,14 +703,14 @@ export function DashboardContent({ view, onViewChange }: Props) {
             <a
               key={kpi.key}
               href={kpi.href}
-              className={`rounded-xl border ${kpi.ring} bg-dash-surface/90 px-3.5 py-3.5 hover:bg-dash-surface-hover transition-colors min-w-0`}
+              className="dash-card min-w-0 rounded-2xl px-3.5 py-3.5"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-semibold text-cyan-200/80 leading-snug line-clamp-2">{kpi.label}</p>
+                <p className="dash-kpi-label text-dash-fg leading-snug line-clamp-2">{kpi.label}</p>
                 <Icon icon={kpi.icon} width={18} height={18} className={`shrink-0 mt-0.5 ${kpi.accent}`} />
               </div>
-              <p className={`text-3xl sm:text-4xl font-bold tabular-nums leading-none mt-2.5 ${kpi.accent}`}>{kpi.value}</p>
-              <p className="text-sm text-cyan-100/60 leading-snug line-clamp-2 mt-2">{kpi.hint}</p>
+              <p className={`dash-kpi-value text-3xl sm:text-4xl font-bold mt-2.5 ${kpi.accent}`}>{kpi.value}</p>
+              <p className="text-sm text-dash-muted leading-snug line-clamp-2 mt-2">{kpi.hint}</p>
             </a>
           ))}
         </div>
@@ -705,20 +718,20 @@ export function DashboardContent({ view, onViewChange }: Props) {
         {/* Fila media: zarpes | estados | mapa — en móvil cada bloque tiene su altura; en desktop llenan la fila */}
         <div className="grid grid-cols-1 gap-4 lg:flex-1 lg:min-h-[280px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)] lg:gap-3">
           {/* Zarpes */}
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
-            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-center justify-between gap-2">
-              <p className="text-base font-bold text-cyan-100 truncate">{tr.upcomingDepartures}</p>
-              <a href={opsHref} className="text-sm font-semibold text-cyan-300/90 hover:text-cyan-200">{tr.viewAll}</a>
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-center justify-between gap-2">
+              <p className="text-base font-bold text-dash-fg truncate">{tr.upcomingDepartures}</p>
+              <a href={opsHref} className="text-sm font-semibold text-dash-neon hover:text-cyan-200">{tr.viewAll}</a>
             </div>
             <div className="lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {upcomingRows.length === 0 ? (
                 <div className="flex items-center justify-center px-6 py-10 lg:py-6 lg:h-full text-center">
-                  <p className="text-base sm:text-lg text-cyan-100/55 leading-relaxed max-w-sm">{tr.noUpcoming}</p>
+                  <p className="text-base sm:text-lg text-dash-muted leading-relaxed max-w-sm">{tr.noUpcoming}</p>
                 </div>
               ) : (
                 <table className="w-full text-left text-base">
                   <thead className="sticky top-0 bg-dash-surface">
-                    <tr className="text-sm text-cyan-300/60 border-b border-cyan-300/10">
+                    <tr className="text-sm text-dash-muted border-b border-cyan-300/10">
                       <th className="px-4 py-2.5 font-bold">{tr.colRef}</th>
                       <th className="px-4 py-2.5 font-bold hidden sm:table-cell">{tr.colClient}</th>
                       <th className="px-4 py-2.5 font-bold">{tr.colPod}</th>
@@ -728,12 +741,12 @@ export function DashboardContent({ view, onViewChange }: Props) {
                   <tbody className="divide-y divide-cyan-300/10">
                     {upcomingRows.map((item) => (
                       <tr key={item.id} className="hover:bg-cyan-400/5">
-                        <td className="px-4 py-2.5 font-bold text-cyan-100 whitespace-nowrap">
+                        <td className="px-4 py-2.5 font-bold text-dash-fg whitespace-nowrap">
                           {item.ref}
                           {item.critico && <Icon icon="lucide:alert-triangle" width={16} height={16} className="inline ml-1.5 text-red-300" />}
                         </td>
-                        <td className="px-4 py-2.5 text-cyan-100/85 truncate max-w-[8rem] hidden sm:table-cell">{item.cliente}</td>
-                        <td className="px-4 py-2.5 text-cyan-100/80 truncate max-w-[6rem]">{item.pod}</td>
+                        <td className="px-4 py-2.5 text-dash-fg/90 truncate max-w-[8rem] hidden sm:table-cell">{item.cliente}</td>
+                        <td className="px-4 py-2.5 text-dash-fg/85 truncate max-w-[6rem]">{item.pod}</td>
                         <td className="px-4 py-2.5">
                           <span className={`text-sm font-bold px-2.5 py-1 rounded-sm border ${
                             item.days === 0
@@ -754,9 +767,9 @@ export function DashboardContent({ view, onViewChange }: Props) {
           </div>
 
           {/* Estados */}
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
-            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15">
-              <p className="text-base font-bold text-cyan-100">{tr.byStatus}</p>
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
+            <div className="dash-section-head shrink-0 px-4 py-3">
+              <p className="text-base font-bold text-dash-fg">{tr.byStatus}</p>
             </div>
             <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {operationalKpis.statusItems.slice(0, 6).map((item) => {
@@ -771,8 +784,8 @@ export function DashboardContent({ view, onViewChange }: Props) {
                 return (
                   <div key={item.estado}>
                     <div className="flex items-center justify-between gap-2 text-base mb-1">
-                      <span className="font-semibold text-cyan-50/95 truncate">{etiquetaEstado(item.estado) || item.estado}</span>
-                      <span className="tabular-nums text-cyan-200/85 shrink-0 font-semibold">{item.cantidad}</span>
+                      <span className="font-semibold text-dash-fg truncate">{etiquetaEstado(item.estado) || item.estado}</span>
+                      <span className="tabular-nums text-dash-fg shrink-0 font-semibold">{item.cantidad}</span>
                     </div>
                     <div className="h-2 rounded-full bg-cyan-950/60 overflow-hidden">
                       <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(pct, 3)}%` }} />
@@ -784,25 +797,25 @@ export function DashboardContent({ view, onViewChange }: Props) {
             <div className="shrink-0 px-4 py-3 border-t border-cyan-300/15 grid grid-cols-3 gap-2 text-center">
               <div>
                 <p className="text-lg font-bold text-emerald-300 tabular-nums">{operationalKpis.arrived}</p>
-                <p className="text-sm text-cyan-300/65 mt-0.5">{tr.arrived}</p>
+                <p className="text-sm text-dash-muted mt-0.5">{tr.arrived}</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-violet-300 tabular-nums">{operationalKpis.rolled}</p>
-                <p className="text-sm text-cyan-300/65 mt-0.5">{tr.rolled}</p>
+                <p className="text-sm text-dash-muted mt-0.5">{tr.rolled}</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-red-300 tabular-nums">{operationalKpis.cancelled}</p>
-                <p className="text-sm text-cyan-300/65 mt-0.5">{tr.cancelled}</p>
+                <p className="text-sm text-dash-muted mt-0.5">{tr.cancelled}</p>
               </div>
             </div>
           </div>
 
           {/* Mapa */}
-          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 rounded-xl border border-cyan-300/20 bg-dash-surface/70 overflow-hidden">
+          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 dash-card rounded-xl overflow-hidden">
             <MapLibreMap
               ref={mapRef}
               initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
-              mapStyle={DASHBOARD_MAP_STYLE}
+              mapStyle={theme === "light" ? DASHBOARD_MAP_STYLE_LIGHT : DASHBOARD_MAP_STYLE_DARK}
               style={{ width: "100%", height: "100%" }}
               dragRotate={false}
               attributionControl={false}
@@ -820,7 +833,7 @@ export function DashboardContent({ view, onViewChange }: Props) {
                 );
               })}
             </MapLibreMap>
-            <div className="absolute bottom-2 left-2 z-10 flex items-center gap-3 rounded-sm bg-dash-header/85 px-2.5 py-1.5 text-sm text-cyan-100/85 backdrop-blur">
+            <div className="absolute bottom-2 left-2 z-10 flex items-center gap-3 rounded-sm bg-dash-header/85 px-2.5 py-1.5 text-sm text-dash-fg backdrop-blur">
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />{tr.mapOrigins}</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{tr.mapDestinations}</span>
             </div>
@@ -830,18 +843,18 @@ export function DashboardContent({ view, onViewChange }: Props) {
         {/* Fila inferior */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-3 lg:shrink-0 lg:min-h-[200px]">
           {/* Clientes */}
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
-            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-cyan-200/90">{tr.activeClients}</p>
-              <p className="text-2xl font-bold text-cyan-200 tabular-nums">{activeClientsCount}</p>
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-dash-fg">{tr.activeClients}</p>
+              <p className="text-2xl font-bold text-dash-neon tabular-nums">{activeClientsCount}</p>
             </div>
             <ul className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topClients.length === 0 ? (
-                <li className="text-base text-cyan-100/40 py-2">—</li>
+                <li className="text-base text-dash-muted py-2">—</li>
               ) : (
                 topClients.map((item) => (
                   <li key={item.cliente} className="flex items-center justify-between gap-2 text-base">
-                    <span className="text-cyan-50/95 truncate">{item.cliente}</span>
+                    <span className="text-dash-fg truncate">{item.cliente}</span>
                     <span className="text-cyan-200/80 tabular-nums shrink-0 font-semibold">{item.cantidad}</span>
                   </li>
                 ))
@@ -850,24 +863,24 @@ export function DashboardContent({ view, onViewChange }: Props) {
           </div>
 
           {/* Zarpes por semana */}
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
-            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-cyan-200/90">{tr.weeklyDepartures}</p>
-              <p className="text-sm text-cyan-300/65">{tr.weeklyDeparturesHint}</p>
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-dash-fg">{tr.weeklyDepartures}</p>
+              <p className="text-sm text-dash-muted">{tr.weeklyDeparturesHint}</p>
             </div>
             <div className="px-4 py-3 flex items-end gap-2 lg:flex-1 lg:min-h-0">
               {weeklyDepartures.buckets.map((bucket) => {
                 const height = (bucket.count / weeklyDepartures.max) * 100;
                 return (
                   <div key={bucket.start.toISOString()} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-                    <span className="text-sm font-semibold text-cyan-100/85 tabular-nums">{bucket.count}</span>
+                    <span className="text-sm font-semibold text-dash-fg tabular-nums">{bucket.count}</span>
                     <div className="w-full h-16 lg:h-full flex items-end bg-cyan-950/45 rounded-sm overflow-hidden">
                       <div
                         className="w-full bg-sky-400/80 rounded-sm"
                         style={{ height: `${bucket.count > 0 ? Math.max(height, 6) : 0}%` }}
                       />
                     </div>
-                    <span className="text-xs text-cyan-300/60 tabular-nums">
+                    <span className="text-xs text-dash-muted tabular-nums">
                       {format(bucket.start, "d MMM", { locale: locale === "es" ? es : undefined })}
                     </span>
                   </div>
@@ -877,10 +890,10 @@ export function DashboardContent({ view, onViewChange }: Props) {
           </div>
 
           {/* Vía + región */}
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col p-4 gap-3 lg:min-h-0">
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col p-4 gap-3 lg:min-h-0">
             <div className="flex items-baseline justify-between gap-2 shrink-0">
-              <p className="text-base font-bold text-cyan-200/90">{tr.byMode}</p>
-              <p className="text-sm text-cyan-300/65 truncate">{tr.byRegion}</p>
+              <p className="text-base font-bold text-dash-fg">{tr.byMode}</p>
+              <p className="text-sm text-dash-muted truncate">{tr.byRegion}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <div
@@ -888,14 +901,14 @@ export function DashboardContent({ view, onViewChange }: Props) {
                 style={{ background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)` }}
               >
                 <div className="absolute inset-[9px] rounded-full bg-dash-surface flex items-center justify-center">
-                  <span className="text-sm font-bold text-cyan-100">{transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}</span>
+                  <span className="text-sm font-bold text-dash-fg">{transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}</span>
                 </div>
               </div>
               <div className="text-base space-y-1.5 min-w-0">
-                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 mr-2" />{tr.maritime} {transportDistribution.maritima}</p>
-                <p className="text-cyan-100/95 truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />{tr.air} {transportDistribution.aereo}</p>
+                <p className="text-dash-fg truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 mr-2" />{tr.maritime} {transportDistribution.maritima}</p>
+                <p className="text-dash-fg truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />{tr.air} {transportDistribution.aereo}</p>
                 {transportDistribution.desconocida > 0 && (
-                  <p className="text-cyan-100/55 truncate text-sm"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-500 mr-2" />{tr.modeUnknown} {transportDistribution.desconocida}</p>
+                  <p className="text-dash-muted truncate text-sm"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-500 mr-2" />{tr.modeUnknown} {transportDistribution.desconocida}</p>
                 )}
               </div>
             </div>
@@ -904,9 +917,9 @@ export function DashboardContent({ view, onViewChange }: Props) {
                 const width = (item.count / regionDistribution.max) * 100;
                 return (
                   <div key={item.region}>
-                    <div className="flex justify-between text-base text-cyan-100/90 mb-1">
+                    <div className="flex justify-between text-base text-dash-fg mb-1">
                       <span className="truncate">{regionLabels[item.region]}</span>
-                      <span className="tabular-nums text-cyan-200/80 font-semibold">{item.count}</span>
+                      <span className="tabular-nums text-dash-fg font-semibold">{item.count}</span>
                     </div>
                     <div className="h-2 bg-cyan-950/50 rounded-full overflow-hidden">
                       <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${width}%` }} />
@@ -918,20 +931,20 @@ export function DashboardContent({ view, onViewChange }: Props) {
           </div>
 
           {/* Navieras */}
-          <div className="rounded-xl border border-cyan-300/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
-            <div className="shrink-0 px-4 py-3 border-b border-cyan-300/15 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-cyan-200/90">{tr.topCarriers}</p>
-              <p className="text-2xl font-bold text-cyan-200 tabular-nums">{topNavieras.distinct}</p>
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-baseline justify-between gap-2">
+              <p className="text-base font-bold text-dash-fg">{tr.topCarriers}</p>
+              <p className="text-2xl font-bold text-dash-neon tabular-nums">{topNavieras.distinct}</p>
             </div>
             <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topNav.length === 0 ? (
-                <p className="text-base text-cyan-100/40">{tr.noCarriers}</p>
+                <p className="text-base text-dash-muted">{tr.noCarriers}</p>
               ) : (
                 topNav.map((item, idx) => (
                   <div key={item.naviera}>
                     <div className="flex justify-between gap-2 text-base mb-1">
-                      <span className="text-cyan-50/95 truncate">{idx + 1}. {item.naviera}</span>
-                      <span className="tabular-nums text-cyan-200/90 shrink-0 font-semibold">{item.cantidad}</span>
+                      <span className="text-dash-fg truncate">{idx + 1}. {item.naviera}</span>
+                      <span className="tabular-nums text-dash-fg shrink-0 font-semibold">{item.cantidad}</span>
                     </div>
                     <div className="h-2 bg-cyan-950/45 rounded-full overflow-hidden">
                       <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${Math.max((item.cantidad / topNavieras.max) * 100, 8)}%` }} />
@@ -943,18 +956,18 @@ export function DashboardContent({ view, onViewChange }: Props) {
           </div>
 
           {/* Especies / POD */}
-          <div className="rounded-xl border border-fuchsia-400/20 bg-dash-surface/90 overflow-hidden flex flex-col lg:min-h-0">
+          <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
             <div className="shrink-0 px-4 py-3 border-b border-fuchsia-300/15 flex items-baseline justify-between gap-2">
               <p className="text-base font-bold text-fuchsia-200/90">{tr.species}</p>
               <p className="text-2xl font-bold text-fuchsia-200 tabular-nums">{speciesStats.distinct}</p>
             </div>
             <div className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topSpecies.length === 0 ? (
-                <p className="text-base text-cyan-100/40">{tr.noData}</p>
+                <p className="text-base text-dash-muted">{tr.noData}</p>
               ) : (
                 topSpecies.map((item, idx) => (
                   <div key={item.especie} className="flex items-center justify-between gap-2 text-base">
-                    <span className="text-cyan-50/95 truncate min-w-0">
+                    <span className="text-dash-fg truncate min-w-0">
                       {idx + 1}. {item.especie}
                       {item.pod ? <span className="text-emerald-300/85"> · {item.pod}</span> : null}
                     </span>

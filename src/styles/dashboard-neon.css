@@ -1,0 +1,408 @@
+/* Dashboard neón moderno — temas por data-theme (hex explícitos). */
+
+:root {
+  --dash-bg: #050914;
+  --dash-header: #0a1224;
+  --dash-surface: #0c1730;
+  --dash-surface-hover: #122040;
+  --dash-control: #101c38;
+  --dash-control-hover: #182850;
+  --dash-fg: #f4fbff;
+  --dash-muted: #8ec8dc;
+  --dash-neon: #00e8ff;
+  --dash-neon-hot: #ff3d7a;
+  --dash-radius: 1rem;
+  --dash-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dash-neon {
+  --dash-bg: #050914;
+  --dash-header: #0a1224;
+  --dash-surface: #0c1730;
+  --dash-surface-hover: #122040;
+  --dash-control: #101c38;
+  --dash-control-hover: #182850;
+  --dash-fg: #f4fbff;
+  --dash-muted: #8ec8dc;
+  --dash-neon: #00e8ff;
+  --dash-neon-hot: #ff3d7a;
+  --dash-border: rgba(0, 232, 255, 0.22);
+  --dash-glow: 0 0 0 1px rgba(0, 232, 255, 0.22), 0 12px 40px -18px rgba(0, 232, 255, 0.45);
+  --dash-radius: 1rem;
+  --dash-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  color-scheme: dark;
+  color: var(--dash-fg);
+  background:
+    radial-gradient(900px 480px at 0% -10%, rgba(0, 232, 255, 0.14), transparent 55%),
+    radial-gradient(700px 400px at 100% 0%, rgba(255, 61, 122, 0.1), transparent 50%),
+    radial-gradient(600px 360px at 50% 100%, rgba(80, 120, 255, 0.06), transparent 55%),
+    var(--dash-bg);
+  min-height: 0;
+  flex: 1;
+  font-feature-settings: "tnum" 1;
+}
+
+.dash-neon[data-theme="dark"] {
+  --dash-bg: #050914;
+  --dash-header: #0a1224;
+  --dash-surface: #0c1730;
+  --dash-surface-hover: #122040;
+  --dash-control: #101c38;
+  --dash-control-hover: #182850;
+  --dash-fg: #f4fbff;
+  --dash-muted: #8ec8dc;
+  --dash-neon: #00e8ff;
+  --dash-neon-hot: #ff3d7a;
+  --dash-border: rgba(0, 232, 255, 0.22);
+  --dash-glow: 0 0 0 1px rgba(0, 232, 255, 0.22), 0 12px 40px -18px rgba(0, 232, 255, 0.45);
+  color-scheme: dark;
+  background:
+    radial-gradient(900px 480px at 0% -10%, rgba(0, 232, 255, 0.14), transparent 55%),
+    radial-gradient(700px 400px at 100% 0%, rgba(255, 61, 122, 0.1), transparent 50%),
+    radial-gradient(600px 360px at 50% 100%, rgba(80, 120, 255, 0.06), transparent 55%),
+    var(--dash-bg);
+}
+
+.dash-neon[data-theme="light"] {
+  --dash-bg: #dce8f6;
+  --dash-header: #f2f7fd;
+  --dash-surface: #ffffff;
+  --dash-surface-hover: #f5f9ff;
+  --dash-control: #e6eef9;
+  --dash-control-hover: #d7e4f5;
+  --dash-fg: #0a1c3a;
+  --dash-muted: #3d6f8f;
+  --dash-neon: #0096b8;
+  --dash-neon-hot: #e0255c;
+  --dash-border: rgba(0, 150, 184, 0.28);
+  --dash-glow: 0 0 0 1px rgba(0, 150, 184, 0.18), 0 14px 36px -20px rgba(10, 28, 58, 0.28);
+  color-scheme: light;
+  background:
+    radial-gradient(1000px 460px at 8% -8%, rgba(0, 180, 210, 0.18), transparent 55%),
+    radial-gradient(800px 400px at 100% 0%, rgba(224, 37, 92, 0.08), transparent 50%),
+    var(--dash-bg);
+}
+
+/* ── Layout ── */
+.dash-neon .dash-page {
+  background: transparent !important;
+  color: var(--dash-fg) !important;
+}
+
+.dash-neon .dash-toolbar {
+  background: color-mix(in srgb, var(--dash-header) 78%, transparent) !important;
+  border-bottom: 1px solid var(--dash-border) !important;
+  color: var(--dash-fg) !important;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--dash-neon) 12%, transparent);
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+}
+
+.dash-neon .dash-title {
+  color: var(--dash-fg) !important;
+  letter-spacing: -0.03em;
+  font-weight: 750;
+}
+
+.dash-neon[data-theme="dark"] .dash-title {
+  text-shadow: 0 0 28px rgba(0, 232, 255, 0.28);
+}
+
+.dash-neon .dash-subtitle {
+  color: var(--dash-muted) !important;
+  letter-spacing: 0.01em;
+}
+
+/* ── Cards ── */
+.dash-neon .dash-card {
+  position: relative;
+  background: color-mix(in srgb, var(--dash-surface) 92%, transparent) !important;
+  color: var(--dash-fg) !important;
+  border: 1px solid var(--dash-border) !important;
+  border-radius: var(--dash-radius) !important;
+  box-shadow: var(--dash-glow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    transform 220ms var(--dash-ease),
+    box-shadow 220ms var(--dash-ease),
+    border-color 220ms var(--dash-ease),
+    background-color 220ms var(--dash-ease);
+  overflow: hidden;
+}
+
+.dash-neon .dash-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--dash-neon) 55%, transparent),
+    transparent
+  );
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.dash-neon[data-theme="dark"] .dash-card {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--dash-surface) 100%, #1a3a60 8%) 0%,
+    var(--dash-surface) 48%,
+    color-mix(in srgb, var(--dash-surface) 92%, #050914) 100%
+  ) !important;
+  box-shadow:
+    0 0 0 1px rgba(0, 232, 255, 0.12),
+    0 16px 40px -22px rgba(0, 0, 0, 0.65),
+    0 0 32px -16px rgba(0, 232, 255, 0.35);
+}
+
+.dash-neon[data-theme="light"] .dash-card {
+  background: var(--dash-surface) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 10px 28px -16px rgba(10, 28, 58, 0.2);
+}
+
+.dash-neon .dash-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--dash-neon) 55%, transparent) !important;
+  background: var(--dash-surface-hover) !important;
+}
+
+.dash-neon[data-theme="dark"] .dash-card:hover {
+  box-shadow:
+    0 0 0 1px rgba(0, 232, 255, 0.35),
+    0 18px 44px -20px rgba(0, 0, 0, 0.7),
+    0 0 40px -12px rgba(0, 232, 255, 0.5);
+}
+
+/* KPI */
+.dash-neon .dash-kpi-value {
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.dash-neon .dash-kpi-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.92;
+}
+
+.dash-neon .dash-section-head {
+  border-bottom: 1px solid color-mix(in srgb, var(--dash-border) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--dash-surface) 70%, transparent);
+}
+
+/* ── Controls ── */
+.dash-neon .dash-control {
+  background: color-mix(in srgb, var(--dash-control) 88%, transparent) !important;
+  color: var(--dash-fg) !important;
+  border: 1px solid var(--dash-border) !important;
+  border-radius: 0.75rem !important;
+  backdrop-filter: blur(8px);
+  transition:
+    background-color 180ms var(--dash-ease),
+    border-color 180ms var(--dash-ease),
+    box-shadow 180ms var(--dash-ease),
+    transform 180ms var(--dash-ease);
+}
+
+.dash-neon .dash-control:hover {
+  background: var(--dash-control-hover) !important;
+  border-color: color-mix(in srgb, var(--dash-neon) 50%, transparent) !important;
+}
+
+.dash-neon .dash-cta {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--dash-neon) 35%, var(--dash-control)),
+    color-mix(in srgb, var(--dash-neon) 18%, var(--dash-control))
+  ) !important;
+  color: var(--dash-fg) !important;
+  border: 1px solid color-mix(in srgb, var(--dash-neon) 55%, transparent) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 0 20px -6px color-mix(in srgb, var(--dash-neon) 55%, transparent);
+  font-weight: 700;
+  transition:
+    transform 180ms var(--dash-ease),
+    box-shadow 180ms var(--dash-ease),
+    filter 180ms var(--dash-ease);
+}
+
+.dash-neon .dash-cta:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 0 28px -4px color-mix(in srgb, var(--dash-neon) 65%, transparent);
+}
+
+.dash-neon .dash-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-control);
+  color: var(--dash-neon);
+  box-shadow: var(--dash-glow);
+  transition: transform 180ms var(--dash-ease), filter 180ms var(--dash-ease);
+}
+
+.dash-neon .dash-theme-toggle:hover {
+  filter: brightness(1.12);
+  transform: scale(1.04);
+}
+
+/* Entrada suave de tarjetas */
+@keyframes dash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dash-neon .dash-card {
+  animation: dash-rise 420ms var(--dash-ease) both;
+}
+
+.dash-neon .dash-card:nth-child(1) { animation-delay: 20ms; }
+.dash-neon .dash-card:nth-child(2) { animation-delay: 45ms; }
+.dash-neon .dash-card:nth-child(3) { animation-delay: 70ms; }
+.dash-neon .dash-card:nth-child(4) { animation-delay: 95ms; }
+.dash-neon .dash-card:nth-child(5) { animation-delay: 120ms; }
+.dash-neon .dash-card:nth-child(6) { animation-delay: 145ms; }
+.dash-neon .dash-card:nth-child(7) { animation-delay: 170ms; }
+.dash-neon .dash-card:nth-child(8) { animation-delay: 195ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-neon .dash-card {
+    animation: none;
+  }
+  .dash-neon .dash-card:hover,
+  .dash-neon .dash-cta:hover,
+  .dash-neon .dash-theme-toggle:hover {
+    transform: none;
+  }
+}
+
+/* Utilidades de texto / fondo del tema */
+.dash-neon .text-dash-fg,
+.dash-neon .text-dash-fg\/90,
+.dash-neon .text-dash-fg\/85 {
+  color: var(--dash-fg) !important;
+}
+
+.dash-neon .text-dash-muted {
+  color: var(--dash-muted) !important;
+}
+
+.dash-neon .text-dash-neon {
+  color: var(--dash-neon) !important;
+}
+
+.dash-neon .bg-dash-bg {
+  background-color: var(--dash-bg) !important;
+}
+
+.dash-neon .bg-dash-header,
+.dash-neon .bg-dash-header\/90,
+.dash-neon .bg-dash-header\/85 {
+  background-color: var(--dash-header) !important;
+}
+
+.dash-neon .bg-dash-surface,
+.dash-neon .bg-dash-surface\/90,
+.dash-neon .bg-dash-surface\/80,
+.dash-neon .bg-dash-surface\/70 {
+  background-color: var(--dash-surface) !important;
+}
+
+.dash-neon .bg-dash-control,
+.dash-neon .bg-dash-control\/85 {
+  background-color: var(--dash-control) !important;
+}
+
+.dash-neon .hover\:bg-dash-surface-hover:hover,
+.dash-neon .bg-dash-surface-hover {
+  background-color: var(--dash-surface-hover) !important;
+}
+
+.dash-neon .hover\:bg-dash-control-hover:hover,
+.dash-neon .bg-dash-control-hover {
+  background-color: var(--dash-control-hover) !important;
+}
+
+.dash-neon .border-dash-neon\/40,
+.dash-neon .border-dash-neon\/25 {
+  border-color: var(--dash-border) !important;
+}
+
+.dash-neon .bg-dash-neon\/20,
+.dash-neon .bg-dash-neon\/25 {
+  background-color: color-mix(in srgb, var(--dash-neon) 22%, transparent) !important;
+}
+
+.dash-neon .hover\:bg-dash-neon\/30:hover {
+  background-color: color-mix(in srgb, var(--dash-neon) 32%, transparent) !important;
+}
+
+/* KPI accents */
+.dash-neon[data-theme="dark"] .text-cyan-300 { color: #5ef0ff !important; text-shadow: 0 0 14px rgba(0, 232, 255, 0.55); }
+.dash-neon[data-theme="dark"] .text-sky-300 { color: #7dd3fc !important; text-shadow: 0 0 14px rgba(56, 189, 248, 0.45); }
+.dash-neon[data-theme="dark"] .text-amber-300 { color: #fcd34d !important; text-shadow: 0 0 14px rgba(251, 191, 36, 0.45); }
+.dash-neon[data-theme="dark"] .text-orange-300 { color: #fdba74 !important; text-shadow: 0 0 14px rgba(251, 146, 60, 0.45); }
+.dash-neon[data-theme="dark"] .text-violet-300 { color: #c4b5fd !important; text-shadow: 0 0 14px rgba(167, 139, 250, 0.45); }
+.dash-neon[data-theme="dark"] .text-emerald-300 { color: #6ee7b7 !important; text-shadow: 0 0 14px rgba(52, 211, 153, 0.45); }
+.dash-neon[data-theme="dark"] .text-rose-300 { color: #fda4af !important; text-shadow: 0 0 14px rgba(251, 113, 133, 0.45); }
+.dash-neon[data-theme="dark"] .text-red-300 { color: #fca5a5 !important; text-shadow: 0 0 14px rgba(248, 113, 113, 0.45); }
+.dash-neon[data-theme="dark"] .text-fuchsia-200 { color: #f0abfc !important; text-shadow: 0 0 14px rgba(232, 121, 249, 0.45); }
+
+.dash-neon[data-theme="light"] .text-cyan-300 { color: #0e7490 !important; }
+.dash-neon[data-theme="light"] .text-sky-300 { color: #0369a1 !important; }
+.dash-neon[data-theme="light"] .text-amber-300 { color: #b45309 !important; }
+.dash-neon[data-theme="light"] .text-orange-300 { color: #c2410c !important; }
+.dash-neon[data-theme="light"] .text-violet-300 { color: #6d28d9 !important; }
+.dash-neon[data-theme="light"] .text-emerald-300 { color: #047857 !important; }
+.dash-neon[data-theme="light"] .text-rose-300 { color: #be123c !important; }
+.dash-neon[data-theme="light"] .text-red-300 { color: #b91c1c !important; }
+.dash-neon[data-theme="light"] .text-fuchsia-200 { color: #a21caf !important; }
+
+.dash-neon[data-theme="dark"] .text-cyan-50,
+.dash-neon[data-theme="dark"] .text-cyan-100,
+.dash-neon[data-theme="dark"] .text-cyan-200,
+.dash-neon[data-theme="dark"] .text-cyan-200\/80,
+.dash-neon[data-theme="dark"] .text-cyan-200\/70,
+.dash-neon[data-theme="dark"] .text-cyan-100\/85,
+.dash-neon[data-theme="dark"] .text-cyan-100\/60,
+.dash-neon[data-theme="dark"] .text-cyan-100\/55 {
+  color: var(--dash-fg) !important;
+}
+
+.dash-neon[data-theme="light"] .text-cyan-50,
+.dash-neon[data-theme="light"] .text-cyan-100,
+.dash-neon[data-theme="light"] .text-cyan-200,
+.dash-neon[data-theme="light"] .text-cyan-200\/80,
+.dash-neon[data-theme="light"] .text-cyan-200\/70,
+.dash-neon[data-theme="light"] .text-cyan-100\/85,
+.dash-neon[data-theme="light"] .text-cyan-100\/60,
+.dash-neon[data-theme="light"] .text-cyan-100\/55 {
+  color: var(--dash-fg) !important;
+}
+
+.dash-neon[data-theme="light"] .text-cyan-300\/90,
+.dash-neon[data-theme="light"] .text-cyan-300\/65,
+.dash-neon[data-theme="light"] .text-cyan-300\/60 {
+  color: var(--dash-muted) !important;
+}

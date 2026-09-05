@@ -1,0 +1,313 @@
+/* Informativos studio — tono neón ASLI + modo oscuro scoped */
+
+.inf-studio {
+  --inf-bg: #d6e0f0;
+  --inf-bg-deep: #c5d2e8;
+  --inf-panel: #f4f8ff;
+  --inf-panel-2: #eaf1fb;
+  --inf-surface: #ffffff;
+  --inf-surface-soft: #f0f5fd;
+  --inf-fg: #0c1b3a;
+  --inf-fg-soft: rgba(12, 27, 58, 0.82);
+  --inf-muted: #5b6f8f;
+  --inf-border: #c7d4e8;
+  --inf-border-soft: #dbe4f2;
+  --inf-navy: #11224e;
+  --inf-navy-2: #0b1a3d;
+  --inf-neon: #00c8e8;
+  --inf-neon-hot: #ff2d55;
+  --inf-neon-soft: rgba(0, 200, 232, 0.18);
+  --inf-glow: 0 0 0 1px rgba(0, 200, 232, 0.22), 0 0 18px -6px rgba(0, 200, 232, 0.45);
+  --inf-glow-hot: 0 0 0 1px rgba(255, 45, 85, 0.28), 0 0 16px -4px rgba(255, 45, 85, 0.4);
+  --inf-shadow: 0 10px 28px -16px rgba(17, 34, 78, 0.45);
+  --inf-board: #cfd9ea;
+  --inf-board-dot: #9eb0cb;
+  --inf-chip: #e4ecf8;
+  --inf-input: #ffffff;
+  --inf-ring: rgba(0, 200, 232, 0.28);
+  color: var(--inf-fg);
+  background:
+    radial-gradient(1200px 480px at 12% -10%, rgba(0, 200, 232, 0.16), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(255, 45, 85, 0.08), transparent 50%),
+    var(--inf-bg);
+}
+
+.inf-studio--dark {
+  --inf-bg: #060a14;
+  --inf-bg-deep: #04070f;
+  --inf-panel: #0b1222;
+  --inf-panel-2: #0f1830;
+  --inf-surface: #101a30;
+  --inf-surface-soft: #132038;
+  --inf-fg: #e8f4ff;
+  --inf-fg-soft: rgba(232, 244, 255, 0.82);
+  --inf-muted: #8aa0c0;
+  --inf-border: #243553;
+  --inf-border-soft: #1a2944;
+  --inf-navy: #132a5c;
+  --inf-navy-2: #0a1733;
+  --inf-neon: #00f0ff;
+  --inf-neon-hot: #ff3d6e;
+  --inf-neon-soft: rgba(0, 240, 255, 0.14);
+  --inf-glow: 0 0 0 1px rgba(0, 240, 255, 0.35), 0 0 22px -4px rgba(0, 240, 255, 0.55);
+  --inf-glow-hot: 0 0 0 1px rgba(255, 61, 110, 0.4), 0 0 18px -2px rgba(255, 61, 110, 0.5);
+  --inf-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.65);
+  --inf-board: #0a1020;
+  --inf-board-dot: #1e3358;
+  --inf-chip: #152445;
+  --inf-input: #0d162a;
+  --inf-ring: rgba(0, 240, 255, 0.35);
+  background:
+    radial-gradient(1000px 520px at 8% -15%, rgba(0, 240, 255, 0.14), transparent 55%),
+    radial-gradient(800px 420px at 100% 0%, rgba(255, 61, 110, 0.1), transparent 48%),
+    linear-gradient(180deg, #080d1a 0%, #060a14 100%);
+}
+
+.inf-studio .inf-toolbar {
+  background: color-mix(in srgb, var(--inf-surface) 88%, transparent);
+  border-color: var(--inf-border);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--inf-neon) 18%, transparent);
+}
+
+.inf-studio .inf-panel {
+  background: var(--inf-panel);
+  border-color: var(--inf-border);
+}
+
+.inf-studio .inf-panel-soft {
+  background: var(--inf-panel-2);
+  border-color: var(--inf-border-soft);
+}
+
+.inf-studio .inf-surface {
+  background: var(--inf-surface);
+  border-color: var(--inf-border);
+  color: var(--inf-fg);
+}
+
+.inf-studio .inf-muted {
+  color: var(--inf-muted);
+}
+
+.inf-studio .inf-fg {
+  color: var(--inf-fg);
+}
+
+.inf-studio .inf-neon-text {
+  color: var(--inf-neon);
+}
+
+.inf-studio .inf-board {
+  background-color: var(--inf-board);
+  background-image: radial-gradient(circle, var(--inf-board-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.inf-studio .inf-input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--inf-border);
+  background: var(--inf-input);
+  color: var(--inf-fg);
+  padding: 0.375rem 0.625rem;
+  font-size: 12px;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--inf-neon) 10%, transparent);
+}
+
+.inf-studio .inf-input::placeholder {
+  color: color-mix(in srgb, var(--inf-fg) 38%, transparent);
+}
+
+.inf-studio .inf-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--inf-neon) 55%, var(--inf-border));
+  box-shadow: var(--inf-glow);
+}
+
+.inf-studio .inf-label {
+  margin-bottom: 0.25rem;
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--inf-muted);
+}
+
+.inf-studio .inf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--inf-border);
+  background: var(--inf-surface);
+  color: var(--inf-fg-soft);
+  padding: 0.375rem 0.625rem;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--inf-neon) 12%, transparent);
+}
+
+.inf-studio .inf-btn:hover {
+  background: var(--inf-surface-soft);
+  border-color: color-mix(in srgb, var(--inf-neon) 35%, var(--inf-border));
+}
+
+.inf-studio .inf-btn:disabled {
+  opacity: 0.4;
+}
+
+.inf-studio .inf-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--inf-neon) 40%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--inf-navy) 88%, var(--inf-neon)), var(--inf-navy-2));
+  color: #fff;
+  padding: 0.375rem 0.625rem;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: var(--inf-glow);
+}
+
+.inf-studio .inf-btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.inf-studio .inf-btn-primary:disabled {
+  opacity: 0.4;
+}
+
+.inf-studio .inf-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--inf-muted);
+}
+
+.inf-studio .inf-btn-ghost:hover {
+  background: var(--inf-neon-soft);
+  color: var(--inf-fg);
+}
+
+.inf-studio .inf-btn-ghost:disabled {
+  opacity: 0.4;
+}
+
+.inf-studio .inf-chip-active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--inf-navy) 80%, var(--inf-neon)), var(--inf-navy-2));
+  color: #fff;
+  box-shadow: var(--inf-glow);
+}
+
+.inf-studio .inf-chip-idle {
+  background: var(--inf-chip);
+  color: var(--inf-fg-soft);
+}
+
+.inf-studio .inf-chip-idle:hover {
+  background: color-mix(in srgb, var(--inf-neon-soft) 70%, var(--inf-chip));
+}
+
+.inf-studio .inf-tile {
+  border: 1px solid var(--inf-border);
+  background: var(--inf-surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--inf-neon) 10%, transparent);
+}
+
+.inf-studio .inf-tile:hover {
+  border-color: color-mix(in srgb, var(--inf-neon) 45%, var(--inf-border));
+  box-shadow: var(--inf-glow);
+  transform: translateY(-1px);
+}
+
+.inf-studio .inf-tile-preview {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--inf-neon) 10%, var(--inf-surface-soft)), var(--inf-surface-soft));
+}
+
+.inf-studio .inf-theme-toggle {
+  border: 1px solid color-mix(in srgb, var(--inf-neon) 40%, var(--inf-border));
+  background: color-mix(in srgb, var(--inf-surface) 80%, var(--inf-neon-soft));
+  color: var(--inf-neon);
+  box-shadow: var(--inf-glow);
+}
+
+.inf-studio .inf-theme-toggle:hover {
+  filter: brightness(1.08);
+}
+
+.inf-studio--dark .inf-artboard-frame {
+  box-shadow: var(--inf-glow), var(--inf-shadow);
+  border: 1px solid color-mix(in srgb, var(--inf-neon) 22%, transparent);
+}
+
+.inf-studio .inf-capas-bar {
+  background: color-mix(in srgb, var(--inf-panel-2) 92%, var(--inf-neon-soft));
+  border-color: var(--inf-border);
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--inf-neon) 16%, transparent);
+}
+
+/* Suaviza paneles internos claros del inspector/agenda en modo oscuro */
+.inf-studio--dark .bg-white,
+.inf-studio--dark .bg-white\/90,
+.inf-studio--dark .bg-white\/80,
+.inf-studio--dark .bg-white\/60,
+.inf-studio--dark .bg-\[\#f8fafc\],
+.inf-studio--dark .bg-\[\#f7f9fc\],
+.inf-studio--dark .bg-\[\#f4f7fb\],
+.inf-studio--dark .bg-\[\#f3f6fb\],
+.inf-studio--dark .bg-\[\#eef2f8\] {
+  background-color: var(--inf-surface) !important;
+}
+
+.inf-studio--dark .text-\[\#11224E\],
+.inf-studio--dark .text-\[\#11224E\]\/90,
+.inf-studio--dark .text-\[\#11224E\]\/80,
+.inf-studio--dark .text-\[\#11224E\]\/75,
+.inf-studio--dark .text-\[\#11224E\]\/60,
+.inf-studio--dark .text-\[\#1a2744\],
+.inf-studio--dark .text-\[\#1a2744\]\/80,
+.inf-studio--dark .text-\[\#1a2744\]\/75,
+.inf-studio--dark .text-brand-blue,
+.inf-studio--dark .text-brand-blue\/90,
+.inf-studio--dark .text-brand-blue\/80,
+.inf-studio--dark .text-brand-blue\/75 {
+  color: var(--inf-fg) !important;
+}
+
+.inf-studio--dark .text-\[\#5a6b85\],
+.inf-studio--dark .text-\[\#5a6b85\]\/85,
+.inf-studio--dark .text-\[\#5a6b85\]\/80,
+.inf-studio--dark .text-\[\#5a6b85\]\/70,
+.inf-studio--dark .text-\[\#5a6b85\]\/60,
+.inf-studio--dark .text-\[\#5a6b85\]\/50,
+.inf-studio--dark .text-brand-blue\/60,
+.inf-studio--dark .text-brand-blue\/55,
+.inf-studio--dark .text-brand-blue\/50,
+.inf-studio--dark .text-brand-blue\/45 {
+  color: var(--inf-muted) !important;
+}
+
+.inf-studio--dark .border-\[\#e2e8f0\],
+.inf-studio--dark .border-\[\#e8eef5\],
+.inf-studio--dark .border-\[\#d5dde8\],
+.inf-studio--dark .border-\[\#c5d0e0\],
+.inf-studio--dark .border-brand-blue\/15,
+.inf-studio--dark .border-brand-blue\/12 {
+  border-color: var(--inf-border) !important;
+}
+
+.inf-studio--dark .ring-\[\#e2e8f0\],
+.inf-studio--dark .ring-\[\#d5dde8\] {
+  --tw-ring-color: var(--inf-border) !important;
+}
