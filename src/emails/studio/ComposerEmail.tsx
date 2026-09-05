@@ -10,6 +10,7 @@ import {
   Hr,
   Html,
   Img,
+  Link,
   Preview,
   pixelBasedPreset,
   Row,
@@ -26,6 +27,7 @@ import {
   mergePlantilla,
   resolveSaludo,
 } from "@/lib/email/informativos/saludo";
+import { CATALOG_KINDS, renderCatalogBlock } from "./catalogRender";
 import { ASLI_TAILWIND, type StudioBlock, type StudioDocument } from "./types";
 import { resolveStudioColor, softTintFromColor } from "./colors";
 
@@ -74,6 +76,19 @@ function BlockView({
   const assets = emailAssetUrls(preferPublic);
   const align = resolveTextAlign(p.align);
   const accent = resolveStudioColor(p.color, "#11224E");
+  const mergeOne = (text: string) => merge(text, nombre, preferPublic);
+
+  if (CATALOG_KINDS.has(block.kind)) {
+    return renderCatalogBlock(block, {
+      nombre,
+      preferPublic,
+      merge: mergeOne,
+      boldParts,
+      align,
+      accent,
+      assets: { logo: assets.logo, logoWhite: assets.logoWhite },
+    });
+  }
 
   switch (block.kind) {
     case "headerAsli": {
@@ -217,6 +232,103 @@ function BlockView({
         );
       }
 
+      if (variant === "menucenter" || variant === "menu-center") {
+        const links = (p.menu || p.kicker || "Inicio|Servicios|Contacto")
+          .split(/[|·•]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return (
+          <Section style={{ backgroundColor: "#ffffff", borderBottom: `3px solid ${stripe}` }}>
+            <Row>
+              <Column style={{ padding: "18px 24px 8px", textAlign: "center" }}>
+                <Img src={logoDark} width="100" alt="ASLI" style={{ display: "inline-block", margin: "0 auto" }} />
+              </Column>
+            </Row>
+            <Row>
+              <Column style={{ padding: "4px 24px 16px", textAlign: "center" }}>
+                {links.map((l, i) => (
+                  <Link
+                    key={i}
+                    href={p.href || "https://asli.cl"}
+                    style={{
+                      display: "inline-block",
+                      margin: "0 10px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: navy,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {l}
+                  </Link>
+                ))}
+              </Column>
+            </Row>
+          </Section>
+        );
+      }
+
+      if (variant === "menuside" || variant === "menu-side") {
+        const links = (p.menu || p.kicker || "Inicio|Servicios|Contacto")
+          .split(/[|·•]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return (
+          <Section style={{ backgroundColor: "#ffffff", borderBottom: `1px solid #e2e8f0` }}>
+            <Row>
+              <Column style={{ padding: "16px 12px 16px 24px", verticalAlign: "middle", width: "40%" }}>
+                <Img src={logoDark} width="96" alt="ASLI" style={{ display: "block" }} />
+              </Column>
+              <Column style={{ padding: "16px 24px 16px 8px", verticalAlign: "middle", textAlign: "right", width: "60%" }}>
+                {links.map((l, i) => (
+                  <Link
+                    key={i}
+                    href={p.href || "https://asli.cl"}
+                    style={{
+                      display: "inline-block",
+                      marginLeft: "12px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: navy,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {l}
+                  </Link>
+                ))}
+              </Column>
+            </Row>
+          </Section>
+        );
+      }
+
+      if (variant === "social") {
+        const icons = [
+          { src: assets.iconPeople, href: "https://www.instagram.com/asli.chile/", alt: "Instagram" },
+          { src: assets.iconGlobe, href: "https://www.linkedin.com/company/asli-chile/", alt: "LinkedIn" },
+          { src: assets.iconMail, href: "https://asli.cl", alt: "Web" },
+        ];
+        return (
+          <Section style={{ backgroundColor: navy }}>
+            <Row>
+              <Column style={{ padding: "18px 24px", verticalAlign: "middle", width: "50%" }}>
+                <Img src={logo} width="96" alt="ASLI" style={{ display: "block" }} />
+              </Column>
+              <Column style={{ padding: "18px 24px", verticalAlign: "middle", textAlign: "right", width: "50%" }}>
+                {icons.map((ic, i) => (
+                  <Link key={i} href={ic.href} style={{ display: "inline-block", marginLeft: "8px" }}>
+                    <Img src={ic.src} width="22" height="22" alt={ic.alt} style={{ display: "block", border: 0 }} />
+                  </Link>
+                ))}
+              </Column>
+            </Row>
+            <Section style={{ backgroundColor: stripe, height: "6px", lineHeight: "6px" }}>
+              <Text style={{ margin: 0, fontSize: "1px", lineHeight: "6px", color: stripe }}>&nbsp;</Text>
+            </Section>
+          </Section>
+        );
+      }
+
       // variante "barra" (default) — bloque navy + franja roja editorial
       return (
         <Section style={{ backgroundColor: navy }}>
@@ -280,32 +392,57 @@ function BlockView({
         </Text>
       );
     }
-    case "heading":
+    case "heading": {
+      const eyebrow = (p.eyebrow || "").trim();
       return (
-        <Heading
-          as={(p.as as "h1" | "h2" | "h3") || "h2"}
-          style={{
-            margin: "0 0 12px 0",
-            fontSize: "20px",
-            fontWeight: 700,
-            lineHeight: "28px",
-            color: accent,
-            textAlign: align,
-          }}
-        >
-          {merge(p.text || "", nombre, preferPublic)}
-        </Heading>
+        <Section style={{ margin: "0 0 12px 0", textAlign: align }}>
+          {eyebrow ? (
+            <Text
+              style={{
+                margin: "0 0 6px 0",
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: resolveStudioColor(p.color, "#C8102E"),
+                textAlign: align,
+              }}
+            >
+              {merge(eyebrow, nombre, preferPublic)}
+            </Text>
+          ) : null}
+          <Heading
+            as={(p.as as "h1" | "h2" | "h3") || "h2"}
+            style={{
+              margin: 0,
+              fontSize: "20px",
+              fontWeight: 700,
+              lineHeight: "28px",
+              color: accent,
+              textAlign: align,
+            }}
+          >
+            {merge(p.text || "", nombre, preferPublic)}
+          </Heading>
+        </Section>
       );
+    }
     case "text": {
       const merged = merge(p.text || "", nombre, preferPublic);
       const lines = merged.split(/\n/);
+      const tVariant = (p.variant || "body").toLowerCase();
+      const isLead = tVariant === "lead";
+      const isMuted = tVariant === "muted";
       return (
         <Text
           style={{
             margin: "16px 0 0 0",
-            fontSize: "14px",
-            lineHeight: "22px",
-            color: resolveStudioColor(p.color, "#18181b"),
+            fontSize: isLead ? "16px" : "14px",
+            lineHeight: isLead ? "26px" : "22px",
+            fontWeight: isLead ? 500 : 400,
+            color: isMuted
+              ? resolveStudioColor(p.color, "#64748b")
+              : resolveStudioColor(p.color, "#18181b"),
             textAlign: align,
           }}
         >
@@ -711,6 +848,36 @@ function BlockView({
     case "divider": {
       const line = resolveStudioColor(p.color, "#E5E7EB");
       const dVariant = (p.variant || "solid").toLowerCase();
+      if (dVariant === "label") {
+        const label = merge(p.label || "Continúa", nombre, preferPublic);
+        return (
+          <Section style={{ margin: "18px 0" }}>
+            <Row>
+              <Column style={{ verticalAlign: "middle" }}>
+                <Hr style={{ borderColor: line, borderTop: `1px solid ${line}`, margin: 0 }} />
+              </Column>
+              <Column style={{ width: "1%", padding: "0 10px", whiteSpace: "nowrap", verticalAlign: "middle" }}>
+                <Text
+                  style={{
+                    margin: 0,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: resolveStudioColor(p.color, "#64748b"),
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {label}
+                </Text>
+              </Column>
+              <Column style={{ verticalAlign: "middle" }}>
+                <Hr style={{ borderColor: line, borderTop: `1px solid ${line}`, margin: 0 }} />
+              </Column>
+            </Row>
+          </Section>
+        );
+      }
       const thickness = dVariant === "thick" ? "3px" : "1px";
       const style =
         dVariant === "dashed"
@@ -726,22 +893,51 @@ function BlockView({
             };
       return <Hr style={style} />;
     }
-    case "image":
+    case "image": {
+      const imgVariant = (p.variant || "default").toLowerCase();
+      const width =
+        imgVariant === "full" ? 600 : Number(p.width) || (imgVariant === "rounded" ? 280 : 160);
+      const radius = imgVariant === "rounded" ? "12px" : "0";
+      const caption = (p.caption || "").trim();
+      const src = (p.src || "").trim() || assets.formasHeader || assets.logo;
       return (
         <Section style={{ margin: "0 0 16px 0", textAlign: align }}>
           <Img
-            src={p.src || assets.logo}
-            alt={p.alt || ""}
-            width={Number(p.width) || 160}
+            src={src}
+            alt={p.alt || "Imagen"}
+            width={width}
             style={{
-              display: "inline-block",
+              display: imgVariant === "full" ? "block" : "inline-block",
               border: 0,
               maxWidth: "100%",
+              width: imgVariant === "full" ? "100%" : undefined,
               height: "auto",
+              borderRadius: radius,
+              backgroundColor: "#eef2f8",
             }}
           />
+          {caption || imgVariant === "caption" || !(p.src || "").trim() ? (
+            <Text
+              style={{
+                margin: "8px 0 0 0",
+                fontSize: "12px",
+                color: "#64748b",
+                textAlign: align,
+              }}
+            >
+              {merge(
+                caption ||
+                  (!(p.src || "").trim()
+                    ? "Cambia la URL de la imagen en Propiedades"
+                    : p.alt || "Pie de imagen"),
+                nombre,
+                preferPublic,
+              )}
+            </Text>
+          ) : null}
         </Section>
       );
+    }
     case "dataRow": {
       const iconSrc = dataRowIconSrc(p.icon, preferPublic);
       const labelText = `${(p.label || "DATO").replace(/:$/, "")}:`;
@@ -977,7 +1173,7 @@ function BlockView({
         );
       }
 
-      if (fVariant === "centered") {
+      if (fVariant === "centered" || fVariant === "onecol" || fVariant === "one-col") {
         return (
           <Section style={{ backgroundColor: "#0B1A3D", padding: "20px 18px", textAlign: "center" }}>
             <Img
@@ -1017,10 +1213,63 @@ function BlockView({
               <br />
               {addr2}
             </Text>
+            {(p.link1 || p.link2) ? (
+              <Text style={{ margin: "10px 0 0 0", fontSize: "11px", textAlign: "center" }}>
+                {p.link1 ? (
+                  <Link href={p.href1 || "https://asli.cl"} style={{ color: "#fff", margin: "0 8px", textDecoration: "underline" }}>
+                    {p.link1}
+                  </Link>
+                ) : null}
+                {p.link2 ? (
+                  <Link href={p.href2 || "https://asli.cl"} style={{ color: "#fff", margin: "0 8px", textDecoration: "underline" }}>
+                    {p.link2}
+                  </Link>
+                ) : null}
+              </Text>
+            ) : null}
             <Section style={{ backgroundColor: accentBar, height: "4px", lineHeight: "4px", marginTop: "14px" }}>
               <Text style={{ margin: 0, fontSize: "1px", lineHeight: "4px", color: accentBar }}>
                 &nbsp;
               </Text>
+            </Section>
+          </Section>
+        );
+      }
+
+      if (fVariant === "twocol" || fVariant === "two-col") {
+        const links = (p.menu || "Servicios|Tracking|Contacto|Privacidad")
+          .split(/[|·•]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return (
+          <Section style={{ backgroundColor: "#0B1A3D", padding: "18px" }}>
+            <Row>
+              <Column style={{ width: "48%", verticalAlign: "top", paddingRight: "10px" }}>
+                <Img src={logo} width="96" alt="ASLI" style={{ display: "block", border: 0 }} />
+                <Text style={{ margin: "8px 0 0 0", fontSize: "11px", color: "rgba(255,255,255,0.8)", lineHeight: "16px" }}>
+                  {tagline}
+                </Text>
+                <Text style={{ margin: "8px 0 0 0", fontSize: "10px", color: "rgba(255,255,255,0.65)", lineHeight: "15px" }}>
+                  {addr1}
+                  <br />
+                  {addr2}
+                </Text>
+              </Column>
+              <Column style={{ width: "52%", verticalAlign: "top", paddingLeft: "10px" }}>
+                <Text style={{ margin: "0 0 8px 0", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fff" }}>
+                  Enlaces
+                </Text>
+                {links.map((l, i) => (
+                  <Text key={i} style={{ margin: "0 0 6px 0", fontSize: "12px" }}>
+                    <Link href={p.href || "https://asli.cl"} style={{ color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
+                      {l}
+                    </Link>
+                  </Text>
+                ))}
+              </Column>
+            </Row>
+            <Section style={{ backgroundColor: accentBar, height: "3px", lineHeight: "3px", marginTop: "14px" }}>
+              <Text style={{ margin: 0, fontSize: "1px", lineHeight: "3px", color: accentBar }}>&nbsp;</Text>
             </Section>
           </Section>
         );
@@ -1082,7 +1331,13 @@ function BlockView({
       return <Section style={{ margin: 0 }}>{parse(html)}</Section>;
     }
     default:
-      return null;
+      return (
+        <Section style={{ margin: "8px 0", padding: "12px", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
+          <Text style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+            Bloque no soportado: {block.kind}
+          </Text>
+        </Section>
+      );
   }
 }
 

@@ -1,4 +1,7 @@
 import { newBlockId, type BlockKind, type StudioBlock, type StudioDocument } from "./types";
+import {
+  REACT_EMAIL_CATALOG_ITEMS,
+} from "./catalogLibrary";
 
 export type PresetDef = {
   kind: BlockKind;
@@ -176,6 +179,121 @@ export const STUDIO_PRESETS: PresetDef[] = [
   <p class="m-0 text-[15px] leading-6">Hola <strong>{{nombre}}</strong>, bloque custom.</p>
 </div>`,
     },
+  },
+  {
+    kind: "grid",
+    label: "Grid",
+    description: "Row + Column (2–4 cols)",
+    defaults: { cols: "2", title1: "Columna A", text1: "Texto", title2: "Columna B", text2: "Texto" },
+  },
+  {
+    kind: "link",
+    label: "Link",
+    description: "Hipervínculo",
+    defaults: { variant: "inline", label: "Ver más", href: "https://www.asli.cl", align: "left" },
+  },
+  {
+    kind: "buttonsRow",
+    label: "Botones (fila)",
+    description: "Dos botones / download",
+    defaults: {
+      variant: "two",
+      label1: "Primario",
+      href1: "https://www.asli.cl",
+      label2: "Secundario",
+      href2: "https://www.asli.cl",
+      align: "center",
+    },
+  },
+  {
+    kind: "avatar",
+    label: "Avatars",
+    description: "Avatares circulares / stacked",
+    defaults: { variant: "circular" },
+  },
+  {
+    kind: "gallery",
+    label: "Gallery",
+    description: "Grilla de imágenes",
+    defaults: { variant: "four" },
+  },
+  {
+    kind: "codeInline",
+    label: "Code inline",
+    description: "Código en línea",
+    defaults: { prefix: "Usa", code: "npm i react-email" },
+  },
+  {
+    kind: "codeBlock",
+    label: "Code block",
+    description: "Bloque de código",
+    defaults: { theme: "dark", lineNumbers: "0", title: "email.tsx" },
+  },
+  {
+    kind: "markdown",
+    label: "Markdown",
+    description: "Markdown → email",
+    defaults: { variant: "simple" },
+  },
+  {
+    kind: "article",
+    label: "Article",
+    description: "Artículo con imagen/autor",
+    defaults: { variant: "imageLeft", title: "Título del artículo", body: "Resumen de ejemplo." },
+  },
+  {
+    kind: "feature",
+    label: "Features",
+    description: "Beneficios / features",
+    defaults: { variant: "list", heading: "Beneficios" },
+  },
+  {
+    kind: "stats",
+    label: "Stats",
+    description: "Métricas",
+    defaults: { variant: "simple" },
+  },
+  {
+    kind: "testimonial",
+    label: "Testimonial",
+    description: "Cita de cliente",
+    defaults: { variant: "centered" },
+  },
+  {
+    kind: "feedback",
+    label: "Feedback",
+    description: "Encuesta / reseñas",
+    defaults: { variant: "rating" },
+  },
+  {
+    kind: "pricing",
+    label: "Pricing",
+    description: "Tabla de precios",
+    defaults: { variant: "simple" },
+  },
+  {
+    kind: "product",
+    label: "Product",
+    description: "Producto ecommerce",
+    defaults: { variant: "stacked", title: "Producto", price: "USD 120" },
+  },
+  {
+    kind: "checkout",
+    label: "Checkout",
+    description: "Resumen de compra",
+    defaults: { heading: "Resumen", cta: "Confirmar" },
+  },
+  {
+    kind: "containerBand",
+    label: "Container",
+    description: "Banda contenedora",
+    defaults: { title: "Contenedor", text: "Mensaje", bg: "#F6EEE8", align: "center" },
+  },
+  {
+    kind: "sectionLayout",
+    label: "Section",
+    description: "Sección simple o con filas",
+    defaults: { variant: "simple", title: "Sección", text: "Contenido" },
   },
 ];
 
@@ -423,8 +541,15 @@ export const STUDIO_LIBRARY: StudioLibraryItem[] = [
     id: "image",
     kind: "image",
     label: "Imagen",
-    description: "URL pública",
+    description: "Cambia la URL en Propiedades",
     icon: "lucide:image",
+    props: {
+      src: "",
+      alt: "Imagen",
+      width: "520",
+      variant: "full",
+      caption: "",
+    },
   },
   {
     id: "divider-solid",
@@ -518,6 +643,7 @@ export const STUDIO_LIBRARY: StudioLibraryItem[] = [
     icon: "lucide:minus",
     props: { variant: "compact" },
   },
+  ...REACT_EMAIL_CATALOG_ITEMS,
 ];
 
 export type StudioLibraryGroup = {
@@ -528,57 +654,75 @@ export type StudioLibraryGroup = {
   itemIds: string[];
 };
 
-/** Categorías del panel Agregar (acordeón), en orden de un correo. */
+/** Categorías del panel Agregar — estilo Canva: pocas, sin duplicados. */
 export const STUDIO_LIBRARY_GROUPS: StudioLibraryGroup[] = [
   {
-    id: "inicio",
-    label: "Inicio del correo",
-    icon: "lucide:panel-top",
-    itemIds: ["header-barra", "header-filete", "header-masthead", "greeting"],
-  },
-  {
-    id: "texto",
-    label: "Textos",
-    icon: "lucide:type",
-    itemIds: ["heading", "text", "quote-bar", "quote-card"],
+    id: "basicos",
+    label: "Básicos",
+    icon: "lucide:shapes",
+    itemIds: [
+      "header-barra",
+      "greeting",
+      "heading",
+      "text",
+      "button-solid",
+      "image",
+      "divider-solid",
+      "spacer-md",
+      "footer-split",
+    ],
   },
   {
     id: "listas",
     label: "Listas",
     icon: "lucide:list",
-    itemIds: ["list-num", "list-bullet", "list-dash", "list-check", "list-steps"],
+    itemIds: ["list-bullet", "list-num", "list-check", "list-steps"],
   },
   {
-    id: "avisos",
-    label: "Avisos y datos",
-    icon: "lucide:megaphone",
+    id: "destacados",
+    label: "Destacados",
+    icon: "lucide:sparkles",
     itemIds: [
       "callout-info",
-      "callout-warn",
-      "callout-ok",
+      "quote-bar",
       "dataRow",
-      "dataRow-red",
-      "dataRow-teal",
-      "html-banner",
+      "container-band",
+      "section-simple",
     ],
   },
   {
-    id: "media",
-    label: "Imágenes y enlaces",
-    icon: "lucide:image",
-    itemIds: ["image", "button-solid", "button-outline", "button-pill", "button-soft"],
+    id: "diseno",
+    label: "Diseño",
+    icon: "lucide:layout-template",
+    itemIds: [
+      "grid-2",
+      "gallery-three",
+      "avatar-text",
+      "image-full",
+      "buttons-two",
+      "link-inline",
+    ],
   },
   {
-    id: "espacio",
-    label: "Separación",
-    icon: "lucide:unfold-vertical",
-    itemIds: ["divider-solid", "divider-thick", "divider-dash", "spacer-sm", "spacer-md", "spacer-lg"],
+    id: "bloques",
+    label: "Bloques",
+    icon: "lucide:panels-top-left",
+    itemIds: [
+      "article-left",
+      "feature-list",
+      "stats-simple",
+      "testimonial-center",
+      "feedback-rating",
+      "pricing-simple",
+      "product-left",
+      "checkout",
+    ],
   },
   {
-    id: "cierre",
-    label: "Cierre y avanzado",
-    icon: "lucide:panel-bottom",
-    itemIds: ["footer-split", "footer-centered", "footer-compact", "html"],
+    id: "avanzado",
+    label: "Avanzado",
+    icon: "lucide:code-2",
+    itemIds: ["md-simple", "code-inline", "code-block", "html", "divider-label"],
   },
 ];
 
@@ -593,6 +737,20 @@ export function getStudioLibraryGrouped(): {
       .map((id) => byId.get(id))
       .filter((i): i is StudioLibraryItem => !!i),
   }));
+}
+
+/** Todos los ítems planos (para búsqueda Canva). */
+export function getStudioLibraryFlat(): StudioLibraryItem[] {
+  const seen = new Set<string>();
+  const out: StudioLibraryItem[] = [];
+  for (const { items } of getStudioLibraryGrouped()) {
+    for (const item of items) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      out.push(item);
+    }
+  }
+  return out;
 }
 
 export const LIST_KINDS: BlockKind[] = [

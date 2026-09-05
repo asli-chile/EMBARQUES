@@ -14,11 +14,29 @@ export type BlockKind =
   | "quote"
   | "spacer"
   | "button"
+  | "buttonsRow"
   | "divider"
   | "image"
   | "dataRow"
   | "footerAsli"
-  | "html";
+  | "html"
+  | "grid"
+  | "link"
+  | "avatar"
+  | "gallery"
+  | "codeInline"
+  | "codeBlock"
+  | "markdown"
+  | "article"
+  | "feature"
+  | "stats"
+  | "testimonial"
+  | "feedback"
+  | "pricing"
+  | "product"
+  | "checkout"
+  | "containerBand"
+  | "sectionLayout";
 
 export type StudioBlock = {
   id: string;

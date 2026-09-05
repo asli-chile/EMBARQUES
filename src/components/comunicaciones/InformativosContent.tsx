@@ -20,13 +20,19 @@ import {
   createBlankStudioDocument,
   createDefaultStudioDocument,
   createFromLibrary,
+  getStudioLibraryFlat,
   getStudioLibraryGrouped,
   isListKind,
   STUDIO_DOCUMENT_TEMPLATES,
   STUDIO_PRESETS,
   type StudioLibraryItem,
 } from "@/emails/studio/presets";
-import type { BlockKind, StudioBlock, StudioDocument } from "@/emails/studio/types";
+import {
+  newBlockId,
+  type BlockKind,
+  type StudioBlock,
+  type StudioDocument,
+} from "@/emails/studio/types";
 import {
   nombreDesdeEmail,
   parseDestinatarios,
@@ -65,11 +71,29 @@ const PRESET_ICONS: Record<BlockKind, string> = {
   quote: "lucide:quote",
   spacer: "lucide:unfold-vertical",
   button: "lucide:rectangle-horizontal",
+  buttonsRow: "lucide:columns-2",
   divider: "lucide:minus",
   image: "lucide:image",
   dataRow: "lucide:rows-3",
   footerAsli: "lucide:panel-bottom",
   html: "lucide:code-2",
+  grid: "lucide:layout-grid",
+  link: "lucide:link",
+  avatar: "lucide:circle-user",
+  gallery: "lucide:images",
+  codeInline: "lucide:code",
+  codeBlock: "lucide:terminal",
+  markdown: "lucide:file-text",
+  article: "lucide:newspaper",
+  feature: "lucide:sparkles",
+  stats: "lucide:bar-chart-3",
+  testimonial: "lucide:message-square-quote",
+  feedback: "lucide:thumbs-up",
+  pricing: "lucide:badge-dollar-sign",
+  product: "lucide:shopping-bag",
+  checkout: "lucide:credit-card",
+  containerBand: "lucide:box",
+  sectionLayout: "lucide:layout-template",
 };
 
 type Panel = "compose" | "send" | "agenda";
@@ -213,6 +237,7 @@ function propFields(
       ];
     case "heading":
       return [
+        { key: "eyebrow", label: "Eyebrow / kicker (opcional)" },
         { key: "text", label: "Texto del título", multiline: true },
         { key: "as", label: "Nivel (h1 | h2 | h3)" },
         COLOR_FIELD,
@@ -220,6 +245,15 @@ function propFields(
       ];
     case "text":
       return [
+        {
+          key: "variant",
+          label: "Estilo",
+          options: [
+            { value: "body", label: "Normal" },
+            { value: "lead", label: "Lead (destacado)" },
+            { value: "muted", label: "Muted (secundario)" },
+          ],
+        },
         {
           key: "text",
           label: "Texto del párrafo",
@@ -331,8 +365,23 @@ function propFields(
       ];
     case "image":
       return [
-        { key: "src", label: "URL de la imagen" },
+        {
+          key: "variant",
+          label: "Estilo",
+          options: [
+            { value: "default", label: "Normal" },
+            { value: "full", label: "Ancho completo" },
+            { value: "rounded", label: "Redondeada" },
+            { value: "caption", label: "Con pie de imagen" },
+          ],
+        },
+        {
+          key: "src",
+          label: "URL de la imagen",
+          hint: "Pega una URL pública (https://…). Vacío = imagen de ejemplo ASLI.",
+        },
         { key: "alt", label: "Texto alternativo" },
+        { key: "caption", label: "Pie de imagen" },
         { key: "width", label: "Ancho (px)" },
         ALIGN_FIELD,
       ];
@@ -385,14 +434,18 @@ function propFields(
             { value: "barra", label: "Barra navy + franja roja" },
             { value: "filete", label: "Filete claro (doble línea)" },
             { value: "masthead", label: "Masthead editorial" },
+            { value: "menuCenter", label: "Menú centrado" },
+            { value: "menuSide", label: "Menú lateral" },
+            { value: "social", label: "Con redes" },
           ],
           hint: "Misma paleta ASLI; distinta composición.",
         },
         {
           key: "kicker",
-          label: "Línea editorial",
-          hint: "Ej: Informativo · Exportaciones · Aviso operativo",
+          label: "Línea editorial / menú",
+          hint: "Ej: Informativo · o Inicio|Servicios|Contacto",
         },
+        { key: "menu", label: "Menú (opcional, con | )" },
         { key: "logoUrl", label: "URL logo (vacío = logo ASLI)" },
         {
           ...COLOR_FIELD,
@@ -410,12 +463,15 @@ function propFields(
             { value: "split", label: "Dividido (logo | dirección)" },
             { value: "centered", label: "Centrado" },
             { value: "compact", label: "Compacto" },
+            { value: "oneCol", label: "Una columna (React Email)" },
+            { value: "twoCol", label: "Dos columnas (React Email)" },
           ],
         },
         { key: "logoUrl", label: "URL logo (vacío = logo ASLI)" },
         { key: "tagline", label: "Línea bajo el logo" },
         { key: "address1", label: "Dirección línea 1" },
         { key: "address2", label: "Dirección línea 2" },
+        { key: "menu", label: "Enlaces (twoCol, con | )" },
         {
           ...COLOR_FIELD,
           label: "Color acento",
@@ -441,7 +497,305 @@ function propFields(
             { value: "solid", label: "Fina" },
             { value: "thick", label: "Gruesa" },
             { value: "dashed", label: "Punteada" },
+            { value: "label", label: "Con etiqueta" },
           ],
+        },
+        { key: "label", label: "Etiqueta (si aplica)" },
+        COLOR_FIELD,
+      ];
+    case "grid":
+      return [
+        { key: "cols", label: "Columnas (2–4)" },
+        { key: "title1", label: "Título col. 1" },
+        { key: "text1", label: "Texto col. 1", multiline: true },
+        { key: "title2", label: "Título col. 2" },
+        { key: "text2", label: "Texto col. 2", multiline: true },
+        { key: "title3", label: "Título col. 3" },
+        { key: "text3", label: "Texto col. 3", multiline: true },
+        { key: "title4", label: "Título col. 4" },
+        { key: "text4", label: "Texto col. 4", multiline: true },
+        COLOR_FIELD,
+        ALIGN_FIELD,
+      ];
+    case "link":
+      return [
+        {
+          key: "variant",
+          label: "Estilo",
+          options: [
+            { value: "inline", label: "Inline" },
+            { value: "button", label: "Como botón" },
+          ],
+        },
+        { key: "label", label: "Texto" },
+        { key: "href", label: "URL" },
+        COLOR_FIELD,
+        ALIGN_FIELD,
+      ];
+    case "buttonsRow":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "two", label: "Dos botones" },
+            { value: "download", label: "Download" },
+          ],
+        },
+        { key: "label1", label: "Botón 1" },
+        { key: "href1", label: "URL 1" },
+        { key: "label2", label: "Botón 2" },
+        { key: "href2", label: "URL 2" },
+        COLOR_FIELD,
+        ALIGN_FIELD,
+      ];
+    case "gallery":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "four", label: "4 imágenes" },
+            { value: "three", label: "3 imágenes" },
+            { value: "horizontal", label: "Horizontal" },
+            { value: "vertical", label: "Vertical" },
+          ],
+        },
+        {
+          key: "urls",
+          label: "URLs de imágenes",
+          multiline: true,
+          hint: "Una URL https por línea. Puedes reemplazar todas las de ejemplo.",
+        },
+      ];
+    case "avatar":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "circular", label: "Circular" },
+            { value: "rounded", label: "Redondeado" },
+            { value: "stacked", label: "Stacked" },
+            { value: "text", label: "Con texto" },
+          ],
+        },
+        {
+          key: "urls",
+          label: "URLs de avatares",
+          multiline: true,
+          hint: "Una URL por línea (opcional).",
+        },
+        { key: "names", label: "Nombres (uno por línea)", multiline: true },
+        { key: "role", label: "Cargo (variante texto)" },
+        ALIGN_FIELD,
+      ];
+    case "codeInline":
+      return [
+        { key: "prefix", label: "Texto antes" },
+        { key: "code", label: "Código" },
+        { key: "suffix", label: "Texto después" },
+      ];
+    case "codeBlock":
+      return [
+        {
+          key: "theme",
+          label: "Tema",
+          options: [
+            { value: "dark", label: "Oscuro" },
+            { value: "light", label: "Claro" },
+          ],
+        },
+        { key: "title", label: "Título" },
+        { key: "code", label: "Código", multiline: true },
+        { key: "lineNumbers", label: "Números de línea (1/0)" },
+      ];
+    case "markdown":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "simple", label: "Simple" },
+            { value: "container", label: "Contenedor" },
+            { value: "custom", label: "Custom" },
+          ],
+        },
+        { key: "content", label: "Markdown", multiline: true },
+      ];
+    case "product":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "stacked", label: "Apilado" },
+            { value: "imageLeft", label: "Imagen izq." },
+            { value: "cards3", label: "3 cards" },
+            { value: "cards4", label: "4 cards" },
+          ],
+        },
+        { key: "heading", label: "Título sección" },
+        { key: "title", label: "Producto" },
+        { key: "price", label: "Precio" },
+        { key: "description", label: "Descripción", multiline: true },
+        {
+          key: "imageUrl",
+          label: "URL imagen",
+          hint: "Reemplaza la imagen de ejemplo con tu URL https.",
+        },
+        {
+          key: "items",
+          label: "Cards (nombre|precio|detalle)",
+          multiline: true,
+        },
+        COLOR_FIELD,
+      ];
+    case "article":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "imageLeft", label: "Imagen izq." },
+            { value: "imageRight", label: "Imagen der." },
+            { value: "withBg", label: "Con fondo" },
+            { value: "cards", label: "Cards" },
+            { value: "author", label: "Con autor" },
+            { value: "authors", label: "Varios autores" },
+          ],
+        },
+        { key: "title", label: "Título" },
+        { key: "body", label: "Cuerpo", multiline: true },
+        { key: "author", label: "Autor" },
+        {
+          key: "imageUrl",
+          label: "URL imagen",
+          hint: "Reemplaza la imagen de ejemplo.",
+        },
+        COLOR_FIELD,
+      ];
+    case "feature":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "list", label: "Lista" },
+            { value: "grid", label: "Grid" },
+            { value: "icons", label: "Con íconos" },
+            { value: "header", label: "Con header" },
+            { value: "numbered", label: "Numerado" },
+          ],
+        },
+        { key: "heading", label: "Título" },
+        {
+          key: "items",
+          label: "Ítems (título|texto por línea)",
+          multiline: true,
+        },
+        COLOR_FIELD,
+      ];
+    case "stats":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "simple", label: "Simple" },
+            { value: "bordered", label: "Con borde" },
+          ],
+        },
+        {
+          key: "items",
+          label: "Métricas (valor|etiqueta por línea)",
+          multiline: true,
+        },
+        COLOR_FIELD,
+      ];
+    case "testimonial":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "centered", label: "Centrado" },
+            { value: "side", label: "Lateral" },
+          ],
+        },
+        { key: "quote", label: "Cita", multiline: true },
+        { key: "author", label: "Autor" },
+        { key: "role", label: "Cargo" },
+        COLOR_FIELD,
+      ];
+    case "feedback":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "rating", label: "Rating" },
+            { value: "survey", label: "Encuesta" },
+            { value: "nps", label: "NPS" },
+          ],
+        },
+        { key: "heading", label: "Título" },
+        { key: "text", label: "Texto", multiline: true },
+        COLOR_FIELD,
+      ];
+    case "pricing":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "simple", label: "3 planes" },
+            { value: "emphasized", label: "2 tiers (destacado)" },
+          ],
+        },
+        {
+          key: "items",
+          label: "Planes (nombre|precio|detalle por línea)",
+          multiline: true,
+        },
+        COLOR_FIELD,
+      ];
+    case "checkout":
+      return [
+        { key: "heading", label: "Título" },
+        {
+          key: "items",
+          label: "Líneas (concepto|monto)",
+          multiline: true,
+        },
+        { key: "cta", label: "Texto del botón" },
+        { key: "href", label: "URL del botón" },
+        COLOR_FIELD,
+      ];
+    case "containerBand":
+      return [
+        { key: "title", label: "Título" },
+        { key: "text", label: "Texto", multiline: true },
+        { key: "bg", label: "Color de fondo" },
+        COLOR_FIELD,
+        ALIGN_FIELD,
+      ];
+    case "sectionLayout":
+      return [
+        {
+          key: "variant",
+          label: "Variante",
+          options: [
+            { value: "simple", label: "Simple" },
+            { value: "rows", label: "Filas" },
+          ],
+        },
+        { key: "title", label: "Título" },
+        { key: "text", label: "Texto", multiline: true },
+        {
+          key: "items",
+          label: "Filas (título|texto)",
+          multiline: true,
         },
         COLOR_FIELD,
       ];
@@ -895,83 +1249,269 @@ function StudioPanelTabs({
   );
 }
 
+function LibraryTilePreview({ kind }: { kind: BlockKind }) {
+  switch (kind) {
+    case "headerAsli":
+      return (
+        <div className="flex h-full w-full flex-col justify-end overflow-hidden rounded-md bg-[#002d69]">
+          <div className="mx-2 mb-1.5 h-1.5 w-8 rounded-sm bg-white/80" />
+          <div className="h-1 w-full bg-[#C8102E]" />
+        </div>
+      );
+    case "footerAsli":
+      return (
+        <div className="flex h-full w-full items-center justify-between overflow-hidden rounded-md bg-[#0B1A3D] px-2">
+          <div className="h-1.5 w-7 rounded-sm bg-white/70" />
+          <div className="h-5 w-0.5 bg-[#C8102E]" />
+          <div className="space-y-0.5">
+            <div className="h-1 w-8 rounded-sm bg-white/40" />
+            <div className="h-1 w-6 rounded-sm bg-white/30" />
+          </div>
+        </div>
+      );
+    case "greeting":
+    case "text":
+    case "markdown":
+      return (
+        <div className="flex h-full w-full flex-col justify-center gap-1 px-2">
+          <div className="h-1 w-[88%] rounded-sm bg-[#11224E]/35" />
+          <div className="h-1 w-[72%] rounded-sm bg-[#11224E]/20" />
+          <div className="h-1 w-[60%] rounded-sm bg-[#11224E]/15" />
+        </div>
+      );
+    case "heading":
+      return (
+        <div className="flex h-full w-full flex-col justify-center gap-1 px-2">
+          <div className="h-1 w-8 rounded-sm bg-[#C8102E]/70" />
+          <div className="h-2 w-[70%] rounded-sm bg-[#11224E]/55" />
+        </div>
+      );
+    case "button":
+    case "buttonsRow":
+    case "link":
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <div className="h-4 w-14 rounded-md bg-[#11224E]" />
+        </div>
+      );
+    case "image":
+    case "gallery":
+    case "avatar":
+    case "product":
+      return (
+        <div className="flex h-full w-full items-center justify-center p-1.5">
+          <div className="flex h-full w-full items-center justify-center rounded-md bg-gradient-to-br from-[#dbe4f0] to-[#eef2f8] ring-1 ring-[#c5d0e0]/80">
+            <Icon icon="lucide:image" width={14} className="text-[#5a6b85]/70" />
+          </div>
+        </div>
+      );
+    case "divider":
+      return (
+        <div className="flex h-full w-full items-center px-2">
+          <div className="h-px w-full bg-[#94a3b8]/70" />
+        </div>
+      );
+    case "spacer":
+      return (
+        <div className="flex h-full w-full items-center justify-center gap-0.5">
+          <div className="h-3 w-px bg-[#94a3b8]/50" />
+          <Icon icon="lucide:unfold-vertical" width={12} className="text-[#5a6b85]/60" />
+          <div className="h-3 w-px bg-[#94a3b8]/50" />
+        </div>
+      );
+    case "listNumbered":
+    case "listBullet":
+    case "listDash":
+    case "listCheck":
+    case "listSteps":
+      return (
+        <div className="flex h-full w-full flex-col justify-center gap-1 px-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#11224E]/50" />
+              <div className="h-1 flex-1 rounded-sm bg-[#11224E]/20" />
+            </div>
+          ))}
+        </div>
+      );
+    case "callout":
+    case "quote":
+    case "containerBand":
+      return (
+        <div className="flex h-full w-full items-center p-1.5">
+          <div className="flex h-full w-full items-center gap-1 rounded-md border border-[#11224E]/15 bg-[#eef2f8] px-1.5">
+            <div className="h-5 w-0.5 rounded-full bg-[#11224E]" />
+            <div className="h-1 flex-1 rounded-sm bg-[#11224E]/25" />
+          </div>
+        </div>
+      );
+    case "grid":
+    case "sectionLayout":
+    case "pricing":
+    case "stats":
+    case "feature":
+      return (
+        <div className="grid h-full w-full grid-cols-3 gap-0.5 p-1.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-sm bg-[#eef2f8] ring-1 ring-[#d5dde8]" />
+          ))}
+        </div>
+      );
+    case "article":
+    case "testimonial":
+    case "feedback":
+    case "checkout":
+      return (
+        <div className="flex h-full w-full gap-1 p-1.5">
+          <div className="w-[38%] rounded-sm bg-[#dbe4f0]" />
+          <div className="flex flex-1 flex-col justify-center gap-1">
+            <div className="h-1.5 w-[80%] rounded-sm bg-[#11224E]/40" />
+            <div className="h-1 w-full rounded-sm bg-[#11224E]/18" />
+            <div className="h-1 w-[70%] rounded-sm bg-[#11224E]/12" />
+          </div>
+        </div>
+      );
+    case "dataRow":
+      return (
+        <div className="flex h-full w-full items-center gap-1 px-2">
+          <div className="h-4 w-4 rounded-full bg-[#11224E]" />
+          <div className="h-1.5 w-8 rounded-sm bg-[#11224E]/45" />
+          <div className="h-1 flex-1 rounded-sm bg-[#11224E]/18" />
+        </div>
+      );
+    case "codeInline":
+    case "codeBlock":
+    case "html":
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <div className="rounded bg-[#0B1A3D] px-2 py-1 font-mono text-[8px] text-[#7dd3fc]">
+            {"</>"}
+          </div>
+        </div>
+      );
+    default:
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <Icon icon="lucide:box" width={14} className="text-[#5a6b85]/60" />
+        </div>
+      );
+  }
+}
+
 function LibraryAddPanel({
   onAdd,
 }: {
   onAdd: (item: StudioLibraryItem) => void;
 }) {
   const groups = useMemo(() => getStudioLibraryGrouped(), []);
-  const [openIds, setOpenIds] = useState<Set<string>>(
-    () => new Set(["inicio", "texto"]),
-  );
+  const allItems = useMemo(() => getStudioLibraryFlat(), []);
+  const [activeGroup, setActiveGroup] = useState<string>("basicos");
+  const [query, setQuery] = useState("");
 
-  const toggle = (id: string) => {
-    setOpenIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const q = query.trim().toLowerCase();
+  const visibleItems = useMemo(() => {
+    if (q) {
+      return allItems.filter(
+        (item) =>
+          item.label.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          item.kind.toLowerCase().includes(q),
+      );
+    }
+    const group = groups.find((g) => g.group.id === activeGroup);
+    return group?.items ?? allItems;
+  }, [q, allItems, groups, activeGroup]);
 
   return (
-    <div className="border-b border-[#e8eef5] px-2 py-2">
-      <p className={label + " mb-1.5 px-1"}>Agregar</p>
-      <div className="max-h-[320px] space-y-1 overflow-y-auto pr-0.5">
-        {groups.map(({ group, items }) => {
-          const open = openIds.has(group.id);
-          return (
-            <div
-              key={group.id}
-              className="overflow-hidden rounded-xl border border-[#e2e8f0] bg-[#f8fafc]"
-            >
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition hover:bg-white"
-                aria-expanded={open}
-                onClick={() => toggle(group.id)}
-              >
-                <Icon
-                  icon={group.icon}
-                  width={14}
-                  className="shrink-0 text-[#11224E]/70"
-                />
-                <span className="min-w-0 flex-1 text-[11px] font-bold text-[#11224E]">
-                  {group.label}
-                </span>
-                <span className="rounded-md bg-white px-1.5 py-0.5 text-[9px] font-bold text-[#5a6b85] ring-1 ring-[#e2e8f0]">
-                  {items.length}
-                </span>
-                <Icon
-                  icon={open ? "lucide:chevron-down" : "lucide:chevron-right"}
-                  width={14}
-                  className="shrink-0 text-[#5a6b85]"
-                />
-              </button>
-              {open ? (
-                <div className="grid grid-cols-2 gap-1 border-t border-[#e8eef5] bg-white p-1.5">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      title={item.description}
-                      className="flex items-center gap-1.5 rounded-lg border border-transparent px-1.5 py-1.5 text-left transition hover:border-[#11224E]/15 hover:bg-[#f8fafc]"
-                      onClick={() => onAdd(item)}
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#eef2f8] text-[#11224E]">
-                        <Icon icon={item.icon} width={13} />
-                      </span>
-                      <span className="min-w-0 truncate text-[10px] font-semibold leading-tight text-[#1a2744]/80">
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
+    <div className="flex min-h-0 flex-col border-b border-[#e8eef5]">
+      <div className="px-2.5 pb-1.5 pt-2">
+        <div className="mb-2 flex items-center justify-between px-0.5">
+          <p className={label + " mb-0"}>Elementos</p>
+          <span className="text-[9px] font-semibold text-[#5a6b85]/80">
+            {visibleItems.length}
+          </span>
+        </div>
+        <div className="relative">
+          <Icon
+            icon="lucide:search"
+            width={13}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#5a6b85]/70"
+          />
+          <input
+            className={input + " !py-1.5 !pl-8 !text-[11px]"}
+            placeholder="Buscar elemento…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar elementos"
+          />
+        </div>
       </div>
+
+      {!q ? (
+        <div className="flex gap-1 overflow-x-auto px-2.5 pb-2 scrollbar-thin">
+          {groups.map(({ group }) => {
+            const active = activeGroup === group.id;
+            return (
+              <button
+                key={group.id}
+                type="button"
+                title={group.label}
+                onClick={() => setActiveGroup(group.id)}
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                  active
+                    ? "bg-[#11224E] text-white shadow-sm"
+                    : "bg-[#eef2f8] text-[#1a2744]/75 hover:bg-[#e2e8f0]"
+                }`}
+              >
+                <Icon icon={group.icon} width={11} />
+                {group.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="px-3 pb-1.5 text-[9px] font-semibold text-[#5a6b85]">
+          Resultados de búsqueda
+        </p>
+      )}
+
+      <div className="max-h-[340px] overflow-y-auto px-2 pb-2.5">
+        {visibleItems.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-[#d5dde8] bg-[#f8fafc] px-3 py-6 text-center text-[11px] text-[#5a6b85]">
+            Sin coincidencias. Prueba otra palabra.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5">
+            {visibleItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                title={`${item.label} — ${item.description}`}
+                onClick={() => onAdd(item)}
+                className="group flex flex-col overflow-hidden rounded-xl border border-[#e2e8f0] bg-white text-left shadow-[0_1px_0_rgba(17,34,78,0.04)] transition hover:-translate-y-0.5 hover:border-[#11224E]/25 hover:shadow-[0_8px_18px_-12px_rgba(17,34,78,0.45)]"
+              >
+                <div className="relative h-[58px] bg-[#f3f6fb]">
+                  <LibraryTilePreview kind={item.kind} />
+                  <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-md bg-white/90 text-[#11224E] opacity-0 shadow-sm ring-1 ring-[#e2e8f0] transition group-hover:opacity-100">
+                    <Icon icon="lucide:plus" width={12} />
+                  </span>
+                </div>
+                <div className="border-t border-[#eef2f8] px-2 py-1.5">
+                  <p className="truncate text-[10px] font-bold leading-tight text-[#11224E]">
+                    {item.label}
+                  </p>
+                  <p className="mt-0.5 truncate text-[9px] leading-tight text-[#5a6b85]">
+                    {item.description}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="border-t border-[#eef2f8] px-3 py-1.5 text-[9px] leading-4 text-[#5a6b85]/85">
+        Un clic agrega. El estilo (variante, color, imagen) se cambia a la derecha en Propiedades.
+      </p>
     </div>
   );
 }
@@ -991,6 +1531,34 @@ const ALIGNABLE_KINDS = new Set<BlockKind>([
   "image",
   "dataRow",
 ]);
+
+function cloneStudioDoc(d: StudioDocument): StudioDocument {
+  return {
+    asunto: d.asunto,
+    previewText: d.previewText,
+    blocks: d.blocks.map((b) => ({
+      id: b.id,
+      kind: b.kind,
+      props: { ...b.props },
+    })),
+  };
+}
+
+function cloneBlocks(blocks: StudioBlock[]): StudioBlock[] {
+  return blocks.map((b) => ({
+    id: b.id,
+    kind: b.kind,
+    props: { ...b.props },
+  }));
+}
+
+function isEditableHotkeyTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (target.isContentEditable) return true;
+  return !!target.closest("input, textarea, select, [contenteditable='true']");
+}
 
 export function InformativosContent() {
   const { user, profile, isLoading, isSuperadmin } = useAuth();
@@ -1033,6 +1601,66 @@ export function InformativosContent() {
 
   const closeConfirm = useCallback(() => setConfirmDlg(null), []);
 
+  const historyPastRef = useRef<StudioDocument[]>([]);
+  const historyFutureRef = useRef<StudioDocument[]>([]);
+  const blockClipboardRef = useRef<StudioBlock[]>([]);
+  const propsHistoryPendingRef = useRef(false);
+  const propsHistoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const docRef = useRef(doc);
+  docRef.current = doc;
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+  const panelRef = useRef(panel);
+  panelRef.current = panel;
+
+  const applyDoc = useCallback((updater: (d: StudioDocument) => StudioDocument) => {
+    const prev = docRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+    propsHistoryPendingRef.current = false;
+    historyPastRef.current.push(cloneStudioDoc(prev));
+    if (historyPastRef.current.length > 60) historyPastRef.current.shift();
+    historyFutureRef.current = [];
+    docRef.current = next;
+    setDoc(next);
+  }, []);
+
+  const replaceDoc = useCallback((next: StudioDocument) => {
+    const prev = docRef.current;
+    propsHistoryPendingRef.current = false;
+    historyPastRef.current.push(cloneStudioDoc(prev));
+    if (historyPastRef.current.length > 60) historyPastRef.current.shift();
+    historyFutureRef.current = [];
+    docRef.current = next;
+    setDoc(next);
+  }, []);
+
+  const undoDoc = useCallback(() => {
+    const past = historyPastRef.current;
+    if (!past.length) return;
+    propsHistoryPendingRef.current = false;
+    const prev = past.pop()!;
+    historyFutureRef.current.push(cloneStudioDoc(docRef.current));
+    docRef.current = prev;
+    setDoc(prev);
+    setSelectedIds((ids) =>
+      ids.filter((id) => prev.blocks.some((b) => b.id === id)),
+    );
+  }, []);
+
+  const redoDoc = useCallback(() => {
+    const future = historyFutureRef.current;
+    if (!future.length) return;
+    propsHistoryPendingRef.current = false;
+    const next = future.pop()!;
+    historyPastRef.current.push(cloneStudioDoc(docRef.current));
+    docRef.current = next;
+    setDoc(next);
+    setSelectedIds((ids) =>
+      ids.filter((id) => next.blocks.some((b) => b.id === id)),
+    );
+  }, []);
+
   const selectedId = selectedIds[selectedIds.length - 1] ?? null;
   const selected = doc.blocks.find((b) => b.id === selectedId) ?? null;
   const multiSelected = selectedIds.length > 1;
@@ -1049,7 +1677,7 @@ export function InformativosContent() {
   const askBlankTemplate = useCallback(() => {
     const applyBlank = () => {
       const next = createBlankStudioDocument();
-      setDoc(next);
+      replaceDoc(next);
       selectOnly(null);
       setPanel("compose");
     };
@@ -1065,7 +1693,7 @@ export function InformativosContent() {
       danger: true,
       onConfirm: applyBlank,
     });
-  }, [doc.blocks.length, selectOnly]);
+  }, [doc.blocks.length, replaceDoc, selectOnly]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -1272,7 +1900,7 @@ export function InformativosContent() {
 
   const addLibraryItem = (item: StudioLibraryItem) => {
     const block = createFromLibrary(item);
-    setDoc((d) => {
+    applyDoc((d) => {
       if (!selectedId) {
         return { ...d, blocks: [...d.blocks, block] };
       }
@@ -1286,40 +1914,56 @@ export function InformativosContent() {
   };
 
   const changeBlockKind = (id: string, kind: BlockKind) => {
-    setDoc((d) => ({
+    applyDoc((d) => ({
       ...d,
       blocks: d.blocks.map((b) => (b.id === id ? { ...b, kind } : b)),
     }));
   };
 
   const duplicateBlock = (id: string) => {
-    setDoc((d) => {
-      const i = d.blocks.findIndex((b) => b.id === id);
-      if (i < 0) return d;
-      const copy = {
-        ...d.blocks[i],
-        id: `b_${Math.random().toString(36).slice(2, 10)}`,
-        props: { ...d.blocks[i].props },
-      };
+    const i = docRef.current.blocks.findIndex((b) => b.id === id);
+    if (i < 0) return;
+    const source = docRef.current.blocks[i];
+    const copy = {
+      id: newBlockId(),
+      kind: source.kind,
+      props: { ...source.props },
+    };
+    applyDoc((d) => {
+      const idx = d.blocks.findIndex((b) => b.id === id);
+      if (idx < 0) return d;
       const blocks = [...d.blocks];
-      blocks.splice(i + 1, 0, copy);
-      selectOnly(copy.id);
+      blocks.splice(idx + 1, 0, copy);
       return { ...d, blocks };
     });
+    selectOnly(copy.id);
   };
 
   const updateProps = (id: string, key: string, value: string) => {
-    setDoc((d) => ({
-      ...d,
-      blocks: d.blocks.map((b) =>
+    const prev = docRef.current;
+    if (!propsHistoryPendingRef.current) {
+      historyPastRef.current.push(cloneStudioDoc(prev));
+      if (historyPastRef.current.length > 60) historyPastRef.current.shift();
+      historyFutureRef.current = [];
+      propsHistoryPendingRef.current = true;
+    }
+    const next: StudioDocument = {
+      ...prev,
+      blocks: prev.blocks.map((b) =>
         b.id === id ? { ...b, props: { ...b.props, [key]: value } } : b,
       ),
-    }));
+    };
+    docRef.current = next;
+    setDoc(next);
+    if (propsHistoryTimerRef.current) clearTimeout(propsHistoryTimerRef.current);
+    propsHistoryTimerRef.current = setTimeout(() => {
+      propsHistoryPendingRef.current = false;
+    }, 450);
   };
 
   const updateAlignMany = (ids: string[], align: string) => {
     const idSet = new Set(ids);
-    setDoc((d) => ({
+    applyDoc((d) => ({
       ...d,
       blocks: d.blocks.map((b) =>
         idSet.has(b.id) && ALIGNABLE_KINDS.has(b.kind)
@@ -1330,7 +1974,7 @@ export function InformativosContent() {
   };
 
   const move = (id: string, dir: -1 | 1) => {
-    setDoc((d) => {
+    applyDoc((d) => {
       const i = d.blocks.findIndex((b) => b.id === id);
       const j = i + dir;
       if (i < 0 || j < 0 || j >= d.blocks.length) return d;
@@ -1340,20 +1984,150 @@ export function InformativosContent() {
     });
   };
 
-  const remove = (id: string) => {
-    setDoc((d) => {
-      const blocks = d.blocks.filter((b) => b.id !== id);
+  const remove = useCallback(
+    (id: string) => {
+      applyDoc((d) => {
+        const blocks = d.blocks.filter((b) => b.id !== id);
+        if (blocks.length === d.blocks.length) return d;
+        return { ...d, blocks };
+      });
+      setSelectedIds((cur) => cur.filter((x) => x !== id));
+    },
+    [applyDoc],
+  );
+
+  const removeSelected = useCallback(() => {
+    const ids = selectedIdsRef.current;
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    applyDoc((d) => {
+      const blocks = d.blocks.filter((b) => !idSet.has(b.id));
+      if (blocks.length === d.blocks.length) return d;
       return { ...d, blocks };
     });
-    setSelectedIds((cur) => cur.filter((x) => x !== id));
-  };
-
-  const removeSelected = () => {
-    if (selectedIds.length === 0) return;
-    const idSet = new Set(selectedIds);
-    setDoc((d) => ({ ...d, blocks: d.blocks.filter((b) => !idSet.has(b.id)) }));
     setSelectedIds([]);
-  };
+  }, [applyDoc]);
+
+  const copySelectedBlocks = useCallback(() => {
+    const ids = selectedIdsRef.current;
+    if (!ids.length) return false;
+    const idSet = new Set(ids);
+    const blocks = docRef.current.blocks.filter((b) => idSet.has(b.id));
+    if (!blocks.length) return false;
+    blockClipboardRef.current = cloneBlocks(blocks);
+    return true;
+  }, []);
+
+  const cutSelectedBlocks = useCallback(() => {
+    if (!copySelectedBlocks()) return;
+    removeSelected();
+  }, [copySelectedBlocks, removeSelected]);
+
+  const pasteClipboardBlocks = useCallback(() => {
+    const clip = blockClipboardRef.current;
+    if (!clip.length) return;
+    const pasted = clip.map((b) => ({
+      id: newBlockId(),
+      kind: b.kind,
+      props: { ...b.props },
+    }));
+    const afterId = selectedIdsRef.current.at(-1);
+    applyDoc((d) => {
+      const blocks = [...d.blocks];
+      const i = afterId ? blocks.findIndex((b) => b.id === afterId) : -1;
+      blocks.splice(i >= 0 ? i + 1 : blocks.length, 0, ...pasted);
+      return { ...d, blocks };
+    });
+    setSelectedIds(pasted.map((b) => b.id));
+  }, [applyDoc]);
+
+  const handleStudioHotkey = useCallback(
+    (e: KeyboardEvent) => {
+      if (panelRef.current !== "compose") return;
+      if (confirmDlg) return;
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+      const inField = isEditableHotkeyTarget(e.target);
+
+      if (mod && key === "z" && !e.shiftKey) {
+        if (inField) return;
+        e.preventDefault();
+        undoDoc();
+        return;
+      }
+      if (mod && (key === "y" || (key === "z" && e.shiftKey))) {
+        if (inField) return;
+        e.preventDefault();
+        redoDoc();
+        return;
+      }
+      if (mod && key === "c") {
+        if (inField) return;
+        if (!selectedIdsRef.current.length) return;
+        e.preventDefault();
+        copySelectedBlocks();
+        return;
+      }
+      if (mod && key === "x") {
+        if (inField) return;
+        if (!selectedIdsRef.current.length) return;
+        e.preventDefault();
+        cutSelectedBlocks();
+        return;
+      }
+      if (mod && key === "v") {
+        if (inField) return;
+        if (!blockClipboardRef.current.length) return;
+        e.preventDefault();
+        pasteClipboardBlocks();
+        return;
+      }
+      if (
+        !inField &&
+        !mod &&
+        (e.key === "Delete" || e.key === "Backspace") &&
+        selectedIdsRef.current.length > 0
+      ) {
+        e.preventDefault();
+        removeSelected();
+      }
+    },
+    [
+      confirmDlg,
+      copySelectedBlocks,
+      cutSelectedBlocks,
+      pasteClipboardBlocks,
+      redoDoc,
+      removeSelected,
+      undoDoc,
+    ],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleStudioHotkey);
+    return () => window.removeEventListener("keydown", handleStudioHotkey);
+  }, [handleStudioHotkey]);
+
+  useEffect(() => {
+    const bindIframeHotkeys = () => {
+      const iframeDoc = previewIframeRef.current?.contentDocument;
+      if (!iframeDoc) return () => {};
+      const onKey = (e: KeyboardEvent) => handleStudioHotkey(e);
+      iframeDoc.addEventListener("keydown", onKey);
+      return () => iframeDoc.removeEventListener("keydown", onKey);
+    };
+    let cleanup = bindIframeHotkeys();
+    const iframe = previewIframeRef.current;
+    const onLoad = () => {
+      cleanup();
+      cleanup = bindIframeHotkeys();
+    };
+    iframe?.addEventListener("load", onLoad);
+    return () => {
+      cleanup();
+      iframe?.removeEventListener("load", onLoad);
+    };
+  }, [handleStudioHotkey, previewKey, previewHtml]);
 
   const sendList = async (list: DestinatarioAgenda[]) => {
     if (!canSendInformativos) {
@@ -1703,7 +2477,7 @@ export function InformativosContent() {
                   const tpl = STUDIO_DOCUMENT_TEMPLATES.find((t) => t.id === id);
                   if (!tpl) return;
                   const next = tpl.create();
-                  setDoc(next);
+                  replaceDoc(next);
                   selectOnly(next.blocks[0]?.id ?? null);
                   setPanel("compose");
                   sileo.success({ title: `Plantilla: ${tpl.label}` });
@@ -1780,8 +2554,12 @@ export function InformativosContent() {
                         btnGhost +
                         " !px-1.5 !py-1.5 text-[#C8102E] hover:bg-[#C8102E]/10"
                       }
-                      title="Eliminar"
-                      onClick={() => remove(selected.id)}
+                      title="Eliminar (Delete)"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        remove(selected.id);
+                      }}
                     >
                       <Icon icon="lucide:trash-2" width={13} />
                     </button>
@@ -1818,8 +2596,12 @@ export function InformativosContent() {
                     <button
                       type="button"
                       className="inline-flex items-center gap-1 rounded-lg bg-[#C8102E] px-2 py-1.5 text-[10px] font-semibold text-white hover:bg-[#a50d26]"
-                      onClick={removeSelected}
-                      title="Eliminar seleccionados"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeSelected();
+                      }}
+                      title="Eliminar seleccionados (Delete)"
                     >
                       <Icon icon="lucide:trash-2" width={12} />
                       <span className="hidden sm:inline">Eliminar</span>
@@ -1919,7 +2701,7 @@ export function InformativosContent() {
             {capasOpen ? (
               <>
                 <p className="mb-1.5 mt-1 px-1 text-[9px] leading-3 text-[#5a6b85]/80">
-                  Clic · Ctrl/Cmd sumar · Shift rango
+                  Clic · Ctrl/Cmd sumar · Shift rango · Del borrar · Ctrl Z/X/C/V
                 </p>
                 <ul className="min-h-0 flex-1 space-y-0.5 overflow-auto pr-0.5">
                   {doc.blocks.map((b, idx) => {
