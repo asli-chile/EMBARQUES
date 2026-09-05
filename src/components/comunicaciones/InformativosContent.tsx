@@ -1442,7 +1442,8 @@ export function InformativosContent() {
           subject: doc.asunto,
           body: html,
           sendFrom: "informaciones",
-          skipSignature: true,
+          // Firma HTML del buzón informaciones@ (Gmail settings)
+          skipSignature: false,
         });
         if (r.success) ok += 1;
         else {
@@ -1534,43 +1535,6 @@ export function InformativosContent() {
 
   const inspectorBody = multiSelected ? (
     <div className="space-y-3">
-      <div className="rounded-xl border border-[#11224E]/12 bg-gradient-to-br from-[#11224E] to-[#0B1A3D] p-3 text-white shadow-md">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
-            <Icon icon="lucide:layers" width={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-bold leading-tight">
-              {selectedIds.length} bloques
-            </p>
-            <p className="text-[10px] text-white/55">Selección múltiple</p>
-          </div>
-        </div>
-        <div className="mt-2.5 flex flex-wrap gap-1">
-          <button
-            type="button"
-            className="rounded-lg bg-white/12 px-2 py-1 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
-            onClick={() => selectOnly(selectedId)}
-          >
-            Solo 1
-          </button>
-          <button
-            type="button"
-            className="rounded-lg bg-white/12 px-2 py-1 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
-            onClick={() => setSelectedIds([])}
-          >
-            Limpiar
-          </button>
-          <button
-            type="button"
-            className="ml-auto rounded-lg bg-[#C8102E]/90 px-2 py-1 text-[10px] font-semibold text-white hover:bg-[#C8102E]"
-            onClick={removeSelected}
-            title="Eliminar seleccionados"
-          >
-            <Icon icon="lucide:trash-2" width={12} className="inline" /> Eliminar
-          </button>
-        </div>
-      </div>
       {alignableSelected.length > 0 ? (
         <div className="rounded-xl border border-[#e2e8f0] bg-white p-3 shadow-sm">
           <label className={label}>
@@ -1627,79 +1591,44 @@ export function InformativosContent() {
       </ul>
     </div>
   ) : !selected ? (
-    <div className="flex flex-col items-center justify-center gap-3 px-2 py-8 text-center">
-      <div className="relative">
-        <div className="absolute inset-0 rounded-2xl bg-[#11224E]/10 blur-md" />
-        <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-lg shadow-[#11224E]/25">
-          <Icon icon="lucide:mouse-pointer-click" width={22} />
-        </div>
+    <div className="relative overflow-hidden rounded-2xl border border-[#d5dde8]/80 bg-gradient-to-b from-white via-white to-[#f3f6fb] px-3 py-7 text-center shadow-[0_10px_28px_-18px_rgba(17,34,78,0.45)]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_center,rgba(17,34,78,0.12),transparent_68%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_center,rgba(200,16,46,0.08),transparent_70%)]"
+      />
+      <div className="relative mx-auto mb-3.5 flex h-16 w-16 items-center justify-center">
+        <span className="absolute inset-0 rounded-[1.15rem] bg-[#11224E]/[0.06] ring-1 ring-[#11224E]/10" />
+        <span className="absolute inset-1.5 rounded-[0.95rem] border border-dashed border-[#11224E]/20" />
+        <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#11224E] via-[#16305f] to-[#0d1a3d] text-white shadow-[0_8px_20px_-6px_rgba(17,34,78,0.55)]">
+          <Icon icon="lucide:mouse-pointer-click" width={20} />
+        </span>
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-white text-[#C8102E] shadow-sm ring-1 ring-[#e2e8f0]">
+          <Icon icon="lucide:sparkles" width={11} />
+        </span>
       </div>
-      <div>
-        <p className="text-[12px] font-bold text-[#11224E]">Sin bloque activo</p>
-        <p className="mt-1 max-w-[210px] text-[11px] leading-5 text-[#5a6b85]">
-          Elige un bloque en Capas o en el lienzo. Marca varios para alinearlos juntos.
-        </p>
-      </div>
-      <div className="flex flex-wrap justify-center gap-1.5">
-        <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold text-[#5a6b85] shadow-sm ring-1 ring-[#e2e8f0]">
+      <p className="relative text-[12px] font-bold tracking-tight text-[#11224E]">
+        Sin bloque activo
+      </p>
+      <p className="relative mx-auto mt-1.5 max-w-[200px] text-[11px] leading-5 text-[#5a6b85]">
+        Elige un bloque en Capas o en el lienzo. Marca varios para alinearlos juntos.
+      </p>
+      <div className="relative mt-4 flex flex-wrap justify-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-[#11224E]/[0.05] px-2 py-1 text-[9px] font-semibold text-[#11224E]/80 ring-1 ring-[#11224E]/10">
+          <Icon icon="lucide:mouse-pointer-2" width={10} />
           Clic · seleccionar
         </span>
-        <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold text-[#5a6b85] shadow-sm ring-1 ring-[#e2e8f0]">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-[#11224E]/[0.05] px-2 py-1 text-[9px] font-semibold text-[#11224E]/80 ring-1 ring-[#11224E]/10">
+          <Icon icon="lucide:command" width={10} />
           Ctrl · sumar
         </span>
       </div>
     </div>
   ) : (
     <div className="space-y-3">
-      <div className="rounded-xl border border-[#11224E]/10 bg-white p-2.5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-sm">
-            <Icon icon={PRESET_ICONS[selected.kind] ?? "lucide:box"} width={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-bold text-[#11224E]">
-              {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
-            </p>
-            <p className="truncate text-[10px] leading-4 text-[#5a6b85]">
-              {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.description}
-            </p>
-          </div>
-        </div>
-        <div className="mt-2 flex gap-1 border-t border-[#eef2f8] pt-2">
-          <button
-            type="button"
-            className={btnGhost + " flex-1 !justify-center"}
-            title="Duplicar"
-            onClick={() => duplicateBlock(selected.id)}
-          >
-            <Icon icon="lucide:copy" width={13} />
-          </button>
-          <button
-            type="button"
-            className={btnGhost + " flex-1 !justify-center"}
-            onClick={() => move(selected.id, -1)}
-            title="Subir"
-          >
-            <Icon icon="lucide:arrow-up" width={13} />
-          </button>
-          <button
-            type="button"
-            className={btnGhost + " flex-1 !justify-center"}
-            onClick={() => move(selected.id, 1)}
-            title="Bajar"
-          >
-            <Icon icon="lucide:arrow-down" width={13} />
-          </button>
-          <button
-            type="button"
-            className={btnGhost + " flex-1 !justify-center text-[#C8102E] hover:bg-[#C8102E]/8"}
-            onClick={() => remove(selected.id)}
-            title="Eliminar"
-          >
-            <Icon icon="lucide:trash-2" width={13} />
-          </button>
-        </div>
-      </div>
       {propFields(selected).length === 0 ? (
         <p className="rounded-xl border border-dashed border-[#d5dde8] bg-white/70 px-3 py-3 text-[11px] text-[#5a6b85]">
           Este bloque no tiene campos (solo estructura visual).
@@ -1816,45 +1745,150 @@ export function InformativosContent() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {panel === "compose" ? (
       <>
-      <div className="z-10 flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[#c5d0e0] bg-white/95 px-3 py-1.5">
-        <p className="text-[11px] font-semibold text-[#5a6b85]">Plantilla</p>
-          <div className="flex items-center gap-1">
-          <select
-            className={input + " !w-[min(100%,200px)] cursor-pointer sm:!w-[220px]"}
-            defaultValue=""
-            title="Cargar plantilla de prueba"
-            aria-label="Cargar plantilla"
-            onChange={(e) => {
-              const id = e.target.value;
-              e.target.value = "";
-              const tpl = STUDIO_DOCUMENT_TEMPLATES.find((t) => t.id === id);
-              if (!tpl) return;
-              const next = tpl.create();
-              setDoc(next);
-              selectOnly(next.blocks[0]?.id ?? null);
-              setPanel("compose");
-              sileo.success({ title: `Plantilla: ${tpl.label}` });
-            }}
-          >
-            <option value="" disabled>
-              Plantillas…
-            </option>
-            {STUDIO_DOCUMENT_TEMPLATES.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
+      <div className="z-10 grid flex-shrink-0 grid-cols-1 items-center gap-2 border-b border-[#c5d0e0] bg-white/95 px-3 py-1.5 sm:grid-cols-[1fr_auto_1fr]">
+        <div className="flex min-w-0 items-center gap-2 sm:justify-self-start">
+          <p className="shrink-0 text-[11px] font-semibold text-[#5a6b85]">Plantilla</p>
+          <div className="flex min-w-0 items-center gap-1">
+            <select
+              className={input + " !w-[min(100%,200px)] cursor-pointer sm:!w-[220px]"}
+              defaultValue=""
+              title="Cargar plantilla de prueba"
+              aria-label="Cargar plantilla"
+              onChange={(e) => {
+                const id = e.target.value;
+                e.target.value = "";
+                const tpl = STUDIO_DOCUMENT_TEMPLATES.find((t) => t.id === id);
+                if (!tpl) return;
+                const next = tpl.create();
+                setDoc(next);
+                selectOnly(next.blocks[0]?.id ?? null);
+                setPanel("compose");
+                sileo.success({ title: `Plantilla: ${tpl.label}` });
+              }}
+            >
+              <option value="" disabled>
+                Plantillas…
               </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={btn}
-            title="Vaciar asunto, preview y bloques"
-            onClick={askBlankTemplate}
-          >
-            <Icon icon="lucide:file-plus" width={13} />
-            <span className="hidden sm:inline">En blanco</span>
-          </button>
+              {STUDIO_DOCUMENT_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={btn}
+              title="Vaciar asunto, preview y bloques"
+              onClick={askBlankTemplate}
+            >
+              <Icon icon="lucide:file-plus" width={13} />
+              <span className="hidden sm:inline">En blanco</span>
+            </button>
+          </div>
         </div>
+
+        {/* Bloque activo — centrado en la barra */}
+        <div className="flex min-w-0 justify-center justify-self-center">
+          {selected && !multiSelected ? (
+            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-[#e2e8f0] bg-[#f7f9fc] py-1 pl-1.5 pr-1 shadow-sm">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-sm">
+                <Icon icon={PRESET_ICONS[selected.kind] ?? "lucide:box"} width={14} />
+              </span>
+              <div className="min-w-0 max-w-[160px] flex-1 sm:max-w-[200px]">
+                <p className="truncate text-[11px] font-bold leading-tight text-[#11224E]">
+                  {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
+                </p>
+                <p className="truncate text-[9px] leading-tight text-[#5a6b85]">
+                  {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.description}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-white p-0.5 ring-1 ring-[#e2e8f0]">
+                <button
+                  type="button"
+                  className={btnGhost + " !px-1.5 !py-1.5"}
+                  title="Duplicar"
+                  onClick={() => duplicateBlock(selected.id)}
+                >
+                  <Icon icon="lucide:copy" width={13} />
+                </button>
+                <button
+                  type="button"
+                  className={btnGhost + " !px-1.5 !py-1.5"}
+                  title="Subir"
+                  onClick={() => move(selected.id, -1)}
+                >
+                  <Icon icon="lucide:arrow-up" width={13} />
+                </button>
+                <button
+                  type="button"
+                  className={btnGhost + " !px-1.5 !py-1.5"}
+                  title="Bajar"
+                  onClick={() => move(selected.id, 1)}
+                >
+                  <Icon icon="lucide:arrow-down" width={13} />
+                </button>
+                <button
+                  type="button"
+                  className={
+                    btnGhost + " !px-1.5 !py-1.5 text-[#C8102E] hover:bg-[#C8102E]/10"
+                  }
+                  title="Eliminar"
+                  onClick={() => remove(selected.id)}
+                >
+                  <Icon icon="lucide:trash-2" width={13} />
+                </button>
+              </div>
+            </div>
+          ) : multiSelected ? (
+            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-[#11224E] to-[#0B1A3D] py-1 pl-1.5 pr-1 text-white shadow-md">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
+                <Icon icon="lucide:layers" width={14} />
+              </span>
+              <div className="min-w-0 max-w-[120px] flex-1 sm:max-w-[140px]">
+                <p className="truncate text-[11px] font-bold leading-tight">
+                  {selectedIds.length} bloques
+                </p>
+                <p className="truncate text-[9px] leading-tight text-white/55">
+                  Selección múltiple
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  className="rounded-lg bg-white/12 px-2 py-1.5 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
+                  onClick={() => selectOnly(selectedId)}
+                >
+                  Solo 1
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-white/12 px-2 py-1.5 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
+                  onClick={() => setSelectedIds([])}
+                >
+                  Limpiar
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#C8102E] px-2 py-1.5 text-[10px] font-semibold text-white hover:bg-[#a50d26]"
+                  onClick={removeSelected}
+                  title="Eliminar seleccionados"
+                >
+                  <Icon icon="lucide:trash-2" width={12} />
+                  <span className="hidden sm:inline">Eliminar</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="hidden items-center gap-1.5 rounded-xl border border-dashed border-[#d5dde8] bg-[#f7f9fc]/80 px-3 py-1.5 sm:flex">
+              <Icon icon="lucide:mouse-pointer-click" width={12} className="text-[#5a6b85]" />
+              <p className="text-[10px] font-medium text-[#5a6b85]">
+                Selecciona un bloque
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden sm:block" aria-hidden />
       </div>
 
       {/* Studio body: left | canvas | right */}
@@ -2014,64 +2048,123 @@ export function InformativosContent() {
         </section>
 
         {/* Right inspector */}
-        <aside className="flex w-full flex-col border-t border-[#c5d0e0] bg-[#eef2f8] lg:w-[300px] lg:shrink-0 lg:border-l lg:border-t-0">
-          <div className="border-b border-[#d5dde8] bg-gradient-to-b from-white to-[#f4f7fb] px-3 py-3">
-            <div className="mb-2.5 flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#11224E] text-white shadow-sm">
-                <Icon icon="lucide:mail-open" width={13} />
+        <aside className="relative flex w-full flex-col overflow-hidden border-t border-[#c5d0e0] bg-[#e8eef6] lg:w-[308px] lg:shrink-0 lg:border-l lg:border-t-0">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.85),transparent_70%)]"
+          />
+          <div className="relative shrink-0 border-b border-[#d0dae8]/90 px-3 pb-3.5 pt-3">
+            <div className="mb-3 flex items-center gap-2.5">
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-[0_6px_14px_-4px_rgba(17,34,78,0.55)]">
+                <Icon icon="lucide:mail-open" width={14} />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#C8102E] ring-2 ring-[#e8eef6]" />
               </span>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold leading-tight text-[#11224E]">
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-bold leading-tight tracking-tight text-[#11224E]">
                   Documento
                 </p>
-                <p className="text-[9px] text-[#5a6b85]">Asunto y preview de bandeja</p>
+                <p className="text-[9px] font-medium text-[#5a6b85]">
+                  Cómo se verá en la bandeja
+                </p>
               </div>
             </div>
-            <div className="space-y-2.5 rounded-xl border border-[#d5dde8] bg-white p-2.5 shadow-sm">
+
+            {/* Mini preview estilo bandeja */}
+            <div className="mb-2.5 overflow-hidden rounded-xl bg-[#11224E] p-[1px] shadow-[0_10px_24px_-12px_rgba(17,34,78,0.55)]">
+              <div className="rounded-[11px] bg-gradient-to-b from-[#16305f] to-[#0f1d42] px-2.5 py-2">
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#C8102E]" />
+                  <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Inbox preview
+                  </span>
+                </div>
+                <p className="truncate text-[11px] font-semibold leading-4 text-white">
+                  {doc.asunto.trim() || "Asunto del correo"}
+                </p>
+                <p className="mt-0.5 truncate text-[10px] leading-4 text-white/55">
+                  {doc.previewText.trim() || "Texto corto en bandeja…"}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-2xl border border-white/80 bg-white/90 p-2.5 shadow-[0_8px_20px_-14px_rgba(17,34,78,0.4)] backdrop-blur-sm">
               <div>
-                <label className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#5a6b85]">
-                  <Icon icon="lucide:text-cursor-input" width={11} />
-                  Asunto
+                <label className="mb-1 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#5a6b85]">
+                    <Icon icon="lucide:text-cursor-input" width={11} />
+                    Asunto
+                  </span>
+                  <span className="tabular-nums text-[9px] font-medium text-[#5a6b85]/70">
+                    {doc.asunto.length}
+                  </span>
                 </label>
                 <input
-                  className={input}
+                  className={
+                    input +
+                    " !rounded-xl !border-[#e2e8f0] !bg-[#f7f9fc] !py-2 focus:!bg-white"
+                  }
                   value={doc.asunto}
                   onChange={(e) => setDoc({ ...doc, asunto: e.target.value })}
                   placeholder="Asunto del correo"
                 />
               </div>
-              <div className="border-t border-dashed border-[#e8eef5] pt-2.5">
-                <label className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#5a6b85]">
-                  <Icon icon="lucide:eye" width={11} />
-                  Preview inbox
+              <div className="rounded-xl bg-[#f4f7fb] p-2 ring-1 ring-[#e2e8f0]/80">
+                <label className="mb-1 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#5a6b85]">
+                    <Icon icon="lucide:eye" width={11} />
+                    Preview inbox
+                  </span>
+                  <span className="tabular-nums text-[9px] font-medium text-[#5a6b85]/70">
+                    {doc.previewText.length}
+                  </span>
                 </label>
                 <input
-                  className={input}
+                  className={
+                    input +
+                    " !rounded-xl !border-[#dce3ee] !bg-white !py-2 !shadow-none"
+                  }
                   value={doc.previewText}
                   onChange={(e) => setDoc({ ...doc, previewText: e.target.value })}
                   placeholder="Texto corto en bandeja"
                 />
-                <p className="mt-1 text-[9px] leading-4 text-[#5a6b85]/80">
+                <p className="mt-1.5 flex items-start gap-1 text-[9px] leading-4 text-[#5a6b85]/85">
+                  <Icon
+                    icon="lucide:info"
+                    width={10}
+                    className="mt-0.5 shrink-0 opacity-70"
+                  />
                   Aparece junto al asunto en Gmail / Outlook.
                 </p>
               </div>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto px-3 py-3">
-            <div className="mb-2.5 flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-[#11224E] shadow-sm ring-1 ring-[#d5dde8]">
-                <Icon icon="lucide:sliders-horizontal" width={12} />
+
+          <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-3 pt-3.5">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[#11224E] shadow-[0_4px_10px_-6px_rgba(17,34,78,0.45)] ring-1 ring-[#d5dde8]/90">
+                <Icon icon="lucide:sliders-horizontal" width={13} />
               </span>
-              <p className="text-[11px] font-bold text-[#11224E]">Propiedades</p>
+              <div className="min-w-0">
+                <p className="text-[12px] font-bold tracking-tight text-[#11224E]">
+                  Propiedades
+                </p>
+                <p className="text-[9px] font-medium text-[#5a6b85]">
+                  Ajustes del bloque activo
+                </p>
+              </div>
               {selected && !multiSelected ? (
-                <span className="ml-auto truncate rounded-full bg-[#11224E]/8 px-2 py-0.5 text-[9px] font-semibold text-[#11224E]">
+                <span className="ml-auto max-w-[96px] truncate rounded-lg bg-[#11224E] px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
                   {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
                 </span>
               ) : multiSelected ? (
-                <span className="ml-auto rounded-full bg-[#11224E] px-2 py-0.5 text-[9px] font-semibold text-white">
+                <span className="ml-auto rounded-lg bg-[#C8102E] px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
                   {selectedIds.length} sel.
                 </span>
-              ) : null}
+              ) : (
+                <span className="ml-auto rounded-lg bg-white/80 px-2 py-1 text-[9px] font-semibold text-[#5a6b85] ring-1 ring-[#d5dde8]">
+                  Ninguno
+                </span>
+              )}
             </div>
             {inspectorBody}
           </div>

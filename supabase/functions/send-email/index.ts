@@ -100,22 +100,42 @@ Deno.serve(async (req) => {
       accessToken = await getServiceAccountToken(sa, sharedMailbox);
     }
 
-    // ── 5. Obtener firma del usuario desde Gmail settings (timeout 3s) ────
+    // ── 5. Obtener firma Gmail del buzón (settings.basic; no es el footer HTML del mail) ────
     let signatureHtml = "";
     if (!skipSignature) {
       try {
+        // gmail.send no alcanza para leer sendAs; hace falta settings.basic
+        const settingsToken = await getServiceAccountToken(
+          sa,
+          senderEmail,
+          "https://www.googleapis.com/auth/gmail.settings.basic",
+        );
         const sigController = new AbortController();
-        const sigTimeout = setTimeout(() => sigController.abort(), 3000);
+        const sigTimeout = setTimeout(() => sigController.abort(), 5000);
         const sigRes = await fetch(
           `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/settings/sendAs/${encodeURIComponent(senderEmail)}`,
-          { headers: { Authorization: `Bearer ${accessToken}` }, signal: sigController.signal }
+          { headers: { Authorization: `Bearer ${settingsToken}` }, signal: sigController.signal },
         );
         clearTimeout(sigTimeout);
         if (sigRes.ok) {
           const sigData = await sigRes.json() as { signature?: string };
-          signatureHtml = sigData.signature ?? "";
+          signatureHtml = (sigData.signature ?? "").trim();
+        } else {
+          const errText = await sigRes.text();
+          console.error(
+            "No se pudo leer firma Gmail:",
+            senderEmail,
+            sigRes.status,
+            errText.slice(0, 300),
+          );
         }
-      } catch { /* si falla o timeout, se envía sin firma */ }
+      } catch (sigErr) {
+        console.error(
+          "Firma Gmail omitida:",
+          senderEmail,
+          sigErr instanceof Error ? sigErr.message : String(sigErr),
+        );
+      }
     }
 
     // ── 6. Enviar vía Gmail API como el ejecutivo ──────────────────────────
@@ -270,6 +290,70 @@ function encodeBase64Mime(text: string): string {
   return b64.match(/.{1,76}/g)?.join("\r\n") ?? b64;
 }
 
+/** Firma de Gmail al final del cuerpo visible (no después de </html>). */
+function appendSignatureHtml(bodyHtml: string, signatureHtml: string): string {
+  const repaired = repairSignatureImages(signatureHtml);
+  const sig = `<div style="margin-top:16px">${repaired}</div>`;
+  if (/<\/body>/i.test(bodyHtml)) {
+    return bodyHtml.replace(/<\/body>/i, `${sig}</body>`);
+  }
+  return `${bodyHtml}<br><br>${repaired}`;
+}
+
+/**
+ * La firma de Gmail suele traer el logo OK y los íconos (tel/pin/web) con URLs
+ * googleusercontent/cid que se rompen al reenviar por API. Reemplazamos esos
+ * íconos por assets públicos estables en www.asli.cl (sin recrear la firma).
+ */
+function repairSignatureImages(signatureHtml: string): string {
+  const ICONS = [
+    "https://www.asli.cl/embarques/email/icons/phone.png",
+    "https://www.asli.cl/embarques/email/icons/pin.png",
+    "https://www.asli.cl/embarques/email/icons/globe.png",
+  ];
+  let imgIndex = 0;
+  let iconSlot = 0;
+
+  return signatureHtml.replace(/<img\b[^>]*>/gi, (tag) => {
+    imgIndex += 1;
+    const srcMatch = tag.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const src = (srcMatch?.[1] ?? srcMatch?.[2] ?? srcMatch?.[3] ?? "").trim();
+    const width = Number((tag.match(/\bwidth\s*=\s*["']?(\d+)/i) ?? [])[1] || 0);
+    const height = Number((tag.match(/\bheight\s*=\s*["']?(\d+)/i) ?? [])[1] || 0);
+    const maxDim = Math.max(width, height);
+    const looksLikeLogo =
+      imgIndex === 1 ||
+      /logo|asli/i.test(src) ||
+      (maxDim > 0 && maxDim >= 40);
+    const looksLikeIcon =
+      (maxDim > 0 && maxDim <= 28) ||
+      /phone|tel|pin|map|location|globe|web|www|icon/i.test(`${src} ${tag}`);
+    const brokenSrc =
+      !src ||
+      /^cid:/i.test(src) ||
+      /googleusercontent\.com/i.test(src) ||
+      /drive\.google\.com/i.test(src) ||
+      !/^https?:\/\//i.test(src);
+
+    // Primer img / logo: solo forzar https www si es relativo; no tocar el resto.
+    if (looksLikeLogo && !looksLikeIcon) {
+      return tag;
+    }
+
+    // Íconos de contacto (2º–4º img típicos) o src roto → assets públicos.
+    if (looksLikeIcon || brokenSrc) {
+      const url = ICONS[Math.min(iconSlot, ICONS.length - 1)];
+      iconSlot += 1;
+      if (srcMatch) {
+        return tag.replace(srcMatch[0], `src="${url}"`);
+      }
+      return tag.replace(/<img\b/i, `<img src="${url}"`);
+    }
+
+    return tag;
+  });
+}
+
 function buildRawEmail(
   fromEmail: string, fromName: string,
   to: string, subject: string, body: string,
@@ -287,8 +371,9 @@ function buildRawEmail(
   const bodyHtmlContent = isHtml
     ? body
     : body.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g, "<br>\r\n");
+  // Insertar firma dentro de </body> (react-email / HTML completo); si no, al final.
   const htmlPart = hasSig
-    ? `${bodyHtmlContent}<br><br>${signatureHtml}`
+    ? appendSignatureHtml(bodyHtmlContent, signatureHtml!)
     : bodyHtmlContent;
 
   const headers = [
