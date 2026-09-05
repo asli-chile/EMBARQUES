@@ -1005,6 +1005,8 @@ export function InformativosContent() {
   const [previewKey, setPreviewKey] = useState(0);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>("compose");
+  const [capasOpen, setCapasOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
 
   const [destRaw, setDestRaw] = useState("");
@@ -1869,102 +1871,127 @@ export function InformativosContent() {
         <aside className="flex w-full flex-col border-b border-[#c5d0e0] bg-white lg:w-[248px] lg:shrink-0 lg:border-b-0 lg:border-r">
           <LibraryAddPanel onAdd={addLibraryItem} />
 
-          <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
-            <div className="mb-1.5 flex items-center gap-1 px-1">
-              <p className={`${label} mb-0`}>Capas</p>
-              <span className="rounded-full bg-[#eef2f8] px-1.5 py-0.5 text-[9px] font-bold text-[#5a6b85]">
-                {doc.blocks.length}
-              </span>
+          <div
+            className={`flex flex-col px-2 py-2 ${
+              capasOpen ? "min-h-0 flex-1" : "shrink-0 border-t border-[#eef2f8]"
+            }`}
+          >
+            <div className="mb-0 flex items-center gap-1 px-1">
               <button
                 type="button"
-                className={btnGhost + " ml-auto !py-0.5 !text-[10px]"}
-                title="Seleccionar todos"
-                disabled={doc.blocks.length === 0}
-                onClick={() => setSelectedIds(doc.blocks.map((b) => b.id))}
+                className="flex min-w-0 flex-1 items-center gap-1 rounded-lg py-0.5 text-left hover:bg-[#f3f6fb]"
+                title={capasOpen ? "Minimizar Capas" : "Expandir Capas"}
+                aria-expanded={capasOpen}
+                onClick={() => setCapasOpen((v) => !v)}
               >
-                Todos
+                <Icon
+                  icon={capasOpen ? "lucide:chevron-down" : "lucide:chevron-right"}
+                  width={14}
+                  className="shrink-0 text-[#5a6b85]"
+                />
+                <p className={`${label} mb-0`}>Capas</p>
+                <span className="rounded-full bg-[#eef2f8] px-1.5 py-0.5 text-[9px] font-bold text-[#5a6b85]">
+                  {doc.blocks.length}
+                </span>
               </button>
-              <button
-                type="button"
-                className={btnGhost + " !py-0.5 !text-[10px]"}
-                title="Vaciar plantilla"
-                onClick={askBlankTemplate}
-              >
-                Vaciar
-              </button>
-            </div>
-            <p className="mb-1.5 px-1 text-[9px] leading-3 text-[#5a6b85]/80">
-              Clic · Ctrl/Cmd sumar · Shift rango
-            </p>
-            <ul className="min-h-0 flex-1 space-y-0.5 overflow-auto pr-0.5">
-              {doc.blocks.map((b, idx) => {
-                const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
-                const active = selectedSet.has(b.id);
-                const isFocus = b.id === selectedId;
-                const summary =
-                  b.props.label ||
-                  b.props.text?.slice(0, 24) ||
-                  b.props.template?.slice(0, 24) ||
-                  "";
-                return (
-                  <li key={b.id} id={`studio-block-nav-${b.id}`}>
-                    <div
-                      className={`flex items-stretch gap-0.5 rounded-lg transition ${
-                        active
-                          ? isFocus
-                            ? "bg-[#11224E] text-white shadow-sm"
-                            : "bg-[#11224E]/80 text-white"
-                          : "text-[#1a2744]/80 hover:bg-[#eef2f8]"
-                      }`}
-                    >
-                      <label
-                        className="flex cursor-pointer items-center pl-1.5"
-                        title="Marcar"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          className="accent-[#11224E]"
-                          checked={active}
-                          onChange={() => toggleSelect(b.id)}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-start gap-1.5 px-1.5 py-1.5 text-left"
-                        onClick={(e) => onBlockNavClick(b.id, e)}
-                      >
-                        <Icon
-                          icon={PRESET_ICONS[b.kind] ?? "lucide:box"}
-                          width={13}
-                          className={`mt-0.5 shrink-0 ${active ? "opacity-80" : "opacity-50"}`}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[11px] font-semibold">
-                            <span className="opacity-50">{idx + 1}. </span>
-                            {meta?.label ?? b.kind}
-                          </span>
-                          {summary ? (
-                            <span
-                              className={`mt-0.5 block truncate text-[9px] font-normal ${
-                                active ? "text-white/65" : "text-[#5a6b85]"
-                              }`}
-                            >
-                              {summary}
-                            </span>
-                          ) : null}
-                        </span>
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-              {doc.blocks.length === 0 ? (
-                <li className="px-2 py-6 text-center text-[11px] text-[#5a6b85]">
-                  Sin capas. Agrega un componente.
-                </li>
+              {capasOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className={btnGhost + " !py-0.5 !text-[10px]"}
+                    title="Seleccionar todos"
+                    disabled={doc.blocks.length === 0}
+                    onClick={() => setSelectedIds(doc.blocks.map((b) => b.id))}
+                  >
+                    Todos
+                  </button>
+                  <button
+                    type="button"
+                    className={btnGhost + " !py-0.5 !text-[10px]"}
+                    title="Vaciar plantilla"
+                    onClick={askBlankTemplate}
+                  >
+                    Vaciar
+                  </button>
+                </>
               ) : null}
-            </ul>
+            </div>
+            {capasOpen ? (
+              <>
+                <p className="mb-1.5 mt-1 px-1 text-[9px] leading-3 text-[#5a6b85]/80">
+                  Clic · Ctrl/Cmd sumar · Shift rango
+                </p>
+                <ul className="min-h-0 flex-1 space-y-0.5 overflow-auto pr-0.5">
+                  {doc.blocks.map((b, idx) => {
+                    const meta = STUDIO_PRESETS.find((x) => x.kind === b.kind);
+                    const active = selectedSet.has(b.id);
+                    const isFocus = b.id === selectedId;
+                    const summary =
+                      b.props.label ||
+                      b.props.text?.slice(0, 24) ||
+                      b.props.template?.slice(0, 24) ||
+                      "";
+                    return (
+                      <li key={b.id} id={`studio-block-nav-${b.id}`}>
+                        <div
+                          className={`flex items-stretch gap-0.5 rounded-lg transition ${
+                            active
+                              ? isFocus
+                                ? "bg-[#11224E] text-white shadow-sm"
+                                : "bg-[#11224E]/80 text-white"
+                              : "text-[#1a2744]/80 hover:bg-[#eef2f8]"
+                          }`}
+                        >
+                          <label
+                            className="flex cursor-pointer items-center pl-1.5"
+                            title="Marcar"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              className="accent-[#11224E]"
+                              checked={active}
+                              onChange={() => toggleSelect(b.id)}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-start gap-1.5 px-1.5 py-1.5 text-left"
+                            onClick={(e) => onBlockNavClick(b.id, e)}
+                          >
+                            <Icon
+                              icon={PRESET_ICONS[b.kind] ?? "lucide:box"}
+                              width={13}
+                              className={`mt-0.5 shrink-0 ${active ? "opacity-80" : "opacity-50"}`}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[11px] font-semibold">
+                                <span className="opacity-50">{idx + 1}. </span>
+                                {meta?.label ?? b.kind}
+                              </span>
+                              {summary ? (
+                                <span
+                                  className={`mt-0.5 block truncate text-[9px] font-normal ${
+                                    active ? "text-white/65" : "text-[#5a6b85]"
+                                  }`}
+                                >
+                                  {summary}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {doc.blocks.length === 0 ? (
+                    <li className="px-2 py-6 text-center text-[11px] text-[#5a6b85]">
+                      Sin capas. Agrega un componente.
+                    </li>
+                  ) : null}
+                </ul>
+              </>
+            ) : null}
           </div>
         </aside>
 
@@ -2019,8 +2046,50 @@ export function InformativosContent() {
           </div>
         </section>
 
-        {/* Right inspector */}
-        <aside className="relative flex w-full flex-col overflow-hidden border-t border-[#c5d0e0] bg-[#e8eef6] lg:w-[308px] lg:shrink-0 lg:border-l lg:border-t-0">
+        {/* Right inspector — minimizable a la derecha */}
+        <aside
+          className={`relative flex flex-col overflow-hidden border-t border-[#c5d0e0] bg-[#e8eef6] transition-[width] duration-200 ease-out lg:shrink-0 lg:border-l lg:border-t-0 ${
+            inspectorOpen
+              ? "w-full lg:w-[308px]"
+              : "w-full lg:w-[48px]"
+          }`}
+        >
+          {!inspectorOpen ? (
+            <div className="flex h-full flex-col items-center gap-2 px-1 py-3">
+              <button
+                type="button"
+                title="Expandir panel"
+                aria-expanded={false}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#11224E] text-white shadow-sm hover:bg-[#0d1a3d]"
+                onClick={() => setInspectorOpen(true)}
+              >
+                <Icon icon="lucide:panel-right-open" width={16} />
+              </button>
+              <button
+                type="button"
+                title="Documento"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#11224E] shadow-sm ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb]"
+                onClick={() => setInspectorOpen(true)}
+              >
+                <Icon icon="lucide:mail-open" width={15} />
+              </button>
+              <button
+                type="button"
+                title="Propiedades"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#11224E] shadow-sm ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb]"
+                onClick={() => setInspectorOpen(true)}
+              >
+                <Icon icon="lucide:sliders-horizontal" width={15} />
+              </button>
+              <p
+                className="mt-2 hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5a6b85]/70 lg:block"
+                style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+              >
+                Inspector
+              </p>
+            </div>
+          ) : (
+            <>
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.85),transparent_70%)]"
@@ -2039,6 +2108,15 @@ export function InformativosContent() {
                   Cómo se verá en la bandeja
                 </p>
               </div>
+              <button
+                type="button"
+                title="Minimizar panel"
+                aria-expanded={true}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#5a6b85] shadow-sm ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb] hover:text-[#11224E]"
+                onClick={() => setInspectorOpen(false)}
+              >
+                <Icon icon="lucide:panel-right-close" width={15} />
+              </button>
             </div>
 
             {/* Mini preview estilo bandeja */}
@@ -2140,6 +2218,8 @@ export function InformativosContent() {
             </div>
             {inspectorBody}
           </div>
+            </>
+          )}
         </aside>
       </div>
       </>

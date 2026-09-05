@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
@@ -11,6 +11,7 @@ import {
 } from "@/lib/sidebarFilter";
 import { sidebarIconFor } from "@/lib/ui/sidebarIcons";
 import { prefetchRoute } from "@/lib/routePrefetch";
+import { LocaleToggle } from "./LocaleToggle";
 
 type RailItem = {
   labelKey: string;
@@ -58,19 +59,17 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
   );
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [railWide, setRailWide] = useState(false);
 
-  useEffect(() => {
-    for (const item of items) {
-      if (item.children?.some((c) => c.href && pathname.startsWith(c.href))) {
-        setExpandedId(item.id);
-        return;
-      }
-      if (item.href && (pathname === item.href || pathname.startsWith(`${item.href}/`))) {
-        setExpandedId(null);
-        return;
-      }
-    }
-  }, [pathname, items]);
+  const openRail = () => {
+    setRailWide(true);
+  };
+
+  const closeRail = () => {
+    setRailWide(false);
+    // Al minimizar: todo cerrado; no se restaura al volver a abrir.
+    setExpandedId(null);
+  };
 
   const navBtn =
     "group/item flex h-10 w-full items-center gap-3 overflow-hidden rounded-lg px-[13px] text-left text-[12px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white";
@@ -90,6 +89,14 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
     <nav
       className="group/rail z-40 flex h-full w-[52px] shrink-0 flex-col overflow-hidden border-r border-black/20 bg-[#0B1A3D] text-white transition-[width] duration-200 ease-out hover:w-[220px] focus-within:w-[220px]"
       aria-label="Navegación ERP"
+      onMouseEnter={openRail}
+      onMouseLeave={closeRail}
+      onFocus={openRail}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          closeRail();
+        }
+      }}
     >
       <div className="flex h-12 shrink-0 items-center gap-3 overflow-hidden border-b border-white/10 px-[10px]">
         <a
@@ -125,13 +132,14 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
 
         {items.map((item) => {
           if (item.children && item.children.length > 0) {
-            const open = expandedId === item.id || groupActive(item);
+            const open = railWide && expandedId === item.id;
             return (
               <div key={item.id} className="space-y-0.5">
                 <button
                   type="button"
                   title={labelFor(item.labelKey)}
                   className={`${navBtn} ${groupActive(item) ? navActive : ""}`}
+                  aria-expanded={open}
                   onClick={() =>
                     setExpandedId((prev) => (prev === item.id ? null : item.id))
                   }
@@ -198,6 +206,11 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
       </div>
 
       <div className="shrink-0 overflow-hidden border-t border-white/10 px-1.5 py-2">
+        <div className="mb-0.5 flex h-10 items-center gap-2 overflow-hidden px-[13px]">
+          <Icon icon="lucide:languages" width={18} className="shrink-0 text-white/55" />
+          <span className={`${labelCls} flex-1`}>Idioma</span>
+          <LocaleToggle variant="dark" className="shrink-0" />
+        </div>
         <a
           href={withBase("/inicio")}
           className={navBtn}
