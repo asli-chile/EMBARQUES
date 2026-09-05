@@ -912,7 +912,6 @@ function StudioIconRail({
           [
             ["compose", "Componer", "lucide:pen-tool"],
             ["agenda", "Agenda", "lucide:book-user"],
-            ["send", "Enviar", "lucide:send"],
           ] as const
         ).map(([id, text, icon]) => (
           <button
@@ -1888,7 +1887,20 @@ export function InformativosContent() {
           )}
         </div>
 
-        <div className="hidden sm:block" aria-hidden />
+        <div className="flex items-center justify-end justify-self-end sm:min-w-0">
+          <button
+            type="button"
+            className={
+              btnPrimary +
+              " !rounded-xl !px-3.5 !py-2 shadow-[0_6px_16px_-6px_rgba(17,34,78,0.55)]"
+            }
+            title="Ir a enviar"
+            onClick={() => setPanel("send")}
+          >
+            <Icon icon="lucide:send" width={14} />
+            Enviar
+          </button>
+        </div>
       </div>
 
       {/* Studio body: left | canvas | right */}
@@ -2180,11 +2192,19 @@ export function InformativosContent() {
             aria-label="Enviar informativo"
           >
             <div className="flex items-center gap-2 border-b border-[#e8eef5] px-3 py-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef2f8] text-[#11224E]">
+              <button
+                type="button"
+                className={btnGhost + " !px-2"}
+                title="Volver a componer"
+                onClick={() => setPanel("compose")}
+              >
+                <Icon icon="lucide:arrow-left" width={14} />
+              </button>
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#11224E] text-white">
                 <Icon icon="lucide:send" width={14} />
               </span>
               <p className="text-[13px] font-bold text-[#11224E]">Enviar</p>
-              </div>
+            </div>
             <div className="mx-auto min-h-0 w-full max-w-xl flex-1 space-y-3 overflow-auto p-4">
               {!canSendInformativos ? (
                 <div
@@ -2378,13 +2398,22 @@ export function InformativosContent() {
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef2f8] text-[#11224E]">
                 <Icon icon="lucide:book-user" width={14} />
               </span>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-bold text-[#11224E]">Agenda</p>
                 <p className="text-[10px] text-[#5a6b85]">
                   {grupos.length} grupos · contactos separados
                 </p>
               </div>
-              </div>
+              <button
+                type="button"
+                className={btnPrimary + " !rounded-xl !px-3.5 !py-2"}
+                title="Ir a enviar"
+                onClick={() => setPanel("send")}
+              >
+                <Icon icon="lucide:send" width={14} />
+                Enviar
+              </button>
+            </div>
             <div className="mx-auto min-h-0 w-full max-w-2xl flex-1 space-y-3 overflow-auto p-4">
               <div className="space-y-1 rounded border border-brand-blue/12 p-2">
                 <p className={label}>Alta rápida</p>
