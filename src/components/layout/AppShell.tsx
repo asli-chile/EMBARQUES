@@ -1,10 +1,11 @@
 import { Header } from "./Header";
 import { NavBanner } from "./NavBanner";
+import { AppIconRail } from "./AppIconRail";
 import { ConfigGuard } from "./ConfigGuard";
 import { CartolasNuboxGuard } from "./CartolasNuboxGuard";
 import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { LocaleProvider } from "@/lib/i18n";
-import { AuthProvider } from "@/lib/auth/AuthContext";
+import { AuthProvider, useAuth } from "@/lib/auth/AuthContext";
 import { AuthFormModalProvider } from "@/lib/auth/AuthFormModalContext";
 import { NotificationsProvider } from "@/lib/notifications/NotificationsContext";
 import { AuthFormModalOverlay } from "@/components/auth/AuthFormModalOverlay";
@@ -315,20 +316,68 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <AuthProvider>
         <NotificationsProvider>
           <AuthFormModalProvider>
-            <div className="h-dvh max-w-full min-w-0 flex flex-col overflow-hidden">
-              {!hideAppChrome ? <Header /> : null}
-              {!hideAppChrome ? <NavBanner pathname={pathname} /> : null}
-              <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
-                <RouteChromeContext.Provider value={getRouteChrome(pathname)}>
-                  {mainContent}
-                </RouteChromeContext.Provider>
-              </div>
-            </div>
+            <AppChromeFrame pathname={pathname} hideAppChrome={hideAppChrome}>
+              <RouteChromeContext.Provider value={getRouteChrome(pathname)}>
+                {mainContent}
+              </RouteChromeContext.Provider>
+            </AppChromeFrame>
             <AuthFormModalOverlay />
             <Toaster position="bottom-center" />
           </AuthFormModalProvider>
         </NotificationsProvider>
       </AuthProvider>
     </LocaleProvider>
+  );
+}
+
+/** Chrome: rail navy en módulos ERP logueados; Header+NavBanner en marketing/invitados. */
+function AppChromeFrame({
+  pathname,
+  hideAppChrome,
+  children,
+}: {
+  pathname: string;
+  hideAppChrome: boolean;
+  children: ReactNode;
+}) {
+  const { user, isLoading } = useAuth();
+  const chrome = getRouteChrome(pathname);
+  const isMarketing = chrome === "marketing";
+  const showRail = !!user && !isMarketing && !isLoading;
+
+  if (hideAppChrome) {
+    // Informativos: rail global + sin Header/NavBanner (el estudio es pantalla completa)
+    return (
+      <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
+        {showRail ? <AppIconRail pathname={pathname} /> : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  if (showRail) {
+    return (
+      <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
+        <AppIconRail pathname={pathname} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <Header compact />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-dvh max-w-full min-w-0 flex-col overflow-hidden">
+      <Header />
+      <NavBanner pathname={pathname} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+    </div>
   );
 }

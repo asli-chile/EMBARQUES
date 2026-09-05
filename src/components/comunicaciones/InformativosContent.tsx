@@ -35,8 +35,6 @@ import {
   renderStudioHtml,
 } from "@/lib/email/informativos/render";
 import { DATA_ROW_ICON_OPTIONS, dataRowIconSrc } from "@/lib/email/assets";
-import { withBase } from "@/lib/basePath";
-import { brand } from "@/lib/brand";
 import { STUDIO_COLOR_OPTIONS, resolveStudioColor } from "@/emails/studio/colors";
 
 /** Tokens UI — studio tipo Canva (claros, compactos). */
@@ -857,98 +855,43 @@ function StudioConfirmModal({
   );
 }
 
-/** Rail oscuro tipo Supabase: iconos siempre; labels al hover. */
-function StudioIconRail({
+/** Rail oscuro tipo Supabase: iconos siempre; labels al hover.
+ *  (ERP global usa AppIconRail; aquí solo tabs de estudio.)
+ */
+function StudioPanelTabs({
   panel,
   onPanel,
-  onBlank,
 }: {
   panel: Panel;
   onPanel: (p: Panel) => void;
-  onBlank: () => void;
 }) {
-  const navBtn =
-    "group/item flex h-10 w-full items-center gap-3 overflow-hidden rounded-lg px-[13px] text-left text-[12px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white";
-  const navActive = "bg-white/12 text-white shadow-sm ring-1 ring-white/10";
-  const labelCls =
-    "min-w-0 truncate opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100";
+  const tabs: { id: Panel; label: string; icon: string }[] = [
+    { id: "compose", label: "Componer", icon: "lucide:pen-tool" },
+    { id: "agenda", label: "Agenda", icon: "lucide:book-user" },
+  ];
 
   return (
-    <nav
-      className="group/rail z-30 flex h-full w-[52px] shrink-0 flex-col overflow-hidden border-r border-black/20 bg-[#0B1A3D] text-white transition-[width] duration-200 ease-out hover:w-[208px] focus-within:w-[208px]"
-      aria-label="Navegación Informativos"
-    >
-      <div className="flex h-12 shrink-0 items-center gap-3 overflow-hidden border-b border-white/10 px-[10px]">
-        <a
-          href={withBase("/dashboard")}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10"
-          title="Volver al ERP"
-        >
-          <img
-            src={brand.logoWhite}
-            alt="ASLI"
-            className="h-5 w-auto max-w-[22px] object-contain"
-          />
-        </a>
-        <div className={`${labelCls} leading-tight`}>
-          <p className="text-[12px] font-bold text-white">Informativos</p>
-          <p className="text-[9px] font-medium text-white/45">Estudio ASLI</p>
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-0.5 overflow-hidden px-1.5 py-2">
-        <a
-          href={withBase("/dashboard")}
-          className={navBtn}
-          title="Inicio ERP"
-        >
-          <Icon icon="lucide:house" width={18} className="shrink-0 opacity-90" />
-          <span className={labelCls}>Inicio ERP</span>
-        </a>
-
-        <div className="my-1.5 mx-2 h-px bg-white/10" />
-
-        {(
-          [
-            ["compose", "Componer", "lucide:pen-tool"],
-            ["agenda", "Agenda", "lucide:book-user"],
-          ] as const
-        ).map(([id, text, icon]) => (
+    <div className="flex items-center gap-1 rounded-xl bg-[#0B1A3D]/[0.06] p-1 ring-1 ring-[#11224E]/10">
+      {tabs.map((tab) => {
+        const active = panel === tab.id;
+        return (
           <button
-            key={id}
+            key={tab.id}
             type="button"
-            title={text}
-            className={`${navBtn} ${panel === id ? navActive : ""}`}
-            onClick={() => onPanel(id)}
+            title={tab.label}
+            onClick={() => onPanel(tab.id)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+              active
+                ? "bg-[#11224E] text-white shadow-sm"
+                : "text-[#5a6b85] hover:bg-white hover:text-[#11224E]"
+            }`}
           >
-            <Icon icon={icon} width={18} className="shrink-0 opacity-90" />
-            <span className={labelCls}>{text}</span>
+            <Icon icon={tab.icon} width={13} />
+            {tab.label}
           </button>
-        ))}
-
-        <div className="my-1.5 mx-2 h-px bg-white/10" />
-
-        <button
-          type="button"
-          title="Plantilla en blanco"
-          className={navBtn}
-          onClick={() => {
-            onPanel("compose");
-            onBlank();
-          }}
-        >
-          <Icon icon="lucide:file-plus" width={18} className="shrink-0 opacity-90" />
-          <span className={labelCls}>En blanco</span>
-        </button>
-      </div>
-
-      <div className="shrink-0 overflow-hidden border-t border-white/10 px-1.5 py-2">
-        <div className={`${navBtn} pointer-events-none !text-white/40`}>
-          <Icon icon="lucide:mail" width={18} className="shrink-0" />
-          <span className={labelCls}>informaciones@asli.cl</span>
-        </div>
-      </div>
-    </nav>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1738,171 +1681,188 @@ export function InformativosContent() {
   );
 
   return (
-    <main className="relative flex h-full min-h-0 flex-1 bg-[#cfd8e6]">
-      <StudioIconRail panel={panel} onPanel={setPanel} onBlank={askBlankTemplate} />
+    <main className="relative flex h-full min-h-0 flex-1 flex-col bg-[#cfd8e6]">
+      <div className="z-10 flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[#c5d0e0] bg-white/95 px-3 py-1.5">
+        <StudioPanelTabs panel={panel} onPanel={setPanel} />
+        {panel === "compose" ? (
+          <>
+            <p className="hidden text-[11px] font-semibold text-[#5a6b85] sm:inline">
+              Plantilla
+            </p>
+            <div className="flex min-w-0 items-center gap-1">
+              <select
+                className={input + " !w-[min(100%,180px)] cursor-pointer sm:!w-[200px]"}
+                defaultValue=""
+                title="Cargar plantilla de prueba"
+                aria-label="Cargar plantilla"
+                onChange={(e) => {
+                  const id = e.target.value;
+                  e.target.value = "";
+                  const tpl = STUDIO_DOCUMENT_TEMPLATES.find((t) => t.id === id);
+                  if (!tpl) return;
+                  const next = tpl.create();
+                  setDoc(next);
+                  selectOnly(next.blocks[0]?.id ?? null);
+                  setPanel("compose");
+                  sileo.success({ title: `Plantilla: ${tpl.label}` });
+                }}
+              >
+                <option value="" disabled>
+                  Plantillas…
+                </option>
+                {STUDIO_DOCUMENT_TEMPLATES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={btn}
+                title="Vaciar asunto, preview y bloques"
+                onClick={askBlankTemplate}
+              >
+                <Icon icon="lucide:file-plus" width={13} />
+                <span className="hidden sm:inline">En blanco</span>
+              </button>
+            </div>
+
+            <div className="mx-auto flex min-w-0 justify-center">
+              {selected && !multiSelected ? (
+                <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-[#e2e8f0] bg-[#f7f9fc] py-1 pl-1.5 pr-1 shadow-sm">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-sm">
+                    <Icon
+                      icon={PRESET_ICONS[selected.kind] ?? "lucide:box"}
+                      width={14}
+                    />
+                  </span>
+                  <div className="min-w-0 max-w-[140px] flex-1 sm:max-w-[180px]">
+                    <p className="truncate text-[11px] font-bold leading-tight text-[#11224E]">
+                      {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
+                    </p>
+                    <p className="truncate text-[9px] leading-tight text-[#5a6b85]">
+                      {
+                        STUDIO_PRESETS.find((x) => x.kind === selected.kind)
+                          ?.description
+                      }
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-white p-0.5 ring-1 ring-[#e2e8f0]">
+                    <button
+                      type="button"
+                      className={btnGhost + " !px-1.5 !py-1.5"}
+                      title="Duplicar"
+                      onClick={() => duplicateBlock(selected.id)}
+                    >
+                      <Icon icon="lucide:copy" width={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className={btnGhost + " !px-1.5 !py-1.5"}
+                      title="Subir"
+                      onClick={() => move(selected.id, -1)}
+                    >
+                      <Icon icon="lucide:arrow-up" width={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className={btnGhost + " !px-1.5 !py-1.5"}
+                      title="Bajar"
+                      onClick={() => move(selected.id, 1)}
+                    >
+                      <Icon icon="lucide:arrow-down" width={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        btnGhost +
+                        " !px-1.5 !py-1.5 text-[#C8102E] hover:bg-[#C8102E]/10"
+                      }
+                      title="Eliminar"
+                      onClick={() => remove(selected.id)}
+                    >
+                      <Icon icon="lucide:trash-2" width={13} />
+                    </button>
+                  </div>
+                </div>
+              ) : multiSelected ? (
+                <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-[#11224E] to-[#0B1A3D] py-1 pl-1.5 pr-1 text-white shadow-md">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
+                    <Icon icon="lucide:layers" width={14} />
+                  </span>
+                  <div className="min-w-0 max-w-[120px] flex-1 sm:max-w-[140px]">
+                    <p className="truncate text-[11px] font-bold leading-tight">
+                      {selectedIds.length} bloques
+                    </p>
+                    <p className="truncate text-[9px] leading-tight text-white/55">
+                      Selección múltiple
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      className="rounded-lg bg-white/12 px-2 py-1.5 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
+                      onClick={() => selectOnly(selectedId)}
+                    >
+                      Solo 1
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-white/12 px-2 py-1.5 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
+                      onClick={() => setSelectedIds([])}
+                    >
+                      Limpiar
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-lg bg-[#C8102E] px-2 py-1.5 text-[10px] font-semibold text-white hover:bg-[#a50d26]"
+                      onClick={removeSelected}
+                      title="Eliminar seleccionados"
+                    >
+                      <Icon icon="lucide:trash-2" width={12} />
+                      <span className="hidden sm:inline">Eliminar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="ml-auto flex items-center">
+              <button
+                type="button"
+                className={
+                  btnPrimary +
+                  " !rounded-xl !px-3.5 !py-2 shadow-[0_6px_16px_-6px_rgba(17,34,78,0.55)]"
+                }
+                title="Ir a enviar"
+                onClick={() => setPanel("send")}
+              >
+                <Icon icon="lucide:send" width={14} />
+                Enviar
+              </button>
+            </div>
+          </>
+        ) : panel === "agenda" ? (
+          <div className="ml-auto flex items-center">
+            <button
+              type="button"
+              className={
+                btnPrimary +
+                " !rounded-xl !px-3.5 !py-2 shadow-[0_6px_16px_-6px_rgba(17,34,78,0.55)]"
+              }
+              title="Ir a enviar"
+              onClick={() => setPanel("send")}
+            >
+              <Icon icon="lucide:send" width={14} />
+              Enviar
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {panel === "compose" ? (
       <>
-      <div className="z-10 grid flex-shrink-0 grid-cols-1 items-center gap-2 border-b border-[#c5d0e0] bg-white/95 px-3 py-1.5 sm:grid-cols-[1fr_auto_1fr]">
-        <div className="flex min-w-0 items-center gap-2 sm:justify-self-start">
-          <p className="shrink-0 text-[11px] font-semibold text-[#5a6b85]">Plantilla</p>
-          <div className="flex min-w-0 items-center gap-1">
-            <select
-              className={input + " !w-[min(100%,200px)] cursor-pointer sm:!w-[220px]"}
-              defaultValue=""
-              title="Cargar plantilla de prueba"
-              aria-label="Cargar plantilla"
-              onChange={(e) => {
-                const id = e.target.value;
-                e.target.value = "";
-                const tpl = STUDIO_DOCUMENT_TEMPLATES.find((t) => t.id === id);
-                if (!tpl) return;
-                const next = tpl.create();
-                setDoc(next);
-                selectOnly(next.blocks[0]?.id ?? null);
-                setPanel("compose");
-                sileo.success({ title: `Plantilla: ${tpl.label}` });
-              }}
-            >
-              <option value="" disabled>
-                Plantillas…
-              </option>
-              {STUDIO_DOCUMENT_TEMPLATES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className={btn}
-              title="Vaciar asunto, preview y bloques"
-              onClick={askBlankTemplate}
-            >
-              <Icon icon="lucide:file-plus" width={13} />
-              <span className="hidden sm:inline">En blanco</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Bloque activo — centrado en la barra */}
-        <div className="flex min-w-0 justify-center justify-self-center">
-          {selected && !multiSelected ? (
-            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-[#e2e8f0] bg-[#f7f9fc] py-1 pl-1.5 pr-1 shadow-sm">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#11224E] to-[#1a3a6e] text-white shadow-sm">
-                <Icon icon={PRESET_ICONS[selected.kind] ?? "lucide:box"} width={14} />
-              </span>
-              <div className="min-w-0 max-w-[160px] flex-1 sm:max-w-[200px]">
-                <p className="truncate text-[11px] font-bold leading-tight text-[#11224E]">
-                  {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.label}
-                </p>
-                <p className="truncate text-[9px] leading-tight text-[#5a6b85]">
-                  {STUDIO_PRESETS.find((x) => x.kind === selected.kind)?.description}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-white p-0.5 ring-1 ring-[#e2e8f0]">
-                <button
-                  type="button"
-                  className={btnGhost + " !px-1.5 !py-1.5"}
-                  title="Duplicar"
-                  onClick={() => duplicateBlock(selected.id)}
-                >
-                  <Icon icon="lucide:copy" width={13} />
-                </button>
-                <button
-                  type="button"
-                  className={btnGhost + " !px-1.5 !py-1.5"}
-                  title="Subir"
-                  onClick={() => move(selected.id, -1)}
-                >
-                  <Icon icon="lucide:arrow-up" width={13} />
-                </button>
-                <button
-                  type="button"
-                  className={btnGhost + " !px-1.5 !py-1.5"}
-                  title="Bajar"
-                  onClick={() => move(selected.id, 1)}
-                >
-                  <Icon icon="lucide:arrow-down" width={13} />
-                </button>
-                <button
-                  type="button"
-                  className={
-                    btnGhost + " !px-1.5 !py-1.5 text-[#C8102E] hover:bg-[#C8102E]/10"
-                  }
-                  title="Eliminar"
-                  onClick={() => remove(selected.id)}
-                >
-                  <Icon icon="lucide:trash-2" width={13} />
-                </button>
-              </div>
-            </div>
-          ) : multiSelected ? (
-            <div className="flex min-w-0 max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-[#11224E] to-[#0B1A3D] py-1 pl-1.5 pr-1 text-white shadow-md">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
-                <Icon icon="lucide:layers" width={14} />
-              </span>
-              <div className="min-w-0 max-w-[120px] flex-1 sm:max-w-[140px]">
-                <p className="truncate text-[11px] font-bold leading-tight">
-                  {selectedIds.length} bloques
-                </p>
-                <p className="truncate text-[9px] leading-tight text-white/55">
-                  Selección múltiple
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  className="rounded-lg bg-white/12 px-2 py-1.5 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
-                  onClick={() => selectOnly(selectedId)}
-                >
-                  Solo 1
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg bg-white/12 px-2 py-1.5 text-[10px] font-semibold text-white ring-1 ring-white/15 hover:bg-white/20"
-                  onClick={() => setSelectedIds([])}
-                >
-                  Limpiar
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-lg bg-[#C8102E] px-2 py-1.5 text-[10px] font-semibold text-white hover:bg-[#a50d26]"
-                  onClick={removeSelected}
-                  title="Eliminar seleccionados"
-                >
-                  <Icon icon="lucide:trash-2" width={12} />
-                  <span className="hidden sm:inline">Eliminar</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="hidden items-center gap-1.5 rounded-xl border border-dashed border-[#d5dde8] bg-[#f7f9fc]/80 px-3 py-1.5 sm:flex">
-              <Icon icon="lucide:mouse-pointer-click" width={12} className="text-[#5a6b85]" />
-              <p className="text-[10px] font-medium text-[#5a6b85]">
-                Selecciona un bloque
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-end justify-self-end sm:min-w-0">
-          <button
-            type="button"
-            className={
-              btnPrimary +
-              " !rounded-xl !px-3.5 !py-2 shadow-[0_6px_16px_-6px_rgba(17,34,78,0.55)]"
-            }
-            title="Ir a enviar"
-            onClick={() => setPanel("send")}
-          >
-            <Icon icon="lucide:send" width={14} />
-            Enviar
-          </button>
-        </div>
-      </div>
-
       {/* Studio body: left | canvas | right */}
       <div className="flex min-h-0 flex-1 flex-col overflow-auto lg:flex-row lg:overflow-hidden">
         {/* Left rail */}
@@ -2404,15 +2364,6 @@ export function InformativosContent() {
                   {grupos.length} grupos · contactos separados
                 </p>
               </div>
-              <button
-                type="button"
-                className={btnPrimary + " !rounded-xl !px-3.5 !py-2"}
-                title="Ir a enviar"
-                onClick={() => setPanel("send")}
-              >
-                <Icon icon="lucide:send" width={14} />
-                Enviar
-              </button>
             </div>
             <div className="mx-auto min-h-0 w-full max-w-2xl flex-1 space-y-3 overflow-auto p-4">
               <div className="space-y-1 rounded border border-brand-blue/12 p-2">
