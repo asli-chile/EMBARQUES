@@ -14,7 +14,7 @@ export const STUDIO_PRESETS: PresetDef[] = [
     kind: "headerAsli",
     label: "Header ASLI",
     description: "Barra marca: logo + acento rojo",
-    defaults: {},
+    defaults: { variant: "barra", kicker: "Informativo", color: "#C8102E" },
   },
   {
     kind: "greeting",
@@ -38,6 +38,80 @@ export const STUDIO_PRESETS: PresetDef[] = [
     },
   },
   {
+    kind: "listNumbered",
+    label: "Lista numerada",
+    description: "1. 2. 3. — un ítem por línea",
+    defaults: {
+      items: "Primer punto\nSegundo punto\nTercer punto",
+      align: "left",
+    },
+  },
+  {
+    kind: "listBullet",
+    label: "Lista con viñetas",
+    description: "• Puntos — un ítem por línea",
+    defaults: {
+      items: "Primer punto\nSegundo punto\nTercer punto",
+      align: "left",
+    },
+  },
+  {
+    kind: "listDash",
+    label: "Lista con guiones",
+    description: "– Guiones — un ítem por línea",
+    defaults: {
+      items: "Primer punto\nSegundo punto\nTercer punto",
+      align: "left",
+    },
+  },
+  {
+    kind: "listCheck",
+    label: "Lista con check",
+    description: "✓ Checks — un ítem por línea",
+    defaults: {
+      items: "Requisito cumplido\nDocumento listo\nPendiente de firma",
+      align: "left",
+    },
+  },
+  {
+    kind: "listSteps",
+    label: "Lista con pasos",
+    description: "Círculo numerado + título + descripción",
+    defaults: {
+      heading: "",
+      items:
+        "Documentación completa | Revisamos packing list, certificados y requisitos del destino.\nCoordinación de carga | Alineamos cut-off, booking y transporte hasta puerto.\nSeguimiento en ruta | Informamos hitos clave hasta la llegada a destino.\nSoporte operativo | Resolvemos desviaciones con respuesta rápida.",
+      align: "left",
+    },
+  },
+  {
+    kind: "callout",
+    label: "Destacado",
+    description: "Caja de aviso (info / alerta / ok)",
+    defaults: {
+      variant: "info",
+      text: "Mensaje destacado para el destinatario.",
+      align: "left",
+    },
+  },
+  {
+    kind: "quote",
+    label: "Cita",
+    description: "Bloque de cita / nota lateral",
+    defaults: {
+      text: "“Texto de cita o nota importante.”",
+      cite: "— Equipo ejemplo",
+      align: "left",
+      variant: "bar",
+    },
+  },
+  {
+    kind: "spacer",
+    label: "Espacio",
+    description: "Separación vertical (S / M / L)",
+    defaults: { size: "md" },
+  },
+  {
     kind: "button",
     label: "Botón",
     description: "Button con estilo Tailwind ASLI",
@@ -45,13 +119,15 @@ export const STUDIO_PRESETS: PresetDef[] = [
       label: "Ver más",
       href: "https://asli.cl",
       align: "center",
+      variant: "solid",
+      color: "#11224E",
     },
   },
   {
     kind: "divider",
     label: "Divisor",
     description: "Hr",
-    defaults: {},
+    defaults: { variant: "solid" },
   },
   {
     kind: "image",
@@ -70,8 +146,8 @@ export const STUDIO_PRESETS: PresetDef[] = [
     description: "Ícono + etiqueta + valor (editable)",
     defaults: {
       icon: "pin",
-      label: "DESTINO",
-      value: "Vietnam",
+      label: "ETIQUETA",
+      value: "Valor de ejemplo",
       align: "left",
     },
   },
@@ -80,10 +156,12 @@ export const STUDIO_PRESETS: PresetDef[] = [
     label: "Footer ASLI",
     description: "Pie de marca con logo",
     defaults: {
+      variant: "split",
       logoUrl: "",
       tagline: "Logística y Comercio Exterior",
-      address1: "Longitudinal Sur Km 186,",
-      address2: "Curicó, Chile",
+      address1: "Dirección de ejemplo 123,",
+      address2: "Ciudad, País",
+      color: "#C8102E",
     },
   },
   {
@@ -110,6 +188,424 @@ export function createBlock(kind: BlockKind): StudioBlock {
   };
 }
 
+/** Ítem de la librería “Agregar”: permite variantes del mismo kind. */
+export type StudioLibraryItem = {
+  id: string;
+  kind: BlockKind;
+  label: string;
+  description: string;
+  icon: string;
+  props?: Record<string, string>;
+};
+
+export function createFromLibrary(item: StudioLibraryItem): StudioBlock {
+  const base = createBlock(item.kind);
+  return {
+    ...base,
+    props: { ...base.props, ...(item.props ?? {}) },
+  };
+}
+
+const LIST_SAMPLE = "Primer punto\nSegundo punto\nTercer punto";
+
+/** Catálogo visual del rail Agregar (componentes + variantes). */
+export const STUDIO_LIBRARY: StudioLibraryItem[] = [
+  {
+    id: "header-barra",
+    kind: "headerAsli",
+    label: "Header barra",
+    description: "Navy + franja roja",
+    icon: "lucide:panel-top",
+    props: { variant: "barra", kicker: "Informativo", color: "#C8102E" },
+  },
+  {
+    id: "header-filete",
+    kind: "headerAsli",
+    label: "Header filete",
+    description: "Claro + doble filete",
+    icon: "lucide:separator-horizontal",
+    props: { variant: "filete", kicker: "Informativo", color: "#C8102E" },
+  },
+  {
+    id: "header-masthead",
+    kind: "headerAsli",
+    label: "Header masthead",
+    description: "Editorial logo + título",
+    icon: "lucide:layout-template",
+    props: { variant: "masthead", kicker: "Informativo", color: "#C8102E" },
+  },
+  {
+    id: "greeting",
+    kind: "greeting",
+    label: "Saludo",
+    description: "Estimado/a + nombre",
+    icon: "lucide:hand",
+  },
+  {
+    id: "heading",
+    kind: "heading",
+    label: "Título",
+    description: "Heading h1–h3",
+    icon: "lucide:heading",
+  },
+  {
+    id: "text",
+    kind: "text",
+    label: "Párrafo",
+    description: "Texto con negrita",
+    icon: "lucide:type",
+  },
+  {
+    id: "list-num",
+    kind: "listNumbered",
+    label: "Lista 1.2.3",
+    description: "Numerada",
+    icon: "lucide:list-ordered",
+    props: { items: LIST_SAMPLE },
+  },
+  {
+    id: "list-bullet",
+    kind: "listBullet",
+    label: "Lista •",
+    description: "Viñetas",
+    icon: "lucide:list",
+    props: { items: LIST_SAMPLE },
+  },
+  {
+    id: "list-dash",
+    kind: "listDash",
+    label: "Lista –",
+    description: "Guiones",
+    icon: "lucide:list-minus",
+    props: { items: LIST_SAMPLE },
+  },
+  {
+    id: "list-check",
+    kind: "listCheck",
+    label: "Lista ✓",
+    description: "Checks",
+    icon: "lucide:list-checks",
+    props: { items: "Documento OK\nInspección lista\nListo para despacho" },
+  },
+  {
+    id: "list-steps",
+    kind: "listSteps",
+    label: "Lista pasos",
+    description: "Número en círculo + título",
+    icon: "lucide:list-ordered",
+    props: {
+      heading: "",
+      items:
+        "Documentación completa | Revisamos packing list, certificados y requisitos del destino.\nCoordinación de carga | Alineamos cut-off, booking y transporte hasta puerto.\nSeguimiento en ruta | Informamos hitos clave hasta la llegada a destino.\nSoporte operativo | Resolvemos desviaciones con respuesta rápida.",
+    },
+  },
+  {
+    id: "callout-info",
+    kind: "callout",
+    label: "Aviso info",
+    description: "Destacado azul",
+    icon: "lucide:info",
+    props: {
+      variant: "info",
+      text: "Información importante para su operación.",
+    },
+  },
+  {
+    id: "callout-warn",
+    kind: "callout",
+    label: "Aviso alerta",
+    description: "Destacado ámbar",
+    icon: "lucide:triangle-alert",
+    props: {
+      variant: "warning",
+      text: "Atención: revise fechas y documentación antes del CUT.",
+    },
+  },
+  {
+    id: "callout-ok",
+    kind: "callout",
+    label: "Aviso OK",
+    description: "Destacado verde",
+    icon: "lucide:circle-check",
+    props: {
+      variant: "success",
+      text: "Proceso confirmado. No se requieren acciones adicionales.",
+    },
+  },
+  {
+    id: "quote-bar",
+    kind: "quote",
+    label: "Cita barra",
+    description: "Nota con filete",
+    icon: "lucide:quote",
+    props: { variant: "bar" },
+  },
+  {
+    id: "quote-card",
+    kind: "quote",
+    label: "Cita tarjeta",
+    description: "Caja con borde",
+    icon: "lucide:message-square-quote",
+    props: {
+      variant: "card",
+      text: "“Nota destacada de ejemplo para el destinatario.”",
+      cite: "— Equipo ejemplo",
+    },
+  },
+  {
+    id: "button-solid",
+    kind: "button",
+    label: "Botón sólido",
+    description: "CTA navy",
+    icon: "lucide:rectangle-horizontal",
+    props: { variant: "solid", label: "Ver detalle", href: "https://asli.cl" },
+  },
+  {
+    id: "button-outline",
+    kind: "button",
+    label: "Botón contorno",
+    description: "CTA outline",
+    icon: "lucide:square",
+    props: { variant: "outline", label: "Más información", href: "https://asli.cl" },
+  },
+  {
+    id: "button-pill",
+    kind: "button",
+    label: "Botón píldora",
+    description: "CTA redondeado",
+    icon: "lucide:pill",
+    props: { variant: "pill", label: "Continuar", href: "https://asli.cl" },
+  },
+  {
+    id: "button-soft",
+    kind: "button",
+    label: "Botón suave",
+    description: "CTA fondo claro",
+    icon: "lucide:app-window",
+    props: { variant: "soft", label: "Abrir enlace", href: "https://asli.cl" },
+  },
+  {
+    id: "dataRow",
+    kind: "dataRow",
+    label: "Fila dato",
+    description: "Ícono + etiqueta + valor",
+    icon: "lucide:rows-3",
+  },
+  {
+    id: "dataRow-red",
+    kind: "dataRow",
+    label: "Fila acento rojo",
+    description: "Etiqueta en rojo ASLI",
+    icon: "lucide:rows-3",
+    props: {
+      icon: "calendar",
+      label: "FECHA",
+      value: "01 de enero de 2026",
+      labelColor: "#C8102E",
+      iconBg: "#11224E",
+    },
+  },
+  {
+    id: "dataRow-teal",
+    kind: "dataRow",
+    label: "Fila acento teal",
+    description: "Etiqueta en teal",
+    icon: "lucide:rows-3",
+    props: {
+      icon: "check",
+      label: "ESTADO",
+      value: "Confirmado (ejemplo)",
+      labelColor: "#007A7B",
+      iconBg: "#007A7B",
+    },
+  },
+  {
+    id: "image",
+    kind: "image",
+    label: "Imagen",
+    description: "URL pública",
+    icon: "lucide:image",
+  },
+  {
+    id: "divider-solid",
+    kind: "divider",
+    label: "Divisor fino",
+    description: "Línea 1px",
+    icon: "lucide:minus",
+    props: { variant: "solid" },
+  },
+  {
+    id: "divider-thick",
+    kind: "divider",
+    label: "Divisor grueso",
+    description: "Línea 3px",
+    icon: "lucide:separator-horizontal",
+    props: { variant: "thick", color: "#11224E" },
+  },
+  {
+    id: "divider-dash",
+    kind: "divider",
+    label: "Divisor punteado",
+    description: "Línea dashed",
+    icon: "lucide:ellipsis",
+    props: { variant: "dashed", color: "#94A3B8" },
+  },
+  {
+    id: "spacer-sm",
+    kind: "spacer",
+    label: "Espacio S",
+    description: "12px",
+    icon: "lucide:unfold-vertical",
+    props: { size: "sm" },
+  },
+  {
+    id: "spacer-md",
+    kind: "spacer",
+    label: "Espacio M",
+    description: "24px",
+    icon: "lucide:unfold-vertical",
+    props: { size: "md" },
+  },
+  {
+    id: "spacer-lg",
+    kind: "spacer",
+    label: "Espacio L",
+    description: "40px",
+    icon: "lucide:unfold-vertical",
+    props: { size: "lg" },
+  },
+  {
+    id: "html",
+    kind: "html",
+    label: "HTML",
+    description: "Tailwind libre",
+    icon: "lucide:code-2",
+  },
+  {
+    id: "html-banner",
+    kind: "html",
+    label: "Banner aviso",
+    description: "Caja HTML de ejemplo",
+    icon: "lucide:panel-top",
+    props: {
+      html: `<div class="rounded-lg px-4 py-3" style="background:#11224E">
+  <p class="m-0 text-[13px] font-bold leading-5 text-white">AVISO DE EJEMPLO</p>
+  <p class="m-0 mt-1 text-[12px] leading-4 text-white/90">Texto representativo para plantillas de prueba.</p>
+</div>`,
+    },
+  },
+  {
+    id: "footer-split",
+    kind: "footerAsli",
+    label: "Footer dividido",
+    description: "Logo | dirección",
+    icon: "lucide:panel-bottom",
+    props: { variant: "split" },
+  },
+  {
+    id: "footer-centered",
+    kind: "footerAsli",
+    label: "Footer centrado",
+    description: "Logo al centro",
+    icon: "lucide:align-center",
+    props: { variant: "centered" },
+  },
+  {
+    id: "footer-compact",
+    kind: "footerAsli",
+    label: "Footer compacto",
+    description: "Una línea + acento",
+    icon: "lucide:minus",
+    props: { variant: "compact" },
+  },
+];
+
+export type StudioLibraryGroup = {
+  id: string;
+  label: string;
+  icon: string;
+  /** ids de STUDIO_LIBRARY */
+  itemIds: string[];
+};
+
+/** Categorías del panel Agregar (acordeón), en orden de un correo. */
+export const STUDIO_LIBRARY_GROUPS: StudioLibraryGroup[] = [
+  {
+    id: "inicio",
+    label: "Inicio del correo",
+    icon: "lucide:panel-top",
+    itemIds: ["header-barra", "header-filete", "header-masthead", "greeting"],
+  },
+  {
+    id: "texto",
+    label: "Textos",
+    icon: "lucide:type",
+    itemIds: ["heading", "text", "quote-bar", "quote-card"],
+  },
+  {
+    id: "listas",
+    label: "Listas",
+    icon: "lucide:list",
+    itemIds: ["list-num", "list-bullet", "list-dash", "list-check", "list-steps"],
+  },
+  {
+    id: "avisos",
+    label: "Avisos y datos",
+    icon: "lucide:megaphone",
+    itemIds: [
+      "callout-info",
+      "callout-warn",
+      "callout-ok",
+      "dataRow",
+      "dataRow-red",
+      "dataRow-teal",
+      "html-banner",
+    ],
+  },
+  {
+    id: "media",
+    label: "Imágenes y enlaces",
+    icon: "lucide:image",
+    itemIds: ["image", "button-solid", "button-outline", "button-pill", "button-soft"],
+  },
+  {
+    id: "espacio",
+    label: "Separación",
+    icon: "lucide:unfold-vertical",
+    itemIds: ["divider-solid", "divider-thick", "divider-dash", "spacer-sm", "spacer-md", "spacer-lg"],
+  },
+  {
+    id: "cierre",
+    label: "Cierre y avanzado",
+    icon: "lucide:panel-bottom",
+    itemIds: ["footer-split", "footer-centered", "footer-compact", "html"],
+  },
+];
+
+export function getStudioLibraryGrouped(): {
+  group: StudioLibraryGroup;
+  items: StudioLibraryItem[];
+}[] {
+  const byId = new Map(STUDIO_LIBRARY.map((i) => [i.id, i]));
+  return STUDIO_LIBRARY_GROUPS.map((group) => ({
+    group,
+    items: group.itemIds
+      .map((id) => byId.get(id))
+      .filter((i): i is StudioLibraryItem => !!i),
+  }));
+}
+
+export const LIST_KINDS: BlockKind[] = [
+  "listNumbered",
+  "listBullet",
+  "listDash",
+  "listCheck",
+];
+
+export function isListKind(kind: BlockKind): boolean {
+  return LIST_KINDS.includes(kind);
+}
+
 export function createDefaultStudioDocument(): StudioDocument {
   return createExportacionesVietnamDocument();
 }
@@ -128,135 +624,125 @@ function withProps(kind: BlockKind, props: Record<string, string>): StudioBlock 
   return { ...b, props: { ...b.props, ...props } };
 }
 
-/** 1) Boletín técnico: saludo + párrafos + muchas filas de dato (sin CTA). */
+/** 1) Boletín técnico de ejemplo (datos representativos). */
 export function createExportacionesVietnamDocument(): StudioDocument {
   return {
-    asunto: "Actualización exportaciones — ASLI",
-    previewText: "Systems Approach para cerezas frescas a Vietnam · temporada 2026/27",
+    asunto: "Ejemplo · Boletín informativo ASLI",
+    previewText: "Plantilla de prueba · datos representativos",
     blocks: [
-      createBlock("headerAsli"),
+      withProps("headerAsli", { variant: "barra", kicker: "Informativo" }),
       withProps("greeting", {
         template: "{{saludo}} {{nombre}},",
         saludoMode: "auto",
         align: "left",
       }),
       withProps("text", {
-        text: "Compartimos la siguiente actualización de interés para las exportaciones de **cerezas frescas chilenas** con destino a Vietnam:",
+        text: "Este es un **boletín de ejemplo** para armar comunicados con filas de dato y texto.",
         align: "left",
       }),
       withProps("text", {
-        text: "A partir de la temporada 2026/27, se incorpora el Systems Approach como alternativa al tratamiento de frío, permitiendo nuevas opciones para embarques marítimos y aéreos.",
+        text: "Reemplace estos párrafos por el mensaje real. Los valores de abajo son solo demostrativos.",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "calendar",
-        label: "ANUNCIO",
-        value: "27 de agosto de 2026",
+        label: "FECHA",
+        value: "01 de enero de 2026",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "pin",
         label: "DESTINO",
-        value: "Vietnam",
+        value: "Mercado de ejemplo",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "product",
         label: "PRODUCTO",
-        value: "Cerezas frescas",
+        value: "Producto demostrativo",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "document",
-        label: "MEDIDA",
-        value: "Systems Approach como alternativa al tratamiento de frío",
-        align: "left",
-      }),
-      withProps("dataRow", {
-        icon: "cold",
-        label: "TRATAMIENTO DE FRÍO",
-        value:
-          "aplicable a fruta proveniente de zonas con presencia de mosca de la fruta, según protocolo.",
+        label: "REFERENCIA",
+        value: "Documento / protocolo de ejemplo",
         align: "left",
       }),
       withProps("text", {
-        text: "Recomendamos verificar las instrucciones operativas definitivas del SAG previo al embarque.",
+        text: "Saludos cordiales,\n**Equipo ejemplo ASLI**",
         align: "left",
       }),
-      withProps("text", {
-        text: "Saludos cordiales,\n**Equipo ASLI**\nLogística & Comercio Exterior",
-        align: "left",
-      }),
-      createBlock("footerAsli"),
+      withProps("footerAsli", { variant: "split" }),
     ],
   };
 }
 
-/** 2) Alerta operativa: banner HTML + título + timeline corta + CTA (sin saludo largo). */
+/** 2) Alerta operativa de ejemplo. */
 export function createRetrasoNaveDocument(): StudioDocument {
   return {
-    asunto: "Aviso de retraso — Nave MSC ORIANA / ASLI",
-    previewText: "Nuevo ETA San Antonio · 12 de septiembre 2026",
+    asunto: "Ejemplo · Aviso operativo",
+    previewText: "Plantilla de alerta · datos ficticios",
     blocks: [
-      createBlock("headerAsli"),
+      withProps("headerAsli", { variant: "filete", kicker: "Aviso operativo" }),
       withProps("html", {
         html: `<div class="rounded-lg px-4 py-3" style="background:#C8102E">
-  <p class="m-0 text-[13px] font-bold leading-5 text-white">AVISO OPERATIVO · RETRASO DE NAVE</p>
-  <p class="m-0 mt-1 text-[12px] leading-4 text-white/90">MSC ORIANA · viaje 26W36 · impacto en stacking</p>
+  <p class="m-0 text-[13px] font-bold leading-5 text-white">AVISO DE EJEMPLO</p>
+  <p class="m-0 mt-1 text-[12px] leading-4 text-white/90">Código DEMO-01 · impacto ilustrativo</p>
 </div>`,
       }),
       withProps("heading", {
-        text: "Nuevo ETA confirmado",
+        text: "Actualización de ejemplo",
         as: "h2",
         align: "center",
       }),
       withProps("text", {
-        text: "El servicio presenta un ajuste por condiciones en puerto de origen. Resumen:",
+        text: "Resumen representativo del cambio. Ajuste fechas y rutas según el caso real.",
         align: "center",
       }),
-      createBlock("divider"),
+      withProps("divider", { variant: "solid" }),
       withProps("dataRow", {
         icon: "calendar",
-        label: "ETA ANTERIOR",
-        value: "08 sep 2026",
+        label: "FECHA A",
+        value: "08 ene 2026",
         align: "center",
       }),
       withProps("dataRow", {
         icon: "clock",
-        label: "NUEVO ETA",
-        value: "12 sep 2026 · 14:00",
+        label: "FECHA B",
+        value: "12 ene 2026 · 14:00",
         align: "center",
       }),
       withProps("dataRow", {
         icon: "pin",
         label: "RUTA",
-        value: "Valparaíso → San Antonio",
+        value: "Puerto Origen → Puerto Destino",
         align: "center",
       }),
-      createBlock("divider"),
+      withProps("divider", { variant: "solid" }),
       withProps("button", {
-        label: "Abrir tracking",
-        href: "https://www.asli.cl/embarques",
+        variant: "solid",
+        label: "Ver detalle (ejemplo)",
+        href: "https://www.asli.cl",
         align: "center",
       }),
       withProps("text", {
-        text: "**Operaciones ASLI** · operaciones@asli.cl",
+        text: "**Operaciones (ejemplo)** · ejemplo@asli.cl",
         align: "center",
       }),
-      createBlock("footerAsli"),
+      withProps("footerAsli", { variant: "centered" }),
     ],
   };
 }
 
-/** 3) Campaña comercial: todo centrado, hero + CTA primero, datos al final. */
+/** 3) Campaña comercial de ejemplo. */
 export function createTemporadaBerriesDocument(): StudioDocument {
   return {
-    asunto: "Apertura temporada berries 2026/27 — ASLI",
-    previewText: "Cupos aéreos y marítimos para arándanos y berries",
+    asunto: "Ejemplo · Campaña / anuncio",
+    previewText: "Plantilla centrada · CTA de demostración",
     blocks: [
-      createBlock("headerAsli"),
+      withProps("headerAsli", { variant: "masthead", kicker: "Campaña" }),
       withProps("heading", {
-        text: "Temporada berries 2026/27",
+        text: "Título de campaña de ejemplo",
         as: "h1",
         align: "center",
       }),
@@ -266,168 +752,175 @@ export function createTemporadaBerriesDocument(): StudioDocument {
         align: "center",
       }),
       withProps("text", {
-        text: "Ya están abiertos los **cupos semanales** de arándanos y berries desde Zona Central hacia EE.UU. y Europa.",
+        text: "Texto comercial de muestra. Use este bloque para highlights y llamados a la acción.",
         align: "center",
       }),
       withProps("button", {
-        label: "Reservar cupo ahora",
+        variant: "pill",
+        label: "Acción de ejemplo",
         href: "https://www.asli.cl",
         align: "center",
       }),
-      createBlock("divider"),
+      withProps("divider", { variant: "dashed", color: "#94A3B8" }),
       withProps("text", {
-        text: "**Aéreo** · SCL → MIA / JFK · salidas diarias desde octubre",
+        text: "**Opción A** · detalle ilustrativo",
         align: "center",
       }),
       withProps("text", {
-        text: "**Marítimo** · 40' reefer · cut-off martes y viernes",
+        text: "**Opción B** · detalle ilustrativo",
         align: "center",
       }),
       withProps("text", {
-        text: "**Contacto** · Carmen Núñez · berries@asli.cl",
+        text: "**Contacto** · Nombre Ejemplo · ejemplo@asli.cl",
         align: "center",
       }),
       withProps("html", {
         html: `<div class="rounded-lg bg-asli-cream px-4 py-3 text-center">
-  <p class="m-0 text-[12px] leading-5 text-asli-navy">Cupos de prueba · respuesta en &lt; 4 hrs hábiles</p>
+  <p class="m-0 text-[12px] leading-5 text-asli-navy">Nota de prueba · sin datos reales</p>
 </div>`,
       }),
-      createBlock("footerAsli"),
+      withProps("footerAsli", { variant: "compact" }),
     ],
   };
 }
 
-/** 4) Comprobante: badge + tabla de datos + divisor + CTA (sin párrafos largos). */
+/** 4) Comprobante de ejemplo. */
 export function createConfirmacionBookingDocument(): StudioDocument {
   return {
-    asunto: "Booking confirmado BK-ASLI-2026-1847",
-    previewText: "Reserva confirmada · 2×40'RF · Callao",
+    asunto: "Ejemplo · Confirmación REF-DEMO-0001",
+    previewText: "Plantilla de comprobante · valores ficticios",
     blocks: [
-      createBlock("headerAsli"),
+      withProps("headerAsli", { variant: "barra", kicker: "Confirmación" }),
       withProps("html", {
         html: `<div class="rounded-lg bg-asli-navy px-4 py-4 text-center text-white">
-  <p class="m-0 text-[11px] uppercase tracking-widest opacity-80">Confirmación</p>
-  <p class="m-0 mt-1 text-[18px] font-bold leading-6">BK-ASLI-2026-1847</p>
-  <p class="m-0 mt-1 text-[12px] opacity-90">2 × 40'HC Reefer · Callao</p>
+  <p class="m-0 text-[11px] uppercase tracking-widest opacity-80">Referencia</p>
+  <p class="m-0 mt-1 text-[18px] font-bold leading-6">REF-DEMO-0001</p>
+  <p class="m-0 mt-1 text-[12px] opacity-90">2 × unidad ejemplo · Destino demo</p>
 </div>`,
       }),
       withProps("greeting", {
-        template: "{{saludo}} {{nombre}}, su booking quedó registrado.",
+        template: "{{saludo}} {{nombre}}, este es un comprobante de ejemplo.",
         saludoMode: "auto",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "package",
         label: "EQUIPO",
-        value: "2 × 40' High Cube Reefer",
+        value: "2 × Unidad de ejemplo",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "pin",
         label: "RUTA",
-        value: "San Antonio (CLSAI) → Callao (PECLL)",
+        value: "Origen DEMO → Destino DEMO",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "ship",
         label: "SERVICIO",
-        value: "Hapag-Lloyd · AL5 · ETD 18-sep-2026",
+        value: "Servicio ejemplo · ETD 18-ene-2026",
         align: "left",
       }),
       withProps("dataRow", {
         icon: "check",
         label: "ESTADO",
-        value: "Confirmado",
+        value: "Confirmado (demo)",
+        labelColor: "#007A7B",
+        iconBg: "#007A7B",
         align: "left",
       }),
-      createBlock("divider"),
+      withProps("divider", { variant: "thick", color: "#11224E" }),
       withProps("dataRow", {
         icon: "alert",
-        label: "CUT DOC",
-        value: "16-sep-2026 12:00 · instructivo + VGM",
+        label: "CORTE",
+        value: "16-ene-2026 12:00 · documentos de ejemplo",
         align: "left",
       }),
       withProps("button", {
-        label: "Descargar booking",
-        href: "https://www.asli.cl/embarques",
+        variant: "outline",
+        label: "Descargar (ejemplo)",
+        href: "https://www.asli.cl",
         align: "left",
       }),
-      createBlock("footerAsli"),
+      withProps("footerAsli", { variant: "split" }),
     ],
   };
 }
 
-/** 5) Urgencia mínima: aviso HTML + 2 datos + botón a la derecha (pocos bloques). */
+/** 5) Urgencia mínima de ejemplo. */
 export function createAlertaDemurrageDocument(): StudioDocument {
   return {
-    asunto: "Alerta free time — contenedor HLCU1234567",
-    previewText: "Quedan 2 días de free time en destino",
+    asunto: "Ejemplo · Alerta de plazo",
+    previewText: "Plantilla urgente · datos ficticios",
     blocks: [
-      createBlock("headerAsli"),
+      withProps("headerAsli", { variant: "filete", kicker: "Urgente" }),
       withProps("html", {
         html: `<div class="rounded-lg px-4 py-3 text-center" style="background:#fff3cd;border:1px solid #f0d78c">
-  <p class="m-0 text-[14px] font-bold leading-5" style="color:#856404">⚠ Free time por vencer</p>
-  <p class="m-0 mt-1 text-[12px] leading-4" style="color:#856404">Contenedor HLCU1234567 · 2 días restantes</p>
+  <p class="m-0 text-[14px] font-bold leading-5" style="color:#856404">⚠ Alerta de ejemplo</p>
+  <p class="m-0 mt-1 text-[12px] leading-4" style="color:#856404">Referencia DEMO-99 · 2 días restantes (ilustrativo)</p>
 </div>`,
       }),
       withProps("heading", {
-        text: "Acción requerida",
+        text: "Acción de ejemplo",
         as: "h3",
         align: "right",
       }),
       withProps("dataRow", {
         icon: "anchor",
-        label: "TERMINAL",
-        value: "DP World Callao",
+        label: "LUGAR",
+        value: "Terminal de ejemplo",
         align: "right",
       }),
       withProps("dataRow", {
         icon: "calendar",
         label: "LÍMITE",
-        value: "10 sep 2026 · 23:59",
+        value: "10 ene 2026 · 23:59",
         align: "right",
       }),
       withProps("button", {
-        label: "Coordinar retiro",
+        variant: "soft",
+        label: "Coordinar (ejemplo)",
         href: "https://www.asli.cl",
         align: "right",
+        color: "#C8102E",
       }),
       withProps("text", {
-        text: "Demurrage ref. **USD 185/día** (dato de prueba).\n**Customer Service ASLI**",
+        text: "Monto de referencia **USD 0 (demo)**.\n**Customer Service (ejemplo)**",
         align: "right",
       }),
-      createBlock("footerAsli"),
+      withProps("footerAsli", { variant: "compact" }),
     ],
   };
 }
 
-/** Extra (no listada): webinar centrado — disponible si se agrega al catálogo. */
+/** Extra: invitación de ejemplo. */
 export function createInvitacionWebinarDocument(): StudioDocument {
   return {
-    asunto: "Invitación: Markets Brief ASLI — Septiembre 2026",
-    previewText: "Webinar · nuevos corredores Asia y Latam · cupos limitados",
+    asunto: "Ejemplo · Invitación a evento",
+    previewText: "Plantilla de invitación · sin datos reales",
     blocks: [
-      createBlock("headerAsli"),
+      withProps("headerAsli", { variant: "masthead", kicker: "Evento" }),
       withProps("greeting", {
         template: "{{saludo}} {{nombre}},",
         saludoMode: "auto",
         align: "center",
       }),
       withProps("heading", {
-        text: "Markets Brief ASLI",
+        text: "Nombre del evento (ejemplo)",
         as: "h2",
         align: "center",
       }),
       withProps("text", {
-        text: "Encuentro mensual: rutas, tarifas referenciales y novedades fitosanitarias.",
+        text: "Descripción breve de muestra para una convocatoria.",
         align: "center",
       }),
       withProps("button", {
-        label: "Confirmar asistencia",
+        variant: "pill",
+        label: "Confirmar (ejemplo)",
         href: "https://www.asli.cl",
         align: "center",
       }),
-      createBlock("footerAsli"),
+      withProps("footerAsli", { variant: "centered" }),
     ],
   };
 }
@@ -439,7 +932,7 @@ export type StudioTemplateDef = {
   create: () => StudioDocument;
 };
 
-/** Catálogo de plantillas cargables en el estudio (5 estructuras distintas). */
+/** Catálogo de plantillas cargables en el estudio (datos solo representativos). */
 export const STUDIO_DOCUMENT_TEMPLATES: StudioTemplateDef[] = [
   {
     id: "vietnam",
@@ -449,27 +942,26 @@ export const STUDIO_DOCUMENT_TEMPLATES: StudioTemplateDef[] = [
   },
   {
     id: "retraso-nave",
-    label: "2 · Alerta de nave",
+    label: "2 · Alerta operativa",
     description: "Banner HTML + título + CTA centrado",
     create: createRetrasoNaveDocument,
   },
   {
     id: "temporada-berries",
-    label: "3 · Campaña berries",
-    description: "Hero centrado · CTA primero · sin filas",
+    label: "3 · Campaña / anuncio",
+    description: "Hero centrado · CTA primero",
     create: createTemporadaBerriesDocument,
   },
   {
     id: "booking",
-    label: "4 · Comprobante booking",
-    description: "Badge + tabla + divisor · CTA izquierda",
+    label: "4 · Comprobante",
+    description: "Badge + tabla + divisor · CTA",
     create: createConfirmacionBookingDocument,
   },
   {
     id: "demurrage",
-    label: "5 · Urgencia demurrage",
+    label: "5 · Urgencia / plazo",
     description: "Mínimo de bloques · alineado a la derecha",
     create: createAlertaDemurrageDocument,
   },
 ];
-

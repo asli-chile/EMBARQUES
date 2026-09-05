@@ -18,22 +18,19 @@ export type RouteChrome =
   | "marketing"
   /** Dashboard: fondo casi negro. */
   | "dashboard"
-  /** Tracking: mapa sobre degradado slate oscuro. */
-  | "tracking";
 
 const MARKETING_ROUTES = new Set(["/inicio", "/servicios", "/sobre-nosotros"]);
 
 export function getRouteChrome(pathname: string): RouteChrome {
   if (MARKETING_ROUTES.has(pathname)) return "marketing";
   if (pathname === "/dashboard") return "dashboard";
-  if (pathname === "/tracking") return "tracking";
   return "module";
 }
 
 /**
  * Fondo de cada aspecto. Debe coincidir con el fondo real de la página:
- * `modulePageBg`, `--inicio-cream` (src/styles/inicio.css) y las raíces de
- * DashboardContent y TrackingContent.
+ * `modulePageBg`, `--inicio-cream` (src/styles/inicio.css) y la raíz de
+ * DashboardContent.
  *
  * En marketing se repite el crema como literal en vez de usar `.inicio-surface`
  * a propósito: esa clase además aplica `zoom: 1.2` y una familia tipográfica,
@@ -43,7 +40,6 @@ export const routeChromeBg: Record<RouteChrome, string> = {
   module: "bg-[#D9E3F2]",
   marketing: "bg-[#f6eee8]",
   dashboard: "bg-dash-bg",
-  tracking: "bg-gradient-to-b from-slate-600 via-slate-800 to-slate-900",
 };
 
 /**

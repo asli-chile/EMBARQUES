@@ -308,14 +308,16 @@ export function AppShell({ children, pathname }: AppShellProps) {
       children
     );
 
+  const hideAppChrome = pathname === "/comunicaciones/informativos";
+
   return (
     <LocaleProvider>
       <AuthProvider>
         <NotificationsProvider>
           <AuthFormModalProvider>
             <div className="h-dvh max-w-full min-w-0 flex flex-col overflow-hidden">
-              <Header />
-              <NavBanner pathname={pathname} />
+              {!hideAppChrome ? <Header /> : null}
+              {!hideAppChrome ? <NavBanner pathname={pathname} /> : null}
               <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
                 <RouteChromeContext.Provider value={getRouteChrome(pathname)}>
                   {mainContent}
