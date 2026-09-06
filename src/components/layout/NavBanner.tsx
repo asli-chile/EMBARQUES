@@ -17,9 +17,10 @@ function navPrefetchHandlers(href: string) {
   };
 }
 
-// Ítems fijos que siempre se muestran en la barra cuando está logueado (Inicio → panel del sistema / dashboard)
+// Ítems fijos cuando está logueado
 const PINNED_NAV = [
-  { labelKey: "inicio" as const, href: "/dashboard" },
+  { labelKey: "inicio" as const, href: "/inicio" },
+  { labelKey: "dashboard" as const, href: "/dashboard" },
   { labelKey: "tracking" as const, href: "/tracking" },
 ];
 

@@ -6,10 +6,10 @@ import { GlassCard, inicioStyles, SectionHeader } from "./inicio-ui";
 import { KpiSkeletonCard } from "./InicioSkeleton";
 
 const kpiAccent = [
-  { bar: "bg-brand-teal", icon: "text-brand-teal" },
-  { bar: "bg-brand-dark-teal", icon: "text-brand-dark-teal" },
-  { bar: "bg-brand-olive", icon: "text-brand-olive" },
-  { bar: "bg-brand-blue", icon: "text-brand-blue" },
+  { bar: "bg-[var(--inicio-teal)]", icon: "text-[var(--inicio-teal)]" },
+  { bar: "bg-sky-400", icon: "text-sky-400" },
+  { bar: "bg-emerald-400", icon: "text-emerald-400" },
+  { bar: "bg-[var(--inicio-hot)]", icon: "text-[var(--inicio-hot)]" },
 ];
 
 export function InicioLoggedInHome({
@@ -28,7 +28,7 @@ export function InicioLoggedInHome({
   return (
     <>
       <section data-inicio-section className="relative z-10 pb-8 sm:pb-12 -mt-1">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <div className="flex items-end justify-between gap-4 mb-5 px-0.5">
             <div data-inicio-reveal>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] inicio-accent-text mb-1.5">
@@ -42,7 +42,7 @@ export function InicioLoggedInHome({
             <a
               data-inicio-reveal
               href={withBase("/dashboard")}
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium inicio-ink-mute transition-colors hover:text-brand-teal"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium inicio-ink-mute transition-colors hover:[color:var(--inicio-teal)]"
             >
               {t.inicio.kpiCta}
               <Icon icon="lucide:arrow-up-right" width={14} height={14} />
@@ -59,18 +59,18 @@ export function InicioLoggedInHome({
                   const delta =
                     compareKey === "operacionesMesAnterior" ? monthDelta : null;
                   return (
-                    <GlassCard key={key} interactive className="p-5 sm:p-6">
+                    <GlassCard key={key} interactive className="rounded-2xl p-5 sm:p-6">
                       <span className={`absolute inset-x-0 top-0 h-0.5 ${accent.bar}`} />
                       <div className="relative flex items-start justify-between gap-2 mb-4">
-                        <div className="inicio-tile w-11 h-11 rounded-md flex items-center justify-center">
+                        <div className="inicio-tile flex h-11 w-11 items-center justify-center rounded-xl">
                           <Icon icon={icon} className={accent.icon} width={20} height={20} />
                         </div>
                         {delta !== null ? (
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded border ${
                               delta >= 0
-                                ? "bg-brand-teal/8 text-brand-teal border-brand-teal/25"
-                                : "bg-brand-red/8 text-brand-red border-brand-red/25"
+                                ? "inicio-delta-up"
+                                : "inicio-delta-down"
                             }`}
                           >
                             <Icon
@@ -107,7 +107,7 @@ export function InicioLoggedInHome({
       </section>
 
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader
             align="left"
             tag={t.inicio.quickLinksTag}
@@ -128,13 +128,13 @@ export function InicioLoggedInHome({
                     </span>
                   </div>
                   <div>
-                    <h3 className="inicio-display text-base font-bold inicio-ink transition-colors group-hover:text-brand-teal">
+                    <h3 className="inicio-display text-base font-bold inicio-ink transition-colors group-hover:[color:var(--inicio-teal)]">
                       {t.inicio[key]}
                     </h3>
                     <p className="inicio-ink-mute text-xs sm:text-sm mt-1.5 leading-relaxed">{t.inicio[descKey]}</p>
                   </div>
                   <div className="mt-auto pt-1 flex items-center gap-1.5 text-xs font-medium inicio-accent-text">
-                    Abrir módulo
+                    {t.inicio.openModule}
                     <Icon
                       icon="lucide:arrow-up-right"
                       width={14}

@@ -54,7 +54,7 @@ export function MarketingPageShell({ children }: { children: ReactNode }) {
       <InicioBackground parallaxRef={bgParallaxRef} />
       {children}
       <InicioFooter t={t.inicio} brand={brand} />
-      <ScrollTopButton visible={showScrollTop} onClick={scrollToTop} />
+      <ScrollTopButton visible={showScrollTop} onClick={scrollToTop} label={t.inicio.scrollTop} />
     </main>
   );
 }

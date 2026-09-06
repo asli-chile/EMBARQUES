@@ -1,71 +1,106 @@
 import { Icon } from "@iconify/react";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
+import { useLocale } from "@/lib/i18n";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import type { AuthProfile } from "@/lib/auth/AuthContext";
 import { GlassCard, GhostButton, PrimaryButton, inicioButtonBase } from "./inicio-ui";
 
-type InicioCopy = {
-  heroTitle: string;
-  heroDescriptionLine1: string;
-  heroDescriptionLine2: string;
-};
-
-const flowSteps = [
-  { icon: "lucide:calendar-plus", label: "Reserva", sub: "Booking y operación" },
-  { icon: "lucide:truck", label: "Transporte", sub: "Planta y contenedor" },
-  { icon: "lucide:ship", label: "Zarpe", sub: "ETD / ETA en vivo" },
-  { icon: "lucide:file-check", label: "Documentos", sub: "BL, DUS, certificados" },
-];
+const flowStepIcons = [
+  "lucide:calendar-plus",
+  "lucide:truck",
+  "lucide:ship",
+  "lucide:file-check",
+] as const;
 
 export function InicioHero({
-  t,
   isLoggedIn,
   profile,
   isCliente = false,
   compact = false,
 }: {
-  t: InicioCopy;
   isLoggedIn: boolean;
   profile: AuthProfile | null;
   isCliente?: boolean;
   compact?: boolean;
 }) {
+  const { t, locale } = useLocale();
+  const i = t.inicio;
   const firstName = profile?.nombre?.split(" ")[0] ?? "";
+  const dateLocale = locale === "en" ? "en-US" : "es-CL";
+
+  const flowSteps = [
+    { icon: flowStepIcons[0], label: i.heroFlowStep1, sub: i.heroFlowStep1Sub },
+    { icon: flowStepIcons[1], label: i.heroFlowStep2, sub: i.heroFlowStep2Sub },
+    { icon: flowStepIcons[2], label: i.heroFlowStep3, sub: i.heroFlowStep3Sub },
+    { icon: flowStepIcons[3], label: i.heroFlowStep4, sub: i.heroFlowStep4Sub },
+  ];
+
+  const quickTiles = isCliente
+    ? [
+        { href: "/reservas/crear", icon: "lucide:plus-circle", label: i.heroCtaNewBooking },
+        { href: "/reservas/mis-reservas", icon: "lucide:package", label: i.heroCtaMyBookings },
+        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: i.heroCtaDocuments },
+        { href: "/dashboard", icon: "lucide:layout-dashboard", label: i.quickDashboard },
+      ]
+    : [
+        { href: "/reservas/crear", icon: "lucide:plus-circle", label: i.heroCtaCreateBooking },
+        { href: "/reservas/mis-reservas", icon: "lucide:package", label: i.heroCtaMyBookings },
+        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: i.heroCtaDocuments },
+        { href: "/transportes/reserva-asli", icon: "lucide:truck", label: i.heroCtaTransport },
+      ];
 
   return (
     <header
-      className={`relative z-10 inicio-ink ${compact ? "pt-8 pb-6 sm:pt-11 sm:pb-8" : "min-h-full flex items-center py-12 sm:py-16"}`}
+      className={`relative z-10 inicio-ink ${
+        compact
+          ? "pt-8 pb-6 sm:pt-12 sm:pb-10"
+          : "flex min-h-[calc(100dvh-2.5rem)] items-center justify-center py-12 sm:py-16"
+      }`}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
-        <div className={`grid gap-10 lg:gap-14 items-center ${compact ? "lg:grid-cols-[1.15fr_0.85fr]" : "lg:grid-cols-[1.05fr_0.95fr]"}`}>
+      <div
+        className={`mx-auto w-full px-6 sm:px-10 ${
+          compact ? "max-w-6xl" : "max-w-6xl lg:max-w-7xl"
+        }`}
+      >
+        <div
+          className={`grid w-full items-center gap-10 lg:gap-14 ${
+            compact
+              ? "lg:grid-cols-2"
+              : "lg:grid-cols-2 lg:gap-16"
+          }`}
+        >
           <div>
             {isLoggedIn && profile ? (
               <div
                 data-hero-item
-                className="inicio-card inline-flex items-center gap-2.5 mb-6 pl-1.5 pr-4 py-1.5 rounded-md text-sm"
+                className="inicio-card mb-7 inline-flex items-center gap-3 rounded-lg py-2 pl-2 pr-5 text-base"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded bg-brand-teal/10 text-brand-teal font-semibold text-xs border border-brand-teal/25">
+                <span className="inicio-icon-box flex h-10 w-10 items-center justify-center rounded-md text-sm font-semibold">
                   {profile.nombre.charAt(0).toUpperCase()}
                 </span>
                 <span className="inicio-ink-soft">
-                  Hola, <span className="font-semibold inicio-ink">{firstName}</span>
+                  {i.heroGreeting} <span className="font-semibold inicio-ink">{firstName}</span>
                 </span>
-                <span className="hidden sm:inline h-3 w-px bg-brand-blue/15" />
-                <span className="hidden sm:inline text-[11px] uppercase tracking-wider inicio-ink-faint">
-                  {new Date().toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
+                <span className="inicio-line hidden h-3.5 w-px bg-current opacity-30 sm:inline" />
+                <span className="hidden text-xs uppercase tracking-wider inicio-ink-faint sm:inline">
+                  {new Date().toLocaleDateString(dateLocale, {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </span>
               </div>
             ) : (
               <div
                 data-hero-item
-                className="inline-flex items-center gap-2.5 mb-6 text-xs font-semibold uppercase tracking-[0.14em] inicio-ink-mute"
+                className="mb-7 inline-flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.16em] inicio-ink-mute"
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-teal opacity-40" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-teal" />
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--inicio-teal)] opacity-40" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--inicio-teal)]" />
                 </span>
-                ERP logístico · ASLI
+                {i.heroBadgeGuest}
               </div>
             )}
 
@@ -74,110 +109,121 @@ export function InicioHero({
                 data-hero-item
                 src={brand.logo}
                 alt={brand.companyTitle}
-                width={480}
-                height={120}
-                className="h-12 sm:h-14 w-auto object-contain mb-8"
+                width={560}
+                height={140}
+                className="inicio-brand-logo mb-9 h-24 w-auto object-contain sm:h-28 lg:h-32"
                 loading="eager"
               />
             )}
 
             <h1
               data-hero-item
-              className={`inicio-display font-extrabold leading-[1.05] ${compact ? "text-3xl sm:text-4xl lg:text-[2.75rem]" : "text-4xl sm:text-5xl lg:text-[3.25rem]"}`}
+              className={`inicio-display font-extrabold leading-[1.02] tracking-tight ${
+                compact
+                  ? "text-4xl sm:text-5xl lg:text-[3.25rem]"
+                  : "text-5xl sm:text-6xl lg:text-[4.25rem] xl:text-[4.75rem]"
+              }`}
             >
               <span className="inicio-hero-title-stretch">
                 {isLoggedIn ? (
                   <>
-                    Tu operación,{" "}
-                    <span className="inicio-accent-text">en un solo lugar</span>
+                    {i.heroTitleLoggedIn}{" "}
+                    <span className="inicio-accent-text">{i.heroTitleLoggedInAccent}</span>
                   </>
                 ) : (
                   <>
-                    Gestión logística{" "}
-                    <span className="inicio-accent-text">integral</span>
+                    {i.heroTitleGuest}{" "}
+                    <span className="inicio-accent-text">{i.heroTitleGuestAccent}</span>
                   </>
                 )}
               </span>
             </h1>
 
-            <p data-hero-item className={`mt-5 inicio-ink-mute max-w-lg leading-relaxed ${compact ? "text-sm sm:text-base" : "text-base sm:text-lg"}`}>
+            <p
+              data-hero-item
+              className={`mt-6 max-w-xl leading-relaxed inicio-ink-mute ${
+                compact ? "text-base sm:text-lg" : "text-lg sm:text-xl lg:text-[1.35rem]"
+              }`}
+            >
               {isLoggedIn ? (
-                isCliente ? (
-                  <>Panel centralizado para tus reservas, documentos y el estado de tus embarques.</>
-                ) : (
-                  <>Panel centralizado para embarques, registros, documentos y transporte.</>
-                )
+                isCliente ? i.heroDescLoggedInClient : i.heroDescLoggedInStaff
               ) : (
                 <>
-                  {t.heroDescriptionLine1} {t.heroDescriptionLine2}
+                  {i.heroDescriptionLine1} {i.heroDescriptionLine2}
                 </>
               )}
             </p>
 
-            <div data-hero-item className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
+            <div data-hero-item className="mt-10 flex flex-col flex-wrap gap-3.5 sm:flex-row">
               {isLoggedIn ? (
                 isCliente ? (
                   <>
                     <PrimaryButton href={withBase("/dashboard")}>
-                      <Icon icon="lucide:layout-dashboard" width={18} height={18} />
-                      Ir al Dashboard
+                      <Icon icon="lucide:layout-dashboard" width={20} height={20} />
+                      {i.heroCtaDashboard}
                     </PrimaryButton>
                     <GhostButton href={withBase("/reservas/mis-reservas")}>
-                      <Icon icon="lucide:package" width={18} height={18} />
-                      Mis reservas
+                      <Icon icon="lucide:package" width={20} height={20} />
+                      {i.heroCtaMyBookings}
                     </GhostButton>
                     <GhostButton href={withBase("/reservas/crear")}>
-                      <Icon icon="lucide:plus" width={18} height={18} />
-                      Nueva reserva
+                      <Icon icon="lucide:plus" width={20} height={20} />
+                      {i.heroCtaNewBooking}
                     </GhostButton>
                     <GhostButton href={withBase("/documentos/mis-documentos")}>
-                      <Icon icon="lucide:file-text" width={18} height={18} />
-                      Documentos
+                      <Icon icon="lucide:file-text" width={20} height={20} />
+                      {i.heroCtaDocuments}
                     </GhostButton>
                   </>
                 ) : (
                   <>
                     <PrimaryButton href={withBase("/dashboard")}>
-                      <Icon icon="lucide:layout-dashboard" width={18} height={18} />
-                      Ir al Dashboard
+                      <Icon icon="lucide:layout-dashboard" width={20} height={20} />
+                      {i.heroCtaDashboard}
                     </PrimaryButton>
                     <GhostButton href={withBase("/reservas/mis-reservas")}>
-                      <Icon icon="lucide:package" width={18} height={18} />
-                      Ir a mis reservas
+                      <Icon icon="lucide:package" width={20} height={20} />
+                      {i.heroCtaMyBookingsStaff}
                     </GhostButton>
                     <GhostButton href={withBase("/reservas/crear")} className="hidden md:inline-flex">
-                      <Icon icon="lucide:plus" width={18} height={18} />
-                      Nueva reserva
+                      <Icon icon="lucide:plus" width={20} height={20} />
+                      {i.heroCtaNewBooking}
                     </GhostButton>
                   </>
                 )
               ) : (
                 <>
-                  <AuthFormTrigger mode="login" className={`${inicioButtonBase} inicio-btn-primary`}>
-                    <Icon icon="lucide:log-in" width={18} height={18} />
-                    Ingresar
+                  <AuthFormTrigger
+                    mode="login"
+                    className={`${inicioButtonBase} inicio-btn-primary px-8 py-3.5 text-base`}
+                  >
+                    <Icon icon="lucide:log-in" width={20} height={20} />
+                    {i.heroCtaLogin}
                   </AuthFormTrigger>
-                  <AuthFormTrigger mode="registro" className={`${inicioButtonBase} inicio-btn-ghost font-medium`}>
-                    <Icon icon="lucide:user-plus" width={18} height={18} />
-                    Solicitar acceso
+                  <AuthFormTrigger
+                    mode="registro"
+                    className={`${inicioButtonBase} inicio-btn-ghost px-8 py-3.5 text-base font-medium`}
+                  >
+                    <Icon icon="lucide:user-plus" width={20} height={20} />
+                    {i.heroCtaRequestAccess}
                   </AuthFormTrigger>
                 </>
               )}
             </div>
 
             {!isLoggedIn && !compact && (
-              <div data-hero-item className="mt-10 flex flex-wrap gap-6 text-xs inicio-ink-faint">
-                <span className="inline-flex items-center gap-2">
-                  <Icon icon="lucide:shield-check" width={14} height={14} className="text-brand-teal" />
-                  Datos en la nube
+              <div data-hero-item className="mt-12 flex flex-wrap gap-x-8 gap-y-3 text-sm inicio-ink-faint">
+                <span className="inline-flex items-center gap-2.5">
+                  <Icon icon="lucide:shield-check" width={18} height={18} className="inicio-accent-text" />
+                  {i.heroTrustCloud}
                 </span>
-                <span className="inline-flex items-center gap-2">
-                  <Icon icon="lucide:clock" width={14} height={14} className="text-brand-teal" />
-                  Tiempo real
+                <span className="inline-flex items-center gap-2.5">
+                  <Icon icon="lucide:clock" width={18} height={18} className="inicio-accent-text" />
+                  {i.heroTrustRealtime}
                 </span>
-                <span className="inline-flex items-center gap-2">
-                  <Icon icon="lucide:map-pin" width={14} height={14} className="text-brand-teal" />
-                  Curicó, Chile
+                <span className="inline-flex items-center gap-2.5">
+                  <Icon icon="lucide:map-pin" width={18} height={18} className="inicio-accent-text" />
+                  {i.heroTrustLocation}
                 </span>
               </div>
             )}
@@ -185,32 +231,19 @@ export function InicioHero({
 
           {compact && isLoggedIn && (
             <div data-hero-item className="hidden lg:block">
-              <GlassCard className="p-6 sm:p-7" reveal={false}>
-                <p className="text-xs sm:text-sm uppercase tracking-[0.14em] inicio-accent-text font-semibold mb-5">
-                  Accesos rápidos
+              <GlassCard className="p-7 sm:p-8" reveal={false}>
+                <p className="mb-6 text-sm uppercase tracking-[0.14em] inicio-accent-text font-semibold">
+                  {i.heroQuickAccess}
                 </p>
-                <div className="grid grid-cols-2 gap-3.5">
-                  {(isCliente
-                    ? [
-                        { href: "/reservas/crear", icon: "lucide:plus-circle", label: "Nueva reserva" },
-                        { href: "/reservas/mis-reservas", icon: "lucide:package", label: "Mis reservas" },
-                        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: "Documentos" },
-                        { href: "/dashboard", icon: "lucide:layout-dashboard", label: "Dashboard" },
-                      ]
-                    : [
-                        { href: "/reservas/crear", icon: "lucide:plus-circle", label: "Crear reserva" },
-                        { href: "/reservas/mis-reservas", icon: "lucide:package", label: "Mis reservas" },
-                        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: "Documentos" },
-                        { href: "/transportes/reserva-asli", icon: "lucide:truck", label: "Transportes" },
-                      ]
-                  ).map(({ href, icon, label }) => (
+                <div className="grid grid-cols-2 gap-4">
+                  {quickTiles.map(({ href, icon, label }) => (
                     <a
                       key={href}
                       href={withBase(href)}
-                      className="inicio-tile rounded-md p-5 min-h-[6.5rem] flex flex-col justify-center group"
+                      className="inicio-tile group flex min-h-[7.5rem] flex-col justify-center rounded-lg p-6"
                     >
-                      <Icon icon={icon} className="text-brand-teal mb-3" width={24} height={24} />
-                      <p className="text-sm font-semibold inicio-ink leading-snug">{label}</p>
+                      <Icon icon={icon} className="inicio-accent-text mb-3.5" width={28} height={28} />
+                      <p className="text-base font-semibold leading-snug inicio-ink">{label}</p>
                     </a>
                   ))}
                 </div>
@@ -220,38 +253,43 @@ export function InicioHero({
 
           {!compact && (
             <div data-hero-item className="hidden lg:block">
-              <GlassCard className="p-6 sm:p-7" reveal={false}>
-                <div className="flex items-center justify-between mb-6">
+              <GlassCard className="p-7 sm:p-9" reveal={false}>
+                <div className="mb-7 flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.14em] inicio-accent-text font-semibold">Flujo operativo</p>
-                    <p className="inicio-ink-mute text-sm mt-1">De la reserva al documento final</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] inicio-accent-text">
+                      {i.heroFlowTitle}
+                    </p>
+                    <p className="mt-1.5 text-base inicio-ink-mute">{i.heroFlowSubtitle}</p>
                   </div>
-                  <div className="inicio-icon-box h-10 w-10 rounded-md flex items-center justify-center">
-                    <Icon icon="lucide:route" width={20} height={20} />
+                  <div className="inicio-icon-box flex h-12 w-12 items-center justify-center rounded-lg">
+                    <Icon icon="lucide:route" width={24} height={24} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {flowSteps.map(({ icon, label, sub }, i) => (
-                    <div key={label} className="inicio-tile relative rounded-md p-4">
-                      <span className="absolute top-3 right-3 text-[10px] font-bold inicio-ink-faint tabular-nums">
-                        {String(i + 1).padStart(2, "0")}
+                <div className="grid grid-cols-2 gap-4">
+                  {flowSteps.map(({ icon, label, sub }, stepIndex) => (
+                    <div key={label} className="inicio-tile relative rounded-lg p-5">
+                      <span className="absolute right-3.5 top-3.5 text-xs font-bold tabular-nums inicio-ink-faint">
+                        {String(stepIndex + 1).padStart(2, "0")}
                       </span>
-                      <div className="inicio-icon-box w-10 h-10 rounded-md flex items-center justify-center mb-3">
-                        <Icon icon={icon} width={20} height={20} />
+                      <div className="inicio-icon-box mb-3.5 flex h-11 w-11 items-center justify-center rounded-lg">
+                        <Icon icon={icon} width={22} height={22} />
                       </div>
-                      <p className="text-sm font-semibold inicio-ink">{label}</p>
-                      <p className="text-[11px] inicio-ink-mute mt-0.5">{sub}</p>
+                      <p className="text-base font-semibold inicio-ink">{label}</p>
+                      <p className="mt-1 text-sm inicio-ink-mute">{sub}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-5 pt-4 border-t inicio-line flex items-center justify-between text-xs">
-                  <span className="inicio-ink-mute">Exportadores · Región del Maule</span>
-                  <span className="inline-flex items-center gap-1 inicio-accent-text font-medium">
-                    Ver módulos
-                    <Icon icon="lucide:arrow-right" width={14} height={14} />
-                  </span>
+                <div className="mt-6 flex items-center justify-between border-t inicio-line pt-5 text-sm">
+                  <span className="inicio-ink-mute">{i.heroFlowFooter}</span>
+                  <a
+                    href="#pilares"
+                    className="inline-flex items-center gap-1.5 font-medium inicio-accent-text"
+                  >
+                    {i.heroFlowViewModules}
+                    <Icon icon="lucide:arrow-right" width={16} height={16} />
+                  </a>
                 </div>
               </GlassCard>
             </div>

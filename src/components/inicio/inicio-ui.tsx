@@ -2,10 +2,10 @@ import { Icon } from "@iconify/react";
 import type { ReactNode } from "react";
 
 export const inicioStyles = {
-  section: "relative z-10 py-16 sm:py-20 lg:py-24",
-  sectionAlt: "relative z-10 py-16 sm:py-20 lg:py-24 inicio-band",
-  card: "group relative inicio-card rounded-lg transition-all duration-300 overflow-hidden",
-  cardInteractive: "inicio-card-interactive hover:-translate-y-0.5",
+  section: "relative z-10 py-20 sm:py-24 lg:py-28",
+  sectionAlt: "relative z-10 py-20 sm:py-24 lg:py-28 inicio-band",
+  card: "group relative inicio-card rounded-2xl transition-all duration-300 overflow-hidden",
+  cardInteractive: "inicio-card-interactive",
 } as const;
 
 export function SectionHeader({
@@ -21,15 +21,15 @@ export function SectionHeader({
 }) {
   const alignClass = align === "center" ? "text-center mx-auto items-center" : "text-left items-start";
   return (
-    <div data-inicio-reveal className={`mb-10 sm:mb-12 max-w-2xl flex flex-col ${alignClass}`}>
-      <span className="inline-flex items-center gap-2 mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] inicio-accent-text">
-        <span className="h-px w-6 bg-brand-teal/60" />
+    <div data-inicio-reveal className={`mb-12 sm:mb-14 max-w-3xl flex flex-col ${alignClass}`}>
+      <span className="inline-flex items-center gap-2.5 mb-4 text-xs font-semibold uppercase tracking-[0.14em] inicio-accent-text">
+        <span className="h-px w-7 bg-[color-mix(in_srgb,var(--inicio-teal)_60%,transparent)]" />
         {tag}
       </span>
-      <h2 className="inicio-display inicio-ink text-3xl sm:text-4xl lg:text-[2.35rem] font-bold leading-[1.1]">
+      <h2 className="inicio-display inicio-ink text-4xl sm:text-5xl lg:text-[3.15rem] font-bold leading-[1.08]">
         {title}
       </h2>
-      {subtitle ? <p className="mt-3 text-sm sm:text-base inicio-ink-mute leading-relaxed max-w-xl">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-4 text-base sm:text-lg inicio-ink-mute leading-relaxed max-w-2xl">{subtitle}</p> : null}
     </div>
   );
 }
@@ -56,7 +56,7 @@ export function GlassCard({
 }
 
 export const inicioButtonBase =
-  "inline-flex items-center justify-center gap-2.5 py-3 px-6 rounded-md font-semibold text-sm transition-all duration-300";
+  "inline-flex items-center justify-center gap-2.5 py-3.5 px-7 rounded-lg font-semibold text-base transition-all duration-300";
 
 export function PrimaryButton({
   href,
@@ -112,7 +112,7 @@ export function InicioFooter({
   brand: { logoWhite: string; companyTitle: string };
 }) {
   return (
-    <footer data-inicio-reveal className="relative z-10 bg-brand-blue py-10 sm:py-12 text-white">
+    <footer data-inicio-reveal className="inicio-footer-neon relative z-10 py-10 sm:py-12 text-white">
       <div className="relative max-w-5xl mx-auto px-4">
         <div className="flex flex-col items-center text-center">
           <img src={brand.logoWhite} alt={brand.companyTitle} width={160} height={80} className="h-9 w-auto object-contain mb-5" loading="lazy" />
@@ -127,7 +127,7 @@ export function InicioFooter({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-md border border-white/20 flex items-center justify-center text-white/70 transition-colors hover:border-brand-teal hover:text-white"
+                className="w-10 h-10 rounded-md border border-white/20 flex items-center justify-center text-white/70 transition-colors hover:border-[var(--inicio-teal)] hover:text-white"
                 aria-label={label}
               >
                 <Icon icon={icon} width={17} height={17} />
@@ -136,15 +136,15 @@ export function InicioFooter({
           </div>
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-white/70">
             <span className="inline-flex items-center gap-2">
-              <Icon icon="lucide:map-pin" width={13} height={13} className="text-brand-teal" />
+              <Icon icon="lucide:map-pin" width={13} height={13} className="inicio-accent-text" />
               {t.footerLocation}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Icon icon="lucide:mail" width={13} height={13} className="text-brand-teal" />
+              <Icon icon="lucide:mail" width={13} height={13} className="inicio-accent-text" />
               {t.footerEmail}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Icon icon="lucide:phone" width={13} height={13} className="text-brand-teal" />
+              <Icon icon="lucide:phone" width={13} height={13} className="inicio-accent-text" />
               {t.footerPhone}
             </span>
           </div>
@@ -157,13 +157,21 @@ export function InicioFooter({
   );
 }
 
-export function ScrollTopButton({ visible, onClick }: { visible: boolean; onClick: () => void }) {
+export function ScrollTopButton({
+  visible,
+  onClick,
+  label = "Volver arriba",
+}: {
+  visible: boolean;
+  onClick: () => void;
+  label?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={`fixed bottom-5 right-5 z-50 w-11 h-11 rounded-md inicio-btn-primary flex items-center justify-center transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
-      aria-label="Volver arriba"
+      aria-label={label}
     >
       <Icon icon="lucide:arrow-up" width={18} height={18} />
     </button>
@@ -173,7 +181,7 @@ export function ScrollTopButton({ visible, onClick }: { visible: boolean; onClic
 export function FeatureChip({ children }: { children: ReactNode }) {
   return (
     <span className="inicio-chip inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded">
-      <Icon icon="lucide:check" width={10} height={10} className="text-brand-teal shrink-0" />
+      <Icon icon="lucide:check" width={10} height={10} className="inicio-accent-text shrink-0" />
       {children}
     </span>
   );

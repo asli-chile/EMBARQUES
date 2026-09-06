@@ -27,7 +27,7 @@ export function InicioGuestLanding({
     <>
       {/* Pilares */}
       <section id="pilares" data-inicio-section className={inicioStyles.section}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader
             tag={t.inicio.pillarsTag}
             title={t.inicio.pillarsTitle}
@@ -40,7 +40,7 @@ export function InicioGuestLanding({
                   <div className="inicio-icon-box w-12 h-12 rounded-md flex items-center justify-center">
                     <Icon icon={icon} width={24} height={24} />
                   </div>
-                  <span className="inicio-display text-4xl font-black text-brand-blue/10 tabular-nums">
+                  <span className="inicio-display text-4xl font-black inicio-ink-faint tabular-nums opacity-35">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                 </div>
@@ -59,7 +59,7 @@ export function InicioGuestLanding({
 
       {/* Stats */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader tag={t.inicio.statsTag} title={t.inicio.statsTitle} subtitle={t.inicio.statsSubtitle} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {stats.map(({ valueKey, labelKey, icon }) => (
@@ -77,7 +77,7 @@ export function InicioGuestLanding({
 
       {/* Comparación */}
       <section data-inicio-section className={inicioStyles.section}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader
             tag={t.inicio.comparisonTag}
             title={t.inicio.comparisonTitle}
@@ -85,11 +85,11 @@ export function InicioGuestLanding({
           />
           <GlassCard className="hidden sm:block overflow-hidden p-0" reveal>
             <div className="grid grid-cols-2 border-b inicio-line">
-              <div className="px-6 py-4 bg-brand-red/8 text-brand-red text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+              <div className="inicio-compare-before px-6 py-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                 <Icon icon="lucide:x" width={14} height={14} />
                 {t.inicio.comparisonBefore}
               </div>
-              <div className="px-6 py-4 bg-brand-teal/8 text-brand-teal text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+              <div className="inicio-compare-after px-6 py-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                 <Icon icon="lucide:check" width={14} height={14} />
                 {t.inicio.comparisonAfter}
               </div>
@@ -104,12 +104,12 @@ export function InicioGuestLanding({
           <div data-inicio-reveal className="sm:hidden space-y-3">
             {comparisons.map(({ beforeKey, afterKey }) => (
               <GlassCard key={beforeKey} className="p-0 overflow-hidden" reveal={false}>
-                <div className="px-4 py-3 bg-brand-red/8 inicio-ink-mute text-xs flex gap-2">
-                  <Icon icon="lucide:x" className="text-brand-red shrink-0 mt-0.5" width={14} height={14} />
+                <div className="inicio-compare-before px-4 py-3 text-xs flex gap-2">
+                  <Icon icon="lucide:x" className="shrink-0 mt-0.5" width={14} height={14} />
                   {t.inicio[beforeKey]}
                 </div>
                 <div className="px-4 py-3 flex gap-2 text-xs inicio-ink">
-                  <Icon icon="lucide:check" className="text-brand-teal shrink-0 mt-0.5" width={14} height={14} />
+                  <Icon icon="lucide:check" className="inicio-accent-text shrink-0 mt-0.5" width={14} height={14} />
                   {t.inicio[afterKey]}
                 </div>
               </GlassCard>
@@ -120,7 +120,7 @@ export function InicioGuestLanding({
 
       {/* Workflow */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader tag={t.inicio.workflowTag} title={t.inicio.workflowTitle} subtitle={t.inicio.workflowSubtitle} />
           <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
             {workflowSteps.map(({ key, descKey, icon, num }) => (
@@ -141,13 +141,13 @@ export function InicioGuestLanding({
 
       {/* Quick links */}
       <section data-inicio-section className={inicioStyles.section}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader tag={t.inicio.quickLinksTag} title={t.inicio.quickLinksTitle} subtitle={t.inicio.quickLinksSubtitle} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {quickLinks.map(({ key, descKey, href, icon }) => (
               <a key={key} href={withBase(href)} data-inicio-reveal className="group">
                 <GlassCard interactive className="flex items-center gap-3 p-4" reveal={false}>
-                  <Icon icon={icon} className="text-brand-teal shrink-0 transition-transform group-hover:scale-110" width={20} height={20} />
+                  <Icon icon={icon} className="inicio-accent-text shrink-0 transition-transform group-hover:scale-110" width={20} height={20} />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold inicio-ink">{t.inicio[key]}</p>
                     <p className="text-xs inicio-ink-mute truncate">{t.inicio[descKey]}</p>
@@ -161,14 +161,14 @@ export function InicioGuestLanding({
 
       {/* KPI preview */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <SectionHeader tag={t.inicio.kpiTag} title={t.inicio.kpiTitle} subtitle={t.inicio.kpiSubtitle} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             {loadingKpis
               ? Array.from({ length: 4 }).map((_, i) => <KpiSkeletonCard key={i} />)
               : kpiConfig.map(({ key, descKey, dataKey, icon }) => (
                   <GlassCard key={key} className="p-5">
-                    <Icon icon={icon} className="text-brand-teal mb-3" width={18} height={18} />
+                    <Icon icon={icon} className="inicio-accent-text mb-3" width={18} height={18} />
                     <p className="inicio-stat-value text-3xl font-bold tabular-nums">
                       {kpiData[dataKey].toLocaleString(undefined)}
                     </p>
@@ -188,8 +188,8 @@ export function InicioGuestLanding({
 
       {/* CTA */}
       <section data-inicio-section className={`${inicioStyles.section} pb-10`}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div data-inicio-reveal className="rounded-lg bg-brand-blue px-6 py-10 sm:px-12 sm:py-14 text-center text-white">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+          <div data-inicio-reveal className="inicio-cta-panel rounded-lg px-6 py-10 sm:px-12 sm:py-14 text-center text-white">
             <h2 className="inicio-display text-3xl sm:text-4xl font-bold mb-4">{t.inicio.ctaFinalTitle}</h2>
             <p className="text-white/70 text-sm sm:text-base mb-8 max-w-md mx-auto">{t.inicio.ctaFinalSubtitle}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
@@ -198,7 +198,7 @@ export function InicioGuestLanding({
                 {t.inicio.ctaFinalButton1}
               </AuthFormTrigger>
               <a
-                href="mailto:informaciones@asli.cl?subject=Solicitud de demo EMBARQUES"
+                href={`mailto:informaciones@asli.cl?subject=${encodeURIComponent(t.inicio.ctaDemoSubject)}`}
                 className={`${inicioButtonBase} px-8 border border-white/25 font-medium text-white transition-colors hover:bg-white/10`}
               >
                 <Icon icon="lucide:play-circle" width={18} height={18} />
@@ -207,11 +207,11 @@ export function InicioGuestLanding({
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center text-xs text-white/60">
               <span className="inline-flex items-center justify-center gap-2">
-                <Icon icon="lucide:check" className="text-brand-teal" width={14} height={14} />
+                <Icon icon="lucide:check" className="inicio-accent-text" width={14} height={14} />
                 {t.inicio.ctaFinalFeature1}
               </span>
               <span className="inline-flex items-center justify-center gap-2">
-                <Icon icon="lucide:check" className="text-brand-teal" width={14} height={14} />
+                <Icon icon="lucide:check" className="inicio-accent-text" width={14} height={14} />
                 {t.inicio.ctaFinalFeature2}
               </span>
             </div>

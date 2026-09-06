@@ -343,7 +343,10 @@ function AppChromeFrame({
   const { user, isLoading } = useAuth();
   const chrome = getRouteChrome(pathname);
   const isMarketing = chrome === "marketing";
-  const showRail = !!user && !isMarketing && !isLoading;
+  // /inicio siempre usa chrome minimalista (rail + header compact), con o sin sesión
+  const showRail =
+    pathname === "/inicio" ||
+    (!!user && !isLoading && !isMarketing);
 
   if (hideAppChrome) {
     // Informativos: rail global + sin Header/NavBanner (el estudio es pantalla completa)

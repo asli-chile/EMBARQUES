@@ -1,4 +1,5 @@
 import { Icon } from "@iconify/react";
+import { createPortal } from "react-dom";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
@@ -23,13 +24,13 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
   const { t } = useLocale();
   const { isMounted, state, close } = useOverlayTransition({ isOpen, onClose });
 
-  if (!isMounted) return null;
+  if (!isMounted || typeof document === "undefined") return null;
 
   const { name, email, level } = user;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
@@ -41,32 +42,32 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
         aria-hidden
       />
       <div
-        className="motion-panel relative flex flex-col md:flex-row w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-mac-modal border border-neutral-200/80 bg-white"
+        className="motion-panel relative my-auto flex w-full max-h-[min(90dvh,900px)] max-w-4xl flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-mac-modal md:flex-row"
         data-state={state}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Panel izquierdo: marca y bienvenida (mismo que login/registro) */}
-        <div className="hidden md:flex flex-1 flex-col px-10 py-12 bg-gradient-to-br from-brand-blue via-[#0d1a3a] to-[#0a1530] text-white min-h-[380px]">
+        <div className="hidden min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-brand-blue via-[#0d1a3a] to-[#0a1530] px-10 py-12 text-white md:flex">
           <div className="mb-4">
-            <p className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/20 bg-white/10 text-xs font-semibold tracking-wide uppercase text-white">
+            <p className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
               BIENVENIDO "{name}"
             </p>
           </div>
-          <div className="flex-1 flex items-center justify-center min-h-[180px] w-full">
+          <div className="flex min-h-[140px] w-full flex-1 items-center justify-center">
             <img
               src={brand.logo}
               alt={brand.companyTitle}
-              className="max-h-24 w-auto max-w-full object-contain brightness-0 invert"
+              className="h-auto max-h-24 w-auto max-w-full object-contain brightness-0 invert"
               width={320}
               height={96}
             />
           </div>
-          <div className="flex flex-col items-start gap-6 shrink-0">
+          <div className="flex shrink-0 flex-col items-start gap-6">
             <div className="space-y-2">
               <h2 className="text-xl font-bold tracking-tight text-white">
                 {WELCOME_TITLE}
               </h2>
-              <p className="text-white/85 text-sm leading-relaxed max-w-xs">
+              <p className="max-w-xs text-sm leading-relaxed text-white/85">
                 {WELCOME_SUBTITLE}
               </p>
             </div>
@@ -76,7 +77,7 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
                   icon="lucide:check-circle"
                   width={18}
                   height={18}
-                  className="text-emerald-300 shrink-0"
+                  className="shrink-0 text-emerald-300"
                   aria-hidden
                 />
                 <span>Reservas, itinerarios y documentación en un solo lugar.</span>
@@ -86,7 +87,7 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
                   icon="lucide:check-circle"
                   width={18}
                   height={18}
-                  className="text-emerald-300 shrink-0"
+                  className="shrink-0 text-emerald-300"
                   aria-hidden
                 />
                 <span>Disponible 24/7 para tu equipo y clientes.</span>
@@ -96,50 +97,50 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
         </div>
 
         {/* Panel derecho: datos del usuario y cerrar sesión */}
-        <div className="flex-1 min-w-0 flex flex-col bg-neutral-50/95 overflow-y-auto min-h-[320px]">
-          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-4 bg-white/95 backdrop-blur border-b border-neutral-200/60 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-neutral-50/95">
+          <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-4 border-b border-neutral-200/60 bg-white/95 p-4 backdrop-blur">
+            <div className="flex min-w-0 items-center gap-3">
               <img
                 src={brand.logo}
                 alt={brand.companyTitle}
-                className="h-11 w-auto max-w-[160px] object-contain object-left shrink-0"
+                className="h-11 w-auto max-w-[160px] shrink-0 object-contain object-left"
                 width={160}
                 height={44}
               />
-              <span className="text-sm font-semibold text-brand-blue truncate hidden sm:inline">
+              <span className="hidden truncate text-sm font-semibold text-brand-blue sm:inline">
                 EMBARQUES
               </span>
             </div>
             <button
               type="button"
               onClick={close}
-              className="motion-interactive p-2 rounded-lg text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              className="motion-interactive rounded-lg p-2 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               aria-label="Cerrar"
             >
               <Icon icon="lucide:x" width={20} height={20} />
             </button>
           </div>
 
-          <div className="p-6 sm:p-8 flex flex-col justify-center min-h-0 w-full max-w-md mx-auto">
+          <div className="mx-auto flex w-full max-w-md flex-col justify-center p-6 sm:p-8">
             <h2
               id="auth-modal-title"
-              className="text-xl font-semibold text-brand-blue tracking-tight mb-1"
+              className="mb-1 text-xl font-semibold tracking-tight text-brand-blue"
             >
               {t.auth.modalTitle}
             </h2>
-            <p className="text-sm text-neutral-500 mb-6">{name}</p>
+            <p className="mb-6 text-sm text-neutral-500">{name}</p>
 
             <div className="space-y-3">
-              <div className="rounded-xl bg-white border border-neutral-200 p-4">
-                <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block mb-1">
+              <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-neutral-500">
                   {t.auth.email}
                 </span>
-                <p className="text-[15px] font-medium text-neutral-800 break-all">
+                <p className="break-all text-[15px] font-medium text-neutral-800">
                   {email}
                 </p>
               </div>
-              <div className="rounded-xl bg-white border border-neutral-200 p-4">
-                <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block mb-1">
+              <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-neutral-500">
                   {t.auth.level}
                 </span>
                 <p className="text-[15px] font-medium text-neutral-800">{level}</p>
@@ -149,11 +150,11 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
             <form
               action={withBase("/api/auth/signout")}
               method="post"
-              className="mt-6 pt-4 border-t border-neutral-200"
+              className="mt-6 border-t border-neutral-200 pt-4"
             >
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 transition-colors"
+                className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200"
               >
                 {t.auth.signOut}
               </button>
@@ -161,6 +162,7 @@ export function AuthModal({ isOpen, onClose, user }: AuthModalProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

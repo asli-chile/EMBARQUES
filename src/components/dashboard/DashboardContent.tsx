@@ -15,7 +15,6 @@ import { formatRefAsli } from "@/lib/refAsli";
 import MapLibreMap, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
 import type { NeonTheme } from "@/lib/ui/neonTheme";
 import { esEstadoCerrado, etiquetaEstado, normalizarEstado } from "@/lib/operaciones/estados";
 
@@ -104,14 +103,12 @@ type Props = {
   view: DashboardView;
   onViewChange: (view: DashboardView) => void;
   theme?: NeonTheme;
-  onThemeChange?: (theme: NeonTheme) => void;
 };
 
 export function DashboardContent({
   view,
   onViewChange,
   theme = "dark",
-  onThemeChange,
 }: Props) {
   const { t, locale } = useLocale();
   const { isLoading: authLoading, isCliente, isEjecutivo, empresaNombres } = useAuth();
@@ -690,7 +687,6 @@ export function DashboardContent({
               title={tr.refresh}>
               <Icon icon="lucide:refresh-cw" className="h-5 w-5" />
             </button>
-            <NeonThemeToggle theme={theme} onThemeChange={onThemeChange} />
           </div>
         </div>
       </div>

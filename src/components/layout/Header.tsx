@@ -4,6 +4,7 @@ import { AuthWidget } from "@/components/ui/AuthWidget";
 import { OnlineUsersButton } from "@/components/ui/OnlineUsersButton";
 import { VisitCounterBadge } from "@/components/ui/VisitCounterBadge";
 import { NotificationsBell } from "@/components/ui/NotificationsBell";
+import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
 import { HeaderTitle } from "./HeaderTitle";
 import { LocaleToggle } from "./LocaleToggle";
 
@@ -30,7 +31,7 @@ export function Header({ compact = false }: HeaderProps) {
         </div>
 
         <a
-          href={withBase("/dashboard")}
+          href={withBase("/inicio")}
           className="flex h-7 items-center justify-self-center"
           aria-label="ASLI ERP"
           title="Inicio"
@@ -45,6 +46,7 @@ export function Header({ compact = false }: HeaderProps) {
         </a>
 
         <div className="flex items-center justify-end gap-1.5 justify-self-end">
+          <NeonThemeToggle variant="header" />
           <LocaleToggle />
           <NotificationsBell />
           <AuthWidget />
@@ -84,6 +86,7 @@ export function Header({ compact = false }: HeaderProps) {
       <div className="hidden sm:block">
         <OnlineUsersButton />
       </div>
+      <NeonThemeToggle variant="header" />
       <LocaleToggle />
       <NotificationsBell />
       <AuthWidget />

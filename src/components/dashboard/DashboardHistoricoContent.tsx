@@ -10,8 +10,6 @@ import { aplicarFiltroTemporada, listarTemporadas, type Temporada } from "@/lib/
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { normalizarEstado } from "@/lib/operaciones/estados";
 import { DashboardViewTabs, type DashboardView } from "./DashboardViewTabs";
-import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
-import type { NeonTheme } from "@/lib/ui/neonTheme";
 
 type OperacionVolumen = {
   etd: string | null;
@@ -28,8 +26,6 @@ type OperacionVolumen = {
 type Props = {
   view: DashboardView;
   onViewChange: (view: DashboardView) => void;
-  theme?: NeonTheme;
-  onThemeChange?: (theme: NeonTheme) => void;
 };
 
 /** Anotado como `string` a propósito: con el literal, el genérico de PostgREST hace explotar la inferencia. */
@@ -53,8 +49,6 @@ function parseEtd(value: string | null): Date | null {
 export function DashboardHistoricoContent({
   view,
   onViewChange,
-  theme = "dark",
-  onThemeChange,
 }: Props) {
   const { t, locale } = useLocale();
   const tr = t.dashboard;
@@ -308,7 +302,6 @@ export function DashboardHistoricoContent({
             >
               <Icon icon="lucide:refresh-cw" className="h-5 w-5" />
             </button>
-            <NeonThemeToggle theme={theme} onThemeChange={onThemeChange} />
           </div>
         </div>
       </div>

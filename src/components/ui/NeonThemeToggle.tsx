@@ -1,47 +1,49 @@
 import { Icon } from "@iconify/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import {
-  readNeonTheme,
   toggleNeonTheme,
+  useNeonTheme,
   type NeonTheme,
 } from "@/lib/ui/neonTheme";
 
 type Props = {
   className?: string;
-  /** Clase del botón (dashboard vs informativos). */
+  /** Clase del botón (dashboard vs header). */
   buttonClassName?: string;
+  /** Estilo para barra superior clara. */
+  variant?: "header" | "neon";
   theme?: NeonTheme;
   onThemeChange?: (theme: NeonTheme) => void;
 };
 
+const HEADER_BTN =
+  "inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5a6b85] ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb] hover:text-[#11224E]";
+
 /**
- * Toggle día/noche neón. Si no recibe theme controlado, gestiona estado local
- * y persiste en localStorage (clave compartida ERP).
+ * Toggle día/noche neón. Sin props controlados usa el tema compartido ERP.
  */
 export function NeonThemeToggle({
   className = "",
-  buttonClassName = "dash-theme-toggle",
+  buttonClassName,
+  variant = "neon",
   theme: controlled,
   onThemeChange,
 }: Props) {
-  const [localTheme, setLocalTheme] = useState<NeonTheme>("dark");
-  const theme = controlled ?? localTheme;
-
-  useEffect(() => {
-    if (controlled != null) return;
-    setLocalTheme(readNeonTheme());
-  }, [controlled]);
+  const [sharedTheme, setSharedTheme] = useNeonTheme();
+  const theme = controlled ?? sharedTheme;
+  const btnClass =
+    buttonClassName ?? (variant === "header" ? HEADER_BTN : "dash-theme-toggle");
 
   const onToggle = useCallback(() => {
     const next = toggleNeonTheme(theme);
     if (onThemeChange) onThemeChange(next);
-    else setLocalTheme(next);
-  }, [theme, onThemeChange]);
+    else setSharedTheme(next);
+  }, [theme, onThemeChange, setSharedTheme]);
 
   return (
     <button
       type="button"
-      className={`${buttonClassName} ${className}`.trim()}
+      className={`${btnClass} ${className}`.trim()}
       title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
       aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
       onClick={onToggle}

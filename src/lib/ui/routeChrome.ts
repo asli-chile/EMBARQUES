@@ -38,8 +38,8 @@ export function getRouteChrome(pathname: string): RouteChrome {
  */
 export const routeChromeBg: Record<RouteChrome, string> = {
   module: "bg-[#D9E3F2]",
-  marketing: "bg-[#f6eee8]",
-  dashboard: "bg-[#060b17]",
+  marketing: "bg-[#050914]",
+  dashboard: "bg-[#050914]",
 };
 
 /**

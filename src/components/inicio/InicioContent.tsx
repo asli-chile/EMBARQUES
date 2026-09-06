@@ -8,6 +8,7 @@ import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { shouldUseHeavyVisualEffects } from "@/lib/ui/devicePerf";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 import "@/styles/inicio.css";
 import {
   emptyKpiData,
@@ -33,6 +34,7 @@ export function InicioContent() {
   const [kpiData, setKpiData] = useState<KpiData>(emptyKpiData);
   const [loadingKpis, setLoadingKpis] = useState(true);
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [theme] = useNeonTheme();
 
   useEffect(() => {
     if (!shouldUseHeavyVisualEffects()) return;
@@ -208,7 +210,8 @@ export function InicioContent() {
   return (
     <main
       ref={mainRef}
-      className="inicio-surface flex-1 min-h-0 overflow-auto relative isolate scroll-smooth"
+      className="inicio-surface relative isolate min-h-0 flex-1 scroll-smooth overflow-auto"
+      data-theme={theme}
       role="main"
     >
       <InicioBackground parallaxRef={bgParallaxRef} />
@@ -217,7 +220,7 @@ export function InicioContent() {
         <InicioAuthSkeleton />
       ) : (
         <>
-          <InicioHero t={t.inicio} isLoggedIn={isLoggedIn} profile={profile} isCliente={isCliente} compact={isLoggedIn} />
+          <InicioHero isLoggedIn={isLoggedIn} profile={profile} isCliente={isCliente} compact={isLoggedIn} />
 
           {isLoggedIn ? (
             <InicioLoggedInHome kpiData={kpiData} loadingKpis={loadingKpis} isCliente={isCliente} />
@@ -229,7 +232,11 @@ export function InicioContent() {
         </>
       )}
 
-      <ScrollTopButton visible={showScrollTop && !authLoading} onClick={handleScrollToTop} />
+      <ScrollTopButton
+        visible={showScrollTop && !authLoading}
+        onClick={handleScrollToTop}
+        label={t.inicio.scrollTop}
+      />
     </main>
   );
 }

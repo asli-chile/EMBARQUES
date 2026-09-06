@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { RoleForbidden } from "@/components/layout/RoleForbidden";
 import { DashboardContent } from "./DashboardContent";
 import { DashboardHistoricoContent } from "./DashboardHistoricoContent";
 import { DashboardVisitorContent } from "./DashboardVisitorContent";
 import type { DashboardView } from "./DashboardViewTabs";
-import { readNeonTheme, type NeonTheme } from "@/lib/ui/neonTheme";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 /**
  * Punto de entrada del dashboard: resuelve el acceso por rol y alterna entre la
@@ -14,13 +14,7 @@ import { readNeonTheme, type NeonTheme } from "@/lib/ui/neonTheme";
 export function DashboardPanel() {
   const { isExternalUser, isLoading: authLoading, isCliente, isStaff } = useAuth();
   const [view, setView] = useState<DashboardView>("curso");
-  const [theme, setTheme] = useState<NeonTheme>(() =>
-    typeof window !== "undefined" ? readNeonTheme() : "dark",
-  );
-
-  useEffect(() => {
-    setTheme(readNeonTheme());
-  }, []);
+  const [theme] = useNeonTheme();
 
   const shellProps = {
     className: "dash-neon flex min-h-0 flex-1 flex-col",
@@ -30,7 +24,7 @@ export function DashboardPanel() {
   if (!authLoading && isExternalUser) {
     return (
       <div {...shellProps}>
-        <DashboardVisitorContent theme={theme} onThemeChange={setTheme} />
+        <DashboardVisitorContent />
       </div>
     );
   }
@@ -47,15 +41,12 @@ export function DashboardPanel() {
         <DashboardHistoricoContent
           view={view}
           onViewChange={setView}
-          theme={theme}
-          onThemeChange={setTheme}
         />
       ) : (
         <DashboardContent
           view={view}
           onViewChange={setView}
           theme={theme}
-          onThemeChange={setTheme}
         />
       )}
     </div>

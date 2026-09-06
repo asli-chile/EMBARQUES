@@ -100,10 +100,10 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
     >
       <div className="flex h-12 shrink-0 items-center gap-3 overflow-hidden border-b border-white/10 px-[10px]">
         <a
-          href={withBase("/dashboard")}
+          href={withBase("/inicio")}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10"
-          title="Inicio ERP"
-          {...navPrefetch("/dashboard")}
+          title={t.nav.home}
+          {...navPrefetch("/inicio")}
         >
           <img
             src={brand.logoWhite}
@@ -119,13 +119,31 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
 
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-1.5 py-2">
         <a
-          href={withBase("/dashboard")}
-          className={`${navBtn} ${pathname === "/dashboard" ? navActive : ""}`}
-          title="Dashboard"
-          {...navPrefetch("/dashboard")}
+          href={withBase("/inicio")}
+          className={`${navBtn} ${pathname === "/inicio" ? navActive : ""}`}
+          title={t.nav.home}
+          {...navPrefetch("/inicio")}
         >
           <Icon icon="lucide:house" width={18} className="shrink-0 opacity-90" />
-          <span className={labelCls}>Inicio</span>
+          <span className={labelCls}>{t.nav.home}</span>
+        </a>
+        <a
+          href={withBase("/dashboard")}
+          className={`${navBtn} ${pathname === "/dashboard" || pathname.startsWith("/dashboard/") ? navActive : ""}`}
+          title={t.nav.dashboardShort}
+          {...navPrefetch("/dashboard")}
+        >
+          <Icon icon="lucide:layout-dashboard" width={18} className="shrink-0 opacity-90" />
+          <span className={labelCls}>{t.nav.dashboardShort}</span>
+        </a>
+        <a
+          href={withBase("/tracking")}
+          className={`${navBtn} ${pathname === "/tracking" || pathname.startsWith("/tracking/") ? navActive : ""}`}
+          title={t.nav.tracking}
+          {...navPrefetch("/tracking")}
+        >
+          <Icon icon="lucide:ship" width={18} className="shrink-0 opacity-90" />
+          <span className={labelCls}>{t.sidebar.tracking}</span>
         </a>
 
         <div className="mx-2 my-1.5 h-px bg-white/10" />
@@ -183,8 +201,8 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           }
 
           if (!item.href) return null;
-          // Evitar duplicar Dashboard (ya está como Inicio)
-          if (item.id === "dashboard") return null;
+          // Evitar duplicar: ya van fijos arriba
+          if (item.id === "dashboard" || item.id === "inicio" || item.id === "tracking") return null;
 
           return (
             <a
@@ -208,22 +226,22 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
       <div className="shrink-0 overflow-hidden border-t border-white/10 px-1.5 py-2">
         <div className="mb-0.5 flex h-10 items-center gap-2 overflow-hidden px-[13px]">
           <Icon icon="lucide:languages" width={18} className="shrink-0 text-white/55" />
-          <span className={`${labelCls} flex-1`}>Idioma</span>
+          <span className={`${labelCls} flex-1`}>{t.nav.language}</span>
           <LocaleToggle variant="dark" className="shrink-0" />
         </div>
         <a
           href={withBase("/inicio")}
           className={navBtn}
-          title="Sitio público"
+          title={t.nav.website}
           {...navPrefetch("/inicio")}
         >
           <Icon icon="lucide:globe" width={18} className="shrink-0 opacity-90" />
-          <span className={labelCls}>Sitio web</span>
+          <span className={labelCls}>{t.nav.website}</span>
         </a>
         <div className={`${navBtn} pointer-events-none !text-white/40`}>
           <Icon icon="lucide:user" width={18} className="shrink-0" />
           <span className={labelCls}>
-            {profile?.nombre || user?.email || "Usuario"}
+            {profile?.nombre || user?.email || t.nav.guest}
           </span>
         </div>
       </div>
