@@ -42,10 +42,10 @@ export function DesktopWindowControls() {
   if (!active) return null;
 
   const btn =
-    "inline-flex h-8 w-10 items-center justify-center text-brand-blue/70 transition-colors hover:bg-neutral-200/80 hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30";
+    "inline-flex h-full w-11 items-center justify-center text-brand-blue/70 transition-colors hover:bg-neutral-200/80 hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30";
 
   return (
-    <div className="ml-1 flex shrink-0 items-center self-stretch border-l border-[#e8eef5] pl-0.5">
+    <div className="ml-1 flex h-full shrink-0 items-stretch border-l border-[#e8eef5]">
       <button type="button" className={btn} aria-label="Minimizar" title="Minimizar" onClick={onMinimize}>
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
           <path d="M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

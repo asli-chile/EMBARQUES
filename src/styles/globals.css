@@ -62,6 +62,23 @@ html, body {
   -webkit-app-region: drag;
 }
 
+/* Titlebar custom: los controles del header no pueden superar la franja */
+[data-desktop-titlebar] {
+  line-height: 1;
+}
+[data-desktop-titlebar] button,
+[data-desktop-titlebar] a {
+  max-height: 36px;
+}
+/* Los controles de ventana (min/max/cerrar) sí ocupan toda la altura */
+[data-desktop-titlebar] > div:last-child button {
+  max-height: none;
+}
+[data-desktop-titlebar] img {
+  max-height: 28px;
+  width: auto;
+}
+
 /* ── Ocultar scrollbar manteniendo scroll funcional ── */
 .scrollbar-hide {
   scrollbar-width: none;       /* Firefox */
