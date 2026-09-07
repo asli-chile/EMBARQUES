@@ -32,7 +32,7 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
 
   if (!desktop) {
     const height = compact
-      ? "h-12 min-h-12"
+      ? "h-[60px] min-h-[60px]"
       : "h-12 min-h-12 md:h-[60px] md:min-h-[60px]";
     return (
       <header
@@ -49,7 +49,7 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
     );
   }
 
-  const height = compact ? "h-[48px] min-h-[48px]" : "h-[52px] min-h-[52px]";
+  const height = compact ? "h-[60px] min-h-[60px]" : "h-[52px] min-h-[52px]";
 
   return (
     <header
