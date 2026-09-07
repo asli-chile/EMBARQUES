@@ -39,7 +39,7 @@ export default function ToolDirectoryPage({
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">
               {label ? <p className="section-label text-asli-accent/90 !mb-3">{label}</p> : null}
-              <h1 className="font-display text-[clamp(2.25rem,5.5vw,4rem)] font-bold leading-[1.02] tracking-tight mb-5 text-balance">
+              <h1 className="font-display text-white text-[clamp(2.25rem,5.5vw,4rem)] font-bold leading-[1.02] tracking-tight mb-5 text-balance">
                 {titleBefore} <span className="text-asli-accent">{titleAccent}</span>
               </h1>
               <p className="text-white/75 text-lg md:text-xl leading-relaxed max-w-2xl">{lead}</p>
@@ -52,7 +52,7 @@ export default function ToolDirectoryPage({
 
           <section className="bg-asli-secondary py-14 md:py-16 text-center text-white">
             <div className="container-asli max-w-2xl">
-              <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight mb-4">
+              <h2 className="font-display text-white text-2xl md:text-3xl font-bold tracking-tight mb-4">
                 {helpTitle}
               </h2>
               <p className="text-white/70 mb-8 text-lg leading-relaxed">{helpBody}</p>
