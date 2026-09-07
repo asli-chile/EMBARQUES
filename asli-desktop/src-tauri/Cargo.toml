@@ -1,6 +1,6 @@
 [package]
 name = "asli-desktop"
-version = "0.1.5"
+version = "0.1.6"
 description = "ASLI Embarques — shell de escritorio"
 authors = ["ASLI"]
 edition = "2021"
