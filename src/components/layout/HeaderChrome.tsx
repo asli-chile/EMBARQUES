@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * En el .exe (Tauri sin decoraciones nativas) el header actúa como barra de título.
- * Compact/dark: transparente y flotante sobre el fondo de la página.
+ * Compact/dark: siempre navy (también en tema claro de la página).
  */
 export function HeaderChrome({ compact = false, tone = "light", children }: Props) {
   const [desktop, setDesktop] = useState(false);
@@ -22,13 +22,13 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
     setDesktop(isDesktopShell());
   }, []);
 
-  /** Oscuro flotante: cristal translúcido sin línea divisoria. */
+  /** Oscuro fijo: no depende del tema de la página. */
   const surface = dark
-    ? "border-0 bg-white/5 text-white backdrop-blur-xl backdrop-saturate-150"
+    ? "border-0 bg-[#0B1A3D]/95 text-white backdrop-blur-xl"
     : "border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm text-[#0a1c3a]";
 
   const surfaceDesktop = dark
-    ? "border-0 bg-white/5 text-white backdrop-blur-xl backdrop-saturate-150"
+    ? "border-0 bg-[#0B1A3D]/95 text-white backdrop-blur-xl"
     : "border-b border-[#e8eef5] bg-white text-[#0a1c3a]";
 
   if (!desktop) {
