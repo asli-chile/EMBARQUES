@@ -5,7 +5,27 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .app_name("ASLI Embarques")
+                .build(),
+        )
         .setup(|app| {
+            // Registrar en el inicio de Windows (HKCU Run) si aún no está.
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_autostart::ManagerExt;
+                let launcher = app.autolaunch();
+                match launcher.is_enabled() {
+                    Ok(true) => {}
+                    Ok(false) | Err(_) => {
+                        if let Err(err) = launcher.enable() {
+                            eprintln!("[asli-desktop] autostart: {err}");
+                        }
+                    }
+                }
+            }
+
             #[cfg(not(debug_assertions))]
             {
                 let handle = app.handle().clone();
@@ -23,7 +43,6 @@ Puedes instalar a mano el último setup desde GitHub Releases."
                     }
                 });
             }
-            let _ = app;
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -5,7 +5,15 @@ Contenedor Windows que abre el ERP web. **Sigues desarrollando solo la web**; es
 | Qué | Dónde |
 |-----|--------|
 | ERP (producto) | `https://www.asli.cl/embarques/` — cada deploy actualiza a todos |
-| Shell (este proyecto) | Ventana + auto-update del instalador |
+| Shell (este proyecto) | Ventana + auto-update del instalador + inicio con Windows |
+
+## Arranque con el sistema
+
+Al abrir el `.exe` (release), se registra solo en el inicio de sesión de Windows
+(`HKCU\...\Run` → «ASLI Embarques»). No hace falta marcar nada en el instalador.
+
+Para quitarlo a mano: Configuración → Aplicaciones → Inicio, o
+`Win+R` → `shell:startup` / editor del registro Run.
 
 ## Requisitos
 
