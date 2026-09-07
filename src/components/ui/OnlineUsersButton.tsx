@@ -157,15 +157,21 @@ export function OnlineUsersButton({ tone = "light" }: { tone?: HeaderChromeTone 
         }}
         className={
           tone === "dark"
-            ? "relative flex h-8 w-8 items-center justify-center rounded-sm text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            ? "relative flex h-10 w-10 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/10 hover:text-white"
             : "relative flex h-8 w-8 items-center justify-center rounded-sm text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
         }
         aria-label={`Ver usuarios en línea (${total})`}
         title="Usuarios en línea"
       >
-        <IconUsers size={15} />
+        <IconUsers size={tone === "dark" ? 19 : 15} />
         {total > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-emerald-500 px-0.5 text-[10px] font-bold leading-none text-white pointer-events-none">
+          <span
+            className={
+              tone === "dark"
+                ? "absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-md bg-emerald-500 px-1 text-[11px] font-bold leading-none text-white pointer-events-none"
+                : "absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-emerald-500 px-0.5 text-[10px] font-bold leading-none text-white pointer-events-none"
+            }
+          >
             {total}
           </span>
         )}
