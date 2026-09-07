@@ -54,15 +54,11 @@ const nextConfig = {
       "teaser-web-seminario.vercel.app",
     ],
   },
-  /** Canónico apex (asli.cl) + normaliza /embarques hacia /embarques/inicio */
+  /** Normaliza /embarques y /embarques/ hacia /embarques/inicio antes del proxy.
+   * No redirigir www↔apex aquí: en Vercel el dominio primario es www.asli.cl
+   * (apex → www). Un redirect inverso en Next provoca bucle 308. */
   async redirects() {
     return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "www.asli.cl" }],
-        destination: "https://asli.cl/:path*",
-        permanent: true,
-      },
       {
         source: "/embarques",
         destination: "/embarques/inicio",

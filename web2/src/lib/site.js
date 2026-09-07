@@ -1,5 +1,7 @@
-/** Datos canónicos del sitio público ASLI (SEO / Open Graph / Schema). */
-export const SITE_URL = 'https://asli.cl'
+/** Datos canónicos del sitio público ASLI (SEO / Open Graph / Schema).
+ * URL canónica = dominio primario en Vercel (`www.asli.cl`). El apex redirige allí.
+ */
+export const SITE_URL = 'https://www.asli.cl'
 
 export const SITE = {
   name: 'ASLI',

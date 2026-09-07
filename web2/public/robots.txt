@@ -11,4 +11,4 @@ Disallow: /seo-preview
 # Visor de PDF operativo (contenido dinámico, bajo valor indexable)
 Disallow: /stacking/pil
 
-Sitemap: https://asli.cl/sitemap.xml
+Sitemap: https://www.asli.cl/sitemap.xml

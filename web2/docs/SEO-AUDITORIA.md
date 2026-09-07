@@ -3,9 +3,11 @@
 Documento de referencia tras la auditoría de títulos, H1, descriptions y keywords.
 Última revisión: **2026-09-06**.
 
-**Canónico:** `https://asli.cl`  
-**Sitemap:** `https://asli.cl/sitemap.xml`  
+**Canónico:** `https://www.asli.cl` (Vercel redirige `asli.cl` → `www`)  
+**Sitemap:** `https://www.asli.cl/sitemap.xml`  
 **Fecha editorial sitemap:** `SITE.contentUpdatedAt` en `src/lib/site.js` (actualizar al editar textos SEO).
+
+> **Importante:** no añadir redirects www↔apex en `next.config.js`. Vercel ya fuerza el primario; un redirect inverso causa bucle 308 y tumba el sitio.
 
 ---
 
@@ -121,7 +123,7 @@ Si en GSC las tres pelean la misma query, reforzar el contenido de la URL ganado
 
 ## Pendiente fuera de código (alto impacto)
 
-1. **Google Search Console** — archivo de verificación en `public/google0d0cb5e4c0ca504e.html`. Tras desplegar: verificar propiedad, preferir canónico `https://asli.cl` (o propiedad de dominio), enviar sitemap, revisar consultas. Si solo verificaste `www`, añade también el apex.
+1. **Google Search Console** — archivo de verificación en `public/google0d0cb5e4c0ca504e.html`. Tras desplegar: verificar propiedad en `https://www.asli.cl` (canónico Vercel), enviar sitemap `https://www.asli.cl/sitemap.xml`. Si también verificaste el apex, úsalo solo como alias.
 2. **Google Business Profile** — completo + reseñas (Curicó)
 3. **Redes en `SITE.sameAs`** — LinkedIn / Instagram oficiales
 4. **GA4** — medición de landings y conversiones
