@@ -5,6 +5,7 @@ import NuestraHistoria from '../src/components/NuestraHistoria'
 import Servicios from '../src/components/Servicios'
 import Proceso from '../src/components/Proceso'
 import Confianza from '../src/components/Confianza'
+import Cotizar from '../src/components/Cotizar'
 import Ubicacion from '../src/components/Ubicacion'
 import Footer from '../src/components/Footer'
 import Seo, { buildHomeJsonLd } from '../src/components/Seo'
@@ -21,7 +22,7 @@ const Home = () => {
         path="/"
         jsonLd={buildHomeJsonLd()}
       />
-      <div className="min-h-screen flex flex-col bg-[#F7F5F2]">
+      <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
           <Hero />
@@ -30,6 +31,7 @@ const Home = () => {
           <Servicios limit={6} />
           <Proceso />
           <Confianza />
+          <Cotizar />
           <Ubicacion />
         </main>
         <Footer />

@@ -1,8 +1,10 @@
 import { useReveal } from '../hooks/useReveal'
+import { useLocale } from '../hooks/useLocale'
 
 const MAPS_URL = 'https://maps.app.goo.gl/cGrni677vZDk5pp26'
 
 const Ubicacion = () => {
+  const { t } = useLocale()
   const info = useReveal('left')
   const map = useReveal('right', 280)
 
@@ -25,24 +27,23 @@ const Ubicacion = () => {
   }
 
   return (
-    <section id="contacto" className="section-fit bg-[#F7F5F2]">
+    <section id="contacto" className="section-fit bg-asli-light">
       <div className="container-asli">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
           <div ref={info.ref} style={info.style} className="lg:col-span-5">
             <div className="card-soft p-5 sm:p-6 md:p-8 h-full !shadow-none sm:!shadow-[var(--shadow-low)] border-0 sm:border rounded-none sm:rounded-[var(--radius-lg)] -mx-4 sm:mx-0 bg-transparent sm:bg-[var(--color-surface)]">
-              <span className="section-label !mb-2">Contacto</span>
+              <span className="section-label !mb-2">{t.contacto.label}</span>
               <h2 className="font-display text-[clamp(1.45rem,5.5vw,2.35rem)] font-bold tracking-tight mb-3 text-asli-dark">
-                Hablemos de tu próxima operación
+                {t.contacto.title}
               </h2>
               <p className="text-muted-strong text-[0.92rem] sm:text-base leading-relaxed mb-5 sm:mb-6">
-                Cuéntanos qué necesitas exportar o importar. En la primera conversación
-                revisamos tu caso y te proponemos un camino concreto — sin compromiso.
+                {t.contacto.body}
               </p>
 
               <div className="space-y-4 mb-5 sm:mb-6">
                 <div>
                   <p className="text-muted text-xs uppercase tracking-wider mb-1 font-bold">
-                    Dirección
+                    {t.contacto.addressLabel}
                   </p>
                   <p className="text-asli-dark font-semibold text-base">
                     Longitudinal Sur Km. 186
@@ -52,7 +53,7 @@ const Ubicacion = () => {
                 </div>
                 <div>
                   <p className="text-muted text-xs uppercase tracking-wider mb-1 font-bold">
-                    Contacto
+                    {t.contacto.contactLabel}
                   </p>
                   <p className="text-asli-dark font-semibold text-base">Mario Basaez</p>
                   <a
@@ -94,7 +95,7 @@ const Ubicacion = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-asli-accent font-semibold hover:gap-3 transition-all duration-320 ease-asli min-h-11"
               >
-                Escribir por WhatsApp
+                {t.contacto.whatsapp}
                 <span aria-hidden="true">→</span>
               </a>
             </div>
@@ -109,19 +110,19 @@ const Ubicacion = () => {
               type="button"
               onClick={handleGoogleMaps}
               className="absolute inset-0 w-full h-full min-h-[220px] text-left"
-              aria-label="Abrir ubicación de ASLI en Google Maps"
+              aria-label={t.contacto.openMapsAria}
             >
               <img
                 src="/img/mapa-asli.webp"
-                alt="Mapa de ASLI en Longitudinal Sur Km. 186, Curicó"
+                alt={t.contacto.mapAlt}
                 width={1280}
                 height={820}
                 loading="lazy"
                 decoding="async"
                 className="absolute inset-0 w-full h-full object-cover object-center"
               />
-              <span className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-sm font-semibold text-asli-dark shadow-sm">
-                Abrir en Google Maps
+              <span className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 inline-flex items-center gap-2 rounded-full bg-asli-surface/95 px-3.5 py-2 text-sm font-semibold text-asli-dark shadow-sm">
+                {t.contacto.openMaps}
                 <span aria-hidden="true">→</span>
               </span>
             </button>

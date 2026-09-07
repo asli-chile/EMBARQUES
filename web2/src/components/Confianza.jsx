@@ -1,5 +1,6 @@
 import { clientes, partners, navieras } from '../data/servicios'
 import { useReveal } from '../hooks/useReveal'
+import { useLocale } from '../hooks/useLocale'
 
 function LogoStrip({ items, label }) {
   const track = [...items, ...items]
@@ -33,31 +34,26 @@ function LogoStrip({ items, label }) {
 }
 
 const Confianza = () => {
+  const { t } = useLocale()
   const { ref, style } = useReveal('up')
 
   return (
-    <section id="confianza" className="section-fit bg-white">
+    <section id="confianza" className="section-fit bg-asli-surface">
       <div ref={ref} style={style} className="container-asli">
         <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8 md:mb-10">
-          <span className="section-label justify-center !mb-2">Red operativa</span>
+          <span className="section-label justify-center !mb-2">{t.confianza.label}</span>
           <h2 className="font-display text-asli-dark text-[clamp(1.45rem,5.5vw,2.35rem)] font-bold tracking-tight mb-2 sm:mb-3 text-balance">
-            Confianza que se construye operación a operación
+            {t.confianza.title}
           </h2>
           <p className="text-muted-strong text-sm sm:text-base md:text-lg leading-relaxed">
-            <span className="sm:hidden">
-              Clientes del agro, alianzas y las principales navieras y aerolíneas del sector.
-            </span>
-            <span className="hidden sm:inline">
-              Trabajamos con clientes del agro-exportador, alianzas institucionales y las
-              principales navieras y aerolíneas del sector. Esa red no es decoración: es la
-              base para que tu carga avance con respaldo real.
-            </span>
+            <span className="sm:hidden">{t.confianza.subtitleMobile}</span>
+            <span className="hidden sm:inline">{t.confianza.subtitleDesktop}</span>
           </p>
         </div>
 
-        <LogoStrip items={clientes} label="Clientes" />
-        <LogoStrip items={partners} label="Somos parte de" />
-        <LogoStrip items={navieras} label="Navieras y aerolíneas" />
+        <LogoStrip items={clientes} label={t.confianza.clients} />
+        <LogoStrip items={partners} label={t.confianza.partners} />
+        <LogoStrip items={navieras} label={t.confianza.carriers} />
       </div>
     </section>
   )

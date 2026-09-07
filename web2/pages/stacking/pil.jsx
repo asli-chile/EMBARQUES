@@ -48,13 +48,13 @@ export default function PilStackingPage() {
             </p>
 
             {loading && (
-              <div className="bg-white border border-asli-dark/10 p-6 rounded-lg shadow-asli-med">
+              <div className="bg-asli-surface border border-asli-dark/10 p-6 rounded-lg shadow-asli-med">
                 Cargando documento...
               </div>
             )}
 
             {!loading && error && (
-              <div className="bg-white border border-asli-dark/10 text-asli-dark p-6 rounded-lg shadow-asli-med">
+              <div className="bg-asli-surface border border-asli-dark/10 text-asli-dark p-6 rounded-lg shadow-asli-med">
                 <p className="font-display text-lg font-bold mb-2">Aún no hay PDF para mostrar</p>
                 <p className="text-asli-dark/70">{error}</p>
               </div>
@@ -66,7 +66,7 @@ export default function PilStackingPage() {
                   {meta?.source?.subject ? `Asunto: ${meta.source.subject}` : 'Asunto no disponible'}
                   {meta?.source?.sentAt ? ` | Fecha correo: ${new Date(meta.source.sentAt).toLocaleString('es-CL')}` : ''}
                 </div>
-                <div className="bg-white border border-asli-dark/10 rounded-lg shadow-asli-med overflow-hidden">
+                <div className="bg-asli-surface border border-asli-dark/10 rounded-lg shadow-asli-med overflow-hidden">
                   <iframe
                     src={pdfUrl}
                     title="Stacking PIL PDF"

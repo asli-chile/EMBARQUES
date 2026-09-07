@@ -14,14 +14,14 @@ const TrackingPage = () => {
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
-          <section className="relative overflow-hidden bg-asli-dark text-white py-20 md:py-28">
+          <section className="relative overflow-hidden bg-asli-ink text-white py-20 md:py-28">
             <div
               className="ken-burns absolute inset-0 bg-cover bg-center opacity-30"
               style={{ backgroundImage: `url('/img/logistica.webp')` }}
               aria-hidden="true"
             />
             <div className="cine-vignette" />
-            <div className="absolute inset-0 bg-gradient-to-r from-asli-dark via-asli-dark/80 to-asli-dark/50" />
+            <div className="absolute inset-0 bg-gradient-to-r from-asli-ink via-asli-ink/80 to-asli-ink/50" />
             <div className="letterbox-bar top" />
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">

@@ -54,7 +54,7 @@ function ServiceTile({ servicio, index }) {
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-asli group-hover:scale-105"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/45 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-asli-ink/45 to-transparent" />
           <span className="absolute bottom-3 left-4 font-display text-white/90 text-xs tracking-[0.18em]">
             {String(index + 1).padStart(2, '0')}
           </span>
@@ -88,7 +88,7 @@ const ServiciosPage = () => {
         path="/servicios"
       />
 
-      <div className="min-h-screen flex flex-col bg-[#F7F5F2]">
+      <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
           <section className="py-16 md:py-24">
@@ -119,7 +119,7 @@ const ServiciosPage = () => {
             </div>
           </section>
 
-          <section className="bg-white py-16 md:py-20 border-y border-asli-dark/5">
+          <section className="bg-asli-surface py-16 md:py-20 border-y border-asli-dark/5">
             <div className="container-asli">
               <div className="mb-10 max-w-2xl">
                 <span className="section-label">Cobertura</span>

@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import { goToHomeSection } from '../lib/scrollToHash'
 import { SHOW_COTIZADOR } from '../lib/features'
+import { useLocale } from '../hooks/useLocale'
+import { ThemeToggle } from './ThemeToggle'
+import { LocaleToggle } from './LocaleToggle'
 
-function formatFechaHora(date) {
-  const fecha = date.toLocaleDateString('es-CL', {
+function formatFechaHora(date, dateLocale) {
+  const fecha = date.toLocaleDateString(dateLocale, {
     timeZone: 'America/Santiago',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   })
-  const hora = date.toLocaleTimeString('es-CL', {
+  const hora = date.toLocaleTimeString(dateLocale, {
     timeZone: 'America/Santiago',
     hour: '2-digit',
     minute: '2-digit',
@@ -26,18 +29,22 @@ function DolarChip({
   fecha,
   hora,
   ahora,
+  dateLocale,
+  t,
 }) {
+  const valorFmt = dolarObservado
+    ? dolarObservado.valor.toLocaleString(dateLocale, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    : ''
+
   return (
     <div
       className={`dolar-chip ${className}`}
-      title="Dólar observado · hora Chile"
+      title={t.dolar.title}
       aria-label={
-        dolarObservado
-          ? `Dólar observado ${dolarObservado.valor.toLocaleString('es-CL', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })} pesos. ${fecha} ${hora}`
-          : `Hora Chile ${fecha} ${hora}`
+        dolarObservado ? t.dolar.withValue(valorFmt, fecha, hora) : t.dolar.onlyTime(fecha, hora)
       }
     >
       <div className="dolar-chip__cell">
@@ -50,10 +57,7 @@ function DolarChip({
         ) : dolarObservado ? (
           <span className="dolar-chip__value">
             <span className="dolar-chip__currency">$</span>
-            {dolarObservado.valor.toLocaleString('es-CL', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {valorFmt}
           </span>
         ) : (
           <span className="dolar-chip__value dolar-chip__value--muted">—</span>
@@ -70,10 +74,8 @@ function DolarChip({
   )
 }
 
-/**
- * Header claro sticky — estilo agencia conversional
- */
 const Header = () => {
+  const { t, dateLocale } = useLocale()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [dolarObservado, setDolarObservado] = useState(null)
   const [loadingDolar, setLoadingDolar] = useState(true)
@@ -123,7 +125,6 @@ const Header = () => {
           }
         }
         setLoadingDolar(true)
-        // Proxy same-origin: la API del Banco Central no admite CORS desde el navegador
         const response = await fetch('/api/dolar')
         if (!response.ok) return
         const data = await response.json()
@@ -143,14 +144,14 @@ const Header = () => {
   }, [])
 
   const navLinks = [
-    { href: '/#historia', label: 'Historia', section: 'historia' },
-    { href: '/#servicios', label: 'Servicios', section: 'servicios' },
-    { href: '/#proceso', label: 'Cómo trabajamos', section: 'proceso' },
-    ...(SHOW_COTIZADOR ? [{ href: '/#cotizar', label: 'Cotizar', section: 'cotizar' }] : []),
-    { href: '/#contacto', label: 'Contacto', section: 'contacto' },
-    { href: '/servicios', label: 'Equipo' },
-    { href: '/tracking', label: 'Tracking' },
-    { href: '/stacking', label: 'Stacking' },
+    { href: '/#historia', label: t.nav.historia, section: 'historia' },
+    { href: '/#servicios', label: t.nav.servicios, section: 'servicios' },
+    { href: '/#proceso', label: t.nav.proceso, section: 'proceso', title: t.nav.procesoTitle },
+    ...(SHOW_COTIZADOR ? [{ href: '/#cotizar', label: t.nav.cotizar, section: 'cotizar' }] : []),
+    { href: '/#contacto', label: t.nav.contacto, section: 'contacto' },
+    { href: '/servicios', label: t.nav.equipo },
+    { href: '/tracking', label: t.nav.tracking },
+    { href: '/stacking', label: t.nav.stacking },
   ]
 
   const handleNavClick = (event, link) => {
@@ -163,7 +164,7 @@ const Header = () => {
     goToHomeSection(link.section, handleCloseMenu)
   }
 
-  const { fecha, hora } = ahora ? formatFechaHora(ahora) : { fecha: '—', hora: '—' }
+  const { fecha, hora } = ahora ? formatFechaHora(ahora, dateLocale) : { fecha: '—', hora: '—' }
 
   const chipProps = {
     dolarObservado,
@@ -171,38 +172,35 @@ const Header = () => {
     fecha,
     hora,
     ahora,
+    dateLocale,
+    t,
   }
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-320 ease-asli pt-[env(safe-area-inset-top)] ${
-        scrolled
-          ? 'bg-white/90 backdrop-blur-xl shadow-asli-low border-b border-asli-dark/5'
-          : 'bg-[#F7F5F2]/90 backdrop-blur-md'
+      className={`site-header sticky top-0 z-50 transition-all duration-320 ease-asli pt-[env(safe-area-inset-top)] ${
+        scrolled ? 'is-scrolled' : ''
       }`}
     >
       <nav className="container-asli">
-        <div className="flex items-center justify-between h-14 sm:h-[4.5rem] gap-4 sm:gap-6 xl:gap-8">
-          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 shrink-0">
-            <a href="/" className="flex items-center min-w-0" aria-label="ASLI - Inicio">
+        <div className="flex h-16 items-center gap-4 sm:gap-5">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-3.5">
+            <a href="/" className="flex items-center" aria-label={t.nav.homeAria}>
               <img
                 src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
                 alt="ASLI"
                 width={176}
                 height={44}
                 decoding="async"
-                className="h-7 sm:h-10 md:h-11 w-auto object-contain"
+                className="logo-on-light h-10 sm:h-11 w-auto object-contain"
               />
             </a>
-            <span
-              className="hidden sm:block h-6 sm:h-7 w-px bg-asli-dark/15 shrink-0"
-              aria-hidden="true"
-            />
+            <span className="hidden lg:block h-6 w-px bg-asli-dark/15" aria-hidden="true" />
             <a
               href="https://www.prochile.gob.cl/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex items-center shrink-0"
+              className="hidden lg:flex items-center"
               aria-label="ProChile"
               title="ProChile"
             >
@@ -212,37 +210,36 @@ const Header = () => {
                 width={160}
                 height={40}
                 decoding="async"
-                className="h-6 sm:h-9 md:h-10 w-auto object-contain"
+                className="h-9 sm:h-10 w-auto object-contain"
               />
             </a>
           </div>
 
-          <div
-            className={`hidden lg:flex items-center justify-center flex-1 min-w-0 ${
-              SHOW_COTIZADOR ? 'gap-5 xl:gap-7' : 'gap-6 xl:gap-8'
-            }`}
-          >
+          <div className="ml-2 hidden min-w-0 flex-1 items-center gap-x-4 overflow-x-auto xl:ml-4 xl:gap-x-5 lg:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
+                title={link.title || link.label}
                 onClick={(e) => handleNavClick(e, link)}
-                className="nav-link"
+                className="nav-link shrink-0"
               >
                 {link.label}
               </a>
             ))}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <DolarChip className="hidden lg:inline-flex" {...chipProps} />
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
+            <DolarChip className="hidden xl:inline-flex" {...chipProps} />
+            <LocaleToggle className="hidden sm:inline-flex" />
+            <ThemeToggle className="hidden sm:inline-flex" />
 
             <button
               type="button"
               className="lg:hidden inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full"
               onClick={handleToggleMenu}
               onKeyDown={handleKeyDown}
-              aria-label={isMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-label={isMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
               aria-expanded={isMenuOpen}
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,33 +256,37 @@ const Header = () => {
 
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-asli-dark/40 z-30 lg:hidden"
+          className="fixed inset-0 bg-asli-ink/40 z-30 lg:hidden"
           onClick={handleCloseMenu}
           aria-hidden="true"
         />
       )}
 
       <div
-        className={`fixed left-0 right-0 bg-white border-t border-asli-dark/5 shadow-asli-high z-40 transition-all duration-320 ease-asli lg:hidden top-14 sm:top-[4.5rem] ${
-          isMenuOpen
-            ? 'translate-y-0 opacity-100'
-            : '-translate-y-2 opacity-0 pointer-events-none'
+        className={`site-header-drawer fixed left-0 right-0 z-40 transition-all duration-320 ease-asli lg:hidden top-16 ${
+          isMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'
         }`}
         style={{
-          maxHeight: 'calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))',
+          maxHeight: 'calc(100dvh - 4rem - env(safe-area-inset-top, 0px))',
           overflowY: 'auto',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <div className="container-asli py-5 sm:py-6 flex flex-col gap-1">
-          <DolarChip className="dolar-chip--mobile mb-4 w-full" {...chipProps} />
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <DolarChip className="dolar-chip--mobile flex-1" {...chipProps} />
+            <div className="flex items-center gap-2 shrink-0">
+              <LocaleToggle className="sm:hidden" />
+              <ThemeToggle className="sm:hidden" />
+            </div>
+          </div>
 
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={(e) => handleNavClick(e, link)}
-              className="font-display text-lg sm:text-xl text-asli-dark hover:text-asli-primary py-3.5 min-h-12 border-b border-asli-dark/5 transition-colors duration-320 flex items-center"
+              className="font-display text-lg sm:text-xl text-asli-dark hover:text-asli-primary py-3.5 min-h-12 border-b border-asli-dark/10 transition-colors duration-320 flex items-center"
             >
               {link.label}
             </a>

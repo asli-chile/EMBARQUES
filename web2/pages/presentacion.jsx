@@ -13,14 +13,14 @@ const PresentacionPage = () => {
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
-          <section className="relative overflow-hidden bg-asli-dark text-white py-20 md:py-28">
+          <section className="relative overflow-hidden bg-asli-ink text-white py-20 md:py-28">
             <div
               className="ken-burns absolute inset-0 bg-cover bg-center opacity-30"
               style={{ backgroundImage: `url('/img/logistica.webp')` }}
               aria-hidden="true"
             />
             <div className="cine-vignette" />
-            <div className="absolute inset-0 bg-gradient-to-r from-asli-dark via-asli-dark/80 to-asli-dark/50" />
+            <div className="absolute inset-0 bg-gradient-to-r from-asli-ink via-asli-ink/80 to-asli-ink/50" />
             <div className="letterbox-bar top" />
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">
@@ -35,8 +35,8 @@ const PresentacionPage = () => {
 
           <section className="grain-surface py-16 md:py-20">
             <div className="relative z-[2] container-asli">
-              <div className="max-w-5xl mx-auto border border-asli-dark/10 bg-white shadow-asli-high overflow-hidden">
-                <div className="bg-asli-dark text-white px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="max-w-5xl mx-auto border border-asli-dark/10 bg-asli-surface shadow-asli-high overflow-hidden">
+                <div className="bg-asli-ink text-white px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
                   <h2 className="font-display text-xl md:text-2xl font-bold tracking-tight">
                     Presentación ASLI
                   </h2>
@@ -45,7 +45,7 @@ const PresentacionPage = () => {
                     download
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-asli-dark font-semibold text-sm hover:bg-asli-primary hover:text-white transition-colors duration-320 ease-asli"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-asli-surface text-asli-dark font-semibold text-sm hover:bg-asli-primary hover:text-white transition-colors duration-320 ease-asli"
                     style={{ borderRadius: 'var(--radius-md)' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

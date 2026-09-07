@@ -14,7 +14,7 @@ const NavieraPicker = ({ navieras, label = 'Naviera' }) => {
               target={internal ? undefined : '_blank'}
               rel={internal ? undefined : 'noopener noreferrer'}
               aria-label={`Ir a ${nav.label}`}
-              className="group flex items-center justify-center h-14 sm:h-16 p-2 border border-asli-dark/10 bg-asli-light hover:border-asli-primary/40 hover:shadow-asli-low hover:ring-2 hover:ring-asli-primary/20 transition-all duration-320"
+              className="group flex items-center justify-center h-14 sm:h-16 p-2 border border-asli-dark/10 bg-asli-surface hover:border-asli-primary/40 hover:shadow-asli-low hover:ring-2 hover:ring-asli-primary/20 transition-all duration-320"
               style={{ borderRadius: 'var(--radius-md)' }}
               title={nav.label}
             >

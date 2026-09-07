@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import '../src/index.css'
 import { scrollToHash } from '../src/lib/scrollToHash'
+import { ThemeProvider } from '../src/hooks/useTheme'
+import { LocaleProvider } from '../src/hooks/useLocale'
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter()
@@ -13,7 +15,13 @@ function MyApp({ Component, pageProps }) {
     return () => window.clearTimeout(t)
   }, [router.asPath])
 
-  return <Component {...pageProps} />
+  return (
+    <LocaleProvider>
+      <ThemeProvider>
+        <Component {...pageProps} />
+      </ThemeProvider>
+    </LocaleProvider>
+  )
 }
 
 export default MyApp

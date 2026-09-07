@@ -17,7 +17,7 @@ const Stacking = () => {
 
   return (
     <div
-      className="w-full bg-white border border-asli-dark/10 p-5 sm:p-6 md:p-8 shadow-asli-med"
+      className="w-full bg-asli-surface border border-asli-dark/10 p-5 sm:p-6 md:p-8 shadow-asli-med"
       style={{ borderRadius: 'var(--radius-md)' }}
     >
       <NavieraPicker navieras={navieras} />

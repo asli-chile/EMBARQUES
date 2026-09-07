@@ -3,9 +3,9 @@
  */
 const PageSkeleton = () => {
   return (
-    <div className="min-h-screen bg-[#F7F5F2]" role="status" aria-live="polite" aria-label="Cargando página">
+    <div className="min-h-screen bg-asli-light" role="status" aria-live="polite" aria-label="Cargando página">
       {/* Header */}
-      <div className="h-[4.25rem] border-b border-asli-dark/5 bg-white/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <div className="h-[4.25rem] border-b border-asli-dark/5 bg-asli-surface/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <div className="skeleton-bone h-9 w-28 rounded-lg" />
         <div className="hidden lg:flex gap-6">
           <div className="skeleton-bone h-3 w-16 rounded-full" />
@@ -54,7 +54,7 @@ const PageSkeleton = () => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="rounded-[22px] overflow-hidden border border-asli-dark/5 bg-white">
+            <div key={i} className="rounded-[22px] overflow-hidden border border-asli-dark/5 bg-asli-surface">
               <div className="skeleton-bone h-44 w-full rounded-none" />
               <div className="p-6 space-y-3">
                 <div className="skeleton-bone h-5 w-3/4 rounded-lg" />

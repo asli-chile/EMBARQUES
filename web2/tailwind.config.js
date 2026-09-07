@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -8,11 +9,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'asli-light': '#F6EEE8',
-        'asli-primary': '#007A7B',
-        'asli-secondary': '#003F5A',
-        'asli-dark': '#11224E',
-        'asli-accent': '#669900',
+        /* Página / texto / superficies — reaccionan a html.dark */
+        'asli-light': 'rgb(var(--asli-bg-rgb) / <alpha-value>)',
+        'asli-surface': 'rgb(var(--asli-surface-rgb) / <alpha-value>)',
+        'asli-dark': 'rgb(var(--asli-fg-rgb) / <alpha-value>)',
+        /* Franjas institucionales (footer / heroes) — siempre oscuras */
+        'asli-ink': 'rgb(var(--asli-ink-rgb) / <alpha-value>)',
+        'asli-primary': 'rgb(var(--asli-primary-rgb) / <alpha-value>)',
+        'asli-secondary': 'rgb(var(--asli-secondary-rgb) / <alpha-value>)',
+        'asli-accent': 'rgb(var(--asli-accent-rgb) / <alpha-value>)',
       },
       fontFamily: {
         display: ['Syne', 'sans-serif'],
@@ -26,9 +31,9 @@ module.exports = {
         'asli-lg': '22px',
       },
       boxShadow: {
-        'asli-low': '0 4px 14px rgba(17, 34, 78, 0.06)',
-        'asli-med': '0 12px 32px rgba(17, 34, 78, 0.1)',
-        'asli-high': '0 24px 56px rgba(17, 34, 78, 0.14)',
+        'asli-low': 'var(--shadow-low)',
+        'asli-med': 'var(--shadow-med)',
+        'asli-high': 'var(--shadow-high)',
       },
       transitionTimingFunction: {
         asli: 'cubic-bezier(0.22, 1, 0.36, 1)',

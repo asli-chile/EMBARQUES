@@ -4,12 +4,30 @@
 
 @layer base {
   :root {
+    /* RGB channels for Tailwind opacity modifiers */
+    --asli-bg-rgb: 247 245 242;
+    --asli-surface-rgb: 255 255 255;
+    --asli-fg-rgb: 17 34 78;
+    --asli-ink-rgb: 17 34 78;
+    --asli-primary-rgb: 0 122 123;
+    --asli-secondary-rgb: 0 63 90;
+    --asli-accent-rgb: 102 153 0;
+
     --color-primary: #007a7b;
     --color-secondary: #003f5a;
     --color-accent: #669900;
     --color-navy: #11224e;
     --color-cream: #f7f5f2;
     --color-surface: #ffffff;
+    --color-fg: #11224e;
+    --color-fg-heading: #0c1838;
+    --color-fg-body: #1a2744;
+    --color-muted: rgba(17, 34, 78, 0.8);
+    --color-muted-strong: rgba(17, 34, 78, 0.9);
+    --color-border: rgba(17, 34, 78, 0.06);
+    --color-border-strong: rgba(17, 34, 78, 0.15);
+    --color-nav: rgba(17, 34, 78, 0.88);
+
     --font-heading: 'Syne', sans-serif;
     --font-body: 'Manrope', sans-serif;
     --radius-sm: 10px;
@@ -22,6 +40,77 @@
     --duration-micro: 180ms;
     --duration-normal: 380ms;
     --duration-macro: 850ms;
+
+    --header-bg: rgb(247 245 242 / 0.9);
+    --header-bg-scrolled: rgb(255 255 255 / 0.9);
+    --chip-border: rgba(255, 255, 255, 0.55);
+    --chip-bg: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.18) 42%,
+      rgba(0, 122, 123, 0.08) 100%
+    );
+    --chip-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.75) inset,
+      0 -1px 0 rgba(17, 34, 78, 0.06) inset,
+      0 10px 28px rgba(17, 34, 78, 0.08),
+      0 2px 8px rgba(0, 122, 123, 0.06);
+    --chip-label: rgba(17, 34, 78, 0.55);
+    --chip-value-muted: rgba(17, 34, 78, 0.35);
+    --chip-text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    --skeleton-a: #e8e4df;
+    --skeleton-b: #f4f1ec;
+    color-scheme: light;
+  }
+
+  html.dark {
+    --asli-bg-rgb: 11 18 32;
+    --asli-surface-rgb: 20 30 48;
+    --asli-fg-rgb: 232 238 248;
+    --asli-ink-rgb: 8 14 26;
+    --asli-primary-rgb: 43 179 180;
+    --asli-secondary-rgb: 10 42 56;
+    --asli-accent-rgb: 139 195 74;
+
+    --color-primary: #2bb3b4;
+    --color-secondary: #0a2a38;
+    --color-accent: #8bc34a;
+    --color-navy: #e8eef8;
+    --color-cream: #0b1220;
+    --color-surface: #141e30;
+    --color-fg: #e8eef8;
+    --color-fg-heading: #f2f6fc;
+    --color-fg-body: #c8d4e8;
+    --color-muted: rgba(232, 238, 248, 0.72);
+    --color-muted-strong: rgba(232, 238, 248, 0.88);
+    --color-border: rgba(232, 238, 248, 0.1);
+    --color-border-strong: rgba(232, 238, 248, 0.2);
+    --color-nav: rgba(232, 238, 248, 0.88);
+
+    --shadow-low: 0 4px 14px rgba(0, 0, 0, 0.28);
+    --shadow-med: 0 12px 32px rgba(0, 0, 0, 0.36);
+    --shadow-high: 0 24px 56px rgba(0, 0, 0, 0.45);
+
+    --header-bg: rgb(11 18 32 / 0.92);
+    --header-bg-scrolled: rgb(20 30 48 / 0.92);
+    --chip-border: rgba(255, 255, 255, 0.12);
+    --chip-bg: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.04) 42%,
+      rgba(43, 179, 180, 0.12) 100%
+    );
+    --chip-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.2) inset,
+      0 10px 28px rgba(0, 0, 0, 0.28),
+      0 2px 8px rgba(43, 179, 180, 0.12);
+    --chip-label: rgba(232, 238, 248, 0.55);
+    --chip-value-muted: rgba(232, 238, 248, 0.35);
+    --chip-text-shadow: none;
+    --skeleton-a: #1a2538;
+    --skeleton-b: #243248;
+    color-scheme: dark;
   }
 
   html {
@@ -42,13 +131,15 @@
   }
 
   body {
-    @apply bg-[#F7F5F2] text-asli-dark antialiased;
+    @apply bg-asli-light text-asli-dark antialiased;
     font-family: var(--font-body);
     font-size: 1.05rem;
     line-height: 1.65;
     font-weight: 500;
     letter-spacing: 0.01em;
-    color: #11224e;
+    color: var(--color-fg);
+    background-color: var(--color-cream);
+    transition: background-color var(--duration-normal) var(--ease), color var(--duration-normal) var(--ease);
   }
 
   #contacto,
@@ -56,6 +147,7 @@
   #proceso,
   #confianza,
   #historia,
+  #cotizar,
   #inicio {
     scroll-margin-top: 4.75rem;
   }
@@ -75,11 +167,11 @@
     font-family: var(--font-heading);
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: #0c1838;
+    color: var(--color-fg-heading);
   }
 
   p {
-    color: #1a2744;
+    color: var(--color-fg-body);
   }
 }
 
@@ -99,7 +191,8 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-asli-dark font-bold tracking-wide border border-asli-dark/15 transition-all;
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-asli-surface text-asli-dark font-bold tracking-wide transition-all;
+    border: 1px solid var(--color-border-strong);
     border-radius: 9999px;
     font-size: 1rem;
     transition-duration: var(--duration-normal);
@@ -112,7 +205,8 @@
   }
 
   .btn-ghost-dark {
-    @apply inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-transparent text-asli-dark font-bold tracking-wide border border-asli-dark/15 transition-all;
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-transparent text-asli-dark font-bold tracking-wide transition-all;
+    border: 1px solid var(--color-border-strong);
     border-radius: 9999px;
     font-size: 1rem;
     transition-duration: var(--duration-normal);
@@ -120,7 +214,7 @@
   }
 
   .btn-ghost-dark:hover {
-    @apply border-asli-primary text-asli-primary bg-white;
+    @apply border-asli-primary text-asli-primary bg-asli-surface;
   }
 
   .section-label {
@@ -131,25 +225,30 @@
 
   .nav-link {
     position: relative;
-    display: inline-block;
-    font-size: 0.9rem;
-    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    height: 2.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
     letter-spacing: 0.01em;
-    color: rgba(17, 34, 78, 0.88);
-    padding-bottom: 0.25rem;
+    line-height: 1;
+    color: var(--color-nav);
+    padding-bottom: 0.1rem;
     white-space: nowrap;
-    transform-origin: center bottom;
-    transition:
-      color var(--duration-normal) var(--ease),
-      font-weight var(--duration-micro) var(--ease),
-      transform var(--duration-normal) var(--ease);
+    transition: color var(--duration-normal) var(--ease);
+  }
+
+  @media (min-width: 1280px) {
+    .nav-link {
+      font-size: 1rem;
+    }
   }
 
   .nav-link::after {
     content: '';
     position: absolute;
     left: 0;
-    bottom: 0;
+    bottom: 0.2rem;
     width: 100%;
     height: 2px;
     background: var(--color-primary);
@@ -162,13 +261,43 @@
   .nav-link:hover,
   .nav-link:focus-visible {
     color: var(--color-primary);
-    font-weight: 600;
-    transform: scale(1.03);
   }
 
   .nav-link:hover::after,
   .nav-link:focus-visible::after {
     transform: scaleX(1);
+  }
+
+  .theme-toggle {
+    @apply inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full transition-colors;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease);
+  }
+
+  .locale-toggle {
+    @apply inline-flex items-center justify-center min-h-9 min-w-9 px-2 rounded-md text-[0.7rem] font-bold tracking-wider text-asli-dark ring-1 ring-asli-dark/15 hover:text-asli-primary hover:ring-asli-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary transition-colors;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease);
+  }
+
+  .site-header {
+    background: var(--header-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .site-header.is-scrolled {
+    background: var(--header-bg-scrolled);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-low);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .site-header-drawer {
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    box-shadow: var(--shadow-high);
   }
 
   /* Indicador dólar + reloj — liquid glass frame */
@@ -178,21 +307,11 @@
     isolation: isolate;
     overflow: hidden;
     border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.18) 42%,
-        rgba(0, 122, 123, 0.08) 100%
-      );
+    border: 1px solid var(--chip-border);
+    background: var(--chip-bg);
     backdrop-filter: blur(22px) saturate(160%);
     -webkit-backdrop-filter: blur(22px) saturate(160%);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.75) inset,
-      0 -1px 0 rgba(17, 34, 78, 0.06) inset,
-      0 10px 28px rgba(17, 34, 78, 0.08),
-      0 2px 8px rgba(0, 122, 123, 0.06);
+    box-shadow: var(--chip-shadow);
   }
 
   .dolar-chip::before {
@@ -206,6 +325,12 @@
       radial-gradient(90% 70% at 88% 100%, rgba(0, 122, 123, 0.12), transparent 50%);
     opacity: 0.95;
     z-index: 0;
+  }
+
+  html.dark .dolar-chip::before {
+    background:
+      radial-gradient(120% 80% at 12% 0%, rgba(255, 255, 255, 0.12), transparent 55%),
+      radial-gradient(90% 70% at 88% 100%, rgba(43, 179, 180, 0.16), transparent 50%);
   }
 
   .dolar-chip::after {
@@ -226,6 +351,15 @@
     z-index: 2;
   }
 
+  html.dark .dolar-chip::after {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.25),
+      transparent
+    );
+  }
+
   .dolar-chip__cell {
     position: relative;
     z-index: 1;
@@ -238,7 +372,7 @@
   }
 
   .dolar-chip__cell--time {
-    border-left: 1px solid rgba(255, 255, 255, 0.35);
+    border-left: 1px solid var(--chip-border);
     background: linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.22),
@@ -246,6 +380,15 @@
     );
     min-width: 7.25rem;
     box-shadow: -1px 0 0 rgba(17, 34, 78, 0.04);
+  }
+
+  html.dark .dolar-chip__cell--time {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(43, 179, 180, 0.1)
+    );
+    box-shadow: -1px 0 0 rgba(0, 0, 0, 0.2);
   }
 
   .dolar-chip__label {
@@ -256,7 +399,7 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(17, 34, 78, 0.55);
+    color: var(--chip-label);
     line-height: 1;
   }
 
@@ -266,8 +409,8 @@
     border-radius: 999px;
     background: var(--color-primary);
     box-shadow:
-      0 0 0 3px rgba(0, 122, 123, 0.14),
-      0 0 10px rgba(0, 122, 123, 0.35);
+      0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent),
+      0 0 10px color-mix(in srgb, var(--color-primary) 40%, transparent);
     flex-shrink: 0;
   }
 
@@ -279,11 +422,11 @@
     color: var(--color-navy);
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    text-shadow: var(--chip-text-shadow);
   }
 
   .dolar-chip__value--muted {
-    color: rgba(17, 34, 78, 0.35);
+    color: var(--chip-value-muted);
   }
 
   .dolar-chip__currency {
@@ -300,7 +443,7 @@
     color: var(--color-navy);
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    text-shadow: var(--chip-text-shadow);
   }
 
   .dolar-chip--mobile {
@@ -352,11 +495,11 @@
   }
 
   .text-muted {
-    color: rgba(17, 34, 78, 0.8);
+    color: var(--color-muted);
   }
 
   .text-muted-strong {
-    color: rgba(17, 34, 78, 0.9);
+    color: var(--color-muted-strong);
   }
 
   .container-asli {
@@ -391,11 +534,13 @@
   .card-soft {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    border: 1px solid rgba(17, 34, 78, 0.06);
+    border: 1px solid var(--color-border);
     box-shadow: var(--shadow-low);
     transition:
       transform var(--duration-normal) var(--ease),
-      box-shadow var(--duration-normal) var(--ease);
+      box-shadow var(--duration-normal) var(--ease),
+      background-color var(--duration-normal) var(--ease),
+      border-color var(--duration-normal) var(--ease);
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -463,9 +608,9 @@
   .skeleton-bone {
     background: linear-gradient(
       90deg,
-      #e8e4df 0%,
-      #f4f1ec 45%,
-      #e8e4df 90%
+      var(--skeleton-a) 0%,
+      var(--skeleton-b) 45%,
+      var(--skeleton-a) 90%
     );
     background-size: 200% 100%;
     animation: skeletonShimmer 1.35s ease-in-out infinite;
@@ -532,8 +677,14 @@
     left: calc(16.666% + 1rem);
     right: calc(16.666% + 1rem);
     height: 2px;
-    background: linear-gradient(90deg, #007a7b, #669900);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
     opacity: 0.25;
+  }
+
+  /* Logos pensados para fondo claro */
+  html.dark .logo-on-light {
+    filter: brightness(0) invert(1);
+    opacity: 0.95;
   }
 }
 

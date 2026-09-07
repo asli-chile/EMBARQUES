@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { goToHomeSection } from '../lib/scrollToHash'
 import { SHOW_COTIZADOR } from '../lib/features'
+import { useLocale } from '../hooks/useLocale'
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const DURATION = '0.7s'
@@ -29,6 +30,7 @@ function useEnter(delay = 0) {
 }
 
 const Hero = () => {
+  const { t } = useLocale()
   const title = useEnter(0)
   const text = useEnter(160)
   const cta = useEnter(300)
@@ -45,7 +47,7 @@ const Hero = () => {
   return (
     <section
       id="inicio"
-      className="section-fit relative overflow-hidden bg-[#F7F5F2] !py-3 sm:!py-8 lg:!py-[unset]"
+      className="section-fit relative overflow-hidden bg-asli-light !py-3 sm:!py-8 lg:!py-[unset]"
     >
       <div
         className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-25"
@@ -65,31 +67,23 @@ const Hero = () => {
           {/* Copy */}
           <div className="container-asli lg:col-span-5 lg:px-0 order-1">
             <p className="section-label !mb-1.5" style={title}>
-              Asesoría logística · Curicó, Maule
+              {t.hero.label}
             </p>
 
             <h1
               className="font-display text-asli-dark text-[clamp(1.9rem,7.5vw,3.2rem)] font-bold leading-[1.08] tracking-tight text-balance mb-2.5 sm:mb-3"
               style={title}
             >
-              Asesoría logística para{' '}
-              <span className="text-asli-primary">exportar e importar</span>
+              {t.hero.titleBefore}{' '}
+              <span className="text-asli-primary">{t.hero.titleAccent}</span>
             </h1>
 
             <p
               className="text-muted-strong text-[0.92rem] sm:text-base md:text-lg max-w-xl mb-3.5 sm:mb-5 leading-relaxed"
               style={text}
             >
-              <span className="sm:hidden">
-                ASLI en Curicó: exportación de fruta fresca, importación de mercancías,
-                contenedores, aéreo y marítimo — con documentación, navieras y aduanas.
-              </span>
-              <span className="hidden sm:inline">
-                En tu operación, ASLI está en cada paso. Acompañamos a exportadores,
-                importadores y PYMEs — sobre todo del agro — en fruta fresca, contenedores,
-                carga aérea y marítima: documentación, navieras, aduanas y seguimiento desde
-                Curicó, Maule.
-              </span>
+              <span className="sm:hidden">{t.hero.bodyMobile}</span>
+              <span className="hidden sm:inline">{t.hero.bodyDesktop}</span>
             </p>
 
             <div className="flex flex-col sm:flex-row gap-2.5 mb-4 lg:mb-0" style={cta}>
@@ -98,7 +92,7 @@ const Hero = () => {
                 onClick={handleServiciosClick}
                 className="btn-primary !py-3 !px-4 sm:!px-7 !text-[0.9rem] w-full sm:w-auto justify-center"
               >
-                Ver servicios
+                {t.hero.ctaServices}
                 <span aria-hidden="true">→</span>
               </button>
               {SHOW_COTIZADOR ? (
@@ -107,7 +101,7 @@ const Hero = () => {
                   onClick={handleCotizarClick}
                   className="btn-ghost-dark !py-3 !px-4 sm:!px-7 !text-[0.9rem] w-full sm:w-auto justify-center"
                 >
-                  Cotizar
+                  {t.hero.ctaQuote}
                 </button>
               ) : null}
             </div>
@@ -124,20 +118,20 @@ const Hero = () => {
             >
               <img
                 src="/img/oficina.png"
-                alt="Oficinas ASLI en Curicó"
+                alt={t.hero.imageAlt}
                 width={1252}
                 height={712}
                 fetchPriority="high"
                 decoding="async"
                 className="absolute inset-0 w-full h-full object-cover object-[center_32%] sm:object-[center_28%] lg:object-[center_30%]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/60 via-asli-dark/10 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-asli-ink/60 via-asli-ink/10 to-transparent" />
               <div className="absolute bottom-3.5 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-5">
                 <p className="text-white font-display font-semibold text-base sm:text-lg tracking-tight">
-                  Curicó · Maule
+                  {t.hero.imageCaption}
                 </p>
                 <p className="text-white/80 text-xs sm:text-sm mt-0.5">
-                  Nuestra base operativa
+                  {t.hero.imageSub}
                 </p>
               </div>
             </div>

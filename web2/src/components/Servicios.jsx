@@ -1,9 +1,15 @@
 import { servicios } from '../data/servicios'
 import { useReveal } from '../hooks/useReveal'
 import { SHOW_COTIZADOR } from '../lib/features'
+import { useLocale } from '../hooks/useLocale'
 
 function ServiceCard({ servicio, index }) {
+  const { t } = useLocale()
   const { ref, style } = useReveal('up', Math.min(index, 5) * 60)
+  const copy = t.servicios.items[servicio.id] || {}
+  const titulo = copy.titulo || servicio.titulo
+  const descripcion = copy.descripcion || servicio.descripcion
+  const alt = copy.alt || servicio.alt || titulo
 
   return (
     <div ref={ref} style={style}>
@@ -11,28 +17,28 @@ function ServiceCard({ servicio, index }) {
         <div className="relative h-36 sm:h-32 overflow-hidden">
           <img
             src={servicio.imagen}
-            alt={servicio.alt || servicio.titulo}
+            alt={alt}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-asli group-hover:scale-105"
             loading="lazy"
             decoding="async"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-asli-dark/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-asli-ink/40 to-transparent" />
           <span className="absolute bottom-2 left-3 font-display text-white/90 text-[0.7rem] tracking-[0.18em]">
             {String(index + 1).padStart(2, '0')}
           </span>
         </div>
         <div className="p-4 md:p-5 flex flex-col flex-grow">
           <h3 className="font-display text-base md:text-lg font-bold text-asli-dark tracking-tight mb-1.5">
-            {servicio.titulo}
+            {titulo}
           </h3>
           <p className="text-muted-strong text-sm leading-relaxed mb-3 flex-grow line-clamp-3 sm:line-clamp-4">
-            {servicio.descripcion}
+            {descripcion}
           </p>
           <a
             href={servicio.href || '/servicios'}
             className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320 ease-asli min-h-10"
           >
-            Conocer más
+            {t.servicios.learnMore}
             <span aria-hidden="true">→</span>
           </a>
         </div>
@@ -42,31 +48,25 @@ function ServiceCard({ servicio, index }) {
 }
 
 const Servicios = ({ limit = null, showCta = true }) => {
+  const { t } = useLocale()
   const items = limit ? servicios.slice(0, limit) : servicios
   const header = useReveal('up')
 
   return (
-    <section id="servicios" className="section-fit bg-white">
+    <section id="servicios" className="section-fit bg-asli-surface">
       <div className="container-asli">
         <div
           ref={header.ref}
           style={header.style}
           className="text-center max-w-2xl mx-auto mb-6 md:mb-8"
         >
-          <span className="section-label justify-center !mb-2">Lo que hacemos por ti</span>
+          <span className="section-label justify-center !mb-2">{t.servicios.label}</span>
           <h2 className="font-display text-asli-dark text-[clamp(1.65rem,3.4vw,2.5rem)] font-bold tracking-tight mb-3 text-balance">
-            Servicios logísticos con acompañamiento real
+            {t.servicios.title}
           </h2>
           <p className="text-muted-strong text-sm sm:text-base md:text-lg leading-relaxed">
-            <span className="sm:hidden">
-              Asesoría, multimodal y aduanas: armamos la operación completa para que
-              te enfoques en tu negocio.
-            </span>
-            <span className="hidden sm:inline">
-              Desde la asesoría de exportación e importación hasta el transporte multimodal y
-              la gestión aduanera: armamos la operación completa para que puedas enfocarte en
-              tu negocio, no en perseguir papeles o navieras.
-            </span>
+            <span className="sm:hidden">{t.servicios.subtitleMobile}</span>
+            <span className="hidden sm:inline">{t.servicios.subtitleDesktop}</span>
           </p>
         </div>
 
@@ -82,7 +82,7 @@ const Servicios = ({ limit = null, showCta = true }) => {
               href="/servicios"
               className="btn-primary !py-3 sm:!py-2.5 !px-6 !text-sm w-full sm:w-auto justify-center"
             >
-              Ver todos los servicios
+              {t.servicios.viewAll}
             </a>
             <a
               href={SHOW_COTIZADOR ? '/#cotizar' : 'https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios'}
@@ -91,7 +91,7 @@ const Servicios = ({ limit = null, showCta = true }) => {
                 : { target: '_blank', rel: 'noopener noreferrer' })}
               className="btn-ghost-dark !py-3 sm:!py-2.5 !px-6 !text-sm w-full sm:w-auto justify-center"
             >
-              Cotizar ahora
+              {t.servicios.quoteNow}
             </a>
           </div>
         )}

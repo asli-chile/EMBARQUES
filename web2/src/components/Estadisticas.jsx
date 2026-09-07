@@ -1,12 +1,6 @@
 import { servicios, navieras } from '../data/servicios'
 import { useReveal } from '../hooks/useReveal'
-
-const stats = [
-  { value: '2021', label: 'Año de fundación' },
-  { value: String(servicios.length), label: 'Líneas de servicio' },
-  { value: `${navieras.length}+`, label: 'Navieras y aerolíneas' },
-  { value: '24/7', label: 'Operación conectada' },
-]
+import { useLocale } from '../hooks/useLocale'
 
 function Stat({ stat, index }) {
   const { ref, style } = useReveal('up', index * 180)
@@ -22,10 +16,18 @@ function Stat({ stat, index }) {
 }
 
 const Estadisticas = () => {
+  const { t } = useLocale()
   const header = useReveal('up')
 
+  const stats = [
+    { value: '2021', label: t.stats.founded },
+    { value: String(servicios.length), label: t.stats.lines },
+    { value: `${navieras.length}+`, label: t.stats.carriers },
+    { value: '24/7', label: t.stats.connected },
+  ]
+
   return (
-    <section className="section-band bg-white border-y border-asli-dark/5 !py-6 sm:!py-8 md:!py-10">
+    <section className="section-band bg-asli-surface border-y border-asli-dark/5 !py-6 sm:!py-8 md:!py-10">
       <div className="container-asli">
         <div
           ref={header.ref}
@@ -33,11 +35,10 @@ const Estadisticas = () => {
           className="text-center max-w-2xl mx-auto mb-5 sm:mb-6"
         >
           <h2 className="font-display text-asli-dark text-[clamp(1.35rem,5.5vw,2.1rem)] font-bold tracking-tight text-balance mb-2">
-            Trayectoria que respalda cada operación
+            {t.stats.title}
           </h2>
           <p className="text-muted-strong text-sm md:text-base leading-relaxed">
-            Desde 2021 trabajamos con exportadores e importadores que necesitan control,
-            cercanía y una logística que no se trabe en temporada alta.
+            {t.stats.subtitle}
           </p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5 sm:gap-x-6 sm:gap-y-6">

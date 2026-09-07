@@ -15,14 +15,14 @@ const StackingPage = () => {
         <Header />
         <main className="flex-grow flex flex-col">
           <section className="relative flex-grow grid lg:grid-cols-2 min-h-0">
-            <div className="relative overflow-hidden bg-asli-dark text-white flex items-center">
+            <div className="relative overflow-hidden bg-asli-ink text-white flex items-center">
               <div
                 className="ken-burns absolute inset-0 bg-cover bg-center opacity-30"
                 style={{ backgroundImage: `url('/img/logistica.webp')` }}
                 aria-hidden="true"
               />
               <div className="cine-vignette" />
-              <div className="absolute inset-0 bg-gradient-to-br from-asli-dark via-asli-dark/90 to-asli-dark/70" />
+              <div className="absolute inset-0 bg-gradient-to-br from-asli-ink via-asli-ink/90 to-asli-ink/70" />
               <div className="letterbox-bar top hidden lg:block" />
               <div className="letterbox-bar bottom hidden lg:block" />
               <div className="relative z-10 container-asli py-10 sm:py-12 lg:py-16 lg:pr-8 xl:pr-12">

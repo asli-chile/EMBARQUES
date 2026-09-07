@@ -1,8 +1,10 @@
 import { Head, Html, Main, NextScript } from 'next/document'
+import { THEME_BOOT_SCRIPT } from '../src/lib/theme'
+import { LOCALE_BOOT_SCRIPT } from '../src/lib/i18n/locale'
 
 export default function Document() {
   return (
-    <Html lang="es">
+    <Html lang="es" suppressHydrationWarning>
       <Head>
         <link rel="icon" href="/favicon.ico?v=6" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=6" />
@@ -18,6 +20,8 @@ export default function Document() {
           href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
           rel="stylesheet"
         />
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </Head>
       <body>
         <Main />

@@ -30,16 +30,16 @@ export default function ServiceLanding({ landing }) {
         jsonLd={jsonLd}
       />
 
-      <div className="min-h-screen flex flex-col bg-[#F7F5F2]">
+      <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
-          <section className="relative overflow-hidden bg-asli-dark text-white py-16 md:py-24">
+          <section className="relative overflow-hidden bg-asli-ink text-white py-16 md:py-24">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-25"
               style={{ backgroundImage: `url('${landing.image}')` }}
               aria-hidden="true"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-asli-dark via-asli-dark/85 to-asli-dark/55" />
+            <div className="absolute inset-0 bg-gradient-to-r from-asli-ink via-asli-ink/85 to-asli-ink/55" />
             <div className="relative z-10 container-asli max-w-3xl">
               <nav className="text-sm text-white/60 mb-5" aria-label="Miga de pan">
                 <a href="/" className="hover:text-white transition-colors">
@@ -74,7 +74,7 @@ export default function ServiceLanding({ landing }) {
                 </a>
                 <a
                   href="/#contacto"
-                  className="btn-ghost-dark !py-3 !px-6 !text-white !border-white/30 hover:!bg-white hover:!text-asli-dark justify-center"
+                  className="btn-ghost-dark !py-3 !px-6 !text-white !border-white/30 hover:!bg-white hover:!text-asli-ink justify-center"
                 >
                   Hablar con el equipo
                 </a>
@@ -183,7 +183,7 @@ export default function ServiceLanding({ landing }) {
           </section>
 
           {landing.faqs?.length ? (
-            <section className="bg-white py-14 md:py-20 border-y border-asli-dark/5">
+            <section className="bg-asli-surface py-14 md:py-20 border-y border-asli-dark/5">
               <div className="container-asli max-w-3xl">
                 <h2 className="font-display text-asli-dark text-2xl md:text-3xl font-bold tracking-tight mb-8">
                   Preguntas frecuentes

@@ -1,22 +1,5 @@
 import { useReveal } from '../hooks/useReveal'
-
-const steps = [
-  {
-    num: '01',
-    title: 'Escuchamos',
-    desc: 'Partimos por ti: qué cargas, a dónde van, en qué plazos y qué restricciones tienes. Traducimos eso a un plan operable, sin tecnicismos de más.',
-  },
-  {
-    num: '02',
-    title: 'Coordinamos',
-    desc: 'Armamos la ruta multimodal — naviera, aérea o terrestre — con documentación, aduanas y proveedores alineados. Tú sabes qué sigue en cada etapa.',
-  },
-  {
-    num: '03',
-    title: 'Operamos',
-    desc: 'Ejecutamos y hacemos seguimiento hasta el destino. Cuando algo se mueve o se complica, tienes contacto directo con alguien que conoce tu operación.',
-  },
-]
+import { useLocale } from '../hooks/useLocale'
 
 function StepCard({ step, index }) {
   const { ref, style } = useReveal('up', index * 180)
@@ -35,29 +18,25 @@ function StepCard({ step, index }) {
 }
 
 const Proceso = () => {
+  const { t } = useLocale()
   const header = useReveal('up')
+  const steps = t.proceso.steps
 
   return (
-    <section id="proceso" className="section-fit bg-[#F7F5F2]">
+    <section id="proceso" className="section-fit bg-asli-light">
       <div className="container-asli">
         <div
           ref={header.ref}
           style={header.style}
           className="text-center max-w-2xl mx-auto mb-6 sm:mb-8 md:mb-10"
         >
-          <span className="section-label justify-center !mb-2">Cómo trabajamos</span>
+          <span className="section-label justify-center !mb-2">{t.proceso.label}</span>
           <h2 className="font-display text-asli-dark text-[clamp(1.5rem,5.5vw,2.5rem)] font-bold tracking-tight mb-2 sm:mb-3 text-balance">
-            Un método simple, con personas detrás
+            {t.proceso.title}
           </h2>
           <p className="text-muted-strong text-sm sm:text-base md:text-lg leading-relaxed">
-            <span className="sm:hidden">
-              Te acompañamos desde la primera conversación hasta que la carga llega.
-            </span>
-            <span className="hidden sm:inline">
-              No entregamos una cotización y desaparecemos. Te acompañamos desde la primera
-              conversación hasta que la carga llega: con criterio, plazos claros y alguien a
-              quien llamar.
-            </span>
+            <span className="sm:hidden">{t.proceso.subtitleMobile}</span>
+            <span className="hidden sm:inline">{t.proceso.subtitleDesktop}</span>
           </p>
         </div>
 
