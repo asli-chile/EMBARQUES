@@ -47,7 +47,7 @@ export default function PilStackingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-asli-ink via-asli-ink/85 to-asli-ink/50" />
             <div className="relative z-10 container-asli max-w-3xl">
               <p className="section-label text-asli-accent/90 !mb-3">{tp.label}</p>
-              <h1 className="font-display text-[clamp(2rem,4.5vw,3.25rem)] font-bold leading-[1.05] tracking-tight mb-4 text-balance">
+              <h1 className="font-display text-white text-[clamp(2rem,4.5vw,3.25rem)] font-bold leading-[1.05] tracking-tight mb-4 text-balance">
                 {tp.title}
               </h1>
               <p className="text-white/75 text-base md:text-lg leading-relaxed mb-6">{tp.lead}</p>
