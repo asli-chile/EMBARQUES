@@ -23,7 +23,7 @@ export function Header({ compact = false }: HeaderProps) {
   if (compact) {
     return (
       <HeaderChrome compact>
-        <div className="flex items-center gap-1 justify-self-start opacity-70">
+        <div className="asli-no-drag relative z-10 flex items-center gap-1 justify-self-start">
           <div className="hidden sm:flex sm:items-center sm:gap-1">
             <VisitCounterBadge />
             <OnlineUsersButton />
@@ -33,22 +33,26 @@ export function Header({ compact = false }: HeaderProps) {
           </div>
         </div>
 
-        <a
-          href={withBase("/inicio")}
-          className="flex h-7 items-center justify-self-center"
-          aria-label="ASLI ERP"
-          title="Inicio"
-        >
-          <img
-            src={siteConfig.logo}
-            alt={siteConfig.companyTitle}
-            className="h-full w-auto max-w-[120px] object-contain"
-            loading="eager"
-            decoding="async"
-          />
-        </a>
+        <div className="flex h-full min-w-0 items-center justify-self-center">
+          <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
+          <a
+            href={withBase("/inicio")}
+            className="asli-no-drag relative z-10 flex h-7 items-center"
+            aria-label="ASLI ERP"
+            title="Inicio"
+          >
+            <img
+              src={siteConfig.logo}
+              alt={siteConfig.companyTitle}
+              className="h-full w-auto max-w-[120px] object-contain"
+              loading="eager"
+              decoding="async"
+            />
+          </a>
+          <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
+        </div>
 
-        <div className="flex items-center justify-end gap-1.5 justify-self-end">
+        <div className="asli-no-drag relative z-10 flex items-center justify-end gap-1.5 justify-self-end">
           <NeonThemeToggle variant="header" />
           <LocaleToggle />
           <NotificationsBell />
@@ -62,7 +66,7 @@ export function Header({ compact = false }: HeaderProps) {
     <HeaderChrome>
       <a
         href={withBase("/inicio")}
-        className="flex h-8 w-auto flex-shrink-0 items-center md:h-[50px]"
+        className="asli-no-drag flex h-8 w-auto flex-shrink-0 items-center md:h-[50px]"
         aria-label="Ir al inicio del ERP"
       >
         <img
@@ -84,7 +88,7 @@ export function Header({ compact = false }: HeaderProps) {
 
       <DragSpacer className="min-h-8 flex-1 self-stretch md:hidden" />
 
-      <div className="flex items-center gap-1.5">
+      <div className="asli-no-drag flex items-center gap-1.5">
         <VisitCounterBadge />
         <div className="hidden sm:block">
           <OnlineUsersButton />

@@ -6,6 +6,14 @@ import { useLocale } from "@/lib/i18n";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
 
+function userInitial(name: string, email: string): string {
+  const fromName = name.trim().charAt(0);
+  if (fromName) return fromName.toLocaleUpperCase("es-CL");
+  const fromEmail = email.trim().charAt(0);
+  if (fromEmail) return fromEmail.toLocaleUpperCase("es-CL");
+  return "?";
+}
+
 export function AuthWidget() {
   const { t } = useLocale();
   const { user, profile, isLoading } = useAuth();
@@ -28,7 +36,7 @@ export function AuthWidget() {
   if (isLoading) {
     return (
       <div
-        className="motion-skeleton flex items-center justify-center w-11 h-11 rounded-full bg-neutral-100"
+        className="motion-skeleton flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100"
         aria-hidden
       />
     );
@@ -39,8 +47,9 @@ export function AuthWidget() {
       <button
         type="button"
         onClick={() => openAuthForm("login")}
-        className="flex items-center justify-center gap-2 min-w-11 h-11 px-2.5 sm:px-4 rounded-lg text-base font-semibold text-brand-blue hover:bg-neutral-200/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+        className="asli-no-drag flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg px-2 text-base font-semibold text-brand-blue transition-colors hover:bg-neutral-200/80 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 sm:px-3"
         aria-label={t.auth.login}
+        title={t.auth.login}
       >
         <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
         <span className="hidden sm:inline">{t.auth.login}</span>
@@ -48,15 +57,18 @@ export function AuthWidget() {
     );
   }
 
+  const initial = userInitial(authUser.name, authUser.email);
+
   return (
     <>
       <button
         type="button"
         onClick={handleOpen}
-        className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
-        aria-label="Ver perfil de usuario"
+        className="asli-no-drag flex h-9 w-9 items-center justify-center rounded-full bg-brand-blue text-sm font-bold text-white transition-all duration-200 hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+        aria-label={`Perfil de ${authUser.name}`}
+        title={authUser.name}
       >
-        <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
+        <span aria-hidden>{initial}</span>
       </button>
       <AuthModal isOpen={isModalOpen} onClose={handleClose} user={authUser} />
     </>

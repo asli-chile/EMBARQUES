@@ -62,15 +62,18 @@ html, body {
   -webkit-app-region: drag;
 }
 
-/* Titlebar custom: los controles del header no pueden superar la franja */
+/* Titlebar custom: controles clicables (no-drag) y altura acotada */
 [data-desktop-titlebar] {
   line-height: 1;
 }
 [data-desktop-titlebar] button,
-[data-desktop-titlebar] a {
+[data-desktop-titlebar] a,
+[data-desktop-titlebar] [role="button"],
+[data-desktop-titlebar] .asli-no-drag {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
   max-height: 36px;
 }
-/* Los controles de ventana (min/max/cerrar) sí ocupan toda la altura */
 [data-desktop-titlebar] > div:last-child button {
   max-height: none;
 }

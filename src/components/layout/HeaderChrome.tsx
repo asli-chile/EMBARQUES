@@ -8,11 +8,8 @@ type Props = {
 };
 
 /**
- * En el .exe (Tauri sin decoraciones nativas) el header actúa como barra de título:
- * zona de arrastre + controles min/max/cerrar.
- *
- * Alturas en px fijos: con html { font-size: 90% } los rem (h-10/h-11) descuadran
- * y los botones se salen de la franja blanca.
+ * En el .exe (Tauri sin decoraciones nativas) el header actúa como barra de título.
+ * Sin overflow-hidden (rompe popovers) y sin capa drag a pantalla completa (roba clics).
  */
 export function HeaderChrome({ compact = false, children }: Props) {
   const [desktop, setDesktop] = useState(false);
@@ -23,8 +20,8 @@ export function HeaderChrome({ compact = false, children }: Props) {
 
   if (!desktop) {
     const height = compact
-      ? "h-12 min-h-12 overflow-hidden"
-      : "h-12 min-h-12 overflow-hidden md:h-[60px] md:min-h-[60px]";
+      ? "h-12 min-h-12"
+      : "h-12 min-h-12 md:h-[60px] md:min-h-[60px]";
     return (
       <header
         className={`sticky top-0 z-50 shrink-0 border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm pt-[env(safe-area-inset-top)] ${
@@ -43,7 +40,7 @@ export function HeaderChrome({ compact = false, children }: Props) {
 
   return (
     <header
-      className={`relative sticky top-0 z-50 flex ${height} shrink-0 items-center overflow-hidden border-b border-[#e8eef5] bg-white select-none`}
+      className={`relative sticky top-0 z-50 flex ${height} shrink-0 items-center border-b border-[#e8eef5] bg-white select-none`}
       role="banner"
       data-desktop-titlebar=""
       onDoubleClick={(e) => {
@@ -51,9 +48,8 @@ export function HeaderChrome({ compact = false, children }: Props) {
         void getDesktopWindow()?.toggleMaximize();
       }}
     >
-      <div className="absolute inset-x-0 top-0 z-20 h-1.5" data-tauri-drag-region />
       <div
-        className={`flex h-full min-w-0 flex-1 items-center overflow-hidden ${
+        className={`flex h-full min-w-0 flex-1 items-center ${
           compact
             ? "grid grid-cols-[1fr_auto_1fr] gap-0 px-2.5"
             : "gap-1.5 px-3 md:gap-3 md:px-4"
@@ -61,6 +57,8 @@ export function HeaderChrome({ compact = false, children }: Props) {
       >
         {children}
       </div>
+      {/* Espacio libre para arrastrar entre acciones y min/max/cerrar */}
+      <div className="h-full w-3 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
       <DesktopWindowControls />
     </header>
   );
