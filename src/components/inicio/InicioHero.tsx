@@ -4,7 +4,7 @@ import { withBase } from "@/lib/basePath";
 import { useLocale } from "@/lib/i18n";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import type { AuthProfile } from "@/lib/auth/AuthContext";
-import { GlassCard, GhostButton, PrimaryButton, inicioButtonBase } from "./inicio-ui";
+import { GlassCard, GhostButton, PrimaryButton, inicioButtonBase, inicioStyles } from "./inicio-ui";
 
 const flowStepIcons = [
   "lucide:calendar-plus",
@@ -58,16 +58,12 @@ export function InicioHero({
           : "flex min-h-[calc(100dvh-2.5rem)] items-center justify-center py-12 sm:py-16"
       }`}
     >
-      <div
-        className={`mx-auto w-full px-6 sm:px-10 ${
-          compact ? "max-w-6xl" : "max-w-6xl lg:max-w-7xl"
-        }`}
-      >
+      <div className={compact ? inicioStyles.shell : inicioStyles.shellGuest}>
         <div
-          className={`grid w-full items-center gap-10 lg:gap-14 ${
+          className={`grid w-full items-center gap-10 lg:gap-12 xl:gap-16 ${
             compact
-              ? "lg:grid-cols-2"
-              : "lg:grid-cols-2 lg:gap-16"
+              ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]"
+              : "lg:grid-cols-2"
           }`}
         >
           <div>
@@ -141,8 +137,8 @@ export function InicioHero({
 
             <p
               data-hero-item
-              className={`mt-6 max-w-xl leading-relaxed inicio-ink-mute ${
-                compact ? "text-base sm:text-lg" : "text-lg sm:text-xl lg:text-[1.35rem]"
+              className={`mt-6 leading-relaxed inicio-ink-mute ${
+                compact ? "max-w-2xl text-base sm:text-lg" : "max-w-xl text-lg sm:text-xl lg:text-[1.35rem]"
               }`}
             >
               {isLoggedIn ? (

@@ -3,7 +3,12 @@ import type { ReactNode } from "react";
 
 export const inicioStyles = {
   section: "relative z-10 py-20 sm:py-24 lg:py-28",
-  sectionAlt: "relative z-10 py-20 sm:py-24 lg:py-28 inicio-band",
+  sectionAlt: "relative z-10 py-16 sm:py-20 lg:py-24 inicio-band",
+  /** Ancho útil casi full-bleed (logueado / desktop). */
+  shell:
+    "mx-auto w-full max-w-[min(100%,1760px)] px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12",
+  /** Landing invitado: un poco más estrecho para lectura. */
+  shellGuest: "mx-auto w-full max-w-7xl px-6 sm:px-10",
   card: "group relative inicio-card rounded-2xl transition-all duration-300 overflow-hidden",
   cardInteractive: "inicio-card-interactive",
 } as const;

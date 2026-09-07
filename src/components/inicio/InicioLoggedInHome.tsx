@@ -28,7 +28,7 @@ export function InicioLoggedInHome({
   return (
     <>
       <section data-inicio-section className="relative z-10 pb-8 sm:pb-12 -mt-1">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <div className="flex items-end justify-between gap-4 mb-5 px-0.5">
             <div data-inicio-reveal>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] inicio-accent-text mb-1.5">
@@ -107,7 +107,7 @@ export function InicioLoggedInHome({
       </section>
 
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader
             align="left"
             tag={t.inicio.quickLinksTag}
@@ -115,7 +115,7 @@ export function InicioLoggedInHome({
             subtitle={t.inicio.quickLinksSubtitle}
           />
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {links.map(({ key, descKey, href, icon }, i) => (
               <a key={key} href={withBase(href)} data-inicio-reveal className="block group">
                 <GlassCard interactive className="h-full p-5 sm:p-6 flex flex-col gap-4" reveal={false}>
