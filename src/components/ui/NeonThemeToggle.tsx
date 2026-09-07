@@ -1,23 +1,18 @@
-import { Icon } from "@iconify/react";
 import { useCallback } from "react";
 import {
   toggleNeonTheme,
   useNeonTheme,
   type NeonTheme,
 } from "@/lib/ui/neonTheme";
+import { IconMoon, IconSun, headerChromeBtnClass } from "@/components/layout/HeaderActionIcons";
 
 type Props = {
   className?: string;
-  /** Clase del botón (dashboard vs header). */
   buttonClassName?: string;
-  /** Estilo para barra superior clara. */
   variant?: "header" | "neon";
   theme?: NeonTheme;
   onThemeChange?: (theme: NeonTheme) => void;
 };
-
-const HEADER_BTN =
-  "inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5a6b85] ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb] hover:text-[#11224E]";
 
 /**
  * Toggle día/noche neón. Sin props controlados usa el tema compartido ERP.
@@ -32,7 +27,7 @@ export function NeonThemeToggle({
   const [sharedTheme, setSharedTheme] = useNeonTheme();
   const theme = controlled ?? sharedTheme;
   const btnClass =
-    buttonClassName ?? (variant === "header" ? HEADER_BTN : "dash-theme-toggle");
+    buttonClassName ?? (variant === "header" ? headerChromeBtnClass : "dash-theme-toggle");
 
   const onToggle = useCallback(() => {
     const next = toggleNeonTheme(theme);
@@ -49,7 +44,7 @@ export function NeonThemeToggle({
       onClick={onToggle}
       suppressHydrationWarning
     >
-      <Icon icon={theme === "dark" ? "lucide:sun" : "lucide:moon"} width={14} />
+      {theme === "dark" ? <IconSun /> : <IconMoon />}
     </button>
   );
 }

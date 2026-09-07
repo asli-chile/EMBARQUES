@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useSessionPresence } from "@/lib/useSessionPresence";
+import { IconUsers } from "@/components/layout/HeaderActionIcons";
 
 type SessionRow = {
   session_id: string;
@@ -154,13 +155,13 @@ export function OnlineUsersButton() {
           updatePlacement();
           setOpen((v) => !v);
         }}
-        className="relative flex items-center justify-center w-11 h-11 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
+        className="relative flex h-8 w-8 items-center justify-center rounded-sm text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
         aria-label={`Ver usuarios en línea (${total})`}
         title="Usuarios en línea"
       >
-        <Icon icon="lucide:users" width={24} height={24} />
+        <IconUsers size={15} />
         {total > 0 && (
-          <span className="absolute top-0.5 right-0.5 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold leading-none pointer-events-none">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-emerald-500 px-0.5 text-[10px] font-bold leading-none text-white pointer-events-none">
             {total}
           </span>
         )}

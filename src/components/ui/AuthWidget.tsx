@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { AuthIcon } from "./AuthIcon";
 import { AuthModal, type AuthUser } from "./AuthModal";
 import { siteConfig } from "@/lib/site";
 import { useLocale } from "@/lib/i18n";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
+import { IconLoginUser } from "@/components/layout/HeaderActionIcons";
 
 function userInitial(name: string, email: string): string {
   const fromName = name.trim().charAt(0);
@@ -36,7 +36,7 @@ export function AuthWidget() {
   if (isLoading) {
     return (
       <div
-        className="motion-skeleton flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100"
+        className="motion-skeleton flex h-8 w-8 items-center justify-center rounded-sm bg-neutral-100"
         aria-hidden
       />
     );
@@ -47,11 +47,11 @@ export function AuthWidget() {
       <button
         type="button"
         onClick={() => openAuthForm("login")}
-        className="asli-no-drag flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg px-2 text-base font-semibold text-brand-blue transition-colors hover:bg-neutral-200/80 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 sm:px-3"
+        className="asli-no-drag inline-flex h-8 items-center justify-center gap-1.5 rounded-sm bg-brand-blue px-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 sm:px-3"
         aria-label={t.auth.login}
         title={t.auth.login}
       >
-        <AuthIcon icon={siteConfig.authIcon} className="text-brand-blue" />
+        <IconLoginUser className="text-white" size={16} />
         <span className="hidden sm:inline">{t.auth.login}</span>
       </button>
     );
@@ -64,7 +64,7 @@ export function AuthWidget() {
       <button
         type="button"
         onClick={handleOpen}
-        className="asli-no-drag flex h-9 w-9 items-center justify-center rounded-full bg-brand-blue text-sm font-bold text-white transition-all duration-200 hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+        className="asli-no-drag flex h-8 w-8 items-center justify-center rounded-sm bg-brand-blue text-[12px] font-bold text-white transition-colors hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
         aria-label={`Perfil de ${authUser.name}`}
         title={authUser.name}
       >

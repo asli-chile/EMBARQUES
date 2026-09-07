@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { parseVisitCount, VISIT_COUNTED_KEY } from "@/lib/visitCounter";
+import { IconEye } from "@/components/layout/HeaderActionIcons";
 
 const PANEL_WIDTH_PX = 224;
 
@@ -146,12 +147,12 @@ export function VisitCounterBadge() {
           updatePlacement();
           setOpen((v) => !v);
         }}
-        className="flex items-center gap-1.5 h-11 px-3 text-neutral-600 hover:bg-neutral-200/80 rounded-full transition-all duration-200 text-base font-semibold"
+        className="flex h-8 items-center gap-1.5 rounded-sm px-2 text-[13px] font-semibold text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
         title="Total de visitas a la página"
         aria-label="Contador de visitas"
       >
-        <Icon icon="lucide:eye" width={20} height={20} />
-        <span className="tabular-nums text-lg">
+        <IconEye size={15} />
+        <span className="tabular-nums">
           {total === null ? "–" : total.toLocaleString("es-CL")}
         </span>
       </button>

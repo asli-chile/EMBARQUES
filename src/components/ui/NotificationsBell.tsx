@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useNotifications, type Notificacion } from "@/lib/notifications/NotificationsContext";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { IconBell, headerChromeBtnClass } from "@/components/layout/HeaderActionIcons";
 
 const ICONO_POR_TIPO: Record<string, string> = {
   nueva_reserva:     "lucide:file-plus",
@@ -98,11 +99,11 @@ export function NotificationsBell() {
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-label="Notificaciones"
-        className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-full hover:bg-neutral-100 transition-colors"
+        className={`relative ${headerChromeBtnClass}`}
       >
-        <Icon icon="lucide:bell" className="w-5 h-5 md:w-6 md:h-6 text-neutral-600" />
+        <IconBell size={15} />
         {noLeidas > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] md:min-w-[20px] md:h-5 px-1 rounded-full bg-red-500 text-white text-xs md:text-sm font-bold flex items-center justify-center leading-none">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
             {noLeidas > 99 ? "99+" : noLeidas}
           </span>
         )}

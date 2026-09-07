@@ -1,4 +1,5 @@
 import { useLocale } from "@/lib/i18n";
+import { headerChromeBtnClass } from "@/components/layout/HeaderActionIcons";
 
 type LocaleToggleProps = {
   /** Estilo para header claro o rail oscuro. */
@@ -16,8 +17,8 @@ export function LocaleToggle({ variant = "light", className = "" }: LocaleToggle
 
   const base =
     variant === "dark"
-      ? "rounded-md px-2 py-1 text-[10px] font-bold tracking-wider text-white/55 ring-1 ring-white/15 hover:bg-white/10 hover:text-white"
-      : "rounded-md px-2 py-1 text-[10px] font-bold tracking-wider text-[#5a6b85] ring-1 ring-[#d5dde8] hover:bg-[#f3f6fb] hover:text-[#11224E]";
+      ? "inline-flex h-8 min-w-8 items-center justify-center rounded-sm px-1.5 text-[10px] font-bold tracking-wider text-white/70 ring-1 ring-white/15 hover:bg-white/10 hover:text-white"
+      : `${headerChromeBtnClass} min-w-8 px-1.5 text-[10px] font-bold tracking-[0.08em]`;
 
   return (
     <button
