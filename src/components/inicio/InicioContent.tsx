@@ -220,12 +220,34 @@ export function InicioContent() {
         <InicioAuthSkeleton />
       ) : (
         <>
-          <InicioHero isLoggedIn={isLoggedIn} profile={profile} isCliente={isCliente} compact={isLoggedIn} />
-
           {isLoggedIn ? (
-            <InicioLoggedInHome kpiData={kpiData} loadingKpis={loadingKpis} isCliente={isCliente} />
+            <>
+              <div className="relative z-10 flex min-h-[calc(100dvh-48px)] flex-col justify-center">
+                <InicioHero
+                  isLoggedIn={isLoggedIn}
+                  profile={profile}
+                  isCliente={isCliente}
+                  compact
+                />
+                <InicioLoggedInHome
+                  kpiData={kpiData}
+                  loadingKpis={loadingKpis}
+                  isCliente={isCliente}
+                  section="kpis"
+                />
+              </div>
+              <InicioLoggedInHome
+                kpiData={kpiData}
+                loadingKpis={loadingKpis}
+                isCliente={isCliente}
+                section="shortcuts"
+              />
+            </>
           ) : (
-            <InicioGuestLanding kpiData={kpiData} loadingKpis={loadingKpis} />
+            <>
+              <InicioHero isLoggedIn={isLoggedIn} profile={profile} isCliente={isCliente} />
+              <InicioGuestLanding kpiData={kpiData} loadingKpis={loadingKpis} />
+            </>
           )}
 
           <InicioFooter t={t.inicio} brand={brand} />
