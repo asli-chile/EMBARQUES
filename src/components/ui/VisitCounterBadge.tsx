@@ -149,13 +149,13 @@ export function VisitCounterBadge({ tone = "light" }: { tone?: HeaderChromeTone 
         }}
         className={
           tone === "dark"
-            ? "flex h-8 items-center gap-1.5 rounded-sm px-2 text-[13px] font-semibold text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            ? "flex h-10 items-center gap-2 rounded-md px-2.5 text-[13px] font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white"
             : "flex h-8 items-center gap-1.5 rounded-sm px-2 text-[13px] font-semibold text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
         }
         title="Total de visitas a la página"
         aria-label="Contador de visitas"
       >
-        <IconEye size={15} />
+        <IconEye size={tone === "dark" ? 19 : 15} />
         <span className="tabular-nums">
           {total === null ? "–" : total.toLocaleString("es-CL")}
         </span>
