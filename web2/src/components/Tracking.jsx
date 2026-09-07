@@ -1,9 +1,9 @@
 import NavieraPicker from './NavieraPicker'
+import { useLocale } from '../hooks/useLocale'
 
-/**
- * Selector de tracking — clic en naviera redirige al sitio oficial
- */
+/** Selector de tracking — clic en naviera redirige al sitio oficial */
 const Tracking = () => {
+  const { t } = useLocale()
   const navieras = [
     { value: 'msc', label: 'MSC', logo: '/img/msc.webp', url: 'https://www.msc.com/es/track-a-shipment' },
     { value: 'maersk', label: 'Maersk', logo: '/img/maersk.webp', url: 'https://www.maersk.com/tracking/' },
@@ -23,7 +23,7 @@ const Tracking = () => {
       className="w-full bg-asli-surface border border-asli-dark/10 p-5 sm:p-6 md:p-8 shadow-asli-med"
       style={{ borderRadius: 'var(--radius-md)' }}
     >
-      <NavieraPicker navieras={navieras} />
+      <NavieraPicker navieras={navieras} label={t.trackingPage.pickerLabel} />
     </div>
   )
 }

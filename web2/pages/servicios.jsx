@@ -4,36 +4,42 @@ import Seo from '../src/components/Seo'
 import { servicios, equipoContactos } from '../src/data/servicios'
 import { useReveal } from '../src/hooks/useReveal'
 import { SHOW_COTIZADOR } from '../src/lib/features'
+import { useLocale } from '../src/hooks/useLocale'
 
-function ContactCard({ persona, index }) {
+function ContactCard({ persona, index, t }) {
   const { ref, style } = useReveal('up', Math.min(index, 4) * 160)
+  const copy = t.teamPage.equipo[persona.id] || {}
 
   return (
     <div ref={ref} style={style}>
       <article className="card-soft p-6 md:p-8 flex flex-col h-full">
-        <p className="section-label !mb-4">{persona.area}</p>
+        <p className="section-label !mb-4">{copy.area || persona.area}</p>
         <div className="mb-5">
           <h3 className="font-display text-lg font-bold text-asli-dark">{persona.nombre}</h3>
-          <p className="text-asli-primary text-sm font-semibold">{persona.cargo}</p>
+          <p className="text-asli-primary text-sm font-semibold">{copy.cargo || persona.cargo}</p>
         </div>
-        <p className="text-muted-strong text-base leading-relaxed mb-3 flex-grow">{persona.bio}</p>
-        {persona.idiomas && (
-          <p className="text-muted text-sm mb-5">{persona.idiomas}</p>
+        <p className="text-muted-strong text-base leading-relaxed mb-3 flex-grow">
+          {copy.bio || persona.bio}
+        </p>
+        {(copy.idiomas || persona.idiomas) && (
+          <p className="text-muted text-sm mb-5">{copy.idiomas || persona.idiomas}</p>
         )}
         <div className="flex flex-col gap-2.5 mt-auto">
           <a
             href={`https://mail.google.com/mail/?view=cm&to=${persona.email}`}
             className="btn-primary !py-2.5 text-sm w-full"
           >
-            Enviar correo
+            {t.teamPage.sendEmail}
           </a>
           <a
-            href={`https://wa.me/${persona.whatsapp.replace('+', '')}?text=${encodeURIComponent(persona.whatsappText)}`}
+            href={`https://wa.me/${persona.whatsapp.replace('+', '')}?text=${encodeURIComponent(
+              copy.whatsappText || persona.whatsappText
+            )}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-7 py-2.5 bg-asli-accent text-white font-semibold text-sm hover:bg-opacity-90 transition-all duration-320 ease-asli w-full rounded-full"
           >
-            WhatsApp
+            {t.teamPage.whatsapp}
           </a>
         </div>
       </article>
@@ -41,8 +47,9 @@ function ContactCard({ persona, index }) {
   )
 }
 
-function ServiceTile({ servicio, index }) {
+function ServiceTile({ servicio, index, t }) {
   const { ref, style } = useReveal('up', Math.min(index, 5) * 140)
+  const copy = t.servicios.items[servicio.id] || {}
 
   return (
     <div ref={ref} style={style}>
@@ -50,7 +57,7 @@ function ServiceTile({ servicio, index }) {
         <div className="relative h-44 overflow-hidden">
           <img
             src={servicio.imagen}
-            alt={servicio.alt || servicio.titulo}
+            alt={copy.alt || servicio.alt || copy.titulo || servicio.titulo}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-asli group-hover:scale-105"
             loading="lazy"
           />
@@ -62,15 +69,17 @@ function ServiceTile({ servicio, index }) {
         <div className="p-6">
           <h3 className="font-display text-xl font-bold text-asli-dark mb-2 tracking-tight">
             <a href={servicio.href || '/servicios'} className="hover:text-asli-primary transition-colors">
-              {servicio.titulo}
+              {copy.titulo || servicio.titulo}
             </a>
           </h3>
-          <p className="text-asli-dark/80 text-sm leading-relaxed mb-4">{servicio.descripcion}</p>
+          <p className="text-asli-dark/80 text-sm leading-relaxed mb-4">
+            {copy.descripcion || servicio.descripcion}
+          </p>
           <a
             href={servicio.href || '/servicios'}
             className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320"
           >
-            Ver detalle
+            {t.teamPage.viewDetail}
             <span aria-hidden="true">→</span>
           </a>
         </div>
@@ -80,40 +89,37 @@ function ServiceTile({ servicio, index }) {
 }
 
 const ServiciosPage = () => {
+  const { t } = useLocale()
+  const tp = t.teamPage
+
   return (
     <>
-      <Seo
-        title="Servicios de logística y comercio exterior | ASLI Curicó"
-        description="Catálogo de servicios ASLI en Curicó: exportación de fruta, importación, contenedores, carga aérea y marítima, aduanas y asesoría a PYMEs. Contacta al equipo."
-        path="/servicios"
-      />
+      <Seo title={tp.seoTitle} description={tp.seoDescription} path="/servicios" />
 
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
           <section className="py-16 md:py-24">
             <div className="container-asli max-w-3xl text-center mx-auto">
-              <span className="section-label justify-center">Catálogo</span>
+              <span className="section-label justify-center">{tp.catalogLabel}</span>
               <h1 className="font-display text-[clamp(2.25rem,5vw,3.5rem)] font-bold tracking-tight mb-5 text-asli-dark text-balance">
-                Servicios de logística y comercio exterior
+                {tp.title}
               </h1>
-              <p className="text-muted-strong text-xl md:text-2xl leading-relaxed">
-                Soluciones logísticas integrales — del origen al destino.
-              </p>
+              <p className="text-muted-strong text-xl md:text-2xl leading-relaxed">{tp.subtitle}</p>
             </div>
           </section>
 
           <section className="pb-16 md:pb-20">
             <div className="container-asli">
               <div className="mb-10 max-w-2xl">
-                <span className="section-label">Equipo especializado</span>
+                <span className="section-label">{tp.teamLabel}</span>
                 <h2 className="font-display text-asli-dark text-2xl md:text-3xl font-bold tracking-tight mb-3">
-                  Habla con quien opera tu carga
+                  {tp.teamTitle}
                 </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
                 {equipoContactos.map((persona, index) => (
-                  <ContactCard key={persona.id} persona={persona} index={index} />
+                  <ContactCard key={persona.id} persona={persona} index={index} t={t} />
                 ))}
               </div>
             </div>
@@ -122,14 +128,14 @@ const ServiciosPage = () => {
           <section className="bg-asli-surface py-16 md:py-20 border-y border-asli-dark/5">
             <div className="container-asli">
               <div className="mb-10 max-w-2xl">
-                <span className="section-label">Cobertura</span>
+                <span className="section-label">{tp.coverageLabel}</span>
                 <h2 className="font-display text-asli-dark text-2xl md:text-3xl font-bold tracking-tight">
-                  Nueve líneas de servicio
+                  {tp.coverageTitle}
                 </h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 {servicios.map((servicio, index) => (
-                  <ServiceTile key={servicio.id} servicio={servicio} index={index} />
+                  <ServiceTile key={servicio.id} servicio={servicio} index={index} t={t} />
                 ))}
               </div>
             </div>
@@ -138,19 +144,19 @@ const ServiciosPage = () => {
           <section className="py-16 md:py-20 text-center">
             <div className="container-asli max-w-2xl">
               <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight mb-4 text-asli-dark">
-                ¿Necesitas cotizar?
+                {tp.quoteTitle}
               </h2>
-              <p className="text-muted-strong mb-8 text-xl">
-                Cuéntanos tu operación y te ayudamos a armar la mejor solución.
-              </p>
+              <p className="text-muted-strong mb-8 text-xl">{tp.quoteBody}</p>
               <a
-                href={SHOW_COTIZADOR ? '/#cotizar' : 'https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios'}
-                {...(SHOW_COTIZADOR
-                  ? {}
-                  : { target: '_blank', rel: 'noopener noreferrer' })}
+                href={
+                  SHOW_COTIZADOR
+                    ? '/#cotizar'
+                    : `https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(tp.quoteMailSubject)}`
+                }
+                {...(SHOW_COTIZADOR ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
                 className="btn-primary"
               >
-                Cotizar aquí
+                {tp.quoteCta}
               </a>
             </div>
           </section>

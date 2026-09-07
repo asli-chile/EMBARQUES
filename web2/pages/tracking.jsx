@@ -2,15 +2,15 @@ import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
 import Seo from '../src/components/Seo'
 import Tracking from '../src/components/Tracking'
+import { useLocale } from '../src/hooks/useLocale'
 
 const TrackingPage = () => {
+  const { t } = useLocale()
+  const tp = t.trackingPage
+
   return (
     <>
-      <Seo
-        title="Tracking de cargas marítimas | Seguimiento de contenedores"
-        description="Tracking de cargas y contenedores en tiempo real: consulta el seguimiento oficial con la naviera. Herramienta gratuita de ASLI, Curicó."
-        path="/tracking"
-      />
+      <Seo title={tp.seoTitle} description={tp.seoDescription} path="/tracking" />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
@@ -26,31 +26,29 @@ const TrackingPage = () => {
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">
               <h1 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1] tracking-tight mb-5 text-balance">
-                Tracking de cargas y <span className="text-asli-accent">contenedores</span>
+                {tp.titleBefore} <span className="text-asli-accent">{tp.titleAccent}</span>
               </h1>
-              <p className="text-white/75 text-lg md:text-xl leading-relaxed">
-                Consulta el estado de tu carga en tiempo real, directo con el seguimiento oficial de la naviera.
-              </p>
+              <p className="text-white/75 text-lg md:text-xl leading-relaxed">{tp.lead}</p>
             </div>
           </section>
 
-          <Tracking />
+          <div className="container-asli py-10 md:py-14">
+            <Tracking />
+          </div>
 
           <section className="bg-asli-secondary py-16 md:py-20 text-center text-white">
             <div className="container-asli max-w-2xl">
               <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight mb-4">
-                ¿Necesitas ayuda con el seguimiento de tu carga?
+                {tp.helpTitle}
               </h2>
-              <p className="text-white/70 mb-8 text-lg">
-                Contáctanos y te ayudamos con cualquier consulta sobre el estado de tu envío.
-              </p>
+              <p className="text-white/70 mb-8 text-lg">{tp.helpBody}</p>
               <a
-                href="https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Consulta sobre tracking"
+                href={`https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(tp.mailSubject)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary hover-lift"
               >
-                Contactar
+                {tp.contactCta}
               </a>
             </div>
           </section>

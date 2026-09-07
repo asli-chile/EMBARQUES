@@ -1,9 +1,13 @@
-const NavieraPicker = ({ navieras, label = 'Naviera' }) => {
+import { useLocale } from '../hooks/useLocale'
+
+const NavieraPicker = ({ navieras, label }) => {
+  const { t } = useLocale()
+  const pickerLabel = label || t.trackingPage.pickerLabel
   const options = navieras.filter((nav) => nav.value && nav.value !== 'otra' && nav.url)
 
   return (
     <div>
-      <p className="section-label !mb-3">{label}</p>
+      <p className="section-label !mb-3">{pickerLabel}</p>
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
         {options.map((nav) => {
           const internal = String(nav.url).startsWith('/')
@@ -13,7 +17,7 @@ const NavieraPicker = ({ navieras, label = 'Naviera' }) => {
               href={nav.url}
               target={internal ? undefined : '_blank'}
               rel={internal ? undefined : 'noopener noreferrer'}
-              aria-label={`Ir a ${nav.label}`}
+              aria-label={t.trackingPage.goTo(nav.label)}
               className="group flex items-center justify-center h-14 sm:h-16 p-2 border border-asli-dark/10 bg-asli-surface hover:border-asli-primary/40 hover:shadow-asli-low hover:ring-2 hover:ring-asli-primary/20 transition-all duration-320"
               style={{ borderRadius: 'var(--radius-md)' }}
               title={nav.label}

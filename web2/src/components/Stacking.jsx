@@ -1,9 +1,9 @@
 import NavieraPicker from './NavieraPicker'
+import { useLocale } from '../hooks/useLocale'
 
-/**
- * Selector de stacking — clic en naviera redirige al sitio oficial
- */
+/** Selector de stacking — clic en naviera redirige al sitio oficial */
 const Stacking = () => {
+  const { t } = useLocale()
   const navieras = [
     { value: 'cma', label: 'CMA CGM', logo: '/img/cma.webp', url: 'https://www.cma-cgm-chile.cl/?page=18' },
     { value: 'cosco', label: 'COSCO', logo: '/img/cosco.webp', url: 'https://documentacioncoscochile.at-portal.com/stackings' },
@@ -20,7 +20,7 @@ const Stacking = () => {
       className="w-full bg-asli-surface border border-asli-dark/10 p-5 sm:p-6 md:p-8 shadow-asli-med"
       style={{ borderRadius: 'var(--radius-md)' }}
     >
-      <NavieraPicker navieras={navieras} />
+      <NavieraPicker navieras={navieras} label={t.stackingPage.pickerLabel} />
     </div>
   )
 }

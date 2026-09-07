@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import Header from '../../src/components/Header'
 import Footer from '../../src/components/Footer'
 import Seo from '../../src/components/Seo'
+import { useLocale } from '../../src/hooks/useLocale'
 
 export default function PilStackingPage() {
+  const { t, dateLocale } = useLocale()
+  const tp = t.stackingPil
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pdfUrl, setPdfUrl] = useState('')
@@ -15,47 +18,40 @@ export default function PilStackingPage() {
         const res = await fetch('/api/stacking/latest')
         const data = await res.json()
         if (!res.ok || !data.ok) {
-          throw new Error(data.message || 'No se pudo cargar el stacking')
+          throw new Error(data.message || tp.loadError)
         }
         setPdfUrl(data.data.pdfUrl)
         setMeta(data.data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido')
+        setError(err instanceof Error ? err.message : tp.unknownError)
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [])
+  }, [tp.loadError, tp.unknownError])
 
   return (
     <>
-      <Seo
-        title="Stacking PIL"
-        description="Visualiza el último PDF de stacking recibido de PIL."
-        path="/stacking/pil"
-        noindex
-      />
+      <Seo title={tp.seoTitle} description={tp.seoDescription} path="/stacking/pil" noindex />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
           <section className="container-asli py-10 md:py-12">
             <h1 className="font-display text-3xl md:text-4xl font-bold text-asli-dark mb-3">
-              Último Stacking PIL
+              {tp.title}
             </h1>
-            <p className="text-asli-dark/70 mb-6">
-              Documento recibido por correo y sincronizado automáticamente.
-            </p>
+            <p className="text-asli-dark/70 mb-6">{tp.lead}</p>
 
             {loading && (
               <div className="bg-asli-surface border border-asli-dark/10 p-6 rounded-lg shadow-asli-med">
-                Cargando documento...
+                {tp.loading}
               </div>
             )}
 
             {!loading && error && (
               <div className="bg-asli-surface border border-asli-dark/10 text-asli-dark p-6 rounded-lg shadow-asli-med">
-                <p className="font-display text-lg font-bold mb-2">Aún no hay PDF para mostrar</p>
+                <p className="font-display text-lg font-bold mb-2">{tp.emptyTitle}</p>
                 <p className="text-asli-dark/70">{error}</p>
               </div>
             )}
@@ -63,15 +59,15 @@ export default function PilStackingPage() {
             {!loading && !error && pdfUrl && (
               <>
                 <div className="mb-4 text-sm text-asli-dark/70">
-                  {meta?.source?.subject ? `Asunto: ${meta.source.subject}` : 'Asunto no disponible'}
-                  {meta?.source?.sentAt ? ` | Fecha correo: ${new Date(meta.source.sentAt).toLocaleString('es-CL')}` : ''}
+                  {meta?.source?.subject
+                    ? `${tp.subject}: ${meta.source.subject}`
+                    : tp.subjectUnavailable}
+                  {meta?.source?.sentAt
+                    ? ` | ${tp.emailDate}: ${new Date(meta.source.sentAt).toLocaleString(dateLocale)}`
+                    : ''}
                 </div>
                 <div className="bg-asli-surface border border-asli-dark/10 rounded-lg shadow-asli-med overflow-hidden">
-                  <iframe
-                    src={pdfUrl}
-                    title="Stacking PIL PDF"
-                    className="w-full h-[75vh]"
-                  />
+                  <iframe src={pdfUrl} title="Stacking PIL PDF" className="w-full h-[75vh]" />
                 </div>
               </>
             )}
