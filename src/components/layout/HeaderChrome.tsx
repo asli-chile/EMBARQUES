@@ -22,13 +22,13 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
     setDesktop(isDesktopShell());
   }, []);
 
-  /** Oscuro flotante: sin placa sólida; leve velo solo para legibilidad en módulos claros. */
+  /** Oscuro flotante: sin borde ni placa; los controles quedan sobre el fondo. */
   const surface = dark
-    ? "border-b border-transparent bg-gradient-to-b from-black/35 via-black/10 to-transparent text-white"
+    ? "border-0 bg-transparent text-white"
     : "border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm text-[#0a1c3a]";
 
   const surfaceDesktop = dark
-    ? "border-b border-transparent bg-gradient-to-b from-black/35 via-black/10 to-transparent text-white"
+    ? "border-0 bg-transparent text-white"
     : "border-b border-[#e8eef5] bg-white text-[#0a1c3a]";
 
   if (!desktop) {
