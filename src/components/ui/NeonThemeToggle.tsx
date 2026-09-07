@@ -1,10 +1,19 @@
-import { useCallback } from "react";
-import { DayAndNightToggle } from "react-day-and-night-toggle";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 import {
   toggleNeonTheme,
   useNeonTheme,
   type NeonTheme,
 } from "@/lib/ui/neonTheme";
+
+type DayNightProps = {
+  checked: boolean;
+  onChange: () => void;
+  size?: number;
+  startInactive?: boolean;
+  animationInactive?: boolean;
+  shadows?: boolean;
+  className?: string;
+};
 
 type Props = {
   className?: string;
@@ -18,8 +27,8 @@ type Props = {
 };
 
 /**
- * Switch día/noche animado ([react-day-and-night-toggle](https://github.com/cutelilangel/react-day-and-night-toggle)).
- * `checked` = modo oscuro.
+ * Switch día/noche animado (react-day-and-night-toggle).
+ * Se importa solo en el cliente: styled-components rompe el SSR de Astro/Vercel.
  */
 export function NeonThemeToggle({
   className = "",
@@ -33,6 +42,21 @@ export function NeonThemeToggle({
   const theme = controlled ?? sharedTheme;
   const isDark = theme === "dark";
   const resolvedSize = size ?? (variant === "header" ? 26 : 32);
+  const [Toggle, setToggle] = useState<ComponentType<DayNightProps> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import("react-day-and-night-toggle")
+      .then((mod) => {
+        if (!cancelled) setToggle(() => mod.DayAndNightToggle as ComponentType<DayNightProps>);
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn("[NeonThemeToggle]", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onChange = useCallback(() => {
     const next = toggleNeonTheme(theme);
@@ -46,14 +70,22 @@ export function NeonThemeToggle({
       title={isDark ? "Modo claro" : "Modo oscuro"}
       suppressHydrationWarning
     >
-      <DayAndNightToggle
-        checked={isDark}
-        onChange={onChange}
-        size={resolvedSize}
-        shadows={variant !== "header"}
-        animationInactive
-        startInactive={false}
-      />
+      {Toggle ? (
+        <Toggle
+          checked={isDark}
+          onChange={onChange}
+          size={resolvedSize}
+          shadows={variant !== "header"}
+          animationInactive
+          startInactive={false}
+        />
+      ) : (
+        <span
+          className="inline-block rounded-full bg-neutral-200/80"
+          style={{ width: resolvedSize * 2.2, height: resolvedSize }}
+          aria-hidden
+        />
+      )}
     </span>
   );
 }

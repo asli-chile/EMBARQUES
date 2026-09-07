@@ -88,10 +88,14 @@ export default defineConfig({
         "@react-email/render",
         "html-react-parser",
       ],
-      exclude: ["xlsx", "xlsx-js-style"],
+      exclude: ["xlsx", "xlsx-js-style", "react-day-and-night-toggle", "styled-components"],
       esbuildOptions: {
         target: "es2022",
       },
+    },
+    ssr: {
+      // Evitar empaquetar el toggle en el server: usa styled-components / DOM.
+      external: ["react-day-and-night-toggle", "styled-components"],
     },
     build: {
       target: "es2022",
