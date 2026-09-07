@@ -44,6 +44,9 @@ next-env.d.ts
 # Supabase CLI local cache
 supabase/.temp/
 
+# Tauri desktop build artifacts
+asli-desktop/src-tauri/target/
+
 # Datos operativos / notas locales (no versionar)
 docs/info alma/
 docs/obsidian-vault/

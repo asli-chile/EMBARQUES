@@ -1,0 +1,5 @@
+# Clave privada (asli-desktop.key) NO se versiona. Solo la pública.
+*
+!.gitignore
+!asli-desktop.key.pub
+!.gitkeep
