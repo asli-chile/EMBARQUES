@@ -34,11 +34,15 @@ const ROL_LABEL: Record<string, string> = {
 
 const FALLBACK_POLL_MS = 10_000;
 const ONLINE_THRESHOLD_MIN = 3;
+const PANEL_WIDTH_PX = 320;
+const PANEL_MAX_HEIGHT_PX = 448;
 
 export function OnlineUsersButton() {
   const { profile, isSuperadmin } = useAuth();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [open, setOpen] = useState(false);
+  const [alignEnd, setAlignEnd] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useSessionPresence();
@@ -59,7 +63,20 @@ export function OnlineUsersButton() {
       .catch(() => {});
   }, [supabase]);
 
-  // Supabase Realtime: re-fetch al detectar cualquier cambio en la tabla
+  const updatePlacement = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    // right-0 hace crecer el panel hacia la izquierda; left-0 hacia la derecha
+    const growLeft = spaceLeft >= PANEL_WIDTH_PX || spaceLeft >= spaceRight;
+    setAlignEnd(growLeft);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    setOpenUp(spaceBelow < PANEL_MAX_HEIGHT_PX && spaceAbove > spaceBelow);
+  }, []);
+
   useEffect(() => {
     if (!isSuperadmin || !supabase) return;
 
@@ -74,7 +91,6 @@ export function OnlineUsersButton() {
       )
       .subscribe();
 
-    // Polling de respaldo por si Realtime no está habilitado en la tabla
     const fallback = setInterval(fetchSessions, FALLBACK_POLL_MS);
 
     return () => {
@@ -83,7 +99,6 @@ export function OnlineUsersButton() {
     };
   }, [isSuperadmin, supabase, fetchSessions]);
 
-  // Cerrar popover al click fuera
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -95,13 +110,19 @@ export function OnlineUsersButton() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Cerrar con Escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    return () => window.removeEventListener("resize", updatePlacement);
+  }, [open, updatePlacement]);
 
   const authUsers = useMemo(() => {
     const byEmail = new Map<string, SessionRow>();
@@ -119,11 +140,20 @@ export function OnlineUsersButton() {
 
   if (!isSuperadmin) return null;
 
+  const desktopPos = [
+    alignEnd ? "md:right-0 md:left-auto" : "md:left-0 md:right-auto",
+    openUp ? "md:bottom-full md:top-auto md:mb-2 md:mt-0" : "md:top-full md:bottom-auto md:mt-2 md:mb-0",
+  ].join(" ");
+
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => { fetchSessions(); setOpen((v) => !v); }}
+        onClick={() => {
+          fetchSessions();
+          updatePlacement();
+          setOpen((v) => !v);
+        }}
         className="relative flex items-center justify-center w-11 h-11 text-brand-blue hover:bg-neutral-200/80 rounded-full transition-all duration-200"
         aria-label={`Ver usuarios en línea (${total})`}
         title="Usuarios en línea"
@@ -138,23 +168,19 @@ export function OnlineUsersButton() {
 
       {open && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-[199] bg-black/20 md:bg-transparent"
             onClick={() => setOpen(false)}
             aria-hidden
           />
 
-          {/* Panel: bottom sheet en móvil, popover en desktop */}
-          <div className="fixed inset-x-0 bottom-0 z-[200] md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:w-80 rounded-t-2xl md:rounded-xl border border-neutral-200 bg-white shadow-lg max-h-[70vh] md:max-h-[28rem] flex flex-col">
-            {/* Header */}
+          <div className={`fixed inset-x-0 bottom-0 z-[200] md:absolute md:inset-auto md:w-80 rounded-t-2xl md:rounded-xl border border-neutral-200 bg-white shadow-lg max-h-[70vh] md:max-h-[28rem] flex flex-col ${desktopPos}`}>
             <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100 shrink-0">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <p className="text-sm font-semibold text-neutral-800">En línea ahora</p>
               <span className="ml-auto text-xs font-medium text-neutral-500 bg-neutral-100 rounded-full px-2 py-0.5">
                 {total} conectado{total !== 1 ? "s" : ""}
               </span>
-              {/* Botón cerrar visible en móvil */}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -165,7 +191,6 @@ export function OnlineUsersButton() {
               </button>
             </div>
 
-            {/* Lista */}
             <ul className="flex-1 overflow-y-auto divide-y divide-neutral-100">
               {sessions.length === 0 ? (
                 <li className="px-4 py-4 text-sm text-neutral-400 text-center">
@@ -231,7 +256,6 @@ export function OnlineUsersButton() {
               )}
             </ul>
 
-            {/* Footer */}
             <div className="px-4 py-2 border-t border-neutral-100 flex items-center justify-between shrink-0">
               <span className="text-[10px] text-neutral-400">Actualización en tiempo real</span>
               <button

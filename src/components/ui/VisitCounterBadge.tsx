@@ -4,6 +4,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { parseVisitCount, VISIT_COUNTED_KEY } from "@/lib/visitCounter";
 
+const PANEL_WIDTH_PX = 224;
+
 /**
  * Contador persistente de visitas totales.
  * - Incrementa 1 vez por sesión de navegador para CUALQUIER visitante (anon o auth).
@@ -13,6 +15,7 @@ export function VisitCounterBadge() {
   const { isSuperadmin } = useAuth();
   const [total, setTotal] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
+  const [alignEnd, setAlignEnd] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +47,16 @@ export function VisitCounterBadge() {
     }
   }, [supabase]);
 
-  // Contar visita: todos los visitantes, una vez por sesión de navegador
+  const updatePlacement = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const growLeft = spaceLeft >= PANEL_WIDTH_PX || spaceLeft >= spaceRight;
+    setAlignEnd(growLeft);
+  }, []);
+
   useEffect(() => {
     if (!supabase) return;
     if (sessionStorage.getItem(VISIT_COUNTED_KEY)) return;
@@ -72,13 +84,11 @@ export function VisitCounterBadge() {
     };
   }, [supabase]);
 
-  // Superadmin: cargar total al montar / al pasar a superadmin
   useEffect(() => {
     if (!isSuperadmin || !supabase) return;
     void fetchTotal();
   }, [isSuperadmin, supabase, fetchTotal]);
 
-  // Superadmin: refrescar periódicamente mientras el badge está montado
   useEffect(() => {
     if (!isSuperadmin || !supabase) return;
     const id = window.setInterval(() => {
@@ -87,7 +97,6 @@ export function VisitCounterBadge() {
     return () => window.clearInterval(id);
   }, [isSuperadmin, supabase, fetchTotal]);
 
-  // Realtime (requiere migración 20260901000001_conteo_visitas_realtime.sql)
   useEffect(() => {
     if (!isSuperadmin || !supabase) return;
     const channel = supabase
@@ -117,7 +126,16 @@ export function VisitCounterBadge() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    return () => window.removeEventListener("resize", updatePlacement);
+  }, [open, updatePlacement]);
+
   if (!isSuperadmin) return null;
+
+  const panelAlign = alignEnd ? "right-0 left-auto" : "left-0 right-auto";
 
   return (
     <div ref={containerRef} className="relative hidden sm:block">
@@ -125,6 +143,7 @@ export function VisitCounterBadge() {
         type="button"
         onClick={() => {
           void fetchTotal();
+          updatePlacement();
           setOpen((v) => !v);
         }}
         className="flex items-center gap-1.5 h-11 px-3 text-neutral-600 hover:bg-neutral-200/80 rounded-full transition-all duration-200 text-base font-semibold"
@@ -138,7 +157,7 @@ export function VisitCounterBadge() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200] p-4">
+        <div className={`absolute top-full mt-2 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg z-[200] p-4 ${panelAlign}`}>
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
             Visitas totales
           </p>
