@@ -28,7 +28,8 @@
     "deploy:function:access-request": "supabase functions deploy access-request",
     "deploy:function:stacking-pil-sync": "supabase functions deploy stacking-pil-sync",
     "desktop:dev": "npm run dev --prefix asli-desktop",
-    "desktop:build": "npm run build --prefix asli-desktop"
+    "desktop:build": "npm run build --prefix asli-desktop",
+    "desktop:publish": "powershell -ExecutionPolicy Bypass -File asli-desktop/scripts/publish-release.ps1"
   },
   "dependencies": {
     "@astrojs/node": "^9.0.4",

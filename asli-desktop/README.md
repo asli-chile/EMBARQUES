@@ -42,13 +42,18 @@ Salida típica:
 La clave privada está en `keys/asli-desktop.key` (gitignored). En la máquina de build:
 
 ```powershell
-$env:TAURI_SIGNING_PRIVATE_KEY_PATH = (Resolve-Path .\keys\asli-desktop.key).Path
-# si la clave tiene password:
-# $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "..."
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content .\keys\asli-desktop.key -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "<password de la clave>"
 npm run build
+# o publicar release completo:
+.\scripts\publish-release.ps1
 ```
 
-Guarda un backup seguro de `asli-desktop.key`. Si la pierdes, los usuarios con el `.exe` antiguo no podrán actualizar el shell.
+Guarda un backup seguro de `asli-desktop.key` **y** su password. Si los pierdes, los usuarios con el `.exe` antiguo no podrán actualizar el shell.
+
+Endpoint configurado:
+
+`https://github.com/asli-chile/EMBARQUES/releases/latest/download/latest.json`
 
 ## Publicar una actualización del shell
 
