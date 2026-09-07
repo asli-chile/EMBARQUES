@@ -71,10 +71,12 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
     setExpandedId(null);
   };
 
-  const railIcon = 22;
-  const childIcon = 18;
+  const railIcon = 28;
+  const childIcon = 22;
+  const iconCls = "shrink-0 opacity-95";
+  const iconStroke = { strokeWidth: 2.35 };
   const navBtn =
-    "group/item flex h-11 w-full items-center gap-3 overflow-hidden rounded-lg px-[11px] text-left text-[12px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white";
+    "group/item flex h-12 w-full items-center gap-3.5 overflow-hidden rounded-lg px-3 text-left text-[13px] font-semibold text-white/75 transition hover:bg-white/10 hover:text-white";
   const navActive = "bg-white/12 text-white shadow-sm ring-1 ring-white/10";
   const labelCls =
     "min-w-0 truncate opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100";
@@ -89,7 +91,7 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
 
   return (
     <nav
-      className="group/rail z-40 flex h-full w-[56px] shrink-0 flex-col overflow-hidden border-r border-black/20 bg-[#0B1A3D] text-white transition-[width] duration-200 ease-out hover:w-[220px] focus-within:w-[220px]"
+      className="group/rail z-40 flex h-full w-[64px] shrink-0 flex-col overflow-hidden border-r border-black/20 bg-[#0B1A3D] text-white transition-[width] duration-200 ease-out hover:w-[248px] focus-within:w-[248px]"
       aria-label="Navegación ERP"
       onMouseEnter={openRail}
       onMouseLeave={closeRail}
@@ -100,33 +102,33 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
         }
       }}
     >
-      <div className="flex h-12 shrink-0 items-center gap-3 overflow-hidden border-b border-white/10 px-[10px]">
+      <div className="flex h-[52px] shrink-0 items-center gap-3 overflow-hidden border-b border-white/10 px-2.5">
         <a
           href={withBase("/inicio")}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10"
           title={t.nav.home}
           {...navPrefetch("/inicio")}
         >
           <img
             src={brand.logoWhite}
             alt="ASLI"
-            className="h-5 w-auto max-w-[22px] object-contain"
+            className="h-6 w-auto max-w-[26px] object-contain"
           />
         </a>
         <div className={`${labelCls} leading-tight`}>
-          <p className="text-[12px] font-bold text-white">ASLI ERP</p>
-          <p className="text-[9px] font-medium text-white/45">Embarques</p>
+          <p className="text-[13px] font-bold text-white">ASLI ERP</p>
+          <p className="text-[10px] font-medium text-white/45">Embarques</p>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-1.5 py-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-1.5 py-2.5">
         <a
           href={withBase("/inicio")}
           className={`${navBtn} ${pathname === "/inicio" ? navActive : ""}`}
           title={t.nav.home}
           {...navPrefetch("/inicio")}
         >
-          <Icon icon="lucide:house" width={railIcon} className="shrink-0 opacity-90" />
+          <Icon icon="lucide:house" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>{t.nav.home}</span>
         </a>
         <a
@@ -135,7 +137,7 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           title={t.nav.dashboardShort}
           {...navPrefetch("/dashboard")}
         >
-          <Icon icon="lucide:layout-dashboard" width={railIcon} className="shrink-0 opacity-90" />
+          <Icon icon="lucide:layout-dashboard" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>{t.nav.dashboardShort}</span>
         </a>
         <a
@@ -144,7 +146,7 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           title={t.nav.tracking}
           {...navPrefetch("/tracking")}
         >
-          <Icon icon="lucide:ship" width={railIcon} className="shrink-0 opacity-90" />
+          <Icon icon="lucide:ship" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>{t.sidebar.tracking}</span>
         </a>
 
@@ -167,23 +169,26 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
                   <Icon
                     icon={sidebarIconFor(item.id)}
                     width={railIcon}
-                    className="shrink-0 opacity-90"
+                    height={railIcon}
+                    className={iconCls}
+                    style={iconStroke}
                   />
                   <span className={`${labelCls} flex-1`}>{labelFor(item.labelKey)}</span>
                   <Icon
                     icon={open ? "lucide:chevron-down" : "lucide:chevron-right"}
-                    width={14}
+                    width={16}
+                    height={16}
                     className={`${labelCls} !min-w-0 shrink-0 opacity-50`}
                   />
                 </button>
                 {open ? (
-                  <div className="ml-[26px] space-y-0.5 border-l border-white/10 pl-1">
+                  <div className="ml-[34px] space-y-0.5 border-l border-white/10 pl-1.5">
                     {item.children.map((child) => (
                       <a
                         key={child.id}
                         href={child.href ? withBase(child.href) : "#"}
                         title={labelFor(child.labelKey)}
-                        className={`${navBtn} !h-9 !px-2 ${
+                        className={`${navBtn} !h-10 !px-2.5 !text-[12px] ${
                           isActiveHref(child.href) ? navActive : ""
                         }`}
                         {...(child.href ? navPrefetch(child.href) : {})}
@@ -191,7 +196,9 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
                         <Icon
                           icon={sidebarIconFor(child.id)}
                           width={childIcon}
-                          className="shrink-0 opacity-90"
+                          height={childIcon}
+                          className={iconCls}
+                          style={iconStroke}
                         />
                         <span className={labelCls}>{labelFor(child.labelKey)}</span>
                       </a>
@@ -217,7 +224,9 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
               <Icon
                 icon={sidebarIconFor(item.id)}
                 width={railIcon}
-                className="shrink-0 opacity-90"
+                height={railIcon}
+                className={iconCls}
+                style={iconStroke}
               />
               <span className={labelCls}>{labelFor(item.labelKey)}</span>
             </a>
@@ -225,9 +234,9 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
         })}
       </div>
 
-      <div className="shrink-0 overflow-hidden border-t border-white/10 px-1.5 py-2">
-        <div className="mb-0.5 flex h-11 items-center gap-2 overflow-hidden px-[11px]">
-          <Icon icon="lucide:languages" width={railIcon} className="shrink-0 text-white/55" />
+      <div className="shrink-0 overflow-hidden border-t border-white/10 px-1.5 py-2.5">
+        <div className="mb-0.5 flex h-12 items-center gap-3 overflow-hidden px-3">
+          <Icon icon="lucide:languages" width={railIcon} height={railIcon} className={`${iconCls} text-white/55`} style={iconStroke} />
           <span className={`${labelCls} flex-1`}>{t.nav.language}</span>
           <LocaleToggle variant="dark" className="shrink-0" />
         </div>
@@ -237,11 +246,11 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           title={t.nav.website}
           {...navPrefetch("/inicio")}
         >
-          <Icon icon="lucide:globe" width={railIcon} className="shrink-0 opacity-90" />
+          <Icon icon="lucide:globe" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>{t.nav.website}</span>
         </a>
         <div className={`${navBtn} pointer-events-none !text-white/40`}>
-          <Icon icon="lucide:user" width={railIcon} className="shrink-0" />
+          <Icon icon="lucide:user" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>
             {profile?.nombre || user?.email || t.nav.guest}
           </span>
