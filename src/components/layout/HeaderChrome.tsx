@@ -23,11 +23,11 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
   }, []);
 
   const surface = dark
-    ? "border-b border-white/10 bg-[#0B1A3D] text-white"
+    ? "border-b border-white/5 bg-transparent text-white backdrop-blur-md"
     : "border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm text-[#0a1c3a]";
 
   const surfaceDesktop = dark
-    ? "border-b border-white/10 bg-[#0B1A3D] text-white"
+    ? "border-b border-white/5 bg-transparent text-white backdrop-blur-md"
     : "border-b border-[#e8eef5] bg-white text-[#0a1c3a]";
 
   if (!desktop) {
