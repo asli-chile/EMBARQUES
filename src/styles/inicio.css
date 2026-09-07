@@ -81,6 +81,30 @@
 .inicio-ink-faint { color: var(--inicio-ink-faint); }
 .inicio-accent-text { color: var(--inicio-teal); }
 
+/* Chip de saludo (logueado): sin overflow:hidden para no cortar borde/glow bajo el header */
+.inicio-greeting {
+  position: relative;
+  background: var(--inicio-card);
+  border: 1px solid var(--inicio-line);
+  box-shadow: var(--inicio-glow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.inicio-greeting::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--inicio-teal) 55%, transparent),
+    transparent
+  );
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 .inicio-card {
   position: relative;
   background: var(--inicio-card);

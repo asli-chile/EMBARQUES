@@ -54,7 +54,7 @@ export function InicioHero({
     <header
       className={`relative z-10 inicio-ink ${
         compact
-          ? "pt-8 pb-6 sm:pt-12 sm:pb-10"
+          ? "pt-10 pb-8 sm:pt-14 sm:pb-10"
           : "flex min-h-[calc(100dvh-2.5rem)] items-center justify-center py-12 sm:py-16"
       }`}
     >
@@ -74,15 +74,15 @@ export function InicioHero({
             {isLoggedIn && profile ? (
               <div
                 data-hero-item
-                className="inicio-card mb-7 inline-flex items-center gap-3 rounded-lg py-2 pl-2 pr-5 text-base"
+                className="inicio-greeting mb-7 inline-flex max-w-full flex-wrap items-center gap-2.5 rounded-lg py-2 pl-2 pr-4 text-base sm:gap-3 sm:pr-5"
               >
-                <span className="inicio-icon-box flex h-10 w-10 items-center justify-center rounded-md text-sm font-semibold">
+                <span className="inicio-icon-box flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold sm:h-10 sm:w-10">
                   {profile.nombre.charAt(0).toUpperCase()}
                 </span>
-                <span className="inicio-ink-soft">
+                <span className="inicio-ink-soft min-w-0">
                   {i.heroGreeting} <span className="font-semibold inicio-ink">{firstName}</span>
                 </span>
-                <span className="inicio-line hidden h-3.5 w-px bg-current opacity-30 sm:inline" />
+                <span className="inicio-line hidden h-3.5 w-px shrink-0 bg-current opacity-30 sm:inline" />
                 <span className="hidden text-xs uppercase tracking-wider inicio-ink-faint sm:inline">
                   {new Date().toLocaleDateString(dateLocale, {
                     weekday: "short",
