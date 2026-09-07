@@ -7,8 +7,8 @@ const StackingPage = () => {
   return (
     <>
       <Seo
-        title="Stacking"
-        description="Consulta la información de stacking para tus contenedores y cargas. Accede directamente al portal de stacking de cada naviera."
+        title="Stacking navieras Chile | Fechas de ingreso contenedores"
+        description="Consulta stacking de navieras en Chile: fechas y horarios de ingreso de contenedores. Acceso directo a portales oficiales desde ASLI Curicó."
         path="/stacking"
       />
       <div className="min-h-screen flex flex-col bg-asli-light">
@@ -28,10 +28,10 @@ const StackingPage = () => {
               <div className="relative z-10 container-asli py-10 sm:py-12 lg:py-16 lg:pr-8 xl:pr-12">
                 <p className="section-label text-asli-accent/90 !mb-3">Stacking</p>
                 <h1 className="font-display text-[clamp(2rem,5vw,3.25rem)] font-bold leading-[1.05] tracking-tight mb-4 text-balance">
-                  Consulta fechas y horarios de <span className="text-asli-accent">stacking</span>
+                  Stacking de navieras en <span className="text-asli-accent">Chile</span>
                 </h1>
                 <p className="text-white/75 text-base md:text-lg leading-relaxed max-w-md">
-                  Haz clic en tu naviera para acceder directo a su portal oficial de stacking.
+                  Fechas y horarios de ingreso de contenedores: entra al portal oficial de tu naviera en un clic.
                 </p>
               </div>
             </div>

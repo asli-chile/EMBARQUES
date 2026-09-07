@@ -1,11 +1,12 @@
-import { SITE_URL } from '../src/lib/site'
+import { SITE, SITE_URL } from '../src/lib/site'
 import { landings } from '../src/data/landings'
 
 const STATIC_PAGES = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
   { path: '/servicios', changefreq: 'monthly', priority: '0.9' },
-  { path: '/tracking', changefreq: 'monthly', priority: '0.7' },
-  { path: '/presentacion', changefreq: 'monthly', priority: '0.6' },
+  { path: '/tracking', changefreq: 'monthly', priority: '0.75' },
+  { path: '/stacking', changefreq: 'weekly', priority: '0.75' },
+  { path: '/presentacion', changefreq: 'monthly', priority: '0.5' },
 ]
 
 const LANDING_PAGES = landings.map((l) => ({
@@ -43,7 +44,7 @@ ${urls}
 }
 
 export async function getServerSideProps({ res }) {
-  const lastmod = new Date().toISOString().slice(0, 10)
+  const lastmod = SITE.contentUpdatedAt || new Date().toISOString().slice(0, 10)
   const xml = buildSitemapXml(lastmod)
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8')

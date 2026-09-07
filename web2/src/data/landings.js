@@ -64,7 +64,7 @@ export const landings = [
   {
     slug: 'asesoria-exportadores-pymes',
     priority: '0.95',
-    title: 'Asesoría a exportadores y PYMEs | ASLI',
+    title: 'Asesoría a exportadores y PYMEs Chile | ASLI Curicó',
     description:
       'Asesoría logística para PYMEs y exportadores en Chile: exportación, importación, documentación y comercio exterior desde Curicó, Maule.',
     h1: 'Asesoría logística para PYMEs y exportadores',
@@ -157,10 +157,10 @@ export const landings = [
   {
     slug: 'gestion-contenedores',
     priority: '0.9',
-    title: 'Gestión e importación de contenedores | ASLI',
+    title: 'Gestión de contenedores Chile | Dry y reefer | ASLI',
     description:
-      'Gestión de contenedores para exportación e importación: espacio, costos, tiempos de despacho y coordinación logística en Chile.',
-    h1: 'Gestión e importación de contenedores',
+      'Gestión de contenedores dry y reefer para exportación e importación en Chile: disponibilidad, stacking, costos y tiempos de despacho.',
+    h1: 'Gestión de contenedores dry y reefer',
     label: 'Contenedores',
     lead:
       'Administramos contenedores con foco en espacio, costo y tiempos de despacho, para que la rentabilidad no se escape en detalles operativos.',

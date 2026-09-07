@@ -34,6 +34,7 @@ export default function PilStackingPage() {
         title="Stacking PIL"
         description="Visualiza el último PDF de stacking recibido de PIL."
         path="/stacking/pil"
+        noindex
       />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />

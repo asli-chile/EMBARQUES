@@ -7,8 +7,8 @@ const TrackingPage = () => {
   return (
     <>
       <Seo
-        title="Tracking de Cargas"
-        description="Consulta el estado de tus cargas en tiempo real. Accede al seguimiento oficial de tu carga directamente con la naviera."
+        title="Tracking de cargas marítimas | Seguimiento de contenedores"
+        description="Tracking de cargas y contenedores en tiempo real: consulta el seguimiento oficial con la naviera. Herramienta gratuita de ASLI, Curicó."
         path="/tracking"
       />
       <div className="min-h-screen flex flex-col bg-asli-light">
@@ -26,10 +26,10 @@ const TrackingPage = () => {
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">
               <h1 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1] tracking-tight mb-5 text-balance">
-                Tracking de <span className="text-asli-accent">cargas</span>
+                Tracking de cargas y <span className="text-asli-accent">contenedores</span>
               </h1>
               <p className="text-white/75 text-lg md:text-xl leading-relaxed">
-                Consulta el estado de tu carga en tiempo real, directo con la naviera.
+                Consulta el estado de tu carga en tiempo real, directo con el seguimiento oficial de la naviera.
               </p>
             </div>
           </section>

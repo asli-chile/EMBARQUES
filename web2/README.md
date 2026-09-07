@@ -75,5 +75,13 @@ Skill instalada en el monorepo ASLI:
 
 - `/` — Home
 - `/servicios` — Catálogo + equipo de contacto
-- `/tracking` — Tracking
-- `/presentacion` — Presentación
+- `/tracking` — Tracking de cargas
+- `/stacking` — Portales de stacking por naviera
+- `/presentacion` — Presentación corporativa
+- Landings SEO — ver `src/data/landings.js` (fruta, importación, aduanas, etc.)
+
+## SEO
+
+Auditoría de títulos, H1, keywords y checklist: [`docs/SEO-AUDITORIA.md`](./docs/SEO-AUDITORIA.md).
+
+Al publicar cambios de copy SEO, actualizar `SITE.contentUpdatedAt` en `src/lib/site.js` (alimenta el `lastmod` del sitemap).

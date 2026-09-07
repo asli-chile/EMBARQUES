@@ -81,6 +81,16 @@ const Footer = () => {
                 </a>
               </li>
               <li>
+                <a href="/servicios-aduaneros" className="hover:text-asli-primary transition-colors duration-320">
+                  Servicios aduaneros
+                </a>
+              </li>
+              <li>
+                <a href="/stacking" className="hover:text-asli-primary transition-colors duration-320">
+                  Stacking navieras
+                </a>
+              </li>
+              <li>
                 <a href="/servicios" className="hover:text-asli-primary transition-colors duration-320">
                   Equipo especializado
                 </a>

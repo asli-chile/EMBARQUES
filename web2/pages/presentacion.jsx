@@ -6,8 +6,8 @@ const PresentacionPage = () => {
   return (
     <>
       <Seo
-        title="Presentación corporativa"
-        description="Conoce más sobre ASLI — Asesorías y Servicios Logísticos Integrales. Descarga nuestra presentación corporativa."
+        title="Presentación corporativa ASLI | Logística Curicó"
+        description="Presentación de ASLI: asesoría logística, exportación e importación desde Curicó, Maule. Conoce la empresa y descarga el PDF corporativo."
         path="/presentacion"
       />
       <div className="min-h-screen flex flex-col bg-asli-light">
@@ -25,10 +25,10 @@ const PresentacionPage = () => {
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">
               <h1 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1] tracking-tight mb-5 text-balance">
-                Presentación de la <span className="text-asli-accent">empresa</span>
+                Presentación corporativa <span className="text-asli-accent">ASLI</span>
               </h1>
               <p className="text-white/75 text-lg md:text-xl leading-relaxed">
-                Conoce más sobre ASLI y nuestros servicios.
+                Asesoría logística y comercio exterior desde Curicó: conoce la empresa y descarga el PDF.
               </p>
             </div>
           </section>

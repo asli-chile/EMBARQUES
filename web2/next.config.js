@@ -54,9 +54,15 @@ const nextConfig = {
       "teaser-web-seminario.vercel.app",
     ],
   },
-  /** Normaliza /embarques y /embarques/ hacia /embarques/inicio antes del proxy */
+  /** Canónico apex (asli.cl) + normaliza /embarques hacia /embarques/inicio */
   async redirects() {
     return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.asli.cl" }],
+        destination: "https://asli.cl/:path*",
+        permanent: true,
+      },
       {
         source: "/embarques",
         destination: "/embarques/inicio",

@@ -83,8 +83,8 @@ const ServiciosPage = () => {
   return (
     <>
       <Seo
-        title="Servicios logísticos: exportación, importación y aduanas"
-        description="Servicios ASLI: asesoría a exportadores y PYMEs, exportación de fruta fresca, importación de mercancías, contenedores, carga aérea y marítima, aduanas. Curicó, Maule."
+        title="Servicios de logística y comercio exterior | ASLI Curicó"
+        description="Catálogo de servicios ASLI en Curicó: exportación de fruta, importación, contenedores, carga aérea y marítima, aduanas y asesoría a PYMEs. Contacta al equipo."
         path="/servicios"
       />
 
@@ -95,7 +95,7 @@ const ServiciosPage = () => {
             <div className="container-asli max-w-3xl text-center mx-auto">
               <span className="section-label justify-center">Catálogo</span>
               <h1 className="font-display text-[clamp(2.25rem,5vw,3.5rem)] font-bold tracking-tight mb-5 text-asli-dark text-balance">
-                Nuestros servicios
+                Servicios de logística y comercio exterior
               </h1>
               <p className="text-muted-strong text-xl md:text-2xl leading-relaxed">
                 Soluciones logísticas integrales — del origen al destino.

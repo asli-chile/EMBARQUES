@@ -46,6 +46,8 @@ export default function Seo({
       <meta property="og:image" content={ogImage} />
       <meta property="og:image:alt" content={ogAlt} />
       <meta property="og:image:type" content="image/png" />
+      <meta property="og:image:width" content={String(SITE.ogImageWidth)} />
+      <meta property="og:image:height" content={String(SITE.ogImageHeight)} />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />

@@ -167,6 +167,14 @@ export default function ServiceLanding({ landing }) {
                           Tracking de cargas →
                         </a>
                       </li>
+                      <li>
+                        <a
+                          href="/stacking"
+                          className="text-asli-dark/70 font-semibold text-sm hover:text-asli-primary"
+                        >
+                          Stacking de navieras →
+                        </a>
+                      </li>
                     </ul>
                   </div>
                 ) : null}
