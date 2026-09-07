@@ -78,7 +78,10 @@ Importante: despliega primero el ERP web y luego instala/actualiza este shell.
 "@
 
 Write-Host "Creando release $tag..."
-gh release delete $tag --yes --repo asli-chile/EMBARQUES 2>$null
+# Si el tag no existe, gh escribe en stderr y con Stop aborta el script.
+$ErrorActionPreference = "Continue"
+gh release delete $tag --yes --repo asli-chile/EMBARQUES 2>$null | Out-Null
+$ErrorActionPreference = "Stop"
 gh release create $tag `
   --repo asli-chile/EMBARQUES `
   --title "ASLI Embarques Desktop $version" `
