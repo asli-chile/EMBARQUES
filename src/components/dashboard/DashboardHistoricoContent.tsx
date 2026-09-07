@@ -28,6 +28,9 @@ type Props = {
   onViewChange: (view: DashboardView) => void;
 };
 
+/** Valor del selector histórico: todas las temporadas (sin filtro). */
+const TEMPORADA_TODAS = "__all__";
+
 /** Anotado como `string` a propósito: con el literal, el genérico de PostgREST hace explotar la inferencia. */
 const COLUMNAS: string =
   "etd, especie, tipo_unidad, contenedor, pallets, peso_neto, total_cajas_25kg, total_cajas_5kg, estado_operacion";
@@ -97,7 +100,10 @@ export function DashboardHistoricoContent({
     setLoading(true);
     let query = supabase.from("operaciones").select(COLUMNAS).is("deleted_at", null);
     query = applyOperacionesClienteFilter(query, { isCliente, isEjecutivo, empresaNombres });
-    query = aplicarFiltroTemporada(query, temporadaSel);
+    query = aplicarFiltroTemporada(
+      query,
+      temporadaSel && temporadaSel !== TEMPORADA_TODAS ? temporadaSel : null
+    );
     const { data } = await query.limit(5000);
     setOperaciones((data ?? []) as unknown as OperacionVolumen[]);
     setLoading(false);
@@ -285,9 +291,12 @@ export function DashboardHistoricoContent({
             <select
               id="dashboard-temporada"
               value={temporadaSel ?? ""}
-              onChange={(e) => setTemporadaSel(e.target.value || null)}
+              onChange={(e) => setTemporadaSel(e.target.value || TEMPORADA_TODAS)}
               className="dash-control rounded-lg px-3 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
             >
+              <option value={TEMPORADA_TODAS} className="text-neutral-800">
+                {tr.seasonAll}
+              </option>
               {temporadas.map((tp) => (
                 <option key={tp.id} value={tp.nombre} className="text-neutral-800">
                   {tp.nombre}
