@@ -98,7 +98,9 @@ function BlockView({
       const logo = p.logoUrl || assets.logoWhite;
       const logoDark = p.logoUrl || assets.logo;
       const variant = (p.variant || "barra").toLowerCase();
-      const kicker = (p.kicker || "Informativo").trim();
+      // Vacío intencional (borrar "Informativo") ≠ fallback; solo default si no existe la prop.
+      const kicker =
+        p.kicker === undefined ? "Informativo" : String(p.kicker).trim();
 
       if (variant === "filete") {
         return (
@@ -186,22 +188,24 @@ function BlockView({
                   textAlign: "right",
                 }}
               >
+                {kicker ? (
+                  <Text
+                    style={{
+                      margin: 0,
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase",
+                      color: navy,
+                      textAlign: "right",
+                    }}
+                  >
+                    {kicker}
+                  </Text>
+                ) : null}
                 <Text
                   style={{
-                    margin: 0,
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    letterSpacing: "0.14em",
-                    textTransform: "uppercase",
-                    color: navy,
-                    textAlign: "right",
-                  }}
-                >
-                  {kicker || "ASLI"}
-                </Text>
-                <Text
-                  style={{
-                    margin: "4px 0 0 0",
+                    margin: kicker ? "4px 0 0 0" : 0,
                     fontSize: "9px",
                     letterSpacing: "0.06em",
                     color: "#64748b",
@@ -346,7 +350,12 @@ function BlockView({
       return (
         <Section style={{ backgroundColor: navy }}>
           <Row>
-            <Column style={{ padding: "20px 22px 16px 22px", verticalAlign: "middle" }}>
+            <Column
+              style={{
+                padding: kicker ? "20px 22px 16px 22px" : "18px 22px",
+                verticalAlign: "middle",
+              }}
+            >
               <Img
                 src={logo}
                 width="96"
@@ -1138,9 +1147,14 @@ function BlockView({
     }
     case "footerAsli": {
       const accentBar = resolveStudioColor(p.color, "#C8102E");
+      const textColor = resolveStudioColor(p.textColor, "#FFFFFF");
+      const phoneColor = resolveStudioColor(p.phoneColor, "#2DD4BF");
       const fVariant = (p.variant || "split").toLowerCase();
       const logo = p.logoUrl || assets.logoWhite;
       const tagline = p.tagline || ASLI_FOOTER.tagline;
+      const customLogo = Boolean(p.logoUrl?.trim());
+      // El logo ASLI ya trae «Logística y Comercio Exterior»; no repetirlo.
+      const showTagline = customLogo && Boolean(tagline?.trim());
       const addr1 = p.address1 || ASLI_FOOTER.address1;
       const addr2 = p.address2 || ASLI_FOOTER.address2;
       const contactName = p.contactName || ASLI_FOOTER.contactName;
@@ -1153,20 +1167,21 @@ function BlockView({
         fontWeight: 700,
         letterSpacing: "0.14em",
         textTransform: "uppercase",
-        color: "#b8c7e8",
+        color: textColor,
+        opacity: 0.72,
       };
       const bodyStyle: React.CSSProperties = {
         margin: 0,
         fontSize: "12px",
         lineHeight: "18px",
-        color: "#ffffff",
+        color: textColor,
         fontWeight: 600,
       };
       const phoneStyle: React.CSSProperties = {
         margin: "2px 0 0 0",
         fontSize: "12px",
         lineHeight: "18px",
-        color: "#2dd4bf",
+        color: phoneColor,
         textDecoration: "none",
         fontWeight: 600,
       };
@@ -1201,7 +1216,7 @@ function BlockView({
                 margin: 0,
                 fontSize: "11px",
                 lineHeight: "18px",
-                color: "#ffffff",
+                color: textColor,
                 textAlign: "center",
               }}
             >
@@ -1212,7 +1227,7 @@ function BlockView({
                 margin: "6px 0 0 0",
                 fontSize: "11px",
                 lineHeight: "16px",
-                color: "#ffffff",
+                color: textColor,
                 textAlign: "center",
               }}
             >
@@ -1240,33 +1255,48 @@ function BlockView({
         );
       }
 
-      if (fVariant === "centered" || fVariant === "onecol" || fVariant === "one-col") {
+      if (fVariant === "centered") {
         return (
-          <Section style={{ backgroundColor: "#0B1A3D", padding: "20px 18px", textAlign: "center" }}>
+          <Section style={{ backgroundColor: "#0B1A3D", padding: "22px 18px", textAlign: "center" }}>
             <Img
               src={logo}
-              width="88"
+              width="132"
               alt="ASLI"
               style={{
                 display: "block",
                 border: 0,
                 margin: "0 auto",
-                maxWidth: "40%",
+                maxWidth: "55%",
                 height: "auto",
               }}
             />
-            <Text
+            {showTagline ? (
+              <Text
+                style={{
+                  margin: "10px 0 0 0",
+                  fontSize: "9px",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: textColor,
+                  textAlign: "center",
+                }}
+              >
+                {tagline}
+              </Text>
+            ) : null}
+            <Section
               style={{
-                margin: "10px 0 0 0",
-                fontSize: "9px",
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-                color: "#ffffff",
-                textAlign: "center",
+                margin: "14px auto 0 auto",
+                width: "40px",
+                backgroundColor: accentBar,
+                height: "3px",
+                lineHeight: "3px",
               }}
             >
-              {tagline}
-            </Text>
+              <Text style={{ margin: 0, fontSize: "1px", lineHeight: "3px", color: accentBar }}>
+                &nbsp;
+              </Text>
+            </Section>
             <Text style={{ ...labelStyle, marginTop: "14px", textAlign: "center" }}>Dirección</Text>
             <Text style={{ ...bodyStyle, textAlign: "center" }}>
               {addr1}
@@ -1280,11 +1310,65 @@ function BlockView({
                 {contactPhone}
               </Link>
             </Text>
-            <Section style={{ backgroundColor: accentBar, height: "4px", lineHeight: "4px", marginTop: "14px" }}>
-              <Text style={{ margin: 0, fontSize: "1px", lineHeight: "4px", color: accentBar }}>
+          </Section>
+        );
+      }
+
+      if (fVariant === "onecol" || fVariant === "one-col") {
+        return (
+          <Section style={{ backgroundColor: "#0B1A3D", padding: "18px 20px", textAlign: "left" }}>
+            <Img
+              src={logo}
+              width="118"
+              alt="ASLI"
+              style={{
+                display: "block",
+                border: 0,
+                margin: "0",
+                maxWidth: "48%",
+                height: "auto",
+              }}
+            />
+            {showTagline ? (
+              <Text
+                style={{
+                  margin: "8px 0 0 0",
+                  fontSize: "9px",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: textColor,
+                  textAlign: "left",
+                }}
+              >
+                {tagline}
+              </Text>
+            ) : null}
+            <Section
+              style={{
+                margin: "14px 0 0 0",
+                width: "36px",
+                backgroundColor: accentBar,
+                height: "3px",
+                lineHeight: "3px",
+              }}
+            >
+              <Text style={{ margin: 0, fontSize: "1px", lineHeight: "3px", color: accentBar }}>
                 &nbsp;
               </Text>
             </Section>
+            <Text style={{ ...labelStyle, marginTop: "14px", textAlign: "left" }}>Dirección</Text>
+            <Text style={{ ...bodyStyle, textAlign: "left" }}>
+              {addr1}
+              <br />
+              {addr2}
+            </Text>
+            <Text style={{ ...labelStyle, marginTop: "12px", textAlign: "left" }}>Contacto</Text>
+            <Text style={{ ...bodyStyle, textAlign: "left" }}>{contactName}</Text>
+            <Text style={{ ...phoneStyle, textAlign: "left" }}>
+              <Link href={contactHref} style={{ ...phoneStyle, textAlign: "left" }}>
+                {contactPhone}
+              </Link>
+            </Text>
           </Section>
         );
       }
@@ -1293,11 +1377,26 @@ function BlockView({
         return (
           <Section style={{ backgroundColor: "#0B1A3D", padding: "18px" }}>
             <Row>
-              <Column style={{ width: "48%", verticalAlign: "top", paddingRight: "10px" }}>
-                <Img src={logo} width="96" alt="ASLI" style={{ display: "block", border: 0 }} />
-                <Text style={{ margin: "8px 0 0 0", fontSize: "11px", color: "rgba(255,255,255,0.9)", lineHeight: "16px" }}>
-                  {tagline}
-                </Text>
+              <Column style={{ width: "48%", verticalAlign: "middle", paddingRight: "10px", textAlign: "center" }}>
+                <Img
+                  src={logo}
+                  width="128"
+                  alt="ASLI"
+                  style={{ display: "block", border: 0, margin: "0 auto", maxWidth: "90%", height: "auto" }}
+                />
+                {showTagline ? (
+                  <Text
+                    style={{
+                      margin: "8px 0 0 0",
+                      fontSize: "11px",
+                      color: textColor,
+                      lineHeight: "16px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {tagline}
+                  </Text>
+                ) : null}
               </Column>
               <Column style={{ width: "52%", verticalAlign: "top", paddingLeft: "10px" }}>
                 {addressBlock}
@@ -1313,37 +1412,54 @@ function BlockView({
 
       // split (default): logo | dirección + contacto
       return (
-        <Section style={{ backgroundColor: "#0B1A3D", padding: "16px 18px" }}>
+        <Section style={{ backgroundColor: "#0B1A3D", padding: "18px 18px" }}>
           <Row>
-            <Column style={{ width: "42%", verticalAlign: "top", paddingRight: "10px" }}>
+            <Column
+              style={{
+                width: "42%",
+                verticalAlign: "middle",
+                paddingRight: "10px",
+                textAlign: "center",
+              }}
+            >
               <Img
                 src={logo}
-                width="96"
+                width="132"
                 alt="ASLI"
-                style={{ display: "block", border: 0, maxWidth: "100%", height: "auto" }}
-              />
-              <Text
                 style={{
-                  margin: "8px 0 0 0",
-                  fontSize: "9px",
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "#ffffff",
+                  display: "block",
+                  border: 0,
+                  margin: "0 auto",
+                  maxWidth: "92%",
+                  height: "auto",
                 }}
-              >
-                {tagline}
-              </Text>
+              />
+              {showTagline ? (
+                <Text
+                  style={{
+                    margin: "8px 0 0 0",
+                    fontSize: "9px",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: textColor,
+                    textAlign: "center",
+                  }}
+                >
+                  {tagline}
+                </Text>
+              ) : null}
             </Column>
             <Column style={{ width: "3px", verticalAlign: "middle" }}>
               <div
                 style={{
                   width: "3px",
-                  height: "72px",
+                  height: "96px",
                   backgroundColor: accentBar,
+                  margin: "0 auto",
                 }}
               />
             </Column>
-            <Column style={{ width: "54%", verticalAlign: "top", paddingLeft: "12px" }}>
+            <Column style={{ width: "54%", verticalAlign: "middle", paddingLeft: "12px" }}>
               {addressBlock}
               {contactBlock}
             </Column>

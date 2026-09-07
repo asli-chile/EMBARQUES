@@ -11,9 +11,11 @@ export const STUDIO_COLOR_OPTIONS: StudioColorOption[] = [
   { id: "brand", label: "Azul marca", value: "#002d69" },
   { id: "red", label: "Rojo", value: "#C8102E" },
   { id: "teal", label: "Teal", value: "#007A7B" },
+  { id: "mint", label: "Menta", value: "#2DD4BF" },
   { id: "amber", label: "Ámbar", value: "#D97706" },
   { id: "slate", label: "Pizarra", value: "#475569" },
   { id: "ink", label: "Tinta", value: "#18181b" },
+  { id: "white", label: "Blanco", value: "#FFFFFF" },
 ];
 
 const HEX_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;

@@ -443,7 +443,7 @@ function propFields(
         {
           key: "kicker",
           label: "Línea editorial / menú",
-          hint: "Ej: Informativo · o Inicio|Servicios|Contacto",
+          hint: "Ej: Informativo. Déjalo vacío para ocultarlo y compactar el banner.",
         },
         { key: "menu", label: "Menú (opcional, con | )" },
         { key: "logoUrl", label: "URL logo (vacío = logo ASLI)" },
@@ -461,18 +461,36 @@ function propFields(
           label: "Estilo de footer",
           options: [
             { value: "split", label: "Dividido (logo | dirección)" },
-            { value: "centered", label: "Centrado" },
-            { value: "compact", label: "Compacto" },
-            { value: "oneCol", label: "Una columna" },
+            { value: "centered", label: "Centrado (todo al centro)" },
+            { value: "oneCol", label: "Una columna (alineado a la izquierda)" },
             { value: "twoCol", label: "Dos columnas" },
+            { value: "compact", label: "Compacto" },
           ],
         },
         { key: "logoUrl", label: "URL logo (vacío = logo ASLI)" },
-        { key: "tagline", label: "Línea bajo el logo" },
+        {
+          key: "tagline",
+          label: "Línea bajo el logo",
+          hint: "Solo con logo personalizado. El logo ASLI ya incluye el lema.",
+        },
         { key: "address1", label: "Dirección línea 1" },
         { key: "address2", label: "Dirección línea 2" },
         { key: "contactName", label: "Contacto (nombre)" },
         { key: "contactPhone", label: "Teléfono" },
+        {
+          key: "textColor",
+          label: "Color del texto",
+          control: "color",
+          hint: "Dirección, nombre y tagline sobre el fondo navy.",
+          fallbackColor: "#FFFFFF",
+        },
+        {
+          key: "phoneColor",
+          label: "Color del teléfono",
+          control: "color",
+          hint: "Número / enlace de contacto.",
+          fallbackColor: "#2DD4BF",
+        },
         {
           ...COLOR_FIELD,
           label: "Color acento",
@@ -1569,13 +1587,14 @@ export function InformativosContent() {
   });
   const [previewNombre, setPreviewNombre] = useState("Usuario");
   const [previewHtml, setPreviewHtml] = useState("");
-  const [previewKey, setPreviewKey] = useState(0);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>("compose");
   const [capasOpen, setCapasOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [studioTheme, setStudioTheme] = useState<NeonTheme>("dark");
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+  const previewScrollPosRef = useRef({ outer: 0, inner: 0 });
 
   useEffect(() => {
     setStudioTheme(readNeonTheme());
@@ -1789,10 +1808,14 @@ export function InformativosContent() {
     setPreviewError(null);
     void renderStudioHtml(doc, previewNombre, { interactive: true })
       .then((html) => {
-        if (!dead) {
-          setPreviewHtml(html);
-          setPreviewKey((k) => k + 1);
-        }
+        if (dead) return;
+        const outer = previewScrollRef.current;
+        const iframeWin = previewIframeRef.current?.contentWindow;
+        previewScrollPosRef.current = {
+          outer: outer?.scrollTop ?? previewScrollPosRef.current.outer,
+          inner: iframeWin?.scrollY ?? previewScrollPosRef.current.inner,
+        };
+        setPreviewHtml(html);
       })
       .catch((e) => {
         console.error(e);
@@ -1804,6 +1827,29 @@ export function InformativosContent() {
       dead = true;
     };
   }, [doc, previewNombre]);
+
+  const restorePreviewScroll = useCallback(() => {
+    const { outer, inner } = previewScrollPosRef.current;
+    const outerEl = previewScrollRef.current;
+    if (outerEl) outerEl.scrollTop = outer;
+    const iframeWin = previewIframeRef.current?.contentWindow;
+    if (iframeWin) {
+      try {
+        iframeWin.scrollTo(0, inner);
+      } catch {
+        /* cross-origin guard */
+      }
+    }
+    // Doble rAF: el iframe aún puede estar midiendo layout tras srcDoc
+    requestAnimationFrame(() => {
+      if (outerEl) outerEl.scrollTop = outer;
+      try {
+        previewIframeRef.current?.contentWindow?.scrollTo(0, inner);
+      } catch {
+        /* ignore */
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const onMessage = (ev: MessageEvent) => {
@@ -2131,7 +2177,7 @@ export function InformativosContent() {
       cleanup();
       iframe?.removeEventListener("load", onLoad);
     };
-  }, [handleStudioHotkey, previewKey, previewHtml]);
+  }, [handleStudioHotkey, previewHtml]);
 
   const sendList = async (list: DestinatarioAgenda[]) => {
     if (!canSendInformativos) {
@@ -2831,7 +2877,7 @@ export function InformativosContent() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 pt-14">
+          <div ref={previewScrollRef} className="min-h-0 flex-1 overflow-auto px-4 pb-8 pt-14">
             <div className="mx-auto w-full max-w-[680px]">
               <div className="mb-2 flex items-center justify-between px-1">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--inf-muted)]">
@@ -2842,12 +2888,14 @@ export function InformativosContent() {
               <div className="inf-artboard-frame overflow-hidden rounded-xl bg-[var(--inf-surface)] shadow-[var(--inf-shadow)] ring-1 ring-[var(--inf-border)]">
                 {previewHtml ? (
                   <iframe
-                    key={previewKey}
                     ref={previewIframeRef}
                     title="preview"
                     className="block h-[min(72vh,900px)] min-h-[480px] w-full border-0 bg-white"
                     srcDoc={previewHtml}
-                    onLoad={syncPreviewSelection}
+                    onLoad={() => {
+                      syncPreviewSelection();
+                      restorePreviewScroll();
+                    }}
                   />
                 ) : (
                   <p className="p-10 text-center text-[12px] text-[var(--inf-muted)]">
