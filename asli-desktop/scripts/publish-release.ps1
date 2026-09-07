@@ -1,5 +1,6 @@
 # Publica un release del shell desktop con artefactos de auto-update.
 # Uso (desde asli-desktop/):
+#   $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "<password>"
 #   .\scripts\publish-release.ps1
 # Requiere: gh autenticado, keys/asli-desktop.key, npm/tauri.
 
@@ -29,7 +30,11 @@ Write-Host "Building (NSIS + updater artifacts)..."
 npm run build
 
 $nsisDir = Join-Path $root "src-tauri\target\release\bundle\nsis"
-$setup = Get-ChildItem $nsisDir -Filter "*setup.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+# Usar el nombre original de Tauri (la firma incluye ese file: en el comentario).
+$setup = Get-ChildItem $nsisDir -Filter "*setup.exe" |
+  Where-Object { $_.Name -notlike "*.sig" } |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
 if (-not $setup) { throw "No se encontró el instalador NSIS en $nsisDir" }
 
 $sig = Get-Item ($setup.FullName + ".sig") -ErrorAction SilentlyContinue
@@ -37,6 +42,8 @@ if (-not $sig) { throw "No se encontró $($setup.Name).sig — revisa la firma u
 
 $dist = Join-Path $root "dist"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+# Nombre sin espacios para GitHub + copia local cómoda (misma firma: firma el contenido).
 $cleanName = "ASLI-Embarques_$version`_x64-setup.exe"
 $cleanPath = Join-Path $dist $cleanName
 Copy-Item $setup.FullName $cleanPath -Force
@@ -46,27 +53,37 @@ $signature = (Get-Content ($cleanPath + ".sig") -Raw).Trim()
 $assetUrl = "https://github.com/asli-chile/EMBARQUES/releases/download/$tag/$cleanName"
 $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
-$latest = @{
-  version = $version
-  notes   = "Actualización del acceso de escritorio ASLI Embarques."
+# JSON compacto sin BOM (ConvertTo-Json de Windows agrega espacios raros y BOM con utf8).
+$latestObj = [ordered]@{
+  version  = $version
+  notes    = "Actualizacion del acceso de escritorio ASLI Embarques."
   pub_date = $pubDate
-  platforms = @{
-    "windows-x86_64" = @{
+  platforms = [ordered]@{
+    "windows-x86_64" = [ordered]@{
       signature = $signature
       url       = $assetUrl
     }
   }
-} | ConvertTo-Json -Depth 6
-
+}
 $latestPath = Join-Path $dist "latest.json"
-Set-Content -Path $latestPath -Value $latest -Encoding utf8
+$json = ($latestObj | ConvertTo-Json -Depth 6 -Compress)
+[System.IO.File]::WriteAllText($latestPath, $json, [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "Creando release $tag..."
 gh release delete $tag --yes --repo asli-chile/EMBARQUES 2>$null
 gh release create $tag `
   --repo asli-chile/EMBARQUES `
   --title "ASLI Embarques Desktop $version" `
-  --notes "Shell de escritorio $version. El ERP web sigue actualizándose con cada deploy; este release solo actualiza el contenedor (.exe)." `
+  --notes @"
+Shell de escritorio $version.
+
+- Barra de título integrada (sin chrome nativo de Windows): visitas, tema, idioma y min/max/cerrar en el header del ERP.
+- Auto-update con feedback al pulsar Actualizar ahora e instalador con UI básica.
+
+El ERP web sigue actualizándose con cada deploy; este release solo actualiza el contenedor (.exe).
+
+**Importante:** despliega primero el ERP web y luego instala/actualiza este shell.
+"@ `
   --latest `
   $cleanPath `
   ($cleanPath + ".sig") `

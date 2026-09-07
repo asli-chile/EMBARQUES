@@ -7,19 +7,22 @@ import { NotificationsBell } from "@/components/ui/NotificationsBell";
 import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
 import { HeaderTitle } from "./HeaderTitle";
 import { LocaleToggle } from "./LocaleToggle";
+import { HeaderChrome } from "./HeaderChrome";
 
 type HeaderProps = {
   /** Con rail lateral: barra fina, sin logo ni título grande. */
   compact?: boolean;
 };
 
+/** Zona vacía arrastrable (solo shell Tauri; en web el atributo no hace nada). */
+function DragSpacer({ className = "" }: { className?: string }) {
+  return <div className={className} data-tauri-drag-region />;
+}
+
 export function Header({ compact = false }: HeaderProps) {
   if (compact) {
     return (
-      <header
-        className="sticky top-0 z-50 grid h-10 min-h-10 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-[#e8eef5] bg-white/90 px-2.5 backdrop-blur-sm pt-[env(safe-area-inset-top)]"
-        role="banner"
-      >
+      <HeaderChrome compact>
         <div className="flex items-center gap-1 justify-self-start opacity-70">
           <div className="hidden sm:flex sm:items-center sm:gap-1">
             <VisitCounterBadge />
@@ -51,15 +54,12 @@ export function Header({ compact = false }: HeaderProps) {
           <NotificationsBell />
           <AuthWidget />
         </div>
-      </header>
+      </HeaderChrome>
     );
   }
 
   return (
-    <header
-      className="sticky top-0 z-50 flex h-12 min-h-12 shrink-0 items-center gap-1.5 bg-white px-3 pt-[env(safe-area-inset-top)] md:h-[60px] md:min-h-[60px] md:gap-3 md:px-4"
-      role="banner"
-    >
+    <HeaderChrome>
       <a
         href={withBase("/inicio")}
         className="flex h-8 w-auto flex-shrink-0 items-center md:h-[50px]"
@@ -76,20 +76,24 @@ export function Header({ compact = false }: HeaderProps) {
         />
       </a>
 
-      <div className="hidden flex-1 items-center md:flex">
+      <div className="hidden min-w-0 flex-1 items-center md:flex">
+        <DragSpacer className="h-full min-h-8 min-w-[12px] flex-1 self-stretch" />
         <HeaderTitle />
+        <DragSpacer className="h-full min-h-8 min-w-[12px] flex-1 self-stretch" />
       </div>
 
-      <div className="flex-1 md:hidden" />
+      <DragSpacer className="min-h-8 flex-1 self-stretch md:hidden" />
 
-      <VisitCounterBadge />
-      <div className="hidden sm:block">
-        <OnlineUsersButton />
+      <div className="flex items-center gap-1.5">
+        <VisitCounterBadge />
+        <div className="hidden sm:block">
+          <OnlineUsersButton />
+        </div>
+        <NeonThemeToggle variant="header" />
+        <LocaleToggle />
+        <NotificationsBell />
+        <AuthWidget />
       </div>
-      <NeonThemeToggle variant="header" />
-      <LocaleToggle />
-      <NotificationsBell />
-      <AuthWidget />
-    </header>
+    </HeaderChrome>
   );
 }

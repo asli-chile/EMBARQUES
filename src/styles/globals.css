@@ -56,6 +56,12 @@ html, body {
   padding-top: env(safe-area-inset-top);
 }
 
+/* Shell Tauri (.exe): arrastre de ventana en zonas data-tauri-drag-region */
+[data-tauri-drag-region] {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
 /* ── Ocultar scrollbar manteniendo scroll funcional ── */
 .scrollbar-hide {
   scrollbar-width: none;       /* Firefox */

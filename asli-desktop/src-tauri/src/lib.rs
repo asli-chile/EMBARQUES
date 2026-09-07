@@ -10,8 +10,15 @@ pub fn run() {
             {
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(err) = run_updater(handle).await {
+                    if let Err(err) = run_updater(handle.clone()).await {
                         eprintln!("[asli-desktop] updater: {err}");
+                        let _ = show_error(
+                            &handle,
+                            format!(
+                                "No se pudo completar la actualización del acceso de escritorio.\n\n{err}\n\n\
+Puedes instalar a mano el último setup desde GitHub Releases."
+                            ),
+                        );
                     }
                 });
             }
@@ -20,6 +27,16 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running ASLI Embarques");
+}
+
+#[cfg(not(debug_assertions))]
+fn show_error(app: &tauri::AppHandle, message: String) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    app.dialog()
+        .message(message)
+        .title("ASLI Embarques")
+        .kind(MessageDialogKind::Error)
+        .blocking_show();
 }
 
 #[cfg(not(debug_assertions))]
@@ -42,7 +59,7 @@ El ERP web ya se actualiza solo con cada deploy; esto solo actualiza el contened
         .title("Actualización ASLI Embarques")
         .kind(MessageDialogKind::Info)
         .buttons(MessageDialogButtons::OkCancelCustom(
-            "Actualizar".into(),
+            "Actualizar ahora".into(),
             "Más tarde".into(),
         ))
         .blocking_show();
@@ -51,10 +68,28 @@ El ERP web ya se actualiza solo con cada deploy; esto solo actualiza el contened
         return Ok(());
     }
 
-    update
-        .download_and_install(|_chunk, _progress| {}, || {})
-        .await?;
+    // Feedback inmediato: sin esto el download parece “no hacer nada”.
+    app.dialog()
+        .message(
+            "Descargando e instalando la actualización…\n\n\
+En Windows verás el instalador a continuación y esta ventana se cerrará sola.",
+        )
+        .title("ASLI Embarques")
+        .kind(MessageDialogKind::Info)
+        .blocking_show();
 
+    update
+        .download_and_install(
+            |_chunk, _progress| {},
+            || {
+                eprintln!("[asli-desktop] updater: descarga completa, lanzando instalador…");
+            },
+        )
+        .await
+        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
+
+    // En Windows download_and_install suele terminar el proceso al lanzar el NSIS.
+    // En otros SO hay que reiniciar a mano.
     app.dialog()
         .message("Actualización instalada. La aplicación se reiniciará.")
         .title("ASLI Embarques")
