@@ -239,10 +239,19 @@ export const translations = {
       level: "Nivel",
       login: "Iniciar sesión",
       loginTitle: "Iniciar sesión",
-      loginSubtitle: "Ingresa tus credenciales para acceder",
+      loginSubtitle: "Ingresa tus credenciales para continuar",
+      loginWelcomeTitle: "Bienvenido a EMBARQUES",
+      loginWelcomeBody:
+        "Gestiona operaciones, documentos y transporte en un solo lugar. Acceso seguro para el equipo ASLI y sus clientes.",
+      authFeatureOps: "Operaciones y zarpes",
+      authFeatureDocs: "Documentación y BL",
+      authFeatureTransport: "Transporte y tracking",
       signUp: "Solicitar acceso",
       signUpTitle: "Solicita tu acceso",
       signUpSubtitle: "Completa tus datos y te crearemos el acceso de forma manual.",
+      signUpWelcomeTitle: "Acceso a EMBARQUES",
+      signUpWelcomeBody:
+        "Los usuarios se crean de forma manual. Déjanos tus datos y te responderemos con tus credenciales.",
       accessInfoBody:
         "Los accesos se crean de forma manual. Indica tu nombre, empresa y correo; te responderemos con tus credenciales cuando esté listo.",
       accessContactTitle: "También puedes escribirnos",
@@ -2771,10 +2780,19 @@ export const translations = {
       level: "Level",
       login: "Log in",
       loginTitle: "Log in",
-      loginSubtitle: "Enter your credentials to access",
+      loginSubtitle: "Enter your credentials to continue",
+      loginWelcomeTitle: "Welcome to EMBARQUES",
+      loginWelcomeBody:
+        "Manage operations, documents, and transport in one place. Secure access for the ASLI team and its clients.",
+      authFeatureOps: "Operations and sailings",
+      authFeatureDocs: "Documentation and BL",
+      authFeatureTransport: "Transport and tracking",
       signUp: "Request access",
       signUpTitle: "Request your access",
       signUpSubtitle: "Fill in your details and we will create your access manually.",
+      signUpWelcomeTitle: "EMBARQUES access",
+      signUpWelcomeBody:
+        "Accounts are created manually. Leave your details and we will reply with your credentials.",
       accessInfoBody:
         "Access is created manually. Enter your name, company, and email; we will reply with your credentials when ready.",
       accessContactTitle: "You can also write to us",

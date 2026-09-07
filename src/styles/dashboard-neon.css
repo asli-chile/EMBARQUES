@@ -406,3 +406,44 @@
 .dash-neon[data-theme="light"] .text-cyan-300\/60 {
   color: var(--dash-muted) !important;
 }
+
+/* ── Auth modal (login / solicitud de acceso) ── */
+.dash-neon .auth-neon-panel {
+  border: 1px solid var(--dash-border);
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--dash-neon) 14%, transparent),
+    0 28px 80px -28px rgba(0, 0, 0, 0.72),
+    0 0 60px -20px color-mix(in srgb, var(--dash-neon) 45%, transparent);
+  background:
+    radial-gradient(520px 280px at 12% 0%, color-mix(in srgb, var(--dash-neon) 16%, transparent), transparent 60%),
+    radial-gradient(420px 240px at 100% 8%, color-mix(in srgb, var(--dash-neon-hot) 12%, transparent), transparent 55%),
+    var(--dash-surface);
+}
+
+.dash-neon[data-theme="light"] .auth-neon-panel {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--dash-neon) 16%, transparent),
+    0 22px 50px -24px rgba(10, 28, 58, 0.35);
+  background:
+    radial-gradient(520px 280px at 12% 0%, color-mix(in srgb, var(--dash-neon) 12%, transparent), transparent 60%),
+    var(--dash-surface);
+}
+
+.dash-neon .auth-neon-brand {
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--dash-header) 92%, transparent) 0%,
+      color-mix(in srgb, var(--dash-surface) 88%, transparent) 100%
+    );
+}
+
+.dash-neon .auth-neon-brand::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -30% 20%;
+  height: 55%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--dash-neon) 18%, transparent), transparent 68%);
+  pointer-events: none;
+}

@@ -1,10 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
+import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
 import { useLocale } from "@/lib/i18n";
+
+const fieldClass =
+  "w-full px-3.5 py-2.5 text-sm rounded-xl border border-[var(--dash-border)] bg-[var(--dash-control)] text-[var(--dash-fg)] placeholder:text-[color-mix(in_srgb,var(--dash-muted)_70%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--dash-neon)_35%,transparent)] focus:border-[color-mix(in_srgb,var(--dash-neon)_55%,transparent)] transition-all disabled:opacity-60";
+
+const labelClass = "block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dash-muted)] mb-1.5";
 
 export function LoginForm() {
   const { t } = useLocale();
+  const { openAuthForm } = useAuthFormModal();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -47,26 +54,26 @@ export function LoginForm() {
 
   return (
     <div>
-      <h2 className="text-[17px] font-bold text-neutral-900 tracking-tight">
+      <h3 className="text-[17px] font-bold tracking-tight text-[var(--dash-fg)]">
         {t.auth.loginTitle}
-      </h2>
-      <p className="text-sm text-neutral-500 mt-0.5 mb-5">
+      </h3>
+      <p className="mt-0.5 mb-5 text-sm text-[var(--dash-muted)]">
         {t.auth.loginSubtitle}
       </p>
 
       {error && (
         <div
-          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm"
+          className="mb-4 flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--dash-neon-hot)_35%,transparent)] bg-[color-mix(in_srgb,var(--dash-neon-hot)_12%,transparent)] p-3 text-sm text-[var(--dash-fg)]"
           role="alert"
         >
-          <Icon icon="lucide:alert-circle" width={15} height={15} className="mt-0.5 shrink-0" />
+          <Icon icon="lucide:alert-circle" width={15} height={15} className="mt-0.5 shrink-0 text-[var(--dash-neon-hot)]" />
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate data-erp-busy="skip">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" noValidate data-erp-busy="skip">
         <div>
-          <label htmlFor="login-email" className="block text-xs font-semibold text-neutral-600 mb-1.5">
+          <label htmlFor="login-email" className={labelClass}>
             {t.auth.email}
           </label>
           <input
@@ -77,12 +84,12 @@ export function LoginForm() {
             required
             disabled={isPending}
             placeholder="correo@empresa.com"
-            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
+            className={fieldClass}
           />
         </div>
 
         <div>
-          <label htmlFor="login-password" className="block text-xs font-semibold text-neutral-600 mb-1.5">
+          <label htmlFor="login-password" className={labelClass}>
             {t.auth.password}
           </label>
           <div className="relative">
@@ -93,7 +100,7 @@ export function LoginForm() {
               autoComplete="current-password"
               required
               disabled={isPending}
-              className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue focus:bg-white transition-all disabled:opacity-60"
+              className={`${fieldClass} pr-10`}
             />
             <button
               type="button"
@@ -101,7 +108,7 @@ export function LoginForm() {
               tabIndex={-1}
               aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
               disabled={isPending}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--dash-muted)] transition-colors hover:text-[var(--dash-fg)] disabled:opacity-50"
             >
               <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
             </button>
@@ -112,7 +119,7 @@ export function LoginForm() {
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          className="mt-1 w-full py-2.5 rounded-xl bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/40 focus:ring-offset-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="dash-cta mt-1 flex w-full items-center justify-center gap-2 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? (
             <>
@@ -120,10 +127,24 @@ export function LoginForm() {
               {t.auth.loggingIn}
             </>
           ) : (
-            t.auth.login
+            <>
+              <Icon icon="lucide:log-in" width={15} height={15} aria-hidden />
+              {t.auth.login}
+            </>
           )}
         </button>
       </form>
+
+      <p className="mt-5 text-center text-sm text-[var(--dash-muted)]">
+        {t.auth.noAccount}{" "}
+        <button
+          type="button"
+          onClick={() => openAuthForm("registro")}
+          className="font-semibold text-[var(--dash-neon)] underline-offset-2 hover:underline"
+        >
+          {t.auth.signUp}
+        </button>
+      </p>
     </div>
   );
 }
