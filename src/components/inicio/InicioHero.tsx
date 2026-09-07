@@ -54,7 +54,7 @@ export function InicioHero({
     <header
       className={`relative z-10 inicio-ink ${
         compact
-          ? "pt-10 pb-8 sm:pt-14 sm:pb-10"
+          ? "flex min-h-[calc(100dvh-48px)] items-center justify-center py-8 sm:py-10 lg:py-12"
           : "flex min-h-[calc(100dvh-2.5rem)] items-center justify-center py-12 sm:py-16"
       }`}
     >

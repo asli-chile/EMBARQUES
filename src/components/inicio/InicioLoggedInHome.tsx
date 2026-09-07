@@ -27,7 +27,7 @@ export function InicioLoggedInHome({
 
   return (
     <>
-      <section data-inicio-section className="relative z-10 pb-8 sm:pb-12 -mt-1">
+      <section data-inicio-section className="relative z-10 pb-8 sm:pb-12">
         <div className={inicioStyles.shell}>
           <div className="flex items-end justify-between gap-4 mb-5 px-0.5">
             <div data-inicio-reveal>
