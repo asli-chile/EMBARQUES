@@ -190,9 +190,14 @@ export function AppShell({ children, pathname }: AppShellProps) {
         </Sus>
       </ModuleWithVisitorInfo>
     ) : pathname === "/tareas" ? (
-      <Sus>
-        <LazyTareasContent />
-      </Sus>
+      <ConfigGuard
+        allowAdmin={false}
+        forbiddenMessage="No tienes acceso a Tareas. Solo el superadmin puede verla."
+      >
+        <Sus>
+          <LazyTareasContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/configuracion/clientes" ? (
       <ConfigGuard>
         <Sus>

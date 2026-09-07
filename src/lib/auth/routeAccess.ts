@@ -35,7 +35,7 @@ const PUBLIC_ROUTES = new Set([
 /** Rutas exactas → regla de acceso (pathname sin base, normalizado). */
 const ROUTE_RULES: Record<string, RouteRule> = {
   "/dashboard": { kind: "operational" },
-  "/tareas": { kind: "staff" },
+  "/tareas": { kind: "superadmin" },
   "/registros": { kind: "staff" },
   "/comunicaciones/informativos": { kind: "staff" },
   "/reservas/crear": { kind: "operational" },

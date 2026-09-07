@@ -15,7 +15,7 @@ export const siteConfig = {
   ] as const,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
-    { labelKey: "tareas", id: "tareas", href: "/tareas", staffOnly: true },
+    { labelKey: "tareas", id: "tareas", href: "/tareas", superadminOnly: true },
     {
       labelKey: "reservas",
       id: "reservas",
