@@ -275,6 +275,7 @@ export const translations = {
       placeholderPassword: "Mínimo 12 caracteres",
       showPassword: "Mostrar contraseña",
       hidePassword: "Ocultar contraseña",
+      rememberCredentials: "Recordar usuario y contraseña",
     },
     visitor: {
       dashboard: {

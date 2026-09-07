@@ -1,7 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
 import { withBase } from "@/lib/basePath";
 import { useAuthFormModal } from "@/lib/auth/AuthFormModalContext";
+import {
+  clearRememberedLogin,
+  loadRememberedLogin,
+  saveRememberedLogin,
+} from "@/lib/auth/rememberCredentials";
+import { isDesktopShell } from "@/lib/desktopShell";
 import { useLocale } from "@/lib/i18n";
 
 const fieldClass =
@@ -15,26 +21,47 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+
+  useEffect(() => {
+    const desktop = isDesktopShell();
+    setIsDesktop(desktop);
+    if (!desktop) return;
+    const saved = loadRememberedLogin();
+    if (!saved) return;
+    setEmail(saved.email);
+    setPassword(saved.password);
+    setRemember(true);
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsPending(true);
 
-    const form = e.currentTarget;
-    const email = (form.querySelector<HTMLInputElement>('[name="email"]')?.value ?? "").trim();
-    const password = form.querySelector<HTMLInputElement>('[name="password"]')?.value ?? "";
+    const emailValue = email.trim();
+    const passwordValue = password;
 
     try {
       const res = await fetch(withBase("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: emailValue, password: passwordValue }),
         credentials: "include",
       });
       const data = await res.json();
       setIsPending(false);
       if (data.success) {
+        if (isDesktop) {
+          if (remember) {
+            saveRememberedLogin({ email: emailValue, password: passwordValue });
+          } else {
+            clearRememberedLogin();
+          }
+        }
         window.erpBusy?.show();
         const params = new URLSearchParams(window.location.search);
         const next = params.get("next");
@@ -80,10 +107,12 @@ export function LoginForm() {
             id="login-email"
             name="email"
             type="email"
-            autoComplete="email"
+            autoComplete="username"
             required
             disabled={isPending}
             placeholder="correo@empresa.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -100,6 +129,8 @@ export function LoginForm() {
               autoComplete="current-password"
               required
               disabled={isPending}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className={`${fieldClass} pr-10`}
             />
             <button
@@ -114,6 +145,23 @@ export function LoginForm() {
             </button>
           </div>
         </div>
+
+        {isDesktop && (
+          <label className="flex cursor-pointer items-center gap-2.5 select-none">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setRemember(on);
+                if (!on) clearRememberedLogin();
+              }}
+              disabled={isPending}
+              className="h-4 w-4 rounded border-[var(--dash-border)] accent-[var(--dash-neon)]"
+            />
+            <span className="text-sm text-[var(--dash-muted)]">{t.auth.rememberCredentials}</span>
+          </label>
+        )}
 
         <button
           type="submit"
