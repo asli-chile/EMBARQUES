@@ -2,14 +2,18 @@ import { clientes, partners, navieras } from '../data/servicios'
 import { useReveal } from '../hooks/useReveal'
 import { useLocale } from '../hooks/useLocale'
 
+/** Segundos por logo: misma velocidad lineal aunque cada franja tenga distinto largo. */
+const SECONDS_PER_LOGO = 4.5
+
 function LogoStrip({ items, label }) {
   const track = [...items, ...items]
+  const durationSec = Math.max(items.length, 1) * SECONDS_PER_LOGO
 
   return (
     <div className="mb-7 last:mb-0">
       <p className="section-label !mb-3">{label}</p>
       <div className="marquee-viewport overflow-hidden">
-        <div className="marquee-track">
+        <div className="marquee-track" style={{ animationDuration: `${durationSec}s` }}>
           {track.map((item, i) => (
             <div
               key={`${item.id ?? item.nombre}-${i}`}
