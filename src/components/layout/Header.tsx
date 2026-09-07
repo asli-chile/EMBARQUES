@@ -57,11 +57,14 @@ export function Header({ compact = false }: HeaderProps) {
           <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
         </div>
 
-        <div className="asli-no-drag relative z-10 flex items-center justify-end gap-1.5 justify-self-end">
+        <div className="asli-no-drag relative z-10 flex items-center justify-end gap-1 justify-self-end">
           <NeonThemeToggle variant="header" />
+          <span className="mx-0.5 hidden h-4 w-px bg-white/20 sm:block" aria-hidden />
           <LocaleToggle variant="dark" />
+          <span className="mx-0.5 h-4 w-px bg-white/20" aria-hidden />
           <NotificationsBell tone={tone} />
-          <AuthWidget />
+          <span className="mx-0.5 h-4 w-px bg-white/20" aria-hidden />
+          <AuthWidget tone={tone} />
         </div>
       </HeaderChrome>
     );

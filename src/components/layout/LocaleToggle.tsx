@@ -1,4 +1,5 @@
 import { useLocale } from "@/lib/i18n";
+import { Icon } from "@iconify/react";
 import { headerChromeBtnClass } from "@/components/layout/HeaderActionIcons";
 
 type LocaleToggleProps = {
@@ -7,28 +8,39 @@ type LocaleToggleProps = {
   className?: string;
 };
 
-/** Alterna ES ↔ EN. */
+/** Alterna ES ↔ EN. En dark muestra idioma actual + chevron (estilo flotante). */
 export function LocaleToggle({ variant = "light", className = "" }: LocaleToggleProps) {
   const { locale, setLocale } = useLocale();
   const next = locale === "es" ? "en" : "es";
-  const label = locale === "es" ? "EN" : "ES";
+  const current = locale === "es" ? "ES" : "EN";
   const title =
     locale === "es" ? "Cambiar a inglés" : "Switch to Spanish";
 
-  const base =
-    variant === "dark"
-      ? "inline-flex h-8 min-w-8 items-center justify-center rounded-sm px-1.5 text-[10px] font-bold tracking-wider text-white/70 ring-1 ring-white/15 hover:bg-white/10 hover:text-white"
-      : `${headerChromeBtnClass} min-w-8 px-1.5 text-[10px] font-bold tracking-[0.08em]`;
+  if (variant === "dark") {
+    return (
+      <button
+        type="button"
+        title={title}
+        aria-label={title}
+        className={`inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-[12px] font-semibold tracking-wide text-white/90 transition-colors hover:bg-white/10 hover:text-white ${className}`.trim()}
+        onClick={() => setLocale(next)}
+      >
+        <Icon icon="lucide:globe" width={16} height={16} className="text-white/85" aria-hidden />
+        <span>{current}</span>
+        <Icon icon="lucide:chevron-down" width={14} height={14} className="text-white/55" aria-hidden />
+      </button>
+    );
+  }
 
   return (
     <button
       type="button"
       title={title}
       aria-label={title}
-      className={`${base} ${className}`.trim()}
+      className={`${headerChromeBtnClass} min-w-8 px-1.5 text-[10px] font-bold tracking-[0.08em] ${className}`.trim()}
       onClick={() => setLocale(next)}
     >
-      {label}
+      {next.toUpperCase()}
     </button>
   );
 }

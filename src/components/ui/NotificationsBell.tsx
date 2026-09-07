@@ -92,19 +92,29 @@ export function NotificationsBell({ tone = "light" }: { tone?: HeaderChromeTone 
   const canSeeNotificationsBell = Boolean(user) && (isEjecutivo || isAdmin || isSuperadmin);
   if (!canSeeNotificationsBell) return null;
 
+  const dark = tone === "dark";
+  const btnClass = dark
+    ? "relative inline-flex h-9 w-9 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+    : `relative ${headerChromeBtn(tone)}`;
+
   return (
     <div ref={containerRef} className="relative flex-shrink-0">
-      {/* Botón campana */}
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-label="Notificaciones"
-        className={`relative ${headerChromeBtn(tone)}`}
+        className={btnClass}
       >
-        <IconBell size={15} />
+        <IconBell size={dark ? 17 : 15} />
         {noLeidas > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
-            {noLeidas > 99 ? "99+" : noLeidas}
+          <span
+            className={
+              dark
+                ? "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sky-400 ring-2 ring-[#0B1A3D]/40"
+                : "absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white"
+            }
+          >
+            {dark ? <span className="sr-only">{noLeidas}</span> : noLeidas > 99 ? "99+" : noLeidas}
           </span>
         )}
       </button>
