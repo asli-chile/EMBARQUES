@@ -4,7 +4,7 @@ import { useNotifications, type Notificacion } from "@/lib/notifications/Notific
 import { useAuth } from "@/lib/auth/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { IconBell, headerChromeBtnClass } from "@/components/layout/HeaderActionIcons";
+import { IconBell, headerChromeBtn, type HeaderChromeTone } from "@/components/layout/HeaderActionIcons";
 
 const ICONO_POR_TIPO: Record<string, string> = {
   nueva_reserva:     "lucide:file-plus",
@@ -70,7 +70,7 @@ function NotificacionItem({
   );
 }
 
-export function NotificationsBell() {
+export function NotificationsBell({ tone = "light" }: { tone?: HeaderChromeTone }) {
   const { user, isEjecutivo, isAdmin, isSuperadmin } = useAuth();
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotifications();
   const [abierto, setAbierto] = useState(false);
@@ -99,7 +99,7 @@ export function NotificationsBell() {
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-label="Notificaciones"
-        className={`relative ${headerChromeBtnClass}`}
+        className={`relative ${headerChromeBtn(tone)}`}
       >
         <IconBell size={15} />
         {noLeidas > 0 && (

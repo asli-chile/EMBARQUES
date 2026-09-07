@@ -56,3 +56,13 @@ export function IconLoginUser({ className = "", size = 18 }: IconProps) {
 /** Botón cuadrado del header claro (idioma / campana). */
 export const headerChromeBtnClass =
   "inline-flex h-8 w-8 items-center justify-center rounded-sm text-[#3d4f6f] ring-1 ring-[#c8d4e4] bg-[#f7f9fc] hover:bg-brand-blue hover:text-white hover:ring-brand-blue transition-colors duration-150";
+
+/** Misma pieza sobre header navy (rail / inicio). */
+export const headerChromeBtnClassDark =
+  "inline-flex h-8 w-8 items-center justify-center rounded-sm text-white/75 ring-1 ring-white/15 bg-white/5 hover:bg-white/12 hover:text-white hover:ring-white/25 transition-colors duration-150";
+
+export type HeaderChromeTone = "light" | "dark";
+
+export function headerChromeBtn(tone: HeaderChromeTone = "light"): string {
+  return tone === "dark" ? headerChromeBtnClassDark : headerChromeBtnClass;
+}

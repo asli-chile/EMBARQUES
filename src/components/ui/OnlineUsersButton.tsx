@@ -3,7 +3,7 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useSessionPresence } from "@/lib/useSessionPresence";
-import { IconUsers } from "@/components/layout/HeaderActionIcons";
+import { IconUsers, type HeaderChromeTone } from "@/components/layout/HeaderActionIcons";
 
 type SessionRow = {
   session_id: string;
@@ -38,7 +38,7 @@ const ONLINE_THRESHOLD_MIN = 3;
 const PANEL_WIDTH_PX = 320;
 const PANEL_MAX_HEIGHT_PX = 448;
 
-export function OnlineUsersButton() {
+export function OnlineUsersButton({ tone = "light" }: { tone?: HeaderChromeTone }) {
   const { profile, isSuperadmin } = useAuth();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [open, setOpen] = useState(false);
@@ -155,7 +155,11 @@ export function OnlineUsersButton() {
           updatePlacement();
           setOpen((v) => !v);
         }}
-        className="relative flex h-8 w-8 items-center justify-center rounded-sm text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
+        className={
+          tone === "dark"
+            ? "relative flex h-8 w-8 items-center justify-center rounded-sm text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            : "relative flex h-8 w-8 items-center justify-center rounded-sm text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
+        }
         aria-label={`Ver usuarios en línea (${total})`}
         title="Usuarios en línea"
       >

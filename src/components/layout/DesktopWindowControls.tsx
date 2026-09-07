@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { getDesktopWindow, isDesktopShell } from "@/lib/desktopShell";
+import type { HeaderChromeTone } from "./HeaderActionIcons";
 
 /**
  * Botones min / max / cerrar del shell Tauri (estilo Windows 11 + ASLI).
  */
-export function DesktopWindowControls() {
+export function DesktopWindowControls({ tone = "light" }: { tone?: HeaderChromeTone }) {
   const [active, setActive] = useState(false);
   const [maximized, setMaximized] = useState(false);
+  const dark = tone === "dark";
 
   useEffect(() => {
     setActive(isDesktopShell());
@@ -41,11 +43,16 @@ export function DesktopWindowControls() {
 
   if (!active) return null;
 
-  const btn =
-    "inline-flex h-full w-[46px] items-center justify-center text-[#3d4f6f] transition-colors hover:bg-[#e8eef5] hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-blue/30";
+  const btn = dark
+    ? "inline-flex h-full w-[46px] items-center justify-center text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/40"
+    : "inline-flex h-full w-[46px] items-center justify-center text-[#3d4f6f] transition-colors hover:bg-[#e8eef5] hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-blue/30";
 
   return (
-    <div className="flex h-full shrink-0 items-stretch border-l border-[#e8eef5]">
+    <div
+      className={`flex h-full shrink-0 items-stretch border-l ${
+        dark ? "border-white/10" : "border-[#e8eef5]"
+      }`}
+    >
       <button type="button" className={btn} aria-label="Minimizar" title="Minimizar" onClick={onMinimize}>
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
           <path d="M1 5h8" stroke="currentColor" strokeWidth="1.2" />

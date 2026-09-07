@@ -1,9 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { getDesktopWindow, isDesktopShell } from "@/lib/desktopShell";
 import { DesktopWindowControls } from "./DesktopWindowControls";
+import type { HeaderChromeTone } from "./HeaderActionIcons";
 
 type Props = {
   compact?: boolean;
+  /** Claro (marketing) u oscuro (rail ERP / inicio). */
+  tone?: HeaderChromeTone;
   children: ReactNode;
 };
 
@@ -11,12 +14,21 @@ type Props = {
  * En el .exe (Tauri sin decoraciones nativas) el header actúa como barra de título.
  * Sin overflow-hidden (rompe popovers) y sin capa drag a pantalla completa (roba clics).
  */
-export function HeaderChrome({ compact = false, children }: Props) {
+export function HeaderChrome({ compact = false, tone = "light", children }: Props) {
   const [desktop, setDesktop] = useState(false);
+  const dark = tone === "dark";
 
   useEffect(() => {
     setDesktop(isDesktopShell());
   }, []);
+
+  const surface = dark
+    ? "border-b border-white/10 bg-[#0B1A3D] text-white"
+    : "border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm text-[#0a1c3a]";
+
+  const surfaceDesktop = dark
+    ? "border-b border-white/10 bg-[#0B1A3D] text-white"
+    : "border-b border-[#e8eef5] bg-white text-[#0a1c3a]";
 
   if (!desktop) {
     const height = compact
@@ -24,12 +36,13 @@ export function HeaderChrome({ compact = false, children }: Props) {
       : "h-12 min-h-12 md:h-[60px] md:min-h-[60px]";
     return (
       <header
-        className={`sticky top-0 z-50 shrink-0 border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm pt-[env(safe-area-inset-top)] ${
+        className={`sticky top-0 z-50 shrink-0 pt-[env(safe-area-inset-top)] ${surface} ${
           compact
             ? `grid ${height} grid-cols-[1fr_auto_1fr] items-center px-2.5`
             : `flex ${height} items-center gap-1.5 px-3 md:gap-3 md:px-4`
         }`}
         role="banner"
+        data-header-tone={tone}
       >
         {children}
       </header>
@@ -40,9 +53,10 @@ export function HeaderChrome({ compact = false, children }: Props) {
 
   return (
     <header
-      className={`relative sticky top-0 z-50 flex ${height} shrink-0 items-center border-b border-[#e8eef5] bg-white select-none`}
+      className={`relative sticky top-0 z-50 flex ${height} shrink-0 items-center select-none ${surfaceDesktop}`}
       role="banner"
       data-desktop-titlebar=""
+      data-header-tone={tone}
       onDoubleClick={(e) => {
         if ((e.target as HTMLElement).closest("button,a,input,select,textarea,[role='button']")) return;
         void getDesktopWindow()?.toggleMaximize();
@@ -59,7 +73,7 @@ export function HeaderChrome({ compact = false, children }: Props) {
       </div>
       {/* Espacio libre para arrastrar entre acciones y min/max/cerrar */}
       <div className="h-full w-3 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
-      <DesktopWindowControls />
+      <DesktopWindowControls tone={tone} />
     </header>
   );
 }

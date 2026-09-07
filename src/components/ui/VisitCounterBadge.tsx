@@ -3,7 +3,7 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { parseVisitCount, VISIT_COUNTED_KEY } from "@/lib/visitCounter";
-import { IconEye } from "@/components/layout/HeaderActionIcons";
+import { IconEye, type HeaderChromeTone } from "@/components/layout/HeaderActionIcons";
 
 const PANEL_WIDTH_PX = 224;
 
@@ -12,7 +12,7 @@ const PANEL_WIDTH_PX = 224;
  * - Incrementa 1 vez por sesión de navegador para CUALQUIER visitante (anon o auth).
  * - La UI solo es visible para superadmin (≥ sm).
  */
-export function VisitCounterBadge() {
+export function VisitCounterBadge({ tone = "light" }: { tone?: HeaderChromeTone }) {
   const { isSuperadmin } = useAuth();
   const [total, setTotal] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
@@ -147,7 +147,11 @@ export function VisitCounterBadge() {
           updatePlacement();
           setOpen((v) => !v);
         }}
-        className="flex h-8 items-center gap-1.5 rounded-sm px-2 text-[13px] font-semibold text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
+        className={
+          tone === "dark"
+            ? "flex h-8 items-center gap-1.5 rounded-sm px-2 text-[13px] font-semibold text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            : "flex h-8 items-center gap-1.5 rounded-sm px-2 text-[13px] font-semibold text-[#3d4f6f] transition-colors hover:bg-[#f3f6fb] hover:text-brand-blue"
+        }
         title="Total de visitas a la página"
         aria-label="Contador de visitas"
       >

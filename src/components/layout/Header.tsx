@@ -1,4 +1,5 @@
 import { siteConfig } from "@/lib/site";
+import { brand } from "@/lib/brand";
 import { withBase } from "@/lib/basePath";
 import { AuthWidget } from "@/components/ui/AuthWidget";
 import { OnlineUsersButton } from "@/components/ui/OnlineUsersButton";
@@ -8,9 +9,10 @@ import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
 import { HeaderTitle } from "./HeaderTitle";
 import { LocaleToggle } from "./LocaleToggle";
 import { HeaderChrome } from "./HeaderChrome";
+import type { HeaderChromeTone } from "./HeaderActionIcons";
 
 type HeaderProps = {
-  /** Con rail lateral: barra fina, sin logo ni título grande. */
+  /** Con rail lateral: barra fina navy, logo blanco, controles sobre oscuro. */
   compact?: boolean;
 };
 
@@ -20,16 +22,19 @@ function DragSpacer({ className = "" }: { className?: string }) {
 }
 
 export function Header({ compact = false }: HeaderProps) {
+  const tone: HeaderChromeTone = compact ? "dark" : "light";
+  const logoSrc = tone === "dark" ? brand.logoWhite : siteConfig.logo;
+
   if (compact) {
     return (
-      <HeaderChrome compact>
+      <HeaderChrome compact tone={tone}>
         <div className="asli-no-drag relative z-10 flex items-center gap-1 justify-self-start">
           <div className="hidden sm:flex sm:items-center sm:gap-1">
-            <VisitCounterBadge />
-            <OnlineUsersButton />
+            <VisitCounterBadge tone={tone} />
+            <OnlineUsersButton tone={tone} />
           </div>
           <div className="sm:hidden">
-            <VisitCounterBadge />
+            <VisitCounterBadge tone={tone} />
           </div>
         </div>
 
@@ -42,7 +47,7 @@ export function Header({ compact = false }: HeaderProps) {
             title="Inicio"
           >
             <img
-              src={siteConfig.logo}
+              src={logoSrc}
               alt={siteConfig.companyTitle}
               className="h-full w-auto max-w-[120px] object-contain"
               loading="eager"
@@ -54,8 +59,8 @@ export function Header({ compact = false }: HeaderProps) {
 
         <div className="asli-no-drag relative z-10 flex items-center justify-end gap-1.5 justify-self-end">
           <NeonThemeToggle variant="header" />
-          <LocaleToggle />
-          <NotificationsBell />
+          <LocaleToggle variant="dark" />
+          <NotificationsBell tone={tone} />
           <AuthWidget />
         </div>
       </HeaderChrome>
@@ -63,14 +68,14 @@ export function Header({ compact = false }: HeaderProps) {
   }
 
   return (
-    <HeaderChrome>
+    <HeaderChrome tone={tone}>
       <a
         href={withBase("/inicio")}
         className="asli-no-drag flex h-8 w-auto flex-shrink-0 items-center md:h-[50px]"
         aria-label="Ir al inicio del ERP"
       >
         <img
-          src={siteConfig.logo}
+          src={logoSrc}
           alt={siteConfig.companyTitle}
           width={160}
           height={44}
@@ -89,13 +94,13 @@ export function Header({ compact = false }: HeaderProps) {
       <DragSpacer className="min-h-8 flex-1 self-stretch md:hidden" />
 
       <div className="asli-no-drag flex items-center gap-1.5">
-        <VisitCounterBadge />
+        <VisitCounterBadge tone={tone} />
         <div className="hidden sm:block">
-          <OnlineUsersButton />
+          <OnlineUsersButton tone={tone} />
         </div>
         <NeonThemeToggle variant="header" />
         <LocaleToggle />
-        <NotificationsBell />
+        <NotificationsBell tone={tone} />
         <AuthWidget />
       </div>
     </HeaderChrome>
