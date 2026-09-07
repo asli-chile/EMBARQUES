@@ -47,6 +47,11 @@ export function DesktopWindowControls({ tone = "light" }: { tone?: HeaderChromeT
     ? "inline-flex h-full w-[46px] items-center justify-center text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/40"
     : "inline-flex h-full w-[46px] items-center justify-center text-[#3d4f6f] transition-colors hover:bg-[#e8eef5] hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-blue/30";
 
+  /** Sin hover del resto: así el rojo de cerrar no queda pisado por hover:bg-white/10. */
+  const closeBtn = dark
+    ? "inline-flex h-full w-[46px] items-center justify-center text-white/70 transition-colors hover:bg-[#e81123] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e81123]/50"
+    : "inline-flex h-full w-[46px] items-center justify-center text-[#3d4f6f] transition-colors hover:bg-[#e81123] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e81123]/40";
+
   return (
     <div
       className={`flex h-full shrink-0 items-stretch border-l ${
@@ -78,7 +83,7 @@ export function DesktopWindowControls({ tone = "light" }: { tone?: HeaderChromeT
       </button>
       <button
         type="button"
-        className={`${btn} hover:bg-[#e81123] hover:text-white`}
+        className={closeBtn}
         aria-label="Cerrar"
         title="Cerrar"
         onClick={onClose}
