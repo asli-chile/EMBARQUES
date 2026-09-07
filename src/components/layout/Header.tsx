@@ -42,7 +42,7 @@ export function Header({ compact = false }: HeaderProps) {
           <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
           <a
             href={withBase("/inicio")}
-            className="asli-no-drag relative z-10 flex h-7 items-center"
+            className="asli-no-drag relative z-10 flex h-8 items-center"
             aria-label="ASLI ERP"
             title="Inicio"
           >
