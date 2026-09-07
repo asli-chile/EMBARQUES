@@ -305,9 +305,21 @@ function BlockView({
 
       if (variant === "social") {
         const icons = [
-          { src: assets.iconPeople, href: "https://www.instagram.com/asli.chile/", alt: "Instagram" },
-          { src: assets.iconGlobe, href: "https://www.linkedin.com/company/asli-chile/", alt: "LinkedIn" },
-          { src: assets.iconMail, href: "https://asli.cl", alt: "Web" },
+          {
+            src: assets.iconInstagram,
+            href: "https://www.instagram.com/asli_chile/",
+            alt: "Instagram",
+          },
+          {
+            src: assets.iconLinkedin,
+            href: "https://www.linkedin.com/company/aslichile/",
+            alt: "LinkedIn",
+          },
+          {
+            src: assets.iconWhatsapp,
+            href: "https://wa.me/56968394225",
+            alt: "WhatsApp",
+          },
         ];
         return (
           <Section style={{ backgroundColor: navy }}>

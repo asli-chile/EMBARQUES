@@ -74,6 +74,9 @@ export function emailAssetUrls(preferPublic = false) {
     iconPeople: emailAsset("/email/icons/people.png", preferPublic),
     iconStar: emailAsset("/email/icons/star.png", preferPublic),
     iconAnchor: emailAsset("/email/icons/anchor.png", preferPublic),
+    iconInstagram: emailAsset("/email/icons/instagram.png", preferPublic),
+    iconLinkedin: emailAsset("/email/icons/linkedin.png", preferPublic),
+    iconWhatsapp: emailAsset("/email/icons/whatsapp.png", preferPublic),
   };
 }
 
