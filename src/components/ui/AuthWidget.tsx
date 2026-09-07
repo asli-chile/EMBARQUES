@@ -57,7 +57,7 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
         onClick={() => openAuthForm("login")}
         className={
           dark
-            ? "asli-no-drag inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-brand-blue px-3 text-[12px] font-semibold text-white transition-colors hover:bg-brand-blue/90"
+            ? "asli-no-drag inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-brand-blue px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-blue/90"
             : "asli-no-drag inline-flex h-8 items-center justify-center gap-1.5 rounded-sm bg-brand-blue px-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 sm:px-3"
         }
         aria-label={t.auth.login}

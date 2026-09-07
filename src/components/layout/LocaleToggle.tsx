@@ -22,12 +22,12 @@ export function LocaleToggle({ variant = "light", className = "" }: LocaleToggle
         type="button"
         title={title}
         aria-label={title}
-        className={`inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-[12px] font-semibold tracking-wide text-white/90 transition-colors hover:bg-white/10 hover:text-white ${className}`.trim()}
+        className={`inline-flex h-10 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-semibold tracking-wide text-white/90 transition-colors hover:bg-white/10 hover:text-white ${className}`.trim()}
         onClick={() => setLocale(next)}
       >
-        <Icon icon="lucide:globe" width={16} height={16} className="text-white/85" aria-hidden />
+        <Icon icon="lucide:globe" width={18} height={18} className="text-white/85" aria-hidden />
         <span>{current}</span>
-        <Icon icon="lucide:chevron-down" width={14} height={14} className="text-white/55" aria-hidden />
+        <Icon icon="lucide:chevron-down" width={15} height={15} className="text-white/55" aria-hidden />
       </button>
     );
   }

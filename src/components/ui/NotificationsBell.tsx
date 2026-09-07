@@ -94,7 +94,7 @@ export function NotificationsBell({ tone = "light" }: { tone?: HeaderChromeTone 
 
   const dark = tone === "dark";
   const btnClass = dark
-    ? "relative inline-flex h-9 w-9 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+    ? "relative inline-flex h-10 w-10 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/10 hover:text-white"
     : `relative ${headerChromeBtn(tone)}`;
 
   return (
@@ -105,12 +105,12 @@ export function NotificationsBell({ tone = "light" }: { tone?: HeaderChromeTone 
         aria-label="Notificaciones"
         className={btnClass}
       >
-        <IconBell size={dark ? 17 : 15} />
+        <IconBell size={dark ? 19 : 15} />
         {noLeidas > 0 && (
           <span
             className={
               dark
-                ? "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sky-400 ring-2 ring-[#0B1A3D]/40"
+                ? "absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-sky-400 ring-2 ring-[#0B1A3D]/40"
                 : "absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white"
             }
           >
