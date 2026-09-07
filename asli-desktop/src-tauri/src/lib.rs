@@ -192,5 +192,4 @@ El ERP web ya se actualiza solo con cada deploy; esto solo actualiza el contened
         .blocking_show();
 
     app.restart();
-    Ok(())
 }
