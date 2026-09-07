@@ -222,7 +222,7 @@ export function InicioContent() {
         <>
           {isLoggedIn ? (
             <>
-              <div className="relative z-10 flex min-h-[calc(100dvh-60px)] flex-col justify-center">
+              <div className="relative z-10 flex min-h-dvh flex-col justify-center pt-[60px]">
                 <InicioHero
                   isLoggedIn={isLoggedIn}
                   profile={profile}

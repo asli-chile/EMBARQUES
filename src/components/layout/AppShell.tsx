@@ -366,12 +366,22 @@ function AppChromeFrame({
   }
 
   if (showRail) {
+    // En /inicio el fondo debe pasar detrás del header; en el resto se reserva espacio.
+    const contentClearsHeader = pathname !== "/inicio";
     return (
       <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
         <AppIconRail pathname={pathname} />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <Header compact />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
+            <div className="pointer-events-auto">
+              <Header compact />
+            </div>
+          </div>
+          <div
+            className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
+              contentClearsHeader ? "pt-[60px]" : ""
+            }`}
+          >
             {children}
           </div>
         </div>

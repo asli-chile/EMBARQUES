@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * En el .exe (Tauri sin decoraciones nativas) el header actúa como barra de título.
- * Sin overflow-hidden (rompe popovers) y sin capa drag a pantalla completa (roba clics).
+ * Compact/dark: transparente y flotante sobre el fondo de la página.
  */
 export function HeaderChrome({ compact = false, tone = "light", children }: Props) {
   const [desktop, setDesktop] = useState(false);
@@ -22,12 +22,13 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
     setDesktop(isDesktopShell());
   }, []);
 
+  /** Oscuro flotante: sin placa sólida; leve velo solo para legibilidad en módulos claros. */
   const surface = dark
-    ? "border-b border-white/5 bg-transparent text-white backdrop-blur-md"
+    ? "border-b border-transparent bg-gradient-to-b from-black/35 via-black/10 to-transparent text-white"
     : "border-b border-[#e8eef5] bg-white/90 backdrop-blur-sm text-[#0a1c3a]";
 
   const surfaceDesktop = dark
-    ? "border-b border-white/5 bg-transparent text-white backdrop-blur-md"
+    ? "border-b border-transparent bg-gradient-to-b from-black/35 via-black/10 to-transparent text-white"
     : "border-b border-[#e8eef5] bg-white text-[#0a1c3a]";
 
   if (!desktop) {
@@ -36,10 +37,10 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
       : "h-12 min-h-12 md:h-[60px] md:min-h-[60px]";
     return (
       <header
-        className={`sticky top-0 z-50 shrink-0 pt-[env(safe-area-inset-top)] ${surface} ${
+        className={`z-50 shrink-0 pt-[env(safe-area-inset-top)] ${surface} ${
           compact
             ? `grid ${height} grid-cols-[1fr_auto_1fr] items-center px-2.5`
-            : `flex ${height} items-center gap-1.5 px-3 md:gap-3 md:px-4`
+            : `sticky top-0 flex ${height} items-center gap-1.5 px-3 md:gap-3 md:px-4`
         }`}
         role="banner"
         data-header-tone={tone}
@@ -53,7 +54,7 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
 
   return (
     <header
-      className={`relative sticky top-0 z-50 flex ${height} shrink-0 items-center select-none ${surfaceDesktop}`}
+      className={`z-50 flex ${height} shrink-0 items-center select-none ${surfaceDesktop}`}
       role="banner"
       data-desktop-titlebar=""
       data-header-tone={tone}
@@ -71,7 +72,6 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
       >
         {children}
       </div>
-      {/* Espacio libre para arrastrar entre acciones y min/max/cerrar */}
       <div className="h-full w-3 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
       <DesktopWindowControls tone={tone} />
     </header>
