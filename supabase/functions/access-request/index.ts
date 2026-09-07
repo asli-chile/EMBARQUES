@@ -27,32 +27,40 @@ Deno.serve(async (req) => {
       return json({ success: false, error: "No autorizado" }, 403);
     }
 
-    const { name, email, password } = await req.json() as {
+    const { name, email, company } = await req.json() as {
       name?: string;
       email?: string;
-      password?: string;
+      company?: string;
     };
 
-    if (!email?.trim() || !password?.trim()) {
-      return json({ success: false, error: "Faltan correo o contraseña" }, 400);
+    if (!email?.trim()) {
+      return json({ success: false, error: "Falta el correo" }, 400);
+    }
+    if (!name?.trim()) {
+      return json({ success: false, error: "Falta el nombre" }, 400);
+    }
+    if (!company?.trim()) {
+      return json({ success: false, error: "Falta la empresa" }, 400);
     }
 
     const notifyTo = (Deno.env.get("ACCESS_REQUEST_NOTIFY_EMAIL") ?? DEFAULT_NOTIFY_EMAIL).trim();
     const sharedMailbox = (Deno.env.get("GMAIL_SHARED_FROM_EMAIL") ?? "informaciones@asli.cl").trim().toLowerCase();
 
     const requesterEmail = email.trim().toLowerCase();
-    const requesterName = (name ?? "").trim() || requesterEmail;
+    const requesterName = name.trim();
+    const requesterCompany = company.trim();
     const isAsliMailbox = requesterEmail.endsWith("@asli.cl");
 
-    const subject = `[EMBARQUES] Nueva solicitud de acceso — ${requesterEmail}`;
+    const subject = `[EMBARQUES] Nueva solicitud de acceso - ${requesterEmail}`;
     const body = [
       "Nueva solicitud de acceso a la plataforma EMBARQUES.",
       "",
       `Nombre: ${requesterName}`,
+      `Empresa: ${requesterCompany}`,
       `Correo: ${requesterEmail}`,
-      `Contraseña solicitada: ${password}`,
       "",
-      "Crea el usuario manualmente en el panel de administración y responde al solicitante por correo cuando el acceso esté listo.",
+      "Crea el usuario manualmente en el panel de administración (con una contraseña nueva) y responde al solicitante por correo cuando el acceso esté listo.",
+      "No uses ni reutilices una clave enviada por el solicitante: define tú la credencial al crear la cuenta.",
     ].join("\n");
 
     const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT");
@@ -166,19 +174,63 @@ async function getServiceAccountToken(
   return data.access_token;
 }
 
+function bytesToBinary(bytes: Uint8Array): string {
+  const chunkSize = 8192;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(
+      ...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)),
+    );
+  }
+  return binary;
+}
+
 function b64url(input: string | Uint8Array): string {
   let str: string;
   if (typeof input === "string") {
     str = btoa(input);
   } else {
-    const chunkSize = 8192;
-    let binary = "";
-    for (let i = 0; i < input.length; i += chunkSize) {
-      binary += String.fromCharCode(...input.subarray(i, Math.min(i + chunkSize, input.length)));
-    }
-    str = btoa(binary);
+    str = btoa(bytesToBinary(input));
   }
   return str.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+/** RFC 2047 encoded-word para Subject / display-name con tildes o guiones tipográficos. */
+function encodeRfc2047(text: string): string {
+  const clean = text.replace(/[\r\n]+/g, " ").trim();
+  if (!/[^\x00-\x7F]/.test(clean)) return clean;
+
+  const encodeChunk = (s: string) =>
+    `=?UTF-8?B?${btoa(bytesToBinary(new TextEncoder().encode(s)))}?=`;
+
+  const full = encodeChunk(clean);
+  if (full.length <= 75) return full;
+
+  const chunks: string[] = [];
+  let buf = "";
+  for (const ch of clean) {
+    const trial = buf + ch;
+    if (encodeChunk(trial).length > 75 && buf) {
+      chunks.push(encodeChunk(buf));
+      buf = ch;
+    } else {
+      buf = trial;
+    }
+  }
+  if (buf) chunks.push(encodeChunk(buf));
+  return chunks.join(" ");
+}
+
+function encodeMimeAddress(name: string, email: string): string {
+  const n = name.replace(/[\r\n]+/g, " ").trim();
+  if (!n) return email;
+  if (!/[^\x00-\x7F]/.test(n) && !/[<>\\"]/.test(n)) return `${n} <${email}>`;
+  return `${encodeRfc2047(n)} <${email}>`;
+}
+
+function encodeBase64Mime(text: string): string {
+  const b64 = btoa(bytesToBinary(new TextEncoder().encode(text)));
+  return b64.match(/.{1,76}/g)?.join("\r\n") ?? b64;
 }
 
 function buildRawEmail(
@@ -198,13 +250,13 @@ function buildRawEmail(
     .replace(/\n/g, "<br>\r\n");
 
   const headers = [
-    `From: ${fromName} <${fromEmail}>`,
+    `From: ${encodeMimeAddress(fromName, fromEmail)}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeRfc2047(subject)}`,
     `MIME-Version: 1.0`,
   ];
   if (replyTo) {
-    headers.push(`Reply-To: ${fromName} <${replyTo}>`);
+    headers.push(`Reply-To: ${encodeMimeAddress(fromName, replyTo)}`);
   }
 
   const raw = [
@@ -213,12 +265,14 @@ function buildRawEmail(
     ``,
     `--${altBoundary}`,
     `Content-Type: text/plain; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
     ``,
-    plainText,
+    encodeBase64Mime(plainText),
     `--${altBoundary}`,
     `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
     ``,
-    htmlPart,
+    encodeBase64Mime(htmlPart),
     `--${altBoundary}--`,
   ].join("\r\n");
 

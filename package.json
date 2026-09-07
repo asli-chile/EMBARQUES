@@ -25,6 +25,7 @@
     "lint": "eslint .",
     "email:dev": "email dev --dir src/emails --port 3001",
     "deploy:function:send-email": "supabase functions deploy send-email",
+    "deploy:function:access-request": "supabase functions deploy access-request",
     "deploy:function:stacking-pil-sync": "supabase functions deploy stacking-pil-sync"
   },
   "dependencies": {

@@ -1,6 +1,12 @@
 import type { APIRoute } from "astro";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/lib/auth/password";
+import {
+  SIGNUP_EMAIL_RATE,
+  SIGNUP_IP_RATE,
+  checkRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/auth/rateLimit";
 
 const json = (data: { success: boolean; error?: string; message?: string }, status: number) =>
   new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
@@ -12,30 +18,57 @@ function isSupabaseConfigured(): boolean {
   );
 }
 
+/**
+ * Solicitud de acceso (no crea usuario Auth).
+ * Recibe nombre, empresa y correo; notifica al admin por la Edge Function access-request.
+ */
 export const POST: APIRoute = async ({ request }) => {
   let email: string | null = null;
-  let password: string | null = null;
   let name: string | null = null;
+  let company: string | null = null;
 
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     const body = await request.json().catch(() => ({}));
     email = (body.email as string)?.trim() ?? null;
-    password = body.password ?? null;
     name = (body.name as string)?.trim() ?? null;
+    company = (body.company as string)?.trim() ?? null;
   } else {
     const formData = await request.formData().catch(() => null);
     if (formData) {
       email = (formData.get("email") as string | null)?.trim() ?? null;
-      password = formData.get("password") as string | null;
       name = (formData.get("name") as string | null)?.trim() ?? null;
+      company = (formData.get("company") as string | null)?.trim() ?? null;
     }
   }
 
+  if (!name) return json({ success: false, error: "Nombre requerido" }, 400);
+  if (!company) return json({ success: false, error: "Empresa requerida" }, 400);
   if (!email) return json({ success: false, error: "Correo requerido" }, 400);
-  if (!password?.trim()) return json({ success: false, error: "Contraseña requerida" }, 400);
-  if (password.length < PASSWORD_MIN_LENGTH)
-    return json({ success: false, error: PASSWORD_MIN_LENGTH_MESSAGE }, 400);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ success: false, error: "Correo inválido" }, 400);
+  }
+
+  const emailKey = email.toLowerCase();
+  const ip = clientIp(request);
+  const ipLimit = checkRateLimit(`signup:ip:${ip}`, SIGNUP_IP_RATE.limit, SIGNUP_IP_RATE.windowMs);
+  if (!ipLimit.allowed) {
+    return rateLimitResponse(
+      ipLimit.retryAfterSec,
+      `Demasiadas solicitudes desde esta red. Espera ${ipLimit.retryAfterSec}s.`,
+    );
+  }
+  const emailLimit = checkRateLimit(
+    `signup:email:${emailKey}`,
+    SIGNUP_EMAIL_RATE.limit,
+    SIGNUP_EMAIL_RATE.windowMs,
+  );
+  if (!emailLimit.allowed) {
+    return rateLimitResponse(
+      emailLimit.retryAfterSec,
+      `Demasiadas solicitudes para este correo. Espera ${emailLimit.retryAfterSec}s.`,
+    );
+  }
 
   if (!isSupabaseConfigured()) {
     return json(
@@ -50,7 +83,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase.functions.invoke("access-request", {
-      body: { name, email, password },
+      body: { name, company, email },
     });
 
     if (error) {

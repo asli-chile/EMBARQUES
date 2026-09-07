@@ -1,5 +1,12 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
+import {
+  LOGIN_RATE,
+  checkRateLimit,
+  clearRateLimit,
+  clientIp,
+  rateLimitResponse,
+} from "@/lib/auth/rateLimit";
 
 const SUPABASE_NOT_CONFIGURED =
   "Autenticación no configurada. Configura PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY en .env";
@@ -43,6 +50,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
+  const emailKey = email.toLowerCase();
+  const ip = clientIp(request);
+  const limitKey = `login:${ip}:${emailKey}`;
+  const limited = checkRateLimit(limitKey, LOGIN_RATE.limit, LOGIN_RATE.windowMs);
+  if (!limited.allowed) {
+    return rateLimitResponse(
+      limited.retryAfterSec,
+      `Demasiados intentos. Espera ${limited.retryAfterSec}s e inténtalo de nuevo.`,
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return new Response(
       JSON.stringify({ success: false, error: SUPABASE_NOT_CONFIGURED }),
@@ -65,6 +83,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       { status: 401, headers: { "Content-Type": "application/json" } }
     );
   }
+
+  clearRateLimit(limitKey);
 
   return new Response(
     JSON.stringify({ success: true, redirect: "/inicio" }),

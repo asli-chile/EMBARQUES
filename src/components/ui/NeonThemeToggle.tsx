@@ -47,6 +47,7 @@ export function NeonThemeToggle({
       title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
       aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
       onClick={onToggle}
+      suppressHydrationWarning
     >
       <Icon icon={theme === "dark" ? "lucide:sun" : "lucide:moon"} width={14} />
     </button>

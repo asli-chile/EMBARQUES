@@ -45,9 +45,9 @@ export function toggleNeonTheme(current: NeonTheme): NeonTheme {
 
 /** Tema neón reactivo (Header, Inicio, Dashboard). */
 export function useNeonTheme(): [NeonTheme, (theme: NeonTheme) => void] {
-  const [theme, setTheme] = useState<NeonTheme>(() =>
-    typeof window !== "undefined" ? readNeonTheme() : "dark",
-  );
+  // Mismo default en SSR y primer paint del cliente para evitar hydration mismatch.
+  // El valor real de localStorage se aplica en useEffect.
+  const [theme, setTheme] = useState<NeonTheme>("dark");
 
   useEffect(() => {
     setTheme(readNeonTheme());
