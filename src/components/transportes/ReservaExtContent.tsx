@@ -6,14 +6,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
-import {
-  moduleCardAccent,
-  moduleHeroRounded,
-  moduleInput,
-  moduleLabel,
-  modulePageBg,
-  moduleSectionTitle,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { format } from "date-fns";
 import { sileo } from "sileo";
 
@@ -223,6 +216,7 @@ function reservaToForm(r: ReservaExt): FormData {
 export function ReservaExtContent() {
   const { t } = useLocale();
   const { isLoading: authLoading } = useAuth();
+  const [theme] = useNeonTheme();
   const tr = t.transporteExt;
 
   const [reservas, setReservas] = useState<ReservaExt[]>([]);
@@ -880,8 +874,13 @@ export function ReservaExtContent() {
     }
   };
 
-  const inputClass = moduleInput;
-  const labelClass = moduleLabel;
+  const inputClass =
+    "dash-control w-full min-h-[2.6rem] px-3 py-2 text-base font-semibold text-dash-fg placeholder:text-dash-muted placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40 disabled:opacity-50 disabled:cursor-not-allowed";
+  const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-dash-muted";
+  const sectionTitleClass = "text-base font-bold tracking-wide text-dash-fg";
+  const cardClass = "dash-card overflow-hidden rounded-xl";
+  const cardAccent = "h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot";
+  const sectionIconWrap = "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-dash-border bg-dash-control";
 
   const renderInput = (
     label: string,
@@ -902,68 +901,52 @@ export function ReservaExtContent() {
     </div>
   );
 
-  const renderSelect = (
-    label: string,
-    field: keyof FormData,
-    options: string[],
-    placeholder?: string
-  ) => (
-    <div>
-      <label className={labelClass}>{label}</label>
-      <select
-        value={formData[field]}
-        onChange={(e) => handleChange(field, e.target.value)}
-        className={inputClass}
-      >
-        <option value="">{placeholder || tr.select}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-
   const showForm = isNew || selectedId;
 
   if (loading) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm font-medium">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-          <span>{tr.loading}</span>
-        </div>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>{tr.loading}</span>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-      <div className="w-full max-w-[1600px] mx-auto space-y-4">
-        {/* Hero */}
-        <div className={moduleHeroRounded}>
-          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:truck" width={22} height={22} className="text-white" />
+    <>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
+
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:truck" width={22} height={22} className="text-dash-neon" aria-hidden />
               </div>
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold leading-tight">{tr.title}</h1>
-                <p className="text-base text-white/75 mt-0.5">{tr.subtitle}</p>
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               {reservas.length > 0 && (
-                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-                  <Icon icon="lucide:clipboard-list" width={13} height={13} className="text-white/80" />
-                  <span className="text-sm font-bold">{reservas.length} {tr.tabReservas.toLowerCase()}</span>
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-1.5">
+                  <Icon icon="lucide:clipboard-list" width={13} height={13} className="text-dash-muted" />
+                  <span className="text-sm font-bold text-dash-fg">{reservas.length} {tr.tabReservas.toLowerCase()}</span>
                 </div>
               )}
               <button
                 type="button"
                 onClick={handleNewReserva}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
+                className="dash-cta inline-flex items-center gap-1.5 px-3 py-2 text-sm"
               >
                 <Icon icon="lucide:plus" width={14} height={14} />
                 <span className="hidden sm:inline">{tr.newReserva}</span>
@@ -972,7 +955,7 @@ export function ReservaExtContent() {
               <button
                 type="button"
                 onClick={() => void fetchData()}
-                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
+                className="rounded-lg border border-dash-border bg-dash-control p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
                 title={tr.refresh}
               >
                 <Icon icon="lucide:refresh-cw" width={16} height={16} />
@@ -981,15 +964,16 @@ export function ReservaExtContent() {
           </div>
         </div>
 
+        <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
         {/* Mobile tabs */}
-        <div className="lg:hidden flex bg-neutral-100 rounded-2xl p-1 gap-1">
+        <div className="flex gap-1 rounded-xl border border-dash-border bg-dash-control p-1 lg:hidden">
           <button
             type="button"
             onClick={() => setMobilePanel("list")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-base font-bold transition-all ${
               mobilePanel === "list"
-                ? "bg-white text-brand-blue shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
+                ? "border border-dash-neon/40 bg-dash-neon/20 text-dash-fg shadow-sm"
+                : "text-dash-muted hover:text-dash-fg"
             }`}
           >
             <Icon icon="lucide:list" width={14} height={14} />
@@ -998,41 +982,41 @@ export function ReservaExtContent() {
           <button
             type="button"
             onClick={() => setMobilePanel("form")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-base font-bold transition-all ${
               mobilePanel === "form"
-                ? "bg-white text-brand-blue shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
+                ? "border border-dash-neon/40 bg-dash-neon/20 text-dash-fg shadow-sm"
+                : "text-dash-muted hover:text-dash-fg"
             }`}
           >
             <Icon icon="lucide:file-plus" width={14} height={14} />
             {tr.tabForm}
             {showForm && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
             )}
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row">
             {/* Panel izquierdo: lista de reservas */}
             <div
               className={`w-full lg:w-80 lg:flex-shrink-0 ${
                 mobilePanel === "form" ? "hidden lg:block" : ""
               }`}
             >
-              <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden lg:sticky lg:top-0">
-                <div className={moduleCardAccent} />
-                <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
+              <div className={`${cardClass} lg:sticky lg:top-0`}>
+                <div className={cardAccent} />
+                <div className="flex items-center justify-between gap-2 border-b border-dash-border px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                      <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
+                    <span className={sectionIconWrap}>
+                      <Icon icon="typcn:document" className="h-4 w-4 text-dash-neon" />
                     </span>
-                    <h2 className={moduleSectionTitle}>
+                    <h2 className={sectionTitleClass}>
                       {tr.listTitle}
                     </h2>
                   </div>
                   {reservas.filter((r) => r.estado !== "completada").length > 0 && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-bold flex-shrink-0">
+                    <span className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/35 bg-amber-400/15 px-2.5 py-1 text-sm font-bold text-dash-fg">
                       <Icon icon="lucide:alert-circle" width={12} height={12} />
                       {reservas.filter((r) => r.estado !== "completada").length} {reservas.filter((r) => r.estado !== "completada").length !== 1 ? tr.activasPluralSuffix : tr.activasSuffix}
                     </span>
@@ -1043,29 +1027,29 @@ export function ReservaExtContent() {
                     <div className="relative">
                       <Icon
                         icon="typcn:zoom"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none"
+                        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dash-muted"
                       />
                       <input
                         type="text"
                         placeholder={tr.searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
+                        className="dash-control w-full py-3 pl-9 pr-4 text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                       />
                     </div>
                   </div>
 
                   {filteredReservas.length === 0 ? (
                     <div className="py-8 text-center">
-                      <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2 inline-flex">
-                        <Icon icon="lucide:inbox" width={20} height={20} className="text-neutral-400" />
+                      <span className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
+                        <Icon icon="lucide:inbox" width={20} height={20} className="text-dash-muted" />
                       </span>
-                      <p className="text-neutral-500 text-sm font-medium">
+                      <p className="text-sm font-medium text-dash-muted">
                         {reservas.length === 0 ? tr.noReservas : tr.noResults}
                       </p>
                     </div>
                   ) : (
-                    <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
+                    <div className="max-h-[calc(100vh-320px)] space-y-2 overflow-y-auto">
                       {filteredReservas.map((r) => {
                         const isActive = selectedId === r.id;
                         const completo = r.estado === "completada";
@@ -1073,42 +1057,42 @@ export function ReservaExtContent() {
                         return (
                           <div
                             key={r.id}
-                            className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                            className={`group relative w-full cursor-pointer rounded-xl border p-3 text-left transition-all ${
                               isActive
-                                ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
+                                ? "border-dash-neon/50 bg-dash-neon/15 ring-2 ring-dash-neon/25"
                                 : completo
-                                  ? "border-emerald-200 bg-emerald-50/40 hover:border-emerald-300 hover:bg-emerald-50"
+                                  ? "border-emerald-400/35 bg-emerald-400/10 hover:border-emerald-400/50 hover:bg-emerald-400/15"
                                   : enCurso
-                                    ? "border-amber-300 bg-amber-50/60 hover:border-amber-400 hover:bg-amber-50"
-                                    : "border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50"
+                                    ? "border-amber-400/35 bg-amber-400/10 hover:border-amber-400/50 hover:bg-amber-400/15"
+                                    : "border-dash-border bg-dash-control/40 hover:border-dash-neon/35 hover:bg-dash-neon/10"
                             }`}
                             onClick={() => handleSelectReserva(r)}
                           >
                             <button
                               type="button"
                               onClick={(ev) => { ev.stopPropagation(); setConfirmDelete(r.id); }}
-                              className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                              className="absolute right-2 top-2 rounded-lg p-1 text-dash-muted opacity-0 transition-all hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
                               title={tr.deleteBtn}
                             >
-                              <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
+                              <Icon icon="typcn:trash" className="h-3.5 w-3.5" />
                             </button>
-                            <div className="flex items-start justify-between gap-2 mb-0.5">
-                              <p className={`font-bold text-sm truncate pr-6 ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
+                            <div className="mb-0.5 flex items-start justify-between gap-2">
+                              <p className={`truncate pr-6 text-sm font-bold ${isActive ? "text-dash-neon" : "text-dash-fg"}`}>
                                 {r.cliente || tr.noClient}
                               </p>
-                              <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              <span className={`flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${
                                 completo
-                                  ? "bg-emerald-100 text-emerald-700"
+                                  ? "border-emerald-400/35 bg-emerald-400/15 text-dash-fg"
                                   : enCurso
-                                    ? "bg-amber-100 text-amber-800"
-                                    : "bg-neutral-100 text-neutral-600"
+                                    ? "border-amber-400/35 bg-amber-400/15 text-dash-fg"
+                                    : "border-dash-border bg-dash-control text-dash-muted"
                               }`}>
                                 <Icon icon={completo ? "lucide:check-circle" : enCurso ? "lucide:loader" : "lucide:clock"} width={10} height={10} />
                                 {completo ? tr.statusComplete : enCurso ? tr.statusInProgress : tr.statusPending}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <p className="text-xs text-neutral-600 truncate">{r.booking || tr.noBooking} · {r.contenedor || tr.noContainer}</p>
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <p className="truncate text-xs text-dash-muted">{r.booking || tr.noBooking} · {r.contenedor || tr.noContainer}</p>
                               {isActive && bookingDocUrl && (
                                 <a
                                   href={bookingDocUrl}
@@ -1116,13 +1100,13 @@ export function ReservaExtContent() {
                                   rel="noopener noreferrer"
                                   onClick={(ev) => ev.stopPropagation()}
                                   title={tr.viewBookingPdf}
-                                  className="flex-shrink-0 p-0.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                  className="shrink-0 rounded p-0.5 text-emerald-400 transition-colors hover:bg-emerald-500/15 hover:text-emerald-300"
                                 >
                                   <Icon icon="lucide:paperclip" width={12} height={12} />
                                 </a>
                               )}
                             </div>
-                            <p className="text-xs text-neutral-400 mt-0.5">{r.naviera || r.transporte || "—"} · ETD: {formatDate(r.etd)}</p>
+                            <p className="mt-0.5 text-xs text-dash-muted/80">{r.naviera || r.transporte || "—"} · ETD: {formatDate(r.etd)}</p>
                           </div>
                         );
                       })}
@@ -1134,27 +1118,27 @@ export function ReservaExtContent() {
 
             {/* Panel derecho: formulario */}
             <div
-              className={`flex-1 min-w-0 ${
+              className={`min-w-0 flex-1 ${
                 mobilePanel === "list" ? "hidden lg:block" : ""
               }`}
             >
               {showForm ? (
                 <div className="space-y-4">
-                  <div className="rounded-2xl bg-white border border-brand-blue/15 shadow-sm overflow-hidden">
-                    <div className={moduleCardAccent} />
-                    <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-start justify-between gap-3">
+                  <div className={cardClass}>
+                    <div className={cardAccent} />
+                    <div className="flex items-start justify-between gap-3 border-l-4 border-dash-neon bg-dash-neon/10 p-4">
                       <div className="min-w-0">
-                        <p className={moduleSectionTitle}>
+                        <p className={sectionTitleClass}>
                           {isNew ? tr.formHeadingNew : tr.formHeadingEdit}
                         </p>
-                        <p className="text-neutral-800 font-bold mt-1 text-sm">
+                        <p className="mt-1 text-sm font-bold text-dash-fg">
                           {isNew
                             ? tr.formDescNew
                             : `${formData.cliente || tr.noClient} — ${formData.booking || tr.noBooking}`
                           }
                         </p>
                         {!isNew && formData.naviera && (
-                          <p className="text-sm text-neutral-500 mt-0.5">
+                          <p className="mt-0.5 text-sm text-dash-muted">
                             {formData.naviera} · {formData.nave} · {formData.pod}
                           </p>
                         )}
@@ -1163,7 +1147,7 @@ export function ReservaExtContent() {
                             href={bookingDocUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-dash-fg transition-colors hover:bg-emerald-400/25"
                           >
                             <Icon icon="lucide:file-text" width={13} height={13} />
                             {tr.viewBookingPdf}
@@ -1174,7 +1158,7 @@ export function ReservaExtContent() {
                       <button
                         type="button"
                         onClick={() => setMobilePanel("list")}
-                        className="lg:hidden flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
+                        className="flex shrink-0 items-center gap-1 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1.5 text-xs font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 lg:hidden"
                       >
                         <Icon icon="lucide:list" width={12} height={12} />
                         {tr.changePanel}
@@ -1184,25 +1168,25 @@ export function ReservaExtContent() {
 
                   {/* Instructivo de Embarque */}
                   {!isNew && (
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
 
                       {/* Header */}
-                      <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
-                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
+                      <div className="flex items-center gap-3 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-violet-400/35 bg-violet-500/15`}>
+                          <Icon icon="lucide:file-spreadsheet" className="h-4 w-4 text-violet-300" />
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className={moduleSectionTitle}>Instructivo de Embarque</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className={sectionTitleClass}>Instructivo de Embarque</p>
                             {instrSavedUrl && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Icon icon="lucide:check" className="w-3 h-3" />
+                              <span className="inline-flex items-center gap-1 rounded-md border border-emerald-400/35 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-dash-fg">
+                                <Icon icon="lucide:check" className="h-3 w-3" />
                                 {tr.instrLoadedBadge}
                               </span>
                             )}
                           </div>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">
+                          <p className="mt-0.5 text-[10px] text-dash-muted">
                             {instrSavedUrl ? tr.instrSavedHint : tr.instrUploadHint}
                           </p>
                         </div>
@@ -1210,17 +1194,17 @@ export function ReservaExtContent() {
 
                       {/* Archivo guardado */}
                       {instrSavedUrl && (
-                        <div className="px-4 py-3 border-b border-emerald-100 bg-emerald-50/70 flex items-center gap-3 flex-wrap">
-                          <span className="w-9 h-9 rounded-xl bg-white border border-emerald-200 flex items-center justify-center flex-shrink-0">
-                            <Icon icon="lucide:file-check-2" className="w-5 h-5 text-emerald-600" />
+                        <div className="flex flex-wrap items-center gap-3 border-b border-emerald-400/25 bg-emerald-400/10 px-4 py-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/35 bg-dash-control">
+                            <Icon icon="lucide:file-check-2" className="h-5 w-5 text-emerald-400" />
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-emerald-900 truncate">{instrFilename}</p>
-                            <p className="text-[10px] text-emerald-700 mt-0.5">{tr.instrSavedLocation}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold text-dash-fg">{instrFilename}</p>
+                            <p className="mt-0.5 text-[10px] text-emerald-300/90">{tr.instrSavedLocation}</p>
                           </div>
                           <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors whitespace-nowrap">
-                            <Icon icon="lucide:download" className="w-3.5 h-3.5" />
+                            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-dash-fg transition-colors hover:bg-emerald-500/30">
+                            <Icon icon="lucide:download" className="h-3.5 w-3.5" />
                             Descargar
                           </a>
                         </div>
@@ -1228,17 +1212,17 @@ export function ReservaExtContent() {
 
                       {/* Error */}
                       {instrSaveError && (
-                        <div className="px-4 py-2 border-b border-red-100 bg-red-50 flex items-center gap-2">
-                          <Icon icon="lucide:cloud-off" className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-                          <span className="text-[10px] text-red-700 flex-1">{instrSaveError}</span>
-                          <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-600">
-                            <Icon icon="lucide:x" className="w-3 h-3" />
+                        <div className="flex items-center gap-2 border-b border-red-400/25 bg-red-500/10 px-4 py-2">
+                          <Icon icon="lucide:cloud-off" className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                          <span className="flex-1 text-[10px] text-red-300">{instrSaveError}</span>
+                          <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-300">
+                            <Icon icon="lucide:x" className="h-3 w-3" />
                           </button>
                         </div>
                       )}
 
                       {/* Acciones */}
-                      <div className="px-4 py-3 flex items-center gap-2">
+                      <div className="flex items-center gap-2 px-4 py-3">
                         <input
                           ref={instrFileInputRef}
                           type="file"
@@ -1253,11 +1237,11 @@ export function ReservaExtContent() {
                             if (instrSavedUrl) setConfirmReplaceInstr(true);
                             else instrFileInputRef.current?.click();
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-300 text-violet-700 bg-white hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/35 bg-violet-500/15 px-3 py-2 text-xs font-semibold text-dash-fg transition-colors hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           {instrUploading
-                            ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
-                            : <><Icon icon="lucide:upload" className="w-3.5 h-3.5" />{instrSavedUrl ? "Reemplazar instructivo" : "Subir instructivo"}</>
+                            ? <><Icon icon="typcn:refresh" className="h-3.5 w-3.5 animate-spin" />Subiendo...</>
+                            : <><Icon icon="lucide:upload" className="h-3.5 w-3.5" />{instrSavedUrl ? "Reemplazar instructivo" : "Subir instructivo"}</>
                           }
                         </button>
                       </div>
@@ -1265,21 +1249,21 @@ export function ReservaExtContent() {
                   )}
 
                   {/* Estado de la reserva */}
-                  <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                    <div className={moduleCardAccent} />
-                    <div className="px-4 py-3 flex items-center justify-between gap-3">
-                      <span className={moduleSectionTitle}>{tr.statusLabel}</span>
+                  <div className={cardClass}>
+                    <div className={cardAccent} />
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <span className={sectionTitleClass}>{tr.statusLabel}</span>
                       <div className="flex gap-1.5">
                         {[
-                          { value: "pendiente", label: tr.statusPendiente, color: "bg-neutral-100 text-neutral-600 border-neutral-200", active: "bg-neutral-700 text-white border-neutral-700" },
-                          { value: "en_curso", label: tr.statusEnCurso, color: "bg-amber-50 text-amber-700 border-amber-200", active: "bg-amber-500 text-white border-amber-500" },
-                          { value: "completada", label: tr.statusCompletada, color: "bg-emerald-50 text-emerald-700 border-emerald-200", active: "bg-emerald-600 text-white border-emerald-600" },
+                          { value: "pendiente", label: tr.statusPendiente, color: "border-dash-border bg-dash-control text-dash-muted", active: "border-dash-neon/50 bg-dash-neon/25 text-dash-fg" },
+                          { value: "en_curso", label: tr.statusEnCurso, color: "border-amber-400/35 bg-amber-400/10 text-dash-fg", active: "border-amber-400/50 bg-amber-400/25 text-dash-fg" },
+                          { value: "completada", label: tr.statusCompletada, color: "border-emerald-400/35 bg-emerald-400/10 text-dash-fg", active: "border-emerald-400/50 bg-emerald-400/25 text-dash-fg" },
                         ].map((opt) => (
                           <button
                             key={opt.value}
                             type="button"
                             onClick={() => handleChange("estado", opt.value)}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-all ${
                               formData.estado === opt.value ? opt.active : opt.color + " hover:opacity-80"
                             }`}
                           >
@@ -1290,17 +1274,17 @@ export function ReservaExtContent() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                     {/* Datos de la operación */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
+                      <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-indigo-400/35 bg-indigo-500/15`}>
+                          <Icon icon="lucide:file-text" className="h-4 w-4 text-indigo-300" />
                         </span>
-                        <h2 className={moduleSectionTitle}>{tr.sectionOp}</h2>
+                        <h2 className={sectionTitleClass}>{tr.sectionOp}</h2>
                         {opVinculada && (
-                          <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          <span className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/35 bg-indigo-500/15 px-2.5 py-1 text-xs font-semibold text-dash-fg">
                             <Icon icon="lucide:link" width={12} height={12} />
                             {opVinculada.ref_asli ??
                               (opVinculada.correlativo != null
@@ -1310,8 +1294,8 @@ export function ReservaExtContent() {
                         )}
                       </div>
                       {opVinculada ? (
-                        <div className="p-4 space-y-3">
-                          <p className="text-xs text-neutral-500">{tr.linkedOpHint}</p>
+                        <div className="space-y-3 p-4">
+                          <p className="text-xs text-dash-muted">{tr.linkedOpHint}</p>
                           <dl className="grid grid-cols-2 gap-3">
                             {[
                               { label: tr.clientLabel, value: opVinculada.cliente },
@@ -1323,7 +1307,7 @@ export function ReservaExtContent() {
                             ].map(({ label, value }) => (
                               <div key={label}>
                                 <dt className={labelClass}>{label}</dt>
-                                <dd className="text-sm font-semibold text-brand-blue truncate">
+                                <dd className="truncate text-sm font-semibold text-dash-fg">
                                   {value || "-"}
                                 </dd>
                               </div>
@@ -1344,7 +1328,7 @@ export function ReservaExtContent() {
                           </div>
                         </div>
                       ) : (
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 p-4">
                         {renderInput(tr.clientLabel, "cliente", "text", tr.clientPlaceholder)}
                         {renderInput(tr.bookingLabel, "booking", "text", tr.bookingPlaceholder)}
                         <div>
@@ -1378,6 +1362,7 @@ export function ReservaExtContent() {
                           label={tr.podLabel}
                           labelClass={labelClass}
                           inputClass={inputClass}
+                          neon
                           value={podInput}
                           options={destinos}
                           onSelect={(opt) => {
@@ -1413,15 +1398,15 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Transporte */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="lucide:truck" className="w-4 h-4 text-blue-600" />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
+                      <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-sky-400/35 bg-sky-500/15`}>
+                          <Icon icon="lucide:truck" className="h-4 w-4 text-sky-300" />
                         </span>
-                        <h2 className={moduleSectionTitle}>{tr.transportInfo}</h2>
+                        <h2 className={sectionTitleClass}>{tr.transportInfo}</h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 p-4">
                         <div>
                           <label className={labelClass}>{tr.transportCompany}</label>
                           <Combobox
@@ -1479,15 +1464,15 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Contenedor */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:box" className="w-4 h-4 text-teal-600" />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
+                      <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-teal-400/35 bg-teal-500/15`}>
+                          <Icon icon="typcn:box" className="h-4 w-4 text-teal-300" />
                         </span>
-                        <h2 className={moduleSectionTitle}>{tr.containerInfo}</h2>
+                        <h2 className={sectionTitleClass}>{tr.containerInfo}</h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 p-4">
                         {renderInput(tr.container, "contenedor")}
                         {renderInput(tr.seal, "sello")}
                         {renderInput(tr.tare, "tara", "number")}
@@ -1495,15 +1480,15 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Citación a Planta */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
+                      <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-amber-400/35 bg-amber-500/15`}>
+                          <Icon icon="typcn:calendar" className="h-4 w-4 text-amber-300" />
                         </span>
-                        <h2 className={moduleSectionTitle}>{tr.sectionCitacion}</h2>
+                        <h2 className={sectionTitleClass}>{tr.sectionCitacion}</h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 p-4">
                         <div className="col-span-2">
                           <label className={labelClass}>{tr.plantaCitacionLabel}</label>
                           <select
@@ -1524,15 +1509,15 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Stacking */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-600" />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
+                      <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-violet-400/35 bg-violet-500/15`}>
+                          <Icon icon="typcn:th-large" className="h-4 w-4 text-violet-300" />
                         </span>
-                        <h2 className={moduleSectionTitle}>{tr.stacking}</h2>
+                        <h2 className={sectionTitleClass}>{tr.stacking}</h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 p-4">
                         {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
                         {renderInput(tr.stackingEnd, "fin_stacking", "datetime-local")}
                         <div className="col-span-2">
@@ -1542,15 +1527,15 @@ export function ReservaExtContent() {
                     </div>
 
                     {/* Costos */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-600" />
+                    <div className={cardClass}>
+                      <div className={cardAccent} />
+                      <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                        <span className={`${sectionIconWrap} border-emerald-400/35 bg-emerald-500/15`}>
+                          <Icon icon="typcn:calculator" className="h-4 w-4 text-emerald-300" />
                         </span>
-                        <h2 className={moduleSectionTitle}>{tr.costs}</h2>
+                        <h2 className={sectionTitleClass}>{tr.costs}</h2>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 p-4">
                         <div className="col-span-2">
                           <label className={labelClass}>{tr.section}</label>
                           <select
@@ -1575,10 +1560,10 @@ export function ReservaExtContent() {
                                 key={v}
                                 type="button"
                                 onClick={() => handleChange("porteo", v)}
-                                className={`flex-1 py-2 rounded-xl text-base font-bold border transition-all ${
+                                className={`flex-1 rounded-xl border py-2 text-base font-bold transition-all ${
                                   formData.porteo === v
-                                    ? "bg-brand-blue text-white border-brand-blue"
-                                    : "bg-[#F4F8FC] text-brand-blue/70 border-brand-blue/20 hover:border-brand-blue/40"
+                                    ? "border-dash-neon/50 bg-dash-neon/25 text-dash-fg"
+                                    : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
                                 }`}
                               >
                                 {v}
@@ -1595,10 +1580,10 @@ export function ReservaExtContent() {
                                 key={v}
                                 type="button"
                                 onClick={() => handleChange("falso_flete", v)}
-                                className={`flex-1 py-2 rounded-xl text-base font-bold border transition-all ${
+                                className={`flex-1 rounded-xl border py-2 text-base font-bold transition-all ${
                                   formData.falso_flete === v
-                                    ? "bg-brand-blue text-white border-brand-blue"
-                                    : "bg-[#F4F8FC] text-brand-blue/70 border-brand-blue/20 hover:border-brand-blue/40"
+                                    ? "border-dash-neon/50 bg-dash-neon/25 text-dash-fg"
+                                    : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
                                 }`}
                               >
                                 {v}
@@ -1615,13 +1600,13 @@ export function ReservaExtContent() {
                   </div>
 
                   {/* Observaciones */}
-                  <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                    <div className={moduleCardAccent} />
-                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
-                        <Icon icon="typcn:notes" className="w-4 h-4 text-neutral-500" />
+                  <div className={cardClass}>
+                    <div className={cardAccent} />
+                    <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3">
+                      <span className={sectionIconWrap}>
+                        <Icon icon="typcn:notes" className="h-4 w-4 text-dash-muted" />
                       </span>
-                      <h2 className={moduleSectionTitle}>{tr.observations}</h2>
+                      <h2 className={sectionTitleClass}>{tr.observations}</h2>
                     </div>
                     <div className="p-4">
                       <textarea
@@ -1635,24 +1620,24 @@ export function ReservaExtContent() {
                   </div>
 
                   {error && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                    <div className="rounded-xl border border-red-400/35 bg-red-500/15 p-4 text-sm font-medium text-red-300">
                       {error}
                     </div>
                   )}
 
 
-                  <div className="flex gap-3 justify-between">
+                  <div className="flex justify-between gap-3">
                     {!isNew && selectedId && (
                       <button
                         type="button"
                         onClick={() => setConfirmDelete(selectedId)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/25"
                       >
-                        <Icon icon="typcn:trash" className="w-4 h-4" />
+                        <Icon icon="typcn:trash" className="h-4 w-4" />
                         {tr.deleteBtn}
                       </button>
                     )}
-                    <div className="flex gap-3 ml-auto">
+                    <div className="ml-auto flex gap-3">
                       <button
                         type="button"
                         onClick={() => {
@@ -1662,35 +1647,35 @@ export function ReservaExtContent() {
                           setError(null);
                           setMobilePanel("list");
                         }}
-                        className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
+                        className="dash-control rounded-xl px-4 py-2.5 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15"
                       >
                         {tr.cancel}
                       </button>
                       <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
+                        className="dash-cta inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm disabled:opacity-50"
                       >
                         {saving ? (
-                          <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.saving}</>
+                          <><Icon icon="typcn:refresh" className="h-4 w-4 animate-spin" />{tr.saving}</>
                         ) : (
-                          <><Icon icon="typcn:tick" className="w-4 h-4" />{isNew ? tr.createReserva : tr.save}</>
+                          <><Icon icon="typcn:tick" className="h-4 w-4" />{isNew ? tr.createReserva : tr.save}</>
                         )}
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl bg-white border border-brand-blue/15 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
-                  <div className="text-center py-8 px-4">
-                    <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
-                      <Icon icon="lucide:truck" width={24} height={24} className="text-neutral-400" />
+                <div className={`${cardClass} flex min-h-[280px] items-center justify-center`}>
+                  <div className="px-4 py-8 text-center">
+                    <span className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
+                      <Icon icon="lucide:truck" width={24} height={24} className="text-dash-muted" />
                     </span>
-                    <p className="text-neutral-500 text-sm font-medium">{tr.selectOrCreate}</p>
+                    <p className="text-sm font-medium text-dash-muted">{tr.selectOrCreate}</p>
                     <button
                       type="button"
                       onClick={() => setMobilePanel("list")}
-                      className="lg:hidden mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
+                      className="dash-cta mt-3 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs lg:hidden"
                     >
                       <Icon icon="typcn:document" width={14} height={14} />
                       {tr.viewReservas}
@@ -1701,14 +1686,18 @@ export function ReservaExtContent() {
             </div>
           </div>
         </form>
-      </div>
+        </div>
+      </main>
+    </div>
 
       {/* Modal confirmación crear nuevo elemento */}
       {confirmNewItem && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-brand-blue/10 text-brand-blue flex items-center justify-center">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+            <div className="p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-dash-neon/35 bg-dash-neon/15 text-dash-neon">
                 {confirmNewItem.type === "empresa" ? (
                   <Icon icon="lucide:building-2" width={18} height={18} />
                 ) : confirmNewItem.type === "chofer" ? (
@@ -1718,20 +1707,20 @@ export function ReservaExtContent() {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-neutral-900">
+                <h3 className="font-semibold text-dash-fg">
                   {confirmNewItem.type === "empresa"
                     ? tr.createEntityEmpresa
                     : confirmNewItem.type === "chofer"
                     ? tr.createEntityChofer
                     : tr.createEntityEquipo}
                 </h3>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-dash-muted">
                   {tr.confirmAddNew}
                 </p>
               </div>
             </div>
 
-            <p className="text-sm text-neutral-700 mb-6">
+            <p className="mb-6 text-sm text-dash-muted">
               {tr.willCreate}{" "}
               {confirmNewItem.type === "empresa"
                 ? tr.entityEmpresa
@@ -1739,7 +1728,7 @@ export function ReservaExtContent() {
                 ? tr.entityChofer
                 : tr.entityEquipo}
               :{" "}
-              <span className="font-medium text-brand-blue">
+              <span className="font-medium text-dash-neon">
                 {confirmNewItem.value}
               </span>
             </p>
@@ -1748,7 +1737,7 @@ export function ReservaExtContent() {
               <button
                 type="button"
                 onClick={() => setConfirmNewItem(null)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="dash-control flex-1 rounded-xl px-4 py-2 text-sm font-medium text-dash-fg"
               >
                 {tr.cancel}
               </button>
@@ -1759,10 +1748,11 @@ export function ReservaExtContent() {
                   setConfirmNewItem(null);
                 }}
                 disabled={saving}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 transition-colors"
+                className="dash-cta flex-1 rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {saving ? tr.creating : tr.confirmBtn}
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -1770,61 +1760,66 @@ export function ReservaExtContent() {
 
       {/* Modal confirmación eliminar */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="h-[3px] bg-red-500" />
+            <div className="p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-400/35 bg-red-500/15 text-red-400">
                 <Icon icon="typcn:trash" width={18} height={18} />
               </div>
               <div>
-                <h3 className="font-semibold text-neutral-900">{tr.deleteModalTitle}</h3>
-                <p className="text-xs text-neutral-500">
+                <h3 className="font-semibold text-dash-fg">{tr.deleteModalTitle}</h3>
+                <p className="text-xs text-dash-muted">
                   {tr.deleteModalWarning}
                 </p>
               </div>
             </div>
-            <p className="text-sm text-neutral-700 mb-6">
+            <p className="mb-6 text-sm text-dash-muted">
               {tr.deleteModalConfirm}
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmDelete(null)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="dash-control flex-1 rounded-xl px-4 py-2 text-sm font-medium text-dash-fg"
               >
                 {tr.cancel}
               </button>
               <button
                 type="button"
                 onClick={() => void handleDelete(confirmDelete)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+                className="flex-1 rounded-xl border border-red-400/35 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/30"
               >
                 {tr.deleteBtn}
               </button>
+            </div>
             </div>
           </div>
         </div>
       )}
 
       {confirmReplaceInstr && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-mac-modal max-w-sm w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+            <div className="p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/35 bg-amber-500/15 text-amber-300">
                 <Icon icon="lucide:triangle-alert" width={18} height={18} />
               </div>
               <div className="min-w-0">
-                <h3 className="font-semibold text-neutral-900">{tr.instrReplaceModalTitle}</h3>
-                <p className="text-xs text-neutral-500">{tr.instrReplaceModalWarning}</p>
+                <h3 className="font-semibold text-dash-fg">{tr.instrReplaceModalTitle}</h3>
+                <p className="text-xs text-dash-muted">{tr.instrReplaceModalWarning}</p>
               </div>
             </div>
-            <p className="text-sm text-neutral-700 mb-2">{tr.instrReplaceModalConfirm}</p>
-            <p className="text-sm font-semibold text-neutral-900 mb-6 break-words">{instrFilename}</p>
+            <p className="mb-2 text-sm text-dash-muted">{tr.instrReplaceModalConfirm}</p>
+            <p className="mb-6 break-words text-sm font-semibold text-dash-fg">{instrFilename}</p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmReplaceInstr(false)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="dash-control flex-1 rounded-xl px-4 py-2 text-sm font-medium text-dash-fg"
               >
                 {tr.cancel}
               </button>
@@ -1834,14 +1829,15 @@ export function ReservaExtContent() {
                   setConfirmReplaceInstr(false);
                   instrFileInputRef.current?.click();
                 }}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+                className="flex-1 rounded-xl border border-violet-400/35 bg-violet-500/20 px-4 py-2 text-sm font-medium text-dash-fg transition-colors hover:bg-violet-500/30"
               >
                 {tr.instrReplaceModalAction}
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }

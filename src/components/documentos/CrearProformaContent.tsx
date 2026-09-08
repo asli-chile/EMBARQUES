@@ -11,13 +11,9 @@ import JSZip from "jszip";
 import * as XLSX from "xlsx";
 import { parseProformaRows, sheetToRows, type ProformaNormalizada } from "@/lib/documentos/proforma-normalizer";
 import { withBase } from "@/lib/basePath";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleLabel,
-  moduleInput,
-} from "@/lib/ui/moduleStyles";
 import { ComboboxInput, type ComboboxOption } from "@/components/ui/ComboboxInput";
+import { FormSelect } from "@/components/ui/FormSelect";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { findOrCreateNave } from "@/lib/catalogos/findOrCreateNave";
 import { sileo } from "sileo";
@@ -924,6 +920,7 @@ export function CrearProformaContent() {
   const supabase = useMemo(() => { try { return createClient(); } catch { return null; } }, []);
   const { user, isCliente, isEjecutivo, isAdmin, isSuperadmin, isLoading, empresaNombres } = useAuth();
   const { temporadaActiva } = useTemporadaActiva();
+  const [theme] = useNeonTheme();
 
   const [tab, setTab] = useState<Tab>("Mercadería");
   const [header, setHeader] = useState<ProformaHeader>(emptyHeader());
@@ -2336,13 +2333,21 @@ export function CrearProformaContent() {
   const setH = (field: keyof ProformaHeader, value: string) =>
     setHeader(h => ({ ...h, [field]: value }));
 
+  const inputClass =
+    "dash-control w-full min-h-[2.6rem] px-3 py-2 text-base font-semibold placeholder:text-dash-muted placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40 disabled:opacity-50 disabled:cursor-not-allowed";
+  const labelClass = "mb-1 block text-[11px] font-bold uppercase tracking-[0.08em] text-dash-muted";
+  const chipOn = "bg-dash-neon/25 text-dash-fg border-dash-neon/50 shadow-sm";
+  const chipOff = "bg-dash-control text-dash-fg border-dash-border hover:border-dash-neon/40";
+  const cellInput =
+    "w-full min-w-[60px] border-0 bg-transparent text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/30 rounded px-1.5 py-1.5 text-base";
+
   const inp = (label: string, field: keyof ProformaHeader, opts?: { type?: string; placeholder?: string }) => (
     <div className="flex flex-col gap-1.5">
-      <label className={moduleLabel}>{label}</label>
+      <label className={labelClass}>{label}</label>
       <input
         type={opts?.type ?? "text"} placeholder={opts?.placeholder ?? ""}
         value={header[field] as string} onChange={e => setH(field, e.target.value)}
-        className={moduleInput}
+        className={inputClass}
       />
     </div>
   );
@@ -2350,43 +2355,50 @@ export function CrearProformaContent() {
   // -- Access guard -----------------------------------------------------------
   if (!isLoading && !isSuperadmin && !isAdmin && !isEjecutivo) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 gap-3 text-neutral-500 p-8">
-        <span className="text-4xl">🔒</span>
-        <p className="text-lg font-medium">Acceso restringido</p>
-        <p className="text-sm">Esta sección está disponible solo para ejecutivos, administradores y superadmin.</p>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-8" role="main">
+          <div className="dash-card flex max-w-md flex-col items-center gap-3 rounded-xl px-6 py-8 text-center">
+            <Icon icon="lucide:lock" width={28} height={28} className="text-dash-muted" />
+            <p className="text-lg font-medium text-dash-fg">Acceso restringido</p>
+            <p className="text-sm text-dash-muted">Esta sección está disponible solo para ejecutivos, administradores y superadmin.</p>
+          </div>
+        </main>
       </div>
     );
   }
 
   // -- Render -----------------------------------------------------------------
   return (
-    <div className={`flex flex-col h-full ${modulePageBg}`}>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-8 h-64 w-64 rounded-full bg-dash-neon/15 blur-3xl" />
+          <div className="absolute bottom-24 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
+        </div>
 
       {/* Datalists globales */}
       <datalist id="variedades-cereza-list">
         {VARIEDADES_CEREZA.map(v => <option key={v} value={v} />)}
       </datalist>
 
-      {/* -- Hero -- */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6 flex-shrink-0`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:file-text" width={24} className="text-white" />
+      <header className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+              <Icon icon="lucide:file-text" width={22} height={22} className="text-dash-neon" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">Crear Proforma</h1>
+              <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">Crear Proforma</h1>
               {header.numero
-                ? <p className="text-base text-white/80 font-mono font-semibold mt-1">{header.numero}</p>
-                : <p className="text-base text-white/75 mt-1">Documento comercial de exportación</p>}
+                ? <p className="mt-0.5 font-mono text-sm font-semibold text-dash-neon">{header.numero}</p>
+                : <p className="mt-0.5 text-xs text-dash-muted sm:text-sm">Documento comercial de exportación</p>}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-            <button onClick={() => { setShowList(true); loadProformas(); }}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-white/25 bg-white/10 text-white hover:bg-white/20 transition-colors">
+            <button type="button" onClick={() => { setShowList(true); loadProformas(); }}
+              className="dash-control inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold">
               <Icon icon="lucide:list" width={16} /><span className="hidden sm:inline">Mis Proformas</span>
             </button>
-            {/* Importar Excel externo */}
             <input
               ref={importInputRef}
               type="file"
@@ -2399,7 +2411,7 @@ export function CrearProformaContent() {
               onClick={() => importInputRef.current?.click()}
               disabled={importing}
               title="Importar proforma desde Excel externo (normalización automática)"
-              className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-white/25 bg-white/10 text-white hover:bg-white/20 disabled:opacity-50 transition-colors">
+              className="dash-control inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold disabled:opacity-50">
               {importing
                 ? <Icon icon="lucide:loader-2" width={16} className="animate-spin" />
                 : <Icon icon="lucide:upload" width={16} />}
@@ -2410,61 +2422,61 @@ export function CrearProformaContent() {
                 type="button"
                 onClick={loadDatosDePrueba}
                 title="Rellenar con datos de prueba"
-                className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-violet-300/40 bg-violet-500/20 text-violet-100 hover:bg-violet-500/30 transition-colors">
+                className="dash-control hidden items-center gap-1.5 px-3 py-2 text-sm font-semibold sm:inline-flex border-violet-400/40 bg-violet-500/20 text-violet-100 hover:bg-violet-500/30">
                 <Icon icon="typcn:flash" width={16} />
                 <span className="hidden sm:inline">Prueba</span>
               </button>
             )}
-            <button onClick={handleNew}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold rounded-lg border border-white/25 bg-white/10 text-white hover:bg-white/20 transition-colors">
+            <button type="button" onClick={handleNew}
+              className="dash-control inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold">
               <Icon icon="lucide:plus" width={16} /><span className="hidden sm:inline">Nueva</span>
             </button>
-            <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold rounded-lg bg-white text-brand-blue hover:bg-white/95 disabled:opacity-50 transition-colors">
+            <button type="button" onClick={handleSave} disabled={saving}
+              className="dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold disabled:opacity-50">
               {saving
                 ? <><Icon icon="lucide:loader-2" width={16} className="animate-spin" /><span>Guardando...</span></>
                 : <><Icon icon="lucide:save" width={16} /><span>Guardar</span></>}
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* -- Operation link + Template selector -- */}
-      <div className="px-4 py-2.5 bg-[#E8F0FA]/95 border-b border-brand-blue/15 flex-shrink-0 flex flex-col gap-2">
+      <div className="relative z-10 px-4 py-2.5 border-b border-dash-border bg-dash-control/40 flex-shrink-0 flex flex-col gap-2">
 
         {/* Operation search */}
         <div className="relative flex items-center gap-2">
           {opLinked ? (
             <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-base bg-brand-blue/8 border border-brand-blue/20 rounded-lg px-3 py-2">
-                <Icon icon="lucide:link" width={14} className="text-brand-blue flex-shrink-0" />
-                <span className="text-brand-blue font-semibold">{opLinked.ref_asli}</span>
-                <span className="text-brand-blue/80 truncate">- {opLinked.cliente}</span>
-                {linkingOpId && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-brand-blue flex-shrink-0" />}
-                <button type="button" onClick={() => { setOpLinked(null); setHeader(h => ({ ...h, operacion_id: "", ref_asli: "" })); }} className="ml-auto text-brand-blue/60 hover:text-brand-blue flex-shrink-0">
+              <div className="flex items-center gap-2 text-base bg-dash-neon/15 border border-dash-neon/35 rounded-lg px-3 py-2">
+                <Icon icon="lucide:link" width={14} className="text-dash-neon flex-shrink-0" />
+                <span className="text-dash-fg font-semibold">{opLinked.ref_asli}</span>
+                <span className="text-dash-muted truncate">- {opLinked.cliente}</span>
+                {linkingOpId && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-dash-neon flex-shrink-0" />}
+                <button type="button" onClick={() => { setOpLinked(null); setHeader(h => ({ ...h, operacion_id: "", ref_asli: "" })); }} className="ml-auto text-dash-muted hover:text-dash-fg flex-shrink-0">
                   <Icon icon="lucide:x" width={14} />
                 </button>
               </div>
-              <p className="text-base text-brand-blue/70 leading-snug px-0.5">
+              <p className="text-sm text-dash-muted leading-snug px-0.5">
                 Al vincular se cargan datos de la operación, consignatario (si coincide en configuración) y una línea de mercadería cuando hay especie o pesos/cajas.
               </p>
             </div>
           ) : (
             <div className="relative flex-1">
-              <Icon icon="lucide:search" width={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-blue/40" />
+              <Icon icon="lucide:search" width={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-muted" />
               <input value={opQuery} onChange={e => setOpQuery(e.target.value)}
                 placeholder="Buscar operación (ref, cliente, booking)..."
-                className="w-full pl-10 pr-3 py-3 text-lg border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white" />
-              {opLoading && <Icon icon="lucide:loader-2" width={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue/40 animate-spin" />}
+                className="dash-control w-full pl-10 pr-3 py-3 text-lg text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40" />
+              {opLoading && <Icon icon="lucide:loader-2" width={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted animate-spin" />}
               {opResults.length > 0 && (
-                <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-brand-blue/15 rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute z-30 top-full left-0 right-0 mt-1 dash-card rounded-xl overflow-hidden border border-dash-border">
                   {opResults.map(op => (
                     <button key={op.id} type="button" disabled={!!linkingOpId} onClick={() => void linkOperation(op)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-base hover:bg-brand-blue/5 text-left border-b border-neutral-50 last:border-0 disabled:opacity-50">
-                      <span className="font-mono font-semibold text-brand-blue">{op.ref_asli}</span>
-                      <span className="text-neutral-500 flex-1 truncate">{op.cliente}</span>
-                      {op.booking && <span className="text-neutral-400">{op.booking}</span>}
-                      {linkingOpId === op.id && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-brand-blue" />}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-base hover:bg-dash-neon/10 text-left border-b border-dash-border last:border-0 disabled:opacity-50 text-dash-fg">
+                      <span className="font-mono font-semibold text-dash-neon">{op.ref_asli}</span>
+                      <span className="text-dash-muted flex-1 truncate">{op.cliente}</span>
+                      {op.booking && <span className="text-dash-muted/70">{op.booking}</span>}
+                      {linkingOpId === op.id && <Icon icon="lucide:loader-2" width={14} className="animate-spin text-dash-neon" />}
                     </button>
                   ))}
                 </div>
@@ -2472,38 +2484,35 @@ export function CrearProformaContent() {
             </div>
           )}
           <input type="date" value={header.fecha} onChange={e => setH("fecha", e.target.value)}
-            className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2.5 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white flex-shrink-0" />
+            className={inputClass + " flex-shrink-0 w-auto"} />
         </div>
 
         {/* Template selector */}
         <div className="flex items-center gap-3 flex-wrap">
-          <Icon icon="lucide:layout-template" width={18} className="text-brand-blue/50 flex-shrink-0" />
-          <label className="text-base font-semibold text-brand-blue flex-shrink-0">Formato:</label>
+          <Icon icon="lucide:layout-template" width={18} className="text-dash-muted flex-shrink-0" />
+          <label className="text-sm font-semibold text-dash-fg flex-shrink-0">Formato:</label>
           {availableTemplates.length === 0 ? (
-            <span className="text-base text-brand-blue/50 italic">Sin formatos personalizados — se usará PDF estándar</span>
+            <span className="text-sm text-dash-muted italic">Sin formatos personalizados — se usará PDF estándar</span>
           ) : (
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <select
-                value={selectedTemplateId}
-                onChange={e => setSelectedTemplateId(e.target.value)}
-                className="flex-1 min-w-0 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3.5 py-2.5 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white"
-              >
-                <option value="">- PDF estándar -</option>
-                {availableTemplates.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.nombre}
-                    {t.cliente ? ` (${t.cliente})` : " (global)"}
-                    {" - "}
-                    {t.template_type === "excel" ? "Excel" : "HTML/PDF"}
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1 min-w-0">
+                <FormSelect
+                  variant="neon"
+                  value={selectedTemplateId}
+                  onChange={setSelectedTemplateId}
+                  placeholder="- PDF estándar -"
+                  options={availableTemplates.map(t => ({
+                    value: t.id,
+                    label: t.nombre + (t.cliente ? " (" + t.cliente + ")" : " (global)") + " - " + (t.template_type === "excel" ? "Excel" : "HTML/PDF"),
+                  }))}
+                />
+              </div>
               {selectedTemplate && (
-                <span className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${
+                <span className={"flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-sm font-semibold border " + (
                   selectedTemplate.template_type === "excel"
-                    ? "bg-green-50 text-green-700 border-green-200"
-                    : "bg-blue-50 text-blue-700 border-blue-200"
-                }`}>
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/35"
+                    : "bg-sky-500/15 text-sky-300 border-sky-400/35"
+                )}>
                   <Icon icon={selectedTemplate.template_type === "excel" ? "lucide:table" : "lucide:file-text"} width={14} />
                   {selectedTemplate.template_type === "excel" ? "Excel" : "HTML"}
                 </span>
@@ -2511,9 +2520,10 @@ export function CrearProformaContent() {
             </div>
           )}
           <button
+            type="button"
             onClick={handleExportExcel}
             disabled={exporting}
-            className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-base font-semibold rounded-lg bg-brand-blue text-white hover:bg-brand-blue/90 disabled:opacity-50 transition-colors shadow-sm"
+            className="dash-cta flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
           >
             {exporting
               ? <><Icon icon="lucide:loader-2" width={16} className="animate-spin" /><span>Generando...</span></>
@@ -2524,18 +2534,18 @@ export function CrearProformaContent() {
       </div>
 
       {/* -- Tabs -- */}
-      <div className="flex border-b border-brand-blue/15 bg-[#E8F0FA]/95 px-4 flex-shrink-0">
+      <div className="relative z-10 flex border-b border-dash-border bg-dash-control/30 px-4 flex-shrink-0">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-3.5 text-lg font-semibold border-b-2 transition-colors whitespace-nowrap ${
-              tab === t ? "border-brand-blue text-brand-blue" : "border-transparent text-neutral-500 hover:text-brand-blue"}`}>
+          <button key={t} type="button" onClick={() => setTab(t)}
+            className={"px-5 py-3 text-base font-semibold border-b-2 transition-colors whitespace-nowrap " + (
+              tab === t ? "border-dash-neon text-dash-neon" : "border-transparent text-dash-muted hover:text-dash-fg")}>
             {t}
           </button>
         ))}
       </div>
 
       {/* -- Tab Content -- */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="relative z-10 flex-1 overflow-y-auto">
 
         {/* --- Mercadería --- */}
         {tab === "Mercadería" && (
@@ -2543,22 +2553,22 @@ export function CrearProformaContent() {
             {/* Moneda + Cláusula */}
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className={moduleLabel}>Moneda</label>
+                <label className={labelClass}>Moneda</label>
                 <div className="flex gap-1.5">
                   {MONEDAS.map(mn => (
                     <button key={mn} onClick={() => setH("moneda", mn)}
-                      className={`px-4 py-2 text-base font-semibold rounded-lg border transition-colors ${header.moneda === mn ? "bg-brand-blue text-white border-brand-blue" : "border-brand-blue/20 text-brand-blue bg-[#F4F8FC] hover:bg-white"}`}>
+                      className={"px-4 py-2 text-base font-semibold rounded-lg border transition-colors " + (header.moneda === mn ? chipOn : chipOff)}>
                       {mn}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className={moduleLabel}>Cláusula de Venta</label>
+                <label className={labelClass}>Cláusula de Venta</label>
                 <div className="flex gap-1.5 flex-wrap">
                   {CLAUSULAS.map(c => (
                     <button key={c} onClick={() => setH("clausula_venta", c)}
-                      className={`px-4 py-2 text-base font-semibold rounded-lg border transition-colors ${header.clausula_venta === c ? "bg-brand-blue text-white border-brand-blue" : "border-brand-blue/20 text-brand-blue bg-[#F4F8FC] hover:bg-white"}`}>
+                      className={"px-4 py-2 text-base font-semibold rounded-lg border transition-colors " + (header.clausula_venta === c ? chipOn : chipOff)}>
                       {c}
                     </button>
                   ))}
@@ -2574,24 +2584,24 @@ export function CrearProformaContent() {
                 { label: "KG Bruto Total", val: fmtKg(totals.kg_bruto) },
                 { label: `FOB Total (${header.moneda})`, val: fmt(totals.valor, header.moneda), hi: true },
               ].map(s => (
-                <div key={s.label} className={`rounded-2xl border px-4 py-4 flex flex-col gap-1 ${s.hi ? "bg-brand-blue/8 border-brand-blue/25" : "bg-white border-brand-blue/15"}`}>
-                  <span className="text-base font-semibold text-brand-blue/70 uppercase tracking-wide">{s.label}</span>
-                  <span className={`text-2xl font-bold font-mono tabular-nums ${s.hi ? "text-brand-blue" : "text-neutral-800"}`}>{s.val}</span>
+                <div key={s.label} className={"rounded-xl border px-4 py-4 flex flex-col gap-1 " + (s.hi ? "bg-dash-neon/15 border-dash-neon/35" : "dash-card-static border-dash-border")}>
+                  <span className="text-base font-semibold text-dash-muted uppercase tracking-wide">{s.label}</span>
+                  <span className={`text-2xl font-bold font-mono tabular-nums ${s.hi ? "text-dash-neon" : "text-dash-fg"}`}>{s.val}</span>
                 </div>
               ))}
             </div>
 
             {/* Botón agregar fila — prominente, antes de la tabla */}
             <button onClick={addItem}
-              className="flex items-center gap-2 px-5 py-3 text-base font-semibold border-2 border-dashed border-brand-blue/40 text-brand-blue rounded-xl hover:bg-brand-blue/5 hover:border-brand-blue transition-colors self-start">
+              className="flex items-center gap-2 px-5 py-3 text-base font-semibold border-2 border-dashed border-dash-neon/40 text-dash-neon rounded-xl hover:bg-dash-neon/10 hover:border-dash-neon transition-colors self-start">
               <Icon icon="lucide:plus-circle" width={20} />Agregar fila
             </button>
 
             {/* Desktop table */}
-            <div className="hidden md:block rounded-2xl border border-brand-blue/15 bg-white overflow-x-auto shadow-sm">
+            <div className="hidden md:block rounded-xl border border-dash-border bg-dash-control/30 overflow-x-auto">
               <table className="w-full text-base min-w-[960px]">
                 <thead>
-                  <tr className="bg-brand-blue text-white">
+                  <tr className="bg-dash-neon/20 text-dash-fg border-b border-dash-neon/30">
                     {["","#","Especie","Variedad","Tipo Envase","Categoría","Etiqueta","Calibre","KG Neto/Caja","KG Bruto/Caja","Cajas",
                       "KG Neto Total","KG Bruto Total",`Val/Caja (${header.moneda})`,
                       `Val/KG (${header.moneda})`, `Valor Total (${header.moneda})`, ""].map((h,i) => (
@@ -2601,18 +2611,18 @@ export function CrearProformaContent() {
                 </thead>
                 <tbody>
                   {items.map((it, idx) => (
-                    <tr key={it.id} className={idx % 2 === 0 ? "bg-white" : "bg-neutral-50"}>
+                    <tr key={it.id} className={idx % 2 === 0 ? "bg-transparent" : "bg-dash-control/40"}>
                       <td className="px-2 py-2 text-center">
                         <button onClick={() => duplicateItem(it.id)} title="Copiar fila"
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-semibold rounded-lg bg-brand-blue/8 border border-brand-blue/20 text-brand-blue hover:bg-brand-blue/15 transition-colors whitespace-nowrap">
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-semibold rounded-lg bg-dash-neon/15 border border-dash-border text-dash-neon hover:bg-dash-neon/20 transition-colors whitespace-nowrap">
                           <Icon icon="lucide:copy-plus" width={14} />Copiar
                         </button>
                       </td>
-                      <td className="px-2 py-2 text-neutral-400 text-center">{idx+1}</td>
+                      <td className="px-2 py-2 text-dash-muted text-center">{idx+1}</td>
                       {/* Especie — select desde tabla especies */}
                       <td className="px-1.5 py-2">
                         <select value={it.especie} onChange={e => updateItem(it.id, "especie", e.target.value)}
-                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
+                          className={cellInput + " min-w-[90px]"}>
                           <option value="">—</option>
                           {especiesCatalog.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -2621,12 +2631,12 @@ export function CrearProformaContent() {
                       <td className="px-1.5 py-2">
                         <input list="variedades-cereza-list" value={it.variedad}
                           onChange={e => updateItem(it.id, "variedad", e.target.value.toUpperCase())}
-                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base uppercase" />
+                          className={cellInput + " min-w-[90px] uppercase"} />
                       </td>
                       {/* Tipo Envase — select fijo */}
                       <td className="px-1.5 py-2">
                         <select value={it.tipo_envase} onChange={e => updateItem(it.id, "tipo_envase", e.target.value)}
-                          className="w-full min-w-[90px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
+                          className={cellInput + " min-w-[90px]"}>
                           <option value="">—</option>
                           {TIPOS_ENVASE_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -2634,7 +2644,7 @@ export function CrearProformaContent() {
                       {/* Categoría — select fijo */}
                       <td className="px-1.5 py-2">
                         <select value={it.categoria} onChange={e => updateItem(it.id, "categoria", e.target.value)}
-                          className="w-full min-w-[75px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
+                          className={cellInput + " min-w-[75px]"}>
                           <option value="">—</option>
                           {CATEGORIAS_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -2642,12 +2652,12 @@ export function CrearProformaContent() {
                       {/* Etiqueta — texto libre */}
                       <td className="px-1.5 py-2">
                         <input value={it.etiqueta} onChange={e => updateItem(it.id, "etiqueta", e.target.value)}
-                          className="w-full min-w-[70px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base" />
+                          className={cellInput + " min-w-[70px]"} />
                       </td>
                       {/* Calibre — select fijo */}
                       <td className="px-1.5 py-2">
                         <select value={it.calibre} onChange={e => updateItem(it.id, "calibre", e.target.value)}
-                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base">
+                          className={cellInput}>
                           <option value="">—</option>
                           {CALIBRES_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -2655,24 +2665,24 @@ export function CrearProformaContent() {
                       {(["kg_neto_caja","kg_bruto_caja","cantidad_cajas"] as const).map(f => (
                         <td key={f} className="px-1 py-1">
                           <input type="number" value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
-                            className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base text-right" />
+                            className={cellInput + " text-right"} />
                         </td>
                       ))}
-                      <td className="px-2 py-2 text-right font-mono tabular-nums text-neutral-700">{fmtKg(it.kg_neto_total)}</td>
-                      <td className="px-2 py-2 text-right font-mono tabular-nums text-neutral-700">{fmtKg(it.kg_bruto_total)}</td>
+                      <td className="px-2 py-2 text-right font-mono tabular-nums text-dash-fg">{fmtKg(it.kg_neto_total)}</td>
+                      <td className="px-2 py-2 text-right font-mono tabular-nums text-dash-fg">{fmtKg(it.kg_bruto_total)}</td>
                       <td className="px-1.5 py-2">
                         <input type="number" step="any" value={it.valor_caja} onChange={e => updateItem(it.id, "valor_caja", e.target.value)}
-                          className="w-full min-w-[60px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base text-right" />
+                          className={cellInput + " text-right"} />
                       </td>
                       <td className="px-1.5 py-2">
                         <input type="number" step="any" value={valorKiloInputString(it)} onChange={e => updateItem(it.id, "valor_kilo", e.target.value)}
-                          className="w-full min-w-[56px] border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded px-1.5 py-1.5 text-base text-right font-mono tabular-nums" />
+                          className={cellInput + " min-w-[56px] text-right font-mono tabular-nums"} />
                       </td>
-                      <td className="px-2 py-2 text-right font-mono tabular-nums font-semibold text-neutral-800">{fmt(it.valor_total, header.moneda)}</td>
+                      <td className="px-2 py-2 text-right font-mono tabular-nums font-semibold text-dash-fg">{fmt(it.valor_total, header.moneda)}</td>
                       <td className="px-1 py-1 text-center">
                         {items.length > 1 && (
                           <button onClick={() => removeItem(it.id)} title="Eliminar fila"
-                            className="text-neutral-300 hover:text-red-500 transition-colors">
+                            className="text-dash-muted/60 hover:text-red-500 transition-colors">
                             <Icon icon="lucide:trash-2" width={14} />
                           </button>
                         )}
@@ -2680,19 +2690,19 @@ export function CrearProformaContent() {
                     </tr>
                   ))}
                   {/* Totals — colSpan debe cuadrar exactamente con las 16 columnas */}
-                  <tr className="bg-brand-blue/8 border-t-2 border-brand-blue/25">
+                  <tr className="bg-dash-neon/15 border-t-2 border-dash-neon/35">
                     {/* cols 0-9: Copiar, #, Especie, Variedad, Tipo Envase, Categoría, Etiqueta, Calibre, KG Neto/Caja, KG Bruto/Caja */}
-                    <td colSpan={10} className="px-2.5 py-3 text-right text-base font-bold text-brand-blue">TOTAL</td>
+                    <td colSpan={10} className="px-2.5 py-3 text-right text-base font-bold text-dash-neon">TOTAL</td>
                     {/* col 10: Cajas */}
-                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-brand-blue">{totals.cajas.toLocaleString()}</td>
+                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-dash-neon">{totals.cajas.toLocaleString()}</td>
                     {/* col 11: KG Neto Total */}
-                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-brand-blue">{fmtKg(totals.kg_neto)}</td>
+                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-dash-neon">{fmtKg(totals.kg_neto)}</td>
                     {/* col 12: KG Bruto Total */}
-                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-brand-blue">{fmtKg(totals.kg_bruto)}</td>
+                    <td className="px-2.5 py-3 text-right text-base font-bold font-mono text-dash-neon">{fmtKg(totals.kg_bruto)}</td>
                     {/* cols 13-14: Val/Caja + Val/KG — vacíos */}
                     <td colSpan={2} />
                     {/* col 15: Valor Total */}
-                    <td className="px-2.5 py-3 text-right text-lg font-bold font-mono text-brand-blue">{fmt(totals.valor, header.moneda)}</td>
+                    <td className="px-2.5 py-3 text-right text-lg font-bold font-mono text-dash-neon">{fmt(totals.valor, header.moneda)}</td>
                     {/* col 16: trash — vacío */}
                     <td />
                   </tr>
@@ -2703,51 +2713,51 @@ export function CrearProformaContent() {
             {/* Mobile cards */}
             <div className="md:hidden flex flex-col gap-3">
               {items.map((it, idx) => (
-                <div key={it.id} className="bg-white rounded-xl border border-neutral-200 p-3 flex flex-col gap-2">
+                <div key={it.id} className="dash-card-static rounded-xl border border-dash-border p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-bold text-brand-blue/60 uppercase">Ítem {idx+1}</span>
-                    {items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-neutral-300 hover:text-red-500"><Icon icon="lucide:trash-2" width={13} /></button>}
+                    <span className="text-base font-bold text-dash-muted uppercase">Ítem {idx+1}</span>
+                    {items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-dash-muted/60 hover:text-red-500"><Icon icon="lucide:trash-2" width={13} /></button>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">Especie</label>
+                      <label className="text-sm font-semibold text-dash-muted">Especie</label>
                       <select value={it.especie} onChange={e => updateItem(it.id, "especie", e.target.value)}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40">
                         <option value="">—</option>
                         {especiesCatalog.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">Variedad</label>
+                      <label className="text-sm font-semibold text-dash-muted">Variedad</label>
                       <input list="variedades-cereza-list" value={it.variedad}
                         onChange={e => updateItem(it.id, "variedad", e.target.value.toUpperCase())}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white uppercase" />
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40 uppercase" />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">Tipo Envase</label>
+                      <label className="text-sm font-semibold text-dash-muted">Tipo Envase</label>
                       <select value={it.tipo_envase} onChange={e => updateItem(it.id, "tipo_envase", e.target.value)}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40">
                         <option value="">—</option>
                         {TIPOS_ENVASE_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">Categoría</label>
+                      <label className="text-sm font-semibold text-dash-muted">Categoría</label>
                       <select value={it.categoria} onChange={e => updateItem(it.id, "categoria", e.target.value)}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40">
                         <option value="">—</option>
                         {CATEGORIAS_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">Etiqueta</label>
+                      <label className="text-sm font-semibold text-dash-muted">Etiqueta</label>
                       <input value={it.etiqueta} onChange={e => updateItem(it.id, "etiqueta", e.target.value)}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white" />
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40" />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">Calibre</label>
+                      <label className="text-sm font-semibold text-dash-muted">Calibre</label>
                       <select value={it.calibre} onChange={e => updateItem(it.id, "calibre", e.target.value)}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white">
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40">
                         <option value="">—</option>
                         {CALIBRES_CEREZA.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
@@ -2756,44 +2766,44 @@ export function CrearProformaContent() {
                   <div className="grid grid-cols-2 gap-2">
                     {([["kg_neto_caja","KG Neto/Caja"],["kg_bruto_caja","KG Bruto/Caja"],["cantidad_cajas","Cajas"],["valor_caja",`Val/Caja (${header.moneda})`]] as const).map(([f,lbl]) => (
                       <div key={f} className="flex flex-col gap-0.5">
-                        <label className="text-sm font-semibold text-brand-blue">{lbl}</label>
+                        <label className="text-sm font-semibold text-dash-muted">{lbl}</label>
                         <input type="number" step="any" value={it[f]} onChange={e => updateItem(it.id, f, e.target.value)}
-                          className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue text-right focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white" />
+                          className="dash-control w-full px-3 py-2 text-base text-dash-fg text-right focus:outline-none focus:ring-2 focus:ring-dash-neon/40" />
                       </div>
                     ))}
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">{`Val/KG (${header.moneda})`}</label>
+                      <label className="text-sm font-semibold text-dash-muted">{`Val/KG (${header.moneda})`}</label>
                       <input type="number" step="any" value={valorKiloInputString(it)} onChange={e => updateItem(it.id, "valor_kilo", e.target.value)}
-                        className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3 py-2 text-base text-brand-blue text-right focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white font-mono" />
+                        className="dash-control w-full px-3 py-2 text-base text-dash-fg text-right focus:outline-none focus:ring-2 focus:ring-dash-neon/40 font-mono" />
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">KG Neto Total</label>
-                      <p className="border border-brand-blue/10 rounded-lg px-3 py-2.5 text-base text-right bg-[#F4F8FC] font-mono text-brand-blue">{fmtKg(it.kg_neto_total)}</p>
+                      <label className="text-sm font-semibold text-dash-muted">KG Neto Total</label>
+                      <p className="border border-dash-border rounded-lg px-3 py-2.5 text-base text-right bg-dash-control font-mono text-dash-neon">{fmtKg(it.kg_neto_total)}</p>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <label className="text-sm font-semibold text-brand-blue">KG Bruto Total</label>
-                      <p className="border border-brand-blue/10 rounded-lg px-3 py-2.5 text-base text-right bg-[#F4F8FC] font-mono text-brand-blue">{fmtKg(it.kg_bruto_total)}</p>
+                      <label className="text-sm font-semibold text-dash-muted">KG Bruto Total</label>
+                      <p className="border border-dash-border rounded-lg px-3 py-2.5 text-base text-right bg-dash-control font-mono text-dash-neon">{fmtKg(it.kg_bruto_total)}</p>
                     </div>
                     <div className="flex flex-col gap-0.5 col-span-2">
-                      <label className="text-sm font-semibold text-brand-blue">Valor Total ({header.moneda})</label>
-                      <p className="border border-brand-blue/20 rounded-lg px-3 py-2.5 text-base text-right bg-brand-blue/8 font-mono font-bold text-brand-blue">{fmt(it.valor_total, header.moneda)}</p>
+                      <label className="text-sm font-semibold text-dash-muted">Valor Total ({header.moneda})</label>
+                      <p className="border border-dash-border rounded-lg px-3 py-2.5 text-base text-right bg-dash-neon/15 font-mono font-bold text-dash-neon">{fmt(it.valor_total, header.moneda)}</p>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="bg-brand-blue/8 border border-brand-blue/20 rounded-xl px-4 py-4 grid grid-cols-2 gap-3 text-base">
-                <div><span className="text-neutral-500">Cajas:</span> <span className="font-bold text-brand-blue">{totals.cajas.toLocaleString()}</span></div>
-                <div><span className="text-neutral-500">KG Neto:</span> <span className="font-bold text-brand-blue">{fmtKg(totals.kg_neto)}</span></div>
-                <div><span className="text-neutral-500">KG Bruto:</span> <span className="font-bold text-brand-blue">{fmtKg(totals.kg_bruto)}</span></div>
-                <div><span className="text-neutral-500">FOB Total:</span> <span className="font-bold text-brand-blue">{fmt(totals.valor, header.moneda)} {header.moneda}</span></div>
+              <div className="bg-dash-neon/15 border border-dash-border rounded-xl px-4 py-4 grid grid-cols-2 gap-3 text-base">
+                <div><span className="text-dash-muted">Cajas:</span> <span className="font-bold text-dash-neon">{totals.cajas.toLocaleString()}</span></div>
+                <div><span className="text-dash-muted">KG Neto:</span> <span className="font-bold text-dash-neon">{fmtKg(totals.kg_neto)}</span></div>
+                <div><span className="text-dash-muted">KG Bruto:</span> <span className="font-bold text-dash-neon">{fmtKg(totals.kg_bruto)}</span></div>
+                <div><span className="text-dash-muted">FOB Total:</span> <span className="font-bold text-dash-neon">{fmt(totals.valor, header.moneda)} {header.moneda}</span></div>
               </div>
             </div>
 
             <div className="flex flex-col gap-0.5">
-              <label className="text-base font-semibold text-brand-blue">Observaciones</label>
+              <label className={labelClass}>Observaciones</label>
               <textarea value={header.observaciones} onChange={e => setH("observaciones", e.target.value)}
                 rows={2} placeholder="Notas o condiciones especiales..."
-                className="border border-brand-blue/20 bg-[#F4F8FC] rounded-lg px-3.5 py-3 text-base text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:bg-white resize-none" />
+                className={inputClass + " resize-none"} />
             </div>
           </div>
         )}
@@ -2801,19 +2811,20 @@ export function CrearProformaContent() {
         {/* --- Partes --- */}
         {tab === "Partes" && (
           <div className="p-5 flex flex-col gap-8 w-full">
-            <p className="text-sm text-neutral-600 -mt-1">
+            <p className="text-sm text-dash-muted -mt-1">
               Elige desde el catálogo o escribe a mano. Si el nombre no existe, puedes agregarlo a la base de datos para usarlo después.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-3">
-                <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
-                  <Icon icon="lucide:building-2" width={18} className="text-brand-blue" />Exportador
+                <h3 className="text-lg font-bold text-dash-fg tracking-wide flex items-center gap-2">
+                  <Icon icon="lucide:building-2" width={18} className="text-dash-neon" />Exportador
                 </h3>
                 <ComboboxInput
+                  neon
                   label="Nombre / Razón Social"
-                  labelClass={moduleLabel}
-                  inputClass={moduleInput}
+                  labelClass={labelClass}
+                  inputClass={inputClass}
                   placeholder="Buscar o escribir empresa…"
                   value={header.exportador}
                   options={empresasOpts}
@@ -2828,13 +2839,14 @@ export function CrearProformaContent() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
-                  <Icon icon="lucide:globe" width={18} className="text-brand-blue" />Consignee / Importador
+                <h3 className="text-lg font-bold text-dash-fg tracking-wide flex items-center gap-2">
+                  <Icon icon="lucide:globe" width={18} className="text-dash-neon" />Consignee / Importador
                 </h3>
                 <ComboboxInput
+                  neon
                   label="Nombre / Razón Social"
-                  labelClass={moduleLabel}
-                  inputClass={moduleInput}
+                  labelClass={labelClass}
+                  inputClass={inputClass}
                   placeholder="Buscar o escribir consignatario…"
                   value={header.importador}
                   options={consignatarioOpts}
@@ -2854,11 +2866,11 @@ export function CrearProformaContent() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-brand-blue/15 pt-6">
-              <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
-                <Icon icon="lucide:bell" width={18} className="text-brand-blue" />Notify Party
+            <div className="flex flex-col gap-3 border-t border-dash-border pt-6">
+              <h3 className="text-lg font-bold text-dash-fg tracking-wide flex items-center gap-2">
+                <Icon icon="lucide:bell" width={18} className="text-dash-neon" />Notify Party
               </h3>
-              <p className="text-sm text-neutral-500 -mt-1">
+              <p className="text-sm text-dash-muted -mt-1">
                 Se rellena al elegir un consignatario del catálogo; también puedes editarlo a mano.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -2876,14 +2888,15 @@ export function CrearProformaContent() {
         {/* --- Embarque --- */}
         {tab === "Embarque" && (
           <div className="p-5 flex flex-col gap-4 w-full">
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-dash-muted">
               Al vincular una operación se precargan estos datos. También puedes elegir del catálogo, escribir a mano o crear registros nuevos.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <ComboboxInput
+                  neon
                 label="Puerto de Embarque"
-                labelClass={moduleLabel}
-                inputClass={moduleInput}
+                labelClass={labelClass}
+                inputClass={inputClass}
                 placeholder="Buscar POL…"
                 value={header.puerto_origen}
                 options={puertosOrigenOpts}
@@ -2894,9 +2907,10 @@ export function CrearProformaContent() {
                 addingNew={addingPuertoOrigen}
               />
               <ComboboxInput
+                  neon
                 label="Puerto de Descarga"
-                labelClass={moduleLabel}
-                inputClass={moduleInput}
+                labelClass={labelClass}
+                inputClass={inputClass}
                 placeholder="Buscar POD…"
                 value={header.puerto_destino}
                 options={destinosOpts}
@@ -2907,9 +2921,10 @@ export function CrearProformaContent() {
                 addingNew={addingDestinoPod}
               />
               <ComboboxInput
+                  neon
                 label="Destino Final"
-                labelClass={moduleLabel}
-                inputClass={moduleInput}
+                labelClass={labelClass}
+                inputClass={inputClass}
                 placeholder="Ciudad / país final…"
                 value={header.destino}
                 options={destinosOpts}
@@ -2929,9 +2944,10 @@ export function CrearProformaContent() {
               {inp("ETD", "etd", { type: "date" })}
               {inp("ETA", "eta", { type: "date" })}
               <ComboboxInput
+                  neon
                 label="Forma de Pago"
-                labelClass={moduleLabel}
-                inputClass={moduleInput}
+                labelClass={labelClass}
+                inputClass={inputClass}
                 placeholder="PREPAID / crédito…"
                 value={header.forma_pago}
                 options={formasPagoOpts}
@@ -2940,9 +2956,10 @@ export function CrearProformaContent() {
               />
               {inp("Contenedor", "contenedor", { placeholder: "TCKU1234567" })}
               <ComboboxInput
+                  neon
                 label="Naviera"
-                labelClass={moduleLabel}
-                inputClass={moduleInput}
+                labelClass={labelClass}
+                inputClass={inputClass}
                 placeholder="Buscar naviera…"
                 value={header.naviera}
                 options={navierasOpts}
@@ -2953,9 +2970,10 @@ export function CrearProformaContent() {
                 addingNew={addingNaviera}
               />
               <ComboboxInput
+                  neon
                 label="Nave / Buque"
-                labelClass={moduleLabel}
-                inputClass={moduleInput}
+                labelClass={labelClass}
+                inputClass={inputClass}
                 placeholder="Buscar nave…"
                 value={header.nave}
                 options={navesFilteredOpts}
@@ -2969,11 +2987,13 @@ export function CrearProformaContent() {
               {inp("Booking", "booking", { placeholder: "HAP1234567" })}
               {inp("Ref. ASLI", "ref_asli", { placeholder: "ASLI-2026-001" })}
               <div className="flex flex-col gap-1.5">
-                <label className={moduleLabel}>Cláusula de Venta</label>
-                <select value={header.clausula_venta} onChange={e => setH("clausula_venta", e.target.value)}
-                  className={moduleInput}>
-                  {CLAUSULAS.map(c => <option key={c}>{c}</option>)}
-                </select>
+                <label className={labelClass}>Cláusula de Venta</label>
+                <FormSelect
+                  variant="neon"
+                  value={header.clausula_venta}
+                  onChange={(v) => setH("clausula_venta", v)}
+                  options={CLAUSULAS.map(c => ({ value: c, label: c }))}
+                />
               </div>
             </div>
           </div>
@@ -2982,8 +3002,8 @@ export function CrearProformaContent() {
         {/* --- Documentos --- */}
         {tab === "Documentos" && (
           <div className="p-5 flex flex-col gap-4 w-full">
-            <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
-              <Icon icon="lucide:file-check-2" width={18} className="text-brand-blue" />Documentos de Exportación
+            <h3 className="text-lg font-bold text-dash-fg tracking-wide flex items-center gap-2">
+              <Icon icon="lucide:file-check-2" width={18} className="text-dash-neon" />Documentos de Exportación
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {inp("DUS", "dus", { placeholder: "DUS-2026-0001" })}
@@ -2996,26 +3016,26 @@ export function CrearProformaContent() {
         {/* --- Etiquetas (plantilla) --- */}
         {tab === "Etiquetas" && (
           <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6 w-full items-start">
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
-              <h3 className="text-lg font-bold text-indigo-900 tracking-wide flex items-center gap-2">
-                <Icon icon="lucide:scan-search" width={16} className="text-indigo-700" />
+            <div className="rounded-xl border border-dash-neon/30 bg-dash-neon/10 p-5">
+              <h3 className="text-lg font-bold text-dash-fg tracking-wide flex items-center gap-2">
+                <Icon icon="lucide:scan-search" width={16} className="text-dash-neon" />
                 Detectadas en tu formato
               </h3>
-              <p className="text-sm text-indigo-900/70 mt-1.5">
+              <p className="text-sm text-dash-muted mt-1.5">
                 Coinciden con el motor de reemplazo al exportar (verde). Ámbar: la plantilla pide una etiqueta que el sistema aún no sustituye; revísala o pide soporte.
               </p>
               {loadingTemplateTags ? (
-                <div className="flex items-center gap-2 text-sm text-indigo-800 mt-3">
+                <div className="flex items-center gap-2 text-sm text-dash-muted mt-3">
                   <Icon icon="lucide:loader-2" width={16} className="animate-spin" />
                   Analizando plantilla…
                 </div>
               ) : !selectedTemplate ? (
-                <p className="text-sm text-indigo-900/75 mt-3">
+                <p className="text-sm text-dash-muted mt-3">
                   Sin formato personalizado seleccionado (PDF estándar). Elige un HTML o Excel arriba para listar solo las etiquetas que usa ese archivo.
                 </p>
               ) : templateTagsDetected.length === 0 ? (
-                <p className="text-sm text-indigo-900/75 mt-3">
-                  No aparecen celdas o textos con <code className="font-mono text-sm bg-white/80 px-1 rounded border border-indigo-100">{"{{etiqueta}}"}</code>
+                <p className="text-sm text-dash-muted mt-3">
+                  No aparecen celdas o textos con <code className="font-mono text-sm bg-dash-control px-1 rounded border border-dash-border">{"{{etiqueta}}"}</code>
                   . Usa la referencia de abajo al diseñar el formato.
                 </p>
               ) : (
@@ -3029,7 +3049,7 @@ export function CrearProformaContent() {
                       <li
                         key={tag}
                         className={`inline-flex flex-col gap-1 rounded-lg border px-3 py-2 text-left max-w-[300px] ${
-                          recognized ? "border-emerald-200 bg-white" : "border-amber-300 bg-amber-50"
+                          recognized ? "border-emerald-400/35 bg-dash-control/60" : "border-amber-400/35 bg-amber-500/10"
                         }`}
                       >
                         <div className="flex items-center gap-1.5">
@@ -3037,24 +3057,24 @@ export function CrearProformaContent() {
                           <button
                             type="button"
                             onClick={() => void copyTag(tag)}
-                            className="flex-shrink-0 text-indigo-600 hover:text-indigo-800 p-0.5 rounded transition-colors"
+                            className="flex-shrink-0 text-dash-neon hover:text-dash-fg p-0.5 rounded transition-colors"
                             title="Copiar"
                           >
                             <Icon icon="lucide:copy" width={14} />
                           </button>
                         </div>
                         {recognized && innerM && previewLookup.has(normalizeTagInner(innerM[1])) && (
-                          <span className="text-sm text-neutral-500 truncate" title={preview ?? ""}>
+                          <span className="text-sm text-dash-muted truncate" title={preview ?? ""}>
                             → {preview === "" || preview === undefined ? "-" : preview}
                           </span>
                         )}
                         {!recognized && suggestion && (
                           <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-sm text-amber-800">Usa:</span>
+                            <span className="text-sm text-amber-200">Usa:</span>
                             <button
                               type="button"
                               onClick={() => void copyTag(suggestion)}
-                              className="inline-flex items-center gap-1 font-mono text-sm bg-white border border-emerald-300 text-emerald-800 rounded px-1.5 py-0.5 hover:bg-emerald-50 transition-colors"
+                              className="inline-flex items-center gap-1 font-mono text-sm bg-dash-control border border-emerald-400/40 text-emerald-300 rounded px-1.5 py-0.5 hover:bg-emerald-500/15 transition-colors"
                               title="Copiar etiqueta sugerida"
                             >
                               {suggestion}
@@ -3063,7 +3083,7 @@ export function CrearProformaContent() {
                           </div>
                         )}
                         {!recognized && !suggestion && (
-                          <span className="text-sm text-amber-800 font-medium">Sin equivalente conocido</span>
+                          <span className="text-sm text-amber-200 font-medium">Sin equivalente conocido</span>
                         )}
                       </li>
                     );
@@ -3072,32 +3092,32 @@ export function CrearProformaContent() {
               )}
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-white p-5">
-              <h3 className="text-lg font-bold text-brand-blue tracking-wide flex items-center gap-2">
-                <Icon icon="lucide:tags" width={16} className="text-emerald-600" />
+            <div className="dash-card-static rounded-xl border border-dash-border p-5">
+              <h3 className="text-lg font-bold text-dash-fg tracking-wide flex items-center gap-2">
+                <Icon icon="lucide:tags" width={16} className="text-emerald-300" />
                 Referencia: etiquetas disponibles
               </h3>
-              <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
+              <p className="text-sm text-dash-muted mt-2 leading-relaxed">
                 {PROFORMA_ITEM_EXCEL_NOTE} En HTML, envuelve filas repetibles entre{" "}
-                <code className="font-mono text-sm bg-neutral-100 px-1 rounded">{"{{#items}}"}</code> y{" "}
-                <code className="font-mono text-sm bg-neutral-100 px-1 rounded">{"{{/items}}"}</code> y usa las etiquetas de fila indicadas abajo.
+                <code className="font-mono text-sm bg-dash-control px-1 rounded">{"{{#items}}"}</code> y{" "}
+                <code className="font-mono text-sm bg-dash-control px-1 rounded">{"{{/items}}"}</code> y usa las etiquetas de fila indicadas abajo.
               </p>
               <div className="mt-4 flex flex-col gap-4">
                 {PROFORMA_TAG_CATALOG.map(grp => (
-                  <div key={grp.group} className="border border-neutral-100 rounded-lg overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-neutral-50 border-b border-neutral-100">
-                      <Icon icon={grp.icon} width={15} className="text-neutral-500" />
-                      <span className="text-base font-bold text-brand-blue tracking-wide">{grp.group}</span>
+                  <div key={grp.group} className="border border-dash-border rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-dash-control/50 border-b border-dash-border">
+                      <Icon icon={grp.icon} width={15} className="text-dash-muted" />
+                      <span className="text-base font-bold text-dash-neon tracking-wide">{grp.group}</span>
                     </div>
-                    <ul className="divide-y divide-neutral-50">
+                    <ul className="divide-y divide-dash-border">
                       {grp.entries.map(e => (
-                        <li key={e.tag} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50/80">
-                          <code className="font-mono text-sm text-emerald-800 flex-shrink-0 break-all">{e.tag}</code>
-                          <span className="text-sm text-neutral-600 flex-1 min-w-0">{e.label}</span>
+                        <li key={e.tag} className="flex items-center gap-3 px-4 py-2.5 hover:bg-dash-control/50/80">
+                          <code className="font-mono text-sm text-emerald-300 flex-shrink-0 break-all">{e.tag}</code>
+                          <span className="text-sm text-dash-muted flex-1 min-w-0">{e.label}</span>
                           <button
                             type="button"
                             onClick={() => void copyTag(e.tag)}
-                            className="flex-shrink-0 text-indigo-600 hover:text-indigo-800 p-1 rounded transition-colors"
+                            className="flex-shrink-0 text-dash-neon hover:text-dash-fg p-1 rounded transition-colors"
                             title="Copiar etiqueta"
                           >
                             <Icon icon="lucide:copy" width={15} />
@@ -3107,21 +3127,21 @@ export function CrearProformaContent() {
                     </ul>
                   </div>
                 ))}
-                <div className="border border-neutral-100 rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-neutral-50 border-b border-neutral-100">
-                    <Icon icon="lucide:list" width={15} className="text-neutral-500" />
-                    <span className="text-base font-bold text-brand-blue tracking-wide">Dentro de {"{{#items}}"} (HTML)</span>
+                <div className="border border-dash-border rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-dash-control/50 border-b border-dash-border">
+                    <Icon icon="lucide:list" width={15} className="text-dash-muted" />
+                    <span className="text-base font-bold text-dash-neon tracking-wide">Dentro de {"{{#items}}"} (HTML)</span>
                   </div>
-                  <ul className="divide-y divide-neutral-50">
+                  <ul className="divide-y divide-dash-border">
                     {PROFORMA_ITEM_ROW_HTML_TAGS.map(e => (
-                      <li key={e.tag} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50/80">
-                        <code className="font-mono text-sm text-blue-800 flex-shrink-0 break-all">{e.tag}</code>
-                        <span className="text-sm text-neutral-600 flex-1 min-w-0">{e.label}</span>
+                      <li key={e.tag} className="flex items-center gap-3 px-4 py-2.5 hover:bg-dash-control/50/80">
+                        <code className="font-mono text-sm text-sky-300 flex-shrink-0 break-all">{e.tag}</code>
+                        <span className="text-sm text-dash-muted flex-1 min-w-0">{e.label}</span>
                         {!e.tag.includes("…") && (
                           <button
                             type="button"
                             onClick={() => void copyTag(e.tag)}
-                            className="flex-shrink-0 text-indigo-600 hover:text-indigo-800 p-1 rounded transition-colors"
+                            className="flex-shrink-0 text-dash-neon hover:text-dash-fg p-1 rounded transition-colors"
                             title="Copiar"
                           >
                             <Icon icon="lucide:copy" width={15} />
@@ -3137,26 +3157,32 @@ export function CrearProformaContent() {
         )}
       </div>
 
+
+      </main>
+
       {/* -- Success Modal -- */}
       {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-              <Icon icon="lucide:check-circle-2" width={28} className="text-emerald-600" />
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral-800 text-base">¡Proforma guardada!</h3>
-              <p className="text-sm text-neutral-500 mt-1">{header.numero} registrada correctamente.</p>
-            </div>
-            <div className="flex gap-2 w-full">
-              <button onClick={handleExportExcel}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-                <Icon icon="lucide:file-spreadsheet" width={14} />Generar Proforma
-              </button>
-              <button onClick={() => setShowSuccess(false)}
-                className="flex-1 px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-                Continuar
-              </button>
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+            <div className="p-6 flex flex-col gap-4 items-center text-center">
+              <div className="w-12 h-12 rounded-xl border border-emerald-400/35 bg-emerald-500/15 flex items-center justify-center">
+                <Icon icon="lucide:check-circle-2" width={28} className="text-emerald-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-dash-fg text-base">¡Proforma guardada!</h3>
+                <p className="text-sm text-dash-muted mt-1">{header.numero} registrada correctamente.</p>
+              </div>
+              <div className="flex gap-2 w-full">
+                <button type="button" onClick={handleExportExcel}
+                  className="dash-cta flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold">
+                  <Icon icon="lucide:file-spreadsheet" width={14} />Generar Proforma
+                </button>
+                <button type="button" onClick={() => setShowSuccess(false)}
+                  className="dash-control flex-1 px-4 py-2 text-sm font-semibold">
+                  Continuar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -3164,54 +3190,58 @@ export function CrearProformaContent() {
 
       {/* -- Error Modal -- */}
       {showError && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-              <Icon icon="lucide:alert-circle" width={28} className="text-red-500" />
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="h-[3px] bg-gradient-to-r from-red-500 to-dash-neon-hot" />
+            <div className="p-6 flex flex-col gap-4 items-center text-center">
+              <div className="w-12 h-12 rounded-xl border border-red-400/35 bg-red-500/15 flex items-center justify-center">
+                <Icon icon="lucide:alert-circle" width={28} className="text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-dash-fg text-base">Error</h3>
+                <p className="text-sm text-dash-muted mt-1">{showError}</p>
+              </div>
+              <button type="button" onClick={() => setShowError(null)}
+                className="dash-cta w-full px-4 py-2 text-sm font-semibold">
+                Entendido
+              </button>
             </div>
-            <div>
-              <h3 className="font-bold text-neutral-800 text-base">Error</h3>
-              <p className="text-sm text-neutral-500 mt-1">{showError}</p>
-            </div>
-            <button onClick={() => setShowError(null)}
-              className="w-full px-4 py-2 text-sm font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-              Entendido
-            </button>
           </div>
         </div>
       )}
 
       {/* -- Proformas List Modal -- */}
       {showList && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-              <h3 className="font-bold text-neutral-800 text-xl">Proformas emitidas</h3>
-              <button onClick={() => setShowList(false)} className="text-neutral-400 hover:text-neutral-600"><Icon icon="lucide:x" width={20} /></button>
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden rounded-2xl">
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot shrink-0" />
+            <div className="flex items-center justify-between px-5 py-4 border-b border-dash-border">
+              <h3 className="font-bold text-dash-fg text-xl">Proformas emitidas</h3>
+              <button type="button" onClick={() => setShowList(false)} className="text-dash-muted hover:text-dash-fg"><Icon icon="lucide:x" width={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {loadingList
-                ? <div className="flex justify-center py-8"><Icon icon="lucide:loader-2" width={20} className="animate-spin text-neutral-400" /></div>
+                ? <div className="flex justify-center py-8"><Icon icon="lucide:loader-2" width={20} className="animate-spin text-dash-neon" /></div>
                 : proformas.length === 0
-                  ? <p className="text-center text-base text-neutral-400 py-8">No hay proformas registradas.</p>
+                  ? <p className="text-center text-base text-dash-muted py-8">No hay proformas registradas.</p>
                   : (
                     <table className="w-full text-base">
-                      <thead className="bg-[#E8F0FA] sticky top-0">
+                      <thead className="bg-dash-control/60 sticky top-0">
                         <tr>{["N°","Ref. ASLI","Importador","Fecha","Total FOB",""].map(h => (
-                          <th key={h} className="px-4 py-3 text-left font-bold text-brand-blue text-sm">{h}</th>
+                          <th key={h} className="px-4 py-3 text-left font-bold text-dash-neon text-sm">{h}</th>
                         ))}</tr>
                       </thead>
                       <tbody>
                         {proformas.map(pf => (
-                          <tr key={pf.id} className="border-t border-neutral-100 hover:bg-brand-blue/5">
-                            <td className="px-4 py-3 font-mono font-semibold text-brand-blue">{pf.numero}</td>
-                            <td className="px-4 py-3 text-neutral-600">{pf.ref_asli ?? "-"}</td>
-                            <td className="px-4 py-3 text-neutral-700 max-w-[160px] truncate">{pf.importador ?? "-"}</td>
-                            <td className="px-4 py-3 text-neutral-500">{pf.fecha}</td>
-                            <td className="px-4 py-3 font-mono font-semibold">{fmt(pf.total_valor ?? 0, pf.moneda ?? "USD")} {pf.moneda}</td>
+                          <tr key={pf.id} className="border-t border-dash-border hover:bg-dash-neon/10">
+                            <td className="px-4 py-3 font-mono font-semibold text-dash-neon">{pf.numero}</td>
+                            <td className="px-4 py-3 text-dash-muted">{pf.ref_asli ?? "-"}</td>
+                            <td className="px-4 py-3 text-dash-fg max-w-[160px] truncate">{pf.importador ?? "-"}</td>
+                            <td className="px-4 py-3 text-dash-muted">{pf.fecha}</td>
+                            <td className="px-4 py-3 font-mono font-semibold text-dash-fg">{fmt(pf.total_valor ?? 0, pf.moneda ?? "USD")} {pf.moneda}</td>
                             <td className="px-4 py-2">
-                              <button onClick={() => loadProforma(pf.id)}
-                                className="px-3 py-2 text-base font-semibold border border-brand-blue/20 text-brand-blue rounded-lg hover:bg-brand-blue/8 transition-colors">
+                              <button type="button" onClick={() => loadProforma(pf.id)}
+                                className="dash-control px-3 py-2 text-base font-semibold">
                                 Abrir
                               </button>
                             </td>

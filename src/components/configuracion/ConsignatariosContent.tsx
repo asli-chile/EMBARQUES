@@ -6,15 +6,8 @@ import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleLabel,
-  moduleInput,
-  moduleBtnPrimary,
-  moduleBtnOnHero,
-  moduleCard,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { FormSelect } from "@/components/ui/FormSelect";
 
 type Cliente = { id: string; nombre: string };
 
@@ -63,11 +56,16 @@ const emptyForm = (): Omit<Consignatario, "id"> => ({
   notas: "",
 });
 
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
+const neonLabel = "block text-sm font-semibold text-dash-muted mb-1.5";
+
 export function ConsignatariosContent() {
   const { isSuperadmin, isAdmin } = useAuth();
   const { t } = useLocale();
   const tr = t.consignatarios;
   const canEdit = isSuperadmin || isAdmin;
+  const [theme] = useNeonTheme();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [consignatarios, setConsignatarios] = useState<Consignatario[]>([]);
@@ -194,321 +192,381 @@ export function ConsignatariosContent() {
 
   const inp = (label: string, field: keyof typeof form, type: string = "text", multiline = false) => (
     <div className="flex flex-col gap-1">
-      <label className={moduleLabel}>{label}</label>
+      <label className={neonLabel}>{label}</label>
       {multiline ? (
         <textarea
           value={(form[field] as string) ?? ""}
           onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
           rows={3}
-          className={`${moduleInput} resize-none`}
+          className={`${neonInput} resize-none`}
         />
       ) : (
         <input
           type={type}
           value={(form[field] as string) ?? ""}
           onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-          className={moduleInput}
+          className={neonInput}
         />
       )}
     </div>
   );
 
   return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`}>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-      {/* ── Hero header ── */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:contact" width={24} height={24} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">{tr.title}</h1>
-              <p className="text-base text-white/75 mt-1 hidden sm:block">{tr.subtitle}</p>
-              {!loading && (
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:users" width={12} height={12} />
-                    {filtered.length} {filtered.length !== 1 ? tr.resultados : tr.resultado}
-                  </span>
-                  {!showInactive && consignatarios.filter(c => !c.activo).length > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold bg-white/10 text-white/60 border border-white/15">
-                      {consignatarios.filter(c => !c.activo).length} {tr.inactivosLabel}
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:contact" width={22} height={22} className="text-dash-neon" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+                {!loading && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-xs font-semibold text-dash-fg">
+                      <Icon icon="lucide:users" width={12} height={12} />
+                      {filtered.length} {filtered.length !== 1 ? tr.resultados : tr.resultado}
                     </span>
-                  )}
-                </div>
-              )}
+                    {!showInactive && consignatarios.filter((c) => !c.activo).length > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-dash-border bg-dash-control px-2 py-0.5 text-xs font-semibold text-dash-muted">
+                        {consignatarios.filter((c) => !c.activo).length} {tr.inactivosLabel}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          {canEdit && (
-            <button
-              onClick={openCreate}
-              className={`${moduleBtnOnHero} shrink-0`}
-            >
-              <Icon icon="lucide:plus" width={15} height={15} />
-              <span className="hidden sm:inline">{tr.nuevo}</span>
-              <span className="sm:hidden">{tr.nuevoShort}</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="p-3 sm:p-4 lg:p-6 max-w-6xl mx-auto space-y-3">
-
-        {error && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-            <Icon icon="lucide:alert-circle" className="w-4 h-4 shrink-0" />
-            <span className="flex-1">{error}</span>
-            <button onClick={() => setError(null)}><Icon icon="lucide:x" width={14} /></button>
-          </div>
-        )}
-
-        {/* ── Filtros ── */}
-        <div className={`${moduleCard} p-3 flex flex-col sm:flex-row gap-2`}>
-          <div className="relative flex-1">
-            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-blue/40 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={tr.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={`${moduleInput} pl-9`}
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={selectedCliente}
-              onChange={(e) => setSelectedCliente(e.target.value)}
-              className={`${moduleInput} flex-1 sm:flex-none min-w-0`}
-            >
-              <option value="all">{tr.allClients}</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.nombre}>{c.nombre}</option>
-              ))}
-            </select>
-            <label className="flex items-center gap-1.5 text-base font-semibold text-brand-blue cursor-pointer px-3 py-2 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] hover:bg-white transition-colors shrink-0">
-              <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="w-3.5 h-3.5 accent-brand-blue" />
-              <span className="hidden sm:inline">{tr.showInactive}</span>
-              <span className="sm:hidden">{tr.showInactiveShort}</span>
-            </label>
-          </div>
-        </div>
-
-        {/* ── Lista ── */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm">
-              <Icon icon="typcn:refresh" className="w-5 h-5 text-brand-blue animate-spin" />
-              {tr.loading}
-            </div>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-brand-blue/15 shadow-sm">
-            <div className="w-16 h-16 rounded-2xl bg-neutral-100 flex items-center justify-center mb-4">
-              <Icon icon="lucide:contact" width={28} height={28} className="text-neutral-300" />
-            </div>
-            <p className="text-neutral-700 font-semibold text-sm">{tr.noConsignatarios}</p>
-            <p className="text-neutral-400 text-xs mt-1 mb-5">
-              {canEdit ? tr.createHint : tr.adminHint}
-            </p>
             {canEdit && (
-              <button onClick={openCreate} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-bold hover:bg-brand-blue/90 transition-colors shadow-sm">
-                <Icon icon="lucide:plus" width={15} />
-                {tr.nuevo}
-              </button>
+              <div className="ml-auto">
+                <button type="button" onClick={openCreate} className="dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-sm">
+                  <Icon icon="lucide:plus" width={15} height={15} />
+                  <span className="hidden sm:inline">{tr.nuevo}</span>
+                  <span className="sm:hidden">{tr.nuevoShort}</span>
+                </button>
+              </div>
             )}
           </div>
-        ) : (
-          <>
-            {/* ── Cards móvil ── */}
-            <div className="md:hidden space-y-2">
-              {filtered.map((c) => (
-                <div key={c.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${!c.activo ? "opacity-60 border-brand-blue/15" : "border-brand-blue/15 hover:border-brand-blue/30"}`}>
-                  <div className="h-1 bg-gradient-to-r from-brand-blue to-indigo-500" />
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm text-neutral-900 truncate">{c.nombre}</p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                          {c.cliente && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-sm font-bold border border-brand-blue/15">
-                              <Icon icon="lucide:building-2" width={9} height={9} />
-                              {c.cliente}
-                            </span>
-                          )}
-                          {c.destino && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-sm font-semibold border border-neutral-200">
-                              <Icon icon="lucide:map-pin" width={9} height={9} />
-                              {c.destino}
-                            </span>
-                          )}
-                          {canEdit ? (
-                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
-                              <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={9} />
-                              {c.activo ? tr.activo : tr.inactivo}
+        </div>
+
+        <div className="relative z-10 flex-1 space-y-3 p-3 sm:p-4">
+          {error && !modal && (
+            <div className="flex items-center gap-3 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              <Icon icon="lucide:alert-circle" className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{error}</span>
+              <button type="button" onClick={() => setError(null)}><Icon icon="lucide:x" width={14} /></button>
+            </div>
+          )}
+
+          <div className="dash-card flex flex-col gap-2 rounded-xl p-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Icon icon="lucide:search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dash-muted" />
+              <input
+                type="text"
+                placeholder={tr.searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className={`${neonInput} pl-9`}
+              />
+            </div>
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1 sm:w-52 sm:flex-none">
+                <FormSelect
+                  variant="neon"
+                  value={selectedCliente === "all" ? "" : selectedCliente}
+                  placeholder={tr.allClients}
+                  options={clientes.map((c) => ({ value: c.nombre, label: c.nombre }))}
+                  onChange={(v) => setSelectedCliente(v || "all")}
+                />
+              </div>
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15">
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => setShowInactive(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-[var(--dash-neon)]"
+                />
+                <span className="hidden sm:inline">{tr.showInactive}</span>
+                <span className="sm:hidden">{tr.showInactiveShort}</span>
+              </label>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="dash-card flex items-center justify-center gap-3 rounded-xl px-5 py-16 text-sm text-dash-muted">
+              <Icon icon="typcn:refresh" className="h-5 w-5 animate-spin text-dash-neon" />
+              {tr.loading}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="dash-card flex flex-col items-center gap-3 rounded-xl px-4 py-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
+                <Icon icon="lucide:contact" width={26} height={26} className="text-dash-muted" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-dash-fg">{tr.noConsignatarios}</p>
+                <p className="mt-1 text-sm text-dash-muted">{canEdit ? tr.createHint : tr.adminHint}</p>
+              </div>
+              {canEdit && (
+                <button type="button" onClick={openCreate} className="dash-cta inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+                  <Icon icon="lucide:plus" width={15} />
+                  {tr.nuevo}
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2 md:hidden">
+                {filtered.map((c) => (
+                  <div
+                    key={c.id}
+                    className={`dash-card overflow-hidden rounded-xl border transition-all ${
+                      !c.activo ? "border-dash-border opacity-60" : "border-dash-border hover:border-dash-neon/35"
+                    }`}
+                  >
+                    <div className="p-4">
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-dash-fg">{c.nombre}</p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            {c.cliente && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-xs font-bold text-dash-fg">
+                                <Icon icon="lucide:building-2" width={9} height={9} />
+                                {c.cliente}
+                              </span>
+                            )}
+                            {c.destino && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-dash-border bg-dash-control px-2 py-0.5 text-xs font-semibold text-dash-muted">
+                                <Icon icon="lucide:map-pin" width={9} height={9} />
+                                {c.destino}
+                              </span>
+                            )}
+                            {canEdit ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActivo(c)}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold transition-colors ${
+                                  c.activo
+                                    ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300"
+                                    : "border-dash-border bg-dash-control text-dash-muted"
+                                }`}
+                              >
+                                <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={9} />
+                                {c.activo ? tr.activo : tr.inactivo}
+                              </button>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+                                  c.activo ? "bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted"
+                                }`}
+                              >
+                                {c.activo ? tr.activo : tr.inactivo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {canEdit && (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(c)}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl text-dash-neon transition-colors hover:bg-dash-neon/15"
+                            >
+                              <Icon icon="lucide:pencil" width={14} />
                             </button>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
-                              {c.activo ? tr.activo : tr.inactivo}
-                            </span>
-                          )}
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDelete({ id: c.id, nombre: c.nombre })}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400"
+                            >
+                              <Icon icon="lucide:trash-2" width={14} />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {canEdit && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button onClick={() => openEdit(c)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-brand-blue/10 text-brand-blue transition-colors border border-transparent hover:border-brand-blue/20">
-                            <Icon icon="lucide:pencil" width={14} />
-                          </button>
-                          <button onClick={() => setConfirmDelete({ id: c.id, nombre: c.nombre })} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors border border-transparent hover:border-red-200">
-                            <Icon icon="lucide:trash-2" width={14} />
-                          </button>
+                      <div className="grid grid-cols-2 gap-2 border-t border-dash-border pt-3">
+                        <div className="rounded-xl border border-dash-border bg-dash-control/50 p-2.5">
+                          <p className="mb-1 text-xs font-semibold text-dash-neon">Consignee</p>
+                          <p className="line-clamp-1 text-xs font-semibold leading-snug text-dash-fg">
+                            {c.consignee_company || <span className="font-normal text-dash-muted">—</span>}
+                          </p>
+                          {c.consignee_attn && <p className="mt-0.5 truncate text-xs text-dash-muted">{c.consignee_attn}</p>}
                         </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-100">
-                      <div className="bg-neutral-50 rounded-xl p-2.5">
-                        <p className="text-base font-semibold text-brand-blue mb-1">Consignee</p>
-                        <p className="text-xs text-neutral-800 font-semibold leading-snug line-clamp-1">{c.consignee_company || <span className="text-neutral-300 font-normal">—</span>}</p>
-                        {c.consignee_attn && <p className="text-sm text-neutral-400 mt-0.5 truncate">{c.consignee_attn}</p>}
-                      </div>
-                      <div className="bg-neutral-50 rounded-xl p-2.5">
-                        <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notify Party</p>
-                        <p className="text-xs text-neutral-800 font-semibold leading-snug line-clamp-1">{c.notify_company || <span className="text-neutral-300 font-normal">—</span>}</p>
-                        {c.notify_attn && <p className="text-sm text-neutral-400 mt-0.5 truncate">{c.notify_attn}</p>}
+                        <div className="rounded-xl border border-dash-border bg-dash-control/50 p-2.5">
+                          <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-dash-muted">Notify Party</p>
+                          <p className="line-clamp-1 text-xs font-semibold leading-snug text-dash-fg">
+                            {c.notify_company || <span className="font-normal text-dash-muted">—</span>}
+                          </p>
+                          {c.notify_attn && <p className="mt-0.5 truncate text-xs text-dash-muted">{c.notify_attn}</p>}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            {/* ── Tabla desktop ── */}
-            <div className={`hidden md:block ${moduleCard}`}>
-              <div className="h-1 bg-gradient-to-r from-brand-blue to-indigo-500" />
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-neutral-100 bg-neutral-50">
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colNombre}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colCliente}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colDestino}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden lg:table-cell">Consignee</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden xl:table-cell">Notify</th>
-                      <th className="text-center px-4 py-3 text-sm font-bold text-brand-blue">{tr.colEstado}</th>
-                      {canEdit && <th className="px-4 py-3 w-20" />}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-50">
-                    {filtered.map((c) => (
-                      <tr key={c.id} className={`hover:bg-neutral-50 transition-colors ${!c.activo ? "opacity-50" : ""}`}>
-                        <td className="px-4 py-3"><p className="font-semibold text-neutral-800 text-xs">{c.nombre}</p></td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-sm font-bold border border-brand-blue/15">
-                            <Icon icon="lucide:building-2" width={9} height={9} />
-                            {c.cliente || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-neutral-600">{c.destino || "—"}</td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <p className="text-xs text-neutral-700 font-medium">{c.consignee_company || "—"}</p>
-                          {c.consignee_attn && <p className="text-sm text-neutral-400">{c.consignee_attn}</p>}
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          <p className="text-xs text-neutral-700 font-medium">{c.notify_company || "—"}</p>
-                          {c.notify_attn && <p className="text-sm text-neutral-400">{c.notify_attn}</p>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {canEdit ? (
-                            <button onClick={() => handleToggleActivo(c)} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold border transition-colors ${c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"}`}>
-                              <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />{c.activo ? tr.activo : tr.inactivo}
-                            </button>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-bold ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>{c.activo ? tr.activo : tr.inactivo}</span>
-                          )}
-                        </td>
-                        {canEdit && (
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1 justify-end">
-                              <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-brand-blue/10 text-brand-blue transition-colors" title="Editar"><Icon icon="lucide:pencil" width={13} /></button>
-                              <button onClick={() => setConfirmDelete({ id: c.id, nombre: c.nombre })} className="p-1.5 rounded-lg hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors" title="Eliminar"><Icon icon="lucide:trash-2" width={13} /></button>
-                            </div>
-                          </td>
-                        )}
+              <div className="dash-card hidden overflow-hidden rounded-xl md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-dash-border bg-dash-control/50">
+                        <th className="px-4 py-3 text-left text-sm font-bold text-dash-neon">{tr.colNombre}</th>
+                        <th className="px-4 py-3 text-left text-sm font-bold text-dash-neon">{tr.colCliente}</th>
+                        <th className="px-4 py-3 text-left text-sm font-bold text-dash-neon">{tr.colDestino}</th>
+                        <th className="hidden px-4 py-3 text-left text-sm font-bold text-dash-neon lg:table-cell">Consignee</th>
+                        <th className="hidden px-4 py-3 text-left text-sm font-bold text-dash-neon xl:table-cell">Notify</th>
+                        <th className="px-4 py-3 text-center text-sm font-bold text-dash-neon">{tr.colEstado}</th>
+                        {canEdit && <th className="w-20 px-4 py-3" />}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-dash-border">
+                      {filtered.map((c) => (
+                        <tr
+                          key={c.id}
+                          className={`transition-colors hover:bg-dash-neon/10 ${!c.activo ? "opacity-50" : ""}`}
+                        >
+                          <td className="px-4 py-3"><p className="text-xs font-semibold text-dash-fg">{c.nombre}</p></td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-xs font-bold text-dash-fg">
+                              <Icon icon="lucide:building-2" width={9} height={9} />
+                              {c.cliente || "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-dash-muted">{c.destino || "—"}</td>
+                          <td className="hidden px-4 py-3 lg:table-cell">
+                            <p className="text-xs font-medium text-dash-fg">{c.consignee_company || "—"}</p>
+                            {c.consignee_attn && <p className="text-xs text-dash-muted">{c.consignee_attn}</p>}
+                          </td>
+                          <td className="hidden px-4 py-3 xl:table-cell">
+                            <p className="text-xs font-medium text-dash-fg">{c.notify_company || "—"}</p>
+                            {c.notify_attn && <p className="text-xs text-dash-muted">{c.notify_attn}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {canEdit ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActivo(c)}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold transition-colors ${
+                                  c.activo
+                                    ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                                    : "border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15"
+                                }`}
+                              >
+                                <Icon icon={c.activo ? "lucide:check" : "lucide:x"} width={10} />
+                                {c.activo ? tr.activo : tr.inactivo}
+                              </button>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                                  c.activo ? "bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted"
+                                }`}
+                              >
+                                {c.activo ? tr.activo : tr.inactivo}
+                              </span>
+                            )}
+                          </td>
+                          {canEdit && (
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(c)}
+                                  className="rounded-lg p-1.5 text-dash-neon transition-colors hover:bg-dash-neon/15"
+                                  title="Editar"
+                                >
+                                  <Icon icon="lucide:pencil" width={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDelete({ id: c.id, nombre: c.nombre })}
+                                  className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400"
+                                  title="Eliminar"
+                                >
+                                  <Icon icon="lucide:trash-2" width={13} />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="border-t border-dash-border bg-dash-control/30 px-4 py-2.5">
+                  <span className="text-sm font-medium text-dash-muted">
+                    {filtered.length} {filtered.length !== 1 ? tr.consignatarios_plural : tr.consignatario}
+                  </span>
+                </div>
               </div>
-              <div className="px-4 py-2.5 border-t border-neutral-100 bg-neutral-50/50">
-                <span className="text-sm text-neutral-400 font-medium">{filtered.length} {filtered.length !== 1 ? tr.consignatarios_plural : tr.consignatario}</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      </main>
 
-      {/* ── Modal crear/editar (bottom sheet en mobile) ── */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-[2px]" onClick={closeModal}>
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="h-1.5 bg-gradient-to-r from-brand-blue to-indigo-500 shrink-0" />
-            <div className="sm:hidden flex justify-center pt-3 pb-0 shrink-0"><div className="w-10 h-1 rounded-full bg-neutral-200" /></div>
-
-            {/* Modal header */}
-            <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between shrink-0">
+        <div
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
+          data-theme={theme}
+          onClick={closeModal}
+        >
+          <div
+            className="dash-card flex max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-3xl sm:max-h-[90vh] sm:max-w-2xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 sm:hidden"><div className="h-1 w-10 rounded-full bg-dash-border" /></div>
+            <div className="flex shrink-0 items-center justify-between border-b border-dash-border px-5 py-4">
               <div className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-xl bg-brand-blue/10 flex items-center justify-center">
-                  <Icon icon={modal === "create" ? "lucide:user-plus" : "lucide:user-cog"} className="w-4 h-4 text-brand-blue" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15">
+                  <Icon icon={modal === "create" ? "lucide:user-plus" : "lucide:user-cog"} className="h-4 w-4 text-dash-neon" />
                 </span>
                 <div>
-                  <h2 className="font-bold text-neutral-900 text-sm">{modal === "create" ? tr.createTitle : tr.editTitle}</h2>
-                  {editId && <p className="text-[11px] text-neutral-400 mt-0.5 truncate max-w-[220px]">{form.nombre}</p>}
+                  <h2 className="text-sm font-bold text-dash-fg">{modal === "create" ? tr.createTitle : tr.editTitle}</h2>
+                  {editId && <p className="mt-0.5 max-w-[220px] truncate text-[11px] text-dash-muted">{form.nombre}</p>}
                 </div>
               </div>
-              <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 text-neutral-400 transition-colors">
+              <button type="button" onClick={closeModal} className="flex h-8 w-8 items-center justify-center rounded-xl text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg">
                 <Icon icon="lucide:x" width={16} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
-              {/* Datos generales */}
+            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
               <div>
-                <p className="text-sm font-bold text-neutral-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+                <p className="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-dash-muted">
                   <Icon icon="lucide:info" width={10} height={10} />
                   {tr.generalSection}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">{inp(tr.nombre, "nombre")}</div>
                   <div className="flex flex-col gap-1">
-                    <label className={moduleLabel}>{tr.clienteLabel}</label>
-                    <select
+                    <label className={neonLabel}>{tr.clienteLabel}</label>
+                    <FormSelect
+                      variant="neon"
                       value={form.cliente ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, cliente: e.target.value }))}
-                      className={moduleInput}
-                    >
-                      <option value="">{tr.selectCliente}</option>
-                      {clientes.map((c) => (
-                        <option key={c.id} value={c.nombre}>{c.nombre}</option>
-                      ))}
-                    </select>
+                      placeholder={tr.selectCliente}
+                      options={clientes.map((c) => ({ value: c.nombre, label: c.nombre }))}
+                      onChange={(v) => setForm((f) => ({ ...f, cliente: v }))}
+                    />
                   </div>
                   {inp(tr.destino, "destino")}
                 </div>
               </div>
 
-              {/* Tabs consignee / notify */}
-              <div className="rounded-2xl border border-neutral-200 overflow-hidden">
-                {/* Pill toggle */}
-                <div className="p-2 bg-neutral-50 border-b border-neutral-100 flex gap-1.5">
+              <div className="overflow-hidden rounded-2xl border border-dash-border">
+                <div className="flex gap-1.5 border-b border-dash-border bg-dash-control/50 p-2">
                   {(["consignee", "notify"] as const).map((tab) => (
                     <button
                       key={tab}
+                      type="button"
                       onClick={() => setActiveTab(tab)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
                         activeTab === tab
-                          ? "bg-brand-blue text-white shadow-sm"
-                          : "text-neutral-500 hover:bg-neutral-100"
+                          ? "bg-dash-neon/25 text-dash-fg ring-1 ring-dash-neon/40"
+                          : "text-dash-muted hover:bg-dash-neon/10 hover:text-dash-fg"
                       }`}
                     >
                       <Icon icon={tab === "consignee" ? "lucide:user-check" : "lucide:bell"} width={12} height={12} />
@@ -517,31 +575,54 @@ export function ConsignatariosContent() {
                   ))}
                 </div>
 
-                {/* Copy banner */}
                 {activeTab === "notify" && (
-                  <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-3">
-                    <p className="text-xs text-amber-700 leading-snug">{tr.notifyEquals}</p>
-                    <button type="button"
-                      onClick={() => setForm((f) => ({ ...f, notify_company: f.consignee_company, notify_address: f.consignee_address, notify_attn: f.consignee_attn, notify_uscc: f.consignee_uscc, notify_mobile: f.consignee_mobile, notify_email: f.consignee_email, notify_zip: f.consignee_zip }))}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded-xl hover:bg-amber-200 transition-colors shrink-0"
+                  <div className="flex items-center justify-between gap-3 border-b border-amber-400/30 bg-amber-500/10 px-4 py-2.5">
+                    <p className="text-xs leading-snug text-amber-200">{tr.notifyEquals}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          notify_company: f.consignee_company,
+                          notify_address: f.consignee_address,
+                          notify_attn: f.consignee_attn,
+                          notify_uscc: f.consignee_uscc,
+                          notify_mobile: f.consignee_mobile,
+                          notify_email: f.consignee_email,
+                          notify_zip: f.consignee_zip,
+                        }))
+                      }
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-400/35 bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/25"
                     >
                       <Icon icon="lucide:copy" width={11} /> {tr.copyBtn}
                     </button>
                   </div>
                 )}
                 {activeTab === "consignee" && (
-                  <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center justify-between gap-3">
-                    <p className="text-xs text-sky-700 leading-snug">{tr.consigneeEquals}</p>
-                    <button type="button"
-                      onClick={() => setForm((f) => ({ ...f, consignee_company: f.notify_company, consignee_address: f.notify_address, consignee_attn: f.notify_attn, consignee_uscc: f.notify_uscc, consignee_mobile: f.notify_mobile, consignee_email: f.notify_email, consignee_zip: f.notify_zip }))}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-sky-700 bg-sky-100 border border-sky-200 rounded-xl hover:bg-sky-200 transition-colors shrink-0"
+                  <div className="flex items-center justify-between gap-3 border-b border-sky-400/30 bg-sky-500/10 px-4 py-2.5">
+                    <p className="text-xs leading-snug text-sky-200">{tr.consigneeEquals}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          consignee_company: f.notify_company,
+                          consignee_address: f.notify_address,
+                          consignee_attn: f.notify_attn,
+                          consignee_uscc: f.notify_uscc,
+                          consignee_mobile: f.notify_mobile,
+                          consignee_email: f.notify_email,
+                          consignee_zip: f.notify_zip,
+                        }))
+                      }
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-sky-400/35 bg-sky-500/15 px-3 py-1.5 text-xs font-bold text-sky-200 transition-colors hover:bg-sky-500/25"
                     >
                       <Icon icon="lucide:copy" width={11} /> {tr.copyBtn}
                     </button>
                   </div>
                 )}
 
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
                   {activeTab === "consignee" ? (
                     <>
                       <div className="sm:col-span-2">{inp(tr.consigneeCompany, "consignee_company")}</div>
@@ -566,73 +647,99 @@ export function ConsignatariosContent() {
                 </div>
               </div>
 
-              {/* Notas + activo */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+              <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
                 <div>{inp(tr.notas, "notas", "text", true)}</div>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200 sm:mt-5">
-                  <label className="flex items-center gap-2.5 cursor-pointer flex-1">
-                    <div className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${form.activo ? "bg-emerald-500" : "bg-neutral-300"}`}
-                      onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}>
-                      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.activo ? "left-4" : "left-0.5"}`} />
+                <div className="flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/50 p-3 sm:mt-5">
+                  <label className="flex flex-1 cursor-pointer items-center gap-2.5">
+                    <div
+                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${form.activo ? "bg-emerald-500" : "bg-dash-border"}`}
+                      onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
+                    >
+                      <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form.activo ? "left-4" : "left-0.5"}`} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-neutral-700">{tr.consignatarioActivo}</p>
-                      <p className="text-sm text-neutral-400">{form.activo ? tr.visibleDocs : tr.hiddenDocs}</p>
+                      <p className="text-xs font-semibold text-dash-fg">{tr.consignatarioActivo}</p>
+                      <p className="text-xs text-dash-muted">{form.activo ? tr.visibleDocs : tr.hiddenDocs}</p>
                     </div>
                   </label>
                 </div>
               </div>
 
               {error && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-                  <Icon icon="lucide:alert-circle" className="w-4 h-4 shrink-0" />{error}
+                <div className="flex items-center gap-3 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-xs text-red-300">
+                  <Icon icon="lucide:alert-circle" className="h-4 w-4 shrink-0" />
+                  {error}
                 </div>
               )}
             </div>
 
-            <div className="px-4 sm:px-6 py-4 border-t border-neutral-100 flex gap-2.5 shrink-0">
-              <button onClick={closeModal} className="flex-1 sm:flex-none py-3 px-5 text-sm font-semibold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">
+            <div className="flex shrink-0 gap-2.5 border-t border-dash-border px-4 py-4 sm:px-6">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex-1 rounded-xl border border-dash-border bg-dash-control px-5 py-3 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:flex-none"
+              >
                 {tr.cancel}
               </button>
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50`}
+                className="dash-cta flex flex-1 items-center justify-center gap-1.5 px-4 py-3 text-sm disabled:opacity-50"
               >
-                {saving ? <><Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />{tr.guardando}</> : <><Icon icon="lucide:save" className="w-4 h-4" />{tr.guardar}</>}
+                {saving ? (
+                  <><Icon icon="typcn:refresh" className="h-4 w-4 animate-spin" />{tr.guardando}</>
+                ) : (
+                  <><Icon icon="lucide:save" className="h-4 w-4" />{tr.guardar}</>
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Modal confirmar eliminación ── */}
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-[2px]" onClick={() => setConfirmDelete(null)}>
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
+          data-theme={theme}
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div className="dash-card w-full overflow-hidden rounded-t-3xl sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="h-1.5 bg-red-500" />
-            <div className="sm:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-neutral-200" /></div>
+            <div className="flex justify-center pt-3 pb-1 sm:hidden"><div className="h-1 w-10 rounded-full bg-dash-border" /></div>
             <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-                  <Icon icon="lucide:trash-2" className="w-5 h-5 text-red-600" />
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-400/35 bg-red-500/15">
+                  <Icon icon="lucide:trash-2" className="h-5 w-5 text-red-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-neutral-900 text-sm">{tr.deleteTitle}</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">{tr.deleteWarning}</p>
+                  <h3 className="text-sm font-bold text-dash-fg">{tr.deleteTitle}</h3>
+                  <p className="mt-0.5 text-xs text-dash-muted">{tr.deleteWarning}</p>
                 </div>
               </div>
-              <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                ¿Confirmas eliminar <span className="font-semibold text-neutral-900">"{confirmDelete.nombre}"</span>?
+              <p className="mb-6 text-sm leading-relaxed text-dash-muted">
+                ¿Confirmas eliminar <span className="font-semibold text-dash-fg">&quot;{confirmDelete.nombre}&quot;</span>?
               </p>
               <div className="flex gap-2.5">
-                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors">{tr.cancel}</button>
-                <button onClick={handleDelete} className="flex-1 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors">{tr.delete}</button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 rounded-xl border border-dash-border bg-dash-control py-3 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15"
+                >
+                  {tr.cancel}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="flex-1 rounded-xl border border-red-400/35 bg-red-500/20 py-3 text-sm font-bold text-red-300 transition-colors hover:bg-red-500/30"
+                >
+                  {tr.delete}
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

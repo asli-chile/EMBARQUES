@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import * as XLSX from "xlsx";
+import { FormSelect } from "@/components/ui/FormSelect";
 import { useLocale } from "@/lib/i18n";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -497,6 +499,7 @@ type ParseError = "format" | "empty" | "read" | null;
 export function CartolasNuboxContent() {
   const { t } = useLocale();
   const tr = t.cartolasNuboxPage;
+  const [theme] = useNeonTheme();
 
   const [dragging, setDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -604,260 +607,248 @@ export function CartolasNuboxContent() {
   // ── Estado: tiene movimientos parseados ────────────────────────────────────
   if (movimientos) {
     return (
-      <main
-        className="flex-1 min-h-0 overflow-auto"
-        role="main"
-        style={{
-          backgroundImage: "url('/embarques/girasol.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
-        }}
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+          </div>
 
-          {/* Header */}
-          <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-sm border border-white/60">
-            <div className="w-10 h-10 rounded-xl bg-brand-blue/15 border border-brand-blue/30 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:file-spreadsheet" className="text-brand-blue" width={22} height={22} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-neutral-900">{tr.title}</h1>
-              <p className="text-xs text-neutral-600 font-medium">{fileName}</p>
+          <div className="dash-toolbar relative z-10 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                  <Icon icon="lucide:file-spreadsheet" width={22} height={22} className="text-dash-neon" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{fileName}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Campos editables de banco */}
-          <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
-              <Icon icon="lucide:building-2" width={15} className="text-brand-blue" />
-              Datos del banco
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Banco — select con códigos Nubox */}
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                  {tr.fieldBanco}
-                </label>
-                <select
-                  value={header.banco}
-                  onChange={(e) => setHeader((h) => ({ ...h, banco: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all text-sm cursor-pointer"
-                >
-                  <option value="">Seleccionar banco...</option>
-                  {BANCOS_NUBOX.map((cod) => (
-                    <option key={cod} value={cod}>{cod}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tipo cuenta y número cuenta — texto libre */}
-              {(
-                [
-                  { key: "tipoCuenta" as const, label: tr.fieldTipoCuenta, placeholder: tr.fieldTipoCuentaPlaceholder },
-                  { key: "numeroCuenta" as const, label: tr.fieldNumeroCuenta, placeholder: "0-000-0000000-0" },
-                ] as const
-              ).map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                    {label}
+          <div className="relative z-10 mx-auto w-full max-w-5xl space-y-4 p-3 sm:p-4 lg:p-5">
+            <div className="dash-card rounded-xl p-5">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-dash-fg">
+                <Icon icon="lucide:building-2" width={15} className="text-dash-neon" />
+                Datos del banco
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
+                    {tr.fieldBanco}
                   </label>
-                  <input
-                    type="text"
-                    value={header[key]}
-                    onChange={(e) => setHeader((h) => ({ ...h, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all text-sm"
+                  <FormSelect
+                    variant="neon"
+                    value={header.banco}
+                    placeholder="Seleccionar banco..."
+                    options={BANCOS_NUBOX.map((cod) => ({ value: cod, label: cod }))}
+                    onChange={(v) => setHeader((h) => ({ ...h, banco: v }))}
                   />
                 </div>
-              ))}
+                {(
+                  [
+                    { key: "tipoCuenta" as const, label: tr.fieldTipoCuenta, placeholder: tr.fieldTipoCuentaPlaceholder },
+                    { key: "numeroCuenta" as const, label: tr.fieldNumeroCuenta, placeholder: "0-000-0000000-0" },
+                  ] as const
+                ).map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
+                      {label}
+                    </label>
+                    <input
+                      type="text"
+                      value={header[key]}
+                      onChange={(e) => setHeader((h) => ({ ...h, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="dash-control w-full rounded-lg px-3 py-2 text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-dash-muted">
+                Formato usado al parsear:{" "}
+                <span className="font-semibold text-dash-fg">
+                  {FORMATOS_BANCO.find((f) => f.value === formatoBanco)?.label ?? "Detectar automaticamente"}
+                </span>
+              </p>
             </div>
-            <p className="mt-3 text-xs text-neutral-500">
-              Formato usado al parsear:{" "}
-              <span className="font-semibold text-neutral-700">
-                {FORMATOS_BANCO.find((f) => f.value === formatoBanco)?.label ?? "Detectar automaticamente"}
-              </span>
-            </p>
-          </div>
 
-          {/* Preview tabla */}
-          <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-              <span className="text-sm font-semibold text-neutral-700">
-                {tr.previewTitle} — <span className="text-brand-blue font-bold">{movimientos.length}</span> {tr.previewRows}
-              </span>
-            </div>
-            <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-neutral-50 border-b border-neutral-200">
-                  <tr>
-                    <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">{tr.colFecha}</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">{tr.colDescripcion}</th>
-                    <th className="px-4 py-2.5 text-left font-semibold text-neutral-600">{tr.colReferencia}</th>
-                    <th className="px-4 py-2.5 text-right font-semibold text-emerald-700">{tr.colAbono}</th>
-                    <th className="px-4 py-2.5 text-right font-semibold text-red-600">{tr.colCargo}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {movimientos.map((m, i) => (
-                    <tr key={i} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-4 py-2 text-neutral-700 whitespace-nowrap font-mono">{m.fecha}</td>
-                      <td className="px-4 py-2 text-neutral-700 max-w-[280px] truncate">{m.descripcion}</td>
-                      <td className="px-4 py-2 text-neutral-500 font-mono">{m.referencia}</td>
-                      <td className="px-4 py-2 text-right text-emerald-700 font-medium whitespace-nowrap">
-                        {m.abono !== "" ? fmtMonto(m.abono) : ""}
-                      </td>
-                      <td className="px-4 py-2 text-right text-red-600 font-medium whitespace-nowrap">
-                        {m.cargo !== "" ? fmtMonto(m.cargo) : ""}
-                      </td>
+            <div className="dash-card overflow-hidden rounded-xl">
+              <div className="dash-section-head flex items-center justify-between px-5 py-4">
+                <span className="text-sm font-semibold text-dash-fg">
+                  {tr.previewTitle} — <span className="font-bold text-dash-neon">{movimientos.length}</span> {tr.previewRows}
+                </span>
+              </div>
+              <div className="max-h-[420px] overflow-x-auto overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left font-semibold text-dash-muted">{tr.colFecha}</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-dash-muted">{tr.colDescripcion}</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-dash-muted">{tr.colReferencia}</th>
+                      <th className="px-4 py-2.5 text-right font-semibold text-emerald-300">{tr.colAbono}</th>
+                      <th className="px-4 py-2.5 text-right font-semibold text-red-300">{tr.colCargo}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-dash-border">
+                    {movimientos.map((m, i) => (
+                      <tr key={i} className="transition-colors hover:bg-dash-neon/10">
+                        <td className="whitespace-nowrap px-4 py-2 font-mono text-dash-fg">{m.fecha}</td>
+                        <td className="max-w-[280px] truncate px-4 py-2 text-dash-fg">{m.descripcion}</td>
+                        <td className="px-4 py-2 font-mono text-dash-muted">{m.referencia}</td>
+                        <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-emerald-300">
+                          {m.abono !== "" ? fmtMonto(m.abono) : ""}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-red-300">
+                          {m.cargo !== "" ? fmtMonto(m.cargo) : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="dash-cta flex flex-1 items-center justify-center gap-2 px-5 py-3 text-sm"
+              >
+                <Icon icon="lucide:download" width={16} />
+                {tr.downloadBtn}
+              </button>
+              <button
+                type="button"
+                onClick={reset}
+                className="dash-control inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-dash-fg hover:bg-dash-neon/15"
+              >
+                <Icon icon="lucide:refresh-cw" width={15} />
+                {tr.resetBtn}
+              </button>
             </div>
           </div>
-
-          {/* Acciones */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={handleDownload}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-blue text-white font-semibold text-sm hover:bg-brand-blue/90 transition-colors shadow-sm"
-            >
-              <Icon icon="lucide:download" width={16} />
-              {tr.downloadBtn}
-            </button>
-            <button
-              onClick={reset}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-neutral-200 bg-white text-neutral-700 font-semibold text-sm hover:bg-neutral-50 transition-colors"
-            >
-              <Icon icon="lucide:refresh-cw" width={15} />
-              {tr.resetBtn}
-            </button>
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     );
   }
 
   // ── Estado: dropzone ───────────────────────────────────────────────────────
   return (
-    <main
-      className="flex-1 min-h-0 overflow-auto"
-      role="main"
-      style={{
-        backgroundImage: "url('/embarques/girasol.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}
-    >
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6">
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center shrink-0">
-            <Icon icon="lucide:file-spreadsheet" className="text-brand-blue" width={26} height={26} />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-brand-blue tracking-tight">{tr.title}</h1>
-            <p className="text-neutral-600 mt-1 text-sm leading-relaxed">{tr.subtitle}</p>
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:file-spreadsheet" width={22} height={22} className="text-dash-neon" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 line-clamp-2 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Dropzone */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
-            Formato del banco
-          </label>
-          <select
-            value={formatoBanco}
-            onChange={(e) => setFormatoBanco(e.target.value as FormatoBanco)}
-            className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all text-sm cursor-pointer"
-          >
-            {FORMATOS_BANCO.map((format) => (
-              <option key={format.value} value={format.value}>
-                {format.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-2 text-xs text-neutral-500">
-            Usa "Detectar automaticamente" para intentar distintos formatos, o elige uno especifico para forzar ese layout.
-          </p>
-        </div>
-
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => !processing && inputRef.current?.click()}
-          className={`rounded-2xl border-2 border-dashed transition-all cursor-pointer p-10 flex flex-col items-center justify-center gap-3 text-center
-            ${dragging
-              ? "border-brand-blue bg-brand-blue/5 scale-[1.01]"
-              : "border-neutral-300 bg-white hover:border-brand-blue/50 hover:bg-neutral-50"
-            } ${processing ? "pointer-events-none opacity-70" : ""}`}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={handleFileInput}
-            onClick={(e) => e.stopPropagation()}
-          />
-          {processing ? (
-            <>
-              <Icon icon="lucide:loader-circle" className="text-brand-blue animate-spin" width={40} height={40} />
-              <p className="text-sm font-medium text-neutral-600">{tr.processing}</p>
-            </>
-          ) : (
-            <>
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${dragging ? "bg-brand-blue/15" : "bg-neutral-100"}`}>
-                <Icon icon="lucide:upload-cloud" className={dragging ? "text-brand-blue" : "text-neutral-400"} width={32} height={32} />
-              </div>
-              <div>
-                <p className="font-semibold text-neutral-800">{tr.dropzone}</p>
-                <p className="text-sm text-neutral-500">{tr.dropzoneOr}</p>
-              </div>
-              <span className="text-xs text-neutral-400 bg-neutral-100 px-3 py-1 rounded-full">{tr.dropzoneHint}</span>
-            </>
-          )}
-        </div>
-
-        {/* Error */}
-        {parseError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3">
-            <Icon icon="lucide:alert-circle" className="text-red-500 mt-0.5 shrink-0" width={18} />
-            <p className="text-sm text-red-700">
-              {parseError === "format"
-                ? tr.errorInvalidFormat
-                : parseError === "empty"
-                ? tr.errorNoMovements
-                : tr.errorRead}
+        <div className="relative z-10 mx-auto w-full max-w-3xl space-y-4 p-3 sm:p-4 lg:p-5">
+          <div className="dash-card rounded-xl p-5">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
+              Formato del banco
+            </label>
+            <FormSelect
+              variant="neon"
+              value={formatoBanco}
+              placeholder="Detectar automaticamente"
+              options={FORMATOS_BANCO.map((format) => ({ value: format.value, label: format.label }))}
+              onChange={(v) => setFormatoBanco((v || "auto") as FormatoBanco)}
+            />
+            <p className="mt-2 text-xs text-dash-muted">
+              Usa &quot;Detectar automaticamente&quot; para intentar distintos formatos, o elige uno especifico para forzar ese layout.
             </p>
-            {parseErrorDetail ? (
-              <p className="text-xs text-red-700/90 mt-1">{parseErrorDetail}</p>
-            ) : null}
           </div>
-        )}
 
-        {/* Info pasos */}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
-            <Icon icon="lucide:info" width={15} className="text-brand-blue" />
-            {tr.infoTitle}
-          </h2>
-          <ol className="space-y-3">
-            {([tr.infoStep1, tr.infoStep2, tr.infoStep3, tr.infoStep4] as string[]).map((step, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-neutral-600">
-                <span className="w-5 h-5 rounded-full bg-brand-blue/10 text-brand-blue font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                  {i + 1}
-                </span>
-                {step}
-              </li>
-            ))}
-          </ol>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => !processing && inputRef.current?.click()}
+            className={`dash-card flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-all ${
+              dragging
+                ? "scale-[1.01] border-dash-neon/60 bg-dash-neon/10"
+                : "border-dash-border hover:border-dash-neon/45 hover:bg-dash-neon/5"
+            } ${processing ? "pointer-events-none opacity-70" : ""}`}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleFileInput}
+              onClick={(e) => e.stopPropagation()}
+            />
+            {processing ? (
+              <>
+                <Icon icon="lucide:loader-circle" className="animate-spin text-dash-neon" width={40} height={40} />
+                <p className="text-sm font-medium text-dash-muted">{tr.processing}</p>
+              </>
+            ) : (
+              <>
+                <div className={`flex h-16 w-16 items-center justify-center rounded-xl border transition-colors ${dragging ? "border-dash-neon/40 bg-dash-neon/15" : "border-dash-border bg-dash-control"}`}>
+                  <Icon icon="lucide:upload-cloud" className={dragging ? "text-dash-neon" : "text-dash-muted"} width={32} height={32} />
+                </div>
+                <div>
+                  <p className="font-semibold text-dash-fg">{tr.dropzone}</p>
+                  <p className="text-sm text-dash-muted">{tr.dropzoneOr}</p>
+                </div>
+                <span className="rounded-lg border border-dash-border bg-dash-control px-3 py-1 text-xs text-dash-muted">{tr.dropzoneHint}</span>
+              </>
+            )}
+          </div>
+
+          {parseError && (
+            <div className="flex items-start gap-3 rounded-xl border border-red-400/35 bg-red-400/10 px-4 py-3">
+              <Icon icon="lucide:alert-circle" className="mt-0.5 shrink-0 text-red-300" width={18} />
+              <div>
+                <p className="text-sm text-dash-fg">
+                  {parseError === "format"
+                    ? tr.errorInvalidFormat
+                    : parseError === "empty"
+                    ? tr.errorNoMovements
+                    : tr.errorRead}
+                </p>
+                {parseErrorDetail ? (
+                  <p className="mt-1 text-xs text-dash-muted">{parseErrorDetail}</p>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          <div className="dash-card rounded-xl p-5">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-dash-fg">
+              <Icon icon="lucide:info" width={15} className="text-dash-neon" />
+              {tr.infoTitle}
+            </h2>
+            <ol className="space-y-3">
+              {([tr.infoStep1, tr.infoStep2, tr.infoStep3, tr.infoStep4] as string[]).map((step, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-dash-muted">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-dash-neon/35 bg-dash-neon/15 text-xs font-bold text-dash-neon">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

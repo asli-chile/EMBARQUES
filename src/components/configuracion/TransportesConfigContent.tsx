@@ -6,14 +6,12 @@ import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleInput,
-  moduleBtnPrimary,
-  moduleCard,
-  moduleSectionTitle,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
+const neonBtnPrimary =
+  "dash-cta inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold disabled:opacity-40";
 
 type Empresa = {
   id: string;
@@ -62,6 +60,7 @@ export function TransportesConfigContent() {
   const { isSuperadmin, isAdmin, profile, isLoading: authLoading } = useAuth();
   const { t } = useLocale();
   const tr = t.transportesConfig;
+  const [theme] = useNeonTheme();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>("");
   const [searchEmpresa, setSearchEmpresa] = useState("");
@@ -502,77 +501,87 @@ export function TransportesConfigContent() {
 
   if (authLoading) {
     return (
-      <main className={`flex-1 min-h-0 ${modulePageBg} flex items-center justify-center`} role="main">
-        <p className="text-neutral-500">{tr.loading}</p>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>{tr.loading}</span>
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!profile) {
     return (
-      <main className={`flex-1 min-h-0 ${modulePageBg} p-6`} role="main">
-        <p className="text-neutral-600">{tr.loginRequired}</p>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-6" role="main">
+          <p className="text-dash-muted">{tr.loginRequired}</p>
+        </main>
+      </div>
     );
   }
 
   if (!isSuperadmin && !isAdmin) {
     return (
-      <main className={`flex-1 min-h-0 ${modulePageBg} p-6 flex items-center justify-center`} role="main">
-        <p className="text-neutral-600">
-          {tr.superadminOnly}
-        </p>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-6" role="main">
+          <p className="text-dash-muted">{tr.superadminOnly}</p>
+        </main>
+      </div>
     );
   }
 
-  const inputBase = moduleInput;
+  const inputBase = neonInput;
 
   return (
-    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-auto`} role="main">
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-      {/* Hero gradient header */}
-      <div className={`flex-shrink-0 ${moduleHero}`}>
-        <div className="px-4 pt-5 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:truck" width={24} height={24} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold leading-tight tracking-tight">{tr.title}</h1>
-              <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:building-2" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:route" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{tramos.length} {tramos.length !== 1 ? tr.tramos : tr.tramo}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-              <Icon icon="lucide:tag" width={13} height={13} className="text-white/80" />
-              <span className="text-sm font-semibold">{costosExtra.length} {tr.costosExtraCount}</span>
-            </div>
-            {selectedEmpresaId && (
-              <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
-                <Icon icon="lucide:user" width={13} height={13} className="text-white/80" />
-                <span className="text-sm font-semibold">{choferes.length} {choferes.length !== 1 ? tr.choferes : tr.chofer}</span>
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:truck" width={22} height={22} className="text-dash-neon" aria-hidden />
               </div>
-            )}
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-xs font-semibold text-dash-fg">
+                    <Icon icon="lucide:building-2" width={12} height={12} />
+                    {empresas.length} {empresas.length !== 1 ? tr.empresas : tr.empresa}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dash-border bg-dash-control px-2 py-0.5 text-xs font-semibold text-dash-muted">
+                    <Icon icon="lucide:route" width={12} height={12} />
+                    {tramos.length} {tramos.length !== 1 ? tr.tramos : tr.tramo}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dash-border bg-dash-control px-2 py-0.5 text-xs font-semibold text-dash-muted">
+                    <Icon icon="lucide:tag" width={12} height={12} />
+                    {costosExtra.length} {tr.costosExtraCount}
+                  </span>
+                  {selectedEmpresaId && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-xs font-semibold text-dash-fg">
+                      <Icon icon="lucide:user" width={12} height={12} />
+                      {choferes.length} {choferes.length !== 1 ? tr.choferes : tr.chofer}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Body */}
-      <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-3 p-3">
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 p-3 xl:flex-row sm:p-4">
 
         {/* Empresas panel */}
-        <section className={`flex-shrink-0 xl:w-64 xl:self-start xl:sticky xl:top-0 flex flex-col ${moduleCard}`}>
-          <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-brand-blue/15 space-y-2">
-            <span className={moduleSectionTitle}>{tr.empresasSection}</span>
+        <section className="dash-card relative z-10 flex shrink-0 flex-col rounded-xl xl:sticky xl:top-0 xl:w-64 xl:self-start">
+          <div className="flex-shrink-0 px-3 pt-3 pb-2 border-b border-dash-border space-y-2">
+            <span className="text-base font-bold text-dash-neon">{tr.empresasSection}</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               <input
                 type="text"
@@ -592,7 +601,7 @@ export function TransportesConfigContent() {
                 type="button"
                 onClick={() => void handleCreateEmpresa()}
                 disabled={!newEmpresaNombre.trim() || creatingEmpresa}
-                className={`${moduleBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}
+                className={`${neonBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}
               >
                 {creatingEmpresa ? (
                   <><Icon icon="eos-icons:loading" width={13} height={13} className="animate-spin" />{tr.creando}</>
@@ -602,7 +611,7 @@ export function TransportesConfigContent() {
               </button>
             </div>
             <div className="relative">
-              <Icon icon="lucide:search" width={12} height={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <Icon icon="lucide:search" width={12} height={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dash-muted" />
               <input
                 type="text"
                 value={searchEmpresa}
@@ -614,9 +623,9 @@ export function TransportesConfigContent() {
           </div>
 
           {/* Mobile: horizontal chip scroller */}
-          <div className="xl:hidden overflow-x-auto py-2 px-2 flex gap-1.5 border-b border-neutral-100">
+          <div className="xl:hidden overflow-x-auto py-2 px-2 flex gap-1.5 border-b border-dash-border">
             {filteredEmpresas.length === 0 ? (
-              <p className="text-xs text-neutral-400 py-1 px-2">
+              <p className="text-xs text-dash-muted py-1 px-2">
                 {searchEmpresa ? tr.sinResultados : tr.noEmpresas}
               </p>
             ) : filteredEmpresas.map((emp) => {
@@ -627,16 +636,16 @@ export function TransportesConfigContent() {
                   type="button"
                   onClick={() => setSelectedEmpresaId(isSelected ? "" : emp.id)}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                    isSelected ? "bg-brand-blue text-white shadow-sm" : "bg-neutral-100 text-neutral-700"
+                    isSelected ? "border border-dash-neon/50 bg-dash-neon/25 text-dash-fg shadow-sm" : "border border-dash-border bg-dash-control text-dash-fg"
                   }`}
                 >
-                  <Icon icon="lucide:building-2" width={11} height={11} className={isSelected ? "text-white/80" : "text-neutral-400"} />
+                  <Icon icon="lucide:building-2" width={11} height={11} className={isSelected ? "text-dash-muted" : "text-dash-muted"} />
                   <span className="max-w-[120px] truncate">{emp.nombre}</span>
                   {isSelected && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'empresa', id: emp.id, name: emp.nombre }); }}
-                      className="ml-1 text-white/60 hover:text-white"
+                      className="ml-1 text-dash-muted hover:text-dash-fg"
                     >
                       <Icon icon="lucide:trash-2" width={10} height={10} />
                     </button>
@@ -649,14 +658,14 @@ export function TransportesConfigContent() {
           {/* Desktop: vertical list */}
           <div className="hidden xl:block max-h-[calc(100vh-340px)] overflow-y-auto py-1.5 px-1.5">
             {filteredEmpresas.length === 0 ? (
-              <p className="text-xs text-neutral-400 text-center py-6">
+              <p className="text-xs text-dash-muted text-center py-6">
                 {searchEmpresa ? tr.sinResultados : tr.noEmpresas}
               </p>
             ) : filteredEmpresas.map((emp) => {
               const isSelected = selectedEmpresaId === emp.id;
               return (
                 <div key={emp.id} className={`flex items-center gap-1 px-1 py-1 rounded-xl mb-0.5 transition-all duration-150 ${
-                  isSelected ? "bg-brand-blue text-white shadow-sm" : "text-neutral-700 hover:bg-neutral-100"
+                  isSelected ? "border border-dash-neon/50 bg-dash-neon/25 text-dash-fg shadow-sm" : "text-dash-fg hover:bg-dash-neon/15"
                 }`}>
                   <button
                     type="button"
@@ -665,14 +674,14 @@ export function TransportesConfigContent() {
                   >
                     <span className="text-xs font-medium truncate">{emp.nombre}</span>
                     {emp.rut && (
-                      <span className={`text-sm ${isSelected ? "text-white/80" : "text-neutral-400"}`}>{emp.rut}</span>
+                      <span className={`text-sm ${isSelected ? "text-dash-muted" : "text-dash-muted"}`}>{emp.rut}</span>
                     )}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDelete({ type: 'empresa', id: emp.id, name: emp.nombre })}
                     className={`shrink-0 p-1 rounded-lg transition-colors ${
-                      isSelected ? "text-white/60 hover:bg-white/20" : "text-red-400 hover:bg-red-50"
+                      isSelected ? "text-dash-muted hover:bg-dash-neon/20" : "text-red-400 hover:bg-red-500/15"
                     }`}
                     title="Eliminar empresa"
                   >
@@ -688,34 +697,34 @@ export function TransportesConfigContent() {
         <section className="flex-1 min-w-0 space-y-3">
 
           {/* Choferes y Equipos */}
-          <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
+          <div className="dash-card overflow-hidden rounded-xl">
             {!selectedEmpresaId ? (
               <div className="flex flex-col items-center justify-center gap-3 text-center p-10">
-                <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                  <Icon icon="lucide:truck" width={26} height={26} className="text-neutral-300" />
+                <div className="w-14 h-14 rounded-2xl bg-dash-control flex items-center justify-center">
+                  <Icon icon="lucide:truck" width={26} height={26} className="text-dash-muted" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-500">{tr.selectEmpresa}</p>
-                  <p className="text-xs text-neutral-400 mt-1">{tr.selectEmpresaHint}</p>
+                  <p className="text-sm font-semibold text-dash-muted">{tr.selectEmpresa}</p>
+                  <p className="text-xs text-dash-muted mt-1">{tr.selectEmpresaHint}</p>
                 </div>
               </div>
             ) : (
               <>
-                <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
-                    <Icon icon="lucide:truck" width={15} height={15} className="text-brand-blue" />
+                <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-dash-neon/15 flex items-center justify-center shrink-0">
+                    <Icon icon="lucide:truck" width={15} height={15} className="text-dash-neon" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-bold text-neutral-900 truncate">
+                    <h2 className="text-sm font-bold text-dash-fg truncate">
                       {empresas.find((e) => e.id === selectedEmpresaId)?.nombre}
                     </h2>
-                    <p className="text-[11px] text-neutral-400">{choferes.length} {tr.choferesSuffix} · {equipos.length} {tr.equiposSuffix}</p>
+                    <p className="text-[11px] text-dash-muted">{choferes.length} {tr.choferesSuffix} · {equipos.length} {tr.equiposSuffix}</p>
                   </div>
                 </div>
 
                 {error && (
                   <div className="px-4 pt-2">
-                    <div className="px-3 py-2 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2" role="alert">
+                    <div className="px-3 py-2 bg-red-500/10 text-red-300 text-xs rounded-xl border border-red-400/35 flex items-center gap-2" role="alert">
                       <Icon icon="lucide:alert-circle" width={13} height={13} className="shrink-0" />
                       {error}
                     </div>
@@ -724,45 +733,45 @@ export function TransportesConfigContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
                   {/* Choferes */}
-                  <div className="rounded-2xl border border-neutral-200 overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-neutral-100 flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center">
-                        <Icon icon="lucide:user" width={14} height={14} className="text-brand-blue" />
+                  <div className="rounded-2xl border border-dash-border overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-dash-border flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-lg bg-dash-neon/15 flex items-center justify-center">
+                        <Icon icon="lucide:user" width={14} height={14} className="text-dash-neon" />
                       </span>
-                      <span className="text-base font-bold text-brand-blue">{tr.choferesSection}</span>
-                      <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{choferes.length}</span>
+                      <span className="text-base font-bold text-dash-neon">{tr.choferesSection}</span>
+                      <span className="ml-auto text-sm font-semibold text-dash-muted bg-dash-control px-2 py-0.5 rounded-full">{choferes.length}</span>
                     </div>
-                    <div className="p-3 border-b border-neutral-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <div className="p-3 border-b border-dash-border grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                       <input type="text" value={newChofer.nombre} onChange={(e) => setNewChofer((p) => ({ ...p, nombre: e.target.value }))} placeholder={tr.nombreChofer} className={inputBase} />
                       <input type="text" value={newChofer.numero_chofer} onChange={(e) => setNewChofer((p) => ({ ...p, numero_chofer: e.target.value }))} placeholder={tr.numeroChofer} className={inputBase} />
                       <input type="text" value={newChofer.rut} onChange={(e) => setNewChofer((p) => ({ ...p, rut: e.target.value }))} placeholder={tr.rut} className={inputBase} />
                       <input type="text" value={newChofer.telefono} onChange={(e) => setNewChofer((p) => ({ ...p, telefono: e.target.value }))} placeholder={tr.telefono} className={inputBase} />
                       <button type="button" onClick={() => void handleAddChofer()} disabled={!newChofer.nombre.trim() || saving}
-                        className={`${moduleBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}>
+                        className={`${neonBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}>
                         <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarChofer}
                       </button>
                     </div>
-                    <div className="divide-y divide-neutral-100">
+                    <div className="divide-y divide-dash-border">
                       {choferes.length === 0 ? (
-                        <p className="text-[11px] text-neutral-400 text-center py-6">{tr.noChoferes}</p>
+                        <p className="text-[11px] text-dash-muted text-center py-6">{tr.noChoferes}</p>
                       ) : choferes.map((c) => (
                         <div key={c.id} className="px-3 py-2.5 flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center uppercase shrink-0">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dash-neon/35 bg-dash-neon/15 text-xs font-bold uppercase text-dash-neon">
                             {c.nombre[0]}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-neutral-800 truncate">{c.nombre}</p>
-                            <p className="text-sm text-neutral-400 truncate">{c.rut || tr.sinRut} · {c.telefono || tr.sinTelefono}</p>
+                            <p className="text-xs font-semibold text-dash-fg truncate">{c.nombre}</p>
+                            <p className="text-sm text-dash-muted truncate">{c.rut || tr.sinRut} · {c.telefono || tr.sinTelefono}</p>
                           </div>
                           <div className="shrink-0 flex items-center gap-1">
                             <button type="button" onClick={() => void handleToggleChoferActivo(c.id, c.activo)}
                               className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
-                                c.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                                c.activo ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted border-dash-border"
                               }`}>
                               {c.activo ? tr.activo : tr.inactivo}
                             </button>
                             <button type="button" onClick={() => setConfirmDelete({ type: 'chofer', id: c.id, name: c.nombre })}
-                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors">
                               <Icon icon="lucide:trash-2" width={12} height={12} />
                             </button>
                           </div>
@@ -772,43 +781,43 @@ export function TransportesConfigContent() {
                   </div>
 
                   {/* Equipos */}
-                  <div className="rounded-2xl border border-neutral-200 overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-neutral-100 flex items-center gap-2">
+                  <div className="rounded-2xl border border-dash-border overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-dash-border flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center">
                         <Icon icon="lucide:truck" width={14} height={14} className="text-sky-600" />
                       </span>
-                      <span className="text-base font-bold text-brand-blue">{tr.equiposSection}</span>
-                      <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{equipos.length}</span>
+                      <span className="text-base font-bold text-dash-neon">{tr.equiposSection}</span>
+                      <span className="ml-auto text-sm font-semibold text-dash-muted bg-dash-control px-2 py-0.5 rounded-full">{equipos.length}</span>
                     </div>
-                    <div className="p-3 border-b border-neutral-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <div className="p-3 border-b border-dash-border grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                       <input type="text" value={newEquipo.patente_camion} onChange={(e) => setNewEquipo((p) => ({ ...p, patente_camion: e.target.value }))} placeholder={tr.patenteCamion} className={inputBase} />
                       <input type="text" value={newEquipo.patente_remolque} onChange={(e) => setNewEquipo((p) => ({ ...p, patente_remolque: e.target.value }))} placeholder={tr.patenteRemolque} className={inputBase} />
                       <button type="button" onClick={() => void handleAddEquipo()} disabled={!newEquipo.patente_camion.trim() || saving}
-                        className={`${moduleBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}>
+                        className={`${neonBtnPrimary} sm:col-span-2 justify-center disabled:opacity-40`}>
                         <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarEquipo}
                       </button>
                     </div>
-                    <div className="divide-y divide-neutral-100">
+                    <div className="divide-y divide-dash-border">
                       {equipos.length === 0 ? (
-                        <p className="text-[11px] text-neutral-400 text-center py-6">{tr.noEquipos}</p>
+                        <p className="text-[11px] text-dash-muted text-center py-6">{tr.noEquipos}</p>
                       ) : equipos.map((e) => (
                         <div key={e.id} className="px-3 py-2.5 flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center shrink-0">
                             <Icon icon="lucide:truck" width={14} height={14} className="text-sky-600" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-neutral-800 truncate">{e.patente_camion}</p>
-                            <p className="text-sm text-neutral-400 truncate">{e.patente_remolque ? `${tr.remolque} ${e.patente_remolque}` : tr.sinRemolque}</p>
+                            <p className="text-xs font-semibold text-dash-fg truncate">{e.patente_camion}</p>
+                            <p className="text-sm text-dash-muted truncate">{e.patente_remolque ? `${tr.remolque} ${e.patente_remolque}` : tr.sinRemolque}</p>
                           </div>
                           <div className="shrink-0 flex items-center gap-1">
                             <button type="button" onClick={() => void handleToggleEquipoActivo(e.id, e.activo)}
                               className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
-                                e.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                                e.activo ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted border-dash-border"
                               }`}>
                               {e.activo ? tr.activo : tr.inactivo}
                             </button>
                             <button type="button" onClick={() => setConfirmDelete({ type: 'equipo', id: e.id, name: e.patente_camion })}
-                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors">
                               <Icon icon="lucide:trash-2" width={12} height={12} />
                             </button>
                           </div>
@@ -822,58 +831,58 @@ export function TransportesConfigContent() {
           </div>
 
           {/* Tramos */}
-          <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-brand-blue/10 flex items-center justify-center shrink-0">
-                <Icon icon="lucide:route" width={15} height={15} className="text-brand-blue" />
+          <div className="dash-card overflow-hidden rounded-xl">
+            <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-dash-neon/15 flex items-center justify-center shrink-0">
+                <Icon icon="lucide:route" width={15} height={15} className="text-dash-neon" />
               </span>
               <div>
-                <h2 className="text-base font-bold text-brand-blue">{tr.tramosSection}</h2>
-                <p className="text-[11px] text-neutral-400">{tr.tramosSubtitle}</p>
+                <h2 className="text-base font-bold text-dash-neon">{tr.tramosSection}</h2>
+                <p className="text-[11px] text-dash-muted">{tr.tramosSubtitle}</p>
               </div>
-              <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{tramos.length}</span>
+              <span className="ml-auto text-sm font-semibold text-dash-muted bg-dash-control px-2 py-0.5 rounded-full">{tramos.length}</span>
             </div>
 
             {/* Add form */}
-            <div className="p-3 border-b border-neutral-100 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <div className="p-3 border-b border-dash-border grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               <input type="text" value={newTramo.origen} onChange={(e) => setNewTramo((p) => ({ ...p, origen: e.target.value }))} placeholder={tr.origen} className={inputBase} />
               <input type="text" value={newTramo.destino} onChange={(e) => setNewTramo((p) => ({ ...p, destino: e.target.value }))} placeholder={tr.destino} className={inputBase} />
               <input type="number" value={newTramo.valor} onChange={(e) => setNewTramo((p) => ({ ...p, valor: e.target.value }))} placeholder={tr.valor} className={inputBase} />
               <input type="text" value={newTramo.moneda} onChange={(e) => setNewTramo((p) => ({ ...p, moneda: e.target.value }))} placeholder={tr.moneda} className={inputBase} />
               <button type="button" onClick={() => void handleAddTramo()} disabled={!newTramo.origen.trim() || !newTramo.destino.trim() || !newTramo.valor.trim() || saving}
-                className={`${moduleBtnPrimary} col-span-2 sm:col-span-4 justify-center disabled:opacity-40`}>
+                className={`${neonBtnPrimary} col-span-2 sm:col-span-4 justify-center disabled:opacity-40`}>
                 <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarTramo}
               </button>
             </div>
 
             {tramos.length === 0 ? (
-              <p className="text-[11px] text-neutral-400 text-center py-6">{tr.noTramos}</p>
+              <p className="text-[11px] text-dash-muted text-center py-6">{tr.noTramos}</p>
             ) : (
               <>
                 {/* Mobile cards */}
-                <div className="md:hidden divide-y divide-neutral-100">
+                <div className="md:hidden divide-y divide-dash-border">
                   {tramos.map((tramo) => (
                     <div key={tramo.id} className="px-4 py-3 flex items-center gap-3">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-800">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-dash-fg">
                           <span className="truncate">{tramo.origen}</span>
-                          <Icon icon="lucide:arrow-right" width={11} height={11} className="shrink-0 text-neutral-400" />
+                          <Icon icon="lucide:arrow-right" width={11} height={11} className="shrink-0 text-dash-muted" />
                           <span className="truncate">{tramo.destino}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-bold text-brand-blue">
+                          <span className="text-xs font-bold text-dash-neon">
                             {tramo.moneda} {tramo.valor.toLocaleString("es-CL", { maximumFractionDigits: 0 })}
                           </span>
                           <button type="button" onClick={() => void handleToggleTramoActivo(tramo.id, tramo.activo)}
                             className={`px-2 py-0.5 rounded-full text-sm font-semibold border transition-colors ${
-                              tramo.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                              tramo.activo ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted border-dash-border"
                             }`}>
                             {tramo.activo ? tr.activo : tr.inactivo}
                           </button>
                         </div>
                       </div>
                       <button type="button" onClick={() => setConfirmDelete({ type: 'tramo', id: tramo.id, name: `${tramo.origen} → ${tramo.destino}` })}
-                        className="shrink-0 p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors">
+                        className="shrink-0 p-2 rounded-xl text-red-400 hover:bg-red-500/15 transition-colors">
                         <Icon icon="lucide:trash-2" width={14} height={14} />
                       </button>
                     </div>
@@ -883,7 +892,7 @@ export function TransportesConfigContent() {
                 {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#F4F8FC] text-sm text-brand-blue sticky top-0">
+                    <thead className="sticky top-0 bg-dash-control/50 text-sm text-dash-neon">
                       <tr>
                         <th className="text-left px-3 py-2 font-bold">{tr.origen}</th>
                         <th className="text-left px-3 py-2 font-bold">{tr.destino}</th>
@@ -893,9 +902,9 @@ export function TransportesConfigContent() {
                         <th className="text-center px-3 py-2 font-bold">{tr.acciones}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100">
+                    <tbody className="divide-y divide-dash-border">
                       {tramos.map((tramo) => (
-                        <tr key={tramo.id} className="hover:bg-neutral-50">
+                        <tr key={tramo.id} className="hover:bg-dash-control">
                           <td className="px-3 py-2">{tramo.origen}</td>
                           <td className="px-3 py-2">{tramo.destino}</td>
                           <td className="px-3 py-2 text-right font-semibold">{tramo.valor.toLocaleString("es-CL", { maximumFractionDigits: 0 })}</td>
@@ -903,14 +912,14 @@ export function TransportesConfigContent() {
                           <td className="px-3 py-2 text-center">
                             <button type="button" onClick={() => void handleToggleTramoActivo(tramo.id, tramo.activo)}
                               className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
-                                tramo.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                                tramo.activo ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted border-dash-border"
                               }`}>
                               {tramo.activo ? tr.activo : tr.inactivo}
                             </button>
                           </td>
                           <td className="px-3 py-2 text-center">
                             <button type="button" onClick={() => setConfirmDelete({ type: 'tramo', id: tramo.id, name: `${tramo.origen} → ${tramo.destino}` })}
-                              className="p-1 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                              className="p-1 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors">
                               <Icon icon="lucide:trash-2" width={12} height={12} />
                             </button>
                           </td>
@@ -924,58 +933,58 @@ export function TransportesConfigContent() {
           </div>
 
           {/* Costos Extra */}
-          <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+          <div className="dash-card overflow-hidden rounded-xl">
+            <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                 <Icon icon="lucide:tag" width={15} height={15} className="text-amber-600" />
               </span>
               <div>
-                <h2 className="text-base font-bold text-brand-blue">{tr.costosExtraSection}</h2>
-                <p className="text-[11px] text-neutral-400">{tr.costosExtraSubtitle}</p>
+                <h2 className="text-base font-bold text-dash-neon">{tr.costosExtraSection}</h2>
+                <p className="text-[11px] text-dash-muted">{tr.costosExtraSubtitle}</p>
               </div>
-              <span className="ml-auto text-sm font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{costosExtra.length}</span>
+              <span className="ml-auto text-sm font-semibold text-dash-muted bg-dash-control px-2 py-0.5 rounded-full">{costosExtra.length}</span>
             </div>
 
             {/* Add form */}
-            <div className="p-3 border-b border-neutral-100 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            <div className="p-3 border-b border-dash-border grid grid-cols-2 sm:grid-cols-3 gap-1.5">
               <input type="text" value={newCostoExtra.concepto} onChange={(e) => setNewCostoExtra((p) => ({ ...p, concepto: e.target.value }))} placeholder={tr.costoExtraConcepto} className={inputBase} />
               <input type="number" value={newCostoExtra.tarifa_valor} onChange={(e) => setNewCostoExtra((p) => ({ ...p, tarifa_valor: e.target.value }))} placeholder={tr.costoExtraTarifaValor} className={inputBase} />
               <input type="text" value={newCostoExtra.tarifa_texto} onChange={(e) => setNewCostoExtra((p) => ({ ...p, tarifa_texto: e.target.value }))} placeholder={tr.costoExtraTarifaTexto} className={inputBase} />
               <input type="text" value={newCostoExtra.moneda} onChange={(e) => setNewCostoExtra((p) => ({ ...p, moneda: e.target.value }))} placeholder={tr.costoExtraMoneda} className={inputBase} />
               <input type="text" value={newCostoExtra.condicion} onChange={(e) => setNewCostoExtra((p) => ({ ...p, condicion: e.target.value }))} placeholder={tr.costoExtraCondicion} className={inputBase} />
               <button type="button" onClick={() => void handleAddCostoExtra()} disabled={!newCostoExtra.concepto.trim() || saving}
-                className={`${moduleBtnPrimary} justify-center disabled:opacity-40`}>
+                className={`${neonBtnPrimary} justify-center disabled:opacity-40`}>
                 <Icon icon="lucide:plus" width={13} height={13} />{tr.agregarCostoExtra}
               </button>
             </div>
 
             {costosExtra.length === 0 ? (
-              <p className="text-[11px] text-neutral-400 text-center py-6">{tr.noCostosExtra}</p>
+              <p className="text-[11px] text-dash-muted text-center py-6">{tr.noCostosExtra}</p>
             ) : (
               <>
                 {/* Mobile cards */}
-                <div className="md:hidden divide-y divide-neutral-100">
+                <div className="md:hidden divide-y divide-dash-border">
                   {costosExtra.map((ce) => (
                     <div key={ce.id} className="px-4 py-3 flex items-center gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-neutral-800 truncate">{ce.concepto}</p>
+                        <p className="text-xs font-semibold text-dash-fg truncate">{ce.concepto}</p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-xs font-bold text-brand-blue">
+                          <span className="text-xs font-bold text-dash-neon">
                             {ce.tarifa_valor != null
                               ? `${ce.moneda} ${ce.tarifa_valor.toLocaleString("es-CL", { maximumFractionDigits: 2 })}`
                               : ce.tarifa_texto ?? "—"}
                           </span>
-                          {ce.condicion && <span className="text-sm text-neutral-400">{ce.condicion}</span>}
+                          {ce.condicion && <span className="text-sm text-dash-muted">{ce.condicion}</span>}
                           <button type="button" onClick={() => void handleToggleCostoExtraActivo(ce.id, ce.activo)}
                             className={`px-2 py-0.5 rounded-full text-sm font-semibold border transition-colors ${
-                              ce.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                              ce.activo ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted border-dash-border"
                             }`}>
                             {ce.activo ? tr.activo : tr.inactivo}
                           </button>
                         </div>
                       </div>
                       <button type="button" onClick={() => setConfirmDelete({ type: 'costoExtra', id: ce.id, name: ce.concepto })}
-                        className="shrink-0 p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors">
+                        className="shrink-0 p-2 rounded-xl text-red-400 hover:bg-red-500/15 transition-colors">
                         <Icon icon="lucide:trash-2" width={14} height={14} />
                       </button>
                     </div>
@@ -985,7 +994,7 @@ export function TransportesConfigContent() {
                 {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#F4F8FC] text-sm text-brand-blue sticky top-0">
+                    <thead className="sticky top-0 bg-dash-control/50 text-sm text-dash-neon">
                       <tr>
                         <th className="text-left px-3 py-2 font-bold">{tr.costoExtraConcepto}</th>
                         <th className="text-right px-3 py-2 font-bold">{tr.costoExtraTarifaValor}</th>
@@ -995,28 +1004,28 @@ export function TransportesConfigContent() {
                         <th className="text-center px-3 py-2 font-bold">{tr.acciones}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100">
+                    <tbody className="divide-y divide-dash-border">
                       {costosExtra.map((ce) => (
-                        <tr key={ce.id} className="hover:bg-neutral-50">
+                        <tr key={ce.id} className="hover:bg-dash-control">
                           <td className="px-3 py-2 font-medium">{ce.concepto}</td>
                           <td className="px-3 py-2 text-right font-semibold">
                             {ce.tarifa_valor != null
                               ? ce.tarifa_valor.toLocaleString("es-CL", { maximumFractionDigits: 2 })
-                              : <span className="text-neutral-400 font-normal">{ce.tarifa_texto ?? "—"}</span>}
+                              : <span className="text-dash-muted font-normal">{ce.tarifa_texto ?? "—"}</span>}
                           </td>
                           <td className="px-3 py-2">{ce.moneda}</td>
-                          <td className="px-3 py-2 text-neutral-500">{ce.condicion ?? "—"}</td>
+                          <td className="px-3 py-2 text-dash-muted">{ce.condicion ?? "—"}</td>
                           <td className="px-3 py-2 text-center">
                             <button type="button" onClick={() => void handleToggleCostoExtraActivo(ce.id, ce.activo)}
                               className={`px-2 py-1 rounded-full text-sm font-semibold border transition-colors ${
-                                ce.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                                ce.activo ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "bg-dash-control text-dash-muted border-dash-border"
                               }`}>
                               {ce.activo ? tr.activo : tr.inactivo}
                             </button>
                           </td>
                           <td className="px-3 py-2 text-center">
                             <button type="button" onClick={() => setConfirmDelete({ type: 'costoExtra', id: ce.id, name: ce.concepto })}
-                              className="p-1 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                              className="p-1 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors">
                               <Icon icon="lucide:trash-2" width={12} height={12} />
                             </button>
                           </td>
@@ -1033,36 +1042,36 @@ export function TransportesConfigContent() {
 
       {/* Delete confirmation — bottom sheet on mobile */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setConfirmDelete(null)}>
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-3xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme} onClick={() => setConfirmDelete(null)}>
+          <div className="dash-card w-full overflow-hidden rounded-t-3xl sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-1 sm:hidden">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+              <div className="h-1 w-10 rounded-full bg-dash-border" />
             </div>
-            <div className="px-6 pt-4 pb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+            <div className="px-6 pb-6 pt-4">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-red-400/35 bg-red-500/15 text-red-300">
                   <Icon icon="lucide:trash-2" width={18} height={18} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-neutral-900">{tr.confirmTitle}</h3>
-                  <p className="text-xs text-neutral-500">{tr.deleteWarning}</p>
+                  <h3 className="font-semibold text-dash-fg">{tr.confirmTitle}</h3>
+                  <p className="text-xs text-dash-muted">{tr.deleteWarning}</p>
                 </div>
               </div>
-              <p className="text-sm text-neutral-700 mb-1">
+              <p className="mb-1 text-sm text-dash-fg">
                 {tr.deleteQuestion} <span className="font-semibold">{confirmDelete.name}</span>?
               </p>
               {confirmDelete.type === 'empresa' && (
-                <p className="text-xs text-red-600 mt-1 mb-4">
+                <p className="mb-4 mt-1 text-xs text-red-300">
                   {tr.deleteEmpresaWarning}
                 </p>
               )}
-              <div className="flex gap-3 mt-5">
+              <div className="mt-5 flex gap-3">
                 <button type="button" onClick={() => setConfirmDelete(null)}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors">
+                  className="flex-1 rounded-xl border border-dash-border bg-dash-control px-4 py-2.5 text-sm font-medium text-dash-fg transition-colors hover:bg-dash-neon/15">
                   {tr.cancel}
                 </button>
                 <button type="button" onClick={handleConfirmDelete}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors">
+                  className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700">
                   {tr.delete}
                 </button>
               </div>
@@ -1070,7 +1079,8 @@ export function TransportesConfigContent() {
           </div>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
 

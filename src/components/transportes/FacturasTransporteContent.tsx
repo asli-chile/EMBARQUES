@@ -8,13 +8,6 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import {
-  moduleCard,
-  moduleCardAccent,
-  moduleHeroRounded,
-  moduleInput,
-  modulePageBg,
-} from "@/lib/ui/moduleStyles";
-import {
   ESTADO_META,
   estadosEnOrden,
   etiquetaEstado,
@@ -23,6 +16,7 @@ import {
 } from "@/lib/operaciones/estados";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 type Factura = {
   id: string;
@@ -81,6 +75,7 @@ const FACTURA_FIELDS_TO_CLEAR = {
 export function FacturasTransporteContent() {
   const { isCliente, empresaNombres } = useAuth();
   const { t } = useLocale();
+  const [theme] = useNeonTheme();
   const tr = t.facturasTransporte;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const [facturas, setFacturas] = useState<Factura[]>([]);
@@ -217,295 +212,304 @@ export function FacturasTransporteContent() {
     }
   }, [deleteTarget, supabase, fetchData]);
 
+  const inputClass =
+    "dash-control min-h-[2.6rem] px-3.5 py-2.5 text-base font-semibold text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40";
+  const cardAccent = <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />;
+
   const estadoColor: Record<GrupoEstado, string> = {
-    COMERCIAL: "bg-amber-50 text-amber-700 border-amber-200",
-    COORDINACION: "bg-blue-50 text-blue-700 border-blue-200",
-    TRANSITO: "bg-violet-50 text-violet-700 border-violet-200",
-    DOCUMENTAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    CIERRE: "bg-neutral-100 text-neutral-500 border-neutral-200",
-    EXCEPCION: "bg-red-50 text-red-600 border-red-200",
+    COMERCIAL: "bg-amber-500/15 text-dash-fg border-amber-400/35",
+    COORDINACION: "bg-blue-500/15 text-dash-fg border-blue-400/35",
+    TRANSITO: "bg-violet-500/15 text-dash-fg border-violet-400/35",
+    DOCUMENTAL: "bg-emerald-500/15 text-dash-fg border-emerald-400/35",
+    CIERRE: "bg-dash-control text-dash-muted border-dash-border",
+    EXCEPCION: "bg-red-500/15 text-dash-fg border-red-400/35",
   };
 
   const estadoBadgeClass = (estado: string | null) => {
     const codigo = normalizarEstado(estado);
     return codigo
       ? estadoColor[ESTADO_META[codigo].grupo]
-      : "bg-neutral-100 text-neutral-500 border-neutral-200";
+      : "bg-dash-control text-dash-muted border-dash-border";
   };
 
   return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+    <>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+          </div>
 
-        {/* Hero */}
-        <div className={moduleHeroRounded}>
-          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:receipt" width={24} height={24} className="text-white" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{tr.title}</h1>
-                <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap shrink-0">
-              {Array.from(totalesPorMoneda.entries()).map(([moneda, total]) => (
-                <div key={moneda} className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-                  <Icon icon="lucide:dollar-sign" width={13} height={13} className="text-white/80" />
-                  <span className="text-sm font-bold">{moneda} {total.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+          <div className="dash-toolbar relative z-10 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                  <Icon icon="lucide:receipt" width={22} height={22} className="text-dash-neon" aria-hidden />
                 </div>
-              ))}
-              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-                <Icon icon="lucide:file-text" width={13} height={13} className="text-white/80" />
-                <span className="text-sm font-bold">{filtered.length} {filtered.length !== 1 ? tr.facturas : tr.factura}</span>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+                </div>
               </div>
-              <button
-                onClick={exportExcel}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors shadow-sm"
-              >
-                <Icon icon="lucide:table-2" width={14} height={14} />
-                <span className="hidden sm:inline">{tr.exportExcel}</span>
-                <span className="sm:hidden">{tr.exportExcelShort}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Filtros */}
-        <div className={`${moduleCard} p-3 sm:p-4 flex flex-wrap gap-2 items-center`}>
-          <div className="relative flex-1 min-w-[180px]">
-            <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-blue/40 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={tr.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={`${moduleInput} pl-9`}
-            />
-          </div>
-          {!isCliente && (
-            <select
-              value={filterCliente}
-              onChange={(e) => setFilterCliente(e.target.value)}
-              className={`${moduleInput} min-w-[140px]`}
-            >
-              <option value="all">{tr.allClients}</option>
-              {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          )}
-          <select
-            value={filterEstado}
-            onChange={(e) => setFilterEstado(e.target.value)}
-            className={`${moduleInput} min-w-[130px]`}
-          >
-            <option value="all">{tr.allStates}</option>
-            {estadosEnOrden().map((e) => (
-              <option key={e} value={e}>{etiquetaEstado(e)}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className={moduleInput}
-            title={tr.dateFromTitle}
-          />
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className={moduleInput}
-            title={tr.dateToTitle}
-          />
-          <label className="flex items-center gap-2 text-base text-brand-blue/80 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-[#F4F8FC]">
-            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="w-3.5 h-3.5 accent-brand-blue" />
-            {tr.showAll}
-          </label>
-        </div>
-
-        {/* Tabla */}
-        <div className={moduleCard}>
-          <div className={moduleCardAccent} />
-          {loading ? (
-            <div className="py-20 flex items-center justify-center">
-              <Icon icon="typcn:refresh" className="w-6 h-6 text-brand-blue animate-spin" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-[#F4F8FC] flex items-center justify-center mx-auto mb-3">
-                <Icon icon="lucide:receipt" width={24} height={24} className="text-brand-blue/30" />
-              </div>
-              <p className="text-brand-blue font-semibold text-base">{tr.noFacturas}</p>
-              <p className="text-neutral-500 text-base mt-1">{tr.noFacturasHint}</p>
-            </div>
-          ) : (
-            <>
-              {/* ── Cards móvil (< md) ── */}
-              <div className="md:hidden divide-y divide-brand-blue/10">
-                {filtered.map((f) => (
-                  <div key={f.id} className="p-4 hover:bg-[#F4F8FC] transition-colors">
-                    {/* Fila 1: Ref + estado + acciones */}
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-base text-brand-blue">{fmtRef(f)}</span>
-                        {f.numero_factura_asli && (
-                          <span className="px-2 py-0.5 rounded-lg bg-brand-blue/10 text-brand-blue text-sm font-bold">
-                            {f.numero_factura_asli}
-                          </span>
-                        )}
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoBadgeClass(f.estado_operacion)}`}>
-                          {etiquetaEstado(f.estado_operacion)}
-                        </span>
-                      </div>
-                      {!isCliente && (
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(f)}
-                          className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title={tr.deleteTitle}
-                        >
-                          <Icon icon="lucide:trash-2" width={14} height={14} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Fila 2: cliente + monto */}
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <div>
-                        <p className="text-base font-semibold text-neutral-800">{f.cliente}</p>
-                        {f.naviera && <p className="text-sm text-neutral-400">{f.naviera}{f.booking ? ` · ${f.booking}` : ""}</p>}
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        {f.monto_facturado != null ? (
-                          <p className="font-bold text-base text-neutral-900">{fmtMonto(f.monto_facturado, f.moneda)}</p>
-                        ) : <p className="text-neutral-300 text-sm">{tr.noAmount}</p>}
-                      </div>
-                    </div>
-
-                    {/* Fila 3: detalles secundarios */}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 pt-2 border-t border-brand-blue/10">
-                      {f.factura_transporte && (
-                        <span className="text-sm text-neutral-500">
-                          <span className="font-medium text-neutral-600">{tr.cardFactTransp}</span> {f.factura_transporte}
-                        </span>
-                      )}
-                      {f.transporte && (
-                        <span className="text-sm text-neutral-500">
-                          <span className="font-medium text-neutral-600">{tr.cardTransporte}</span> {f.transporte}
-                        </span>
-                      )}
-                      {f.fecha_entrega_factura && (
-                        <span className="text-sm text-neutral-500">
-                          <span className="font-medium text-neutral-600">{tr.cardEntrega}</span> {fmtDate(f.fecha_entrega_factura)}
-                        </span>
-                      )}
-                      <span className={`text-sm flex items-center gap-1 ${f.fecha_pago_cliente ? "text-emerald-600" : "text-amber-500"}`}>
-                        <Icon icon={f.fecha_pago_cliente ? "lucide:check-circle" : "lucide:clock"} width={10} />
-                        {f.fecha_pago_cliente ? `${tr.cardPagoCliente} ${fmtDate(f.fecha_pago_cliente)}` : tr.cardPagoClientePending}
-                      </span>
-                      <span className={`text-sm flex items-center gap-1 ${f.fecha_pago_transporte ? "text-emerald-600" : "text-amber-500"}`}>
-                        <Icon icon={f.fecha_pago_transporte ? "lucide:check-circle" : "lucide:clock"} width={10} />
-                        {f.fecha_pago_transporte ? `${tr.cardPagoTransp} ${fmtDate(f.fecha_pago_transporte)}` : tr.cardPagoTranspPending}
-                      </span>
-                    </div>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {Array.from(totalesPorMoneda.entries()).map(([moneda, total]) => (
+                  <div key={moneda} className="inline-flex items-center gap-1.5 rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-3 py-1.5 text-sm font-bold text-dash-fg">
+                    <Icon icon="lucide:dollar-sign" width={13} height={13} className="text-dash-neon" />
+                    <span>{moneda} {total.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                   </div>
                 ))}
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-1.5 text-sm font-bold text-dash-fg">
+                  <Icon icon="lucide:file-text" width={13} height={13} className="text-dash-muted" />
+                  <span>{filtered.length} {filtered.length !== 1 ? tr.facturas : tr.factura}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={exportExcel}
+                  className="dash-cta inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold"
+                >
+                  <Icon icon="lucide:table-2" width={14} height={14} />
+                  <span className="hidden sm:inline">{tr.exportExcel}</span>
+                  <span className="sm:hidden">{tr.exportExcelShort}</span>
+                </button>
               </div>
+            </div>
+          </div>
 
-              {/* ── Tabla desktop (≥ md) ── */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-base">
-                  <thead>
-                    <tr className="border-b border-brand-blue/10 bg-[#F4F8FC]">
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colRef}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colCliente}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colFacturaAsli}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue">{tr.colFactTransporte}</th>
-                      <th className="text-right px-4 py-3 text-sm font-bold text-brand-blue">{tr.colMonto}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden lg:table-cell">{tr.colTransporte}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden lg:table-cell">{tr.colEntrega}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden xl:table-cell">{tr.colPagoCliente}</th>
-                      <th className="text-left px-4 py-3 text-sm font-bold text-brand-blue hidden xl:table-cell">{tr.colPagoTransporte}</th>
-                      <th className="text-center px-4 py-3 text-sm font-bold text-brand-blue">{tr.colEstado}</th>
-                      {!isCliente && <th className="px-3 py-3 w-12" />}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-blue/5">
+          <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
+            {/* Filtros */}
+            <div className="dash-card overflow-hidden rounded-xl p-3 sm:p-4 flex flex-wrap gap-2 items-center">
+              <div className="relative flex-1 min-w-[180px]">
+                <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dash-muted pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder={tr.searchPlaceholder}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className={`${inputClass} w-full pl-9`}
+                />
+              </div>
+              {!isCliente && (
+                <select
+                  value={filterCliente}
+                  onChange={(e) => setFilterCliente(e.target.value)}
+                  className={`${inputClass} min-w-[140px]`}
+                >
+                  <option value="all">{tr.allClients}</option>
+                  {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              )}
+              <select
+                value={filterEstado}
+                onChange={(e) => setFilterEstado(e.target.value)}
+                className={`${inputClass} min-w-[130px]`}
+              >
+                <option value="all">{tr.allStates}</option>
+                {estadosEnOrden().map((e) => (
+                  <option key={e} value={e}>{etiquetaEstado(e)}</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className={inputClass}
+                title={tr.dateFromTitle}
+              />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className={inputClass}
+                title={tr.dateToTitle}
+              />
+              <label className="flex items-center gap-2 text-base text-dash-muted cursor-pointer px-2 py-1.5 rounded-lg hover:bg-dash-neon/10">
+                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="w-3.5 h-3.5 accent-[var(--dash-neon)]" />
+                {tr.showAll}
+              </label>
+            </div>
+
+            {/* Tabla */}
+            <div className="dash-card overflow-hidden rounded-xl">
+              {cardAccent}
+              {loading ? (
+                <div className="py-20 flex items-center justify-center">
+                  <Icon icon="typcn:refresh" className="w-6 h-6 text-dash-neon animate-spin" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="w-14 h-14 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center mx-auto mb-3">
+                    <Icon icon="lucide:receipt" width={24} height={24} className="text-dash-muted" />
+                  </div>
+                  <p className="text-dash-fg font-semibold text-base">{tr.noFacturas}</p>
+                  <p className="text-dash-muted text-base mt-1">{tr.noFacturasHint}</p>
+                </div>
+              ) : (
+                <>
+                  {/* ── Cards móvil (< md) ── */}
+                  <div className="md:hidden divide-y divide-dash-border">
                     {filtered.map((f) => (
-                      <tr key={f.id} className="hover:bg-[#F4F8FC] transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="font-bold text-base text-brand-blue">{fmtRef(f)}</p>
-                          {f.booking && <p className="text-sm text-neutral-400 mt-0.5">{f.booking}</p>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-base font-semibold text-neutral-800">{f.cliente}</p>
-                          {f.naviera && <p className="text-sm text-neutral-400">{f.naviera}</p>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {f.numero_factura_asli ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-brand-blue/10 text-brand-blue text-sm font-bold">
-                              {f.numero_factura_asli}
+                      <div key={f.id} className="p-4 hover:bg-dash-neon/10 transition-colors">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-base text-dash-neon">{fmtRef(f)}</span>
+                            {f.numero_factura_asli && (
+                              <span className="px-2 py-0.5 rounded-lg bg-dash-neon/15 border border-dash-neon/35 text-dash-fg text-sm font-bold">
+                                {f.numero_factura_asli}
+                              </span>
+                            )}
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoBadgeClass(f.estado_operacion)}`}>
+                              {etiquetaEstado(f.estado_operacion)}
                             </span>
-                          ) : <span className="text-neutral-300 text-sm">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-base text-neutral-600">{f.factura_transporte || "—"}</td>
-                        <td className="px-4 py-3 text-right">
-                          {f.monto_facturado != null ? (
-                            <span className="font-bold text-base text-neutral-800">{fmtMonto(f.monto_facturado, f.moneda)}</span>
-                          ) : <span className="text-neutral-300 text-sm">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-base text-neutral-600 hidden lg:table-cell">{f.transporte || "—"}</td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          {f.fecha_entrega_factura ? <span className="text-base">{fmtDate(f.fecha_entrega_factura)}</span> : <span className="text-neutral-300 text-sm">—</span>}
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          {f.fecha_pago_cliente ? (
-                            <span className="inline-flex items-center gap-1 text-base text-emerald-700"><Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_cliente)}</span>
-                          ) : <span className="text-amber-500 text-base flex items-center gap-1"><Icon icon="lucide:clock" width={11} />{tr.pendiente}</span>}
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          {f.fecha_pago_transporte ? (
-                            <span className="inline-flex items-center gap-1 text-base text-emerald-700"><Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_transporte)}</span>
-                          ) : <span className="text-amber-500 text-base flex items-center gap-1"><Icon icon="lucide:clock" width={11} />{tr.pendiente}</span>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoBadgeClass(f.estado_operacion)}`}>
-                            {etiquetaEstado(f.estado_operacion)}
-                          </span>
-                        </td>
-                        {!isCliente && (
-                          <td className="px-3 py-3 text-center">
-                            <button type="button" onClick={() => setDeleteTarget(f)} className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all" title={tr.deleteTitle}>
+                          </div>
+                          {!isCliente && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(f)}
+                              className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg text-dash-muted hover:text-red-300 hover:bg-red-500/15 transition-colors"
+                              title={tr.deleteTitle}
+                            >
                               <Icon icon="lucide:trash-2" width={14} height={14} />
                             </button>
-                          </td>
-                        )}
-                      </tr>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div>
+                            <p className="text-base font-semibold text-dash-fg">{f.cliente}</p>
+                            {f.naviera && <p className="text-sm text-dash-muted">{f.naviera}{f.booking ? ` · ${f.booking}` : ""}</p>}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            {f.monto_facturado != null ? (
+                              <p className="font-bold text-base text-dash-fg">{fmtMonto(f.monto_facturado, f.moneda)}</p>
+                            ) : <p className="text-dash-muted text-sm">{tr.noAmount}</p>}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 pt-2 border-t border-dash-border">
+                          {f.factura_transporte && (
+                            <span className="text-sm text-dash-muted">
+                              <span className="font-medium text-dash-fg">{tr.cardFactTransp}</span> {f.factura_transporte}
+                            </span>
+                          )}
+                          {f.transporte && (
+                            <span className="text-sm text-dash-muted">
+                              <span className="font-medium text-dash-fg">{tr.cardTransporte}</span> {f.transporte}
+                            </span>
+                          )}
+                          {f.fecha_entrega_factura && (
+                            <span className="text-sm text-dash-muted">
+                              <span className="font-medium text-dash-fg">{tr.cardEntrega}</span> {fmtDate(f.fecha_entrega_factura)}
+                            </span>
+                          )}
+                          <span className={`text-sm flex items-center gap-1 ${f.fecha_pago_cliente ? "text-emerald-400" : "text-amber-400"}`}>
+                            <Icon icon={f.fecha_pago_cliente ? "lucide:check-circle" : "lucide:clock"} width={10} />
+                            {f.fecha_pago_cliente ? `${tr.cardPagoCliente} ${fmtDate(f.fecha_pago_cliente)}` : tr.cardPagoClientePending}
+                          </span>
+                          <span className={`text-sm flex items-center gap-1 ${f.fecha_pago_transporte ? "text-emerald-400" : "text-amber-400"}`}>
+                            <Icon icon={f.fecha_pago_transporte ? "lucide:check-circle" : "lucide:clock"} width={10} />
+                            {f.fecha_pago_transporte ? `${tr.cardPagoTransp} ${fmtDate(f.fecha_pago_transporte)}` : tr.cardPagoTranspPending}
+                          </span>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
+                  </div>
+
+                  {/* ── Tabla desktop (≥ md) ── */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-base">
+                      <thead>
+                        <tr className="border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon">{tr.colRef}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon">{tr.colCliente}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon">{tr.colFacturaAsli}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon">{tr.colFactTransporte}</th>
+                          <th className="text-right px-4 py-3 text-sm font-bold text-dash-neon">{tr.colMonto}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon hidden lg:table-cell">{tr.colTransporte}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon hidden lg:table-cell">{tr.colEntrega}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon hidden xl:table-cell">{tr.colPagoCliente}</th>
+                          <th className="text-left px-4 py-3 text-sm font-bold text-dash-neon hidden xl:table-cell">{tr.colPagoTransporte}</th>
+                          <th className="text-center px-4 py-3 text-sm font-bold text-dash-neon">{tr.colEstado}</th>
+                          {!isCliente && <th className="px-3 py-3 w-12" />}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dash-border">
+                        {filtered.map((f) => (
+                          <tr key={f.id} className="hover:bg-dash-neon/10 transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="font-bold text-base text-dash-neon">{fmtRef(f)}</p>
+                              {f.booking && <p className="text-sm text-dash-muted mt-0.5">{f.booking}</p>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-base font-semibold text-dash-fg">{f.cliente}</p>
+                              {f.naviera && <p className="text-sm text-dash-muted">{f.naviera}</p>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {f.numero_factura_asli ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-dash-neon/15 border border-dash-neon/35 text-dash-fg text-sm font-bold">
+                                  {f.numero_factura_asli}
+                                </span>
+                              ) : <span className="text-dash-muted text-sm">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-base text-dash-muted">{f.factura_transporte || "—"}</td>
+                            <td className="px-4 py-3 text-right">
+                              {f.monto_facturado != null ? (
+                                <span className="font-bold text-base text-dash-fg">{fmtMonto(f.monto_facturado, f.moneda)}</span>
+                              ) : <span className="text-dash-muted text-sm">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-base text-dash-muted hidden lg:table-cell">{f.transporte || "—"}</td>
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                              {f.fecha_entrega_factura ? <span className="text-base text-dash-fg">{fmtDate(f.fecha_entrega_factura)}</span> : <span className="text-dash-muted text-sm">—</span>}
+                            </td>
+                            <td className="px-4 py-3 hidden xl:table-cell">
+                              {f.fecha_pago_cliente ? (
+                                <span className="inline-flex items-center gap-1 text-base text-emerald-400"><Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_cliente)}</span>
+                              ) : <span className="text-amber-400 text-base flex items-center gap-1"><Icon icon="lucide:clock" width={11} />{tr.pendiente}</span>}
+                            </td>
+                            <td className="px-4 py-3 hidden xl:table-cell">
+                              {f.fecha_pago_transporte ? (
+                                <span className="inline-flex items-center gap-1 text-base text-emerald-400"><Icon icon="lucide:check" width={11} />{fmtDate(f.fecha_pago_transporte)}</span>
+                              ) : <span className="text-amber-400 text-base flex items-center gap-1"><Icon icon="lucide:clock" width={11} />{tr.pendiente}</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${estadoBadgeClass(f.estado_operacion)}`}>
+                                {etiquetaEstado(f.estado_operacion)}
+                              </span>
+                            </td>
+                            {!isCliente && (
+                              <td className="px-3 py-3 text-center">
+                                <button type="button" onClick={() => setDeleteTarget(f)} className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-dash-muted hover:text-red-300 hover:bg-red-500/15 border border-transparent hover:border-red-400/35 transition-all" title={tr.deleteTitle}>
+                                  <Icon icon="lucide:trash-2" width={14} height={14} />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </main>
       </div>
 
       {/* Modal de confirmación de borrado */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="bg-white rounded-2xl shadow-mac-modal border border-brand-blue/15 p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
+          <div className="dash-card w-full max-w-md rounded-xl p-6 shadow-lg">
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:alert-triangle" width={20} height={20} className="text-red-500" />
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-400/35 flex items-center justify-center flex-shrink-0">
+                <Icon icon="lucide:alert-triangle" width={20} height={20} className="text-red-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-neutral-900">{tr.deleteTitle}</h3>
-                <p className="text-base text-neutral-500 mt-1.5 leading-relaxed">
+                <h3 className="text-base font-bold text-dash-fg">{tr.deleteTitle}</h3>
+                <p className="text-base text-dash-muted mt-1.5 leading-relaxed">
                   {tr.deleteConfirmMsg}{" "}
-                  <span className="font-bold text-brand-blue">{fmtRef(deleteTarget)}</span>
+                  <span className="font-bold text-dash-neon">{fmtRef(deleteTarget)}</span>
                   {deleteTarget.numero_factura_asli && (
-                    <> ({tr.deleteConfirmFact} <span className="font-bold">{deleteTarget.numero_factura_asli}</span>)</>
+                    <> ({tr.deleteConfirmFact} <span className="font-bold text-dash-fg">{deleteTarget.numero_factura_asli}</span>)</>
                   )}
                   {tr.deleteConfirmEnd}
                 </p>
@@ -516,7 +520,7 @@ export function FacturasTransporteContent() {
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
-                className="px-4 py-2.5 text-base font-semibold text-brand-blue/80 bg-[#F4F8FC] border border-brand-blue/20 rounded-lg hover:bg-white transition-colors"
+                className="dash-control px-4 py-2.5 text-base font-semibold text-dash-fg"
               >
                 {tr.cancel}
               </button>
@@ -524,7 +528,7 @@ export function FacturasTransporteContent() {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold text-white bg-red-600 border border-red-700 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold text-red-300 bg-red-500/15 border border-red-400/35 rounded-lg hover:bg-red-500/25 transition-colors disabled:opacity-50"
               >
                 {deleting ? (
                   <Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />
@@ -537,6 +541,6 @@ export function FacturasTransporteContent() {
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }

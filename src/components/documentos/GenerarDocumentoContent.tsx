@@ -18,11 +18,7 @@ import {
   type InstructivoConsignatario,
   type InstructivoOpData,
 } from "@/lib/documentos/instructivo";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleInput,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -57,6 +53,15 @@ type TagGroup = { group: string; icon: string; tags: { tag: string; label: strin
 
 function fmtRef(op: Operacion) {
   return formatRefAsli(op.ref_asli, op.correlativo) ?? "";
+}
+
+function fmtDate(dateStr: string | null | undefined) {
+  if (!dateStr) return "";
+  try {
+    return format(new Date(dateStr), "dd-MM-yyyy");
+  } catch {
+    return dateStr;
+  }
 }
 
 const OP_SELECT = `id, ref_asli, correlativo, cliente, consignatario, naviera, nave, booking, booking_doc_url,
@@ -114,8 +119,16 @@ async function applyTagsToBuffer(buffer: ArrayBuffer, values: Record<string, str
 // ─── Estilos por tipo (sin texto) ─────────────────────────────────────────────
 
 const TIPO_STYLES = {
-  proforma:    { icon: "lucide:file-check",  color: "text-indigo-600", colorBg: "bg-indigo-100", colorBtn: "bg-indigo-600 hover:bg-indigo-700" },
-  instructivo: { icon: "lucide:file-list",   color: "text-amber-600",  colorBg: "bg-amber-100",  colorBtn: "bg-amber-600 hover:bg-amber-700"   },
+  proforma: {
+    icon: "lucide:file-check",
+    color: "text-dash-neon",
+    colorBg: "border border-dash-neon/35 bg-dash-neon/15",
+  },
+  instructivo: {
+    icon: "lucide:file-list",
+    color: "text-dash-neon-hot",
+    colorBg: "border border-dash-neon-hot/35 bg-dash-neon-hot/15",
+  },
 };
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -243,6 +256,7 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
 
   const { empresaNombres, isCliente, isLoading: authLoading } = useAuth();
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
+  const [theme] = useNeonTheme();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [formatos, setFormatos] = useState<FormatoDocumento[]>([]);
@@ -437,340 +451,347 @@ export function GenerarDocumentoContent({ tipoDoc }: Props) {
     })).filter((g) => g.tags.length > 0);
   }, [tagsDeDePlantilla, tagGroups]);
 
-  // ─── CSS ──────────────────────────────────────────────────────────────────
-  const inputCls = moduleInput;
+  const inputCls =
+    "dash-control w-full min-h-[2.6rem] px-3 py-2 text-sm font-semibold placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40";
+  const labelCls = "mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-dash-muted";
 
   const canGenerate = !!selectedOp && !!selectedFormato && !loadingTags && !isCliente;
   const isExcel = (selectedFormato?.template_type ?? "html") === "excel";
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <main className={`flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`}>
-      {/* ── Topbar ── */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 flex items-center justify-between gap-3 shrink-0`}>
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
-            <Icon icon={cfg.icon} width={24} height={24} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">{cfg.titulo}</h1>
-            <p className="text-base text-white/75 mt-1 truncate">{cfg.subtitulo}</p>
-            {enrichmentNote && (
-              <p className="text-sm text-emerald-200/90 mt-1 truncate">
-                {linkingOp ? "Cargando datos…" : `Auto: ${enrichmentNote}`}
-              </p>
-            )}
-          </div>
-        </div>
-        {/* Botón generar (desktop) */}
-        {canGenerate && (
-          <button
-            onClick={handleGenerar}
-            disabled={generating}
-            className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 shadow-sm transition-colors disabled:opacity-50"
-          >
-            <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={15} height={15} className={generating ? "animate-spin" : ""} />
-            {generating ? tr.generando : isExcel ? tr.descargarExcel : tr.generarPdf}
-          </button>
-        )}
-      </div>
-
-      {/* ── Mobile tabs ── */}
-      <div className="sm:hidden flex border-b border-neutral-200 bg-white shrink-0">
-        {([
-          { id: "operacion", label: tr.tabOperacion, icon: "lucide:list" },
-          { id: "formato",   label: tr.tabFormato,   icon: "lucide:file" },
-          { id: "datos",     label: tr.tabDatos,     icon: "lucide:edit-3" },
-        ] as const).map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setMobileTab(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold transition-colors relative ${
-              mobileTab === tab.id ? "text-brand-blue" : "text-neutral-400"
-            }`}
-          >
-            <Icon icon={tab.icon} width={15} height={15} />
-            {tab.label}
-            {tab.id === "operacion" && selectedOp && (
-              <span className="absolute top-1.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-green-500" />
-            )}
-            {tab.id === "formato" && selectedFormato && (
-              <span className="absolute top-1.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-green-500" />
-            )}
-            {mobileTab === tab.id && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-brand-blue rounded-full" />}
-          </button>
-        ))}
-      </div>
-
-      {/* Toast */}
-      {error && (
-        <div className="mx-4 mt-3 flex items-center gap-3 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs shrink-0">
-          <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
-          <span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)}><Icon icon="lucide:x" width={12} height={12} /></button>
-        </div>
-      )}
-
-      {/* ── Body ── */}
-      <div className="flex-1 min-h-0 flex overflow-hidden">
-
-        {/* ════════════════════════════════════════
-            PANEL 1: LISTA DE OPERACIONES
-        ════════════════════════════════════════ */}
-        <div className={`w-full sm:w-72 lg:w-80 shrink-0 border-r border-neutral-200 bg-white flex flex-col overflow-hidden ${mobileTab !== "operacion" ? "hidden sm:flex" : "flex"}`}>
-          <div className="p-3 border-b border-neutral-100 shrink-0">
-            <div className="relative">
-              <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-              <input
-                value={searchOp}
-                onChange={(e) => setSearchOp(e.target.value)}
-                placeholder={tr.buscarPlaceholder}
-                className="w-full pl-8 pr-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-xs text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-brand-blue/30 focus:border-brand-blue transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-12 gap-2 text-neutral-400 text-sm">
-                <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
-                {tr.cargando}
-              </div>
-            ) : opsFiltradas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                <Icon icon="lucide:inbox" width={28} height={28} className="text-neutral-300 mb-2" />
-                <p className="text-xs text-neutral-500">{searchOp ? tr.sinResultados : tr.noOperaciones}</p>
-              </div>
-            ) : (
-              opsFiltradas.map((op) => {
-                const isActive = selectedOp?.id === op.id;
-                return (
-                  <button
-                    key={op.id}
-                    onClick={() => void handleSelectOp(op)}
-                    className={`w-full flex items-start gap-3 px-3 py-3 text-left border-b border-neutral-100 transition-all ${
-                      isActive ? "bg-brand-blue/5 border-l-2 border-l-brand-blue" : "hover:bg-neutral-50 border-l-2 border-l-transparent"
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${isActive ? "bg-brand-blue text-white" : "bg-neutral-100 text-neutral-400"}`}>
-                      <Icon icon="lucide:container" width={14} height={14} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={`text-xs font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
-                          {fmtRef(op)}
-                        </span>
-                        {isActive && <Icon icon="lucide:check" width={12} height={12} className="text-brand-blue shrink-0" />}
-                      </div>
-                      <p className="text-[11px] text-neutral-500 truncate mt-0.5">{op.cliente || tr.sinCliente}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {op.booking && (
-                          <span className="text-[10px] text-neutral-400 font-mono truncate">{op.booking}</span>
-                        )}
-                        {op.etd && (
-                          <span className="text-[10px] text-neutral-400">{fmtDate(op.etd)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-8 h-64 w-64 rounded-full bg-dash-neon/15 blur-3xl" />
+          <div className="absolute bottom-24 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
         </div>
 
-        {/* ════════════════════════════════════════
-            PANEL 2: SELECCIÓN DE FORMATO + DATOS
-        ════════════════════════════════════════ */}
-        <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${mobileTab === "operacion" ? "hidden sm:flex" : "flex"}`}>
-
-          {!selectedOp ? (
-            /* Empty state: no operation selected */
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
-              <div className={`w-16 h-16 rounded-2xl ${cfg.colorBg} flex items-center justify-center`}>
-                <Icon icon="lucide:arrow-left" width={24} height={24} className={cfg.color} />
+        <header className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon={cfg.icon} width={22} height={22} className="text-dash-neon" />
               </div>
-              <h3 className="text-sm font-bold text-neutral-700">{tr.seleccionaOperacion}</h3>
-              <p className="text-xs text-neutral-500 max-w-xs">{tr.seleccionaOperacionHint}</p>
-            </div>
-          ) : (
-            <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-
-              {/* ─── Sub-panel: Formatos disponibles ─── */}
-              <div className={`lg:w-72 shrink-0 border-b lg:border-b-0 lg:border-r border-neutral-200 bg-neutral-50 flex flex-col overflow-hidden ${mobileTab === "datos" ? "hidden lg:flex" : "flex"}`}>
-                <div className="px-4 py-3 border-b border-neutral-200 bg-white shrink-0">
-                  <h3 className="text-xs font-bold text-neutral-700 flex items-center gap-2">
-                    <Icon icon={cfg.icon} width={13} height={13} className={cfg.color} />
-                    {tr.formatosDe} {tipoDoc}
-                    <span className="ml-auto text-neutral-400 font-normal">{formatos.length}</span>
-                  </h3>
-                </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                  {formatos.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
-                      <Icon icon="lucide:file-x" width={24} height={24} className="text-neutral-300" />
-                      <p className="text-xs text-neutral-500">{cfg.emptyMsg}</p>
-                      <a href={withBase("/configuracion/formatos-documentos")} className="text-xs text-brand-blue hover:underline font-medium mt-1">
-                        {tr.crearFormato}
-                      </a>
-                    </div>
-                  ) : formatos.map((fmt) => {
-                    const isActive = selectedFormato?.id === fmt.id;
-                    const isExcelFmt = (fmt.template_type ?? "html") === "excel";
-                    return (
-                      <button
-                        key={fmt.id}
-                        onClick={() => handleSelectFormato(fmt)}
-                        className={`w-full text-left p-3 rounded-xl border transition-all ${
-                          isActive
-                            ? "bg-white border-brand-blue shadow-sm ring-1 ring-brand-blue/20"
-                            : "bg-white border-neutral-200 hover:border-neutral-300 hover:shadow-sm"
-                        }`}
-                      >
-                        <div className="flex items-start gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isExcelFmt ? "bg-green-100" : "bg-brand-blue/10"}`}>
-                            <Icon icon={isExcelFmt ? "lucide:file-spreadsheet" : "lucide:file-text"} width={15} height={15} className={isExcelFmt ? "text-green-600" : "text-brand-blue"} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-xs font-bold truncate ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>{fmt.nombre}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${isExcelFmt ? "bg-green-100 text-green-700 border-green-200" : "bg-sky-100 text-sky-700 border-sky-200"}`}>
-                                {isExcelFmt ? "Excel" : "HTML/PDF"}
-                              </span>
-                            </div>
-                            {fmt.descripcion && <p className="text-[10px] text-neutral-400 mt-1 line-clamp-2">{fmt.descripcion}</p>}
-                          </div>
-                          {isActive && <Icon icon="lucide:check-circle" width={14} height={14} className="text-brand-blue shrink-0 mt-0.5" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ─── Sub-panel: Datos / Tag values ─── */}
-              <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${mobileTab === "formato" && formatos.length > 0 ? "hidden lg:flex" : "flex"}`}>
-                {!selectedFormato ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
-                    <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                      <Icon icon="lucide:file" width={20} height={20} className="text-neutral-400" />
-                    </div>
-                    <p className="text-xs text-neutral-500">{tr.seleccionaFormato}</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Header con info de la operación seleccionada */}
-                    <div className="bg-white border-b border-neutral-200 px-4 py-3 shrink-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-neutral-800">{fmtRef(selectedOp)}</span>
-                            <span className="text-neutral-300">·</span>
-                            <span className="text-xs text-neutral-500 truncate">{selectedOp.cliente || "Sin cliente"}</span>
-                            <span className="text-neutral-300">·</span>
-                            <span className="text-xs font-semibold text-brand-blue truncate">{selectedFormato.nombre}</span>
-                          </div>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">
-                            {tr.datosAutoHint}
-                          </p>
-                        </div>
-                        {/* Botón generar mobile */}
-                        {!isCliente && (
-                          <button
-                            onClick={handleGenerar}
-                            disabled={generating || !canGenerate}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-50 shrink-0 ${cfg.colorBtn}`}
-                          >
-                            <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={13} height={13} className={generating ? "animate-spin" : ""} />
-                            {generating ? "..." : isExcel ? tr.descargarExcel : tr.generarPdf}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Formulario de etiquetas */}
-                    <div className="flex-1 overflow-y-auto p-4">
-                      {loadingTags ? (
-                        <div className="flex items-center justify-center py-16 gap-3 flex-col">
-                          <Icon icon="typcn:refresh" className="w-7 h-7 animate-spin text-brand-blue" />
-                          <p className="text-sm text-neutral-500">{tr.cargandoCampos}</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-6 max-w-3xl">
-                          {tagGroupsActivos.map((g) => (
-                            <div key={g.group}>
-                              {/* Group header */}
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
-                                  <Icon icon={g.icon} width={12} height={12} className="text-neutral-500" />
-                                </div>
-                                <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">{g.group}</span>
-                                <div className="flex-1 h-px bg-neutral-200" />
-                              </div>
-                              {/* Fields grid */}
-                              <div className="grid sm:grid-cols-2 gap-3">
-                                {g.tags.map(({ tag, label }) => {
-                                  const val = tagValues[tag] ?? "";
-                                  const autoFilled = !!val && autoTagValues[tag] === val;
-                                  return (
-                                    <div key={tag}>
-                                      <label className="flex items-center gap-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                                        {label}
-                                        {autoFilled && (
-                                          <span className="flex items-center gap-0.5 text-[10px] font-medium text-green-600 normal-case tracking-normal">
-                                            <Icon icon="lucide:check" width={9} height={9} />
-                                            {tr.auto}
-                                          </span>
-                                        )}
-                                      </label>
-                                      <input
-                                        value={val}
-                                        onChange={(e) => setTagValues((p) => ({ ...p, [tag]: e.target.value }))}
-                                        placeholder={`${tag}`}
-                                        className={`${inputCls} ${autoFilled ? "border-green-200 bg-green-50/50 focus:border-brand-blue focus:bg-white" : ""}`}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Botón generar al final del form */}
-                          <div className="pt-2 pb-6">
-                            {isCliente ? (
-                              <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs">
-                                <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
-                                <span>{tr.sinPermisos}</span>
-                              </div>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={handleGenerar}
-                                  disabled={generating || !canGenerate}
-                                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white shadow-sm transition-colors disabled:opacity-50 ${cfg.colorBtn}`}
-                                >
-                                  <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={16} height={16} className={generating ? "animate-spin" : ""} />
-                                  {generating ? tr.generandoDoc : isExcel ? tr.descargarExcelDatos : tr.generarImprimirPdf}
-                                </button>
-                                <p className="text-[10px] text-neutral-400 text-center mt-2">
-                                  {isExcel ? tr.excelHint : tr.pdfHint}
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{cfg.titulo}</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{cfg.subtitulo}</p>
+                {enrichmentNote && (
+                  <p className="mt-0.5 truncate text-xs text-emerald-300/90">
+                    {linkingOp ? "Cargando datos…" : `Auto: ${enrichmentNote}`}
+                  </p>
                 )}
               </div>
             </div>
-          )}
+            {canGenerate && (
+              <button
+                type="button"
+                onClick={handleGenerar}
+                disabled={generating}
+                className="dash-cta hidden items-center gap-2 px-4 py-2.5 text-sm font-semibold sm:inline-flex disabled:opacity-50"
+              >
+                <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={15} height={15} className={generating ? "animate-spin" : ""} />
+                {generating ? tr.generando : isExcel ? tr.descargarExcel : tr.generarPdf}
+              </button>
+            )}
+          </div>
+        </header>
+
+        <div className="relative z-10 sm:hidden flex border-b border-dash-border bg-dash-control/40 shrink-0">
+          {([
+            { id: "operacion", label: tr.tabOperacion, icon: "lucide:list" },
+            { id: "formato",   label: tr.tabFormato,   icon: "lucide:file" },
+            { id: "datos",     label: tr.tabDatos,     icon: "lucide:edit-3" },
+          ] as const).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMobileTab(tab.id)}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold transition-colors relative ${
+                mobileTab === tab.id ? "text-dash-neon" : "text-dash-muted"
+              }`}
+            >
+              <Icon icon={tab.icon} width={15} height={15} />
+              {tab.label}
+              {tab.id === "operacion" && selectedOp && (
+                <span className="absolute top-1.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-emerald-400" />
+              )}
+              {tab.id === "formato" && selectedFormato && (
+                <span className="absolute top-1.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-emerald-400" />
+              )}
+              {mobileTab === tab.id && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-dash-neon rounded-full" />}
+            </button>
+          ))}
         </div>
-      </div>
-    </main>
+
+        {error && (
+          <div className="relative z-10 mx-4 mt-3 flex items-center gap-3 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-2.5 text-xs text-red-200 shrink-0">
+            <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button type="button" onClick={() => setError(null)}><Icon icon="lucide:x" width={12} height={12} /></button>
+          </div>
+        )}
+
+        <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
+          <div className={`w-full sm:w-72 lg:w-80 shrink-0 border-r border-dash-border bg-dash-control/30 flex flex-col overflow-hidden ${mobileTab !== "operacion" ? "hidden sm:flex" : "flex"}`}>
+            <div className="p-3 border-b border-dash-border shrink-0">
+              <div className="relative">
+                <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted" />
+                <input
+                  value={searchOp}
+                  onChange={(e) => setSearchOp(e.target.value)}
+                  placeholder={tr.buscarPlaceholder}
+                  className="dash-control w-full pl-8 pr-3 py-2 text-xs text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center justify-center py-12 gap-2 text-dash-muted text-sm">
+                  <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin text-dash-neon" />
+                  {tr.cargando}
+                </div>
+              ) : opsFiltradas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <Icon icon="lucide:inbox" width={28} height={28} className="text-dash-muted/50 mb-2" />
+                  <p className="text-xs text-dash-muted">{searchOp ? tr.sinResultados : tr.noOperaciones}</p>
+                </div>
+              ) : (
+                opsFiltradas.map((op) => {
+                  const isActive = selectedOp?.id === op.id;
+                  return (
+                    <button
+                      key={op.id}
+                      type="button"
+                      onClick={() => void handleSelectOp(op)}
+                      className={`w-full flex items-start gap-3 px-3 py-3 text-left border-b border-dash-border transition-all ${
+                        isActive
+                          ? "bg-dash-neon/15 border-l-2 border-l-dash-neon"
+                          : "hover:bg-dash-neon/10 border-l-2 border-l-transparent"
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 border ${
+                        isActive
+                          ? "bg-dash-neon/25 border-dash-neon/40 text-dash-neon"
+                          : "bg-dash-control border-dash-border text-dash-muted"
+                      }`}>
+                        <Icon icon="lucide:container" width={14} height={14} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-xs font-bold truncate ${isActive ? "text-dash-fg" : "text-dash-fg/90"}`}>
+                            {fmtRef(op)}
+                          </span>
+                          {isActive && <Icon icon="lucide:check" width={12} height={12} className="text-dash-neon shrink-0" />}
+                        </div>
+                        <p className="text-[11px] text-dash-muted truncate mt-0.5">{op.cliente || tr.sinCliente}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {op.booking && (
+                            <span className="text-[10px] text-dash-muted font-mono truncate">{op.booking}</span>
+                          )}
+                          {op.etd && (
+                            <span className="text-[10px] text-dash-muted">{fmtDate(op.etd)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${mobileTab === "operacion" ? "hidden sm:flex" : "flex"}`}>
+            {!selectedOp ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
+                <div className={`w-16 h-16 rounded-xl ${cfg.colorBg} flex items-center justify-center`}>
+                  <Icon icon="lucide:arrow-left" width={24} height={24} className={cfg.color} />
+                </div>
+                <h3 className="text-sm font-bold text-dash-fg">{tr.seleccionaOperacion}</h3>
+                <p className="text-xs text-dash-muted max-w-xs">{tr.seleccionaOperacionHint}</p>
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+                <div className={`lg:w-72 shrink-0 border-b lg:border-b-0 lg:border-r border-dash-border bg-dash-control/20 flex flex-col overflow-hidden ${mobileTab === "datos" ? "hidden lg:flex" : "flex"}`}>
+                  <div className="px-4 py-3 border-b border-dash-border bg-dash-control/40 shrink-0">
+                    <h3 className="text-xs font-bold text-dash-fg flex items-center gap-2">
+                      <Icon icon={cfg.icon} width={13} height={13} className={cfg.color} />
+                      {tr.formatosDe} {tipoDoc}
+                      <span className="ml-auto text-dash-muted font-normal">{formatos.length}</span>
+                    </h3>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {formatos.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                        <Icon icon="lucide:file-x" width={24} height={24} className="text-dash-muted/50" />
+                        <p className="text-xs text-dash-muted">{cfg.emptyMsg}</p>
+                        <a href={withBase("/configuracion/formatos-documentos")} className="text-xs text-dash-neon hover:underline font-medium mt-1">
+                          {tr.crearFormato}
+                        </a>
+                      </div>
+                    ) : formatos.map((fmt) => {
+                      const isActive = selectedFormato?.id === fmt.id;
+                      const isExcelFmt = (fmt.template_type ?? "html") === "excel";
+                      return (
+                        <button
+                          key={fmt.id}
+                          type="button"
+                          onClick={() => handleSelectFormato(fmt)}
+                          className={`w-full text-left p-3 rounded-xl border transition-all ${
+                            isActive
+                              ? "bg-dash-neon/15 border-dash-neon/50 ring-1 ring-dash-neon/25"
+                              : "bg-dash-control/60 border-dash-border hover:border-dash-neon/40"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                              isExcelFmt
+                                ? "bg-emerald-500/15 border-emerald-400/35"
+                                : "bg-dash-neon/15 border-dash-neon/35"
+                            }`}>
+                              <Icon
+                                icon={isExcelFmt ? "lucide:file-spreadsheet" : "lucide:file-text"}
+                                width={15}
+                                height={15}
+                                className={isExcelFmt ? "text-emerald-300" : "text-dash-neon"}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-xs font-bold truncate ${isActive ? "text-dash-fg" : "text-dash-fg/90"}`}>{fmt.nombre}</p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-sm border ${
+                                  isExcelFmt
+                                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/35"
+                                    : "bg-sky-500/15 text-sky-300 border-sky-400/35"
+                                }`}>
+                                  {isExcelFmt ? "Excel" : "HTML/PDF"}
+                                </span>
+                              </div>
+                              {fmt.descripcion && <p className="text-[10px] text-dash-muted mt-1 line-clamp-2">{fmt.descripcion}</p>}
+                            </div>
+                            {isActive && <Icon icon="lucide:check-circle" width={14} height={14} className="text-dash-neon shrink-0 mt-0.5" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${mobileTab === "formato" && formatos.length > 0 ? "hidden lg:flex" : "flex"}`}>
+                  {!selectedFormato ? (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
+                      <div className="w-12 h-12 rounded-xl bg-dash-control border border-dash-border flex items-center justify-center">
+                        <Icon icon="lucide:file" width={20} height={20} className="text-dash-muted" />
+                      </div>
+                      <p className="text-xs text-dash-muted">{tr.seleccionaFormato}</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="border-b border-dash-border bg-dash-control/40 px-4 py-3 shrink-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-dash-fg">{fmtRef(selectedOp)}</span>
+                              <span className="text-dash-muted">·</span>
+                              <span className="text-xs text-dash-muted truncate">{selectedOp.cliente || "Sin cliente"}</span>
+                              <span className="text-dash-muted">·</span>
+                              <span className="text-xs font-semibold text-dash-neon truncate">{selectedFormato.nombre}</span>
+                            </div>
+                            <p className="text-[10px] text-dash-muted mt-0.5">{tr.datosAutoHint}</p>
+                          </div>
+                          {!isCliente && (
+                            <button
+                              type="button"
+                              onClick={handleGenerar}
+                              disabled={generating || !canGenerate}
+                              className="dash-cta flex items-center gap-1.5 px-3 py-2 text-xs font-semibold disabled:opacity-50 shrink-0"
+                            >
+                              <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={13} height={13} className={generating ? "animate-spin" : ""} />
+                              {generating ? "..." : isExcel ? tr.descargarExcel : tr.generarPdf}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-4">
+                        {loadingTags ? (
+                          <div className="flex items-center justify-center py-16 gap-3 flex-col">
+                            <Icon icon="typcn:refresh" className="w-7 h-7 animate-spin text-dash-neon" />
+                            <p className="text-sm text-dash-muted">{tr.cargandoCampos}</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-6 max-w-3xl">
+                            {tagGroupsActivos.map((g) => (
+                              <div key={g.group}>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-6 h-6 rounded-lg bg-dash-control border border-dash-border flex items-center justify-center shrink-0">
+                                    <Icon icon={g.icon} width={12} height={12} className="text-dash-muted" />
+                                  </div>
+                                  <span className="text-xs font-bold text-dash-muted uppercase tracking-wider">{g.group}</span>
+                                  <div className="flex-1 h-px bg-dash-border" />
+                                </div>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                  {g.tags.map(({ tag, label }) => {
+                                    const val = tagValues[tag] ?? "";
+                                    const autoFilled = !!val && autoTagValues[tag] === val;
+                                    return (
+                                      <div key={tag}>
+                                        <label className={labelCls}>
+                                          {label}
+                                          {autoFilled && (
+                                            <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-300 normal-case tracking-normal">
+                                              <Icon icon="lucide:check" width={9} height={9} />
+                                              {tr.auto}
+                                            </span>
+                                          )}
+                                        </label>
+                                        <input
+                                          value={val}
+                                          onChange={(e) => setTagValues((p) => ({ ...p, [tag]: e.target.value }))}
+                                          placeholder={`${tag}`}
+                                          className={`${inputCls} ${autoFilled ? "border-emerald-400/40 bg-emerald-500/10" : ""}`}
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+
+                            <div className="pt-2 pb-6">
+                              {isCliente ? (
+                                <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-400/35 text-amber-200 text-xs">
+                                  <Icon icon="lucide:lock" width={14} height={14} className="shrink-0" />
+                                  <span>{tr.sinPermisos}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={handleGenerar}
+                                    disabled={generating || !canGenerate}
+                                    className="dash-cta w-full flex items-center justify-center gap-2 py-3 text-sm font-bold disabled:opacity-50"
+                                  >
+                                    <Icon icon={generating ? "typcn:refresh" : isExcel ? "lucide:file-spreadsheet" : "lucide:printer"} width={16} height={16} className={generating ? "animate-spin" : ""} />
+                                    {generating ? tr.generandoDoc : isExcel ? tr.descargarExcelDatos : tr.generarImprimirPdf}
+                                  </button>
+                                  <p className="text-[10px] text-dash-muted text-center mt-2">
+                                    {isExcel ? tr.excelHint : tr.pdfHint}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }

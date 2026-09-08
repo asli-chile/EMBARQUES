@@ -7,7 +7,10 @@ import { AREAS_CANONICAL, normalizeArea } from "@/lib/areas";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { getApiOriginPrefix } from "@/lib/basePath";
-import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
 
 function getApiUrl(): string {
   return getApiOriginPrefix();
@@ -83,6 +86,7 @@ const defaultConsorciosTr: Record<string, string> = {
 export function ConsorciosContent() {
   const { t } = useLocale();
   const { isSuperadmin } = useAuth();
+  const [theme] = useNeonTheme();
   const tr = { ...defaultConsorciosTr, ...(t?.consorciosPage as Record<string, string> | undefined) };
   const [consorcios, setConsorcios] = useState<Consorcio[]>([]);
   const [serviciosOpts, setServiciosOpts] = useState<ServicioOption[]>([]);
@@ -354,27 +358,27 @@ export function ConsorciosContent() {
     return (
       <li
         key={c.id}
-        className={`${moduleCard} p-4 flex items-start justify-between gap-3`}
+        className={`dash-card rounded-xl border border-dash-border p-4 flex items-start justify-between gap-3`}
       >
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-brand-blue">{c.nombre}</p>
-          <p className="text-sm text-neutral-600 mt-0.5">
+          <p className="font-semibold text-dash-neon">{c.nombre}</p>
+          <p className="text-sm text-dash-muted mt-0.5">
             {numServicios === 1 ? tr.serviceCount.replace("{{count}}", String(numServicios)) : tr.serviceCount_other.replace("{{count}}", String(numServicios))}
-            <span className="text-neutral-400 mx-1">·</span>
+            <span className="text-dash-muted mx-1">·</span>
             {numDestinos === 1 ? tr.destinationCount.replace("{{count}}", String(numDestinos)) : tr.destinationCount_other.replace("{{count}}", String(numDestinos))}
             {servicioNombres.length > 0 && (
-              <span className="text-neutral-500"> · {servicioNombres.join(", ")}</span>
+              <span className="text-dash-muted"> · {servicioNombres.join(", ")}</span>
             )}
           </p>
           {navieras.length > 0 && (
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-xs text-dash-muted mt-1">
               {tr.carriers}: {navieras.join(", ")}
             </p>
           )}
           <button
             type="button"
             onClick={() => setDetailsConsorcio(c)}
-            className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-brand-blue/40 text-[11px] font-medium text-brand-blue hover:bg-brand-blue/5 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+            className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-dash-neon/40 text-[11px] font-medium text-dash-neon hover:bg-dash-neon/10 focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
           >
             <Icon icon="lucide:eye" width={14} height={14} aria-hidden />
             Ver detalle de servicios
@@ -384,7 +388,7 @@ export function ConsorciosContent() {
           <button
             type="button"
             onClick={() => handleOpenEdit(c)}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-brand-blue hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+            className="p-1.5 rounded-lg text-dash-muted hover:text-dash-neon hover:bg-dash-neon/15 transition-colors focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
             aria-label={tr.editAria.replace("{{name}}", c.nombre)}
             title={tr.edit}
           >
@@ -394,7 +398,7 @@ export function ConsorciosContent() {
             type="button"
             onClick={() => handleDelete(c)}
             disabled={deletingId === c.id}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
+            className="p-1.5 rounded-lg text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
             aria-label={tr.deleteAria.replace("{{name}}", c.nombre)}
             title={tr.delete}
           >
@@ -407,41 +411,48 @@ export function ConsorciosContent() {
 
   return (
     <>
-    <main className={`flex-1 min-h-0 min-w-0 overflow-auto ${modulePageBg}`} role="main">
-      {/* Hero */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
-        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:layers" width={24} height={24} className="text-white" />
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+      </div>
+
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 px-3 py-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+              <Icon icon="lucide:layers" width={22} height={22} className="text-dash-neon" aria-hidden />
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">
                 {tr.title}
               </h1>
-              <p className="text-base text-white/75 mt-1">
+              <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">
                 {tr.modalDescNew}
               </p>
             </div>
           </div>
           {isSuperadmin && (
+          <div className="ml-auto">
           <button
             type="button"
             onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-semibold rounded-lg bg-white text-brand-blue hover:bg-white/95 transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
+            className="dash-cta inline-flex items-center gap-2 px-4 py-2 text-sm"
             aria-label={tr.newConsortiumAria}
           >
-            <Icon icon="lucide:plus" width={18} height={18} />
+            <Icon icon="lucide:plus" width={16} height={16} />
             {tr.newConsortium}
           </button>
+          </div>
           )}
         </div>
       </div>
 
-      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-5 py-4 sm:py-6 space-y-4">
+      <div className="relative z-10 flex-1 space-y-3 p-2 sm:p-3">
 
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700 flex items-center gap-2" role="alert">
+          <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-center gap-2" role="alert">
             <Icon icon="lucide:alert-circle" width={18} height={18} aria-hidden />
             {error}
           </div>
@@ -449,10 +460,10 @@ export function ConsorciosContent() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Icon icon="lucide:loader-2" width={32} height={32} className="animate-spin text-brand-blue" aria-hidden />
+            <Icon icon="lucide:loader-2" width={32} height={32} className="animate-spin text-dash-neon" aria-hidden />
           </div>
         ) : consorcios.length === 0 ? (
-          <div className={`${moduleCard} p-8 text-center text-neutral-500`}>
+          <div className={`dash-card rounded-xl border border-dash-border p-8 text-center text-dash-muted`}>
             <Icon icon="lucide:layers" width={40} height={40} className="mx-auto mb-3 opacity-50" />
             <p className="font-medium text-base">{tr.noConsorcios}</p>
             <p className="text-base mt-1">{tr.noConsorciosHint}</p>
@@ -465,11 +476,11 @@ export function ConsorciosContent() {
               );
               return (
                 <section key={areaName} className="min-w-0">
-                  <h2 className="text-base font-bold text-brand-blue mb-1 flex items-center gap-2">
-                    <Icon icon="lucide:map-pin" width={16} height={16} className="text-brand-blue shrink-0" />
+                  <h2 className="text-base font-bold text-dash-neon mb-1 flex items-center gap-2">
+                    <Icon icon="lucide:map-pin" width={16} height={16} className="text-dash-neon shrink-0" />
                     {areaName}
                   </h2>
-                  <p className="text-base text-neutral-500 mb-3">
+                  <p className="text-base text-dash-muted mb-3">
                     {list.length === 1
                       ? tr.consortiumCount.replace("{{count}}", String(list.length))
                       : tr.consortiumCount_other.replace("{{count}}", String(list.length))}
@@ -486,7 +497,7 @@ export function ConsorciosContent() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-white"
+          className="dash-neon fixed inset-0 z-50 flex flex-col bg-[var(--dash-bg)]" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-consorcio-title"
@@ -494,25 +505,25 @@ export function ConsorciosContent() {
           <div ref={modalRef} className="flex flex-col min-h-0 flex-1 overflow-y-auto">
             <div className="p-6 sm:p-8 w-full pb-24">
               <header className="mb-8">
-                <h2 id="modal-consorcio-title" className="text-xl font-semibold text-brand-blue tracking-tight">
+                <h2 id="modal-consorcio-title" className="text-xl font-semibold text-dash-neon tracking-tight">
                   {editingId ? tr.modalTitleEdit : tr.modalTitleNew}
                 </h2>
-                <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
+                <p className="text-sm text-dash-muted mt-2 leading-relaxed">
                   {editingId ? tr.modalDescEdit : tr.modalDescNew}
                 </p>
               </header>
 
               {modalError && (
-                <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-3" role="alert">
+                <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-400/35 bg-red-500/10 p-4 text-sm text-red-300" role="alert">
                   <Icon icon="lucide:alert-circle" width={20} height={20} className="shrink-0" />
                   <span>{modalError}</span>
                 </div>
               )}
 
               <div className="space-y-8">
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Icon icon="lucide:tag" width={16} height={16} className="text-brand-blue" />
+                <section className="rounded-xl border border-dash-border bg-dash-control/40 p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold text-dash-fg uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Icon icon="lucide:tag" width={16} height={16} className="text-dash-neon" />
                     {tr.nameLabel}
                   </h3>
                   <input
@@ -520,24 +531,24 @@ export function ConsorciosContent() {
                     type="text"
                     value={form.nombre}
                     onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white transition-colors"
+                    className={neonInput}
                     placeholder={tr.namePlaceholder}
                     autoComplete="off"
                   />
                 </section>
 
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Icon icon="lucide:layers" width={16} height={16} className="text-brand-blue" />
+                <section className="rounded-xl border border-dash-border bg-dash-control/40 p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold text-dash-fg uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Icon icon="lucide:layers" width={16} height={16} className="text-dash-neon" />
                     {tr.servicesIncluded}
                   </h3>
                   {serviciosOpts.length === 0 ? (
-                    <p className="text-sm text-neutral-500 py-2">{tr.createServicesFirst}</p>
+                    <p className="text-sm text-dash-muted py-2">{tr.createServicesFirst}</p>
                   ) : (
-                    <div className="rounded-xl border border-neutral-200 bg-white divide-y divide-neutral-100 max-h-[50vh] overflow-y-auto">
+                    <div className="max-h-[50vh] divide-y divide-dash-border overflow-y-auto rounded-xl border border-dash-border bg-dash-control/30">
                       {areaNames.map((areaName) => (
                         <div key={areaName}>
-                          <p className="px-4 py-2.5 text-xs font-semibold text-neutral-600 uppercase tracking-wider bg-neutral-50 sticky top-0">
+                          <p className="px-4 py-2.5 text-xs font-semibold text-dash-muted uppercase tracking-wider bg-dash-control/50 sticky top-0">
                             {tr.areaLabel}: {areaName}
                           </p>
                           <ul className="py-1">
@@ -553,8 +564,8 @@ export function ConsorciosContent() {
                                     key={inputId}
                                     className={`flex items-start gap-3 px-4 py-2.5 transition-colors ${
                                       isUsed
-                                        ? "bg-amber-50/70 hover:bg-amber-50"
-                                        : "hover:bg-neutral-50/80"
+                                        ? "bg-amber-500/10 hover:bg-amber-500/15"
+                                        : "hover:bg-dash-neon/10"
                                     }`}
                                   >
                                     <input
@@ -562,19 +573,19 @@ export function ConsorciosContent() {
                                       id={inputId}
                                       checked={isChecked}
                                       onChange={() => handleToggleServicio(s.id)}
-                                      className="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue/30 w-4 h-4 mt-0.5 shrink-0"
+                                      className="mt-0.5 h-4 w-4 shrink-0 rounded accent-[var(--dash-neon)]"
                                     />
-                                    <label htmlFor={inputId} className="text-sm cursor-pointer flex-1 min-w-0">
-                                      <span className={`font-medium ${isUsed ? "text-amber-800" : "text-neutral-800"}`}>
+                                    <label htmlFor={inputId} className="min-w-0 flex-1 cursor-pointer text-sm">
+                                      <span className={`font-medium ${isUsed ? "text-amber-300" : "text-dash-fg"}`}>
                                         {s.nombre}
                                       </span>
                                       {s.naviera_nombre?.trim() && (
-                                        <span className={`ml-1 ${isUsed ? "text-amber-600" : "text-neutral-500"}`}>
+                                        <span className={`ml-1 ${isUsed ? "text-amber-400/80" : "text-dash-muted"}`}>
                                           · {s.naviera_nombre}
                                         </span>
                                       )}
                                       {isUsed && (
-                                        <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5">
+                                        <span className="ml-2 inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-300">
                                           <Icon icon="lucide:alert-triangle" width={11} height={11} aria-hidden />
                                           Ya en: {usedIn.join(", ")}
                                         </span>
@@ -590,14 +601,14 @@ export function ConsorciosContent() {
                   )}
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     {form.servicios_ids.length > 0 && (
-                      <p className="text-sm text-neutral-500">
+                      <p className="text-sm text-dash-muted">
                         {form.servicios_ids.length === 1
                           ? tr.selectedCount.replace("{{count}}", String(form.servicios_ids.length))
                           : tr.selectedCount_other.replace("{{count}}", String(form.servicios_ids.length))}
                       </p>
                     )}
                     {Object.keys(usedInConsorcioMap).length > 0 && (
-                      <p className="text-xs text-amber-700 flex items-center gap-1">
+                      <p className="flex items-center gap-1 text-xs text-amber-300">
                         <Icon icon="lucide:alert-triangle" width={13} height={13} aria-hidden />
                         Los servicios en ámbar ya pertenecen a otro consorcio.
                       </p>
@@ -606,12 +617,12 @@ export function ConsorciosContent() {
                 </section>
               </div>
 
-              <footer className="fixed bottom-0 left-0 right-0 flex gap-4 p-4 sm:p-6 bg-white/95 border-t border-neutral-200 backdrop-blur-sm">
+              <footer className="fixed bottom-0 left-0 right-0 flex gap-4 p-4 sm:p-6 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-bg)_92%,transparent)] backdrop-blur-sm">
                 <div className="w-full flex gap-4">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="flex-1 px-5 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                    className="flex-1 rounded-xl border border-dash-border bg-dash-control px-5 py-3 font-medium text-dash-fg transition-colors hover:bg-dash-neon/15 focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                   >
                     {tr.cancel}
                   </button>
@@ -619,7 +630,7 @@ export function ConsorciosContent() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={saving}
-                    className="flex-1 px-5 py-3 rounded-xl bg-brand-blue text-white font-medium hover:bg-brand-blue/90 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                    className="dash-cta flex-1 px-5 py-3 rounded-xl font-medium disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                   >
                     {saving ? tr.saving : editingId ? tr.save : tr.create}
                   </button>
@@ -638,20 +649,20 @@ export function ConsorciosContent() {
           aria-label={`Detalle del consorcio ${detailsConsorcio.nombre}`}
         >
           <div className="flex-1 flex items-center justify-center p-4">
-            <div className="w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 bg-neutral-50">
+            <div className="dash-card flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-dash-border">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-dash-border bg-dash-control/50">
                 <div>
-                  <h2 className="text-sm font-semibold text-neutral-900">
+                  <h2 className="text-sm font-semibold text-dash-fg">
                     Consorcio: {detailsConsorcio.nombre}
                   </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
+                  <p className="text-xs text-dash-muted mt-0.5">
                     Detalle de los servicios que componen este consorcio (nombre, naviera, naves y destinos).
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDetailsConsorcio(null)}
-                  className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className="p-2 rounded-lg text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                   aria-label="Cerrar detalle de consorcio"
                 >
                   <Icon icon="lucide:x" width={18} height={18} aria-hidden />
@@ -664,7 +675,7 @@ export function ConsorciosContent() {
                     .filter((s): s is NonNullable<Consorcio["servicios"]>[number]["servicio_unico"] => Boolean(s));
                   if (servicios.length === 0) {
                     return (
-                      <p className="text-sm text-neutral-500">
+                      <p className="text-sm text-dash-muted">
                         Este consorcio aún no tiene servicios asociados.
                       </p>
                     );
@@ -672,6 +683,7 @@ export function ConsorciosContent() {
                   return (
                     <div className="space-y-3">
                       {servicios.map((s) => {
+                        if (!s) return null;
                         const naves =
                           (s.naves ?? [])
                             .map((n) => (n.nave_nombre ?? "").trim())
@@ -685,23 +697,23 @@ export function ConsorciosContent() {
                         return (
                           <div
                             key={s.id}
-                            className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 flex flex-col gap-1.5"
+                            className="flex flex-col gap-1.5 rounded-xl border border-dash-border bg-dash-control/50 p-4"
                           >
-                            <p className="text-sm font-semibold text-neutral-900 flex items-center justify-between gap-2">
+                            <p className="flex items-center justify-between gap-2 text-sm font-semibold text-dash-fg">
                               <span>{s.nombre}</span>
                               {s.naviera_nombre?.trim() && (
-                                <span className="text-xs font-medium text-brand-blue uppercase">
+                                <span className="text-xs font-medium uppercase text-dash-neon">
                                   {s.naviera_nombre}
                                 </span>
                               )}
                             </p>
-                            <p className="text-xs text-neutral-600">
+                            <p className="text-xs text-dash-muted">
                               <span className="font-medium">POL:</span> {s.puerto_origen || "—"}
                             </p>
-                            <p className="text-xs text-neutral-600">
+                            <p className="text-xs text-dash-muted">
                               <span className="font-medium">Naves:</span> {naves}
                             </p>
-                            <p className="text-xs text-neutral-600">
+                            <p className="text-xs text-dash-muted">
                               <span className="font-medium">Destinos:</span> {destinos}
                             </p>
                           </div>
@@ -716,6 +728,7 @@ export function ConsorciosContent() {
         </div>
       )}
     </main>
+    </div>
     {confirmDialog && (
       <ConfirmDialog
         title={confirmDialog.title}

@@ -7,9 +7,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { modulePageBg, moduleHeroRounded, moduleCard } from "@/lib/ui/moduleStyles";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 type Operacion = {
   id: string;
@@ -31,6 +31,7 @@ export function PapeleraTransportesContent() {
   const { t, locale } = useLocale();
   const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papeleraTransportes;
+  const [theme] = useNeonTheme();
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -184,258 +185,334 @@ export function PapeleraTransportesContent() {
   };
 
   const tipoBadge = (tipo: string | null) => {
-    if (tipo === "asli") return { label: "ASLI", cls: "bg-brand-blue/10 text-brand-blue border-brand-blue/20" };
-    if (tipo === "externa") return { label: "Externa", cls: "bg-violet-50 text-violet-700 border-violet-200" };
-    return { label: "—", cls: "bg-neutral-100 text-neutral-500 border-neutral-200" };
+    if (tipo === "asli") return { label: "ASLI", cls: "bg-dash-neon/15 text-dash-fg border-dash-neon/35" };
+    if (tipo === "externa") return { label: "Externa", cls: "bg-violet-500/15 text-violet-300 border-violet-400/35" };
+    return { label: "—", cls: "bg-dash-control text-dash-muted border-dash-border" };
   };
 
   if (loading) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-brand-blue/70 text-base font-medium">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-          <span>{tr.loading}</span>
-        </div>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>{tr.loading}</span>
+          </div>
+        </main>
+      </div>
     );
   }
 
+  const allSelected = selectedIds.size === operaciones.length && operaciones.length > 0;
+
   return (
     <>
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-      <div className="w-full max-w-[1600px] mx-auto space-y-4">
-
-        {/* Hero */}
-        <div className={moduleHeroRounded}>
-          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:trash-2" width={24} height={24} className="text-white" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{tr.title}</h1>
-                <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3.5 py-2.5">
-                <Icon icon="lucide:package-x" width={16} height={16} className="text-white/80" />
-                <span className="text-base font-bold">{operaciones.length} {tr.itemsInTrash}</span>
-              </div>
-              {isSuperadmin && operaciones.length > 0 && (
-                <button
-                  onClick={() => void handleEmptyTrash()}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-base font-semibold bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
-                >
-                  <Icon icon="lucide:trash-2" width={16} height={16} />
-                  <span className="hidden sm:inline">{tr.emptyTrash}</span>
-                </button>
-              )}
-              <button
-                onClick={() => void fetchOperaciones()}
-                className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
-                title={tr.refresh}
-              >
-                <Icon icon="lucide:refresh-cw" width={18} height={18} />
-              </button>
-            </div>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
           </div>
-        </div>
 
-        {/* Barra de selección */}
-        {selectedIds.size > 0 && (
-          <div className={`${moduleCard} px-4 py-3 flex items-center gap-3`}>
-            <span className="text-base font-semibold text-brand-blue flex-1">
-              {selectedIds.size} elemento{selectedIds.size !== 1 ? "s" : ""} seleccionado{selectedIds.size !== 1 ? "s" : ""}
-            </span>
-            <button
-              onClick={() => void handleRestore(Array.from(selectedIds))}
-              disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
-            >
-              <Icon icon="lucide:undo-2" width={16} height={16} />
-              <span className="hidden sm:inline">{tr.restore}</span>
-            </button>
-            {isSuperadmin && (
-              <button
-                onClick={() => void handleDeletePermanently(Array.from(selectedIds))}
-                disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-              >
-                <Icon icon="lucide:trash-2" width={16} height={16} />
-                <span className="hidden sm:inline">{tr.deletePermanent}</span>
-              </button>
-            )}
-            <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
-              <Icon icon="lucide:x" width={16} height={16} />
-            </button>
-          </div>
-        )}
-
-        {/* Contenido */}
-        <div className={moduleCard}>
-          {operaciones.length === 0 ? (
-            <div className="py-20 flex flex-col items-center gap-3 text-center">
-              <span className="w-14 h-14 rounded-2xl bg-[#F4F8FC] flex items-center justify-center">
-                <Icon icon="lucide:trash-2" width={26} height={26} className="text-brand-blue/30" />
-              </span>
-              <p className="text-brand-blue font-semibold text-base">{tr.trashEmpty}</p>
-            </div>
-          ) : (
-            <>
-              {/* Cards móvil */}
-              <div className="md:hidden divide-y divide-neutral-100">
-                {operaciones.map((op) => {
-                  const badge = tipoBadge(op.tipo_reserva_transporte);
-                  const isSelected = selectedIds.has(op.id);
-                  return (
-                    <div
-                      key={op.id}
-                      onClick={() => handleSelect(op.id)}
-                      className={`p-4 cursor-pointer transition-colors ${isSelected ? "bg-red-50/60" : "hover:bg-neutral-50"}`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? "bg-red-500 border-red-500" : "border-neutral-300"}`}>
-                            {isSelected && <Icon icon="lucide:check" width={11} height={11} className="text-white" />}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-base text-brand-blue">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}</p>
-                            <p className="text-base text-neutral-500 truncate">{op.cliente || "-"}</p>
-                          </div>
-                        </div>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold border shrink-0 ${badge.cls}`}>
-                          {badge.label}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5 text-base mb-3">
-                        <div className="bg-[#F4F8FC] rounded-xl px-2.5 py-1.5">
-                          <p className="text-brand-blue/60 text-sm font-semibold">Naviera</p>
-                          <p className="text-neutral-700 font-medium truncate">{op.naviera || "-"}</p>
-                        </div>
-                        <div className="bg-[#F4F8FC] rounded-xl px-2.5 py-1.5">
-                          <p className="text-brand-blue/60 text-sm font-semibold">Transporte</p>
-                          <p className="text-neutral-700 font-medium truncate">{op.transporte || "-"}</p>
-                        </div>
-                        {op.contenedor && (
-                          <div className="bg-[#F4F8FC] rounded-xl px-2.5 py-1.5">
-                            <p className="text-brand-blue/60 text-sm font-semibold">Contenedor</p>
-                            <p className="text-neutral-700 font-mono truncate">{op.contenedor}</p>
-                          </div>
-                        )}
-                        <div className="bg-red-50 rounded-xl px-2.5 py-1.5">
-                          <p className="text-red-400 text-sm font-semibold">Eliminado</p>
-                          <p className="text-red-700 font-medium">{formatDate(op.transporte_deleted_at)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => void handleRestore([op.id])}
-                          disabled={actionLoading}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-base font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                        >
-                          <Icon icon="lucide:undo-2" width={16} height={16} />
-                          {tr.restore}
-                        </button>
-                        {isSuperadmin && (
-                          <button
-                            onClick={() => void handleDeletePermanently([op.id])}
-                            disabled={actionLoading}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-base font-semibold bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                          >
-                            <Icon icon="lucide:trash-2" width={16} height={16} />
-                            {tr.deletePermanent}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Tabla desktop */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-base">
-                  <thead>
-                    <tr className="bg-[#F4F8FC] border-b border-brand-blue/10">
-                      <th className="px-4 py-3 w-10">
-                        <input type="checkbox" checked={selectedIds.size === operaciones.length && operaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colRef}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colClient}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colCarrier}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colBooking}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colTransport}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colContainer}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colType}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue whitespace-nowrap min-w-[7.5rem]">{tr.colDeleted}</th>
-                      <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue">{tr.colActions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {operaciones.map((op, idx) => {
-                      const badge = tipoBadge(op.tipo_reserva_transporte);
-                      return (
-                        <tr
-                          key={op.id}
-                          className={`border-b border-neutral-50 transition-colors ${
-                            selectedIds.has(op.id) ? "bg-red-50/60" : idx % 2 === 0 ? "bg-white hover:bg-neutral-50/80" : "bg-neutral-50/40 hover:bg-neutral-50/80"
-                          }`}
-                        >
-                          <td className="px-4 py-3 text-center">
-                            <input type="checkbox" checked={selectedIds.has(op.id)} onChange={() => handleSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="font-bold text-brand-blue text-base">{op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}</span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-base text-neutral-700 font-medium">{op.cliente || "-"}</td>
-                          <td className="px-4 py-3 text-center text-base text-neutral-600">{op.naviera || "-"}</td>
-                          <td className="px-4 py-3 text-center text-base font-mono text-neutral-600">{op.booking || "-"}</td>
-                          <td className="px-4 py-3 text-center text-base text-neutral-600">{op.transporte || "-"}</td>
-                          <td className="px-4 py-3 text-center text-base font-mono text-neutral-600">{op.contenedor || "-"}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold border ${badge.cls}`}>{badge.label}</span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-base text-neutral-600 font-medium min-w-[7.5rem]">{formatDate(op.transporte_deleted_at)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => void handleRestore([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50" title={tr.restore}>
-                                <Icon icon="lucide:undo-2" width={15} height={15} />
-                              </button>
-                              {isSuperadmin && (
-                                <button onClick={() => void handleDeletePermanently([op.id])} disabled={actionLoading} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title={tr.deletePermanent}>
-                                  <Icon icon="lucide:trash-2" width={15} height={15} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div className="px-4 py-2.5 border-t border-brand-blue/10 bg-[#F4F8FC]/80 text-base text-neutral-500">
-                  {operaciones.length} elemento{operaciones.length !== 1 ? "s" : ""} en papelera
-                  {selectedIds.size > 0 && <span className="ml-2 text-brand-blue font-semibold">· {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>}
+          <div className="dash-toolbar relative z-10 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                  <Icon icon="lucide:trash-2" width={22} height={22} className="text-dash-neon" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">
+                    {operaciones.length === 0
+                      ? tr.trashEmpty
+                      : `${operaciones.length} ${tr.itemsInTrash}`}
+                  </p>
                 </div>
               </div>
-            </>
-          )}
-        </div>
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {selectedIds.size > 0 && (
+                  <>
+                    <button
+                      onClick={() => void handleRestore(Array.from(selectedIds))}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:opacity-50"
+                    >
+                      <Icon icon="lucide:undo-2" width={14} height={14} />
+                      {tr.restore} ({selectedIds.size})
+                    </button>
+                    {isSuperadmin && (
+                      <button
+                        onClick={() => void handleDeletePermanently(Array.from(selectedIds))}
+                        disabled={actionLoading}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/35 bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+                      >
+                        <Icon icon="lucide:trash-2" width={14} height={14} />
+                        {tr.deletePermanent} ({selectedIds.size})
+                      </button>
+                    )}
+                  </>
+                )}
+                {isSuperadmin && operaciones.length > 0 && selectedIds.size === 0 && (
+                  <button
+                    onClick={() => void handleEmptyTrash()}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:opacity-50"
+                  >
+                    <Icon icon="lucide:trash" width={14} height={14} />
+                    {tr.emptyTrash}
+                  </button>
+                )}
+                <button
+                  onClick={() => void fetchOperaciones()}
+                  disabled={actionLoading}
+                  className="rounded-lg border border-dash-border bg-dash-control p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                  title={tr.refresh}
+                >
+                  <Icon icon="typcn:refresh" width={16} height={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex-1 space-y-3 p-3 sm:p-4">
+            {selectedIds.size > 0 && (
+              <div className="flex items-center justify-between rounded-xl border border-dash-neon/35 bg-dash-neon/10 px-4 py-2.5">
+                <span className="text-sm font-semibold text-dash-fg">
+                  {selectedIds.size} {selectedIds.size === 1 ? "elemento seleccionado" : "elementos seleccionados"}
+                </span>
+                <button onClick={() => setSelectedIds(new Set())} className="text-sm text-dash-muted hover:text-dash-fg">
+                  Deseleccionar todo
+                </button>
+              </div>
+            )}
+
+            {operaciones.length === 0 ? (
+              <div className="dash-card flex flex-col items-center gap-3 rounded-xl px-4 py-16">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
+                  <Icon icon="lucide:trash-2" width={26} height={26} className="text-dash-muted" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-dash-fg">{tr.trashEmpty}</p>
+                  <p className="mt-1 text-sm text-dash-muted">{tr.subtitle}</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2 md:hidden">
+                  {operaciones.map((op) => {
+                    const badge = tipoBadge(op.tipo_reserva_transporte);
+                    const sel = selectedIds.has(op.id);
+                    return (
+                      <div
+                        key={op.id}
+                        onClick={() => handleSelect(op.id)}
+                        className={`dash-card cursor-pointer rounded-xl border p-4 transition-all ${
+                          sel
+                            ? "border-dash-neon/50 bg-dash-neon/15 ring-2 ring-dash-neon/25"
+                            : "border-dash-border hover:border-dash-neon/35"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={sel}
+                              onChange={() => handleSelect(op.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-4 w-4 shrink-0 rounded accent-[var(--dash-neon)]"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-bold text-dash-fg">
+                                  {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}
+                                </span>
+                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                              <p className="mt-0.5 truncate text-sm font-medium text-dash-muted">{op.cliente || "-"}</p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => void handleRestore([op.id])}
+                              disabled={actionLoading}
+                              className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-400 disabled:opacity-50"
+                              title={tr.restore}
+                            >
+                              <Icon icon="lucide:undo-2" width={15} height={15} />
+                            </button>
+                            {isSuperadmin && (
+                              <button
+                                onClick={() => void handleDeletePermanently([op.id])}
+                                disabled={actionLoading}
+                                className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
+                                title={tr.deletePermanent}
+                              >
+                                <Icon icon="lucide:trash-2" width={15} height={15} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-dash-muted">
+                          {op.naviera && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:ship" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate">{op.naviera}</span>
+                            </div>
+                          )}
+                          {op.transporte && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:truck" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate">{op.transporte}</span>
+                            </div>
+                          )}
+                          {op.contenedor && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:container" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate font-mono">{op.contenedor}</span>
+                            </div>
+                          )}
+                          {op.booking && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:hash" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate font-mono">{op.booking}</span>
+                            </div>
+                          )}
+                          <div className="col-span-2 mt-1 flex items-center gap-1.5 border-t border-dash-border pt-1">
+                            <Icon icon="lucide:clock" width={14} height={14} className="shrink-0 text-red-400" />
+                            <span className="font-medium text-red-400">Eliminado: {formatDate(op.transporte_deleted_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="dash-card-static hidden overflow-hidden rounded-xl border border-dash-border md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
+                          <th className="w-10 px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={handleSelectAll}
+                              className="h-4 w-4 rounded accent-[var(--dash-neon)]"
+                            />
+                          </th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colRef}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colClient}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colCarrier}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colBooking}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colTransport}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colContainer}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colType}</th>
+                          <th className="min-w-[8rem] whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colDeleted}</th>
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colActions}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {operaciones.map((op, idx) => {
+                          const badge = tipoBadge(op.tipo_reserva_transporte);
+                          const sel = selectedIds.has(op.id);
+                          return (
+                            <tr
+                              key={op.id}
+                              onClick={() => handleSelect(op.id)}
+                              className={`cursor-pointer transition-colors ${
+                                sel
+                                  ? "bg-dash-neon/15"
+                                  : idx % 2 === 0
+                                  ? "bg-transparent hover:bg-dash-neon/10"
+                                  : "bg-dash-control/30 hover:bg-dash-neon/10"
+                              }`}
+                            >
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={sel}
+                                  onChange={() => handleSelect(op.id)}
+                                  className="h-4 w-4 rounded accent-[var(--dash-neon)]"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm font-bold text-dash-fg">
+                                  {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-dash-fg">{op.cliente || "-"}</td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-dash-muted">{op.naviera || "-"}</td>
+                              <td className="px-4 py-3 font-mono text-sm text-dash-muted">{op.booking || "-"}</td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-dash-muted">{op.transporte || "-"}</td>
+                              <td className="px-4 py-3 font-mono text-sm text-dash-muted">{op.contenedor || "-"}</td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>
+                                  {badge.label}
+                                </span>
+                              </td>
+                              <td className="min-w-[8rem] whitespace-nowrap px-4 py-3 text-sm font-medium text-red-400">
+                                {formatDate(op.transporte_deleted_at)}
+                              </td>
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => void handleRestore([op.id])}
+                                    disabled={actionLoading}
+                                    className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-400 disabled:opacity-50"
+                                    title={tr.restore}
+                                  >
+                                    <Icon icon="lucide:undo-2" width={15} height={15} />
+                                  </button>
+                                  {isSuperadmin && (
+                                    <button
+                                      onClick={() => void handleDeletePermanently([op.id])}
+                                      disabled={actionLoading}
+                                      className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
+                                      title={tr.deletePermanent}
+                                    >
+                                      <Icon icon="lucide:trash-2" width={15} height={15} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-dash-border bg-dash-control/50 px-4 py-2.5">
+                    <span className="text-sm text-dash-muted">
+                      {operaciones.length} {operaciones.length === 1 ? "elemento" : "elementos"} en papelera
+                    </span>
+                    {selectedIds.size > 0 && (
+                      <span className="text-sm font-semibold text-dash-fg">
+                        {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </main>
       </div>
-    </main>
-    {confirmDialog && (
-      <ConfirmDialog
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmLabel={confirmDialog.confirmLabel}
-        cancelLabel="Cancelar"
-        variant="danger"
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog(null)}
-      />
-    )}
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          cancelLabel="Cancelar"
+          variant="danger"
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     </>
   );
 }

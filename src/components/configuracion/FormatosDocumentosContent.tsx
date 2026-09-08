@@ -10,17 +10,13 @@ import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { withBase } from "@/lib/basePath";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleLabel,
-  moduleInput,
-  moduleBtnPrimary,
-  moduleBtnOnHero,
-  moduleBtnSecondary,
-  moduleCard,
-  moduleCardAccent,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
+const neonLabel = "block text-sm font-semibold text-dash-muted mb-1.5";
+const neonBtnPrimary = "dash-cta inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold disabled:opacity-40";
+const neonBtnSecondary = "inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3.5 py-2.5 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -48,13 +44,13 @@ type FormatoDocumento = {
 // ─── Tipos de formato ─────────────────────────────────────────────────────────
 
 const TIPOS: { value: TipoFormato; label: string; icon: string; color: string }[] = [
-  { value: "factura",               label: "Factura",                 icon: "lucide:file-text",   color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "proforma",              label: "Proforma Invoice",        icon: "lucide:file-check",  color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-  { value: "instructivo",           label: "Instructivo",             icon: "lucide:file-list",   color: "bg-amber-100 text-amber-700 border-amber-200" },
-  { value: "conocimiento_embarque", label: "Conocimiento de Embarque",icon: "lucide:ship",        color: "bg-teal-100 text-teal-700 border-teal-200" },
-  { value: "packing_list",          label: "Packing List",            icon: "lucide:package",     color: "bg-orange-100 text-orange-700 border-orange-200" },
-  { value: "certificado_origen",    label: "Certificado de Origen",   icon: "lucide:award",       color: "bg-green-100 text-green-700 border-green-200" },
-  { value: "otro",                  label: "Otro",                    icon: "lucide:file",        color: "bg-neutral-100 text-neutral-600 border-neutral-200" },
+  { value: "factura",               label: "Factura",                 icon: "lucide:file-text",   color: "border border-blue-400/35 bg-blue-500/15 text-blue-300" },
+  { value: "proforma",              label: "Proforma Invoice",        icon: "lucide:file-check",  color: "border border-indigo-400/35 bg-indigo-500/15 text-indigo-300" },
+  { value: "instructivo",           label: "Instructivo",             icon: "lucide:file-list",   color: "border border-amber-400/35 bg-amber-500/15 text-amber-300" },
+  { value: "conocimiento_embarque", label: "Conocimiento de Embarque",icon: "lucide:ship",        color: "border border-teal-400/35 bg-teal-500/15 text-teal-300" },
+  { value: "packing_list",          label: "Packing List",            icon: "lucide:package",     color: "border border-orange-400/35 bg-orange-500/15 text-orange-300" },
+  { value: "certificado_origen",    label: "Certificado de Origen",   icon: "lucide:award",       color: "border border-emerald-400/35 bg-emerald-500/15 text-emerald-300" },
+  { value: "otro",                  label: "Otro",                    icon: "lucide:file",        color: "border border-dash-border bg-dash-control text-dash-muted" },
 ];
 
 // ─── Etiquetas ────────────────────────────────────────────────────────────────
@@ -480,6 +476,7 @@ async function applyTagsToXlsxBuffer(
 
 export function FormatosDocumentosContent() {
   const { isCliente } = useAuth();
+  const [theme] = useNeonTheme();
 
   const [formatos, setFormatos] = useState<FormatoDocumento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -790,62 +787,65 @@ export function FormatosDocumentosContent() {
   })).filter((g) => g.tags.length > 0);
 
   // ─── Estilos base ──────────────────────────────────────────────────────────
-  const inputCls = moduleInput;
-  const labelCls = moduleLabel;
+  const inputCls = neonInput;
+  const labelCls = neonLabel;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: LISTA
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (view === "list") return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`}>
-
-      {/* ── Hero header ── */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:file-code-2" width={24} height={24} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">Formatos de Documentos</h1>
-              <p className="text-base text-white/75 mt-1 hidden sm:block">
-                Plantillas Excel o HTML por cliente para proformas e instructivos
-              </p>
-              {formatos.length > 0 && (
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:files" width={14} height={14} />
-                    {formatos.length} formato{formatos.length !== 1 ? "s" : ""}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:file-spreadsheet" width={14} height={14} />
-                    {formatos.filter(f => f.template_type === "excel").length} Excel
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-base font-semibold bg-white/15 text-white/90 border border-white/20">
-                    <Icon icon="lucide:code" width={14} height={14} />
-                    {formatos.filter(f => f.template_type !== "excel").length} HTML
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-          {!isCliente && (
-            <button
-              onClick={handleNuevo}
-              className={`${moduleBtnOnHero} shrink-0`}
-            >
-              <Icon icon="lucide:plus" width={16} height={16} />
-              <span className="hidden sm:inline">Nuevo formato</span>
-              <span className="sm:hidden">Nuevo</span>
-            </button>
-          )}
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
         </div>
-      </div>
 
-      <div className="p-3 sm:p-4 lg:p-6 max-w-6xl mx-auto space-y-4">
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:file-code-2" width={22} height={22} className="text-dash-neon" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">Formatos de Documentos</h1>
+                <p className="mt-0.5 line-clamp-1 hidden text-xs text-dash-muted sm:block sm:text-sm">
+                  Plantillas Excel o HTML por cliente para proformas e instructivos
+                </p>
+                {formatos.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-xs font-semibold text-dash-fg">
+                      <Icon icon="lucide:files" width={12} height={12} />
+                      {formatos.length} formato{formatos.length !== 1 ? "s" : ""}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dash-border bg-dash-control px-2 py-0.5 text-xs font-semibold text-dash-muted">
+                      <Icon icon="lucide:file-spreadsheet" width={12} height={12} />
+                      {formatos.filter(f => f.template_type === "excel").length} Excel
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dash-border bg-dash-control px-2 py-0.5 text-xs font-semibold text-dash-muted">
+                      <Icon icon="lucide:code" width={12} height={12} />
+                      {formatos.filter(f => f.template_type !== "excel").length} HTML
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {!isCliente && (
+              <div className="ml-auto">
+                <button type="button" onClick={handleNuevo} className="dash-cta inline-flex shrink-0 items-center gap-1.5 px-4 py-2 text-sm">
+                  <Icon icon="lucide:plus" width={16} height={16} />
+                  <span className="hidden sm:inline">Nuevo formato</span>
+                  <span className="sm:hidden">Nuevo</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-6xl flex-1 space-y-4 p-3 sm:p-4">
         {error && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-base">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-400/35 bg-red-500/10 text-red-300 text-base">
             <Icon icon="lucide:alert-circle" width={18} height={18} className="shrink-0" />
             <span className="flex-1">{error}</span>
             <button type="button" onClick={() => setError(null)}><Icon icon="lucide:x" width={16} height={16} /></button>
@@ -854,53 +854,53 @@ export function FormatosDocumentosContent() {
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className={`${moduleCard} px-5 py-4 flex items-center gap-3 text-neutral-600 text-base`}>
-              <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
+            <div className={`dash-card rounded-xl px-5 py-4 flex items-center gap-3 text-dash-muted text-base`}>
+              <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-dash-neon" />
               Cargando formatos...
             </div>
           </div>
         ) : formatos.length === 0 ? (
-          <div className={`${moduleCard}`}>
-            <div className={moduleCardAccent} />
+          <div className={`dash-card rounded-xl`}>
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
             <div className="p-6 sm:p-8">
               <div className="flex flex-col lg:flex-row lg:items-start gap-6">
                 <div className="flex-1 min-w-0">
-                  <div className="w-14 h-14 rounded-lg bg-brand-blue/10 border border-brand-blue/15 flex items-center justify-center mb-4">
-                    <Icon icon="lucide:file-spreadsheet" width={28} height={28} className="text-brand-blue" />
+                  <div className="w-14 h-14 rounded-lg bg-dash-neon/15 border border-dash-border flex items-center justify-center mb-4">
+                    <Icon icon="lucide:file-spreadsheet" width={28} height={28} className="text-dash-neon" />
                   </div>
-                  <h3 className="text-xl font-bold text-brand-blue tracking-tight">Sin formatos personalizados</h3>
-                  <p className="text-base text-neutral-600 mt-2 max-w-xl leading-relaxed">
+                  <h3 className="text-xl font-bold text-dash-neon tracking-tight">Sin formatos personalizados</h3>
+                  <p className="text-base text-dash-muted mt-2 max-w-xl leading-relaxed">
                     Todavía no hay plantillas en la base de datos. Mientras tanto, Crear Proforma usa el formato Almafruit por defecto.
                   </p>
-                  <p className="text-base text-neutral-600 mt-2 max-w-xl leading-relaxed">
+                  <p className="text-base text-dash-muted mt-2 max-w-xl leading-relaxed">
                     Sube un Excel con etiquetas como{" "}
-                    <code className="bg-[#F4F8FC] border border-brand-blue/15 px-1.5 py-0.5 rounded-lg text-sm font-mono text-brand-blue">{"{{booking}}"}</code>
+                    <code className="bg-dash-control border border-dash-border px-1.5 py-0.5 rounded-lg text-sm font-mono text-dash-neon">{"{{booking}}"}</code>
                     {" "}y asígnalo a un cliente para que se elija solo al exportar.
                   </p>
                   {!isCliente && (
-                    <button type="button" onClick={handleNuevo} className={`${moduleBtnPrimary} mt-5`}>
+                    <button type="button" onClick={handleNuevo} className={`${neonBtnPrimary} mt-5`}>
                       <Icon icon="lucide:plus" width={16} height={16} />
                       Crear primer formato
                     </button>
                   )}
                 </div>
-                <div className="w-full lg:w-[280px] shrink-0 rounded-xl border border-brand-blue/15 bg-[#F4F8FC] p-4">
-                  <p className="text-base font-bold text-brand-blue mb-3">Pasos rápidos</p>
-                  <ol className="space-y-3 text-base text-neutral-700">
+                <div className="w-full lg:w-[280px] shrink-0 rounded-xl border border-dash-border bg-dash-control p-4">
+                  <p className="text-base font-bold text-dash-neon mb-3">Pasos rápidos</p>
+                  <ol className="space-y-3 text-base text-dash-fg">
                     <li className="flex gap-2.5">
-                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">1</span>
+                      <span className="w-6 h-6 rounded-lg bg-dash-neon text-dash-fg text-sm font-bold flex items-center justify-center shrink-0">1</span>
                       <span>Tipo: Proforma Invoice</span>
                     </li>
                     <li className="flex gap-2.5">
-                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">2</span>
+                      <span className="w-6 h-6 rounded-lg bg-dash-neon text-dash-fg text-sm font-bold flex items-center justify-center shrink-0">2</span>
                       <span>Plantilla Excel</span>
                     </li>
                     <li className="flex gap-2.5">
-                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">3</span>
+                      <span className="w-6 h-6 rounded-lg bg-dash-neon text-dash-fg text-sm font-bold flex items-center justify-center shrink-0">3</span>
                       <span>Asigna el cliente (o Global)</span>
                     </li>
                     <li className="flex gap-2.5">
-                      <span className="w-6 h-6 rounded-lg bg-brand-blue text-white text-sm font-bold flex items-center justify-center shrink-0">4</span>
+                      <span className="w-6 h-6 rounded-lg bg-dash-neon text-dash-fg text-sm font-bold flex items-center justify-center shrink-0">4</span>
                       <span>Sube el .xlsx y guarda</span>
                     </li>
                   </ol>
@@ -914,31 +914,31 @@ export function FormatosDocumentosContent() {
               const meta = getTipoMeta(f.tipo);
               const isExcel = f.template_type === "excel";
               return (
-                <div key={f.id} className={`${moduleCard} flex flex-col`}>
-                  <div className={`h-[3px] bg-gradient-to-r ${isExcel ? "from-emerald-600 to-emerald-400" : "from-brand-blue to-brand-teal"}`} />
+                <div key={f.id} className={`dash-card rounded-xl flex flex-col`}>
+                  <div className={`h-[3px] bg-gradient-to-r ${isExcel ? "from-emerald-600 to-emerald-400" : "from-dash-neon to-dash-neon-hot"}`} />
 
                   <div className="p-4 flex-1 flex flex-col gap-3">
                     <div className="flex items-start gap-3">
-                      <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border ${isExcel ? "bg-emerald-50 border-emerald-200" : "bg-brand-blue/8 border-brand-blue/15"}`}>
-                        <Icon icon={isExcel ? "lucide:file-spreadsheet" : meta.icon} width={20} height={20} className={isExcel ? "text-emerald-700" : "text-brand-blue"} />
+                      <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border ${isExcel ? "border-emerald-400/35 bg-emerald-500/15" : "bg-dash-neon/15 border-dash-border"}`}>
+                        <Icon icon={isExcel ? "lucide:file-spreadsheet" : meta.icon} width={20} height={20} className={isExcel ? "text-emerald-700" : "text-dash-neon"} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-bold text-brand-blue leading-snug line-clamp-2">{f.nombre}</h3>
+                        <h3 className="text-base font-bold text-dash-neon leading-snug line-clamp-2">{f.nombre}</h3>
                         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-sm font-semibold border ${meta.color}`}>
                             {meta.label}
                           </span>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border ${isExcel ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-[#F4F8FC] text-brand-blue border-brand-blue/20"}`}>
+                          <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-sm font-semibold ${isExcel ? "border-emerald-400/35 bg-emerald-500/15 text-emerald-300" : "border-dash-border bg-dash-control text-dash-neon"}`}>
                             <Icon icon={isExcel ? "lucide:table" : "lucide:code"} width={12} height={12} />
                             {isExcel ? "Excel" : "HTML"}
                           </span>
                           {f.cliente ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border bg-[#F4F8FC] text-brand-blue border-brand-blue/20 max-w-[140px]">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border bg-dash-control text-dash-neon border-dash-border max-w-[140px]">
                               <Icon icon="lucide:building-2" width={12} height={12} />
                               <span className="truncate">{f.cliente}</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border bg-neutral-50 text-neutral-600 border-neutral-200">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-sm font-semibold border bg-dash-control text-dash-muted border-dash-border">
                               <Icon icon="lucide:globe" width={12} height={12} />
                               Global
                             </span>
@@ -948,17 +948,17 @@ export function FormatosDocumentosContent() {
                     </div>
 
                     {f.descripcion && (
-                      <p className="text-base text-neutral-600 leading-relaxed line-clamp-2">{f.descripcion}</p>
+                      <p className="text-base text-dash-muted leading-relaxed line-clamp-2">{f.descripcion}</p>
                     )}
 
                     {isExcel && f.excel_nombre && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F4F8FC] border border-brand-blue/15">
-                        <Icon icon="lucide:file-spreadsheet" width={14} height={14} className="text-brand-blue shrink-0" />
-                        <span className="text-sm text-brand-blue font-medium truncate">{f.excel_nombre}</span>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-dash-control border border-dash-border">
+                        <Icon icon="lucide:file-spreadsheet" width={14} height={14} className="text-dash-neon shrink-0" />
+                        <span className="text-sm text-dash-neon font-medium truncate">{f.excel_nombre}</span>
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1.5 text-sm text-neutral-500 mt-auto">
+                    <div className="flex items-center gap-1.5 text-sm text-dash-muted mt-auto">
                       <Icon icon="lucide:clock" width={13} height={13} />
                       Actualizado {formatFecha(f.updated_at)}
                     </div>
@@ -969,7 +969,7 @@ export function FormatosDocumentosContent() {
                       <button
                         type="button"
                         onClick={() => handleAbrirGenerar(f)}
-                        className={`${moduleBtnPrimary} flex-1 justify-center ${isExcel ? "bg-emerald-700 hover:bg-emerald-800" : ""}`}
+                        className={`${neonBtnPrimary} flex-1 justify-center ${isExcel ? "bg-emerald-700 hover:bg-emerald-800" : ""}`}
                       >
                         <Icon icon="lucide:zap" width={15} height={15} />
                         Generar
@@ -979,7 +979,7 @@ export function FormatosDocumentosContent() {
                       <button
                         type="button"
                         onClick={() => handleEditar(f)}
-                        className={moduleBtnSecondary}
+                        className={neonBtnSecondary}
                         title="Editar"
                       >
                         <Icon icon="lucide:pencil" width={15} height={15} />
@@ -989,7 +989,7 @@ export function FormatosDocumentosContent() {
                       <button
                         type="button"
                         onClick={() => handleDescargarPlantilla(f)}
-                        className={moduleBtnSecondary}
+                        className={neonBtnSecondary}
                         title="Descargar plantilla"
                       >
                         <Icon icon="lucide:download" width={15} height={15} />
@@ -999,7 +999,7 @@ export function FormatosDocumentosContent() {
                       <button
                         type="button"
                         onClick={() => setConfirmDelete({ id: f.id, nombre: f.nombre, excel_path: f.excel_path })}
-                        className="inline-flex items-center justify-center px-3 py-2.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                        className="inline-flex items-center justify-center rounded-lg border border-red-400/35 bg-red-500/15 px-3 py-2.5 text-red-300 transition-colors hover:bg-red-500/25"
                         title="Eliminar"
                       >
                         <Icon icon="lucide:trash-2" width={15} height={15} />
@@ -1015,26 +1015,26 @@ export function FormatosDocumentosContent() {
 
       {/* ── Modal Eliminar (bottom sheet en mobile) ── */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setConfirmDelete(null)}>
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme} onClick={() => setConfirmDelete(null)}>
+          <div className="dash-card flex w-full flex-col overflow-hidden rounded-t-3xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="h-1.5 bg-red-500" />
-            <div className="sm:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-neutral-200" /></div>
+            <div className="sm:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-dash-border" /></div>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-                  <Icon icon="lucide:trash-2" width={20} height={20} className="text-red-600" />
+                <div className="w-11 h-11 rounded-2xl bg-red-500/15 flex items-center justify-center shrink-0">
+                  <Icon icon="lucide:trash-2" width={20} height={20} className="text-red-300" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">Eliminar formato</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">Esta acción no se puede deshacer.</p>
+                  <h3 className="text-sm font-bold text-dash-fg">Eliminar formato</h3>
+                  <p className="text-xs text-dash-muted mt-0.5">Esta acción no se puede deshacer.</p>
                 </div>
               </div>
-              <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
-                ¿Confirmas eliminar <span className="font-semibold text-neutral-900">"{confirmDelete.nombre}"</span>?
+              <p className="text-sm text-dash-muted mb-6 leading-relaxed">
+                ¿Confirmas eliminar <span className="font-semibold text-dash-fg">"{confirmDelete.nombre}"</span>?
               </p>
               <div className="flex gap-2.5">
-                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-neutral-100 hover:bg-neutral-200 transition-colors text-neutral-700">Cancelar</button>
-                <button onClick={handleEliminar} disabled={deleting} className="flex-1 py-3 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50">
+                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-dash-control hover:bg-dash-border transition-colors text-dash-fg">Cancelar</button>
+                <button onClick={handleEliminar} disabled={deleting} className="flex-1 py-3 rounded-xl text-sm font-bold bg-red-600 text-dash-fg hover:bg-red-700 transition-colors disabled:opacity-50">
                   {deleting ? "Eliminando..." : "Eliminar"}
                 </button>
               </div>
@@ -1045,36 +1045,36 @@ export function FormatosDocumentosContent() {
 
       {/* ── Modal Generar Documento (bottom sheet) ── */}
       {generarFormato && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center sm:p-4" onClick={() => setGenerarFormato(null)}>
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92dvh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme} onClick={() => setGenerarFormato(null)}>
+          <div className="dash-card flex w-full flex-col overflow-hidden rounded-t-3xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             {/* Handle bar */}
-            <div className="sm:hidden flex justify-center pt-3 pb-0 shrink-0"><div className="w-10 h-1 rounded-full bg-neutral-200" /></div>
+            <div className="sm:hidden flex justify-center pt-3 pb-0 shrink-0"><div className="w-10 h-1 rounded-full bg-dash-border" /></div>
             {/* Header */}
             <div className="px-5 py-4 flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${generarFormato.template_type === "excel" ? "bg-emerald-100" : "bg-brand-blue/10"}`}>
-                  <Icon icon={generarFormato.template_type === "excel" ? "lucide:file-spreadsheet" : "lucide:file-text"} width={18} height={18} className={generarFormato.template_type === "excel" ? "text-emerald-600" : "text-brand-blue"} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${generarFormato.template_type === "excel" ? "border border-emerald-400/35 bg-emerald-500/15" : "bg-dash-neon/15"}`}>
+                  <Icon icon={generarFormato.template_type === "excel" ? "lucide:file-spreadsheet" : "lucide:file-text"} width={18} height={18} className={generarFormato.template_type === "excel" ? "text-emerald-300" : "text-dash-neon"} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">Generar documento</h3>
-                  <p className="text-xs text-neutral-500 mt-0.5 truncate max-w-[200px]">{generarFormato.nombre}</p>
+                  <h3 className="text-sm font-bold text-dash-fg">Generar documento</h3>
+                  <p className="text-xs text-dash-muted mt-0.5 truncate max-w-[200px]">{generarFormato.nombre}</p>
                 </div>
               </div>
-              <button onClick={() => setGenerarFormato(null)} className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors">
+              <button onClick={() => setGenerarFormato(null)} className="w-8 h-8 flex items-center justify-center rounded-xl text-dash-muted hover:text-dash-fg hover:bg-dash-control transition-colors">
                 <Icon icon="lucide:x" width={16} height={16} />
               </button>
             </div>
-            <div className="mx-5 border-t border-neutral-100" />
+            <div className="mx-5 border-t border-dash-border" />
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {loadingTags ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Icon icon="typcn:refresh" className="w-7 h-7 animate-spin text-brand-blue" />
-                  <p className="text-sm text-neutral-500">Detectando etiquetas del formato...</p>
+                  <Icon icon="typcn:refresh" className="w-7 h-7 animate-spin text-dash-neon" />
+                  <p className="text-sm text-dash-muted">Detectando etiquetas del formato...</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-xs text-neutral-400 leading-relaxed">
+                  <p className="text-xs text-dash-muted leading-relaxed">
                     Completa los valores para reemplazar las etiquetas. Los campos vacíos quedarán en blanco.
                   </p>
                   {TAG_GROUPS.map((g) => {
@@ -1083,17 +1083,17 @@ export function FormatosDocumentosContent() {
                     return (
                       <div key={g.group}>
                         <div className="flex items-center gap-2 mb-2.5">
-                          <div className="w-5 h-5 rounded-lg bg-brand-blue/10 flex items-center justify-center">
-                            <Icon icon={g.icon} width={11} height={11} className="text-brand-blue" />
+                          <div className="w-5 h-5 rounded-lg bg-dash-neon/15 flex items-center justify-center">
+                            <Icon icon={g.icon} width={11} height={11} className="text-dash-neon" />
                           </div>
-                          <span className="text-sm font-bold text-neutral-500 uppercase tracking-wider">{g.group}</span>
+                          <span className="text-sm font-bold text-dash-muted uppercase tracking-wider">{g.group}</span>
                         </div>
                         <div className="space-y-2.5">
                           {tagsInGroup.map(({ tag, label, sample }) => (
                             <div key={tag}>
-                              <label className="flex items-center gap-2 text-xs font-semibold text-neutral-600 mb-1">
+                              <label className="flex items-center gap-2 text-xs font-semibold text-dash-muted mb-1">
                                 {label}
-                                <code className="font-mono text-[9px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded-md">{tag}</code>
+                                <code className="font-mono text-[9px] text-dash-muted bg-dash-control px-1.5 py-0.5 rounded-md">{tag}</code>
                               </label>
                               <input
                                 value={tagValues[tag] ?? ""}
@@ -1111,14 +1111,14 @@ export function FormatosDocumentosContent() {
               )}
             </div>
             {/* Footer */}
-            <div className="shrink-0 px-5 py-4 border-t border-neutral-100 flex gap-2.5">
-              <button onClick={() => { setGenerarFormato(null); setLoadingTags(false); }} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-neutral-100 hover:bg-neutral-200 transition-colors text-neutral-700">
+            <div className="shrink-0 px-5 py-4 border-t border-dash-border flex gap-2.5">
+              <button onClick={() => { setGenerarFormato(null); setLoadingTags(false); }} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-dash-control hover:bg-dash-border transition-colors text-dash-fg">
                 Cancelar
               </button>
               <button
                 onClick={handleGenerar}
                 disabled={generating || loadingTags}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50 ${(generarFormato.template_type ?? "html") === "excel" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-brand-blue hover:bg-brand-blue/90"}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-dash-fg transition-colors disabled:opacity-50 ${(generarFormato.template_type ?? "html") === "excel" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-dash-neon hover:bg-dash-neon/90"}`}
               >
                 <Icon icon={generating ? "typcn:refresh" : (generarFormato.template_type ?? "html") === "excel" ? "lucide:file-spreadsheet" : "lucide:file-text"} width={15} height={15} className={generating ? "animate-spin" : ""} />
                 {generating ? "Generando..." : (generarFormato.template_type ?? "html") === "excel" ? "Descargar Excel" : "Generar PDF"}
@@ -1128,6 +1128,7 @@ export function FormatosDocumentosContent() {
         </div>
       )}
     </main>
+    </div>
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1135,22 +1136,27 @@ export function FormatosDocumentosContent() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   return (
-    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`}>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
       {/* Topbar editor */}
-      <div className={`${moduleHero} px-3 sm:px-5 py-3.5 flex items-center gap-2 shrink-0 min-w-0`}>
-        <button type="button" onClick={() => setView("list")} className="flex items-center gap-1.5 text-base font-medium text-white/80 hover:text-white transition-colors shrink-0 px-2.5 py-2 rounded-lg hover:bg-white/10">
+      <div className="dash-toolbar relative z-10 flex shrink-0 min-w-0 items-center gap-2 px-3 py-3.5 sm:px-5">
+        <button type="button" onClick={() => setView("list")} className="flex items-center gap-1.5 text-base font-medium text-dash-muted hover:text-dash-fg transition-colors shrink-0 px-2.5 py-2 rounded-lg hover:bg-dash-neon/10">
           <Icon icon="lucide:arrow-left" width={16} height={16} />
           <span className="hidden sm:inline">Formatos</span>
         </button>
-        <Icon icon="lucide:chevron-right" width={14} height={14} className="text-white/35 shrink-0" />
-        <span className="text-base font-semibold text-white truncate flex-1 min-w-0">
+        <Icon icon="lucide:chevron-right" width={14} height={14} className="text-dash-fg/35 shrink-0" />
+        <span className="text-base font-semibold text-dash-fg truncate flex-1 min-w-0">
           {editingId ? nombre || "Sin nombre" : "Nuevo formato"}
         </span>
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setMobileTagDrawer(true)}
-            className={`${moduleBtnSecondary} lg:hidden bg-white/10 border-white/25 text-white hover:bg-white/20`}
+            className={`${neonBtnSecondary} lg:hidden bg-dash-neon/10 border-dash-neon/40 text-dash-fg hover:bg-dash-neon/20`}
           >
             <Icon icon="lucide:tag" width={15} height={15} />
             <span className="hidden sm:inline">Etiquetas</span>
@@ -1162,7 +1168,7 @@ export function FormatosDocumentosContent() {
                 const win = window.open("", "_blank", "width=900,height=700");
                 if (win) { win.document.write(applyPreview(contenidoHtml)); win.document.close(); }
               }}
-              className={`${moduleBtnSecondary} bg-white/10 border-white/25 text-white hover:bg-white/20`}
+              className={`${neonBtnSecondary} bg-dash-neon/10 border-dash-neon/40 text-dash-fg hover:bg-dash-neon/20`}
               title="Vista previa"
             >
               <Icon icon="lucide:eye" width={15} height={15} />
@@ -1173,7 +1179,7 @@ export function FormatosDocumentosContent() {
             type="button"
             onClick={handleGuardar}
             disabled={saving}
-            className={`${moduleBtnOnHero} disabled:opacity-50`}
+            className={`${neonBtnPrimary} disabled:opacity-50`}
           >
             <Icon icon={saving ? "typcn:refresh" : "lucide:save"} width={15} height={15} className={saving ? "animate-spin" : ""} />
             {saving ? "Guardando…" : "Guardar"}
@@ -1182,20 +1188,20 @@ export function FormatosDocumentosContent() {
       </div>
 
       {error && (
-        <div className="mx-3 mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-base shrink-0">
+        <div className="mx-3 mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl border border-red-400/35 bg-red-500/10 text-red-300 text-base shrink-0">
           <Icon icon="lucide:alert-circle" width={16} height={16} className="shrink-0" />
           <span className="flex-1">{error}</span>
           <button type="button" onClick={() => setError(null)}><Icon icon="lucide:x" width={14} height={14} /></button>
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex overflow-hidden">
+      <div className="relative z-10 flex-1 min-h-0 flex overflow-hidden">
         {/* Columna central */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
           {/* ── Metadatos ── */}
-          <div className="bg-white border-b border-brand-blue/15 px-3 sm:px-5 pt-4 pb-4 shrink-0">
-            <p className="text-base font-bold text-brand-blue tracking-wide mb-3 flex items-center gap-2">
+          <div className="bg-dash-control border-b border-dash-border px-3 sm:px-5 pt-4 pb-4 shrink-0">
+            <p className="text-base font-bold text-dash-neon tracking-wide mb-3 flex items-center gap-2">
               <Icon icon="lucide:settings-2" width={16} height={16} />
               Configuración del formato
             </p>
@@ -1211,7 +1217,7 @@ export function FormatosDocumentosContent() {
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Descripción <span className="text-neutral-400 font-normal">(opcional)</span></label>
+                <label className={labelCls}>Descripción <span className="text-dash-muted font-normal">(opcional)</span></label>
                 <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Uso o notas de este formato" className={inputCls} />
               </div>
               <div>
@@ -1225,9 +1231,9 @@ export function FormatosDocumentosContent() {
           </div>
 
           {/* ── Toolbar tipo + tabs ── */}
-          <div className="bg-[#E8F0FA]/95 border-b border-brand-blue/15 px-3 sm:px-4 py-2.5 flex items-center gap-2 shrink-0 flex-wrap">
+          <div className="bg-dash-control/40 border-b border-dash-border px-3 sm:px-4 py-2.5 flex items-center gap-2 shrink-0 flex-wrap">
             {/* Pill toggle HTML / Excel */}
-            <div className="flex items-center gap-1 p-1 bg-white border border-brand-blue/15 rounded-lg shrink-0">
+            <div className="flex items-center gap-1 p-1 bg-dash-control border border-dash-border rounded-lg shrink-0">
               {(["html", "excel"] as const).map((tt) => (
                 <button
                   key={tt}
@@ -1235,8 +1241,8 @@ export function FormatosDocumentosContent() {
                   onClick={() => setTemplateType(tt)}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap ${
                     templateType === tt
-                      ? "bg-brand-blue text-white"
-                      : "text-brand-blue/70 hover:text-brand-blue hover:bg-brand-blue/5"
+                      ? "bg-dash-neon text-dash-fg"
+                      : "text-dash-neon/70 hover:text-dash-neon hover:bg-dash-neon/10"
                   }`}
                 >
                   <Icon icon={tt === "html" ? "lucide:code" : "lucide:file-spreadsheet"} width={15} height={15} />
@@ -1247,13 +1253,13 @@ export function FormatosDocumentosContent() {
 
             {/* Pill toggle Código / Preview (solo HTML) */}
             {templateType === "html" && (
-              <div className="flex items-center gap-1 p-1 bg-white border border-brand-blue/15 rounded-lg">
+              <div className="flex items-center gap-1 p-1 bg-dash-control border border-dash-border rounded-lg">
                 {(["code", "preview"] as const).map((tab) => (
                   <button key={tab} type="button" onClick={() => setEditorTab(tab)}
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap ${
                       editorTab === tab
-                        ? "bg-brand-blue text-white"
-                        : "text-brand-blue/70 hover:text-brand-blue hover:bg-brand-blue/5"
+                        ? "bg-dash-neon text-dash-fg"
+                        : "text-dash-neon/70 hover:text-dash-neon hover:bg-dash-neon/10"
                     }`}
                   >
                     <Icon icon={tab === "code" ? "lucide:terminal" : "lucide:eye"} width={14} height={14} />
@@ -1265,7 +1271,7 @@ export function FormatosDocumentosContent() {
 
             {/* Sub-tabs archivo/preview (solo Excel) */}
             {templateType === "excel" && (
-              <div className="flex items-center gap-1 p-1 bg-white border border-brand-blue/15 rounded-lg">
+              <div className="flex items-center gap-1 p-1 bg-dash-control border border-dash-border rounded-lg">
                 {(["upload", "preview"] as const).map((tab) => (
                   <button
                     key={tab}
@@ -1277,8 +1283,8 @@ export function FormatosDocumentosContent() {
                     disabled={tab === "preview" && !xlsxPreviewHtml && !excelPath}
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
                       xlsxPanel === tab
-                        ? "bg-emerald-700 text-white"
-                        : "text-brand-blue/70 hover:text-brand-blue hover:bg-brand-blue/5"
+                        ? "bg-emerald-700 text-dash-fg"
+                        : "text-dash-neon/70 hover:text-dash-neon hover:bg-dash-neon/10"
                     }`}
                   >
                     <Icon icon={tab === "upload" ? "lucide:upload-cloud" : "lucide:eye"} width={14} height={14} />
@@ -1294,7 +1300,7 @@ export function FormatosDocumentosContent() {
                 {xlsxSheetNames.map((sn) => (
                   <button key={sn} type="button"
                     onClick={() => { setXlsxActiveSheet(sn); if (xlsxWb) setXlsxPreviewHtml(generateSheetPreview(xlsxWb, sn)); }}
-                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shrink-0 ${xlsxActiveSheet === sn ? "bg-emerald-700 text-white" : "text-neutral-600 hover:bg-white border border-transparent hover:border-brand-blue/20"}`}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shrink-0 ${xlsxActiveSheet === sn ? "bg-emerald-700 text-dash-fg" : "text-dash-muted hover:bg-dash-control border border-transparent hover:border-dash-border"}`}
                   >{sn}</button>
                 ))}
               </div>
@@ -1315,7 +1321,7 @@ export function FormatosDocumentosContent() {
                   placeholder="Escribe el HTML del documento aquí..."
                 />
               ) : (
-                <iframe srcDoc={applyPreview(contenidoHtml)} title="Preview" className="w-full h-full border-0 bg-white" />
+                <iframe srcDoc={applyPreview(contenidoHtml)} title="Preview" className="w-full h-full border-0 bg-dash-control" />
               )
             ) : (
               <div className="h-full flex flex-col overflow-hidden">
@@ -1330,13 +1336,13 @@ export function FormatosDocumentosContent() {
                       className={`flex flex-col items-center justify-center gap-3 px-6 py-8 sm:py-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
                         dragOver ? "border-emerald-500 bg-emerald-50"
                           : excelFile || excelPath ? "border-emerald-400 bg-emerald-50/40"
-                          : "border-neutral-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/30"
+                          : "border-dash-border bg-dash-control hover:border-emerald-400 hover:bg-emerald-500/15/30"
                       }`}
                     >
                       <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) processExcelFile(f); }} />
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${excelFile || excelPath ? "bg-emerald-100" : "bg-neutral-100"}`}>
-                        <Icon icon={excelFile || excelPath ? "lucide:file-check" : "lucide:upload-cloud"} width={22} height={22} className={excelFile || excelPath ? "text-emerald-600" : "text-neutral-400"} />
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${excelFile || excelPath ? "border border-emerald-400/35 bg-emerald-500/15" : "border border-dash-border bg-dash-control"}`}>
+                        <Icon icon={excelFile || excelPath ? "lucide:file-check" : "lucide:upload-cloud"} width={22} height={22} className={excelFile || excelPath ? "text-emerald-600" : "text-dash-muted"} />
                       </div>
                       {excelFile ? (
                         <div className="text-center">
@@ -1354,7 +1360,7 @@ export function FormatosDocumentosContent() {
                             type="button"
                             onClick={(e) => { e.stopPropagation(); void handleCargarPreviewStorage(); }}
                             disabled={loadingPreview}
-                            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 mx-auto rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 mx-auto rounded-lg bg-emerald-600 text-dash-fg text-xs font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
                           >
                             <Icon icon={loadingPreview ? "typcn:refresh" : "lucide:eye"} width={12} height={12} className={loadingPreview ? "animate-spin" : ""} />
                             {loadingPreview ? "Cargando..." : "Ver vista previa"}
@@ -1362,30 +1368,30 @@ export function FormatosDocumentosContent() {
                         </div>
                       ) : (
                         <div className="text-center">
-                          <p className="text-sm font-semibold text-neutral-700">Sube tu plantilla Excel</p>
-                          <p className="text-xs text-neutral-400 mt-0.5">Arrastra o toca para seleccionar · .xlsx, .xls</p>
+                          <p className="text-sm font-semibold text-dash-fg">Sube tu plantilla Excel</p>
+                          <p className="text-xs text-dash-muted mt-0.5">Arrastra o toca para seleccionar · .xlsx, .xls</p>
                         </div>
                       )}
                     </div>
 
                     {/* Tags detectadas */}
                     {xlsxTags.length > 0 && (
-                      <div className="bg-white rounded-2xl border border-brand-blue/15 p-4 shadow-sm">
-                        <h4 className="text-xs font-bold text-neutral-700 mb-3 flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-lg bg-brand-blue/10 flex items-center justify-center">
-                            <Icon icon="lucide:tag" width={11} height={11} className="text-brand-blue" />
+                      <div className="bg-dash-control rounded-2xl border border-dash-border p-4 ">
+                        <h4 className="text-xs font-bold text-dash-fg mb-3 flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-lg bg-dash-neon/15 flex items-center justify-center">
+                            <Icon icon="lucide:tag" width={11} height={11} className="text-dash-neon" />
                           </span>
                           Etiquetas detectadas
-                          <span className="ml-auto px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue text-sm font-bold">{xlsxTags.length}</span>
+                          <span className="ml-auto px-2 py-0.5 rounded-full bg-dash-neon/15 text-dash-neon text-sm font-bold">{xlsxTags.length}</span>
                         </h4>
                         <div className="flex flex-wrap gap-1.5">
                           {xlsxTags.map((tag) => {
                             const meta = TAG_GROUPS.flatMap((g) => g.tags).find((t) => t.tag === tag);
                             return (
-                              <span key={tag} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-blue/8 border border-brand-blue/15 text-sm font-mono text-brand-blue">
+                              <span key={tag} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-dash-neon/15 border border-dash-border text-sm font-mono text-dash-neon">
                                 <Icon icon="lucide:check" width={9} height={9} />
                                 {tag}
-                                {meta && <span className="font-sans text-neutral-400 ml-0.5">{meta.label}</span>}
+                                {meta && <span className="font-sans text-dash-muted ml-0.5">{meta.label}</span>}
                               </span>
                             );
                           })}
@@ -1394,7 +1400,7 @@ export function FormatosDocumentosContent() {
                     )}
 
                     {/* Instrucciones */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                    <div className="bg-amber-500/15 border border-amber-200 rounded-2xl p-4">
                       <h4 className="text-xs font-bold text-amber-800 mb-2.5 flex items-center gap-2">
                         <Icon icon="lucide:lightbulb" width={13} height={13} className="text-amber-500" />
                         Cómo usar etiquetas en Excel
@@ -1419,7 +1425,7 @@ export function FormatosDocumentosContent() {
                   <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     {xlsxPreviewHtml ? (
                       <>
-                        <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center gap-3 shrink-0">
+                        <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-400/35 flex items-center gap-3 shrink-0">
                           <Icon icon="lucide:info" width={13} height={13} className="text-emerald-600 shrink-0" />
                           <p className="text-xs text-emerald-700 flex-1 leading-relaxed">
                             Las etiquetas <mark className="bg-yellow-200 text-yellow-800 px-1 rounded font-mono text-sm">{"{{etiqueta}}"}</mark> se reemplazarán al generar.
@@ -1429,13 +1435,13 @@ export function FormatosDocumentosContent() {
                             Cambiar
                           </button>
                         </div>
-                        <div className="flex-1 min-h-0 overflow-hidden bg-neutral-100">
+                        <div className="flex-1 min-h-0 overflow-hidden bg-dash-control">
                           <iframe srcDoc={xlsxPreviewHtml} title="Vista previa Excel" className="w-full h-full border-0" />
                         </div>
                       </>
                     ) : (
                       <div className="flex-1 flex items-center justify-center">
-                        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm">
+                        <div className="flex items-center gap-3 px-5 py-4 bg-dash-control rounded-2xl border border-dash-border  text-dash-muted text-sm">
                           <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-emerald-600" />
                           Cargando vista previa...
                         </div>
@@ -1452,33 +1458,33 @@ export function FormatosDocumentosContent() {
         {mobileTagDrawer && (
           <>
             <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setMobileTagDrawer(false)} />
-            <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl flex flex-col max-h-[75dvh] lg:hidden shadow-2xl">
-              <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-neutral-100 shrink-0">
+            <div className="dash-neon fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-2xl border border-dash-border bg-dash-control lg:hidden" data-theme={theme}>
+              <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-dash-border shrink-0">
                 <div className="flex items-center gap-2">
-                  <Icon icon="lucide:tag" width={15} height={15} className="text-brand-blue" />
-                  <h4 className="text-sm font-bold text-neutral-800">
+                  <Icon icon="lucide:tag" width={15} height={15} className="text-dash-neon" />
+                  <h4 className="text-sm font-bold text-dash-fg">
                     {templateType === "html" ? "Insertar etiqueta" : "Etiquetas disponibles"}
                   </h4>
                 </div>
-                <button onClick={() => setMobileTagDrawer(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 transition-colors">
+                <button onClick={() => setMobileTagDrawer(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-dash-muted hover:bg-dash-control transition-colors">
                   <Icon icon="lucide:x" width={15} height={15} />
                 </button>
               </div>
-              <div className="px-3 py-2.5 border-b border-neutral-100 shrink-0">
+              <div className="px-3 py-2.5 border-b border-dash-border shrink-0">
                 <input
                   value={tagSearch}
                   onChange={(e) => setTagSearch(e.target.value)}
                   placeholder="Buscar etiqueta..."
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                  className="w-full px-3 py-2 rounded-xl border border-dash-border bg-dash-control text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/20 focus:border-dash-neon transition-all"
                 />
               </div>
               <div className="flex-1 overflow-y-auto">
                 {filteredGroups.map((g) => (
-                  <div key={g.group} className="border-b border-neutral-100 last:border-0">
-                    <button onClick={() => toggleGroup(g.group)} className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-neutral-50 transition-colors">
-                      <Icon icon={g.icon} width={13} height={13} className="text-neutral-400 shrink-0" />
-                      <span className="text-xs font-semibold text-neutral-600 flex-1">{g.group}</span>
-                      <Icon icon={expandedGroups.has(g.group) ? "lucide:chevron-up" : "lucide:chevron-down"} width={12} height={12} className="text-neutral-400" />
+                  <div key={g.group} className="border-b border-dash-border last:border-0">
+                    <button onClick={() => toggleGroup(g.group)} className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-dash-control transition-colors">
+                      <Icon icon={g.icon} width={13} height={13} className="text-dash-muted shrink-0" />
+                      <span className="text-xs font-semibold text-dash-muted flex-1">{g.group}</span>
+                      <Icon icon={expandedGroups.has(g.group) ? "lucide:chevron-up" : "lucide:chevron-down"} width={12} height={12} className="text-dash-muted" />
                     </button>
                     {expandedGroups.has(g.group) && (
                       <div className="pb-1">
@@ -1490,12 +1496,12 @@ export function FormatosDocumentosContent() {
                               else navigator.clipboard.writeText(tag);
                               setMobileTagDrawer(false);
                             }}
-                            className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-brand-blue/5 active:bg-brand-blue/10 group transition-colors"
+                            className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-dash-neon/10 active:bg-dash-neon/15 group transition-colors"
                           >
-                            <Icon icon={templateType === "html" ? "lucide:plus-circle" : "lucide:copy"} width={13} height={13} className="text-brand-blue/50 group-hover:text-brand-blue mt-0.5 shrink-0" />
+                            <Icon icon={templateType === "html" ? "lucide:plus-circle" : "lucide:copy"} width={13} height={13} className="text-dash-neon/50 group-hover:text-dash-neon mt-0.5 shrink-0" />
                             <div className="min-w-0 text-left">
-                              <div className="text-xs font-medium text-neutral-700 group-hover:text-neutral-900">{label}</div>
-                              <div className="text-sm font-mono text-neutral-400 group-hover:text-brand-blue truncate">{tag}</div>
+                              <div className="text-xs font-medium text-dash-fg group-hover:text-dash-fg">{label}</div>
+                              <div className="text-sm font-mono text-dash-muted group-hover:text-dash-neon truncate">{tag}</div>
                             </div>
                           </button>
                         ))}
@@ -1504,8 +1510,8 @@ export function FormatosDocumentosContent() {
                   </div>
                 ))}
               </div>
-              <div className="px-4 py-3 border-t border-neutral-100 bg-neutral-50 shrink-0">
-                <p className="text-[11px] text-neutral-400 text-center">
+              <div className="px-4 py-3 border-t border-dash-border bg-dash-control shrink-0">
+                <p className="text-[11px] text-dash-muted text-center">
                   {templateType === "html" ? "Toca una etiqueta para insertarla en el cursor." : "Toca para copiar al portapapeles."}
                 </p>
               </div>
@@ -1514,25 +1520,25 @@ export function FormatosDocumentosContent() {
         )}
 
         {/* Panel de etiquetas (solo desktop) */}
-        <div className="w-72 shrink-0 bg-white border-l border-brand-blue/15 hidden lg:flex flex-col overflow-hidden">
-          <div className="px-3.5 py-3.5 border-b border-brand-blue/15 shrink-0 bg-[#F4F8FC]">
-            <h4 className="text-base font-bold text-brand-blue mb-2">
+        <div className="w-72 shrink-0 bg-dash-control border-l border-dash-border hidden lg:flex flex-col overflow-hidden">
+          <div className="px-3.5 py-3.5 border-b border-dash-border shrink-0 bg-dash-control">
+            <h4 className="text-base font-bold text-dash-neon mb-2">
               {templateType === "html" ? "Insertar etiqueta" : "Etiquetas disponibles"}
             </h4>
             <input
               value={tagSearch}
               onChange={(e) => setTagSearch(e.target.value)}
               placeholder="Buscar…"
-              className={moduleInput}
+              className={neonInput}
             />
           </div>
           <div className="flex-1 overflow-y-auto">
             {filteredGroups.map((g) => (
-              <div key={g.group} className="border-b border-neutral-100 last:border-0">
-                <button type="button" onClick={() => toggleGroup(g.group)} className="w-full flex items-center gap-2 px-3.5 py-2.5 text-left hover:bg-[#F4F8FC] transition-colors">
-                  <Icon icon={g.icon} width={15} height={15} className="text-brand-blue/60 shrink-0" />
-                  <span className="text-sm font-semibold text-brand-blue flex-1">{g.group}</span>
-                  <Icon icon={expandedGroups.has(g.group) ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} className="text-neutral-400" />
+              <div key={g.group} className="border-b border-dash-border last:border-0">
+                <button type="button" onClick={() => toggleGroup(g.group)} className="w-full flex items-center gap-2 px-3.5 py-2.5 text-left hover:bg-dash-control transition-colors">
+                  <Icon icon={g.icon} width={15} height={15} className="text-dash-neon/60 shrink-0" />
+                  <span className="text-sm font-semibold text-dash-neon flex-1">{g.group}</span>
+                  <Icon icon={expandedGroups.has(g.group) ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} className="text-dash-muted" />
                 </button>
                 {expandedGroups.has(g.group) && (
                   <div className="pb-1">
@@ -1542,16 +1548,16 @@ export function FormatosDocumentosContent() {
                         type="button"
                         onClick={() => templateType === "html" ? handleInsertTag(tag) : navigator.clipboard.writeText(tag)}
                         title={templateType === "html" ? `Insertar ${tag}` : `Copiar ${tag}`}
-                        className="w-full flex items-start gap-2 px-3.5 py-2 hover:bg-brand-blue/5 group transition-colors"
+                        className="w-full flex items-start gap-2 px-3.5 py-2 hover:bg-dash-neon/10 group transition-colors"
                       >
                         <Icon
                           icon={templateType === "html" ? "lucide:plus-circle" : "lucide:copy"}
                           width={14} height={14}
-                          className="text-brand-blue/50 group-hover:text-brand-blue mt-0.5 shrink-0"
+                          className="text-dash-neon/50 group-hover:text-dash-neon mt-0.5 shrink-0"
                         />
                         <div className="min-w-0 text-left">
-                          <div className="text-sm font-medium text-neutral-700 group-hover:text-brand-blue">{label}</div>
-                          <div className="text-xs font-mono text-neutral-400 group-hover:text-brand-blue/80 truncate">{tag}</div>
+                          <div className="text-sm font-medium text-dash-fg group-hover:text-dash-neon">{label}</div>
+                          <div className="text-xs font-mono text-dash-muted group-hover:text-dash-neon/80 truncate">{tag}</div>
                         </div>
                       </button>
                     ))}
@@ -1560,8 +1566,8 @@ export function FormatosDocumentosContent() {
               </div>
             ))}
           </div>
-          <div className="px-3.5 py-3 border-t border-brand-blue/15 bg-[#F4F8FC] shrink-0">
-            <p className="text-sm text-neutral-600 leading-relaxed">
+          <div className="px-3.5 py-3 border-t border-dash-border bg-dash-control shrink-0">
+            <p className="text-sm text-dash-muted leading-relaxed">
               {templateType === "html"
                 ? "Clic → inserta en el cursor del editor."
                 : "Clic → copia al portapapeles para pegar en Excel."}
@@ -1570,5 +1576,6 @@ export function FormatosDocumentosContent() {
         </div>
       </div>
     </main>
+    </div>
   );
 }

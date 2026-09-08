@@ -43,7 +43,7 @@ import {
 import { DATA_ROW_ICON_OPTIONS, dataRowIconSrc } from "@/lib/email/assets";
 import { STUDIO_COLOR_OPTIONS, resolveStudioColor } from "@/emails/studio/colors";
 import {
-  readNeonTheme,
+  useNeonTheme,
   type NeonTheme,
 } from "@/lib/ui/neonTheme";
 import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
@@ -128,31 +128,31 @@ function DataRowIconPicker({
               onClick={() => onChange(opt.value)}
               className={`group flex flex-col items-center gap-1 rounded-xl border px-1 py-1.5 text-center transition ${
                 active
-                  ? "border-[#11224E]/40 bg-[#eef2f8] ring-1 ring-[#11224E]/25"
-                  : "border-[#e2e8f0] bg-white hover:border-[#11224E]/20 hover:bg-[#f8fafc]"
+                  ? "border-[var(--inf-neon)]/40 bg-[var(--inf-neon-soft)] ring-1 ring-[var(--inf-neon)]/25"
+                  : "border-[var(--inf-border)] bg-[var(--inf-surface)] hover:border-[var(--inf-neon)]/25 hover:bg-[var(--inf-surface-soft)]"
               }`}
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f0f4f9]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--inf-surface-soft)]">
                 {src ? (
                   <img src={src} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
                 ) : (
-                  <span className="text-[10px] font-semibold text-[#5a6b85]/50">—</span>
+                  <span className="text-[10px] font-semibold text-[var(--inf-muted)]/50">—</span>
                 )}
               </span>
-              <span className="text-[9px] font-semibold leading-tight text-[#1a2744]/75">
+              <span className="text-[9px] font-semibold leading-tight text-[var(--inf-fg-soft)]">
                 {opt.label}
               </span>
             </button>
           );
         })}
       </div>
-      <div className="overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
-        <p className="border-b border-[#e8eef5] bg-[#f8fafc] px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-[#5a6b85]">
+      <div className="overflow-hidden rounded-xl border border-[var(--inf-border)] bg-[var(--inf-surface)] shadow-sm">
+        <p className="border-b border-[var(--inf-border-soft)] bg-[var(--inf-surface-soft)] px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--inf-muted)]">
           Vista previa fila
         </p>
         <div className="flex items-stretch text-[11px]">
           {previewSrc ? (
-            <div className="flex w-10 shrink-0 items-center justify-center border-r border-slate-200 px-1 py-1.5">
+            <div className="flex w-10 shrink-0 items-center justify-center border-r border-[var(--inf-border)] px-1 py-1.5">
               <img
                 src={previewSrc}
                 alt=""
@@ -162,10 +162,10 @@ function DataRowIconPicker({
               />
             </div>
           ) : null}
-          <div className="w-[88px] shrink-0 px-2 py-1.5 font-bold text-[#002d69]">
+          <div className="w-[88px] shrink-0 px-2 py-1.5 font-bold text-[var(--inf-navy)]">
             {previewLabel}:
           </div>
-          <div className="min-w-0 flex-1 truncate px-2 py-1.5 text-[#1a2744]/90">
+          <div className="min-w-0 flex-1 truncate px-2 py-1.5 text-[var(--inf-fg-soft)]">
             {previewValue}
           </div>
         </div>
@@ -849,7 +849,7 @@ function ColorPicker({
               title={c.label}
               className={`h-8 w-8 rounded-lg shadow-sm transition ${
                 active
-                  ? "scale-110 ring-2 ring-[#11224E] ring-offset-2"
+                  ? "scale-110 ring-2 ring-[var(--inf-neon)] ring-offset-2 ring-offset-[var(--inf-surface)]"
                   : "ring-1 ring-black/10 hover:scale-105"
               }`}
               style={{ backgroundColor: c.value }}
@@ -865,7 +865,7 @@ function ColorPicker({
       <div className="flex items-center gap-2">
         <input
           type="color"
-          className="h-9 w-11 cursor-pointer rounded border border-[#d5dde8] bg-white p-0.5"
+          className="h-9 w-11 cursor-pointer rounded border border-[var(--inf-border)] bg-[var(--inf-surface)] p-0.5"
           value={current}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
           title="Color personalizado"
@@ -884,7 +884,7 @@ function ColorPicker({
           spellCheck={false}
         />
       </div>
-      <p className="text-[10px] font-semibold text-[#11224E]">
+      <p className="text-[10px] font-semibold text-[var(--inf-fg)]">
         Activo:{" "}
         <span className="inline-flex items-center gap-1.5">
           <span
@@ -943,9 +943,9 @@ function ListItemsEditor({
       {rows.map((item, idx) => (
         <div
           key={idx}
-          className="flex gap-1.5 rounded-lg border border-[#e8eef5] bg-[#f8fafc] p-2"
+          className="flex gap-1.5 rounded-lg border border-[var(--inf-border-soft)] bg-[var(--inf-surface-soft)] p-2"
         >
-          <span className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#11224E]/10 text-[10px] font-bold text-[#11224E]">
+          <span className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[var(--inf-neon-soft)] text-[10px] font-bold text-[var(--inf-neon)]">
             {idx + 1}
           </span>
           <input
@@ -956,7 +956,7 @@ function ListItemsEditor({
           />
           <button
             type="button"
-            className={btnGhost + " shrink-0 !px-1.5 text-[#C8102E]"}
+            className={btnGhost + " shrink-0 !px-1.5 text-[var(--inf-neon-hot)]"}
             title="Quitar"
             onClick={() => remove(idx)}
             disabled={rows.length <= 1}
@@ -1010,18 +1010,18 @@ function ListStepsEditor({
       {steps.map((step, idx) => (
         <div
           key={idx}
-          className="space-y-1.5 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-2.5"
+          className="space-y-1.5 rounded-xl border border-[var(--inf-border)] bg-[var(--inf-surface-soft)] p-2.5"
         >
           <div className="flex items-center gap-1.5">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#11224E] text-[10px] font-bold text-white">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--inf-navy)] text-[10px] font-bold text-white">
               {idx + 1}
             </span>
-            <p className="flex-1 text-[10px] font-bold uppercase tracking-wide text-[#5a6b85]">
+            <p className="flex-1 text-[10px] font-bold uppercase tracking-wide text-[var(--inf-muted)]">
               Paso {idx + 1}
             </p>
             <button
               type="button"
-              className={btnGhost + " !px-1.5 text-[#C8102E]"}
+              className={btnGhost + " !px-1.5 text-[var(--inf-neon-hot)]"}
               title="Quitar paso"
               onClick={() => remove(idx)}
               disabled={steps.length <= 1}
@@ -1030,7 +1030,7 @@ function ListStepsEditor({
             </button>
           </div>
           <div>
-            <label className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-[#5a6b85]">
+            <label className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-[var(--inf-muted)]">
               Título
             </label>
             <input
@@ -1041,7 +1041,7 @@ function ListStepsEditor({
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-[#5a6b85]">
+            <label className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-[var(--inf-muted)]">
               Descripción
             </label>
             <textarea
@@ -1075,7 +1075,7 @@ function AlignPicker({
     { value: "right", label: "Der.", title: "Derecha" },
   ] as const;
   return (
-    <div className="flex gap-1 rounded-xl bg-[#eef2f8] p-1">
+    <div className="flex gap-1 rounded-xl bg-[var(--inf-surface-soft)] p-1 ring-1 ring-[var(--inf-border)]">
       {opts.map((o) => {
         const active = current === o.value;
         return (
@@ -1085,8 +1085,8 @@ function AlignPicker({
             title={o.title}
             className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition ${
               active
-                ? "bg-[#11224E] text-white shadow-sm"
-                : "text-[#1a2744]/75 hover:bg-white/80"
+                ? "bg-[var(--inf-navy)] text-white shadow-sm"
+                : "text-[var(--inf-fg-soft)] hover:bg-[var(--inf-surface)]"
             }`}
             onClick={() => onChange(o.value)}
           >
@@ -1122,8 +1122,8 @@ function ListStylePicker({
             title={o.label}
             className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
               active
-                ? "border-[#11224E] bg-[#11224E] text-white"
-                : "border-[#e2e8f0] bg-white text-[#1a2744]/80 hover:bg-[#f8fafc]"
+                ? "border-[var(--inf-navy)] bg-[var(--inf-navy)] text-white"
+                : "border-[var(--inf-border)] bg-[var(--inf-surface)] text-[var(--inf-fg-soft)] hover:bg-[var(--inf-surface-soft)]"
             }`}
             onClick={() => onChange(o.kind)}
           >
@@ -1148,9 +1148,11 @@ type StudioConfirm = {
 function StudioConfirmModal({
   state,
   onClose,
+  theme,
 }: {
   state: StudioConfirm | null;
   onClose: () => void;
+  theme: NeonTheme;
 }) {
   useEffect(() => {
     if (!state) return;
@@ -1165,7 +1167,8 @@ function StudioConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-[#11224E]/35 p-4 backdrop-blur-[2px]"
+      className="dash-neon fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      data-theme={theme}
       role="presentation"
       onClick={onClose}
     >
@@ -1173,15 +1176,15 @@ function StudioConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="studio-confirm-title"
-        className="w-full max-w-sm overflow-hidden rounded-2xl border border-[#c5d0e0] bg-white shadow-2xl"
+        className="dash-card w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start gap-3 border-b border-[#e8eef5] px-4 py-3.5">
+        <div className="flex items-start gap-3 border-b border-dash-border px-4 py-3.5">
           <span
             className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
               state.danger
-                ? "bg-[#C8102E]/10 text-[#C8102E]"
-                : "bg-[#eef2f8] text-[#11224E]"
+                ? "bg-red-400/15 text-red-300"
+                : "border border-dash-neon/35 bg-dash-neon/15 text-dash-neon"
             }`}
           >
             <Icon
@@ -1192,18 +1195,18 @@ function StudioConfirmModal({
           <div className="min-w-0 pt-0.5">
             <h2
               id="studio-confirm-title"
-              className="text-[14px] font-bold leading-snug text-[#11224E]"
+              className="text-[14px] font-bold leading-snug text-dash-fg"
             >
               {state.title}
             </h2>
             {state.description ? (
-              <p className="mt-1 text-[12px] leading-5 text-[#5a6b85]">
+              <p className="mt-1 text-[12px] leading-5 text-dash-muted">
                 {state.description}
               </p>
             ) : null}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 bg-[#f8fafc] px-4 py-3">
+        <div className="flex items-center justify-end gap-2 bg-dash-control/50 px-4 py-3">
           <button type="button" className={btn} onClick={onClose} autoFocus>
             {state.cancelLabel ?? "Cancelar"}
           </button>
@@ -1211,7 +1214,7 @@ function StudioConfirmModal({
             type="button"
             className={
               state.danger
-                ? "inline-flex items-center justify-center gap-1 rounded-lg bg-[#C8102E] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:bg-[#a50d25]"
+                ? "inline-flex items-center justify-center gap-1 rounded-lg bg-[var(--inf-neon-hot)] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:brightness-110"
                 : btnPrimary
             }
             onClick={() => {
@@ -1591,14 +1594,10 @@ export function InformativosContent() {
   const [panel, setPanel] = useState<Panel>("compose");
   const [capasOpen, setCapasOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [studioTheme, setStudioTheme] = useState<NeonTheme>("dark");
+  const [theme] = useNeonTheme();
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollPosRef = useRef({ outer: 0, inner: 0 });
-
-  useEffect(() => {
-    setStudioTheme(readNeonTheme());
-  }, []);
 
   const [destRaw, setDestRaw] = useState("");
   const [resolved, setResolved] = useState<DestinatarioAgenda[]>([]);
@@ -2295,16 +2294,18 @@ export function InformativosContent() {
 
   if (isLoading) {
     return (
-      <main className={`flex flex-1 ${boardBg} p-3 text-[12px] text-[#5a6b85]`}>
-        Cargando estudio…
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className={`inf-studio relative flex flex-1 flex-col p-3 text-[12px] text-[var(--inf-muted)] ${theme === "dark" ? "inf-studio--dark" : ""}`}>
+          Cargando estudio…
+        </main>
+      </div>
     );
   }
 
   const inspectorBody = multiSelected ? (
     <div className="space-y-3">
       {alignableSelected.length > 0 ? (
-        <div className="rounded-xl border border-[#e2e8f0] bg-white p-3 shadow-sm">
+        <div className="rounded-xl border border-[var(--inf-border)] bg-[var(--inf-surface)] p-3 shadow-sm">
           <label className={label}>
             Alinear {alignableSelected.length} bloque
             {alignableSelected.length === 1 ? "" : "s"}
@@ -2326,29 +2327,29 @@ export function InformativosContent() {
               )
             }
           />
-          <p className="mt-1.5 text-[10px] leading-4 text-[#5a6b85]">
+          <p className="mt-1.5 text-[10px] leading-4 text-[var(--inf-muted)]">
             Aplica a saludo, título, párrafo, botón, imagen y fila dato.
           </p>
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed border-[#d5dde8] bg-white/60 px-3 py-2 text-[11px] text-[#5a6b85]">
+        <p className="rounded-xl border border-dashed border-[var(--inf-border)] bg-[var(--inf-surface-soft)]/60 px-3 py-2 text-[11px] text-[var(--inf-muted)]">
           Ningún bloque seleccionado admite alineación.
         </p>
       )}
-      <ul className="max-h-40 space-y-1 overflow-auto rounded-xl border border-[#e2e8f0] bg-white p-2 shadow-sm text-[10px] text-[#5a6b85]">
+      <ul className="max-h-40 space-y-1 overflow-auto rounded-xl border border-[var(--inf-border)] bg-[var(--inf-surface)] p-2 shadow-sm text-[10px] text-[var(--inf-muted)]">
         {doc.blocks
           .filter((b) => selectedSet.has(b.id))
           .map((b) => (
             <li
               key={b.id}
-              className="flex items-center gap-1.5 rounded-lg bg-[#f8fafc] px-2 py-1.5"
+              className="flex items-center gap-1.5 rounded-lg bg-[var(--inf-surface-soft)] px-2 py-1.5"
             >
               <Icon
                 icon={PRESET_ICONS[b.kind] ?? "lucide:box"}
                 width={12}
-                className="shrink-0 text-[#11224E]/60"
+                className="shrink-0 text-[var(--inf-muted)]"
               />
-              <span className="font-semibold text-[#1a2744]/80">
+              <span className="font-semibold text-[var(--inf-fg-soft)]">
                 {STUDIO_PRESETS.find((x) => x.kind === b.kind)?.label ?? b.kind}
               </span>
               {!ALIGNABLE_KINDS.has(b.kind) ? (
@@ -2359,37 +2360,37 @@ export function InformativosContent() {
       </ul>
     </div>
   ) : !selected ? (
-    <div className="relative overflow-hidden rounded-2xl border border-[#d5dde8]/80 bg-gradient-to-b from-white via-white to-[#f3f6fb] px-3 py-7 text-center shadow-[0_10px_28px_-18px_rgba(17,34,78,0.45)]">
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--inf-border)] bg-gradient-to-b from-[var(--inf-surface)] via-[var(--inf-surface)] to-[var(--inf-surface-soft)] px-3 py-7 text-center shadow-[var(--inf-shadow)]">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_center,rgba(17,34,78,0.12),transparent_68%)]"
+        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--inf-neon)_18%,transparent),transparent_68%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_center,rgba(200,16,46,0.08),transparent_70%)]"
+        className="pointer-events-none absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--inf-neon-hot)_12%,transparent),transparent_70%)]"
       />
       <div className="relative mx-auto mb-3.5 flex h-16 w-16 items-center justify-center">
-        <span className="absolute inset-0 rounded-[1.15rem] bg-[#11224E]/[0.06] ring-1 ring-[#11224E]/10" />
-        <span className="absolute inset-1.5 rounded-[0.95rem] border border-dashed border-[#11224E]/20" />
-        <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#11224E] via-[#16305f] to-[#0d1a3d] text-white shadow-[0_8px_20px_-6px_rgba(17,34,78,0.55)]">
+        <span className="absolute inset-0 rounded-[1.15rem] bg-[var(--inf-neon-soft)] ring-1 ring-[var(--inf-border)]" />
+        <span className="absolute inset-1.5 rounded-[0.95rem] border border-dashed border-[var(--inf-border)]" />
+        <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--inf-navy)] via-[var(--inf-navy-2)] to-[var(--inf-navy)] text-white shadow-[var(--inf-glow)]">
           <Icon icon="lucide:mouse-pointer-click" width={20} />
         </span>
-        <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-white text-[#C8102E] shadow-sm ring-1 ring-[#e2e8f0]">
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-[var(--inf-surface)] text-[var(--inf-neon-hot)] shadow-sm ring-1 ring-[var(--inf-border)]">
           <Icon icon="lucide:sparkles" width={11} />
         </span>
       </div>
-      <p className="relative text-[12px] font-bold tracking-tight text-[#11224E]">
+      <p className="relative text-[12px] font-bold tracking-tight text-[var(--inf-fg)]">
         Sin bloque activo
       </p>
-      <p className="relative mx-auto mt-1.5 max-w-[200px] text-[11px] leading-5 text-[#5a6b85]">
+      <p className="relative mx-auto mt-1.5 max-w-[200px] text-[11px] leading-5 text-[var(--inf-muted)]">
         Haz clic en el preview para editar. Capas queda abajo si necesitas selección múltiple.
       </p>
       <div className="relative mt-4 flex flex-wrap justify-center gap-1.5">
-        <span className="inline-flex items-center gap-1 rounded-lg bg-[#11224E]/[0.05] px-2 py-1 text-[9px] font-semibold text-[#11224E]/80 ring-1 ring-[#11224E]/10">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--inf-neon-soft)] px-2 py-1 text-[9px] font-semibold text-[var(--inf-fg-soft)] ring-1 ring-[var(--inf-border)]">
           <Icon icon="lucide:mouse-pointer-2" width={10} />
           Clic · seleccionar
         </span>
-        <span className="inline-flex items-center gap-1 rounded-lg bg-[#11224E]/[0.05] px-2 py-1 text-[9px] font-semibold text-[#11224E]/80 ring-1 ring-[#11224E]/10">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--inf-neon-soft)] px-2 py-1 text-[9px] font-semibold text-[var(--inf-fg-soft)] ring-1 ring-[var(--inf-border)]">
           <Icon icon="lucide:command" width={10} />
           Ctrl · sumar
         </span>
@@ -2398,7 +2399,7 @@ export function InformativosContent() {
   ) : (
     <div className="space-y-3">
       {propFields(selected).length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[#d5dde8] bg-white/70 px-3 py-3 text-[11px] text-[#5a6b85]">
+        <p className="rounded-xl border border-dashed border-[var(--inf-border)] bg-[var(--inf-surface-soft)]/70 px-3 py-3 text-[11px] text-[var(--inf-muted)]">
           Este bloque no tiene campos (solo estructura visual).
         </p>
       ) : (
@@ -2406,7 +2407,7 @@ export function InformativosContent() {
           {propFields(selected).map((f) => (
             <div
               key={f.key}
-              className="rounded-xl border border-[#e2e8f0] bg-white p-2.5 shadow-sm"
+              className="rounded-xl border border-[var(--inf-border)] bg-[var(--inf-surface)] p-2.5 shadow-sm"
             >
               <label className={label}>{f.label}</label>
               {f.control === "iconPicker" ? (
@@ -2507,9 +2508,10 @@ export function InformativosContent() {
   );
 
   return (
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
     <main
       className={`inf-studio relative flex h-full min-h-0 flex-1 flex-col ${
-        studioTheme === "dark" ? "inf-studio--dark" : ""
+        theme === "dark" ? "inf-studio--dark" : ""
       }`}
     >
       <div className="inf-toolbar z-10 flex flex-shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
@@ -2667,8 +2669,6 @@ export function InformativosContent() {
 
             <div className="ml-auto flex items-center gap-1.5">
               <NeonThemeToggle
-                theme={studioTheme}
-                onThemeChange={setStudioTheme}
                 buttonClassName="inf-theme-toggle inline-flex h-8 w-8 items-center justify-center rounded-lg"
               />
               <button
@@ -2688,8 +2688,6 @@ export function InformativosContent() {
         ) : panel === "agenda" ? (
           <div className="ml-auto flex items-center gap-1.5">
             <NeonThemeToggle
-              theme={studioTheme}
-              onThemeChange={setStudioTheme}
               buttonClassName="inf-theme-toggle inline-flex h-8 w-8 items-center justify-center rounded-lg"
             />
             <button
@@ -2708,8 +2706,6 @@ export function InformativosContent() {
         ) : (
           <div className="ml-auto flex items-center">
             <NeonThemeToggle
-              theme={studioTheme}
-              onThemeChange={setStudioTheme}
               buttonClassName="inf-theme-toggle inline-flex h-8 w-8 items-center justify-center rounded-lg"
             />
           </div>
@@ -2808,7 +2804,7 @@ export function InformativosContent() {
                           >
                             <input
                               type="checkbox"
-                              className="accent-[#11224E]"
+                              className="accent-[var(--inf-neon)]"
                               checked={active}
                               onChange={() => toggleSelect(b.id)}
                             />
@@ -3102,36 +3098,33 @@ export function InformativosContent() {
             </div>
             <div className="mx-auto min-h-0 w-full max-w-xl flex-1 space-y-3 overflow-auto p-4">
               {!canSendInformativos ? (
-                <div
-                  className="rounded border border-amber-300/80 bg-amber-50 px-3 py-2.5 text-[12px] leading-5 text-amber-950"
-                  role="status"
-                >
+                <div className="rounded border border-amber-400/35 bg-amber-400/10 px-3 py-2.5 text-[12px] leading-5 text-dash-fg" role="status">
                   <p className="font-bold">Envío en desarrollo</p>
-                  <p className="mt-1 text-amber-900/90">
-                    Por seguridad, solo <strong>Rodrigo Cáceres</strong> puede enviar
+                  <p className="mt-1 text-dash-muted">
+                    Por seguridad, solo <strong className="text-dash-fg">Rodrigo Cáceres</strong> puede enviar
                     correos informativos por ahora. Puedes armar plantillas, revisar el
                     preview, gestionar la agenda y conocer el sistema; el botón de envío
                     se habilitará más adelante.
                   </p>
                 </div>
               ) : null}
-              <div className="space-y-1 rounded border border-brand-blue/15 bg-[#f7f9fc] p-2">
+              <div className="space-y-1 rounded border border-[var(--inf-border)] bg-[var(--inf-surface-soft)] p-2">
                 <div className="flex items-center gap-2">
                   <p className={label + " mb-0"}>Grupos</p>
                   {grupoLoading ? (
-                    <span className="text-[10px] text-brand-blue/50">…</span>
+                    <span className="text-[10px] text-[var(--inf-muted)]">…</span>
                   ) : null}
                 </div>
                 {grupos.length === 0 ? (
-                  <p className="text-[11px] text-brand-blue/45">Sin grupos cargados.</p>
+                  <p className="text-[11px] text-[var(--inf-muted)]">Sin grupos cargados.</p>
                 ) : (
                   <ul className="space-y-1">
                     {grupos.map((g) => (
                       <li key={g.id}>
-                        <label className="flex items-center gap-2 text-[12px] font-semibold text-brand-blue">
+                        <label className="flex items-center gap-2 text-[12px] font-semibold text-[var(--inf-fg)]">
                           <input
                             type="checkbox"
-                            className="accent-[#11224E]"
+                            className="accent-[var(--inf-neon)]"
                             checked={gruposSeleccionados.has(g.nombre)}
                             onChange={() => {
                               setGruposSeleccionados((prev) => {
@@ -3149,7 +3142,7 @@ export function InformativosContent() {
                   </ul>
                 )}
               </div>
-              <p className="text-[11px] text-brand-blue/60">
+              <p className="text-[11px] text-[var(--inf-muted)]">
                 Opcional: pega emails extra (uno por línea). Nombre desde la agenda o del correo —
                 no usa Usuarios ERP.
               </p>
@@ -3163,15 +3156,15 @@ export function InformativosContent() {
                 <p className="text-[10px] text-red-600">{parsed.errores.join(" · ")}</p>
               ) : null}
               {resolved.length > 0 ? (
-                <ul className="max-h-72 overflow-auto rounded border border-brand-blue/15 text-[11px]">
+                <ul className="max-h-72 overflow-auto rounded border border-[var(--inf-border)] text-[11px]">
                   {resolved.map((d) => (
                     <li
                       key={d.email}
-                      className="flex items-center gap-2 border-b border-brand-blue/8 px-2 py-1.5 last:border-0"
+                      className="flex items-center gap-2 border-b border-[var(--inf-border-soft)] px-2 py-1.5 last:border-0"
                     >
                       <input
                         type="checkbox"
-                        className="accent-[#11224E]"
+                        className="accent-[var(--inf-neon)]"
                         checked={picked.has(d.email)}
                         onChange={() => {
                           setPicked((prev) => {
@@ -3183,9 +3176,9 @@ export function InformativosContent() {
                         }}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-brand-blue/90">{d.email}</p>
+                        <p className="truncate font-medium text-[var(--inf-fg)]">{d.email}</p>
                         {d.empresa ? (
-                          <p className="truncate text-[10px] text-brand-blue/45">{d.empresa}</p>
+                          <p className="truncate text-[10px] text-[var(--inf-muted)]">{d.empresa}</p>
                         ) : null}
                       </div>
                       <input
@@ -3204,12 +3197,12 @@ export function InformativosContent() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-[11px] text-brand-blue/45">
+                <p className="text-[11px] text-[var(--inf-muted)]">
                   Marca uno o más grupos, o pega emails.
                 </p>
               )}
             </div>
-            <div className="mx-auto flex w-full max-w-xl flex-shrink-0 gap-2 border-t border-brand-blue/10 p-4">
+            <div className="mx-auto flex w-full max-w-xl flex-shrink-0 gap-2 border-t border-[var(--inf-border)] p-4">
               <button
                 type="button"
                 className={btn}
@@ -3301,7 +3294,7 @@ export function InformativosContent() {
               </div>
             </div>
             <div className="mx-auto min-h-0 w-full max-w-2xl flex-1 space-y-3 overflow-auto p-4">
-              <div className="space-y-1 rounded border border-brand-blue/12 p-2">
+              <div className="space-y-1 rounded border border-[var(--inf-border)] bg-[var(--inf-surface-soft)] p-2">
                 <p className={label}>Alta rápida</p>
                 <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                   <input
@@ -3346,9 +3339,9 @@ export function InformativosContent() {
                 </button>
               </div>
 
-              <div className="space-y-1 rounded border border-brand-blue/12 p-2">
+              <div className="space-y-1 rounded border border-[var(--inf-border)] bg-[var(--inf-surface-soft)] p-2">
                 <p className={label}>Pegar lista</p>
-                <p className="text-[10px] text-brand-blue/50">
+                <p className="text-[10px] text-[var(--inf-muted)]">
                   Una por línea: <code>nombre;email;empresa</code> o con 4to campo grupo
                 </p>
                 <select
@@ -3406,26 +3399,26 @@ export function InformativosContent() {
                   </button>
                 </div>
                 {agendaLoading ? (
-                  <p className="text-[11px] text-brand-blue/45">Cargando…</p>
+                  <p className="text-[11px] text-[var(--inf-muted)]">Cargando…</p>
                 ) : agendaVisible.length === 0 ? (
-                  <p className="text-[11px] text-brand-blue/45">Sin contactos en este filtro.</p>
+                  <p className="text-[11px] text-[var(--inf-muted)]">Sin contactos en este filtro.</p>
                 ) : (
-                  <ul className="max-h-[50vh] overflow-auto rounded border border-brand-blue/15 text-[11px]">
+                  <ul className="max-h-[50vh] overflow-auto rounded border border-[var(--inf-border)] text-[11px]">
                     {agendaVisible.map((c) => (
                       <li
                         key={c.id}
-                        className="flex items-start gap-2 border-b border-brand-blue/8 px-2 py-1.5 last:border-0"
+                        className="flex items-start gap-2 border-b border-[var(--inf-border-soft)] px-2 py-1.5 last:border-0"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-brand-blue">{c.nombre}</p>
-                          <p className="truncate text-neutral-600">{c.email}</p>
+                          <p className="font-semibold text-[var(--inf-fg)]">{c.nombre}</p>
+                          <p className="truncate text-[var(--inf-muted)]">{c.email}</p>
                           {c.empresa ? (
-                            <p className="truncate text-[10px] text-brand-blue/45">
+                            <p className="truncate text-[10px] text-[var(--inf-muted)]">
                               {c.empresa}
                             </p>
                           ) : null}
                           {c.grupos?.length ? (
-                            <p className="truncate text-[10px] text-brand-blue/55">
+                            <p className="truncate text-[10px] text-[var(--inf-fg-soft)]">
                               {c.grupos.join(" · ")}
                             </p>
                           ) : null}
@@ -3461,7 +3454,8 @@ export function InformativosContent() {
       ) : null}
       </div>
 
-      <StudioConfirmModal state={confirmDlg} onClose={closeConfirm} />
+      <StudioConfirmModal state={confirmDlg} onClose={closeConfirm} theme={theme} />
     </main>
+    </div>
   );
 }

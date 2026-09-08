@@ -13,7 +13,8 @@ import {
   saveDraftToStorage,
   type StackingDraft,
 } from "@/lib/stacking-drafts";
-import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { FormSelect } from "@/components/ui/FormSelect";
 
 type StackingContentProps = {
   /** Datos del embarque y horarios de recepción stacking. Si no se pasa, se intenta cargar automáticamente. */
@@ -148,8 +149,8 @@ function StackingFieldRow({
   onBlurSave: (field: keyof StackingDraft) => void;
 }) {
   return (
-    <div className="space-y-1 min-w-0">
-      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">{label}</p>
+    <div className="min-w-0 space-y-1">
+      <p className="text-[9px] font-bold uppercase tracking-wide text-dash-muted">{label}</p>
       {editable ? (
         <input
           type="text"
@@ -157,10 +158,10 @@ function StackingFieldRow({
           onChange={(e) => onChange(field, e.target.value)}
           onBlur={() => onBlurSave(field)}
           placeholder={placeholder}
-          className="w-full text-xs font-mono rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-shadow"
+          className="dash-control w-full rounded-lg px-2 py-1.5 font-mono text-xs text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
         />
       ) : (
-        <p className="text-xs font-mono font-semibold text-neutral-800 tabular-nums min-h-[28px] flex items-center">
+        <p className="flex min-h-[28px] items-center font-mono text-xs font-semibold tabular-nums text-dash-fg">
           {value.trim() || "—"}
         </p>
       )}
@@ -181,13 +182,13 @@ function StackingScheduleCard({
 }) {
   return (
     <div
-      className={`rounded-xl border border-neutral-200 bg-white/95 shadow-sm hover:shadow-md hover:border-brand-blue/25 transition-all duration-200 overflow-hidden group ${borderAccent}`}
+      className={`dash-card group overflow-hidden rounded-xl transition-all duration-200 ${borderAccent}`}
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-100 bg-gradient-to-r from-neutral-50 to-white">
-        <span className="w-7 h-7 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/15 transition-colors">
-          <Icon icon={icon} width={15} height={15} className="text-brand-blue" aria-hidden />
+      <div className="dash-section-head flex items-center gap-2 px-3 py-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-dash-neon/35 bg-dash-neon/15">
+          <Icon icon={icon} width={15} height={15} className="text-dash-neon" aria-hidden />
         </span>
-        <span className="text-[11px] font-bold text-neutral-800 uppercase tracking-wide">{title}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-dash-fg">{title}</span>
       </div>
       <div className="p-3">{children}</div>
     </div>
@@ -198,6 +199,7 @@ export function StackingContent({ data = null }: StackingContentProps) {
   const { t } = useLocale();
   const tr = t.stackingPage;
   const { isSuperadmin } = useAuth();
+  const [theme] = useNeonTheme();
 
   const [itinerarios, setItinerarios] = useState<ItinerarioWithEscalas[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -330,381 +332,667 @@ export function StackingContent({ data = null }: StackingContentProps) {
     !hasPropData && !loading && !error && stackingItinerarios.length > 0 && sortedFiltered.length === 0;
 
   return (
-    <main
-      className={`flex flex-col flex-1 min-h-0 overflow-hidden ${modulePageBg}`}
-      role="main"
-      aria-label={tr.title}
-    >
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1920px] mx-auto">
-        {hasPropData && data && (
-          <div className="p-3 sm:p-4">
-            <StackingTable data={data} tr={tr} />
-          </div>
-        )}
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main
+        className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden"
+        role="main"
+        aria-label={tr.title}
+      >
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-        {!hasPropData && (
-          <>
-            {/* Hero navy */}
-            <header className={`flex-shrink-0 ${moduleHero} overflow-hidden`}>
-              <div className="px-4 sm:px-6 py-5 sm:py-6 flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div className="w-12 h-12 shrink-0 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center">
-                    <Icon icon="lucide:ship" width={24} height={24} className="text-white" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight truncate">
-                      {tr.title}
-                      {stackingItinerarios.length > 0 && (
-                        <span className="ml-2 text-base font-bold text-white/70">{sortedFiltered.length}/{stackingItinerarios.length}</span>
-                      )}
-                    </h1>
-                    <p className="text-base text-white/75 mt-1 truncate hidden sm:block">
-                      {(tr as { subtitle?: string }).subtitle ?? "Horarios de recepción stacking"}
-                    </p>
-                  </div>
-                </div>
-                {stackingItinerarios.length > 0 && (
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <select
-                      value={filterNaviera}
-                      onChange={(e) => setFilterNaviera(e.target.value)}
-                      className="flex-1 sm:flex-initial sm:min-w-[130px] rounded-lg border border-white/25 bg-white/15 px-3 py-2.5 text-base text-white focus:outline-none focus:ring-2 focus:ring-white/30"
-                      aria-label={tr.filterNaviera}
-                    >
-                      <option value="" className="text-neutral-800">{tr.filterAll}</option>
-                      {navieraOptions.map((n) => <option key={n} value={n} className="text-neutral-800">{n}</option>)}
-                    </select>
-                    <select
-                      value={filterPol}
-                      onChange={(e) => setFilterPol(e.target.value)}
-                      className="flex-1 sm:flex-initial sm:min-w-[100px] rounded-lg border border-white/25 bg-white/15 px-3 py-2.5 text-base text-white focus:outline-none focus:ring-2 focus:ring-white/30"
-                      aria-label={tr.filterPol}
-                    >
-                      <option value="" className="text-neutral-800">{tr.filterAllPol}</option>
-                      {polOptions.map((p) => <option key={p} value={p} className="text-neutral-800">{p}</option>)}
-                    </select>
-                    {(filterNaviera || filterPol) && (
-                      <button
-                        type="button"
-                        onClick={() => { setFilterNaviera(""); setFilterPol(""); }}
-                        className="shrink-0 p-2.5 rounded-lg text-white/70 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
-                        aria-label="Limpiar filtros"
-                      >
-                        <Icon icon="lucide:x" width={16} height={16} aria-hidden />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </header>
+        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col">
+          {hasPropData && data && (
+            <div className="p-3 sm:p-4">
+              <StackingTable data={data} tr={tr} />
+            </div>
+          )}
 
-            {loading && (
-              <div
-                className="flex-1 flex flex-col items-center justify-center gap-4 px-3 sm:px-4 py-10 sm:py-16"
-                role="status"
-                aria-live="polite"
-              >
-                <span className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" aria-hidden />
-                <p className="text-sm text-neutral-500">
-                  {(tr as { loading?: string }).loading ?? t.itinerarioPage?.loadingItineraries ?? "Cargando itinerarios…"}
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div
-                className="flex-1 flex items-center justify-center px-3 sm:px-4 py-8 sm:py-12"
-                role="alert"
-              >
-                <div className="flex items-center gap-3 rounded-xl sm:rounded-2xl border border-red-200 bg-red-50 px-4 sm:px-5 py-3 sm:py-4 text-red-700 text-sm shadow-sm max-w-md">
-                  <Icon icon="lucide:alert-circle" width={20} height={20} className="shrink-0" aria-hidden />
-                  {error}
-                </div>
-              </div>
-            )}
-
-            {showEmptyState && (
-              <div
-                className="flex-1 flex flex-col items-center justify-center px-3 sm:px-4 py-10 sm:py-16 text-center max-w-md mx-auto"
-                role="status"
-                aria-live="polite"
-              >
-                <div className="rounded-xl sm:rounded-2xl bg-white/80 border border-neutral-200 p-6 sm:p-8 shadow-sm">
-                  <div className="flex justify-center text-neutral-300 mb-4">
-                    <Icon icon="lucide:calendar-x" width={48} height={48} aria-hidden />
-                  </div>
-                  <p className="text-neutral-700 font-medium">{tr.emptyTitle}</p>
-                  <p className="text-neutral-500 text-sm mt-2">{tr.emptySubtitle}</p>
-                  <p className="text-neutral-400 text-xs mt-4">{tr.noUpcomingStacking}</p>
-                </div>
-              </div>
-            )}
-
-            {showNoResultsAfterFilter && (
-              <div
-                className="flex-1 flex flex-col items-center justify-center px-3 sm:px-4 py-10 sm:py-16 text-center max-w-md mx-auto"
-                role="status"
-              >
-                <div className="rounded-xl sm:rounded-2xl bg-white/80 border border-neutral-200 p-6 sm:p-8 shadow-sm">
-                  <div className="flex justify-center text-neutral-300 mb-4">
-                    <Icon icon="lucide:filter-x" width={48} height={48} aria-hidden />
-                  </div>
-                  <p className="text-neutral-700 font-medium">{tr.emptyTitle}</p>
-                  <p className="text-neutral-500 text-sm mt-2">
-                    {(tr as Record<string, string>).filterNoResults ?? "No hay resultados con los filtros seleccionados."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {sortedFiltered.length > 0 && (() => {
-              const countLabel = sortedFiltered.length === 1
-                ? ((tr as { itineraryCount?: string }).itineraryCount ?? "{{count}} itinerario").replace("{{count}}", "1")
-                : ((tr as { itineraryCount_other?: string }).itineraryCount_other ?? "{{count}} itinerarios").replace("{{count}}", String(sortedFiltered.length));
-              return (
-              <section className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3 overflow-hidden">
-                {/* ── Col 1: Lista de itinerarios ── */}
-                <div className={`min-h-0 flex-col ${moduleCard} overflow-hidden lg:w-[32%] lg:flex-shrink-0 ${mobileView === "detail" ? "hidden lg:flex" : "flex"}`}>
-                  <div className="flex-shrink-0 px-3 py-2.5 border-b border-brand-blue/10 flex items-center justify-between bg-[#F4F8FC]">
-                    <span className="text-sm font-bold text-brand-blue uppercase tracking-widest">
-                      {(tr as { listTitle?: string }).listTitle ?? "Itinerarios"}
-                    </span>
-                    <span className="text-sm font-bold text-brand-blue bg-brand-blue/8 px-2.5 py-0.5 rounded-full tabular-nums">{countLabel}</span>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-100 scroll-smooth">
-                    {sortedFiltered.map((it) => {
-                      const isActive = selected?.id === it.id;
-                      const firstEta = getFirstEta(it.escalas);
-                      const daysLeft = daysUntil(it.etd, 0);
-                      const urgency = daysLeft === null ? null : daysLeft <= 3 ? "red" : daysLeft <= 7 ? "amber" : "emerald";
-                      return (
-                        <button
-                          key={it.id}
-                          type="button"
-                          onClick={() => { setSelectedId(it.id); setMobileView("detail"); }}
-                          className={`w-full text-left transition-colors duration-150 ${
-                            isActive ? "bg-brand-blue/[0.05]" : "hover:bg-neutral-50/80"
-                          }`}
-                        >
-                          <div className={`flex border-l-[3px] ${isActive ? "border-brand-blue" : "border-transparent"}`}>
-                            <div className="flex-1 min-w-0 px-3 py-2.5">
-                              {/* Row 1: naviera label + urgency pill */}
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className={`text-[10px] font-bold uppercase tracking-widest truncate ${isActive ? "text-brand-blue" : "text-neutral-400"}`}>
-                                  {(it.operador || it.naviera || it.servicio || "").trim() || "—"}
-                                </span>
-                                {daysLeft !== null && (
-                                  <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums ${
-                                    urgency === "red" ? "bg-red-50 text-red-600 border border-red-200" :
-                                    urgency === "amber" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                                    "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  }`}>
-                                    {isTodayEtd(it.etd) ? "HOY" : `${daysLeft}d`}
-                                  </span>
-                                )}
-                              </div>
-                              {/* Row 2: nave · viaje */}
-                              <p className={`text-xs font-bold truncate leading-snug ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
-                                {it.nave || "—"} <span className="font-normal text-neutral-400">·</span> {it.viaje || "—"}
-                              </p>
-                              {/* Row 3: POL + ETD + ETA */}
-                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-neutral-400">
-                                <span>POL <span className="font-mono font-semibold text-neutral-600">{it.pol || "—"}</span></span>
-                                <span>ETD <span className="font-mono font-semibold text-neutral-600">{formatEtdDisplay(it.etd)}</span></span>
-                                {firstEta && <span>ETA <span className="font-mono font-semibold text-neutral-600">{formatEtdDisplay(firstEta)}</span></span>}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* ── Col 2: Detalle del itinerario ── */}
-                <div className={`flex-1 min-h-0 flex-col ${moduleCard} overflow-hidden ${mobileView === "list" ? "hidden lg:flex" : "flex"}`}>
-                  {selected ? (() => {
-                    const daysToZarpe = daysUntil(selected.etd, 0);
-                    const daysToClose = daysUntil(selected.etd, STACKING_CLOSE_OFFSET_DAYS);
-                    const zarpeUrgency = daysToZarpe === null ? null : daysToZarpe <= 3 ? "red" : daysToZarpe <= 7 ? "amber" : "emerald";
-                    const closeUrgency = daysToClose === null ? null : daysToClose <= 2 ? "red" : daysToClose <= 5 ? "amber" : "emerald";
-                    const urgencyNumClass = (u: string | null) =>
-                      u === "red" ? "text-red-600" :
-                      u === "amber" ? "text-amber-600" :
-                      "text-emerald-600";
-                    const sp = tr as Record<string, string>;
-                    const d = stackingDraft ?? getEmptyStackingDraft();
-                    const placeholderFmt = sp.placeholderDateFormat ?? "DD/MM/AAAA HH:MM";
-                    const setField = (key: keyof StackingDraft, v: string) => {
-                      setStackingDraft((prev) => ({ ...getEmptyStackingDraft(), ...(prev ?? {}), [key]: v }));
-                    };
-                    const blurSave = (key: keyof StackingDraft) => {
-                      if (!selected) return;
-                      setStackingDraft((prev) => {
-                        const next = { ...getEmptyStackingDraft(), ...(prev ?? {}) };
-                        saveDraftToStorage(selected.nave, { [key]: next[key] });
-                        return next;
-                      });
-                    };
-                    return (
-                    <>
-                      {/* Cabecera: identidad embarque + métricas */}
-                      <div className="flex-shrink-0 relative overflow-hidden">
-                        <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-                        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/[0.04] to-transparent pointer-events-none" aria-hidden />
-                        <div className="relative px-3 py-3 border-b border-neutral-100">
-                          <div className="flex items-start gap-2 flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => setMobileView("list")}
-                              className="lg:hidden shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-brand-blue hover:text-brand-blue/80 transition-colors mt-0.5"
-                            >
-                              <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
-                              Lista
-                            </button>
-                            <span className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center shrink-0 shadow-md shadow-brand-blue/25">
-                              <Icon icon="lucide:ship" width={18} height={18} className="text-white" aria-hidden />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-black text-neutral-900 tracking-tight leading-tight">
-                                <span className="text-brand-blue">{selected.nave || "—"}</span>
-                                <span className="font-normal text-neutral-300 mx-1.5">·</span>
-                                <span>{selected.viaje || "—"}</span>
-                              </p>
-                              <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
-                                {(selected.operador || selected.naviera || selected.servicio || "").trim() || "—"}
-                              </p>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white/90 px-2.5 py-1 text-[11px] shadow-sm">
-                                  <Icon icon="lucide:anchor" width={12} height={12} className="text-brand-blue shrink-0" aria-hidden />
-                                  <span className="text-neutral-400 font-bold uppercase text-[9px]">{tr.polLabel}</span>
-                                  <span className="font-mono font-bold text-neutral-800">{selected.pol || "—"}</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white/90 px-2.5 py-1 text-[11px] shadow-sm tabular-nums">
-                                  <Icon icon="lucide:calendar-days" width={12} height={12} className="text-brand-blue shrink-0" aria-hidden />
-                                  <span className="text-neutral-400 font-bold uppercase text-[9px]">{sp.etdBadge ?? "ETD"}</span>
-                                  <span className="font-mono font-bold text-neutral-800">{formatEtdDisplay(selected.etd)}</span>
-                                  {isTodayEtd(selected.etd) && (
-                                    <span className="ml-0.5 inline-flex rounded bg-brand-olive/15 text-brand-olive px-1 py-0.5 text-[8px] font-black uppercase">{sp.todayTag ?? "HOY"}</span>
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
-                              {daysToZarpe !== null && (
-                                <div className="text-right rounded-xl border border-neutral-200 bg-neutral-50/90 px-3 py-1.5 min-w-[4.5rem]">
-                                  <p className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(zarpeUrgency)}`}>{daysToZarpe}</p>
-                                  <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wide">{sp.zarpeDaysLabel ?? "días al zarpe"}</p>
-                                </div>
-                              )}
-                              {daysToClose !== null && (
-                                <div className="text-right rounded-xl border border-neutral-200 bg-neutral-50/90 px-3 py-1.5 min-w-[4.5rem]">
-                                  <p className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(closeUrgency)}`}>{daysToClose}</p>
-                                  <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-wide">{sp.stackingDaysLabel ?? "cierre est."}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Cronograma: ventanas y cortes */}
-                      <div className="flex-shrink-0 px-3 py-2 border-b border-neutral-100 bg-neutral-50/50">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <h2 className="text-[11px] font-black text-neutral-700 uppercase tracking-widest flex items-center gap-2">
-                            <Icon icon="lucide:calendar-clock" width={14} height={14} className="text-brand-blue" aria-hidden />
-                            {sp.scheduleTitle ?? "Cronograma"}
-                          </h2>
-                        </div>
-                        <p className="text-[10px] text-neutral-500 mb-2 leading-snug">{sp.scheduleHint ?? ""}</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                          <StackingScheduleCard title={sp.rowStackingDry ?? "Stacking"} icon="lucide:package" borderAccent="border-l-[3px] border-l-brand-blue">
-                            <div className="grid grid-cols-2 gap-2">
-                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="dryInicio" value={d.dryInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="dryFin" value={d.dryFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                            </div>
-                          </StackingScheduleCard>
-                          <StackingScheduleCard title={sp.rowCorteDocumental ?? "Corte documental"} icon="lucide:file-badge" borderAccent="border-l-[3px] border-l-amber-500">
-                            <StackingFieldRow label={sp.rowCorteDocumental ?? "Corte documental"} field="cutoffDry" value={d.cutoffDry} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                          </StackingScheduleCard>
-                          <StackingScheduleCard title={sp.rowLate ?? "Late"} icon="lucide:clock-alert" borderAccent="border-l-[3px] border-l-orange-500">
-                            <div className="grid grid-cols-2 gap-2">
-                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="lateInicio" value={d.lateInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="lateFin" value={d.lateFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                            </div>
-                          </StackingScheduleCard>
-                          <StackingScheduleCard title={sp.rowXlate ?? "X-Late"} icon="lucide:timer" borderAccent="border-l-[3px] border-l-violet-500">
-                            <div className="grid grid-cols-2 gap-2">
-                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="xlateInicio" value={d.xlateInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="xlateFin" value={d.xlateFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                            </div>
-                          </StackingScheduleCard>
-                          <StackingScheduleCard title={sp.rowReefer ?? "Reefer"} icon="lucide:snowflake" borderAccent="border-l-[3px] border-l-sky-500">
-                            <div className="grid grid-cols-2 gap-2">
-                              <StackingFieldRow label={sp.fieldInicio ?? "Inicio"} field="reeferInicio" value={d.reeferInicio} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                              <StackingFieldRow label={sp.fieldFin ?? "Fin"} field="reeferFin" value={d.reeferFin} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                            </div>
-                          </StackingScheduleCard>
-                          <StackingScheduleCard title={sp.rowCutoffReefer ?? "Cut off Reefer"} icon="lucide:thermometer-snowflake" borderAccent="border-l-[3px] border-l-cyan-600">
-                            <StackingFieldRow label={sp.rowCutoffReefer ?? "Cut off Reefer"} field="cutoffReefer" value={d.cutoffReefer} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                          </StackingScheduleCard>
-                          <div className="sm:col-span-2 xl:col-span-3">
-                          <StackingScheduleCard title={sp.rowCutoffAnticipado ?? "Cut off anticipado"} icon="lucide:calendar-x-2" borderAccent="border-l-[3px] border-l-neutral-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <StackingFieldRow label={sp.rowCutoffAnticipado ?? "Fecha / hora"} field="cutoffAnticipado" value={d.cutoffAnticipado} editable={isSuperadmin} placeholder={placeholderFmt} onChange={setField} onBlurSave={blurSave} />
-                              <div className="space-y-1 min-w-0 sm:col-span-2">
-                                <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wide">{sp.cutoffAnticipadoDescLabel ?? "Descripción"}</p>
-                                {isSuperadmin ? (
-                                  <input
-                                    type="text"
-                                    value={d.cutoffAnticipadoDescripcion}
-                                    onChange={(e) => setField("cutoffAnticipadoDescripcion", e.target.value)}
-                                    onBlur={() => blurSave("cutoffAnticipadoDescripcion")}
-                                    className="w-full text-xs rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
-                                  />
-                                ) : (
-                                  <p className="text-xs text-neutral-700 min-h-[28px]">{d.cutoffAnticipadoDescripcion.trim() || "—"}</p>
-                                )}
-                              </div>
-                            </div>
-                          </StackingScheduleCard>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Imagen stacking */}
-                      <div className="flex-1 min-h-0 overflow-auto bg-neutral-50/40 border-t border-neutral-100 p-3 flex items-start justify-center">
-                        {selected.stacking_imagen_url ? (
-                          <img
-                            src={selected.stacking_imagen_url}
-                            alt="Stacking oficial"
-                            className="w-full max-w-full h-auto object-contain object-top block rounded-xl"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center gap-2.5 text-neutral-400 py-16 text-center">
-                            <span className="w-12 h-12 rounded-2xl bg-white border border-neutral-200 flex items-center justify-center shadow-sm">
-                              <Icon icon="lucide:image-off" width={22} height={22} aria-hidden />
-                            </span>
-                            <p className="text-sm font-medium">{(tr as { noImageHint?: string }).noImageHint ?? "Sin imagen de stacking"}</p>
-                          </div>
+          {!hasPropData && (
+            <>
+              <div className="dash-toolbar relative z-10 shrink-0">
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                      <Icon icon="lucide:ship" width={22} height={22} className="text-dash-neon" aria-hidden />
+                    </div>
+                    <div className="min-w-0">
+                      <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">
+                        {tr.title}
+                        {stackingItinerarios.length > 0 && (
+                          <span className="ml-2 text-sm font-bold text-dash-muted">
+                            {sortedFiltered.length}/{stackingItinerarios.length}
+                          </span>
                         )}
+                      </h1>
+                      <p className="mt-0.5 line-clamp-1 hidden text-xs text-dash-muted sm:block sm:text-sm">
+                        {(tr as { subtitle?: string }).subtitle ?? "Horarios de recepción stacking"}
+                      </p>
+                    </div>
+                  </div>
+                  {stackingItinerarios.length > 0 && (
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+                      <div className="min-w-[130px] flex-1 sm:flex-initial">
+                        <FormSelect
+                          variant="neon"
+                          value={filterNaviera}
+                          placeholder={tr.filterAll}
+                          options={navieraOptions.map((n) => ({ value: n, label: n }))}
+                          onChange={setFilterNaviera}
+                        />
                       </div>
-                    </>
-                  );})() : (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-400 text-center px-4 min-h-[200px]">
-                      <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                        <Icon icon="lucide:mouse-pointer-click" width={24} height={24} aria-hidden />
-                      </span>
-                      <p className="text-sm font-medium">{(tr as { selectItinerary?: string }).selectItinerary ?? tr.emptyTitle}</p>
+                      <div className="min-w-[100px] flex-1 sm:flex-initial">
+                        <FormSelect
+                          variant="neon"
+                          value={filterPol}
+                          placeholder={tr.filterAllPol}
+                          options={polOptions.map((p) => ({ value: p, label: p }))}
+                          onChange={setFilterPol}
+                        />
+                      </div>
+                      {(filterNaviera || filterPol) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterNaviera("");
+                            setFilterPol("");
+                          }}
+                          className="dash-control shrink-0 rounded-lg p-2.5 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                          aria-label="Limpiar filtros"
+                        >
+                          <Icon icon="lucide:x" width={16} height={16} aria-hidden />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
-              </section>
-            );})()}
-          </>
-        )}
-      </div>
-    </main>
+              </div>
+
+              {loading && (
+                <div
+                  className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4 px-3 py-10 sm:px-4 sm:py-16"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span
+                    className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-dash-neon border-t-transparent"
+                    aria-hidden
+                  />
+                  <p className="text-sm text-dash-muted">
+                    {(tr as { loading?: string }).loading ??
+                      t.itinerarioPage?.loadingItineraries ??
+                      "Cargando itinerarios…"}
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <div
+                  className="relative z-10 flex flex-1 items-center justify-center px-3 py-8 sm:px-4 sm:py-12"
+                  role="alert"
+                >
+                  <div className="flex max-w-md items-center gap-3 rounded-xl border border-red-400/35 bg-red-400/15 px-4 py-3 text-sm text-dash-fg sm:px-5 sm:py-4">
+                    <Icon icon="lucide:alert-circle" width={20} height={20} className="shrink-0 text-red-400" aria-hidden />
+                    {error}
+                  </div>
+                </div>
+              )}
+
+              {showEmptyState && (
+                <div
+                  className="relative z-10 mx-auto flex max-w-md flex-1 flex-col items-center justify-center px-3 py-10 text-center sm:px-4 sm:py-16"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div className="dash-card rounded-xl p-6 sm:p-8">
+                    <div className="mb-4 flex justify-center text-dash-muted">
+                      <Icon icon="lucide:calendar-x" width={48} height={48} aria-hidden />
+                    </div>
+                    <p className="font-medium text-dash-fg">{tr.emptyTitle}</p>
+                    <p className="mt-2 text-sm text-dash-muted">{tr.emptySubtitle}</p>
+                    <p className="mt-4 text-xs text-dash-muted">{tr.noUpcomingStacking}</p>
+                  </div>
+                </div>
+              )}
+
+              {showNoResultsAfterFilter && (
+                <div
+                  className="relative z-10 mx-auto flex max-w-md flex-1 flex-col items-center justify-center px-3 py-10 text-center sm:px-4 sm:py-16"
+                  role="status"
+                >
+                  <div className="dash-card rounded-xl p-6 sm:p-8">
+                    <div className="mb-4 flex justify-center text-dash-muted">
+                      <Icon icon="lucide:filter-x" width={48} height={48} aria-hidden />
+                    </div>
+                    <p className="font-medium text-dash-fg">{tr.emptyTitle}</p>
+                    <p className="mt-2 text-sm text-dash-muted">
+                      {(tr as Record<string, string>).filterNoResults ??
+                        "No hay resultados con los filtros seleccionados."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {sortedFiltered.length > 0 &&
+                (() => {
+                  const countLabel =
+                    sortedFiltered.length === 1
+                      ? (
+                          (tr as { itineraryCount?: string }).itineraryCount ?? "{{count}} itinerario"
+                        ).replace("{{count}}", "1")
+                      : (
+                          (tr as { itineraryCount_other?: string }).itineraryCount_other ??
+                          "{{count}} itinerarios"
+                        ).replace("{{count}}", String(sortedFiltered.length));
+                  return (
+                    <section className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 lg:flex-row">
+                      {/* ── Col 1: Lista de itinerarios ── */}
+                      <div
+                        className={`dash-card min-h-0 flex-col overflow-hidden lg:w-[32%] lg:flex-shrink-0 ${
+                          mobileView === "detail" ? "hidden lg:flex" : "flex"
+                        }`}
+                      >
+                        <div className="dash-section-head flex flex-shrink-0 items-center justify-between px-3 py-2.5">
+                          <span className="text-sm font-bold uppercase tracking-widest text-dash-neon">
+                            {(tr as { listTitle?: string }).listTitle ?? "Itinerarios"}
+                          </span>
+                          <span className="rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 py-0.5 text-sm font-bold tabular-nums text-dash-fg">
+                            {countLabel}
+                          </span>
+                        </div>
+                        <div className="min-h-0 flex-1 scroll-smooth divide-y divide-dash-border overflow-y-auto">
+                          {sortedFiltered.map((it) => {
+                            const isActive = selected?.id === it.id;
+                            const firstEta = getFirstEta(it.escalas);
+                            const daysLeft = daysUntil(it.etd, 0);
+                            const urgency =
+                              daysLeft === null
+                                ? null
+                                : daysLeft <= 3
+                                  ? "red"
+                                  : daysLeft <= 7
+                                    ? "amber"
+                                    : "emerald";
+                            return (
+                              <button
+                                key={it.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedId(it.id);
+                                  setMobileView("detail");
+                                }}
+                                className={`w-full text-left transition-colors duration-150 ${
+                                  isActive ? "bg-dash-neon/15" : "hover:bg-dash-neon/10"
+                                }`}
+                              >
+                                <div
+                                  className={`flex border-l-[3px] ${
+                                    isActive ? "border-dash-neon" : "border-transparent"
+                                  }`}
+                                >
+                                  <div className="min-w-0 flex-1 px-3 py-2.5">
+                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                      <span
+                                        className={`truncate text-[10px] font-bold uppercase tracking-widest ${
+                                          isActive ? "text-dash-neon" : "text-dash-muted"
+                                        }`}
+                                      >
+                                        {(it.operador || it.naviera || it.servicio || "").trim() || "—"}
+                                      </span>
+                                      {daysLeft !== null && (
+                                        <span
+                                          className={`inline-flex shrink-0 items-center rounded-lg border px-2 py-0.5 text-[10px] font-black tabular-nums ${
+                                            urgency === "red"
+                                              ? "border-red-400/35 bg-red-400/15 text-dash-fg"
+                                              : urgency === "amber"
+                                                ? "border-amber-400/35 bg-amber-400/15 text-dash-fg"
+                                                : "border-emerald-400/35 bg-emerald-400/15 text-dash-fg"
+                                          }`}
+                                        >
+                                          {isTodayEtd(it.etd) ? "HOY" : `${daysLeft}d`}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p
+                                      className={`truncate text-xs font-bold leading-snug ${
+                                        isActive ? "text-dash-neon" : "text-dash-fg"
+                                      }`}
+                                    >
+                                      {it.nave || "—"}{" "}
+                                      <span className="font-normal text-dash-muted">·</span>{" "}
+                                      {it.viaje || "—"}
+                                    </p>
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-dash-muted">
+                                      <span>
+                                        POL{" "}
+                                        <span className="font-mono font-semibold text-dash-fg">
+                                          {it.pol || "—"}
+                                        </span>
+                                      </span>
+                                      <span>
+                                        ETD{" "}
+                                        <span className="font-mono font-semibold text-dash-fg">
+                                          {formatEtdDisplay(it.etd)}
+                                        </span>
+                                      </span>
+                                      {firstEta && (
+                                        <span>
+                                          ETA{" "}
+                                          <span className="font-mono font-semibold text-dash-fg">
+                                            {formatEtdDisplay(firstEta)}
+                                          </span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* ── Col 2: Detalle del itinerario ── */}
+                      <div
+                        className={`dash-card min-h-0 flex-1 flex-col overflow-hidden ${
+                          mobileView === "list" ? "hidden lg:flex" : "flex"
+                        }`}
+                      >
+                        {selected
+                          ? (() => {
+                              const daysToZarpe = daysUntil(selected.etd, 0);
+                              const daysToClose = daysUntil(selected.etd, STACKING_CLOSE_OFFSET_DAYS);
+                              const zarpeUrgency =
+                                daysToZarpe === null
+                                  ? null
+                                  : daysToZarpe <= 3
+                                    ? "red"
+                                    : daysToZarpe <= 7
+                                      ? "amber"
+                                      : "emerald";
+                              const closeUrgency =
+                                daysToClose === null
+                                  ? null
+                                  : daysToClose <= 2
+                                    ? "red"
+                                    : daysToClose <= 5
+                                      ? "amber"
+                                      : "emerald";
+                              const urgencyNumClass = (u: string | null) =>
+                                u === "red"
+                                  ? "text-red-400"
+                                  : u === "amber"
+                                    ? "text-amber-400"
+                                    : "text-emerald-400";
+                              const sp = tr as Record<string, string>;
+                              const d = stackingDraft ?? getEmptyStackingDraft();
+                              const placeholderFmt = sp.placeholderDateFormat ?? "DD/MM/AAAA HH:MM";
+                              const setField = (key: keyof StackingDraft, v: string) => {
+                                setStackingDraft((prev) => ({
+                                  ...getEmptyStackingDraft(),
+                                  ...(prev ?? {}),
+                                  [key]: v,
+                                }));
+                              };
+                              const blurSave = (key: keyof StackingDraft) => {
+                                if (!selected) return;
+                                setStackingDraft((prev) => {
+                                  const next = {
+                                    ...getEmptyStackingDraft(),
+                                    ...(prev ?? {}),
+                                  };
+                                  saveDraftToStorage(selected.nave, { [key]: next[key] });
+                                  return next;
+                                });
+                              };
+                              return (
+                                <>
+                                  <div className="relative flex-shrink-0 overflow-hidden">
+                                    <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+                                    <div className="relative border-b border-dash-border px-3 py-3">
+                                      <div className="flex flex-wrap items-start gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setMobileView("list")}
+                                          className="mt-0.5 inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-dash-neon transition-colors hover:text-dash-fg lg:hidden"
+                                        >
+                                          <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
+                                          Lista
+                                        </button>
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_20px_-8px_color-mix(in_srgb,var(--dash-neon)_50%,transparent)]">
+                                          <Icon
+                                            icon="lucide:ship"
+                                            width={18}
+                                            height={18}
+                                            className="text-dash-neon"
+                                            aria-hidden
+                                          />
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-sm font-black leading-tight tracking-tight text-dash-fg">
+                                            <span className="text-dash-neon">{selected.nave || "—"}</span>
+                                            <span className="mx-1.5 font-normal text-dash-muted">·</span>
+                                            <span>{selected.viaje || "—"}</span>
+                                          </p>
+                                          <p className="mt-0.5 truncate text-[11px] text-dash-muted">
+                                            {(
+                                              selected.operador ||
+                                              selected.naviera ||
+                                              selected.servicio ||
+                                              ""
+                                            ).trim() || "—"}
+                                          </p>
+                                          <div className="mt-2 flex flex-wrap gap-2">
+                                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1 text-[11px]">
+                                              <Icon
+                                                icon="lucide:anchor"
+                                                width={12}
+                                                height={12}
+                                                className="shrink-0 text-dash-neon"
+                                                aria-hidden
+                                              />
+                                              <span className="text-[9px] font-bold uppercase text-dash-muted">
+                                                {tr.polLabel}
+                                              </span>
+                                              <span className="font-mono font-bold text-dash-fg">
+                                                {selected.pol || "—"}
+                                              </span>
+                                            </span>
+                                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1 text-[11px] tabular-nums">
+                                              <Icon
+                                                icon="lucide:calendar-days"
+                                                width={12}
+                                                height={12}
+                                                className="shrink-0 text-dash-neon"
+                                                aria-hidden
+                                              />
+                                              <span className="text-[9px] font-bold uppercase text-dash-muted">
+                                                {sp.etdBadge ?? "ETD"}
+                                              </span>
+                                              <span className="font-mono font-bold text-dash-fg">
+                                                {formatEtdDisplay(selected.etd)}
+                                              </span>
+                                              {isTodayEtd(selected.etd) && (
+                                                <span className="ml-0.5 inline-flex rounded bg-dash-neon/15 px-1 py-0.5 text-[8px] font-black uppercase text-dash-neon">
+                                                  {sp.todayTag ?? "HOY"}
+                                                </span>
+                                              )}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
+                                          {daysToZarpe !== null && (
+                                            <div className="min-w-[4.5rem] rounded-xl border border-dash-border bg-dash-control px-3 py-1.5 text-right">
+                                              <p
+                                                className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(
+                                                  zarpeUrgency
+                                                )}`}
+                                              >
+                                                {daysToZarpe}
+                                              </p>
+                                              <p className="text-[8px] font-bold uppercase tracking-wide text-dash-muted">
+                                                {sp.zarpeDaysLabel ?? "días al zarpe"}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {daysToClose !== null && (
+                                            <div className="min-w-[4.5rem] rounded-xl border border-dash-border bg-dash-control px-3 py-1.5 text-right">
+                                              <p
+                                                className={`text-xl font-black tabular-nums leading-none ${urgencyNumClass(
+                                                  closeUrgency
+                                                )}`}
+                                              >
+                                                {daysToClose}
+                                              </p>
+                                              <p className="text-[8px] font-bold uppercase tracking-wide text-dash-muted">
+                                                {sp.stackingDaysLabel ?? "cierre est."}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-shrink-0 border-b border-dash-border bg-dash-control/40 px-3 py-2">
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                      <h2 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-dash-fg">
+                                        <Icon
+                                          icon="lucide:calendar-clock"
+                                          width={14}
+                                          height={14}
+                                          className="text-dash-neon"
+                                          aria-hidden
+                                        />
+                                        {sp.scheduleTitle ?? "Cronograma"}
+                                      </h2>
+                                    </div>
+                                    <p className="mb-2 text-[10px] leading-snug text-dash-muted">
+                                      {sp.scheduleHint ?? ""}
+                                    </p>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                      <StackingScheduleCard
+                                        title={sp.rowStackingDry ?? "Stacking"}
+                                        icon="lucide:package"
+                                        borderAccent="border-l-[3px] border-l-dash-neon"
+                                      >
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <StackingFieldRow
+                                            label={sp.fieldInicio ?? "Inicio"}
+                                            field="dryInicio"
+                                            value={d.dryInicio}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                          <StackingFieldRow
+                                            label={sp.fieldFin ?? "Fin"}
+                                            field="dryFin"
+                                            value={d.dryFin}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                        </div>
+                                      </StackingScheduleCard>
+                                      <StackingScheduleCard
+                                        title={sp.rowCorteDocumental ?? "Corte documental"}
+                                        icon="lucide:file-badge"
+                                        borderAccent="border-l-[3px] border-l-amber-500"
+                                      >
+                                        <StackingFieldRow
+                                          label={sp.rowCorteDocumental ?? "Corte documental"}
+                                          field="cutoffDry"
+                                          value={d.cutoffDry}
+                                          editable={isSuperadmin}
+                                          placeholder={placeholderFmt}
+                                          onChange={setField}
+                                          onBlurSave={blurSave}
+                                        />
+                                      </StackingScheduleCard>
+                                      <StackingScheduleCard
+                                        title={sp.rowLate ?? "Late"}
+                                        icon="lucide:clock-alert"
+                                        borderAccent="border-l-[3px] border-l-orange-500"
+                                      >
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <StackingFieldRow
+                                            label={sp.fieldInicio ?? "Inicio"}
+                                            field="lateInicio"
+                                            value={d.lateInicio}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                          <StackingFieldRow
+                                            label={sp.fieldFin ?? "Fin"}
+                                            field="lateFin"
+                                            value={d.lateFin}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                        </div>
+                                      </StackingScheduleCard>
+                                      <StackingScheduleCard
+                                        title={sp.rowXlate ?? "X-Late"}
+                                        icon="lucide:timer"
+                                        borderAccent="border-l-[3px] border-l-violet-500"
+                                      >
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <StackingFieldRow
+                                            label={sp.fieldInicio ?? "Inicio"}
+                                            field="xlateInicio"
+                                            value={d.xlateInicio}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                          <StackingFieldRow
+                                            label={sp.fieldFin ?? "Fin"}
+                                            field="xlateFin"
+                                            value={d.xlateFin}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                        </div>
+                                      </StackingScheduleCard>
+                                      <StackingScheduleCard
+                                        title={sp.rowReefer ?? "Reefer"}
+                                        icon="lucide:snowflake"
+                                        borderAccent="border-l-[3px] border-l-sky-500"
+                                      >
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <StackingFieldRow
+                                            label={sp.fieldInicio ?? "Inicio"}
+                                            field="reeferInicio"
+                                            value={d.reeferInicio}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                          <StackingFieldRow
+                                            label={sp.fieldFin ?? "Fin"}
+                                            field="reeferFin"
+                                            value={d.reeferFin}
+                                            editable={isSuperadmin}
+                                            placeholder={placeholderFmt}
+                                            onChange={setField}
+                                            onBlurSave={blurSave}
+                                          />
+                                        </div>
+                                      </StackingScheduleCard>
+                                      <StackingScheduleCard
+                                        title={sp.rowCutoffReefer ?? "Cut off Reefer"}
+                                        icon="lucide:thermometer-snowflake"
+                                        borderAccent="border-l-[3px] border-l-cyan-600"
+                                      >
+                                        <StackingFieldRow
+                                          label={sp.rowCutoffReefer ?? "Cut off Reefer"}
+                                          field="cutoffReefer"
+                                          value={d.cutoffReefer}
+                                          editable={isSuperadmin}
+                                          placeholder={placeholderFmt}
+                                          onChange={setField}
+                                          onBlurSave={blurSave}
+                                        />
+                                      </StackingScheduleCard>
+                                      <div className="sm:col-span-2 xl:col-span-3">
+                                        <StackingScheduleCard
+                                          title={sp.rowCutoffAnticipado ?? "Cut off anticipado"}
+                                          icon="lucide:calendar-x-2"
+                                          borderAccent="border-l-[3px] border-l-neutral-500"
+                                        >
+                                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            <StackingFieldRow
+                                              label={sp.rowCutoffAnticipado ?? "Fecha / hora"}
+                                              field="cutoffAnticipado"
+                                              value={d.cutoffAnticipado}
+                                              editable={isSuperadmin}
+                                              placeholder={placeholderFmt}
+                                              onChange={setField}
+                                              onBlurSave={blurSave}
+                                            />
+                                            <div className="min-w-0 space-y-1 sm:col-span-2">
+                                              <p className="text-[9px] font-bold uppercase tracking-wide text-dash-muted">
+                                                {sp.cutoffAnticipadoDescLabel ?? "Descripción"}
+                                              </p>
+                                              {isSuperadmin ? (
+                                                <input
+                                                  type="text"
+                                                  value={d.cutoffAnticipadoDescripcion}
+                                                  onChange={(e) =>
+                                                    setField(
+                                                      "cutoffAnticipadoDescripcion",
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  onBlur={() => blurSave("cutoffAnticipadoDescripcion")}
+                                                  className="dash-control w-full rounded-lg px-2 py-1.5 text-xs text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                                                />
+                                              ) : (
+                                                <p className="min-h-[28px] text-xs text-dash-fg">
+                                                  {d.cutoffAnticipadoDescripcion.trim() || "—"}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </StackingScheduleCard>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto border-t border-dash-border bg-dash-control/30 p-3">
+                                    {selected.stacking_imagen_url ? (
+                                      <img
+                                        src={selected.stacking_imagen_url}
+                                        alt="Stacking oficial"
+                                        className="block h-auto w-full max-w-full rounded-xl object-contain object-top"
+                                      />
+                                    ) : (
+                                      <div className="flex flex-col items-center gap-2.5 py-16 text-center text-dash-muted">
+                                        <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-dash-border bg-dash-control">
+                                          <Icon icon="lucide:image-off" width={22} height={22} aria-hidden />
+                                        </span>
+                                        <p className="text-sm font-medium">
+                                          {(tr as { noImageHint?: string }).noImageHint ??
+                                            "Sin imagen de stacking"}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              );
+                            })()
+                          : (
+                              <div className="flex min-h-[200px] flex-1 flex-col items-center justify-center gap-3 px-4 text-center text-dash-muted">
+                                <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-dash-border bg-dash-control">
+                                  <Icon icon="lucide:mouse-pointer-click" width={24} height={24} aria-hidden />
+                                </span>
+                                <p className="text-sm font-medium">
+                                  {(tr as { selectItinerary?: string }).selectItinerary ?? tr.emptyTitle}
+                                </p>
+                              </div>
+                            )}
+                      </div>
+                    </section>
+                  );
+                })()}
+            </>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
 
@@ -718,39 +1006,37 @@ function StackingTable({ data, tr }: StackingTableProps) {
 
   return (
     <div className="space-y-5">
-      {/* Embarque info card */}
-      <div className={`${moduleCard}`}>
-        <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal" />
-        <dl className="grid grid-cols-2 md:grid-cols-4 gap-px bg-brand-blue/10">
+      <div className="dash-card overflow-hidden rounded-xl">
+        <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+        <dl className="grid grid-cols-2 gap-px bg-dash-border md:grid-cols-4">
           {[
             { label: tr.nave, value: embarque.nave },
             { label: tr.viaje, value: embarque.viaje },
             { label: tr.eta, value: embarque.eta },
             { label: tr.servicio, value: embarque.servicio },
           ].map(({ label, value }) => (
-            <div key={label} className="bg-white px-4 py-4">
-              <dt className="text-sm font-bold text-brand-blue uppercase tracking-wide">{label}</dt>
-              <dd className="mt-1 text-base font-semibold text-neutral-800">{value || "—"}</dd>
+            <div key={label} className="bg-dash-surface px-4 py-4">
+              <dt className="text-sm font-bold uppercase tracking-wide text-dash-neon">{label}</dt>
+              <dd className="mt-1 text-base font-semibold text-dash-fg">{value || "—"}</dd>
             </div>
           ))}
         </dl>
       </div>
 
-      {/* Stacking table */}
-      <div className={`${moduleCard}`}>
+      <div className="dash-card overflow-hidden rounded-xl">
         <table className="w-full border-collapse text-base" role="table" aria-label={tr.title}>
           <thead>
-            <tr className="bg-[#F4F8FC] border-b border-brand-blue/15">
-              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
+            <tr className="dash-section-head border-b border-dash-border">
+              <th className="px-4 py-3.5 text-left text-sm font-bold uppercase tracking-wide text-dash-neon">
                 {tr.colTipoCarga}
               </th>
-              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
+              <th className="px-4 py-3.5 text-left text-sm font-bold uppercase tracking-wide text-dash-neon">
                 {tr.colFecha}
               </th>
-              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
+              <th className="px-4 py-3.5 text-left text-sm font-bold uppercase tracking-wide text-dash-neon">
                 {tr.colHorario}
               </th>
-              <th className="text-left text-sm font-bold text-brand-blue uppercase tracking-wide px-4 py-3.5">
+              <th className="px-4 py-3.5 text-left text-sm font-bold uppercase tracking-wide text-dash-neon">
                 {tr.colObservaciones}
               </th>
             </tr>
@@ -759,28 +1045,22 @@ function StackingTable({ data, tr }: StackingTableProps) {
             {lineas.map((linea, index) => (
               <tr
                 key={index}
-                className={`border-b border-neutral-100 transition-colors hover:bg-brand-blue/5 ${index % 2 === 0 ? "bg-white" : "bg-neutral-50/40"}`}
+                className={`border-b border-dash-border transition-colors hover:bg-dash-neon/10 ${
+                  index % 2 === 0 ? "" : "bg-dash-control/40"
+                }`}
               >
-                <td className="px-4 py-3 font-semibold text-neutral-800">
-                  {linea.tipoCarga}
-                </td>
-                <td className="px-4 py-3 font-mono text-sm text-neutral-700">
-                  {linea.fecha ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-neutral-700">
-                  {linea.horario ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-neutral-600 text-sm">
-                  {linea.nota ?? "—"}
-                </td>
+                <td className="px-4 py-3 font-semibold text-dash-fg">{linea.tipoCarga}</td>
+                <td className="px-4 py-3 font-mono text-sm text-dash-fg">{linea.fecha ?? "—"}</td>
+                <td className="px-4 py-3 text-dash-fg">{linea.horario ?? "—"}</td>
+                <td className="px-4 py-3 text-sm text-dash-muted">{linea.nota ?? "—"}</td>
               </tr>
             ))}
 
             {lateArrivalVgmNote && (
-              <tr className="bg-red-50 border-b border-neutral-100">
-                <td colSpan={4} className="px-4 py-3 text-red-700 text-sm font-medium">
+              <tr className="border-b border-dash-border bg-red-400/15">
+                <td colSpan={4} className="px-4 py-3 text-sm font-medium text-dash-fg">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                    <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400" />
                     {lateArrivalVgmNote}
                   </span>
                 </td>
@@ -788,10 +1068,10 @@ function StackingTable({ data, tr }: StackingTableProps) {
             )}
 
             {contenedoresVaciosNote && (
-              <tr className="bg-neutral-700 text-white">
+              <tr className="bg-dash-control text-dash-fg">
                 <td colSpan={4} className="px-4 py-3 text-sm font-medium">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                    <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-dash-muted" />
                     {contenedoresVaciosNote}
                   </span>
                 </td>

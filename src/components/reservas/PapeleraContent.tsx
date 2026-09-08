@@ -11,12 +11,12 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
 import { displayRefAsli } from "@/lib/refAsli";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 type Operacion = {
   id: string;
@@ -36,6 +36,7 @@ export function PapeleraContent() {
   const { t } = useLocale();
   const { isCliente, isEjecutivo, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
   const tr = t.papelera;
+  const [theme] = useNeonTheme();
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,12 +188,14 @@ export function PapeleraContent() {
 
   if (loading) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-brand-blue/70 text-base font-medium">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-          <span>{tr.loading}</span>
-        </div>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>{tr.loading}</span>
+          </div>
+        </main>
+      </div>
     );
   }
 
@@ -200,327 +203,326 @@ export function PapeleraContent() {
 
   return (
     <>
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`}>
-      {/* Hero header */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
-        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:trash-2" width={24} height={24} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">{t.sidebar.papelera}</h1>
-              <p className="text-base text-white/75 mt-1">
-                {operaciones.length === 0
-                  ? tr.trashEmpty
-                  : `${operaciones.length} ${tr.itemsInTrash}`}
-              </p>
-            </div>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
           </div>
 
-          <div className="flex items-center gap-2">
-            {selectedIds.size > 0 && (
-              <>
-                <button
-                  onClick={() => handleRestore(Array.from(selectedIds))}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-xl hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                >
-                  <Icon icon="lucide:rotate-ccw" width={16} height={16} />
-                  {tr.restore} ({selectedIds.size})
-                </button>
-                {isSuperadmin && (
+          <div className="dash-toolbar relative z-10 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                  <Icon icon="lucide:trash-2" width={22} height={22} className="text-dash-neon" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{t.sidebar.papelera}</h1>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">
+                    {operaciones.length === 0
+                      ? tr.trashEmpty
+                      : `${operaciones.length} ${tr.itemsInTrash}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {selectedIds.size > 0 && (
+                  <>
+                    <button
+                      onClick={() => handleRestore(Array.from(selectedIds))}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:opacity-50"
+                    >
+                      <Icon icon="lucide:rotate-ccw" width={14} height={14} />
+                      {tr.restore} ({selectedIds.size})
+                    </button>
+                    {isSuperadmin && (
+                      <button
+                        onClick={() => handleDeletePermanently(Array.from(selectedIds))}
+                        disabled={actionLoading}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/35 bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+                      >
+                        <Icon icon="lucide:trash-2" width={14} height={14} />
+                        {tr.delete} ({selectedIds.size})
+                      </button>
+                    )}
+                  </>
+                )}
+                {isSuperadmin && operaciones.length > 0 && selectedIds.size === 0 && (
                   <button
-                    onClick={() => handleDeletePermanently(Array.from(selectedIds))}
+                    onClick={handleEmptyTrash}
                     disabled={actionLoading}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-red-500/20 text-red-300 border border-red-400/30 rounded-xl hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:opacity-50"
                   >
-                    <Icon icon="lucide:trash-2" width={16} height={16} />
-                    {tr.delete} ({selectedIds.size})
+                    <Icon icon="lucide:trash" width={14} height={14} />
+                    {tr.emptyTrash}
                   </button>
                 )}
-              </>
-            )}
-            {isSuperadmin && operaciones.length > 0 && selectedIds.size === 0 && (
-              <button
-                onClick={handleEmptyTrash}
-                disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold bg-white/10 text-white/80 border border-white/20 rounded-xl hover:bg-white/20 transition-colors disabled:opacity-50"
-              >
-                <Icon icon="lucide:trash" width={16} height={16} />
-                {tr.emptyTrash}
-              </button>
-            )}
-            <button
-              onClick={() => void fetchOperaciones()}
-              disabled={actionLoading}
-              className="p-2.5 bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition-colors text-white/70"
-              title={t.misReservas.refresh}
-            >
-              <Icon icon="typcn:refresh" width={18} height={18} />
-            </button>
+                <button
+                  onClick={() => void fetchOperaciones()}
+                  disabled={actionLoading}
+                  className="rounded-lg border border-dash-border bg-dash-control p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                  title={t.misReservas.refresh}
+                >
+                  <Icon icon="typcn:refresh" width={16} height={16} />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="p-3 sm:p-4 lg:p-5">
-        <div className="w-full max-w-[1600px] mx-auto space-y-3">
-
-          {/* Warning banner */}
-          {operaciones.length > 0 && (
-            <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl text-base text-amber-700">
-              <Icon icon="lucide:alert-triangle" width={18} height={18} className="flex-shrink-0 mt-0.5 text-amber-500" />
-              <span>Los elementos en la papelera pueden eliminarse permanentemente. Restaura lo que necesites antes de vaciarla.</span>
-            </div>
-          )}
-
-          {/* Selection toolbar */}
-          {selectedIds.size > 0 && (
-            <div className="flex items-center justify-between px-4 py-2.5 bg-brand-blue/5 border border-brand-blue/20 rounded-2xl">
-              <span className="text-base font-semibold text-brand-blue">
-                {selectedIds.size} {selectedIds.size === 1 ? "elemento seleccionado" : "elementos seleccionados"}
-              </span>
-              <button onClick={() => setSelectedIds(new Set())} className="text-base text-neutral-500 hover:text-neutral-700">
-                Deseleccionar todo
-              </button>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {operaciones.length === 0 ? (
-            <div className={`${moduleCard} p-16 flex flex-col items-center gap-4`}>
-              <div className="w-16 h-16 rounded-2xl bg-[#F4F8FC] flex items-center justify-center">
-                <Icon icon="lucide:trash-2" width={28} height={28} className="text-brand-blue/30" />
+          <div className="relative z-10 flex-1 space-y-3 p-3 sm:p-4">
+            {operaciones.length > 0 && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
+                <Icon icon="lucide:alert-triangle" width={16} height={16} className="mt-0.5 shrink-0 text-amber-500" />
+                <span>Los elementos en la papelera pueden eliminarse permanentemente. Restaura lo que necesites antes de vaciarla.</span>
               </div>
-              <div className="text-center">
-                <p className="text-brand-blue font-semibold text-base">{tr.trashEmpty}</p>
-                <p className="text-neutral-500 text-base mt-1">No hay operaciones eliminadas</p>
+            )}
+
+            {selectedIds.size > 0 && (
+              <div className="flex items-center justify-between rounded-xl border border-dash-neon/35 bg-dash-neon/10 px-4 py-2.5">
+                <span className="text-sm font-semibold text-dash-fg">
+                  {selectedIds.size} {selectedIds.size === 1 ? "elemento seleccionado" : "elementos seleccionados"}
+                </span>
+                <button onClick={() => setSelectedIds(new Set())} className="text-sm text-dash-muted hover:text-dash-fg">
+                  Deseleccionar todo
+                </button>
               </div>
-            </div>
-          ) : (
-            <>
-              {/* Mobile cards */}
-              <div className="md:hidden space-y-2">
-                {operaciones.map((op) => {
-                  const cfg = getEstadoOperacionStyle(op.estado_operacion);
-                  const sel = selectedIds.has(op.id);
-                  return (
-                    <div
-                      key={op.id}
-                      onClick={() => handleSelect(op.id)}
-                      className={`bg-white rounded-2xl border shadow-sm p-4 cursor-pointer transition-all ${
-                        sel ? "border-brand-blue/40 bg-brand-blue/5 ring-1 ring-brand-blue/20" : "border-brand-blue/15 hover:border-brand-blue/30"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={sel}
-                            onChange={() => handleSelect(op.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-4 h-4 rounded border-neutral-300 accent-brand-blue flex-shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-brand-blue text-base">
-                                {displayRefAsli(op.ref_asli, op.correlativo, "-")}
-                              </span>
-                              {cfg && (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                  {etiquetaEstado(op.estado_operacion)}
+            )}
+
+            {operaciones.length === 0 ? (
+              <div className="dash-card flex flex-col items-center gap-3 rounded-xl px-4 py-16">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
+                  <Icon icon="lucide:trash-2" width={26} height={26} className="text-dash-muted" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-dash-fg">{tr.trashEmpty}</p>
+                  <p className="mt-1 text-sm text-dash-muted">No hay operaciones eliminadas</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2 md:hidden">
+                  {operaciones.map((op) => {
+                    const cfg = getEstadoOperacionStyle(op.estado_operacion);
+                    const sel = selectedIds.has(op.id);
+                    return (
+                      <div
+                        key={op.id}
+                        onClick={() => handleSelect(op.id)}
+                        className={`dash-card cursor-pointer rounded-xl border p-4 transition-all ${
+                          sel
+                            ? "border-dash-neon/50 bg-dash-neon/15 ring-2 ring-dash-neon/25"
+                            : "border-dash-border hover:border-dash-neon/35"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={sel}
+                              onChange={() => handleSelect(op.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-4 w-4 shrink-0 rounded accent-[var(--dash-neon)]"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-bold text-dash-fg">
+                                  {displayRefAsli(op.ref_asli, op.correlativo, "-")}
                                 </span>
-                              )}
-                            </div>
-                            <p className="text-base text-neutral-600 font-medium mt-0.5 truncate">{op.cliente || "-"}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); void handleRestore([op.id]); }}
-                            disabled={actionLoading}
-                            className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
-                            title={tr.restore}
-                          >
-                            <Icon icon="lucide:rotate-ccw" width={15} height={15} />
-                          </button>
-                          {isSuperadmin && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); void handleDeletePermanently([op.id]); }}
-                              disabled={actionLoading}
-                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                              title={tr.delete}
-                            >
-                              <Icon icon="lucide:trash-2" width={15} height={15} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 text-base text-neutral-600">
-                        {op.especie && (
-                          <div className="flex items-center gap-1.5 col-span-2">
-                            <Icon icon="lucide:package" width={14} height={14} className="flex-shrink-0 text-neutral-400" />
-                            <span className="truncate">{op.especie}</span>
-                          </div>
-                        )}
-                        {op.naviera && (
-                          <div className="flex items-center gap-1.5">
-                            <Icon icon="lucide:ship" width={14} height={14} className="flex-shrink-0 text-neutral-400" />
-                            <span className="truncate">{op.naviera}</span>
-                          </div>
-                        )}
-                        {op.nave && (
-                          <div className="flex items-center gap-1.5">
-                            <Icon icon="lucide:anchor" width={14} height={14} className="flex-shrink-0 text-neutral-400" />
-                            <span className="truncate">{op.nave}</span>
-                          </div>
-                        )}
-                        {op.booking && (
-                          <div className="flex items-center gap-1.5">
-                            <Icon icon="lucide:hash" width={14} height={14} className="flex-shrink-0 text-neutral-400" />
-                            <span className="font-mono truncate">{op.booking}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1.5 col-span-2 pt-1 border-t border-brand-blue/10 mt-1">
-                          <Icon icon="lucide:clock" width={14} height={14} className="flex-shrink-0 text-red-400" />
-                          <span className="text-red-500 font-medium">Eliminado: {formatDate(op.deleted_at)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Desktop table */}
-              <div className={`hidden md:block ${moduleCard}`}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-base">
-                    <thead>
-                      <tr className="bg-[#F4F8FC] border-b border-brand-blue/10">
-                        <th className="px-4 py-3 w-10">
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
-                            onChange={handleSelectAll}
-                            className="w-4 h-4 rounded border-neutral-300 accent-brand-blue"
-                          />
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colRef}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colClient}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colSpecies}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colCarrier}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colVessel}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colBooking}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap">{tr.colStatus}</th>
-                        <th className="px-4 py-3 text-left text-sm font-bold text-brand-blue whitespace-nowrap min-w-[8rem]">{tr.colDeleted}</th>
-                        <th className="px-4 py-3 text-center text-sm font-bold text-brand-blue">{tr.colActions}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-50">
-                      {operaciones.map((op, idx) => {
-                        const cfg = getEstadoOperacionStyle(op.estado_operacion);
-                        const sel = selectedIds.has(op.id);
-                        return (
-                          <tr
-                            key={op.id}
-                            onClick={() => handleSelect(op.id)}
-                            className={`cursor-pointer transition-colors ${
-                              sel
-                                ? "bg-brand-blue/5"
-                                : idx % 2 === 0
-                                ? "bg-white hover:bg-neutral-50/80"
-                                : "bg-neutral-50/40 hover:bg-neutral-50/80"
-                            }`}
-                          >
-                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={sel}
-                                onChange={() => handleSelect(op.id)}
-                                className="w-4 h-4 rounded border-neutral-300 accent-brand-blue"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="font-bold text-brand-blue text-base">
-                                {displayRefAsli(op.ref_asli, op.correlativo, "-")}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-base text-neutral-700 font-medium whitespace-nowrap">{op.cliente || "-"}</td>
-                            <td className="px-4 py-3 text-base text-neutral-600">{op.especie || "-"}</td>
-                            <td className="px-4 py-3 text-base text-neutral-600 whitespace-nowrap">{op.naviera || "-"}</td>
-                            <td className="px-4 py-3 text-base text-neutral-600 whitespace-nowrap">{op.nave || "-"}</td>
-                            <td className="px-4 py-3 text-base font-mono text-neutral-600">{op.booking || "-"}</td>
-                            <td className="px-4 py-3">
-                              {cfg ? (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
-                                  {etiquetaEstado(op.estado_operacion)}
-                                </span>
-                              ) : (
-                                <span className="text-neutral-400 text-base">-</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-base text-red-500 font-medium min-w-[8rem] whitespace-nowrap">
-                              {formatDate(op.deleted_at)}
-                            </td>
-                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => void handleRestore([op.id])}
-                                  disabled={actionLoading}
-                                  className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
-                                  title={tr.restore}
-                                >
-                                  <Icon icon="lucide:rotate-ccw" width={15} height={15} />
-                                </button>
-                                {isSuperadmin && (
-                                  <button
-                                    onClick={() => void handleDeletePermanently([op.id])}
-                                    disabled={actionLoading}
-                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                    title={tr.delete}
-                                  >
-                                    <Icon icon="lucide:trash-2" width={15} height={15} />
-                                  </button>
+                                {cfg && (
+                                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                                    {etiquetaEstado(op.estado_operacion)}
+                                  </span>
                                 )}
                               </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              <p className="mt-0.5 truncate text-sm font-medium text-dash-muted">{op.cliente || "-"}</p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); void handleRestore([op.id]); }}
+                              disabled={actionLoading}
+                              className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-400 disabled:opacity-50"
+                              title={tr.restore}
+                            >
+                              <Icon icon="lucide:rotate-ccw" width={15} height={15} />
+                            </button>
+                            {isSuperadmin && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); void handleDeletePermanently([op.id]); }}
+                                disabled={actionLoading}
+                                className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
+                                title={tr.delete}
+                              >
+                                <Icon icon="lucide:trash-2" width={15} height={15} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-dash-muted">
+                          {op.especie && (
+                            <div className="col-span-2 flex items-center gap-1.5">
+                              <Icon icon="lucide:package" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate">{op.especie}</span>
+                            </div>
+                          )}
+                          {op.naviera && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:ship" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate">{op.naviera}</span>
+                            </div>
+                          )}
+                          {op.nave && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:anchor" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate">{op.nave}</span>
+                            </div>
+                          )}
+                          {op.booking && (
+                            <div className="flex items-center gap-1.5">
+                              <Icon icon="lucide:hash" width={14} height={14} className="shrink-0 text-dash-muted" />
+                              <span className="truncate font-mono">{op.booking}</span>
+                            </div>
+                          )}
+                          <div className="col-span-2 mt-1 flex items-center gap-1.5 border-t border-dash-border pt-1">
+                            <Icon icon="lucide:clock" width={14} height={14} className="shrink-0 text-red-400" />
+                            <span className="font-medium text-red-400">Eliminado: {formatDate(op.deleted_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* Table footer */}
-                <div className="px-4 py-2.5 border-t border-brand-blue/10 bg-[#F4F8FC]/80 flex items-center justify-between">
-                  <span className="text-base text-neutral-500">
-                    {operaciones.length} {operaciones.length === 1 ? "elemento" : "elementos"} en papelera
-                  </span>
-                  {selectedIds.size > 0 && (
-                    <span className="text-base font-semibold text-brand-blue">
-                      {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}
+                <div className="dash-card-static hidden overflow-hidden rounded-xl border border-dash-border md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
+                          <th className="w-10 px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={handleSelectAll}
+                              className="h-4 w-4 rounded accent-[var(--dash-neon)]"
+                            />
+                          </th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colRef}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colClient}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colSpecies}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colCarrier}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colVessel}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colBooking}</th>
+                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colStatus}</th>
+                          <th className="min-w-[8rem] whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colDeleted}</th>
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colActions}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {operaciones.map((op, idx) => {
+                          const cfg = getEstadoOperacionStyle(op.estado_operacion);
+                          const sel = selectedIds.has(op.id);
+                          return (
+                            <tr
+                              key={op.id}
+                              onClick={() => handleSelect(op.id)}
+                              className={`cursor-pointer transition-colors ${
+                                sel
+                                  ? "bg-dash-neon/15"
+                                  : idx % 2 === 0
+                                  ? "bg-transparent hover:bg-dash-neon/10"
+                                  : "bg-dash-control/30 hover:bg-dash-neon/10"
+                              }`}
+                            >
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={sel}
+                                  onChange={() => handleSelect(op.id)}
+                                  className="h-4 w-4 rounded accent-[var(--dash-neon)]"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm font-bold text-dash-fg">
+                                  {displayRefAsli(op.ref_asli, op.correlativo, "-")}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-dash-fg">{op.cliente || "-"}</td>
+                              <td className="px-4 py-3 text-sm text-dash-muted">{op.especie || "-"}</td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-dash-muted">{op.naviera || "-"}</td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-dash-muted">{op.nave || "-"}</td>
+                              <td className="px-4 py-3 font-mono text-sm text-dash-muted">{op.booking || "-"}</td>
+                              <td className="px-4 py-3">
+                                {cfg ? (
+                                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.dot}`} />
+                                    {etiquetaEstado(op.estado_operacion)}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-dash-muted">-</span>
+                                )}
+                              </td>
+                              <td className="min-w-[8rem] whitespace-nowrap px-4 py-3 text-sm font-medium text-red-400">
+                                {formatDate(op.deleted_at)}
+                              </td>
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => void handleRestore([op.id])}
+                                    disabled={actionLoading}
+                                    className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-400 disabled:opacity-50"
+                                    title={tr.restore}
+                                  >
+                                    <Icon icon="lucide:rotate-ccw" width={15} height={15} />
+                                  </button>
+                                  {isSuperadmin && (
+                                    <button
+                                      onClick={() => void handleDeletePermanently([op.id])}
+                                      disabled={actionLoading}
+                                      className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
+                                      title={tr.delete}
+                                    >
+                                      <Icon icon="lucide:trash-2" width={15} height={15} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-dash-border bg-dash-control/50 px-4 py-2.5">
+                    <span className="text-sm text-dash-muted">
+                      {operaciones.length} {operaciones.length === 1 ? "elemento" : "elementos"} en papelera
                     </span>
-                  )}
+                    {selectedIds.size > 0 && (
+                      <span className="text-sm font-semibold text-dash-fg">
+                        {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        </main>
       </div>
-    </main>
-    {confirmDialog && (
-      <ConfirmDialog
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmLabel={confirmDialog.confirmLabel}
-        variant="danger"
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog(null)}
-      />
-    )}
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          variant="danger"
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     </>
   );
 }

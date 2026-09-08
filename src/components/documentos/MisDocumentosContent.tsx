@@ -9,7 +9,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { modulePageBg, moduleHero, moduleCard, moduleInput } from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 type Operacion = {
   id: string;
@@ -95,18 +95,18 @@ const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: string }> = {
-  BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-blue-600 bg-blue-50" },
-  INSTRUCTIVO_EMBARQUE:    { label: "Instructivo de Embarque (IE)",   icon: "lucide:file-text",      color: "text-violet-600 bg-violet-50" },
-  PACKING_LIST:            { label: "Packing List",                   icon: "lucide:package",       color: "text-orange-600 bg-orange-50" },
-  FACTURA_PROFORMA:        { label: "Factura Proforma",               icon: "lucide:file-check",     color: "text-amber-600 bg-amber-50" },
-  CERTIFICADO_FITOSANITARIO: { label: "Certificado Fitosanitario",   icon: "lucide:leaf",           color: "text-green-600 bg-green-50" },
-  CERTIFICADO_ORIGEN:      { label: "Certificado de Origen",         icon: "lucide:globe",          color: "text-teal-600 bg-teal-50" },
-  BL_TELEX_SWB_AWB:        { label: "BL / Telex / SWB / AWB",       icon: "lucide:ship",           color: "text-sky-600 bg-sky-50" },
-  FULLSET:                 { label: "Fullset",                       icon: "lucide:layers",         color: "text-neutral-600 bg-neutral-100" },
-  FACTURA_COMERCIAL:       { label: "Factura Comercial",             icon: "lucide:shopping-bag",   color: "text-pink-600 bg-pink-50" },
-  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-emerald-600 bg-emerald-50" },
-  FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt",        color: "text-orange-600 bg-orange-50" },
-  DUS:                     { label: "DUS",                           icon: "lucide:landmark",       color: "text-indigo-600 bg-indigo-50" },
+  BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-sky-300 bg-sky-500/15" },
+  INSTRUCTIVO_EMBARQUE:    { label: "Instructivo de Embarque (IE)",   icon: "lucide:file-text",      color: "text-violet-300 bg-violet-500/15" },
+  PACKING_LIST:            { label: "Packing List",                   icon: "lucide:package",       color: "text-orange-300 bg-orange-500/15" },
+  FACTURA_PROFORMA:        { label: "Factura Proforma",               icon: "lucide:file-check",     color: "text-amber-300 bg-amber-500/15" },
+  CERTIFICADO_FITOSANITARIO: { label: "Certificado Fitosanitario",   icon: "lucide:leaf",           color: "text-emerald-300 bg-emerald-500/15" },
+  CERTIFICADO_ORIGEN:      { label: "Certificado de Origen",         icon: "lucide:globe",          color: "text-teal-300 bg-teal-500/15" },
+  BL_TELEX_SWB_AWB:        { label: "BL / Telex / SWB / AWB",       icon: "lucide:ship",           color: "text-cyan-300 bg-cyan-500/15" },
+  FULLSET:                 { label: "Fullset",                       icon: "lucide:layers",         color: "text-dash-muted bg-dash-control" },
+  FACTURA_COMERCIAL:       { label: "Factura Comercial",             icon: "lucide:shopping-bag",   color: "text-pink-300 bg-pink-500/15" },
+  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-lime-300 bg-lime-500/15" },
+  FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt",        color: "text-orange-300 bg-orange-500/15" },
+  DUS:                     { label: "DUS",                           icon: "lucide:landmark",       color: "text-indigo-300 bg-indigo-500/15" },
 };
 
 function opRef(op: Operacion) {
@@ -116,6 +116,7 @@ function opRef(op: Operacion) {
 export function MisDocumentosContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading } = useAuth();
+  const [theme] = useNeonTheme();
   const tr = t.misDocumentos;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const visibleTipos = isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO;
@@ -510,12 +511,14 @@ export function MisDocumentosContent() {
 
   if (loading) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-brand-blue/70 text-base font-medium">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-          <span>{tr.loading}</span>
-        </div>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>{tr.loading}</span>
+          </div>
+        </main>
+      </div>
     );
   }
 
@@ -539,10 +542,10 @@ export function MisDocumentosContent() {
       <span
         className={`inline-flex items-center gap-1 text-base font-extrabold px-2 py-0.5 rounded-sm border tabular-nums ${
           completo
-            ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+            ? "text-emerald-300 bg-emerald-500/15 border-emerald-400/35"
             : count > 0
-              ? "text-brand-blue bg-brand-blue/10 border-brand-blue/20"
-              : "text-neutral-500 bg-neutral-100 border-neutral-200"
+              ? "text-dash-fg bg-dash-neon/15 border-dash-neon/35"
+              : "text-dash-muted bg-dash-control border-dash-border"
         }`}
       >
         {count}/{totalTipos - naCount}
@@ -552,10 +555,10 @@ export function MisDocumentosContent() {
   };
 
   const paginationBar = (
-    <div className={`border-t border-brand-blue/10 flex flex-col gap-2 bg-[#F4F8FC]/80 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
-      <div className={`flex flex-wrap items-center gap-2 text-base text-neutral-600 ${hasSelection ? "justify-center" : ""}`}>
-        {!hasSelection && <span className="font-semibold text-brand-blue/70">{tr.rowsPerPage}</span>}
-        <div className="inline-flex rounded-lg border border-brand-blue/20 overflow-hidden bg-white">
+    <div className={`border-t border-dash-border flex flex-col gap-2 bg-dash-control/40 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
+      <div className={`flex flex-wrap items-center gap-2 text-base text-dash-muted ${hasSelection ? "justify-center" : ""}`}>
+        {!hasSelection && <span className="font-semibold text-dash-muted">{tr.rowsPerPage}</span>}
+        <div className="inline-flex rounded-lg border border-dash-border overflow-hidden bg-dash-control">
           {PAGE_SIZE_OPTIONS.map((size) => (
             <button
               key={size}
@@ -565,8 +568,8 @@ export function MisDocumentosContent() {
                 hasSelection ? "px-2 py-1 text-sm" : "px-3 py-1.5 text-base"
               } ${
                 pageSize === size
-                  ? "bg-brand-blue text-white"
-                  : "text-brand-blue/80 hover:bg-[#F4F8FC]"
+                  ? "bg-dash-neon/25 text-dash-fg border-dash-neon/40"
+                  : "text-dash-muted hover:bg-dash-neon/10 hover:text-dash-fg"
               }`}
             >
               {size}
@@ -574,7 +577,7 @@ export function MisDocumentosContent() {
           ))}
         </div>
         {!hasSelection && (
-          <span className="text-neutral-500 tabular-nums">
+          <span className="text-dash-muted tabular-nums">
             {tr.showingRange
               .replace("{from}", String(rangeFrom))
               .replace("{to}", String(rangeTo))
@@ -588,13 +591,13 @@ export function MisDocumentosContent() {
           type="button"
           disabled={safePage <= 1}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
-          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-brand-blue/20 bg-white text-brand-blue/80 hover:bg-[#F4F8FC] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
           title={tr.prevPage}
         >
           <Icon icon="lucide:chevron-left" width={16} height={16} />
           {!hasSelection && tr.prevPage}
         </button>
-        <span className="text-base font-bold text-brand-blue tabular-nums px-1.5">
+        <span className="text-base font-bold text-dash-fg tabular-nums px-1.5">
           {hasSelection
             ? `${safePage}/${totalPages}`
             : tr.pageOf.replace("{page}", String(safePage)).replace("{pages}", String(totalPages))}
@@ -603,7 +606,7 @@ export function MisDocumentosContent() {
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-brand-blue/20 bg-white text-brand-blue/80 hover:bg-[#F4F8FC] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
           title={tr.nextPage}
         >
           {!hasSelection && tr.nextPage}
@@ -615,76 +618,76 @@ export function MisDocumentosContent() {
 
   const docsPanel = hasSelection && operacionActual ? (
     <div className="space-y-3">
-      <div className={`rounded-2xl overflow-hidden shadow-md border-2 ${progressPct === 100 ? "border-emerald-400 bg-gradient-to-br from-emerald-50 via-white to-teal-50" : "border-brand-blue bg-gradient-to-br from-[#11224E] via-[#163066] to-[#007A7B]"}`}>
-        <div className={`px-4 py-3.5 flex items-start gap-3 ${progressPct === 100 ? "" : "text-white"}`}>
+      <div className={`dash-card rounded-xl overflow-hidden border-2 ${
+        progressPct === 100
+          ? "border-emerald-400/50 bg-emerald-500/10"
+          : "border-dash-neon/40"
+      }`}>
+        <div className="px-4 py-3.5 flex items-start gap-3">
           <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border ${
             progressPct === 100
-              ? "bg-emerald-100 border-emerald-200"
-              : "bg-white/15 border-white/25"
+              ? "bg-emerald-500/15 border-emerald-400/35"
+              : "bg-dash-neon/15 border-dash-neon/40"
           }`}>
             <Icon
               icon={progressPct === 100 ? "lucide:check-circle" : "lucide:focus"}
               width={24}
               height={24}
-              className={progressPct === 100 ? "text-emerald-600" : "text-white"}
+              className={progressPct === 100 ? "text-emerald-300" : "text-dash-neon"}
             />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-extrabold uppercase tracking-wider ${
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-extrabold uppercase tracking-wider border ${
                 progressPct === 100
-                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                  : "bg-white/20 text-white border border-white/30"
+                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/35"
+                  : "bg-dash-neon/15 text-dash-fg border-dash-neon/35"
               }`}>
-                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${progressPct === 100 ? "bg-emerald-500" : "bg-emerald-300"}`} />
+                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${progressPct === 100 ? "bg-emerald-400" : "bg-dash-neon"}`} />
                 {tr.workingOn}
               </span>
               {operacionActual.cliente ? (
-                <span className={`text-sm font-semibold truncate ${progressPct === 100 ? "text-neutral-600" : "text-white/80"}`}>
+                <span className="text-sm font-semibold truncate text-dash-muted">
                   {operacionActual.cliente}
                 </span>
               ) : null}
             </div>
             <p className={`text-2xl sm:text-[1.65rem] font-extrabold tracking-tight truncate leading-none mb-2.5 ${
-              progressPct === 100 ? "text-emerald-800" : "text-white"
+              progressPct === 100 ? "text-emerald-300" : "text-dash-fg"
             }`}>
               {opRef(operacionActual)}
             </p>
-            <div className={`grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 ${
-              progressPct === 100 ? "bg-white/70 border border-emerald-200/80" : "bg-black/20 border border-white/15"
-            }`}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 bg-dash-control/70 border border-dash-border">
               <div className="min-w-0">
-                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colRefExterna}</p>
-                <p className={`text-sm font-bold truncate ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.referencia_externa || "—"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRefExterna}</p>
+                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.referencia_externa || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colBooking}</p>
-                <p className={`text-sm font-bold truncate font-mono ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.booking || "—"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colBooking}</p>
+                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.booking || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colContenedor}</p>
-                <p className={`text-sm font-bold truncate font-mono ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.contenedor || "—"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colContenedor}</p>
+                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.contenedor || "—"}</p>
               </div>
               <div className="min-w-0">
-                <p className={`text-[10px] font-bold uppercase tracking-wide ${progressPct === 100 ? "text-neutral-400" : "text-white/55"}`}>{tr.colNaviera}</p>
-                <p className={`text-sm font-bold truncate ${progressPct === 100 ? "text-brand-blue" : "text-white"}`}>{operacionActual.naviera || "—"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colNaviera}</p>
+                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.naviera || "—"}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 mt-3">
-              <div className={`flex-1 h-2.5 rounded-sm overflow-hidden border ${
-                progressPct === 100 ? "bg-white/70 border-emerald-200" : "bg-white/15 border-white/20"
-              }`}>
+              <div className="flex-1 h-2.5 rounded-sm overflow-hidden border bg-dash-control border-dash-border">
                 <div
                   className="h-full rounded-sm transition-all duration-500"
                   style={{
                     width: `${progressPct}%`,
                     background: progressPct === 100
                       ? "linear-gradient(to right,#10b981,#059669)"
-                      : "linear-gradient(to right,#34d399,#67e8f9)",
+                      : "linear-gradient(to right, var(--dash-neon), var(--dash-neon-hot))",
                   }}
                 />
               </div>
-              <span className={`text-base font-extrabold shrink-0 tabular-nums ${progressPct === 100 ? "text-emerald-700" : "text-white"}`}>
+              <span className={`text-base font-extrabold shrink-0 tabular-nums ${progressPct === 100 ? "text-emerald-300" : "text-dash-fg"}`}>
                 {docsCompletados}/{tiposAplicables} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
               </span>
             </div>
@@ -692,11 +695,7 @@ export function MisDocumentosContent() {
           <button
             type="button"
             onClick={() => setSelectedOperacion("")}
-            className={`shrink-0 p-2 rounded-lg transition-colors ${
-              progressPct === 100
-                ? "text-neutral-400 hover:text-neutral-700 hover:bg-white/70"
-                : "text-white/70 hover:text-white hover:bg-white/15"
-            }`}
+            className="shrink-0 p-2 rounded-lg transition-colors text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15"
             title={tr.closeSelection}
           >
             <Icon icon="lucide:x" width={18} height={18} />
@@ -705,7 +704,7 @@ export function MisDocumentosContent() {
       </div>
 
       {error && (
-        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-base font-medium flex items-center gap-2">
+        <div className="px-3 py-2 bg-red-500/15 border border-red-400/35 rounded-xl text-red-300 text-base font-medium flex items-center gap-2">
           <Icon icon="lucide:alert-circle" className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
@@ -722,44 +721,44 @@ export function MisDocumentosContent() {
           const puedeMarcarNoAplica = !isCliente && isTipoNoAplicaEligible(tipo);
 
           return (
-            <div key={tipo} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden transition-all ${
+            <div key={tipo} className={`dash-card rounded-xl border-2 overflow-hidden transition-all ${
               marcadoNoAplica
-                ? "border-neutral-300"
+                ? "border-dash-border"
                 : doc
-                  ? "border-emerald-300"
-                  : "border-brand-blue/15"
+                  ? "border-emerald-400/40"
+                  : "border-dash-border"
             }`}>
               <div className={`h-1.5 ${
                 marcadoNoAplica
-                  ? "bg-neutral-300"
+                  ? "bg-dash-border"
                   : doc
                     ? "bg-gradient-to-r from-emerald-400 to-teal-400"
-                    : "bg-gradient-to-r from-brand-blue/20 to-brand-blue/5"
+                    : "bg-gradient-to-r from-dash-neon/40 to-dash-neon/10"
               }`} />
-              <div className="px-4 py-3 flex items-center gap-3 border-b border-brand-blue/10">
-                <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              <div className="px-4 py-3 flex items-center gap-3 border-b border-dash-border">
+                <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border ${
                   marcadoNoAplica
-                    ? "bg-neutral-100"
+                    ? "bg-dash-control border-dash-border"
                     : doc
-                      ? "bg-emerald-100"
-                      : meta.color.split(" ")[1]
+                      ? "bg-emerald-500/15 border-emerald-400/35"
+                      : `${meta.color.split(" ")[1]} border-dash-border`
                 }`}>
                   <Icon
                     icon={marcadoNoAplica ? "lucide:minus-circle" : doc ? "lucide:check" : meta.icon}
                     className={`w-4.5 h-4.5 ${
                       marcadoNoAplica
-                        ? "text-neutral-500"
+                        ? "text-dash-muted"
                         : doc
-                          ? "text-emerald-600"
+                          ? "text-emerald-300"
                           : meta.color.split(" ")[0]
                     }`}
                     width={18}
                     height={18}
                   />
                 </span>
-                <h3 className="text-base font-bold text-brand-blue leading-tight flex-1 min-w-0">{tipoLabel}</h3>
+                <h3 className="text-base font-bold text-dash-fg leading-tight flex-1 min-w-0">{tipoLabel}</h3>
                 {marcadoNoAplica && (
-                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-neutral-500 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-sm">
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-dash-muted bg-dash-control border border-dash-border px-2 py-0.5 rounded-sm">
                     {tr.noAplica}
                   </span>
                 )}
@@ -767,46 +766,46 @@ export function MisDocumentosContent() {
               <div className="p-3 space-y-2.5">
                 {puedeMarcarNoAplica && (
                   <label
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-neutral-200 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors"
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-dash-border bg-dash-control cursor-pointer hover:bg-dash-neon/10 transition-colors"
                     title={tr.noAplicaHint}
                   >
                     <input
                       type="checkbox"
                       checked={marcadoNoAplica}
                       onChange={(e) => void handleToggleNoAplica(tipo, e.target.checked)}
-                      className="w-4 h-4 rounded-sm border-neutral-300 text-brand-blue focus:ring-brand-blue/30"
+                      className="w-4 h-4 rounded-sm border-dash-border accent-[var(--dash-neon)] focus:ring-dash-neon/30"
                     />
-                    <span className="text-sm font-semibold text-neutral-700">{tr.noAplica}</span>
-                    <span className="text-xs text-neutral-400 truncate hidden sm:inline">{tr.noAplicaHint}</span>
+                    <span className="text-sm font-semibold text-dash-fg">{tr.noAplica}</span>
+                    <span className="text-xs text-dash-muted truncate hidden sm:inline">{tr.noAplicaHint}</span>
                   </label>
                 )}
 
                 {marcadoNoAplica ? (
-                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-neutral-300 bg-neutral-50/80">
-                    <Icon icon="lucide:ban" className="w-5 h-5 text-neutral-400" />
-                    <p className="text-base text-neutral-500 font-medium">{tr.noAplicaHint}</p>
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-dash-border bg-dash-control/50">
+                    <Icon icon="lucide:ban" className="w-5 h-5 text-dash-muted" />
+                    <p className="text-base text-dash-muted font-medium">{tr.noAplicaHint}</p>
                   </div>
                 ) : doc ? (
                   <div className="space-y-2.5">
-                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#F4F8FC] border border-brand-blue/10">
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-dash-control/70 border border-dash-border">
                       <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}
-                        className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-500" : "text-green-600"}`} />
+                        className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-400" : "text-emerald-300"}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-semibold text-neutral-800 truncate leading-tight">{doc.nombre_archivo}</p>
-                        <p className="text-base text-neutral-500 mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
+                        <p className="text-base font-semibold text-dash-fg truncate leading-tight">{doc.nombre_archivo}</p>
+                        <p className="text-base text-dash-muted mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={() => handlePreview(doc)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-brand-blue bg-brand-blue/8 rounded-lg hover:bg-brand-blue/15 transition-colors">
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-dash-fg bg-dash-neon/15 border border-dash-neon/35 rounded-lg hover:bg-dash-neon/25 transition-colors">
                         <Icon icon="lucide:eye" className="w-4 h-4" />{tr.preview}
                       </button>
                       <button type="button" onClick={() => handleDownload(doc)}
-                        className="inline-flex items-center justify-center w-10 h-10 text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200" title={tr.download}>
+                        className="inline-flex items-center justify-center w-10 h-10 text-emerald-300 bg-emerald-500/15 rounded-lg hover:bg-emerald-500/25 transition-colors border border-emerald-400/35" title={tr.download}>
                         <Icon icon="lucide:download" className="w-4 h-4" />
                       </button>
                       {!isCliente && !isSyntheticBooking && (
-                        <label className="inline-flex items-center justify-center w-10 h-10 text-neutral-500 bg-[#F4F8FC] rounded-lg hover:bg-white transition-colors cursor-pointer border border-brand-blue/20" title={tr.replace}>
+                        <label className="inline-flex items-center justify-center w-10 h-10 text-dash-muted bg-dash-control rounded-lg hover:bg-dash-neon/15 hover:text-dash-fg transition-colors cursor-pointer border border-dash-border" title={tr.replace}>
                           <Icon icon="lucide:refresh-cw" className="w-4 h-4" />
                           <input type="file" accept=".pdf,.xls,.xlsx" className="hidden"
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
@@ -814,29 +813,29 @@ export function MisDocumentosContent() {
                       )}
                       {!isCliente && !isSyntheticBooking && (
                         <button type="button" onClick={() => handleDelete(doc)}
-                          className="inline-flex items-center justify-center w-10 h-10 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200" title={tr.deleteDocument}>
+                          className="inline-flex items-center justify-center w-10 h-10 text-red-400 bg-red-500/15 rounded-lg hover:bg-red-500/25 transition-colors border border-red-400/35" title={tr.deleteDocument}>
                           <Icon icon="lucide:trash-2" className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                   </div>
                 ) : isCliente ? (
-                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-brand-blue/20">
-                    <Icon icon="lucide:file-x" className="w-5 h-5 text-neutral-300" />
-                    <p className="text-base text-neutral-400">{tr.noDocument}</p>
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-dash-border">
+                    <Icon icon="lucide:file-x" className="w-5 h-5 text-dash-muted/50" />
+                    <p className="text-base text-dash-muted">{tr.noDocument}</p>
                   </div>
                 ) : (
                   <label className={`flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed cursor-pointer transition-all ${
-                    isUploading ? "border-brand-blue bg-brand-blue/5" : "border-brand-blue/20 hover:border-brand-blue/50 hover:bg-brand-blue/[0.03]"
+                    isUploading ? "border-dash-neon bg-dash-neon/10" : "border-dash-border hover:border-dash-neon/50 hover:bg-dash-neon/5"
                   }`}>
                     {isUploading ? (
-                      <><Icon icon="lucide:loader-2" className="w-5 h-5 text-brand-blue animate-spin flex-shrink-0" />
-                      <span className="text-base font-semibold text-brand-blue">{tr.uploading}</span></>
+                      <><Icon icon="lucide:loader-2" className="w-5 h-5 text-dash-neon animate-spin flex-shrink-0" />
+                      <span className="text-base font-semibold text-dash-neon">{tr.uploading}</span></>
                     ) : (
-                      <><Icon icon="lucide:upload" className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+                      <><Icon icon="lucide:upload" className="w-5 h-5 text-dash-muted flex-shrink-0" />
                       <div>
-                        <p className="text-base font-semibold text-neutral-600">{tr.uploadFile}</p>
-                        <p className="text-base text-neutral-400">{tr.fileTypesHint}</p>
+                        <p className="text-base font-semibold text-dash-fg">{tr.uploadFile}</p>
+                        <p className="text-base text-dash-muted">{tr.fileTypesHint}</p>
                       </div></>
                     )}
                     <input type="file" accept=".pdf,.xls,.xlsx" className="hidden" disabled={isUploading}
@@ -853,308 +852,326 @@ export function MisDocumentosContent() {
 
   return (
     <>
-    <main className={`flex-1 min-h-0 w-full overflow-hidden flex flex-col ${modulePageBg}`}>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-      <div className={`${moduleHero} px-4 sm:px-6 pt-5 pb-4`}>
-        <div className="flex items-center justify-between gap-3 w-full">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <Icon icon="lucide:folder-open" width={24} height={24} className="text-white" />
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:folder-open" width={22} height={22} className="text-dash-neon" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight">{tr.title}</h1>
-              <p className="text-base text-white/75 mt-1 truncate">{tr.subtitle}</p>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void fetchOperaciones()}
+                className="dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-sm"
+                title={tr.updateTooltip}
+              >
+                <Icon icon="lucide:refresh-cw" width={14} height={14} />
+                {tr.updateTooltip}
+              </button>
             </div>
           </div>
-          <button type="button" onClick={() => void fetchOperaciones()}
-            className="p-2.5 bg-white/15 hover:bg-white/25 rounded-lg transition-colors text-white" title={tr.updateTooltip}>
-            <Icon icon="lucide:refresh-cw" width={18} height={18} />
-          </button>
         </div>
-      </div>
 
-      <div className="flex-1 min-h-0 w-full overflow-hidden p-2 sm:p-2.5">
-        <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0 w-full">
+        <div className="relative z-10 flex-1 min-h-0 w-full overflow-hidden p-2 sm:p-2.5">
+          <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0 w-full">
 
-          {/* Columna operaciones */}
-          <div
-            className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
-              hasSelection
-                ? "hidden lg:flex lg:w-[280px] xl:w-[300px] lg:shrink-0"
-                : "w-full flex-1"
-            }`}
-          >
-            <div className={`${moduleCard} flex flex-col min-h-0 h-full w-full`}>
-              <div className={`border-b border-brand-blue/10 flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
-                <Icon icon="lucide:history" width={hasSelection ? 16 : 18} height={hasSelection ? 16 : 18} className="text-brand-blue shrink-0" />
-                <div className="min-w-0 flex-1 basis-[8rem]">
-                  <p className={`font-bold text-brand-blue ${hasSelection ? "text-sm" : "text-base"}`}>{tr.recentMovements}</p>
-                  {!hasSelection && (
-                    <p className="text-base text-neutral-500 truncate hidden sm:block">{tr.selectOperationPrompt}</p>
-                  )}
-                </div>
-                {!hasSelection && (
-                  <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl order-last sm:order-none">
-                    <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40 w-4 h-4 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder={tr.searchPlaceholder}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className={`${moduleInput} pl-9`}
-                    />
-                  </div>
-                )}
-                {hasSelection && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedOperacion("")}
-                    className="shrink-0 p-1.5 text-neutral-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors"
-                    title={tr.expandOperations}
-                  >
-                    <Icon icon="lucide:panel-left-open" width={16} height={16} />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-auto w-full">
-                {/* Lista compacta (selección activa): Ref ASLI, Ref Externa, Booking, Contenedor */}
-                {hasSelection ? (
-                  <div className="divide-y divide-brand-blue/10">
-                    {pagedOperaciones.length === 0 ? (
-                      <div className="py-8 px-3 text-center text-neutral-400 text-base">{tr.noOperations}</div>
-                    ) : (
-                      pagedOperaciones.map((op) => {
-                        const isActive = selectedOperacion === op.id;
-                        return (
-                          <button
-                            key={op.id}
-                            type="button"
-                            onClick={() => handleSelectOperacion(op.id)}
-                            className={`w-full text-left px-2.5 py-2.5 transition-all relative ${
-                              isActive
-                                ? "bg-brand-blue text-white shadow-sm ring-1 ring-inset ring-brand-blue"
-                                : "hover:bg-[#F4F8FC] border-l-[3px] border-l-transparent text-neutral-800"
-                            }`}
-                          >
-                            {isActive && (
-                              <span className="absolute inset-y-0 left-0 w-[3px] bg-emerald-400" aria-hidden />
-                            )}
-                            <div className="flex items-start justify-between gap-2">
-                              <p className={`text-[1.1rem] font-extrabold break-all ${isActive ? "text-white" : "text-neutral-800"}`}>
-                                {opRef(op)}
-                              </p>
-                              {isActive && (
-                                <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold uppercase tracking-wide bg-white/20 text-white border border-white/25">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                                  {tr.activeOp}
-                                </span>
-                              )}
-                            </div>
-                            <p className={`text-[15.4px] font-bold break-all mt-0.5 ${isActive ? "text-white/95" : "text-neutral-700"}`}>
-                              {op.referencia_externa || "—"}
-                            </p>
-                            <p className={`text-[15.4px] break-all mt-0.5 ${isActive ? "text-white/75" : "text-neutral-500"}`}>
-                              <span className={isActive ? "text-white/55" : "text-neutral-400"}>{tr.colBooking}:</span>{" "}
-                              {op.booking || "—"}
-                            </p>
-                            <p className={`text-[15.4px] break-all mt-0.5 ${isActive ? "text-white/75" : "text-neutral-500"}`}>
-                              <span className={isActive ? "text-white/55" : "text-neutral-400"}>{tr.colContenedor}:</span>{" "}
-                              {op.contenedor || "—"}
-                            </p>
-                          </button>
-                        );
-                      })
+            {/* Columna operaciones */}
+            <div
+              className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
+                hasSelection
+                  ? "hidden lg:flex lg:w-[280px] xl:w-[300px] lg:shrink-0"
+                  : "w-full flex-1"
+              }`}
+            >
+              <div className="dash-card-static flex flex-col min-h-0 h-full w-full rounded-xl border border-dash-border overflow-hidden">
+                <div className={`border-b border-dash-border flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
+                  <Icon icon="lucide:history" width={hasSelection ? 16 : 18} height={hasSelection ? 16 : 18} className="text-dash-neon shrink-0" />
+                  <div className="min-w-0 flex-1 basis-[8rem]">
+                    <p className={`font-bold text-dash-fg ${hasSelection ? "text-sm" : "text-base"}`}>{tr.recentMovements}</p>
+                    {!hasSelection && (
+                      <p className="text-base text-dash-muted truncate hidden sm:block">{tr.selectOperationPrompt}</p>
                     )}
                   </div>
-                ) : (
-                  <>
-                    {/* Cards móvil sin selección */}
-                    <div className="md:hidden divide-y divide-brand-blue/10">
+                  {!hasSelection && (
+                    <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl order-last sm:order-none">
+                      <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted w-4 h-4 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder={tr.searchPlaceholder}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="dash-control w-full pl-9 pr-3 py-2 text-sm text-dash-fg border border-dash-border rounded-lg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50"
+                      />
+                    </div>
+                  )}
+                  {hasSelection && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOperacion("")}
+                      className="shrink-0 p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors"
+                      title={tr.expandOperations}
+                    >
+                      <Icon icon="lucide:panel-left-open" width={16} height={16} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-auto w-full">
+                  {/* Lista compacta (selección activa): Ref ASLI, Ref Externa, Booking, Contenedor */}
+                  {hasSelection ? (
+                    <div className="divide-y divide-dash-border">
                       {pagedOperaciones.length === 0 ? (
-                        <div className="py-12 px-4 text-center">
-                          <Icon icon="lucide:folder" width={28} height={28} className="text-brand-blue/30 mx-auto mb-2" />
-                          <p className="text-neutral-500 text-base">{tr.noOperations}</p>
-                        </div>
+                        <div className="py-8 px-3 text-center text-dash-muted text-base">{tr.noOperations}</div>
                       ) : (
-                        pagedOperaciones.map((op) => (
-                          <button
-                            key={op.id}
-                            type="button"
-                            onClick={() => handleSelectOperacion(op.id)}
-                            className="w-full text-left p-3.5 transition-colors bg-white hover:bg-[#F4F8FC]"
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <div className="min-w-0">
-                                <p className="text-[1.1rem] font-bold text-brand-blue">{opRef(op)}</p>
-                                <p className="text-[15.4px] text-neutral-500 truncate mt-0.5">
-                                  <span className="text-neutral-400">{tr.colRefExterna}:</span>{" "}
-                                  {op.referencia_externa || "—"}
+                        pagedOperaciones.map((op) => {
+                          const isActive = selectedOperacion === op.id;
+                          return (
+                            <button
+                              key={op.id}
+                              type="button"
+                              onClick={() => handleSelectOperacion(op.id)}
+                              className={`w-full text-left px-2.5 py-2.5 transition-all relative ${
+                                isActive
+                                  ? "bg-dash-neon/15 text-dash-fg ring-1 ring-inset ring-dash-neon/40"
+                                  : "hover:bg-dash-neon/10 border-l-[3px] border-l-transparent text-dash-fg"
+                              }`}
+                            >
+                              {isActive && (
+                                <span className="absolute inset-y-0 left-0 w-[3px] bg-dash-neon" aria-hidden />
+                              )}
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-[1.1rem] font-extrabold break-all text-dash-fg">
+                                  {opRef(op)}
                                 </p>
+                                {isActive && (
+                                  <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold uppercase tracking-wide bg-dash-neon/25 text-dash-fg border border-dash-neon/40">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-dash-neon animate-pulse" />
+                                    {tr.activeOp}
+                                  </span>
+                                )}
                               </div>
-                              {docsBadge(op.id)}
-                            </div>
-                            <p className="text-base text-neutral-600 truncate">{op.cliente || "-"}</p>
-                            <p className="text-base text-neutral-500 mt-0.5 truncate">
-                              {op.naviera || "-"}
-                              {op.booking ? ` · ${op.booking}` : ""}
-                              {op.contenedor ? ` · ${op.contenedor}` : ""}
-                              {op.pod ? ` · ${op.pod}` : ""}
-                            </p>
-                            <p className="text-base text-neutral-500 mt-1">{tr.colDate}: {formatDate(op.created_at)}</p>
-                          </button>
-                        ))
+                              <p className="text-[15.4px] font-bold break-all mt-0.5 text-dash-fg/90">
+                                {op.referencia_externa || "—"}
+                              </p>
+                              <p className="text-[15.4px] break-all mt-0.5 text-dash-muted">
+                                <span className="text-dash-muted/70">{tr.colBooking}:</span>{" "}
+                                {op.booking || "—"}
+                              </p>
+                              <p className="text-[15.4px] break-all mt-0.5 text-dash-muted">
+                                <span className="text-dash-muted/70">{tr.colContenedor}:</span>{" "}
+                                {op.contenedor || "—"}
+                              </p>
+                            </button>
+                          );
+                        })
                       )}
                     </div>
+                  ) : (
+                    <>
+                      {/* Cards móvil sin selección */}
+                      <div className="md:hidden divide-y divide-dash-border">
+                        {pagedOperaciones.length === 0 ? (
+                          <div className="py-12 px-4 text-center">
+                            <Icon icon="lucide:folder" width={28} height={28} className="text-dash-neon/40 mx-auto mb-2" />
+                            <p className="text-dash-muted text-base">{tr.noOperations}</p>
+                          </div>
+                        ) : (
+                          pagedOperaciones.map((op) => (
+                            <button
+                              key={op.id}
+                              type="button"
+                              onClick={() => handleSelectOperacion(op.id)}
+                              className="w-full text-left p-3.5 transition-colors bg-transparent hover:bg-dash-neon/10"
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="min-w-0">
+                                  <p className="text-[1.1rem] font-bold text-dash-fg">{opRef(op)}</p>
+                                  <p className="text-[15.4px] text-dash-muted truncate mt-0.5">
+                                    <span className="text-dash-muted/70">{tr.colRefExterna}:</span>{" "}
+                                    {op.referencia_externa || "—"}
+                                  </p>
+                                </div>
+                                {docsBadge(op.id)}
+                              </div>
+                              <p className="text-base text-dash-fg/80 truncate">{op.cliente || "-"}</p>
+                              <p className="text-base text-dash-muted mt-0.5 truncate">
+                                {op.naviera || "-"}
+                                {op.booking ? ` · ${op.booking}` : ""}
+                                {op.contenedor ? ` · ${op.contenedor}` : ""}
+                                {op.pod ? ` · ${op.pod}` : ""}
+                              </p>
+                              <p className="text-base text-dash-muted mt-1">{tr.colDate}: {formatDate(op.created_at)}</p>
+                            </button>
+                          ))
+                        )}
+                      </div>
 
-                    {/* Tabla completa desktop — ancho completo */}
-                    <div className="hidden md:block w-full overflow-x-auto">
-                      <table className="w-full table-fixed text-left text-base">
-                        <colgroup>
-                          <col className="w-[8%]" />
-                          <col className="w-[11%]" />
-                          <col className="w-[13%]" />
-                          <col className="w-[11%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[10%]" />
-                          <col className="w-[9%]" />
-                          <col className="w-[7%]" />
-                          <col className="w-[7%]" />
-                        </colgroup>
-                        <thead>
-                          <tr className="bg-[#F4F8FC] border-b border-brand-blue/10">
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colRef}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colRefExterna}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colCliente}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colNaviera}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colBooking}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colContenedor}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colPod}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colEtd}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colDocs}</th>
-                            <th className="px-3 py-2.5 text-sm font-bold text-brand-blue">{tr.colDate}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-brand-blue/10">
-                          {pagedOperaciones.length === 0 ? (
-                            <tr>
-                              <td colSpan={10} className="px-4 py-12 text-center text-neutral-400 text-base">
-                                {tr.noOperations}
-                              </td>
+                      {/* Tabla completa desktop — ancho completo */}
+                      <div className="hidden md:block w-full overflow-x-auto">
+                        <table className="w-full table-fixed text-left text-base">
+                          <colgroup>
+                            <col className="w-[8%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[13%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[12%]" />
+                            <col className="w-[12%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[7%]" />
+                            <col className="w-[7%]" />
+                          </colgroup>
+                          <thead>
+                            <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] border-b border-dash-border">
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colRef}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colRefExterna}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colCliente}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colNaviera}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colBooking}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colContenedor}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colPod}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colEtd}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colDocs}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colDate}</th>
                             </tr>
-                          ) : (
-                            pagedOperaciones.map((op) => (
-                              <tr
-                                key={op.id}
-                                onClick={() => handleSelectOperacion(op.id)}
-                                className="cursor-pointer transition-colors hover:bg-[#F4F8FC]"
-                              >
-                                <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-brand-blue">{opRef(op)}</td>
-                                <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-brand-blue">{op.referencia_externa || "—"}</td>
-                                <td className="px-3 py-2.5 text-neutral-700 truncate">{op.cliente || "-"}</td>
-                                <td className="px-3 py-2.5 text-neutral-600 truncate">{op.naviera || "-"}</td>
-                                <td className="px-3 py-2.5 text-neutral-600 truncate">{op.booking || "-"}</td>
-                                <td className="px-3 py-2.5 text-neutral-600 truncate font-mono">{op.contenedor || "-"}</td>
-                                <td className="px-3 py-2.5 text-neutral-600 truncate">{op.pod || "-"}</td>
-                                <td className="px-3 py-2.5 text-neutral-600 truncate">{formatDate(op.etd)}</td>
-                                <td className="px-3 py-2.5">{docsBadge(op.id)}</td>
-                                <td className="px-3 py-2.5 text-neutral-500 truncate">{formatDate(op.created_at)}</td>
+                          </thead>
+                          <tbody className="divide-y divide-dash-border">
+                            {pagedOperaciones.length === 0 ? (
+                              <tr>
+                                <td colSpan={10} className="px-4 py-12 text-center text-dash-muted text-base">
+                                  {tr.noOperations}
+                                </td>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="shrink-0">{paginationBar}</div>
-            </div>
-          </div>
-
-          {/* Columna documentos — solo visible con selección */}
-          {hasSelection && (
-            <div className="flex-1 min-w-0 min-h-0 overflow-auto w-full">
-              {docsPanel}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {previewDoc && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={closePreview}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-mac-modal w-full h-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
-            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 flex-shrink-0 gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                  <Icon
-                    icon={isPdf(previewDoc.mime_type) ? "lucide:file-text" : "lucide:file-spreadsheet"}
-                    className={`w-4 h-4 ${isPdf(previewDoc.mime_type) ? "text-red-500" : "text-green-600"}`}
-                  />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-semibold text-neutral-800 text-base truncate">{previewDoc.nombre_archivo}</p>
-                  <p className="text-base text-neutral-500">
-                    {formatFileSize(previewDoc.tamano)} · {formatDate(previewDoc.created_at)}
-                  </p>
+                            ) : (
+                              pagedOperaciones.map((op, idx) => (
+                                <tr
+                                  key={op.id}
+                                  onClick={() => handleSelectOperacion(op.id)}
+                                  className={`cursor-pointer transition-colors ${
+                                    idx % 2 === 0
+                                      ? "bg-transparent hover:bg-dash-neon/10"
+                                      : "bg-dash-control/30 hover:bg-dash-neon/10"
+                                  }`}
+                                >
+                                  <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-dash-fg">{opRef(op)}</td>
+                                  <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-dash-fg">{op.referencia_externa || "—"}</td>
+                                  <td className="px-3 py-2.5 text-dash-fg/80 truncate">{op.cliente || "-"}</td>
+                                  <td className="px-3 py-2.5 text-dash-muted truncate">{op.naviera || "-"}</td>
+                                  <td className="px-3 py-2.5 text-dash-muted truncate">{op.booking || "-"}</td>
+                                  <td className="px-3 py-2.5 text-dash-muted truncate font-mono">{op.contenedor || "-"}</td>
+                                  <td className="px-3 py-2.5 text-dash-muted truncate">{op.pod || "-"}</td>
+                                  <td className="px-3 py-2.5 text-dash-muted truncate">{formatDate(op.etd)}</td>
+                                  <td className="px-3 py-2.5">{docsBadge(op.id)}</td>
+                                  <td className="px-3 py-2.5 text-dash-muted truncate">{formatDate(op.created_at)}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleDownload(previewDoc)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
-                >
-                  <Icon icon="lucide:download" className="w-3.5 h-3.5" />
-                  {tr.download}
-                </button>
-                <button
-                  type="button"
-                  onClick={closePreview}
-                  className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
-                >
-                  <Icon icon="lucide:x" className="w-4 h-4" />
-                </button>
+
+                <div className="shrink-0">{paginationBar}</div>
               </div>
             </div>
-            <div className="flex-1 overflow-hidden bg-neutral-100">
-              {isPdf(previewDoc.mime_type) ? (
-                <iframe
-                  src={`${previewDoc.url}#toolbar=1&navpanes=0`}
-                  className="w-full h-full border-0"
-                  title={previewDoc.nombre_archivo}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <span className="w-16 h-16 rounded-lg bg-neutral-200 flex items-center justify-center">
-                    <Icon icon="lucide:file-spreadsheet" className="w-8 h-8 text-neutral-400" />
+
+            {/* Columna documentos — solo visible con selección */}
+            {hasSelection && (
+              <div className="flex-1 min-w-0 min-h-0 overflow-auto w-full">
+                {docsPanel}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {previewDoc && (
+          <div
+            className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            data-theme={theme}
+            onClick={closePreview}
+          >
+            <div
+              className="dash-card motion-enter-lift rounded-2xl w-full h-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
+              <div className="flex items-center justify-between px-5 py-3 border-b border-dash-border flex-shrink-0 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-lg bg-dash-neon/15 border border-dash-neon/35 flex items-center justify-center flex-shrink-0">
+                    <Icon
+                      icon={isPdf(previewDoc.mime_type) ? "lucide:file-text" : "lucide:file-spreadsheet"}
+                      className={`w-4 h-4 ${isPdf(previewDoc.mime_type) ? "text-red-400" : "text-emerald-300"}`}
+                    />
                   </span>
-                  <p className="text-neutral-600 font-medium text-base">{tr.excelPreviewNotAvailable}</p>
-                  <p className="text-neutral-400 text-base">{tr.downloadToView}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-dash-fg text-base truncate">{previewDoc.nombre_archivo}</p>
+                    <p className="text-base text-dash-muted">
+                      {formatFileSize(previewDoc.tamano)} · {formatDate(previewDoc.created_at)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => handleDownload(previewDoc)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 transition-colors"
+                    className="dash-cta inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm"
                   >
-                    <Icon icon="lucide:download" className="w-4 h-4" />
-                    {tr.downloadFile}
+                    <Icon icon="lucide:download" className="w-3.5 h-3.5" />
+                    {tr.download}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closePreview}
+                    className="p-2 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors"
+                  >
+                    <Icon icon="lucide:x" className="w-4 h-4" />
                   </button>
                 </div>
-              )}
+              </div>
+              <div className="flex-1 overflow-hidden bg-dash-control/50">
+                {isPdf(previewDoc.mime_type) ? (
+                  <iframe
+                    src={`${previewDoc.url}#toolbar=1&navpanes=0`}
+                    className="w-full h-full border-0"
+                    title={previewDoc.nombre_archivo}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-4">
+                    <span className="w-16 h-16 rounded-lg bg-dash-control border border-dash-border flex items-center justify-center">
+                      <Icon icon="lucide:file-spreadsheet" className="w-8 h-8 text-dash-muted" />
+                    </span>
+                    <p className="text-dash-fg font-medium text-base">{tr.excelPreviewNotAvailable}</p>
+                    <p className="text-dash-muted text-base">{tr.downloadToView}</p>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(previewDoc)}
+                      className="dash-cta inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+                    >
+                      <Icon icon="lucide:download" className="w-4 h-4" />
+                      {tr.downloadFile}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </main>
+    </div>
     {confirmDialog && (
       <ConfirmDialog
         title={confirmDialog.title}

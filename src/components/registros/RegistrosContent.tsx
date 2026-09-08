@@ -13,11 +13,11 @@ import { exportRegistrosSimpleExcel } from "@/lib/registros-export-simple-excel"
 import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
-import { modulePageBg } from "@/lib/ui/moduleStyles";
 import { formatRefAsli } from "@/lib/refAsli";
 import { EstadoOperacionCellRenderer } from "@/components/registros/EstadoOperacionCellRenderer";
 import { ESTADO_INICIAL, estadosEnOrden, etiquetaEstado } from "@/lib/operaciones/estados";
 import { listarTemporadas, TEMPORADA_TODAS, type Temporada } from "@/lib/temporadas";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -705,6 +705,7 @@ const COLUMN_GROUPS = [
 export function RegistrosContent() {
   const { locale, t } = useLocale();
   const { isCliente, isEjecutivo, empresaNombres, isLoading: authLoading, user } = useAuth();
+  const [theme] = useNeonTheme();
   const canEdit = !isCliente;
   const gridRef = useRef<AgGridReact<OperacionRow>>(null);
   const [selectionCount, setSelectionCount] = useState(0);
@@ -1817,70 +1818,82 @@ export function RegistrosContent() {
 
   if (loading && rowData.length === 0) {
     return (
-      <main className={`relative flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main" aria-busy="true">
-        <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
-              <p className="text-xs text-white/65 mt-0.5">{t.registros.loading}</p>
-            </div>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main" aria-busy="true">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 top-8 h-64 w-64 rounded-full bg-dash-neon/15 blur-3xl" />
+            <div className="absolute bottom-20 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
           </div>
-        </div>
-        <div className="flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15">
-          <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
-            <div className="h-9 flex-1 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface" />
-            <div className="h-9 w-20 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface shrink-0" />
-            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface shrink-0" />
-            <div className="h-9 w-9 rounded-lg bg-white border border-brand-blue/15 motion-skeleton motion-skeleton-surface shrink-0" />
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3">
-          <div className="h-full min-h-[250px] rounded-xl border border-brand-blue/12 bg-white shadow-sm overflow-hidden">
-            <div className="h-10 bg-[#E8EEF7] border-b border-brand-blue/15" />
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className={`flex gap-3 px-3 py-2.5 border-b border-brand-blue/8 ${i % 2 === 1 ? "bg-[#F7FAFD]" : ""}`}>
-                <div className="h-4 w-16 rounded bg-brand-blue/10 motion-skeleton" />
-                <div className="h-4 flex-1 max-w-[8rem] rounded bg-brand-blue/10 motion-skeleton" />
-                <div className="h-4 flex-1 rounded bg-brand-blue/8 motion-skeleton" />
-                <div className="h-4 flex-1 rounded bg-brand-blue/8 motion-skeleton" />
-                <div className="h-4 w-20 rounded bg-brand-blue/10 motion-skeleton" />
+          <div className="dash-toolbar relative z-10 shrink-0">
+            <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-neon/40 bg-dash-neon/15">
+                <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-dash-neon" />
               </div>
-            ))}
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight text-dash-fg">{t.sidebar.registros}</h1>
+                <p className="mt-0.5 text-xs text-dash-muted">{t.registros.loading}</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </main>
+          <div className="relative z-10 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)]">
+            <div className="flex items-center gap-1.5 px-3 py-2 sm:px-4">
+              <div className="h-9 flex-1 rounded-lg border border-dash-border bg-dash-control motion-skeleton motion-skeleton-surface" />
+              <div className="h-9 w-20 shrink-0 rounded-lg border border-dash-border bg-dash-control motion-skeleton motion-skeleton-surface" />
+              <div className="h-9 w-9 shrink-0 rounded-lg border border-dash-border bg-dash-control motion-skeleton motion-skeleton-surface" />
+              <div className="h-9 w-9 shrink-0 rounded-lg border border-dash-border bg-dash-control motion-skeleton motion-skeleton-surface" />
+            </div>
+          </div>
+          <div className="relative z-10 flex-1 min-h-0 overflow-hidden p-2 sm:p-3">
+            <div className="h-full min-h-[250px] overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-sm">
+              <div className="h-10 border-b border-dash-border bg-dash-control" />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className={`flex gap-3 border-b border-dash-border/60 px-3 py-2.5 ${i % 2 === 1 ? "bg-dash-control/40" : ""}`}>
+                  <div className="h-4 w-16 rounded bg-dash-neon/15 motion-skeleton" />
+                  <div className="h-4 max-w-[8rem] flex-1 rounded bg-dash-neon/15 motion-skeleton" />
+                  <div className="h-4 flex-1 rounded bg-dash-neon/10 motion-skeleton" />
+                  <div className="h-4 flex-1 rounded bg-dash-neon/10 motion-skeleton" />
+                  <div className="h-4 w-20 rounded bg-dash-neon/15 motion-skeleton" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className={`relative flex-1 min-h-0 overflow-hidden flex flex-col ${modulePageBg}`} role="main">
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -right-16 top-8 h-64 w-64 rounded-full bg-dash-neon/15 blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
+      </div>
+
       {error && (
-        <div className="flex-shrink-0 px-3 sm:px-4 py-2.5 bg-red-100 text-red-700 text-base border-b border-red-200" role="alert">
+        <div className="relative z-10 shrink-0 border-b border-red-400/35 bg-red-500/15 px-3 py-2.5 text-base text-dash-fg sm:px-4" role="alert">
           {error}
         </div>
       )}
 
-      {/* Hero */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-white" />
+      {/* Toolbar */}
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-neon/40 bg-dash-neon/15">
+              <Icon icon="lucide:clipboard-list" width={18} height={18} className="text-dash-neon" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight">{t.sidebar.registros}</h1>
-              <p className="text-xs text-white/65 mt-0.5">
-                <span className="font-semibold text-white tabular-nums">{rowData.length}</span> {t.registros.records}
+              <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg sm:text-xl">{t.sidebar.registros}</h1>
+              <p className="mt-0.5 text-xs text-dash-muted">
+                <span className="font-semibold tabular-nums text-dash-neon">{rowData.length}</span> {t.registros.records}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5">
             <a
               href={withBase("/reservas/papelera")}
-              className="p-2 bg-white/12 border border-white/15 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
+              className="dash-control rounded-lg p-2 text-dash-muted hover:text-dash-fg"
               title="Papelera"
             >
               <Icon icon="lucide:trash-2" width={14} height={14} />
@@ -1888,7 +1901,7 @@ export function RegistrosContent() {
             {canEdit && (
               <a
                 href={withBase("/reservas/crear")}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors"
+                className="dash-cta inline-flex items-center gap-1.5 px-3 py-2 text-sm"
               >
                 <Icon icon="lucide:plus" width={13} height={13} />
                 <span className="hidden sm:inline">{t.registros.newBooking}</span>
@@ -1899,13 +1912,13 @@ export function RegistrosContent() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="relative z-40 flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
-        <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
-          <div className="flex-1 min-w-0 relative">
+      {/* Barra de búsqueda y acciones */}
+      <div className="relative z-40 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] backdrop-blur-md">
+        <div className="flex items-center gap-1.5 px-3 py-2 sm:px-4">
+          <div className="relative min-w-0 flex-1">
             <Icon
               icon="lucide:search"
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-blue/35 w-3.5 h-3.5 pointer-events-none"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dash-muted"
             />
             <input
               type="search"
@@ -1914,13 +1927,13 @@ export function RegistrosContent() {
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="Buscar: nave, booking, contenedor..."
-              className="w-full pl-8 pr-8 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all"
+              className="w-full rounded-lg border border-dash-border bg-dash-control py-2 pl-8 pr-8 text-sm text-dash-fg placeholder:text-dash-muted focus:border-dash-neon/50 focus:outline-none focus:ring-2 focus:ring-dash-neon/40 transition-all"
             />
             {globalSearch && (
               <button
                 type="button"
                 onClick={() => setGlobalSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-blue/35 hover:text-brand-blue transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-dash-muted transition-colors hover:text-dash-fg"
                 aria-label="Limpiar búsqueda"
               >
                 <Icon icon="lucide:x" width={13} height={13} />
@@ -1931,14 +1944,14 @@ export function RegistrosContent() {
           <div className="relative shrink-0">
             <Icon
               icon="lucide:calendar-range"
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-blue/45 w-3.5 h-3.5 pointer-events-none"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dash-muted"
             />
             <select
               value={temporadaSel}
               onChange={(e) => setTemporadaSel(e.target.value)}
               aria-label="Filtrar por temporada"
               title="Filtrar por temporada"
-              className="appearance-none pl-8 pr-7 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm font-semibold text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all"
+              className="appearance-none rounded-lg border border-dash-border bg-dash-control py-2 pl-8 pr-7 text-sm font-semibold text-dash-fg focus:border-dash-neon/50 focus:outline-none focus:ring-2 focus:ring-dash-neon/40 transition-all"
             >
               {temporadas.map((tp) => (
                 <option key={tp.id} value={tp.nombre}>
@@ -1950,24 +1963,24 @@ export function RegistrosContent() {
             </select>
             <Icon
               icon="lucide:chevron-down"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-blue/45 w-3.5 h-3.5 pointer-events-none"
+              className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dash-muted"
             />
           </div>
 
           <button
             type="button"
             onClick={() => setShowColumnPanel(true)}
-            className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-2 border rounded-lg text-sm font-semibold transition-colors shrink-0 ${
+            className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm font-semibold transition-colors ${
               hiddenColumns.size > 0
-                ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
-                : "border-brand-blue/20 bg-white hover:bg-[#F4F8FC] text-brand-blue/70"
+                ? "border-dash-neon/50 bg-dash-neon/15 text-dash-fg"
+                : "border-dash-border bg-dash-control text-dash-muted hover:bg-dash-control"
             }`}
             title="Columnas"
           >
             <Icon icon="lucide:columns" width={13} height={13} />
             <span className="hidden sm:inline">Columnas</span>
             {hiddenColumns.size > 0 && (
-              <span className="min-w-4 h-4 px-1 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-dash-neon/25 px-1 text-[10px] font-bold text-white">
                 {hiddenColumns.size}
               </span>
             )}
@@ -1977,7 +1990,7 @@ export function RegistrosContent() {
             type="button"
             onClick={() => void handleExportExcel()}
             disabled={rowData.length === 0}
-            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-dash-border bg-dash-control px-2.5 py-2 text-sm font-semibold text-dash-muted transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
             title={locale === "en" ? "Download visible table as Excel (.xlsx)" : "Descargar tabla visible en Excel (.xlsx)"}
           >
             <Icon icon="lucide:table-2" width={13} height={13} />
@@ -1988,7 +2001,7 @@ export function RegistrosContent() {
             type="button"
             onClick={() => void handleExportPdf()}
             disabled={rowData.length === 0 || isExportingPdf}
-            className="inline-flex items-center justify-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-dash-border bg-dash-control px-2.5 py-2 text-sm font-semibold text-dash-muted transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
             title="Exportar Reserva Confirmada PDF"
           >
             <Icon
@@ -2003,7 +2016,7 @@ export function RegistrosContent() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="p-2 text-brand-blue/55 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
+            className="shrink-0 rounded-lg p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
             title={t.registros.refresh}
           >
             <Icon icon="lucide:refresh-cw" width={14} height={14} />
@@ -2011,14 +2024,14 @@ export function RegistrosContent() {
         </div>
 
         {canEdit && selectionCount > 0 && (
-          <div className="px-3 sm:px-4 py-2 border-t border-brand-blue/10 flex items-center gap-2 bg-brand-blue/5">
-            <span className="text-sm font-semibold text-brand-blue flex-1">
+          <div className="flex items-center gap-2 border-t border-dash-border bg-dash-neon/10 px-3 py-2 sm:px-4">
+            <span className="flex-1 text-sm font-semibold text-dash-fg">
               {selectionCount} seleccionada{selectionCount !== 1 ? "s" : ""}
             </span>
             <button
               type="button"
               onClick={() => setShowTransportModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
             >
               <Icon icon="lucide:truck" width={12} height={12} />
               <span className="hidden sm:inline">{t.registros.sendToTransport}</span>
@@ -2027,7 +2040,7 @@ export function RegistrosContent() {
             <button
               type="button"
               onClick={() => void handleRemoveSelected()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100"
             >
               <Icon icon="lucide:trash-2" width={12} height={12} />
               <span className="hidden sm:inline">{t.registros.deleteSelection}</span>
@@ -2036,7 +2049,7 @@ export function RegistrosContent() {
             <button
               type="button"
               onClick={() => gridRef.current?.api?.deselectAll()}
-              className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
               aria-label="Limpiar selección"
             >
               <Icon icon="lucide:x" width={13} height={13} />
@@ -2046,9 +2059,9 @@ export function RegistrosContent() {
       </div>
 
       {/* Tabla */}
-      <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-3 flex flex-col">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-3">
         <div
-          className="ag-theme-balham flex-1 min-h-[250px] sm:min-h-[300px] w-full overflow-hidden rounded-xl border border-brand-blue/12 bg-white shadow-sm flex flex-col"
+          className="ag-theme-balham flex w-full min-h-[250px] flex-1 flex-col overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-sm sm:min-h-[300px]"
           style={{ minHeight: 300 }}
         >
           <div className="flex-1 min-h-0">
@@ -2087,12 +2100,12 @@ export function RegistrosContent() {
             />
           </div>
           {rowData.length > 0 && (
-            <div className="px-3 py-2 border-t border-brand-blue/10 flex items-center justify-between bg-[#E8EEF7]/90 flex-shrink-0">
-              <span className="text-xs text-brand-blue/60 font-medium tabular-nums">
+            <div className="flex shrink-0 items-center justify-between border-t border-dash-border bg-dash-control/90 px-3 py-2">
+              <span className="text-xs font-medium tabular-nums text-dash-muted">
                 {rowData.length} {t.registros.records}
               </span>
               {selectionCount > 0 && (
-                <span className="text-xs text-brand-blue font-semibold">
+                <span className="text-xs font-semibold text-dash-neon">
                   {selectionCount} seleccionado{selectionCount !== 1 ? "s" : ""}
                 </span>
               )}
@@ -2109,21 +2122,22 @@ export function RegistrosContent() {
         return (
           <div
             role="menu"
-            className="fixed z-[80] min-w-[220px] rounded-lg border border-neutral-200 bg-white shadow-lg py-1"
+            className="dash-neon fixed z-[80] min-w-[220px] rounded-lg border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_96%,transparent)] py-1 shadow-lg"
+            data-theme={theme}
             style={{ left, top }}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
-            <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 truncate">
+            <p className="truncate px-3 pb-1 pt-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-muted">
               {ctxMenu.refLabel}
             </p>
             <button
               type="button"
               role="menuitem"
               onClick={handleCtxAddDocuments}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-neutral-800 hover:bg-brand-blue/8 hover:text-brand-blue transition-colors"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15"
             >
-              <Icon icon="lucide:folder-plus" width={16} height={16} className="shrink-0 text-brand-blue" />
+              <Icon icon="lucide:folder-plus" width={16} height={16} className="shrink-0 text-dash-neon" />
               {t.registros.contextAddDocuments}
             </button>
           </div>
@@ -2132,19 +2146,19 @@ export function RegistrosContent() {
 
       {/* Panel: visibilidad de columnas */}
       {showColumnPanel && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end bg-black/40 backdrop-blur-[2px]" onClick={() => setShowColumnPanel(false)}>
+        <div className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:justify-end" data-theme={theme} onClick={() => setShowColumnPanel(false)}>
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl border border-neutral-200 w-full sm:w-80 sm:mr-4 flex flex-col"
+            className="flex w-full flex-col rounded-t-2xl border border-dash-border bg-dash-surface shadow-xl sm:mr-4 sm:w-80 sm:rounded-2xl"
             style={{ maxHeight: "85vh" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 flex-shrink-0">
+            <div className="flex shrink-0 items-center justify-between border-b border-dash-border px-4 py-3">
               <div className="flex items-center gap-2">
-                <Icon icon="lucide:columns" width={16} height={16} className="text-brand-blue" />
-                <span className="text-sm font-bold text-neutral-900">Columnas visibles</span>
+                <Icon icon="lucide:columns" width={16} height={16} className="text-dash-neon" />
+                <span className="text-sm font-bold text-dash-fg">Columnas visibles</span>
                 {hiddenColumns.size > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue font-medium">
+                  <span className="rounded-full border border-dash-border bg-dash-neon/15 px-1.5 py-0.5 text-xs font-medium text-dash-fg">
                     {hiddenColumns.size} oculta{hiddenColumns.size > 1 ? "s" : ""}
                   </span>
                 )}
@@ -2154,7 +2168,7 @@ export function RegistrosContent() {
                   <button
                     type="button"
                     onClick={showAllColumns}
-                    className="text-xs text-brand-blue hover:underline font-medium"
+                    className="text-xs font-medium text-dash-neon hover:underline"
                   >
                     Mostrar todas
                   </button>
@@ -2162,7 +2176,7 @@ export function RegistrosContent() {
                 <button
                   type="button"
                   onClick={resetColumnOrder}
-                  className="text-xs text-neutral-400 hover:text-neutral-600 hover:underline font-medium"
+                  className="text-xs font-medium text-dash-muted hover:text-dash-fg hover:underline"
                   title="Restablecer orden original de columnas"
                 >
                   Resetear orden
@@ -2170,7 +2184,7 @@ export function RegistrosContent() {
                 <button
                   type="button"
                   onClick={() => setShowColumnPanel(false)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
                 >
                   <Icon icon="lucide:x" width={16} height={16} />
                 </button>
@@ -2178,7 +2192,7 @@ export function RegistrosContent() {
             </div>
 
             {/* Lista de grupos */}
-            <div className="overflow-y-auto flex-1 px-3 py-2">
+            <div className="flex-1 overflow-y-auto px-3 py-2">
               {COLUMN_GROUPS.map((group) => {
                 const allHidden = group.fields.every((f) => hiddenColumns.has(f));
                 const someHidden = group.fields.some((f) => hiddenColumns.has(f));
@@ -2188,20 +2202,20 @@ export function RegistrosContent() {
                     <button
                       type="button"
                       onClick={() => toggleSection(group.fields)}
-                      className="w-full flex items-center gap-2 px-1 mb-1 group/sec"
+                      className="group/sec mb-1 flex w-full items-center gap-2 px-1"
                       title={allHidden ? "Mostrar sección" : "Ocultar sección"}
                     >
-                      <span className={`flex-shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                      <span className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border transition-colors ${
                         allHidden
-                          ? "border-neutral-300 bg-white"
+                          ? "border-dash-border bg-dash-control"
                           : someHidden
                             ? "border-amber-400 bg-amber-400"
-                            : "border-brand-blue bg-brand-blue"
+                            : "border-dash-neon bg-dash-neon"
                       }`}>
                         {!allHidden && <Icon icon={someHidden ? "lucide:minus" : "lucide:check"} width={8} height={8} className="text-white" />}
                       </span>
-                      <p className={`text-[10px] font-semibold uppercase tracking-wider flex-1 text-left transition-colors ${
-                        allHidden ? "text-neutral-300" : "text-neutral-400 group-hover/sec:text-neutral-600"
+                      <p className={`flex-1 text-left text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                        allHidden ? "text-dash-muted/40" : "text-dash-muted group-hover/sec:text-dash-fg"
                       }`}>
                         {group.label}
                       </p>
@@ -2215,16 +2229,16 @@ export function RegistrosContent() {
                             key={field}
                             type="button"
                             onClick={() => toggleColumn(field)}
-                            className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs transition-colors text-left ${
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
                               hidden
-                                ? "text-neutral-400 hover:bg-neutral-50"
-                                : "text-neutral-700 hover:bg-neutral-50"
+                                ? "text-dash-muted hover:bg-dash-neon/10"
+                                : "text-dash-fg hover:bg-dash-neon/10"
                             }`}
                           >
-                            <span className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                               hidden
-                                ? "border-neutral-300 bg-white"
-                                : "border-brand-blue bg-brand-blue"
+                                ? "border-dash-border bg-dash-control"
+                                : "border-dash-neon bg-dash-neon"
                             }`}>
                               {!hidden && <Icon icon="lucide:check" width={10} height={10} className="text-white" />}
                             </span>
@@ -2243,33 +2257,33 @@ export function RegistrosContent() {
 
       {/* Modal: confirmar agregar nuevo valor al catálogo */}
       {addNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="motion-enter-lift bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 w-full max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
-                <Icon icon="lucide:plus-circle" width={20} height={20} className="text-amber-600" />
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="motion-enter-lift w-full max-w-sm rounded-2xl border border-dash-border bg-dash-surface p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-400/35 bg-amber-500/15">
+                <Icon icon="lucide:plus-circle" width={20} height={20} className="text-amber-400" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">{t.registros.newValueDetected}</h3>
-                <p className="text-xs text-neutral-500">{addNewModal.label}</p>
+                <h3 className="text-sm font-bold text-dash-fg">{t.registros.newValueDetected}</h3>
+                <p className="text-xs text-dash-muted">{addNewModal.label}</p>
               </div>
             </div>
-            <p className="text-sm text-neutral-700 mb-1">{t.registros.confirmAddValue}</p>
-            <div className="mt-2 mb-5 px-3 py-2 rounded-lg bg-neutral-100 border border-neutral-200 text-sm font-semibold text-neutral-800 truncate">
+            <p className="mb-1 text-sm text-dash-fg">{t.registros.confirmAddValue}</p>
+            <div className="mb-5 mt-2 truncate rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-semibold text-dash-fg">
               "{addNewModal.newValue}"
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => void handleConfirmAddNew()}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors"
+                className="flex-1 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
               >
                 {t.registros.yesAdd}
               </button>
               <button
                 type="button"
                 onClick={() => setAddNewModal(null)}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
+                className="flex-1 rounded-xl border border-dash-border bg-dash-control px-4 py-2 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15"
               >
                 {t.registros.noThisTime}
               </button>
@@ -2280,52 +2294,52 @@ export function RegistrosContent() {
 
       {/* Modal selección tipo de transporte */}
       {showTransportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-                <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="motion-enter-lift w-full max-w-sm rounded-2xl border border-dash-border bg-dash-surface p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-500/15">
+                <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">{t.registros.transportModalTitle}</h3>
-                <p className="text-xs text-neutral-500">
+                <h3 className="text-sm font-bold text-dash-fg">{t.registros.transportModalTitle}</h3>
+                <p className="text-xs text-dash-muted">
                   {getSelectedRows().length} {getSelectedRows().length > 1 ? t.registros.transportModalOpsCount_many : t.registros.transportModalOpsCount_one}
                 </p>
               </div>
             </div>
-            <p className="text-xs text-neutral-500 mb-4">{t.registros.transportModalSelectType}</p>
+            <p className="mb-4 text-xs text-dash-muted">{t.registros.transportModalSelectType}</p>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => void handleSendToAsli()}
-                className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group"
+                className="group flex w-full items-center gap-3 rounded-xl border border-dash-border p-3 text-left transition-all hover:border-dash-neon/50 hover:bg-dash-neon/10"
               >
-                <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0 group-hover:bg-brand-blue/20 transition-colors">
-                  <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-dash-neon/15 transition-colors group-hover:bg-dash-neon/25">
+                  <Icon icon="lucide:building-2" width={18} height={18} className="text-dash-neon" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-800">{t.registros.reservaAsli}</p>
-                  <p className="text-[11px] text-neutral-400">{t.registros.reservaAsliDesc}</p>
+                  <p className="text-sm font-semibold text-dash-fg">{t.registros.reservaAsli}</p>
+                  <p className="text-[11px] text-dash-muted">{t.registros.reservaAsliDesc}</p>
                 </div>
               </button>
               <button
                 type="button"
                 onClick={() => void handleSendToExterna()}
-                className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group"
+                className="group flex w-full items-center gap-3 rounded-xl border border-dash-border p-3 text-left transition-all hover:border-emerald-400/50 hover:bg-emerald-500/10"
               >
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition-colors">
-                  <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 transition-colors group-hover:bg-emerald-500/25">
+                  <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-800">{t.registros.reservaExterna}</p>
-                  <p className="text-[11px] text-neutral-400">{t.registros.reservaExternaDesc}</p>
+                  <p className="text-sm font-semibold text-dash-fg">{t.registros.reservaExterna}</p>
+                  <p className="text-[11px] text-dash-muted">{t.registros.reservaExternaDesc}</p>
                 </div>
               </button>
             </div>
             <button
               type="button"
               onClick={() => setShowTransportModal(false)}
-              className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors"
+              className="mt-3 w-full rounded-xl border border-dash-border bg-dash-control px-4 py-2 text-xs font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15"
             >
               Cancelar
             </button>
@@ -2333,5 +2347,6 @@ export function RegistrosContent() {
         </div>
       )}
     </main>
+    </div>
   );
 }

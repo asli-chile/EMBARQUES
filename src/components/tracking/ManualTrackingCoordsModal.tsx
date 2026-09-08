@@ -113,33 +113,34 @@ export function ManualTrackingCoordsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="manual-coords-title"
       onClick={(e) => e.target === e.currentTarget && !busy && onClose()}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white shadow-mac-modal border border-neutral-200 p-5 sm:p-6"
+        className="dash-card w-full max-w-md rounded-2xl border border-dash-border p-5 sm:p-6 shadow-[0_0_40px_-12px_color-mix(in_srgb,var(--dash-neon)_45%,transparent)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="mb-4 h-[3px] rounded-full bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 id="manual-coords-title" className="text-base font-bold text-brand-blue">
+            <h2 id="manual-coords-title" className="text-base font-bold text-dash-fg">
               {tr.manualModalTitle}
             </h2>
-            <p className="text-xs text-neutral-500 mt-1">{tr.manualModalHint}</p>
-            <p className="text-xs font-medium text-neutral-700 mt-2 truncate" title={vesselLabel}>
+            <p className="mt-1 text-xs text-dash-muted">{tr.manualModalHint}</p>
+            <p className="mt-2 truncate text-xs font-medium text-dash-fg" title={vesselLabel}>
               {vesselLabel}
             </p>
             {groupHint ? (
-              <p className="text-[11px] text-violet-700/90 mt-2 leading-snug">{groupHint}</p>
+              <p className="mt-2 text-[11px] leading-snug text-violet-300/90">{groupHint}</p>
             ) : null}
           </div>
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+            className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-dash-control hover:text-dash-fg"
             aria-label={tr.manualCancel}
           >
             <Icon icon="lucide:x" width={20} height={20} />
@@ -148,7 +149,10 @@ export function ManualTrackingCoordsModal({
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label htmlFor="manual-lat" className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1">
+            <label
+              htmlFor="manual-lat"
+              className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted"
+            >
               {tr.manualLatLabel}
             </label>
             <input
@@ -158,12 +162,15 @@ export function ManualTrackingCoordsModal({
               value={latStr}
               onChange={(e) => setLatStr(e.target.value)}
               placeholder="-33.0472"
-              className="w-full px-3 py-2.5 rounded-lg border border-neutral-300 text-sm text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              className="dash-control w-full px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
               disabled={busy}
             />
           </div>
           <div>
-            <label htmlFor="manual-lng" className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-1">
+            <label
+              htmlFor="manual-lng"
+              className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted"
+            >
               {tr.manualLngLabel}
             </label>
             <input
@@ -173,28 +180,24 @@ export function ManualTrackingCoordsModal({
               value={lngStr}
               onChange={(e) => setLngStr(e.target.value)}
               placeholder="-71.6297"
-              className="w-full px-3 py-2.5 rounded-lg border border-neutral-300 text-sm text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              className="dash-control w-full px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
               disabled={busy}
             />
           </div>
 
           {err && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-300" role="alert">
               {err}
             </p>
           )}
           {msg && (
-            <p className="text-sm text-emerald-600" role="status">
+            <p className="text-sm text-emerald-300" role="status">
               {msg}
             </p>
           )}
 
           <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-semibold hover:bg-brand-blue/90 disabled:opacity-50"
-            >
+            <button type="submit" disabled={busy} className="dash-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm disabled:opacity-50">
               {busy ? <Icon icon="lucide:loader-2" width={18} height={18} className="animate-spin" /> : null}
               {tr.manualSave}
             </button>
@@ -202,7 +205,7 @@ export function ManualTrackingCoordsModal({
               type="button"
               disabled={busy || (initialLat == null && initialLng == null)}
               onClick={() => void handleClear()}
-              className="px-4 py-2.5 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+              className="dash-control px-4 py-2.5 text-sm font-medium disabled:opacity-40"
             >
               {tr.manualClear}
             </button>
@@ -210,7 +213,7 @@ export function ManualTrackingCoordsModal({
               type="button"
               disabled={busy}
               onClick={onClose}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-500 hover:text-neutral-800"
+              className="px-4 py-2.5 text-sm font-medium text-dash-muted hover:text-dash-fg"
             >
               {tr.manualCancel}
             </button>

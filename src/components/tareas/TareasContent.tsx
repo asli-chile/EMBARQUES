@@ -5,25 +5,19 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { format, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { sileo } from "sileo";
-import {
-  moduleBtnSecondary,
-  moduleCard,
-  moduleCardAccent,
-  moduleHeroRounded,
-  moduleInput,
-  modulePageBg,
-} from "@/lib/ui/moduleStyles";
 import { formatRefAsli } from "@/lib/refAsli";
 import {
+  ESTADO_META,
   estadoAvanceRecomendado,
   etiquetaEstado,
   esEstadoCerrado,
   normalizarEstado,
   type EstadoOperacion,
+  type GrupoEstado,
 } from "@/lib/operaciones/estados";
-import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 import {
   ESTADO_TAREA_ETIQUETA,
   diasRestantes,
@@ -57,36 +51,81 @@ const URGENCIA_STYLE: Record<
   { badge: string; dot: string; etiqueta: string; explicacion: string }
 > = {
   vencida: {
-    badge: "bg-red-50 text-red-700 border-red-200",
-    dot: "bg-red-500",
+    badge: "bg-red-400/15 text-dash-fg border-red-400/35",
+    dot: "bg-red-400",
     etiqueta: "Atrasadas",
     explicacion: "El plazo ya se cumplió y la tarea sigue abierta",
   },
   hoy: {
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
-    dot: "bg-amber-500",
+    badge: "bg-amber-400/15 text-dash-fg border-amber-400/35",
+    dot: "bg-amber-400",
     etiqueta: "Para hoy",
     explicacion: "Vencen hoy",
   },
   proxima: {
-    badge: "bg-blue-50 text-blue-700 border-blue-200",
-    dot: "bg-blue-400",
+    badge: "bg-sky-400/15 text-dash-fg border-sky-400/35",
+    dot: "bg-sky-400",
     etiqueta: "Próximos 7 días",
     explicacion: "Todavía hay tiempo",
   },
   sin_fecha: {
-    badge: "bg-neutral-100 text-neutral-600 border-neutral-200",
+    badge: "bg-dash-control text-dash-muted border-dash-border",
     dot: "bg-neutral-400",
     etiqueta: "Sin plazo",
     explicacion: "No tienen fecha límite calculada, normalmente porque falta el ETD o el ETA de la operación",
   },
   cerrada: {
-    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    dot: "bg-emerald-500",
+    badge: "bg-emerald-400/15 text-dash-fg border-emerald-400/35",
+    dot: "bg-emerald-400",
     etiqueta: "Cerradas",
     explicacion: "Completadas o canceladas",
   },
 };
+
+const ESTADO_GRUPO_STYLE: Record<GrupoEstado, { bg: string; text: string; border: string; dot: string }> = {
+  COMERCIAL: {
+    bg: "bg-amber-400/15",
+    text: "text-dash-fg",
+    border: "border-amber-400/35",
+    dot: "bg-amber-400",
+  },
+  COORDINACION: {
+    bg: "bg-sky-400/15",
+    text: "text-dash-fg",
+    border: "border-sky-400/35",
+    dot: "bg-sky-400",
+  },
+  TRANSITO: {
+    bg: "bg-violet-400/15",
+    text: "text-dash-fg",
+    border: "border-violet-400/35",
+    dot: "bg-violet-400",
+  },
+  DOCUMENTAL: {
+    bg: "bg-emerald-400/15",
+    text: "text-dash-fg",
+    border: "border-emerald-400/35",
+    dot: "bg-emerald-400",
+  },
+  CIERRE: {
+    bg: "bg-dash-control",
+    text: "text-dash-muted",
+    border: "border-dash-border",
+    dot: "bg-neutral-400",
+  },
+  EXCEPCION: {
+    bg: "bg-red-400/15",
+    text: "text-dash-fg",
+    border: "border-red-400/35",
+    dot: "bg-red-400",
+  },
+};
+
+function getEstadoGrupoStyle(estado: string | null | undefined) {
+  const codigo = normalizarEstado(estado);
+  if (!codigo) return null;
+  return ESTADO_GRUPO_STYLE[ESTADO_META[codigo].grupo];
+}
 
 function fmtFecha(valor: string | null): string {
   if (!valor) return "—";
@@ -132,6 +171,7 @@ function progresoFase(tareasOperacion: TareaRow[], estadoOperacion: string | nul
 export function TareasContent() {
   const { profile, isStaff, isLoading: authLoading } = useAuth();
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
+  const [theme] = useNeonTheme();
   const [tareas, setTareas] = useState<TareaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -425,297 +465,343 @@ export function TareasContent() {
 
   if (!isStaff && !authLoading && profile === null) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4`}>
-        <div className={`${moduleCard} max-w-md mx-auto mt-10 p-6 text-center`}>
-          <p className="text-base text-brand-blue/80">Inicia sesión para ver las tareas de tus operaciones.</p>
-        </div>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-auto p-4" role="main">
+          <div className="dash-card mx-auto mt-10 max-w-md rounded-xl p-6 text-center">
+            <p className="text-base text-dash-muted">Inicia sesión para ver las tareas de tus operaciones.</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-      <div className="w-full max-w-[1400px] mx-auto space-y-4">
-        <section className={`${moduleHeroRounded} px-5 py-4`}>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold">Tareas</h1>
-              <p className="text-base text-white/70 mt-0.5">
-                Qué hay que hacer hoy, ordenado por lo que más apura
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setVerAyuda((v) => !v)}
-              className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-base font-semibold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors"
-              aria-expanded={verAyuda}
-            >
-              <Icon icon="lucide:help-circle" width={14} height={14} />
-              Cómo funciona
-            </button>
-            <button
-              type="button"
-              onClick={() => void cargar()}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-base font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors"
-            >
-              <Icon icon="lucide:refresh-cw" width={14} height={14} />
-              Actualizar
-            </button>
-          </div>
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:list-checks" width={22} height={22} className="text-dash-neon" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">Tareas</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">
+                  Qué hay que hacer hoy, ordenado por lo que más apura
+                </p>
+              </div>
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVerAyuda((v) => !v)}
+                className="dash-control inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold"
+                aria-expanded={verAyuda}
+              >
+                <Icon icon="lucide:help-circle" width={14} height={14} />
+                Cómo funciona
+              </button>
+              <button
+                type="button"
+                onClick={() => void cargar()}
+                className="dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-sm"
+              >
+                <Icon icon="lucide:refresh-cw" width={14} height={14} />
+                Actualizar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-[1400px] space-y-3 p-3 sm:p-4 lg:p-5">
           {verAyuda && (
-            <div className="mt-3 rounded-lg bg-white/10 border border-white/15 px-4 py-3 space-y-2 text-base text-white/85">
+            <div className="dash-card space-y-2 rounded-xl px-4 py-3 text-sm text-dash-muted">
               <p>
-                <strong className="text-white">Las tareas las crea el sistema, no se escriben a mano.</strong>{" "}
-                Cada vez que una operación entra a un estado nuevo, se generan las tareas que corresponden a
-                ese estado, con su responsable y su fecha límite.
+                <strong className="text-dash-fg">Las tareas las crea el sistema, no se escriben a mano.</strong>{" "}
+                Cada vez que una operación entra a un estado nuevo, se generan las tareas que corresponden a ese
+                estado, con su responsable y su fecha límite.
               </p>
               <p>
-                <strong className="text-white">Completar una tarea apaga el recordatorio.</strong> Si la fase
+                <strong className="text-dash-fg">Completar una tarea apaga el recordatorio.</strong> Si la fase
                 tiene dos o más tareas y completas la última, la operación avanza sola al siguiente estado.
-                También puedes usar <strong className="text-white">Avanzar</strong> para cerrar todo de una
-                vez sin ir a Registros.
+                También puedes usar <strong className="text-dash-fg">Avanzar</strong> para cerrar todo de una vez
+                sin ir a Registros.
               </p>
               <p>
-                <strong className="text-white">El plazo se cuenta desde que la operación entró al estado</strong>,
-                o desde el ETD o el ETA cuando la tarea depende de la nave, como el rescate del BL o el aviso
-                de arribo.
+                <strong className="text-dash-fg">El plazo se cuenta desde que la operación entró al estado</strong>
+                , o desde el ETD o el ETA cuando la tarea depende de la nave, como el rescate del BL o el aviso de
+                arribo.
               </p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4">
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
             {[
-              { label: "Vencidas", valor: kpis.vencidas, tono: "text-red-200", icono: "lucide:alert-triangle" },
-              { label: "Vencen hoy", valor: kpis.hoy, tono: "text-amber-200", icono: "lucide:clock" },
-              { label: "Esta semana", valor: kpis.semana, tono: "text-sky-200", icono: "lucide:calendar-days" },
-              { label: "Asignadas a mí", valor: kpis.mias, tono: "text-white", icono: "lucide:user-check" },
+              {
+                label: "Vencidas",
+                valor: kpis.vencidas,
+                icono: "lucide:alert-triangle",
+                accent: "text-red-300",
+                bar: "bg-red-400",
+              },
+              {
+                label: "Vencen hoy",
+                valor: kpis.hoy,
+                icono: "lucide:clock",
+                accent: "text-amber-300",
+                bar: "bg-amber-400",
+              },
+              {
+                label: "Esta semana",
+                valor: kpis.semana,
+                icono: "lucide:calendar-days",
+                accent: "text-sky-300",
+                bar: "bg-sky-400",
+              },
+              {
+                label: "Asignadas a mí",
+                valor: kpis.mias,
+                icono: "lucide:user-check",
+                accent: "text-dash-neon",
+                bar: "bg-dash-neon",
+              },
             ].map((k) => (
-              <div key={k.label} className="rounded-lg bg-white/10 border border-white/15 px-3 py-2.5">
-                <div className="flex items-center gap-1.5 text-white/70">
-                  <Icon icon={k.icono} width={13} height={13} />
+              <div key={k.label} className="dash-card relative overflow-hidden rounded-xl px-3.5 py-3.5">
+                <span className={`absolute inset-x-0 top-0 h-0.5 ${k.bar}`} aria-hidden />
+                <div className="flex items-center gap-1.5 text-dash-muted">
+                  <Icon icon={k.icono} width={13} height={13} className={k.accent} />
                   <span className="text-sm font-semibold">{k.label}</span>
                 </div>
-                <p className={`text-2xl font-bold tabular-nums mt-1 ${k.tono}`}>{k.valor}</p>
+                <p className={`mt-1 text-2xl font-bold tabular-nums ${k.accent}`}>{k.valor}</p>
               </div>
             ))}
           </div>
-        </section>
 
-        <section className={moduleCard}>
-          <div className={moduleCardAccent} />
-          <div className="px-4 py-3 flex flex-wrap items-center gap-2.5">
-            <input
-              type="search"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por tarea, referencia o cliente"
-              className={`${moduleInput} max-w-xs`}
-            />
-            <label className="inline-flex items-center gap-2 text-base font-semibold text-brand-blue/80 cursor-pointer">
+          <section className="dash-card rounded-xl">
+            <div className="dash-section-head flex flex-wrap items-center gap-2.5 px-4 py-3">
               <input
-                type="checkbox"
-                checked={soloMias}
-                onChange={(e) => setSoloMias(e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-blue"
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por tarea, referencia o cliente"
+                className="dash-control max-w-xs flex-1 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
               />
-              Solo mías
-            </label>
-            <label className="inline-flex items-center gap-2 text-base font-semibold text-brand-blue/80 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={verCerradas}
-                onChange={(e) => setVerCerradas(e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-blue"
-              />
-              Ver cerradas
-            </label>
-            <span className="ml-auto text-base text-neutral-500">
-              {filtradas.length} {filtradas.length === 1 ? "tarea" : "tareas"} · {gruposOperacion.length}{" "}
-              {gruposOperacion.length === 1 ? "operación" : "operaciones"}
-            </span>
-          </div>
-        </section>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-dash-muted">
+                <input
+                  type="checkbox"
+                  checked={soloMias}
+                  onChange={(e) => setSoloMias(e.target.checked)}
+                  className="h-4 w-4 rounded border-dash-border text-dash-neon focus:ring-dash-neon/30"
+                />
+                Solo mías
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-dash-muted">
+                <input
+                  type="checkbox"
+                  checked={verCerradas}
+                  onChange={(e) => setVerCerradas(e.target.checked)}
+                  className="h-4 w-4 rounded border-dash-border text-dash-neon focus:ring-dash-neon/30"
+                />
+                Ver cerradas
+              </label>
+              <span className="ml-auto text-sm text-dash-muted">
+                {filtradas.length} {filtradas.length === 1 ? "tarea" : "tareas"} · {gruposOperacion.length}{" "}
+                {gruposOperacion.length === 1 ? "operación" : "operaciones"}
+              </span>
+            </div>
+          </section>
 
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="rounded-lg border border-red-400/35 bg-red-500/15 px-4 py-3 text-sm text-dash-fg" role="alert">
+              {error}
+            </div>
+          )}
 
-        {loading ? (
-          <div className={`${moduleCard} px-4 py-10 text-center text-base text-neutral-500`}>
-            Cargando tareas...
-          </div>
-        ) : gruposOperacion.length === 0 ? (
-          <div className={`${moduleCard} px-4 py-10 text-center`}>
-            <Icon icon="lucide:check-circle-2" width={28} height={28} className="mx-auto text-emerald-500" />
-            <p className="text-base text-brand-blue/80 mt-2 font-semibold">No hay tareas pendientes</p>
-            <p className="text-base text-neutral-500 mt-1 max-w-md mx-auto">
-              Las tareas se crean solas cuando una operación se registra o avanza de estado. Si esperabas
-              ver alguna, revisa los filtros de arriba.
-            </p>
-          </div>
-        ) : (
-          gruposOperacion.map((grupo) => {
-            const estadoStyle = getEstadoOperacionStyle(grupo.estadoOperacion);
-            const etiquetaEstadoActual = etiquetaEstado(grupo.estadoOperacion);
-            const puedeAvanzar = grupo.siguienteEstado !== null && !esEstadoCerrado(grupo.estadoOperacion);
-            const pendientesFase = grupo.progreso.total - grupo.progreso.completadas;
-            const avanzando = avanzandoOperacion === grupo.operacionId;
-            const pctProgreso =
-              grupo.progreso.total > 0
-                ? Math.round((grupo.progreso.completadas / grupo.progreso.total) * 100)
-                : 100;
+          {loading ? (
+            <div className="grid gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="motion-skeleton motion-skeleton-on-dark dash-card h-36 rounded-xl" />
+              ))}
+            </div>
+          ) : gruposOperacion.length === 0 ? (
+            <div className="dash-card rounded-xl px-4 py-10 text-center">
+              <Icon icon="lucide:check-circle-2" width={28} height={28} className="mx-auto text-emerald-300" />
+              <p className="mt-2 text-base font-semibold text-dash-fg">No hay tareas pendientes</p>
+              <p className="mx-auto mt-1 max-w-md text-sm text-dash-muted">
+                Las tareas se crean solas cuando una operación se registra o avanza de estado. Si esperabas ver
+                alguna, revisa los filtros de arriba.
+              </p>
+            </div>
+          ) : (
+            gruposOperacion.map((grupo) => {
+              const estadoStyle = getEstadoGrupoStyle(grupo.estadoOperacion);
+              const etiquetaEstadoActual = etiquetaEstado(grupo.estadoOperacion);
+              const puedeAvanzar = grupo.siguienteEstado !== null && !esEstadoCerrado(grupo.estadoOperacion);
+              const pendientesFase = grupo.progreso.total - grupo.progreso.completadas;
+              const avanzando = avanzandoOperacion === grupo.operacionId;
+              const pctProgreso =
+                grupo.progreso.total > 0
+                  ? Math.round((grupo.progreso.completadas / grupo.progreso.total) * 100)
+                  : 100;
 
-            return (
-              <section key={grupo.operacionId} className={moduleCard}>
-                <div className={moduleCardAccent} />
-                <div className="px-4 py-3 border-b border-brand-blue/10">
-                  <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <h2 className="text-lg font-bold text-brand-blue">{grupo.ref}</h2>
-                        {grupo.cliente && (
-                          <span className="text-base text-neutral-600 truncate max-w-[280px]">{grupo.cliente}</span>
-                        )}
-                        {estadoStyle && (
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-sm font-semibold ${estadoStyle.bg} ${estadoStyle.text} ${estadoStyle.border}`}
-                          >
-                            <span className={`h-1.5 w-1.5 rounded-full ${estadoStyle.dot}`} aria-hidden />
-                            {etiquetaEstadoActual}
-                          </span>
+              return (
+                <section key={grupo.operacionId} className="dash-card overflow-hidden rounded-xl">
+                  <div className="dash-section-head px-4 py-3">
+                    <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <h2 className="text-lg font-bold text-dash-neon">{grupo.ref}</h2>
+                          {grupo.cliente && (
+                            <span className="max-w-[280px] truncate text-sm text-dash-muted">{grupo.cliente}</span>
+                          )}
+                          {estadoStyle && (
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-sm font-semibold ${estadoStyle.bg} ${estadoStyle.text} ${estadoStyle.border}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${estadoStyle.dot}`} aria-hidden />
+                              {etiquetaEstadoActual}
+                            </span>
+                          )}
+                        </div>
+
+                        {grupo.progreso.total > 0 ? (
+                          <div className="mt-2 max-w-md">
+                            <div className="flex items-center justify-between gap-2 text-sm text-dash-muted">
+                              <span>
+                                {grupo.progreso.completadas} de {grupo.progreso.total} tareas de esta fase
+                              </span>
+                              <span className="font-semibold tabular-nums text-dash-fg">{pctProgreso}%</span>
+                            </div>
+                            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-dash-control">
+                              <div
+                                className="h-full rounded-full bg-dash-neon transition-all duration-300"
+                                style={{ width: `${pctProgreso}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-1.5 text-sm text-dash-muted">Sin tareas pendientes en esta fase</p>
                         )}
                       </div>
 
-                      {grupo.progreso.total > 0 ? (
-                        <div className="mt-2 max-w-md">
-                          <div className="flex items-center justify-between gap-2 text-sm text-neutral-600">
-                            <span>
-                              {grupo.progreso.completadas} de {grupo.progreso.total} tareas de esta fase
-                            </span>
-                            <span className="font-semibold tabular-nums">{pctProgreso}%</span>
-                          </div>
-                          <div className="mt-1 h-1.5 rounded-full bg-brand-blue/10 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-brand-blue transition-all duration-300"
-                              style={{ width: `${pctProgreso}%` }}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="mt-1.5 text-sm text-neutral-500">Sin tareas pendientes en esta fase</p>
+                      {grupo.siguienteEstado && (
+                        <button
+                          type="button"
+                          disabled={!puedeAvanzar || avanzando}
+                          title={
+                            pendientesFase > 0
+                              ? `Cierra ${pendientesFase} ${pendientesFase === 1 ? "tarea pendiente" : "tareas pendientes"} y avanza la operación`
+                              : "Avanza la operación al siguiente estado"
+                          }
+                          onClick={() => void avanzarOperacion(grupo)}
+                          className="dash-cta inline-flex shrink-0 items-center gap-1.5 px-3.5 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Icon icon="lucide:arrow-right-circle" width={15} height={15} />
+                          {avanzando
+                            ? "Avanzando..."
+                            : `Avanzar a ${etiquetaEstado(grupo.siguienteEstado)}`}
+                        </button>
                       )}
                     </div>
-
-                    {grupo.siguienteEstado && (
-                      <button
-                        type="button"
-                        disabled={!puedeAvanzar || avanzando}
-                        title={
-                          pendientesFase > 0
-                            ? `Cierra ${pendientesFase} ${pendientesFase === 1 ? "tarea pendiente" : "tareas pendientes"} y avanza la operación`
-                            : "Avanza la operación al siguiente estado"
-                        }
-                        onClick={() => void avanzarOperacion(grupo)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-base font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                      >
-                        <Icon icon="lucide:arrow-right-circle" width={15} height={15} />
-                        {avanzando
-                          ? "Avanzando..."
-                          : `Avanzar a ${etiquetaEstado(grupo.siguienteEstado)}`}
-                      </button>
-                    )}
                   </div>
-                </div>
 
-                <ul className="divide-y divide-brand-blue/10">
-                  {grupo.tareas.length === 0 ? (
-                    <li className="px-4 py-3 text-base text-emerald-700 bg-emerald-50/50">
-                      <Icon icon="lucide:check-circle-2" width={16} height={16} className="inline mr-1.5 -mt-0.5" />
-                      Todas las tareas de esta fase están listas. Avanza la operación para generar el siguiente
-                      lote.
-                    </li>
-                  ) : (
-                    grupo.tareas.map((t) => {
-                    const abierta = esTareaAbierta(t.estado);
-                    const ocupado = guardando === t.id;
-                    const urgencia = urgenciaTarea(t.estado, t.fecha_limite);
-                    const cfg = URGENCIA_STYLE[urgencia];
-
-                    return (
-                      <li key={t.id} className="px-4 py-3">
-                        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-base font-semibold text-brand-blue">{t.titulo}</p>
-
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-base text-neutral-600">
-                              <span className="inline-flex items-center gap-1">
-                                <Icon icon="lucide:user" width={12} height={12} />
-                                {nombreResponsable(t)}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <Icon icon="lucide:calendar" width={12} height={12} />
-                                {fmtFecha(t.fecha_limite)}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-sm font-semibold border ${cfg.badge}`}
-                              >
-                                {textoPlazo(t.fecha_limite)}
-                              </span>
-                              {t.estado_origen && (
-                                <span className="inline-flex items-center gap-1 text-sm text-neutral-500">
-                                  <Icon icon="lucide:git-branch" width={12} height={12} />
-                                  Se creó al pasar a {etiquetaEstado(t.estado_origen)}
-                                </span>
-                              )}
-                              {!abierta && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-sm font-semibold border bg-neutral-100 text-neutral-600 border-neutral-200">
-                                  {ESTADO_TAREA_ETIQUETA[t.estado]}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {abierta && (
-                            <div className="flex items-center gap-2 shrink-0">
-                              {t.estado !== "EN_CURSO" && (
-                                <button
-                                  type="button"
-                                  disabled={ocupado}
-                                  onClick={() => void cambiarEstado(t, "EN_CURSO")}
-                                  className={`${moduleBtnSecondary} disabled:opacity-50`}
-                                >
-                                  <Icon icon="lucide:play" width={13} height={13} />
-                                  En curso
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                disabled={ocupado}
-                                onClick={() => void cambiarEstado(t, "COMPLETADA")}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-base font-semibold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors disabled:opacity-50"
-                              >
-                                <Icon icon="lucide:check" width={13} height={13} />
-                                Completar
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                  <ul className="divide-y divide-dash-border">
+                    {grupo.tareas.length === 0 ? (
+                      <li className="bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                        <Icon
+                          icon="lucide:check-circle-2"
+                          width={16}
+                          height={16}
+                          className="-mt-0.5 mr-1.5 inline"
+                        />
+                        Todas las tareas de esta fase están listas. Avanza la operación para generar el siguiente
+                        lote.
                       </li>
-                    );
-                    })
-                  )}
-                </ul>
-              </section>
-            );
-          })
-        )}
-      </div>
-    </main>
+                    ) : (
+                      grupo.tareas.map((t) => {
+                        const abierta = esTareaAbierta(t.estado);
+                        const ocupado = guardando === t.id;
+                        const urgencia = urgenciaTarea(t.estado, t.fecha_limite);
+                        const cfg = URGENCIA_STYLE[urgencia];
+
+                        return (
+                          <li key={t.id} className="px-4 py-3">
+                            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-base font-semibold text-dash-fg">{t.titulo}</p>
+
+                                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-dash-muted">
+                                  <span className="inline-flex items-center gap-1">
+                                    <Icon icon="lucide:user" width={12} height={12} className="text-dash-neon" />
+                                    {nombreResponsable(t)}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <Icon icon="lucide:calendar" width={12} height={12} className="text-dash-neon" />
+                                    {fmtFecha(t.fecha_limite)}
+                                  </span>
+                                </div>
+
+                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-sm font-semibold ${cfg.badge}`}
+                                  >
+                                    {textoPlazo(t.fecha_limite)}
+                                  </span>
+                                  {t.estado_origen && (
+                                    <span className="inline-flex items-center gap-1 text-sm text-dash-muted">
+                                      <Icon icon="lucide:git-branch" width={12} height={12} />
+                                      Se creó al pasar a {etiquetaEstado(t.estado_origen)}
+                                    </span>
+                                  )}
+                                  {!abierta && (
+                                    <span className="inline-flex items-center rounded-md border border-dash-border bg-dash-control px-2 py-0.5 text-sm font-semibold text-dash-muted">
+                                      {ESTADO_TAREA_ETIQUETA[t.estado]}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {abierta && (
+                                <div className="flex shrink-0 items-center gap-2">
+                                  {t.estado !== "EN_CURSO" && (
+                                    <button
+                                      type="button"
+                                      disabled={ocupado}
+                                      onClick={() => void cambiarEstado(t, "EN_CURSO")}
+                                      className="dash-control inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-semibold disabled:opacity-50"
+                                    >
+                                      <Icon icon="lucide:play" width={13} height={13} />
+                                      En curso
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    disabled={ocupado}
+                                    onClick={() => void cambiarEstado(t, "COMPLETADA")}
+                                    className="dash-cta inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm disabled:opacity-50"
+                                  >
+                                    <Icon icon="lucide:check" width={13} height={13} />
+                                    Completar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                </section>
+              );
+            })
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

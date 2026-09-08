@@ -7,14 +7,14 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Combobox } from "@/components/ui/Combobox";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleCard,
-  moduleLabel,
-  moduleInput,
-  moduleBtnPrimary,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { FormSelect } from "@/components/ui/FormSelect";
+
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
+const neonLabel = "block text-sm font-semibold text-dash-muted mb-1.5";
+const neonCombo =
+  "dash-control w-full border border-dash-border rounded-lg text-sm text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -673,15 +673,13 @@ type FilaModalProps = {
 };
 
 function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaModalProps) {
+  const [theme] = useNeonTheme();
   const [f, setF] = useState(initial);
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
     setF(initial);
   }, [initial]);
-
-  const comboCls =
-    "w-full pl-2.5 pr-8 py-1.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white";
 
   const navieraOpts = useMemo(() => toComboOpts(mergeCurrent(catalog.navieras, f.naviera)), [catalog.navieras, f.naviera]);
   const polOpts = useMemo(() => toComboOpts(mergeCurrent(catalog.pol, f.pol)), [catalog.pol, f.pol]);
@@ -690,31 +688,32 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
   const t2Opts = useMemo(() => toComboOpts(mergeCurrent(catalog.transbordo, f.t2)), [catalog.transbordo, f.t2]);
   const monedaOpts = useMemo(() => mergeCurrent(catalog.monedas.length > 0 ? catalog.monedas : [...MONEDAS_FALLBACK], f.moneda), [catalog.monedas, f.moneda]);
 
-  const fieldCls = moduleInput;
-  const labelCls = moduleLabel;
+  const fieldCls = neonInput;
+  const labelCls = neonLabel;
+  const comboCls = neonCombo;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme} onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="dash-card w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-          <h3 className="font-semibold text-neutral-800">{f.id ? "Editar fila" : "Nueva fila"}</h3>
+        <div className="flex items-center justify-between border-b border-dash-border px-5 py-4">
+          <h3 className="font-semibold text-dash-fg">{f.id ? "Editar fila" : "Nueva fila"}</h3>
           <div className="flex items-center gap-2">
             {!disabled && (
               <button
                 type="button"
                 onClick={() => setF({ ...f, ...DEMO_FILA_SINGLE })}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                className="flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 transition-colors hover:bg-amber-500/20"
                 title="Rellenar con datos de prueba"
               >
                 <Icon icon="lucide:flask-conical" className="w-3 h-3" />
                 Datos de prueba
               </button>
             )}
-            <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100">
-              <Icon icon="lucide:x" className="w-4 h-4 text-neutral-500" />
+            <button type="button" onClick={onClose} className="rounded-lg p-1 text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg">
+              <Icon icon="lucide:x" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -730,6 +729,7 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
               placeholder="Buscar naviera…"
               disabled={disabled}
               className={comboCls}
+              neon
             />
           </div>
           <div>
@@ -741,6 +741,7 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
               placeholder="Puerto de carga…"
               disabled={disabled}
               className={comboCls}
+              neon
             />
           </div>
           <div>
@@ -752,17 +753,20 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
               placeholder="Puerto de destino…"
               disabled={disabled}
               className={comboCls}
+              neon
             />
           </div>
 
           {/* Tarifas */}
           <div>
             <label className={labelCls}>Moneda</label>
-            <select className={fieldCls} value={f.moneda} onChange={(e) => set("moneda", e.target.value)} disabled={disabled}>
-              {monedaOpts.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+            <FormSelect
+              variant="neon"
+              value={f.moneda}
+              disabled={disabled}
+              options={monedaOpts.map((m) => ({ value: m, label: m }))}
+              onChange={(v) => set("moneda", v || f.moneda)}
+            />
           </div>
           <div>
             <label className={labelCls}>Tarifa Pública</label>
@@ -801,6 +805,7 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
               placeholder="Puerto transbordo…"
               disabled={disabled}
               className={comboCls}
+              neon
             />
           </div>
           <div>
@@ -812,6 +817,7 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
               placeholder="Puerto transbordo…"
               disabled={disabled}
               className={comboCls}
+              neon
             />
           </div>
           <div>
@@ -850,15 +856,15 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-neutral-100 bg-neutral-50 rounded-b-2xl">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-neutral-600 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50">
+        <div className="flex justify-end gap-2 rounded-b-2xl border-t border-dash-border bg-dash-control/40 px-5 py-4">
+          <button type="button" onClick={onClose} className="rounded-lg border border-dash-border bg-dash-control px-4 py-2 text-sm font-semibold text-dash-fg hover:bg-dash-neon/15">
             Cancelar
           </button>
           <button
             type="button"
             onClick={() => onSave(f)}
             disabled={disabled}
-            className="px-4 py-2 text-sm text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 disabled:opacity-50 disabled:pointer-events-none"
+            className="dash-cta rounded-lg px-4 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
           >
             {f.id ? "Guardar cambios" : "Agregar fila"}
           </button>
@@ -872,6 +878,7 @@ function FilaModal({ fila: initial, catalog, disabled, onSave, onClose }: FilaMo
 
 export function TarifarioContent() {
   const { user, profile, isLoading, empresaNombres } = useAuth();
+  const [theme] = useNeonTheme();
   const canEdit = !!profile?.rol && ["superadmin", "admin", "ejecutivo"].includes(profile.rol);
   
   const hasAccess = !isLoading && user && canEdit;
@@ -1181,72 +1188,85 @@ export function TarifarioContent() {
   );
 
   // ── Shared styles ──────────────────────────────────────────────────────────
-  const inputCls = moduleInput;
-  const comboClsEditor =
-    "w-full pl-3.5 pr-8 py-3 text-base border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all";
-  const labelCls = moduleLabel;
+  const inputCls = neonInput;
+  const comboClsEditor = neonCombo;
+  const labelCls = neonLabel;
 
   // ─── Access Check ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue" />
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>Cargando…</span>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <Icon icon="lucide:lock" className="w-16 h-16 text-neutral-300 mb-4" />
-        <h2 className="text-xl font-semibold text-neutral-700 mb-2">Acceso Restringido</h2>
-        <p className="text-neutral-500 max-w-md">
-          Esta sección está disponible solo para usuarios con rol Ejecutivo, Admin o Superadmin.
-        </p>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card max-w-md rounded-xl px-6 py-8 text-center">
+            <Icon icon="lucide:lock" className="mx-auto mb-4 h-12 w-12 text-dash-muted" />
+            <h2 className="mb-2 text-lg font-semibold text-dash-fg">Acceso Restringido</h2>
+            <p className="text-sm text-dash-muted">
+              Esta sección está disponible solo para usuarios con rol Ejecutivo, Admin o Superadmin.
+            </p>
+          </div>
+        </main>
       </div>
     );
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className={`flex flex-col h-full overflow-hidden ${modulePageBg}`}>
-      {/* ── Hero ── */}
-      <div className={`flex-shrink-0 ${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-3.5 flex-1 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:file-spreadsheet" className="w-6 h-6 text-white" />
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+      </div>
+
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+              <Icon icon="lucide:file-spreadsheet" width={22} height={22} className="text-dash-neon" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">Tarifario</h1>
-              <p className="text-base text-white/75 mt-1">Gestiona tarifas de flete por cliente</p>
+              <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">Tarifario</h1>
+              <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">Gestiona tarifas de flete por cliente</p>
             </div>
           </div>
-          {/* Filtros */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <Icon icon="lucide:search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dash-muted" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar..."
-                className="pl-9 pr-3 py-2.5 text-base border border-white/25 bg-white/15 text-white placeholder:text-white/45 rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-white/30"
+                className="dash-control w-44 rounded-lg border border-dash-border py-2 pl-9 pr-3 text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
               />
             </div>
-            <select
-              value={filterCliente}
-              onChange={(e) => setFilterCliente(e.target.value)}
-              className="px-3 py-2.5 text-base border border-white/25 bg-white/15 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/30"
-            >
-              <option value="todos" className="text-neutral-800">Todos los clientes</option>
-              {clientes.map((c) => <option key={c} value={c} className="text-neutral-800">{c}</option>)}
-            </select>
+            <div className="min-w-[10rem]">
+              <FormSelect
+                variant="neon"
+                value={filterCliente === "todos" ? "" : filterCliente}
+                placeholder="Todos los clientes"
+                options={clientes.map((c) => ({ value: c, label: c }))}
+                onChange={(v) => setFilterCliente(v || "todos")}
+              />
+            </div>
           </div>
           {canEdit && (
             <button
               type="button"
               onClick={abrirNuevo}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-base font-semibold text-brand-blue bg-white rounded-lg hover:bg-white/95 transition-colors"
+              className="dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-sm"
             >
               <Icon icon="lucide:plus" className="w-4 h-4" />
               Nuevo tarifario
@@ -1255,18 +1275,18 @@ export function TarifarioContent() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto p-4">
+      <div className="relative z-10 min-h-0 flex-1 space-y-3 overflow-auto p-3 sm:p-4">
         {loading ? (
-          <div className="flex items-center justify-center h-40 gap-2 text-neutral-500">
-            <Icon icon="lucide:loader-circle" className="w-5 h-5 animate-spin text-brand-blue" />
-            <span className="text-base">Cargando tarifarios...</span>
+          <div className="dash-card flex h-40 items-center justify-center gap-2 rounded-xl text-sm text-dash-muted">
+            <Icon icon="lucide:loader-circle" className="h-5 w-5 animate-spin text-dash-neon" />
+            <span>Cargando tarifarios...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-60 gap-3 text-neutral-400">
-            <Icon icon="lucide:file-spreadsheet" className="w-12 h-12 opacity-30" />
-            <p className="text-base">No hay tarifarios{search ? " que coincidan" : " creados"}</p>
+          <div className="dash-card flex h-60 flex-col items-center justify-center gap-3 rounded-xl text-dash-muted">
+            <Icon icon="lucide:file-spreadsheet" className="h-12 w-12 opacity-30" />
+            <p className="text-sm">No hay tarifarios{search ? " que coincidan" : " creados"}</p>
             {canEdit && !search && (
-              <button onClick={abrirNuevo} className={`${moduleBtnPrimary} mt-1`}>
+              <button onClick={abrirNuevo} className="dash-cta mt-1 inline-flex items-center gap-1.5 px-4 py-2 text-sm">
                 Crear primer tarifario
               </button>
             )}
@@ -1276,25 +1296,25 @@ export function TarifarioContent() {
             {filtered.map((tar) => (
               <div
                 key={tar.id}
-                className={`${moduleCard} p-4 hover:shadow-md transition-shadow cursor-pointer group`}
+                className={`dash-card cursor-pointer rounded-xl border border-dash-border p-4 transition-all hover:border-dash-neon/35 group`}
                 onClick={() => void abrirEditar(tar)}
               >
                 {/* Cabecera card */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="p-1.5 rounded-lg bg-blue-50 flex-shrink-0">
-                      <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-brand-blue" />
+                    <span className="p-1.5 rounded-lg bg-dash-neon/15 flex-shrink-0">
+                      <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-dash-neon" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-neutral-800 truncate">{tar.cliente}</p>
-                      {tar.titulo && <p className="text-xs text-neutral-500 truncate">{tar.titulo}</p>}
+                      <p className="text-sm font-semibold text-dash-fg truncate">{tar.cliente}</p>
+                      {tar.titulo && <p className="text-xs text-dash-muted truncate">{tar.titulo}</p>}
                     </div>
                   </div>
                   {canEdit && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: tar.id, cliente: tar.cliente }); }}
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                      className="rounded p-1 text-dash-muted opacity-0 transition-all hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
                     >
                       <Icon icon="lucide:trash-2" className="w-3.5 h-3.5" />
                     </button>
@@ -1302,36 +1322,36 @@ export function TarifarioContent() {
                 </div>
 
                 {/* Info */}
-                <div className="space-y-1 text-xs text-neutral-600">
+                <div className="space-y-1 text-xs text-dash-muted">
                   {tar.servicio && (
                     <div className="flex items-center gap-1.5">
-                      <Icon icon="lucide:ship" className="w-3 h-3 text-neutral-400" />
+                      <Icon icon="lucide:ship" className="w-3 h-3 text-dash-muted" />
                       <span>{tar.servicio}</span>
                     </div>
                   )}
                   {tar.pol && (
                     <div className="flex items-center gap-1.5">
-                      <Icon icon="lucide:anchor" className="w-3 h-3 text-neutral-400" />
+                      <Icon icon="lucide:anchor" className="w-3 h-3 text-dash-muted" />
                       <span className="truncate">{tar.pol}</span>
                     </div>
                   )}
                   {tar.pod && (
                     <div className="flex items-center gap-1.5">
-                      <Icon icon="lucide:map-pin" className="w-3 h-3 text-neutral-400" />
+                      <Icon icon="lucide:map-pin" className="w-3 h-3 text-dash-muted" />
                       <span className="truncate">{tar.pod}</span>
                     </div>
                   )}
                   {tar.producto && (
                     <div className="flex items-center gap-1.5">
-                      <Icon icon="lucide:package" className="w-3 h-3 text-neutral-400" />
+                      <Icon icon="lucide:package" className="w-3 h-3 text-dash-muted" />
                       <span>{tar.producto}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Footer card */}
-                <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-neutral-400 flex-shrink-0">
+                <div className="mt-3 pt-2.5 border-t border-dash-border flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-dash-muted flex-shrink-0">
                     {format(new Date(tar.updated_at), "dd MMM yyyy", { locale: es })}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -1342,7 +1362,7 @@ export function TarifarioContent() {
                         const filasTarifario = await fetchFilas(tar.id, false);
                         void exportarExcel(tar, filasTarifario ?? []);
                       }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                      className="flex items-center gap-1 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-2.5 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/25"
                     >
                       <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
                       Excel
@@ -1354,7 +1374,7 @@ export function TarifarioContent() {
                         const filasTarifario = await fetchFilas(tar.id, false);
                         void exportarPDF(tar, filasTarifario ?? []);
                       }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border border-neutral-200 transition-colors"
+                      className="flex items-center gap-1 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1.5 text-xs font-medium text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
                     >
                       <Icon icon="lucide:printer" className="w-3.5 h-3.5" />
                       PDF
@@ -1369,20 +1389,24 @@ export function TarifarioContent() {
 
       {/* ── Editor modal ── */}
       {showEditor && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-stretch justify-end" onClick={() => !saving && setShowEditor(false)}>
+        <div className="dash-neon fixed inset-0 z-40 flex items-stretch justify-end bg-black/60 backdrop-blur-sm" data-theme={theme} onClick={() => !saving && setShowEditor(false)}>
           <div
-            className="w-full max-w-5xl bg-white h-full flex flex-col shadow-2xl overflow-hidden"
+            className="dash-card flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-none border-l border-dash-border"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header editor */}
-            <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-200 bg-brand-blue">
-              <div>
-                <h2 className="text-base font-semibold text-white">
-                  {editMode ? "Editar tarifario" : "Nuevo tarifario"}
-                </h2>
-                {editMode && selected && (
-                  <p className="text-xs text-white/70">{selected.cliente}</p>
-                )}
+            <div className="flex shrink-0 items-center justify-between border-b border-dash-border px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15">
+                  <Icon icon="lucide:file-spreadsheet" className="h-4 w-4 text-dash-neon" />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-dash-fg">
+                    {editMode ? "Editar tarifario" : "Nuevo tarifario"}
+                  </h2>
+                  {editMode && selected && (
+                    <p className="text-xs text-dash-muted">{selected.cliente}</p>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {editMode && selected && (
@@ -1390,7 +1414,7 @@ export function TarifarioContent() {
                     <button
                       type="button"
                       onClick={() => void exportarExcel(selected, filas)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-1.5 text-xs font-medium text-dash-fg transition-colors hover:bg-dash-neon/15"
                     >
                       <Icon icon="lucide:file-spreadsheet" className="w-3.5 h-3.5" />
                       Excel
@@ -1398,7 +1422,7 @@ export function TarifarioContent() {
                     <button
                       type="button"
                       onClick={() => void exportarPDF(selected, filas)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-1.5 text-xs font-medium text-dash-fg transition-colors hover:bg-dash-neon/15"
                     >
                       <Icon icon="lucide:printer" className="w-3.5 h-3.5" />
                       PDF
@@ -1408,7 +1432,7 @@ export function TarifarioContent() {
                 <button
                   type="button"
                   onClick={() => setShowEditor(false)}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white"
+                  className="rounded-lg p-1.5 text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg"
                 >
                   <Icon icon="lucide:x" className="w-4 h-4" />
                 </button>
@@ -1417,9 +1441,9 @@ export function TarifarioContent() {
 
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* ── Sección 1: Info general ── */}
-              <div className="px-5 py-4 border-b border-neutral-100">
+              <div className="px-5 py-4 border-b border-dash-border">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-dash-muted uppercase tracking-wider">
                     Información general
                   </h3>
                   {canEdit && (
@@ -1434,7 +1458,7 @@ export function TarifarioContent() {
                           orden: i,
                         })));
                       }}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                      className="flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 transition-colors hover:bg-amber-500/20"
                     >
                       <Icon icon="lucide:flask-conical" className="w-3 h-3" />
                       Datos de prueba
@@ -1451,6 +1475,7 @@ export function TarifarioContent() {
                       placeholder="Buscar cliente…"
                       disabled={!canEdit}
                       className={comboClsEditor}
+                      neon
                     />
                   </div>
                   <div>
@@ -1459,16 +1484,13 @@ export function TarifarioContent() {
                   </div>
                   <div>
                     <label className={labelCls}>Tipo de servicio</label>
-                    <select
-                      className={inputCls}
+                    <FormSelect
+                      variant="neon"
                       value={headerForm.servicio ?? ""}
-                      onChange={(e) => setHeaderForm((p) => ({ ...p, servicio: e.target.value }))}
                       disabled={!canEdit}
-                    >
-                      {mergeCurrent(serviciosCabeceraOpts, headerForm.servicio).map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
+                      options={mergeCurrent(serviciosCabeceraOpts, headerForm.servicio).map((s) => ({ value: s, label: s }))}
+                      onChange={(v) => setHeaderForm((p) => ({ ...p, servicio: v }))}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Puerto de carga (POL)</label>
@@ -1479,6 +1501,7 @@ export function TarifarioContent() {
                       placeholder="Puerto de carga…"
                       disabled={!canEdit}
                       className={comboClsEditor}
+                      neon
                     />
                   </div>
                   <div>
@@ -1490,6 +1513,7 @@ export function TarifarioContent() {
                       placeholder="Puerto de destino…"
                       disabled={!canEdit}
                       className={comboClsEditor}
+                      neon
                     />
                   </div>
                   <div>
@@ -1501,22 +1525,23 @@ export function TarifarioContent() {
                       placeholder="Especie / producto…"
                       disabled={!canEdit}
                       className={comboClsEditor}
+                      neon
                     />
                   </div>
                 </div>
               </div>
 
               {/* ── Sección 2: Filas de tarifas ── */}
-              <div className="px-5 py-4 border-b border-neutral-100">
+              <div className="px-5 py-4 border-b border-dash-border">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-dash-muted uppercase tracking-wider">
                     Tarifas ({filas.length} fila{filas.length !== 1 ? "s" : ""})
                   </h3>
                   {canEdit && (
                     <button
                       type="button"
                       onClick={() => setFilaModal({ fila: emptyFila(), index: null })}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5"
+                      className="flex items-center gap-1 rounded-lg border border-dash-neon/35 px-2.5 py-1 text-xs font-medium text-dash-neon hover:bg-dash-neon/10"
                     >
                       <Icon icon="lucide:plus" className="w-3.5 h-3.5" />
                       Agregar fila
@@ -1525,75 +1550,75 @@ export function TarifarioContent() {
                 </div>
 
                 {filas.length === 0 ? (
-                  <div className="border-2 border-dashed border-neutral-200 rounded-xl py-8 flex flex-col items-center gap-2 text-neutral-400">
+                  <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-dash-border py-8 text-dash-muted">
                     <Icon icon="lucide:table-2" className="w-8 h-8 opacity-40" />
                     <p className="text-sm">Sin filas de tarifas</p>
                     <button
                       type="button"
                       onClick={() => setFilaModal({ fila: emptyFila(), index: null })}
-                      className="px-3 py-1.5 text-xs text-brand-blue border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5"
+                      className="rounded-lg border border-dash-neon/35 px-3 py-1.5 text-xs text-dash-neon hover:bg-dash-neon/10"
                     >
                       Agregar primera fila
                     </button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-neutral-200">
+                  <div className="overflow-x-auto rounded-xl border border-dash-border">
                     <table className="w-full text-sm min-w-[900px]">
                       <thead>
-                        <tr className="bg-[#F4F8FC] border-b border-brand-blue/15">
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue w-6">#</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Naviera</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">POL</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">POD</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Pública</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Neta</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">VD</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">TT</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Servicio</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Desde</th>
-                          <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue">Hasta</th>
-                          {canEdit && <th className="px-2 py-2.5 text-center text-sm font-bold text-brand-blue w-20">Acc.</th>}
+                        <tr className="bg-dash-control/60 border-b border-dash-neon/20">
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon w-6">#</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">Naviera</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">POL</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">POD</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">Pública</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">Neta</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">VD</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">TT</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">Servicio</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">Desde</th>
+                          <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon">Hasta</th>
+                          {canEdit && <th className="px-2 py-2.5 text-center text-sm font-bold text-dash-neon w-20">Acc.</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {filas.map((f, i) => (
-                          <tr key={f.id ?? i} className={`border-t border-neutral-100 ${i % 2 === 0 ? "bg-white" : "bg-neutral-50/60"} hover:bg-blue-50/40 transition-colors`}>
-                            <td className="px-2 py-2 text-center text-neutral-400">{i + 1}</td>
-                            <td className="px-2 py-2 text-center font-medium text-neutral-800">{f.naviera || <span className="text-neutral-300">—</span>}</td>
-                            <td className="px-2 py-2 text-center text-neutral-600">{f.pol || <span className="text-neutral-300">—</span>}</td>
-                            <td className="px-2 py-2 text-center text-neutral-600">{f.pod || <span className="text-neutral-300">—</span>}</td>
-                            <td className="px-2 py-2 text-center font-medium text-neutral-800">
-                              {f.publica != null ? <>{f.moneda} {fmtNum(f.publica)}</> : <span className="text-neutral-300">—</span>}
+                          <tr key={f.id ?? i} className={`border-t border-dash-border transition-colors hover:bg-dash-neon/10 ${i % 2 === 0 ? "bg-transparent" : "bg-dash-control/30"}`}>
+                            <td className="px-2 py-2 text-center text-dash-muted">{i + 1}</td>
+                            <td className="px-2 py-2 text-center font-medium text-dash-fg">{f.naviera || <span className="text-dash-muted/50">—</span>}</td>
+                            <td className="px-2 py-2 text-center text-dash-muted">{f.pol || <span className="text-dash-muted/50">—</span>}</td>
+                            <td className="px-2 py-2 text-center text-dash-muted">{f.pod || <span className="text-dash-muted/50">—</span>}</td>
+                            <td className="px-2 py-2 text-center font-medium text-dash-fg">
+                              {f.publica != null ? <>{f.moneda} {fmtNum(f.publica)}</> : <span className="text-dash-muted/50">—</span>}
                             </td>
-                            <td className="px-2 py-2 text-center text-emerald-700 font-medium">
-                              {f.neta != null ? fmtNum(f.neta) : <span className="text-neutral-300">—</span>}
+                            <td className="px-2 py-2 text-center font-medium text-emerald-300">
+                              {f.neta != null ? fmtNum(f.neta) : <span className="text-dash-muted/50">—</span>}
                             </td>
-                            <td className="px-2 py-2 text-center text-neutral-600">
-                              {f.vd != null ? fmtNum(f.vd) : <span className="text-neutral-300">—</span>}
+                            <td className="px-2 py-2 text-center text-dash-muted">
+                              {f.vd != null ? fmtNum(f.vd) : <span className="text-dash-muted/50">—</span>}
                             </td>
-                            <td className="px-2 py-2 text-center text-neutral-600">
-                              {f.tt != null ? `${f.tt}d` : <span className="text-neutral-300">—</span>}
+                            <td className="px-2 py-2 text-center text-dash-muted">
+                              {f.tt != null ? `${f.tt}d` : <span className="text-dash-muted/50">—</span>}
                             </td>
                             <td className="px-2 py-2 text-center">
                               {f.servicio ? (
-                                <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">{f.servicio}</span>
-                              ) : <span className="text-neutral-300">—</span>}
+                                <span className="px-1.5 py-0.5 rounded bg-dash-neon/20 text-dash-neon font-medium">{f.servicio}</span>
+                              ) : <span className="text-dash-muted/50">—</span>}
                             </td>
-                            <td className="px-2 py-2 text-center text-neutral-500">{fmtDate(f.desde) || <span className="text-neutral-300">—</span>}</td>
-                            <td className="px-2 py-2 text-center text-neutral-500">{fmtDate(f.hasta) || <span className="text-neutral-300">—</span>}</td>
+                            <td className="px-2 py-2 text-center text-dash-muted">{fmtDate(f.desde) || <span className="text-dash-muted/50">—</span>}</td>
+                            <td className="px-2 py-2 text-center text-dash-muted">{fmtDate(f.hasta) || <span className="text-dash-muted/50">—</span>}</td>
                             {canEdit && (
                               <td className="px-2 py-2">
                                 <div className="flex items-center justify-center gap-0.5">
-                                  <button type="button" onClick={() => moverFila(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-neutral-200 disabled:opacity-30">
+                                  <button type="button" onClick={() => moverFila(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-dash-neon/20 disabled:opacity-30">
                                     <Icon icon="lucide:chevron-up" className="w-3 h-3" />
                                   </button>
-                                  <button type="button" onClick={() => moverFila(i, 1)} disabled={i === filas.length - 1} className="p-1 rounded hover:bg-neutral-200 disabled:opacity-30">
+                                  <button type="button" onClick={() => moverFila(i, 1)} disabled={i === filas.length - 1} className="p-1 rounded hover:bg-dash-neon/20 disabled:opacity-30">
                                     <Icon icon="lucide:chevron-down" className="w-3 h-3" />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setFilaModal({ fila: { ...f }, index: i })}
-                                    className="p-1 rounded hover:bg-blue-100 text-blue-600"
+                                    className="p-1 rounded hover:bg-dash-neon/20 text-dash-neon"
                                   >
                                     <Icon icon="lucide:pencil" className="w-3 h-3" />
                                   </button>
@@ -1617,7 +1642,7 @@ export function TarifarioContent() {
 
               {/* ── Sección 3: Notas al pie ── */}
               <div className="px-5 py-4">
-                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
+                <h3 className="text-xs font-semibold text-dash-muted uppercase tracking-wider mb-3">
                   Notas / Leyenda al pie
                 </h3>
                 <textarea
@@ -1625,17 +1650,17 @@ export function TarifarioContent() {
                   onChange={(e) => setHeaderForm((p) => ({ ...p, notas: e.target.value }))}
                   placeholder={`*FLETE + GASTOS LOCALES SON PAGADOS POR EXPORTADOR DIRECTO A LA NAVIERA\n**SITRANS $193725 // ...\n*Tarifa por contenedor (Fee ASLI) $200.000`}
                   disabled={!canEdit}
-                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xl min-h-[100px] resize-y focus:outline-none focus:ring-2 focus:ring-brand-blue/30 font-mono text-xs disabled:bg-neutral-50 disabled:text-neutral-500"
+                  className={`${neonInput} min-h-[100px] resize-y font-mono text-xs disabled:opacity-60`}
                 />
               </div>
             </div>
 
             {/* Footer editor */}
-            <div className="flex-shrink-0 px-5 py-3 border-t border-neutral-200 bg-neutral-50 flex items-center justify-between gap-3">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-dash-border bg-dash-control/40 px-5 py-3">
               <button
                 type="button"
                 onClick={() => setShowEditor(false)}
-                className="px-4 py-2 text-sm text-neutral-600 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50"
+                className="rounded-lg border border-dash-border bg-dash-control px-4 py-2 text-sm font-semibold text-dash-fg hover:bg-dash-neon/15"
               >
                 Cancelar
               </button>
@@ -1644,7 +1669,7 @@ export function TarifarioContent() {
                   type="button"
                   onClick={() => void handleSave()}
                   disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue/90 disabled:opacity-60"
+                  className="dash-cta flex items-center gap-2 px-5 py-2 text-sm font-medium disabled:opacity-60"
                 >
                   {saving ? (
                     <><Icon icon="lucide:loader-circle" className="w-4 h-4 animate-spin" /> Guardando...</>
@@ -1671,28 +1696,29 @@ export function TarifarioContent() {
 
       {/* ── Confirm delete ── */}
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="p-2 rounded-full bg-red-100">
-                <Icon icon="lucide:trash-2" className="w-5 h-5 text-red-500" />
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm rounded-2xl p-6">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="rounded-xl border border-red-400/35 bg-red-500/15 p-2">
+                <Icon icon="lucide:trash-2" className="h-5 w-5 text-red-400" />
               </span>
-              <h3 className="font-semibold text-neutral-800">Eliminar tarifario</h3>
+              <h3 className="font-semibold text-dash-fg">Eliminar tarifario</h3>
             </div>
-            <p className="text-sm text-neutral-600 mb-5">
-              ¿Eliminar el tarifario de <strong>{confirmDelete.cliente}</strong>? Esta acción no se puede deshacer.
+            <p className="mb-5 text-sm text-dash-muted">
+              ¿Eliminar el tarifario de <strong className="text-dash-fg">{confirmDelete.cliente}</strong>? Esta acción no se puede deshacer.
             </p>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 text-sm text-neutral-600 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50">
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-dash-border bg-dash-control px-4 py-2 text-sm font-semibold text-dash-fg hover:bg-dash-neon/15">
                 Cancelar
               </button>
-              <button onClick={() => void handleDelete(confirmDelete.id)} className="px-4 py-2 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600">
+              <button onClick={() => void handleDelete(confirmDelete.id)} className="rounded-lg border border-red-400/35 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/25">
                 Eliminar
               </button>
             </div>
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

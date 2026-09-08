@@ -12,6 +12,8 @@ type FormSelectProps = {
   placeholder?: string;
   disabled?: boolean;
   onChange: (value: string) => void;
+  /** Estilo neón (páginas dash-neon). El panel en portal respeta data-erp-neon. */
+  variant?: "default" | "neon";
 };
 
 export function FormSelect({
@@ -22,6 +24,7 @@ export function FormSelect({
   placeholder = "Seleccionar...",
   disabled,
   onChange,
+  variant = "default",
 }: FormSelectProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -31,6 +34,7 @@ export function FormSelect({
   const listId = `${id ?? uid}-list`;
   const selected = options.find((o) => o.value === value);
   const items = [{ value: "", label: placeholder }, ...options];
+  const neon = variant === "neon";
 
   const [portalStyle, setPortalStyle] = useState<React.CSSProperties>({});
 
@@ -91,6 +95,16 @@ export function FormSelect({
     }
   };
 
+  const btnClass = neon
+    ? `relative w-full min-h-[2.6rem] px-3 pr-10 rounded-lg border text-left text-base font-semibold transition-all erp-neon-control ${
+        open ? "ring-2 ring-[color-mix(in_srgb,var(--erp-neon)_40%,transparent)]" : ""
+      } ${selected ? "" : "opacity-80"} disabled:opacity-50 disabled:cursor-not-allowed`
+    : `relative w-full min-h-[2.6rem] px-3 pr-10 rounded-lg border text-left text-base font-semibold transition-all ${
+        open
+          ? "border-brand-blue bg-white ring-2 ring-brand-blue/25 shadow-sm"
+          : "border-brand-blue/20 bg-white hover:border-brand-blue/45 shadow-[0_1px_2px_rgba(17,34,78,0.06)]"
+      } ${selected ? "text-brand-blue" : "text-brand-blue/45"} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100`;
+
   return (
     <div className="relative min-w-0">
       <button
@@ -101,20 +115,20 @@ export function FormSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        onClick={() => { if (!disabled) setOpen((v) => !v); }}
+        onClick={() => {
+          if (!disabled) setOpen((v) => !v);
+        }}
         onKeyDown={onKeyDown}
-        className={`relative w-full min-h-[2.6rem] px-3 pr-10 rounded-lg border text-left text-base font-semibold transition-all ${
-          open
-            ? "border-brand-blue bg-white ring-2 ring-brand-blue/25 shadow-sm"
-            : "border-brand-blue/20 bg-white hover:border-brand-blue/45 shadow-[0_1px_2px_rgba(17,34,78,0.06)]"
-        } ${selected ? "text-brand-blue" : "text-brand-blue/45"} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100`}
+        className={btnClass}
       >
         <span className="block truncate">{selected?.label || placeholder}</span>
         <Icon
           icon="lucide:chevron-down"
           width={18}
           height={18}
-          className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-blue/50 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`absolute right-3.5 top-1/2 -translate-y-1/2 transition-transform ${
+            neon ? "text-[color:var(--erp-muted)]" : "text-brand-blue/50"
+          } ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && typeof document !== "undefined"
@@ -123,7 +137,11 @@ export function FormSelect({
               ref={listRef}
               id={listId}
               role="listbox"
-              className="rounded-xl border border-brand-blue/15 bg-white shadow-[0_16px_40px_rgba(17,34,78,0.18)] overflow-y-auto py-1.5"
+              className={
+                neon
+                  ? "erp-neon-panel rounded-xl border overflow-y-auto py-1.5 shadow-lg"
+                  : "rounded-xl border border-brand-blue/15 bg-white shadow-[0_16px_40px_rgba(17,34,78,0.18)] overflow-y-auto py-1.5"
+              }
               style={portalStyle}
             >
               {items.map((item, idx) => {
@@ -140,18 +158,24 @@ export function FormSelect({
                       e.preventDefault();
                       choose(item.value);
                     }}
-                    className={`w-full px-4 py-2.5 text-left text-base font-medium truncate ${
-                      hi || active
-                        ? "bg-brand-blue text-white"
-                        : "text-brand-blue hover:bg-[#EEF3FA]"
-                    }`}
+                    className={
+                      neon
+                        ? `w-full px-4 py-2.5 text-left text-base font-medium truncate ${
+                            hi || active ? "erp-neon-option-active" : "erp-neon-option"
+                          }`
+                        : `w-full px-4 py-2.5 text-left text-base font-medium truncate ${
+                            hi || active
+                              ? "bg-brand-blue text-white"
+                              : "text-brand-blue hover:bg-[#EEF3FA]"
+                          }`
+                    }
                   >
                     {item.label}
                   </button>
                 );
               })}
             </div>,
-            document.body
+            document.body,
           )
         : null}
     </div>

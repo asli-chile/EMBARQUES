@@ -21,13 +21,14 @@ import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
 const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 44px" };
 
 const FILTER_FIELD =
-  "w-full px-2.5 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all";
-const FILTER_LABEL = "block text-[10px] font-bold uppercase tracking-wider text-brand-blue/50 mb-1";
+  "dash-control w-full px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40";
+const FILTER_LABEL = "mb-1 block text-[10px] font-bold uppercase tracking-wider text-dash-muted";
 
 type SvgProps = { size?: number; className?: string };
 
@@ -155,7 +156,7 @@ function VentanaBadge({ value }: { value: string | null | undefined }) {
       </span>
     );
   }
-  return <span className="text-brand-blue/30 text-xs">—</span>;
+  return <span className="text-dash-muted text-xs">—</span>;
 }
 
 function ventanaLabel(value: string | null | undefined): string {
@@ -184,14 +185,14 @@ function EmptyInlineCell({ value, canEdit, addLabel, saving, onSave }: EmptyInli
 
   if (!isBlank(value)) {
     return (
-      <span className="text-[13px] text-brand-blue/80 font-medium truncate block max-w-full" title={String(value)}>
+      <span className="text-[13px] text-dash-fg/90 font-medium truncate block max-w-full" title={String(value)}>
         {value}
       </span>
     );
   }
 
   if (!canEdit) {
-    return <span className="text-brand-blue/30 text-xs">—</span>;
+    return <span className="text-dash-muted text-xs">—</span>;
   }
 
   if (!editing) {
@@ -203,7 +204,7 @@ function EmptyInlineCell({ value, canEdit, addLabel, saving, onSave }: EmptyInli
           setDraft("");
           setEditing(true);
         }}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-brand-blue/55 border border-dashed border-brand-blue/30 hover:border-brand-blue/50 hover:text-brand-blue hover:bg-brand-blue/5 transition-colors"
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-dash-muted border border-dashed border-dash-neon/35 hover:border-dash-neon/50 hover:text-dash-fg hover:bg-dash-neon/10 transition-colors"
         title={addLabel}
       >
         <Icon icon="lucide:pencil" width={12} height={12} />
@@ -242,7 +243,7 @@ function EmptyInlineCell({ value, canEdit, addLabel, saving, onSave }: EmptyInli
           setEditing(false);
         }
       }}
-      className="w-full min-w-[6rem] max-w-[11rem] px-2 py-1 rounded-md border border-brand-blue/35 text-[12px] font-semibold text-brand-blue bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/25"
+      className="dash-control w-full min-w-[6rem] max-w-[11rem] px-2 py-1 text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
       placeholder={addLabel}
     />
   );
@@ -251,8 +252,8 @@ function EmptyInlineCell({ value, canEdit, addLabel, saving, onSave }: EmptyInli
 function CardDetail({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[9px] font-bold uppercase tracking-wider text-brand-blue/45">{label}</p>
-      <p className="text-xs font-semibold text-brand-blue leading-snug break-words mt-0.5">{value}</p>
+      <p className="text-[9px] font-bold uppercase tracking-wider text-dash-muted">{label}</p>
+      <p className="text-xs font-semibold text-dash-fg leading-snug break-words mt-0.5">{value}</p>
     </div>
   );
 }
@@ -351,18 +352,18 @@ type SortableHeaderProps = {
 function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className={`sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 whitespace-nowrap border-b border-brand-blue/15 text-center ${className ?? ""}`}>
+    <th className={`sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 whitespace-nowrap border-b border-dash-border text-center backdrop-blur-sm ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
         className={`inline-flex items-center justify-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-          isActive ? "text-brand-blue" : "text-brand-blue/45 hover:text-brand-blue"
+          isActive ? "text-dash-neon" : "text-dash-muted hover:text-dash-fg"
         }`}
       >
         {label}
         <span className="flex flex-col gap-px">
-          <Icon icon="typcn:arrow-sorted-up" width={10} height={10} className={isActive && sortDirection === "asc" ? "text-brand-blue" : "text-brand-blue/20"} />
-          <Icon icon="typcn:arrow-sorted-down" width={10} height={10} className={isActive && sortDirection === "desc" ? "text-brand-blue" : "text-brand-blue/20"} />
+          <Icon icon="typcn:arrow-sorted-up" width={10} height={10} className={isActive && sortDirection === "asc" ? "text-dash-neon" : "text-dash-muted/40"} />
+          <Icon icon="typcn:arrow-sorted-down" width={10} height={10} className={isActive && sortDirection === "desc" ? "text-dash-neon" : "text-dash-muted/40"} />
         </span>
       </button>
     </th>
@@ -398,30 +399,30 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
     <div
       onClick={!isCliente ? () => onSelect(op.id) : undefined}
       onContextMenu={(event) => onContextMenu(event, op)}
-      className={`relative bg-white rounded-xl flex flex-col overflow-hidden transition-all duration-150 border ${
+      className={`relative dash-card rounded-xl flex flex-col overflow-hidden transition-all duration-150 border ${
         !isCliente ? "cursor-pointer" : ""
       } ${
         selected
-          ? "border-brand-blue ring-2 ring-brand-blue/20 shadow-md"
-          : "border-brand-blue/12 hover:border-brand-blue/30 hover:shadow-sm"
+          ? "border-dash-neon/50 ring-2 ring-dash-neon/25 shadow-md"
+          : "border-dash-border hover:border-dash-neon/35 hover:shadow-sm"
       }`}
     >
-      <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg ? cfg.dot : "bg-brand-blue"}`} aria-hidden />
+      <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg ? cfg.dot : "bg-dash-neon/25"}`} aria-hidden />
 
       <div className="pl-4 pr-3 pt-3 pb-2 flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 min-w-0">
           {!isCliente && (
-            <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-              selected ? "bg-brand-blue border-brand-blue" : "border-brand-blue/30 bg-white"
+            <div className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-all ${
+              selected ? "border-dash-neon/50 bg-dash-neon/30" : "border-dash-neon/35 bg-dash-control"
             }`}>
-              {selected && <Icon icon="lucide:check" width={10} height={10} className="text-white" />}
+              {selected && <Icon icon="lucide:check" width={10} height={10} className="text-dash-neon" />}
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-sm font-bold text-brand-blue leading-tight tabular-nums tracking-tight">
+            <p className="text-sm font-bold text-dash-fg leading-tight tabular-nums tracking-tight">
               {displayRefAsli(op.ref_asli, op.correlativo)}
             </p>
-            <p className="text-xs text-brand-blue/65 truncate mt-0.5 font-medium">{op.cliente ?? "-"}</p>
+            <p className="text-xs text-dash-muted truncate mt-0.5 font-medium">{op.cliente ?? "-"}</p>
           </div>
         </div>
         {cfg && (
@@ -438,46 +439,46 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
         </div>
       ) : null}
 
-      <div className="mx-3 mb-2.5 bg-[#F4F8FC] rounded-lg px-3 py-2.5">
+      <div className="mx-3 mb-2.5 bg-dash-control rounded-lg px-3 py-2.5">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-blue/45">{tr.cardOrigin}</p>
-            <p className="text-sm font-bold text-brand-blue truncate leading-tight">{op.pol ?? "-"}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-dash-muted">{tr.cardOrigin}</p>
+            <p className="text-sm font-bold text-dash-fg truncate leading-tight">{op.pol ?? "-"}</p>
           </div>
           <div className="flex flex-col items-center gap-0.5 shrink-0">
-            <div className="w-10 h-px bg-brand-blue/20" />
+            <div className="w-10 h-px bg-dash-neon/25" />
             {op.tt !== null ? (
-              <span className="text-[10px] font-bold text-brand-blue tabular-nums">{op.tt}d</span>
+              <span className="text-[10px] font-bold text-dash-fg tabular-nums">{op.tt}d</span>
             ) : (
-              <Icon icon="lucide:arrow-right" width={12} height={12} className="text-brand-blue/30" />
+              <Icon icon="lucide:arrow-right" width={12} height={12} className="text-dash-muted" />
             )}
-            <div className="w-10 h-px bg-brand-blue/20" />
+            <div className="w-10 h-px bg-dash-neon/25" />
           </div>
           <div className="flex-1 min-w-0 text-right">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-brand-blue/45">{tr.cardDestino}</p>
-            <p className="text-sm font-bold text-brand-blue truncate leading-tight">{op.pod ?? "-"}</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-dash-muted">{tr.cardDestino}</p>
+            <p className="text-sm font-bold text-dash-fg truncate leading-tight">{op.pod ?? "-"}</p>
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between text-[11px] tabular-nums">
-          <span className="text-brand-blue/50">ETD <span className="font-semibold text-brand-blue">{fmtDate(op.etd)}</span></span>
-          <span className="text-brand-blue/50">ETA <span className="font-semibold text-brand-blue">{fmtDate(op.eta)}</span></span>
+          <span className="text-dash-muted">ETD <span className="font-semibold text-dash-fg">{fmtDate(op.etd)}</span></span>
+          <span className="text-dash-muted">ETA <span className="font-semibold text-dash-fg">{fmtDate(op.eta)}</span></span>
         </div>
       </div>
 
       <div className="px-3 pb-2 flex-1 space-y-1 text-xs">
         {(op.naviera || op.nave) && (
-          <p className="text-brand-blue/80 truncate">
+          <p className="text-dash-fg/90 truncate">
             <span className="font-semibold">{op.naviera ?? "-"}</span>
-            {op.nave ? <span className="text-brand-blue/50"> · {op.nave}</span> : null}
+            {op.nave ? <span className="text-dash-muted"> · {op.nave}</span> : null}
           </p>
         )}
         {op.especie && (
-          <p className="text-brand-blue/60 truncate">{op.especie}</p>
+          <p className="text-dash-muted truncate">{op.especie}</p>
         )}
       </div>
 
       {expanded && (
-        <div className="mx-3 mb-2.5 rounded-lg border border-brand-blue/12 bg-white px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
+        <div className="mx-3 mb-2.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
           <CardDetail label={tr.colRefExterna} value={op.referencia_externa || "—"} />
           <CardDetail label={tr.colBooking} value={op.booking || "—"} />
           <CardDetail label={tr.colContainer} value={op.contenedor || "—"} />
@@ -518,13 +519,13 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
           setExpanded((open) => !open);
         }}
         aria-expanded={expanded}
-        className="mx-3 mb-2 inline-flex items-center justify-center gap-1 rounded-lg border border-brand-blue/15 bg-[#F4F8FC] px-2.5 py-1.5 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/8 hover:border-brand-blue/25 transition-colors"
+        className="mx-3 mb-2 inline-flex items-center justify-center gap-1 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1.5 text-[11px] font-semibold text-dash-fg hover:bg-dash-neon/15 hover:border-dash-neon/35 transition-colors"
       >
         {expanded ? tr.cardHideDetails : tr.cardShowDetails}
         <Icon icon={expanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} />
       </button>
 
-      <div className="px-2.5 py-1.5 border-t border-brand-blue/8 flex items-center justify-between bg-[#F7FAFD]">
+      <div className="px-2.5 py-1.5 border-t border-dash-border flex items-center justify-between bg-dash-control/40">
         {!isCliente ? (
           <button
             type="button"
@@ -534,7 +535,7 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : op.booking
                 ? "bg-amber-50 text-amber-700 border-amber-200"
-                : "bg-white text-brand-blue/40 border-dashed border-brand-blue/25"
+                : "bg-dash-control text-dash-muted border-dashed border-dash-neon/35"
             }`}
             title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
           >
@@ -542,13 +543,13 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
             <span className="font-mono truncate">{op.booking ?? tr.confirmShort}</span>
           </button>
         ) : (
-          <span className="font-mono text-[11px] text-brand-blue/70 truncate max-w-[58%]">{op.booking || "—"}</span>
+          <span className="font-mono text-[11px] text-dash-muted truncate max-w-[58%]">{op.booking || "—"}</span>
         )}
         <div className="flex items-center">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-brand-blue/40 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.copyTitle}>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors" title={tr.copyTitle}>
             <IcoCopy size={16} />
           </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-brand-blue/40 hover:text-brand-blue hover:bg-brand-blue/8 rounded-lg transition-colors" title={tr.emailTitle}>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors" title={tr.emailTitle}>
             <IcoMail size={16} />
           </button>
         </div>
@@ -607,19 +608,19 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
     <tr
       style={ROW_CV}
       onContextMenu={(event) => onContextMenu(event, op)}
-      className={`border-b border-brand-blue/[0.07] ${
-        selected ? "bg-brand-blue/[0.08]" : idx % 2 === 0 ? "bg-white hover:bg-brand-blue/[0.04]" : "bg-[#F7FAFD] hover:bg-brand-blue/[0.04]"
+      className={`border-b border-dash-border ${
+        selected ? "bg-dash-neon/15" : idx % 2 === 0 ? "bg-transparent hover:bg-dash-neon/10" : "bg-dash-control/30 hover:bg-dash-neon/10"
       }`}
     >
       {!isCliente && (
         <td className="relative px-3 py-2 text-center w-10">
           {cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
-          <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
+          <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-[var(--dash-neon)]" />
         </td>
       )}
       <td className={`px-3 py-2 text-center ${isCliente ? "relative" : ""}`}>
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
-        <span className="font-bold text-brand-blue text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
+        <span className="font-bold text-dash-fg text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
       </td>
       <td className="px-3 py-2 text-center max-w-[9rem]">
         <EmptyInlineCell
@@ -640,7 +641,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                   : op.booking
                   ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                  : "bg-white text-neutral-400 border-neutral-200 border-dashed hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50"
+                  : "bg-dash-control text-dash-muted border-dash-border border-dashed hover:border-amber-400/60 hover:text-amber-500 hover:bg-amber-500/10"
               }`}
               title={op.booking ? editBookingTitle : confirmBookingTitle}
             >
@@ -655,7 +656,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           </div>
         ) : (
           <div className="inline-flex items-center gap-1">
-            <span className="text-[12px] font-mono text-brand-blue/80">{op.booking || "—"}</span>
+            <span className="text-[12px] font-mono text-dash-fg/90">{op.booking || "—"}</span>
             {op.booking_doc_url && (
               <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
                 <IcoPaperclip size={12} />
@@ -666,14 +667,14 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       </td>
       <td className="px-3 py-2 text-center whitespace-nowrap">
         {op.contenedor ? (
-          <span className="text-[12px] font-mono font-semibold text-brand-blue tracking-tight">{op.contenedor}</span>
+          <span className="text-[12px] font-mono font-semibold text-dash-fg tracking-tight">{op.contenedor}</span>
         ) : (
-          <span className="text-brand-blue/30 text-xs">—</span>
+          <span className="text-dash-muted text-xs">—</span>
         )}
       </td>
-      <td className="px-3 py-2 text-center text-[13px] text-brand-blue font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
-      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 max-w-[8rem] truncate">{op.especie || "—"}</td>
-      <td className="px-3 py-2 text-center text-[13px] text-brand-blue/75 whitespace-nowrap">{op.naviera || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-dash-fg font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-dash-muted max-w-[8rem] truncate">{op.especie || "—"}</td>
+      <td className="px-3 py-2 text-center text-[13px] text-dash-muted whitespace-nowrap">{op.naviera || "—"}</td>
       <td className="px-3 py-2 text-center max-w-[9rem]">
         <EmptyInlineCell
           value={op.nave}
@@ -698,12 +699,12 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           onSave={(next) => onInlineSave(op, "pod", next)}
         />
       </td>
-      <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
-      <td className="px-3 py-2 text-center text-[12px] text-brand-blue font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
+      <td className="px-3 py-2 text-center text-[12px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
+      <td className="px-3 py-2 text-center text-[12px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
       <td className="px-3 py-2 text-center">
         {op.tt !== null ? (
-          <span className="text-[11px] font-bold text-brand-blue tabular-nums">{op.tt}d</span>
-        ) : <span className="text-brand-blue/30 text-xs">—</span>}
+          <span className="text-[11px] font-bold text-dash-fg tabular-nums">{op.tt}d</span>
+        ) : <span className="text-dash-muted text-xs">—</span>}
       </td>
       <td className="px-3 py-2 text-center">
         <VentanaBadge value={op.solicitud_ventana} />
@@ -714,11 +715,11 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
             {etiquetaEstado(op.estado_operacion)}
           </span>
-        ) : <span className="text-brand-blue/30 text-xs">—</span>}
+        ) : <span className="text-dash-muted text-xs">—</span>}
       </td>
       <td className="px-3 py-2 text-center">
         {op.tipo_reserva_transporte === "asli" ? (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-dash-neon/15 text-dash-fg border border-dash-border">
             ASLI
           </span>
         ) : op.tipo_reserva_transporte === "externa" ? (
@@ -726,17 +727,17 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
             {typeExternal}
           </span>
         ) : (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-transparent text-brand-blue/40 border border-dashed border-brand-blue/20">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-transparent text-dash-muted border border-dashed border-dash-border">
             {typePendiente}
           </span>
         )}
       </td>
       <td className="px-2 py-2 text-center">
         <div className="flex items-center justify-center">
-          <button type="button" onClick={() => onCopy(op)} className="p-1.5 text-brand-blue/35 hover:text-brand-blue hover:bg-brand-blue/8 rounded-md" title={copyShort}>
+          <button type="button" onClick={() => onCopy(op)} className="p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-md" title={copyShort}>
             <IcoCopy size={15} />
           </button>
-          <button type="button" onClick={() => onEmail(op)} className="p-1.5 text-brand-blue/35 hover:text-brand-blue hover:bg-brand-blue/8 rounded-md" title={emailTitle}>
+          <button type="button" onClick={() => onEmail(op)} className="p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-md" title={emailTitle}>
             <IcoMail size={15} />
           </button>
         </div>
@@ -750,6 +751,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
 function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
   const { t } = useLocale();
   const tr = t.misReservas;
+  const [theme] = useNeonTheme();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -770,43 +772,43 @@ function EmailModal({ op, onClose }: { op: Operacion; onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-      <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sent ? "bg-emerald-100 border border-emerald-200" : "bg-brand-blue/10 border border-brand-blue/20"}`}>
-            <Icon icon={sent ? "lucide:check-circle" : "lucide:mail"} width={20} height={20} className={sent ? "text-emerald-600" : "text-brand-blue"} />
+    <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+      <div className="dash-card motion-enter-lift w-full max-w-sm rounded-2xl p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${sent ? "border-emerald-400/35 bg-emerald-500/15" : "border-dash-neon/35 bg-dash-neon/15"}`}>
+            <Icon icon={sent ? "lucide:check-circle" : "lucide:mail"} width={20} height={20} className={sent ? "text-emerald-300" : "text-dash-neon"} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">{sent ? tr.emailSentTitle : tr.emailSendTitle}</h3>
-            <p className="text-xs text-neutral-500">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
+            <h3 className="text-sm font-bold text-dash-fg">{sent ? tr.emailSentTitle : tr.emailSendTitle}</h3>
+            <p className="text-xs text-dash-muted">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
           </div>
         </div>
 
-        {error && <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>}
+        {error && <div className="mb-3 rounded-lg border border-red-400/35 bg-red-500/15 p-2.5 text-xs text-dash-fg">{error}</div>}
 
         {sent ? (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-400/35 bg-emerald-500/15 p-3 text-xs text-emerald-300">
             <Icon icon="lucide:send" width={14} height={14} className="shrink-0" />
             Correo enviado a <strong>roodericus7@gmail.com</strong> desde tu cuenta.
           </div>
         ) : (
           <div className="mb-4 space-y-2">
-            <p className="text-xs text-neutral-600">El correo se enviará desde tu cuenta <strong>@asli.cl</strong> a <strong>roodericus7@gmail.com</strong>.</p>
-            <div className="px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
-              <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1">{tr.emailSubject}</p>
-              <p className="text-xs text-neutral-700 font-medium leading-snug line-clamp-2">{subject}</p>
+            <p className="text-xs text-dash-muted">El correo se enviará desde tu cuenta <strong className="text-dash-fg">@asli.cl</strong> a <strong className="text-dash-fg">roodericus7@gmail.com</strong>.</p>
+            <div className="rounded-lg border border-dash-border bg-dash-control/70 px-3 py-2">
+              <p className="mb-1 text-[10px] font-semibold uppercase text-dash-muted">{tr.emailSubject}</p>
+              <p className="line-clamp-2 text-xs font-medium leading-snug text-dash-fg">{subject}</p>
             </div>
           </div>
         )}
 
         <div className="flex gap-2">
           <button type="button" onClick={onClose} disabled={sending}
-            className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60">
+            className="dash-control flex-1 px-4 py-2.5 text-xs font-semibold disabled:opacity-60">
             {sent ? tr.close : tr.cancel}
           </button>
           {!sent && (
           <button type="button" onClick={() => void handleEnviar()} disabled={sending}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 transition-colors font-semibold text-xs shadow-md shadow-brand-blue/20 disabled:opacity-60">
+            className="dash-cta flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs disabled:opacity-60">
             {sending
               ? <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />{tr.sending}</>
               : <><Icon icon="lucide:send" width={14} height={14} />{tr.sendFromAccount}</>
@@ -831,6 +833,7 @@ type BookingModalProps = {
 function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
   const { t } = useLocale();
   const tr = t.misReservas;
+  const [theme] = useNeonTheme();
   const [bookingInput, setBookingInput] = useState(op.booking ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -879,27 +882,27 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
   const hasDoc = !!op.booking_doc_url;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
-      <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 w-full max-w-sm overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-amber-400 to-amber-500" />
+    <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+      <div className="dash-card motion-enter-lift w-full max-w-sm overflow-hidden rounded-2xl">
+        <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-              <Icon icon="lucide:bookmark-check" width={20} height={20} className="text-amber-600" />
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/35 bg-amber-500/15">
+              <Icon icon="lucide:bookmark-check" width={20} height={20} className="text-amber-300" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-neutral-900">{tr.confirmBookingModal}</h3>
-              <p className="text-xs text-neutral-500">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
+              <h3 className="text-sm font-bold text-dash-fg">{tr.confirmBookingModal}</h3>
+              <p className="text-xs text-dash-muted">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
             </div>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>
+            <div className="mb-4 rounded-xl border border-red-400/35 bg-red-500/15 p-3 text-xs text-dash-fg">{error}</div>
           )}
 
           {/* Número de booking */}
           <div className="mb-4">
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
               {tr.bookingNumberLabel}
             </label>
             <input
@@ -907,36 +910,36 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               value={bookingInput}
               onChange={(e) => setBookingInput(e.target.value)}
               placeholder="Ej: ABC123456"
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 bg-neutral-50 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 focus:bg-white transition-all"
+              className="dash-control w-full px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
             />
           </div>
 
           {/* Documento */}
           <div className="mb-5">
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
               {tr.bookingDocFieldLabel}
             </label>
 
             {hasDoc && !file && (
-              <div className="flex items-center gap-2 mb-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
-                <Icon icon="lucide:paperclip" width={14} height={14} className="text-emerald-600 shrink-0" />
-                <span className="text-xs text-emerald-700 font-medium flex-1 truncate">{tr.docAttached}</span>
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-400/35 bg-emerald-500/15 p-2.5">
+                <Icon icon="lucide:paperclip" width={14} height={14} className="shrink-0 text-emerald-300" />
+                <span className="flex-1 truncate text-xs font-medium text-emerald-300">{tr.docAttached}</span>
                 <a
                   href={op.booking_doc_url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-emerald-600 hover:underline font-semibold shrink-0"
+                  className="shrink-0 text-xs font-semibold text-emerald-300 hover:underline"
                 >
                   {tr.view}
                 </a>
               </div>
             )}
 
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
+            <label className="group flex cursor-pointer items-center gap-2">
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                 file
-                  ? "border-amber-300 bg-amber-50 text-amber-700"
-                  : "border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 hover:bg-neutral-100"
+                  ? "border-amber-400/40 bg-amber-500/15 text-dash-fg"
+                  : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40 hover:text-dash-fg"
               }`}>
                 <Icon icon={file ? "lucide:file-check" : "lucide:upload"} width={14} height={14} />
                 {file ? file.name : (hasDoc ? tr.replaceDoc : tr.uploadDoc)}
@@ -952,7 +955,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               <button
                 type="button"
                 onClick={() => setFile(null)}
-                className="mt-1.5 text-xs text-neutral-400 hover:text-red-500 transition-colors"
+                className="mt-1.5 text-xs text-dash-muted transition-colors hover:text-red-300"
               >
                 {tr.removeFile}
               </button>
@@ -964,7 +967,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               type="button"
               onClick={onClose}
               disabled={uploading}
-              className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60"
+              className="dash-control flex-1 px-4 py-2.5 text-xs font-semibold disabled:opacity-60"
             >
               {tr.cancel}
             </button>
@@ -972,7 +975,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
               type="button"
               onClick={() => void handleSave()}
               disabled={uploading || (!bookingInput.trim() && !file)}
-              className="flex-1 px-4 py-2.5 text-xs font-semibold bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+              className="dash-cta inline-flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
             >
               {uploading ? (
                 <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />{tr.saving}</>
@@ -992,6 +995,7 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
 export function MisReservasContent() {
   const { t } = useLocale();
   const { isCliente, isEjecutivo, isStaff, empresaNombres, isLoading: authLoading, user, profile } = useAuth();
+  const [theme] = useNeonTheme();
   const canInlineEdit = isEjecutivo || isStaff;
   const tr = t.misReservas;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
@@ -1342,32 +1346,36 @@ export function MisReservasContent() {
 
   if (loading) {
     return (
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[#D9E3F2]" role="main">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex items-center gap-2.5 px-5 py-3.5 bg-[#F4F8FC] rounded-lg border border-brand-blue/15 shadow-mac-modal text-brand-blue text-base font-medium">
-            <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin text-brand-blue" />
-            <span>{tr.loading}</span>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+          <div className="flex flex-1 items-center justify-center">
+            <div className="dash-card flex items-center gap-2.5 rounded-xl border border-dash-border px-5 py-3.5 text-base font-medium text-dash-fg">
+              <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+              <span>{tr.loading}</span>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     );
   }
 
   if ((isCliente || isEjecutivo) && empresaNombres.length === 0) {
     return (
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[#D9E3F2]" role="main">
-        <div className="flex-1 flex items-center justify-center px-4">
-          <div className="max-w-md text-center px-6 py-8 bg-[#F4F8FC] rounded-xl border border-brand-blue/15 shadow-mac-modal">
-            <Icon icon="lucide:building-2" className="mx-auto mb-3 text-brand-blue/50" width={40} height={40} />
-            <p className="text-brand-blue font-semibold text-lg mb-2">Sin empresa asignada</p>
-            <p className="text-brand-blue/70 text-sm">
-              {isEjecutivo
-                ? "Aún no tienes clientes asignados. Un administrador debe asignártelos en Configuración → Asignar ejecutivos a clientes."
-                : "Tu usuario cliente aún no tiene una empresa vinculada. Un administrador debe asignarte en Configuración → Asignar clientes-empresas."}
-            </p>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+          <div className="flex flex-1 items-center justify-center px-4">
+            <div className="dash-card max-w-md rounded-xl px-6 py-8 text-center">
+              <Icon icon="lucide:building-2" className="mx-auto mb-3 text-dash-muted" width={40} height={40} />
+              <p className="mb-2 text-lg font-semibold text-dash-fg">Sin empresa asignada</p>
+              <p className="text-sm text-dash-muted">
+                {isEjecutivo
+                  ? "Aún no tienes clientes asignados. Un administrador debe asignártelos en Configuración → Asignar ejecutivos a clientes."
+                  : "Tu usuario cliente aún no tiene una empresa vinculada. Un administrador debe asignarte en Configuración → Asignar clientes-empresas."}
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     );
   }
 
@@ -1518,43 +1526,48 @@ export function MisReservasContent() {
   };
 
   return (
-    <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col bg-[#D9E3F2]" role="main">
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -right-16 top-8 h-64 w-64 rounded-full bg-dash-neon/15 blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
+      </div>
 
-      {/* ── Hero ── */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-brand-blue via-[#0d1c42] to-brand-dark-teal text-white px-4 sm:px-5 py-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+      {/* ── Toolbar ── */}
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={() => goBackOr(withBase("/inicio"))}
               title={tr.btnBack}
               aria-label={tr.btnBack}
-              className="inline-flex items-center gap-1.5 shrink-0 px-2.5 sm:px-3 h-9 rounded-lg border border-white/25 bg-white/15 text-white text-sm font-semibold hover:bg-white/25 transition-colors"
+              className="dash-control inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-sm font-semibold sm:px-3"
             >
               <Icon icon="lucide:arrow-left" width={18} height={18} className="shrink-0" />
               <span className="hidden sm:inline">{tr.btnBack}</span>
             </button>
-            <div className="w-9 h-9 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center shrink-0">
-              <Icon icon="typcn:clipboard" width={18} height={18} className="text-white" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-neon/40 bg-dash-neon/15">
+              <Icon icon="typcn:clipboard" width={18} height={18} className="text-dash-neon" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold leading-tight tracking-tight">{t.sidebar.misReservas}</h1>
-              <p className="text-xs text-white/65 mt-0.5">
-                <span className="font-semibold text-white tabular-nums">{filteredOperaciones.length}</span>
+              <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg sm:text-xl">{t.sidebar.misReservas}</h1>
+              <p className="mt-0.5 text-xs text-dash-muted">
+                <span className="font-semibold tabular-nums text-dash-neon">{filteredOperaciones.length}</span>
                 {filteredOperaciones.length !== operaciones.length
-                  ? <span className="text-white/45"> / {operaciones.length}</span>
+                  ? <span className="text-dash-muted/70"> / {operaciones.length}</span>
                   : null
                 } {tr.records}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex items-center bg-white/12 rounded-lg p-0.5">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex items-center rounded-lg border border-dash-border bg-dash-control/80 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("cards")}
                 title={tr.viewCards}
-                className={`px-2.5 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-white text-brand-blue shadow-sm" : "text-white/75 hover:text-white"}`}
+                className={`rounded-md px-2.5 py-1.5 transition-all ${viewMode === "cards" ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40" : "border border-transparent text-dash-muted hover:text-dash-fg"}`}
               >
                 <Icon icon="lucide:layout-grid" width={14} height={14} />
               </button>
@@ -1562,21 +1575,21 @@ export function MisReservasContent() {
                 type="button"
                 onClick={() => setViewMode("table")}
                 title={tr.viewTable}
-                className={`px-2.5 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white text-brand-blue shadow-sm" : "text-white/75 hover:text-white"}`}
+                className={`rounded-md px-2.5 py-1.5 transition-all ${viewMode === "table" ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40" : "border border-transparent text-dash-muted hover:text-dash-fg"}`}
               >
                 <Icon icon="lucide:list" width={14} height={14} />
               </button>
             </div>
             <a
               href={withBase("/reservas/papelera")}
-              className="p-2 bg-white/12 border border-white/15 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
+              className="dash-control rounded-lg p-2 text-dash-muted hover:text-dash-fg"
               title="Papelera"
             >
               <Icon icon="lucide:trash-2" width={14} height={14} />
             </a>
             <a
               href={withBase("/reservas/crear")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white text-brand-blue hover:bg-white/90 transition-colors"
+              className="dash-cta inline-flex items-center gap-1.5 px-3 py-2 text-sm"
             >
               <Icon icon="lucide:plus" width={13} height={13} />
               <span className="hidden sm:inline">{tr.newBooking}</span>
@@ -1587,19 +1600,19 @@ export function MisReservasContent() {
       </div>
 
       {/* ── Barra de búsqueda y filtros ── */}
-      <div className="flex-shrink-0 bg-[#E8F0FA]/95 border-b border-brand-blue/15 backdrop-blur-md">
+      <div className="relative z-10 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] backdrop-blur-md">
         <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
           <div className="flex-1 min-w-0 relative">
-            <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-blue/35 w-3.5 h-3.5 pointer-events-none" />
+            <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dash-muted w-3.5 h-3.5 pointer-events-none" />
             <input
               type="text"
               placeholder={tr.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-8 py-2 border border-brand-blue/20 bg-white rounded-lg text-sm text-brand-blue placeholder:text-brand-blue/35 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue transition-all"
+              className="w-full pl-8 pr-8 py-2 border border-dash-border bg-dash-control rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50 transition-all"
             />
             {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-blue/35 hover:text-brand-blue transition-colors">
+              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-dash-muted hover:text-dash-fg transition-colors">
                 <Icon icon="lucide:x" width={13} height={13} />
               </button>
             )}
@@ -1608,20 +1621,20 @@ export function MisReservasContent() {
             onClick={() => setShowFilters(!showFilters)}
             className={`inline-flex items-center gap-1.5 px-2.5 py-2 border rounded-lg text-sm font-semibold transition-colors shrink-0 ${
               showFilters || activeFiltersCount > 0
-                ? "border-brand-blue bg-brand-blue/8 text-brand-blue"
-                : "border-brand-blue/20 bg-white hover:bg-[#F4F8FC] text-brand-blue/70"
+                ? "border-dash-neon/50 bg-dash-neon/15 text-dash-fg"
+                : "border-dash-border bg-dash-control text-dash-muted hover:bg-dash-control"
             }`}
           >
             <Icon icon="lucide:sliders-horizontal" width={13} height={13} />
             <span className="hidden sm:inline">{tr.filters}</span>
             {activeFiltersCount > 0 && (
-              <span className="min-w-4 h-4 px-1 text-[10px] font-bold bg-brand-blue text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
+              <span className="min-w-4 h-4 px-1 text-[10px] font-bold bg-dash-neon/25 text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
             )}
           </button>
           <button
             onClick={() => void handleExportExcel()}
             disabled={filteredOperaciones.length === 0}
-            className="inline-flex items-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center gap-1 px-2.5 py-2 border border-dash-border bg-dash-control hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 rounded-lg text-sm font-semibold text-dash-muted transition-colors shrink-0 disabled:opacity-40"
             title="Exportar a Excel"
           >
             <Icon icon="lucide:table-2" width={13} height={13} />
@@ -1630,7 +1643,7 @@ export function MisReservasContent() {
           <button
             onClick={handleExportPDF}
             disabled={filteredOperaciones.length === 0}
-            className="inline-flex items-center gap-1 px-2.5 py-2 border border-brand-blue/20 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-sm font-semibold text-brand-blue/70 transition-colors shrink-0 disabled:opacity-40"
+            className="inline-flex items-center gap-1 px-2.5 py-2 border border-dash-border bg-dash-control hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-lg text-sm font-semibold text-dash-muted transition-colors shrink-0 disabled:opacity-40"
             title="Exportar a PDF"
           >
             <Icon icon="lucide:file-text" width={13} height={13} />
@@ -1638,7 +1651,7 @@ export function MisReservasContent() {
           </button>
           <button
             onClick={fetchOperaciones}
-            className="p-2 text-brand-blue/55 hover:text-brand-blue hover:bg-white rounded-lg transition-colors shrink-0"
+            className="p-2 text-dash-muted hover:text-dash-fg hover:bg-dash-control rounded-lg transition-colors shrink-0"
             title={tr.refresh}
           >
             <Icon icon="lucide:refresh-cw" width={14} height={14} />
@@ -1647,8 +1660,8 @@ export function MisReservasContent() {
 
         {/* Barra de selección */}
         {!isCliente && selectedIds.size > 0 && (
-          <div className="px-3 sm:px-4 py-2 border-t border-brand-blue/10 flex items-center gap-2 bg-brand-blue/5">
-            <span className="text-sm font-semibold text-brand-blue flex-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? "s" : ""}</span>
+          <div className="px-3 sm:px-4 py-2 border-t border-dash-border flex items-center gap-2 bg-dash-neon/10">
+            <span className="text-sm font-semibold text-dash-fg flex-1">{selectedIds.size} seleccionada{selectedIds.size !== 1 ? "s" : ""}</span>
             <button
               onClick={() => setShowTransportModal(true)}
               disabled={actionLoading}
@@ -1666,7 +1679,7 @@ export function MisReservasContent() {
               <Icon icon="lucide:trash-2" width={12} height={12} />
               <span className="hidden sm:inline">{tr.delete}</span>
             </button>
-            <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
+            <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors">
               <Icon icon="lucide:x" width={13} height={13} />
             </button>
           </div>
@@ -1674,7 +1687,7 @@ export function MisReservasContent() {
 
         {/* Panel de filtros */}
         {showFilters && (
-          <div className="px-3 sm:px-4 py-2.5 border-t border-brand-blue/10 bg-[#DCE6F4]/80 space-y-2">
+          <div className="px-3 sm:px-4 py-2.5 border-t border-dash-border bg-dash-control/70 space-y-2">
             {/* Fila 1: Estado, Cliente, Naviera, Especie, Nave */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <div>
@@ -1740,7 +1753,7 @@ export function MisReservasContent() {
               </div>
             </div>
             {activeFiltersCount > 0 && (
-              <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-semibold">
+              <button onClick={clearAllFilters} className="text-xs text-dash-fg hover:underline font-semibold">
                 {tr.clearAllFilters}
               </button>
             )}
@@ -1749,18 +1762,18 @@ export function MisReservasContent() {
       </div>
 
       {/* ── Área de contenido ── */}
-      <div className="flex-1 min-h-0 overflow-auto p-2 sm:p-3">
+      <div className="relative z-10 flex-1 min-h-0 overflow-auto p-2 sm:p-3">
 
         {/* Vista Tabla */}
         {viewMode === "table" && (
-          <div className="bg-white rounded-xl border border-brand-blue/12 overflow-hidden flex flex-col h-full min-h-0 shadow-sm" style={{ minHeight: 300 }}>
+          <div className="dash-card-static flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]" style={{ minHeight: 300 }}>
             <div className="overflow-auto flex-1 min-h-0">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-[#E8EEF7]">
+                  <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
                     {!isCliente && (
-                      <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 w-10 border-b border-brand-blue/15">
-                        <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-brand-blue" />
+                      <th className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 w-10 border-b border-dash-border">
+                        <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-[var(--dash-neon)]" />
                       </th>
                     )}
                     <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -1778,8 +1791,8 @@ export function MisReservasContent() {
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="solicitud_ventana" label={tr.colTipoOperacion} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colTransport}</th>
-                    <th className="sticky top-0 z-20 bg-[#E8EEF7] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-brand-blue/45 border-b border-brand-blue/15">{tr.colActions}</th>
+                    <th className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colTransport}</th>
+                    <th className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colActions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1787,12 +1800,12 @@ export function MisReservasContent() {
                     <tr>
                       <td colSpan={isCliente ? 16 : 17} className="px-4 py-14 text-center">
                         <div className="flex flex-col items-center gap-2">
-                          <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-                            <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
+                          <span className="w-10 h-10 rounded-xl bg-dash-control border border-dash-border flex items-center justify-center">
+                            <Icon icon="typcn:clipboard" width={20} height={20} className="text-dash-muted" />
                           </span>
-                          <p className="text-brand-blue/70 font-medium text-sm">{tr.noResults}</p>
+                          <p className="text-dash-muted font-medium text-sm">{tr.noResults}</p>
                           {(activeFiltersCount > 0 || searchTerm) && (
-                            <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">{tr.clearFilters}</button>
+                            <button onClick={clearAllFilters} className="text-xs text-dash-fg hover:underline font-medium mt-1">{tr.clearFilters}</button>
                           )}
                         </div>
                       </td>
@@ -1827,13 +1840,13 @@ export function MisReservasContent() {
               </table>
             </div>
             {filteredOperaciones.length > 0 && (
-              <div className="px-3 py-2 border-t border-brand-blue/10 flex items-center justify-between bg-[#E8EEF7]/90 flex-shrink-0">
-                <span className="text-xs text-brand-blue/60 font-medium tabular-nums">
+              <div className="px-3 py-2 border-t border-dash-border flex items-center justify-between bg-[color-mix(in_srgb,var(--dash-control)_90%,transparent)] flex-shrink-0">
+                <span className="text-xs text-dash-muted font-medium tabular-nums">
                   {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tr.registro : tr.records}
                   {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 </span>
                 {selectedIds.size > 0 && (
-                  <span className="text-xs text-brand-blue font-semibold">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
+                  <span className="text-xs text-dash-fg font-semibold">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
                 )}
               </div>
             )}
@@ -1844,13 +1857,13 @@ export function MisReservasContent() {
         {viewMode === "cards" && (
           <>
             {filteredOperaciones.length === 0 ? (
-              <div className="bg-white rounded-xl border border-brand-blue/12 px-4 py-12 flex flex-col items-center gap-2">
-                <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-                  <Icon icon="typcn:clipboard" width={20} height={20} className="text-neutral-400" />
+              <div className="dash-card rounded-xl border border-dash-border px-4 py-12 flex flex-col items-center gap-2">
+                <span className="w-10 h-10 rounded-xl bg-dash-control border border-dash-border flex items-center justify-center">
+                  <Icon icon="typcn:clipboard" width={20} height={20} className="text-dash-muted" />
                 </span>
-                <p className="text-brand-blue/70 font-medium text-sm">{tr.noResults}</p>
+                <p className="text-dash-muted font-medium text-sm">{tr.noResults}</p>
                 {(activeFiltersCount > 0 || searchTerm) && (
-                  <button onClick={clearAllFilters} className="text-xs text-brand-blue hover:underline font-medium mt-1">Limpiar filtros</button>
+                  <button onClick={clearAllFilters} className="text-xs text-dash-fg hover:underline font-medium mt-1">Limpiar filtros</button>
                 )}
               </div>
             ) : (
@@ -1873,7 +1886,7 @@ export function MisReservasContent() {
               </div>
             )}
             {filteredOperaciones.length > 0 && (
-              <p className="text-xs text-brand-blue/55 text-center mt-3 font-medium">
+              <p className="text-xs text-dash-muted text-center mt-3 font-medium">
                 {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tr.reservaSingular : tr.reservasPlural}
                 {filteredOperaciones.length !== operaciones.length && ` de ${operaciones.length}`}
                 {selectedIds.size > 0 && ` · ${selectedIds.size} seleccionada${selectedIds.size !== 1 ? "s" : ""}`}
@@ -1886,26 +1899,26 @@ export function MisReservasContent() {
 
       {/* Modal éxito transporte */}
       {successTransport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_96%,transparent)] shadow-2xl">
             <div className="h-[3px] bg-emerald-500" />
             <div className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
-                <Icon icon="lucide:truck" width={24} height={24} className="text-emerald-500" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/15">
+                <Icon icon="lucide:truck" width={24} height={24} className="text-emerald-400" />
               </div>
-              <h3 className="font-bold text-neutral-900 mb-2">{tr.sentSuccessTitle}</h3>
-              <p className="text-sm text-neutral-600 mb-5">{successTransport}</p>
+              <h3 className="mb-2 font-bold text-dash-fg">{tr.sentSuccessTitle}</h3>
+              <p className="mb-5 text-sm text-dash-muted">{successTransport}</p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setSuccessTransport(null)}
-                  className="flex-1 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl hover:bg-neutral-200 transition-colors font-medium text-sm"
+                  className="flex-1 rounded-xl border border-dash-border bg-dash-control px-4 py-2.5 text-sm font-medium text-dash-fg transition-colors hover:bg-dash-neon/15"
                 >
                   {tr.close}
                 </button>
                 <a
                   href={withBase("/transportes/reserva-asli")}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-sm"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                 >
                   {tr.goToTransports}
                   <Icon icon="typcn:arrow-right" width={14} height={14} />
@@ -1924,38 +1937,38 @@ export function MisReservasContent() {
         const pendientes = selOps.filter((op) => !op.tipo_reserva_transporte);
         const allAssigned = pendientes.length === 0;
         return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-          <div className="motion-enter-lift bg-white rounded-2xl shadow-mac-modal border border-neutral-200 p-6 w-full max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-                <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-600" />
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" data-theme={theme}>
+          <div className="motion-enter-lift mx-4 w-full max-w-sm rounded-2xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_96%,transparent)] p-6 shadow-mac-modal">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-500/15">
+                <Icon icon="lucide:truck" width={20} height={20} className="text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-neutral-900">{tr.sendToTransports}</h3>
-                <p className="text-xs text-neutral-500">{selectedIds.size} operación{selectedIds.size > 1 ? "es" : ""} seleccionada{selectedIds.size > 1 ? "s" : ""}</p>
+                <h3 className="text-sm font-bold text-dash-fg">{tr.sendToTransports}</h3>
+                <p className="text-xs text-dash-muted">{selectedIds.size} operación{selectedIds.size > 1 ? "es" : ""} seleccionada{selectedIds.size > 1 ? "s" : ""}</p>
               </div>
             </div>
 
             {(alreadyInAsli.length > 0 || alreadyInExt.length > 0) && (
-              <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 space-y-0.5">
+              <div className="mb-3 space-y-0.5 rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-xs text-amber-700">
                 {alreadyInAsli.length > 0 && (
                   <p>{alreadyInAsli.length} ya está{alreadyInAsli.length > 1 ? "n" : ""} en <strong>ASLI</strong> ({alreadyInAsli.map((o) => displayRefAsli(o.ref_asli, o.correlativo)).join(", ")})</p>
                 )}
                 {alreadyInExt.length > 0 && (
                   <p>{alreadyInExt.length} ya está{alreadyInExt.length > 1 ? "n" : ""} en <strong>Externa</strong> ({alreadyInExt.map((o) => displayRefAsli(o.ref_asli, o.correlativo)).join(", ")})</p>
                 )}
-                {!allAssigned && <p className="text-amber-600 font-medium">Solo se enviarán las {pendientes.length} pendiente{pendientes.length > 1 ? "s" : ""}.</p>}
+                {!allAssigned && <p className="font-medium text-amber-600">Solo se enviarán las {pendientes.length} pendiente{pendientes.length > 1 ? "s" : ""}.</p>}
               </div>
             )}
 
             {allAssigned ? (
               <>
-                <p className="text-xs text-neutral-500 mb-4">{tr.allAssignedMsg}</p>
+                <p className="mb-4 text-xs text-dash-muted">{tr.allAssignedMsg}</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setShowTransportModal(false)} className="flex-1 px-4 py-2.5 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
+                  <button type="button" onClick={() => setShowTransportModal(false)} className="flex-1 rounded-xl border border-dash-border bg-dash-control px-4 py-2.5 text-xs font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15">
                     {tr.close}
                   </button>
-                  <a href={withBase("/transportes/reserva-asli")} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-xs">
+                  <a href={withBase("/transportes/reserva-asli")} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700">
                     {tr.goToTransports}
                     <Icon icon="typcn:arrow-right" width={14} height={14} />
                   </a>
@@ -1963,28 +1976,28 @@ export function MisReservasContent() {
               </>
             ) : (
               <>
-                <p className="text-xs text-neutral-500 mb-4">{tr.selectTransportType}</p>
+                <p className="mb-4 text-xs text-dash-muted">{tr.selectTransportType}</p>
                 <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => void handleSendToAsli()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-brand-blue hover:bg-brand-blue/5 transition-all text-left group">
-                    <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center shrink-0 group-hover:bg-brand-blue/20 transition-colors">
-                      <Icon icon="lucide:building-2" width={18} height={18} className="text-brand-blue" />
+                  <button type="button" onClick={() => void handleSendToAsli()} className="group flex w-full items-center gap-3 rounded-xl border border-dash-border p-3 text-left transition-all hover:border-dash-neon/50 hover:bg-dash-neon/10">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-dash-neon/15 transition-colors group-hover:bg-dash-neon/25">
+                      <Icon icon="lucide:building-2" width={18} height={18} className="text-dash-neon" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-neutral-800">{tr.reservaAsliName}</p>
-                      <p className="text-[11px] text-neutral-400">{tr.reservaAsliDesc}</p>
+                      <p className="text-sm font-semibold text-dash-fg">{tr.reservaAsliName}</p>
+                      <p className="text-[11px] text-dash-muted">{tr.reservaAsliDesc}</p>
                     </div>
                   </button>
-                  <button type="button" onClick={() => void handleSendToExterna()} className="flex items-center gap-3 w-full p-3 rounded-xl border border-neutral-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all text-left group">
-                    <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-                      <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-600" />
+                  <button type="button" onClick={() => void handleSendToExterna()} className="group flex w-full items-center gap-3 rounded-xl border border-dash-border p-3 text-left transition-all hover:border-emerald-400/50 hover:bg-emerald-500/10">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 transition-colors group-hover:bg-emerald-500/25">
+                      <Icon icon="lucide:globe" width={18} height={18} className="text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-neutral-800">{tr.reservaExtName}</p>
-                      <p className="text-[11px] text-neutral-400">{tr.reservaExtDesc}</p>
+                      <p className="text-sm font-semibold text-dash-fg">{tr.reservaExtName}</p>
+                      <p className="text-[11px] text-dash-muted">{tr.reservaExtDesc}</p>
                     </div>
                   </button>
                 </div>
-                <button type="button" onClick={() => setShowTransportModal(false)} className="w-full mt-3 px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-xl hover:bg-neutral-200 transition-colors">
+                <button type="button" onClick={() => setShowTransportModal(false)} className="mt-3 w-full rounded-xl border border-dash-border bg-dash-control px-4 py-2 text-xs font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15">
                   {tr.cancel}
                 </button>
               </>
@@ -2002,21 +2015,22 @@ export function MisReservasContent() {
         return (
           <div
             role="menu"
-            className="fixed z-[80] min-w-[220px] rounded-lg border border-neutral-200 bg-white shadow-lg py-1"
+            className="dash-neon fixed z-[80] min-w-[220px] rounded-lg border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_96%,transparent)] py-1 shadow-lg"
+            data-theme={theme}
             style={{ left, top }}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
-            <p className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 truncate">
+            <p className="truncate px-3 pb-1 pt-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-muted">
               {ctxMenu.refLabel}
             </p>
             <button
               type="button"
               role="menuitem"
               onClick={handleCtxViewDocuments}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-neutral-800 hover:bg-brand-blue/8 hover:text-brand-blue transition-colors"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15"
             >
-              <Icon icon="lucide:folder-open" width={16} height={16} className="shrink-0 text-brand-blue" />
+              <Icon icon="lucide:folder-open" width={16} height={16} className="shrink-0 text-dash-neon" />
               {tr.contextViewDocuments}
             </button>
             <button
@@ -2024,9 +2038,9 @@ export function MisReservasContent() {
               role="menuitem"
               onClick={handleCtxMoveToTrash}
               disabled={actionLoading}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/15 disabled:opacity-50"
             >
-              <Icon icon="lucide:trash-2" width={16} height={16} className="shrink-0 text-red-600" />
+              <Icon icon="lucide:trash-2" width={16} height={16} className="shrink-0 text-red-400" />
               {tr.moveToTrash}
             </button>
           </div>
@@ -2049,5 +2063,6 @@ export function MisReservasContent() {
         document.body
       )}
     </main>
+    </div>
   );
 }

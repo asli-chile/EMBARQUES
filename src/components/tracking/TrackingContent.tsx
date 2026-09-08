@@ -3,7 +3,6 @@ import { useLocale } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { AnimatedNetworkBackground } from "@/components/ui/AnimatedNetworkBackground";
 import {
   TrackingMapView,
   type MapFleetManualVessel,
@@ -13,6 +12,7 @@ import {
 import { ManualTrackingCoordsModal } from "@/components/tracking/ManualTrackingCoordsModal";
 import { getApiOriginPrefix } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 import {
   ESTADO_META,
   esEstadoCerrado,
@@ -61,17 +61,17 @@ type AisSearchRow = {
 };
 
 const estadoColors: Record<GrupoEstado, string> = {
-  COMERCIAL: "bg-amber-100 text-amber-800 border-amber-200",
-  COORDINACION: "bg-blue-100 text-blue-800 border-blue-200",
-  TRANSITO: "bg-violet-100 text-violet-800 border-violet-200",
-  DOCUMENTAL: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  CIERRE: "bg-neutral-100 text-neutral-700 border-neutral-200",
-  EXCEPCION: "bg-red-100 text-red-800 border-red-200",
+  COMERCIAL: "bg-amber-400/15 text-dash-fg border-amber-400/35",
+  COORDINACION: "bg-sky-400/15 text-dash-fg border-sky-400/35",
+  TRANSITO: "bg-violet-400/15 text-dash-fg border-violet-400/35",
+  DOCUMENTAL: "bg-emerald-400/15 text-dash-fg border-emerald-400/35",
+  CIERRE: "bg-dash-control text-dash-muted border-dash-border",
+  EXCEPCION: "bg-red-400/15 text-dash-fg border-red-400/35",
 };
 
 function getEstadoStyle(estado: string | null): string {
   const codigo = normalizarEstado(estado);
-  if (!codigo) return "bg-neutral-100 text-neutral-700 border-neutral-200";
+  if (!codigo) return "bg-dash-control text-dash-muted border-dash-border";
   return estadoColors[ESTADO_META[codigo].grupo];
 }
 
@@ -239,6 +239,7 @@ export function TrackingContent() {
   const { t, locale } = useLocale();
   const tr = t.trackingPage;
   const { user, profile, isStaff } = useAuth();
+  const [theme] = useNeonTheme();
 
   const [termino, setTermino] = useState("");
   const [loading, setLoading] = useState(false);
@@ -262,6 +263,7 @@ export function TrackingContent() {
   const [lastAisAt, setLastAisAt] = useState<Date | null>(null);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [fleetManualVessels, setFleetManualVessels] = useState<MapFleetManualVessel[]>([]);
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
 
   const supabase = useMemo(() => {
     try {
@@ -648,368 +650,503 @@ export function TrackingContent() {
     return { lat: inh?.lat ?? null, lng: inh?.lng ?? null };
   }, [selectedOp, results]);
 
+  const hasMapFocus = Boolean(selectedOpId || vesselOnMap || fleetManualMerged.length > 0);
+
   return (
-    <main className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative isolate" role="main">
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden min-h-[100dvh] w-full">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-600 via-slate-800 to-slate-900" />
-        <AnimatedNetworkBackground />
-      </div>
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.2) 30%, rgba(15,23,42,0.15) 50%, rgba(15,23,42,0.2) 70%, rgba(15,23,42,0.35) 100%)",
-        }}
-      />
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-      <aside className="relative z-10 flex flex-col w-full lg:w-[min(100%,420px)] lg:max-w-[440px] shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-slate-900/75 backdrop-blur-md min-h-0 max-h-[52dvh] lg:max-h-none">
-        <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-5 space-y-5">
-          <header>
-            <h1
-              className="text-lg sm:text-xl font-bold text-white tracking-tight"
-              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9), 0 2px 12px rgba(0,0,0,0.8)" }}
-            >
-              {tr.title}
-            </h1>
-            <p
-              className="text-white/85 text-xs sm:text-sm mt-2 leading-relaxed"
-              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 1px 8px rgba(0,0,0,0.7)" }}
-            >
-              {tr.subtitle}
-            </p>
-          </header>
-
-          <section className="rounded-2xl border border-white/10 bg-white shadow-mac-modal p-4 space-y-3">
-            <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{tr.searchLabel}</p>
-            <label htmlFor="tracking-search" className="sr-only">
-              {tr.searchLabel}
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="tracking-search"
-                type="text"
-                value={termino}
-                onChange={(e) => setTermino(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={tr.searchPlaceholder}
-                className="flex-1 min-w-0 px-3 py-2.5 rounded-lg border border-neutral-300 bg-white text-brand-blue text-sm placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue"
-              />
+        <div className="dash-toolbar relative z-10 shrink-0">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                <Icon icon="lucide:satellite-dish" width={22} height={22} className="text-dash-neon" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 rounded-xl border border-dash-border bg-dash-control/80 p-0.5 lg:hidden">
               <button
                 type="button"
-                onClick={() => void handleSearch()}
-                disabled={loading}
-                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 transition-colors disabled:opacity-60 shrink-0"
+                onClick={() => setMobileView("list")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold motion-interactive focus:outline-none focus:ring-2 focus:ring-dash-neon/40 ${
+                  mobileView === "list"
+                    ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40"
+                    : "border border-transparent text-dash-muted hover:text-dash-fg"
+                }`}
               >
-                {loading ? (
-                  <Icon icon="lucide:loader-2" width={18} height={18} className="animate-spin" aria-hidden />
-                ) : (
-                  <Icon icon="lucide:search" width={18} height={18} aria-hidden />
-                )}
-                <span className="hidden sm:inline">{tr.searchButton}</span>
+                Lista
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileView("map")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold motion-interactive focus:outline-none focus:ring-2 focus:ring-dash-neon/40 ${
+                  mobileView === "map"
+                    ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40"
+                    : "border border-transparent text-dash-muted hover:text-dash-fg"
+                }`}
+              >
+                Mapa
               </button>
             </div>
-            <ul className="text-[11px] text-neutral-600 space-y-1">
-              <li className="flex gap-2">
-                <Icon icon="typcn:media-record" className="text-brand-teal shrink-0 mt-0.5" width={6} height={6} />
-                {tr.feature1}
-              </li>
-              <li className="flex gap-2">
-                <Icon icon="typcn:media-record" className="text-brand-teal shrink-0 mt-0.5" width={6} height={6} />
-                {tr.feature2}
-              </li>
-              <li className="flex gap-2">
-                <Icon icon="typcn:media-record" className="text-brand-teal shrink-0 mt-0.5" width={6} height={6} />
-                {tr.feature3}
-              </li>
-            </ul>
-          </section>
+          </div>
+        </div>
 
-          {error && (
-            <div className="p-3 rounded-lg bg-red-950/80 text-red-200 text-sm border border-red-500/30" role="alert">
-              {error}
-            </div>
-          )}
-
-          {searched && !loading && (
-            <section className="space-y-2">
-              {results.length === 0 ? (
-                <div className="rounded-xl border border-white/10 bg-white/95 p-4 text-center text-neutral-600 text-sm">
-                  <p className="font-medium">{tr.noResults}</p>
-                  <p className="text-xs mt-1">{tr.noResultsHint}</p>
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-2.5">
+          <div className="flex h-full min-h-0 w-full flex-col gap-2 lg:flex-row">
+            <div
+              className={`dash-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl transition-all duration-300 ease-out ${
+                mobileView === "map" ? "hidden lg:flex" : "flex"
+              } lg:w-[min(100%,400px)] lg:shrink-0 xl:w-[420px]`}
+            >
+              <div className="dash-section-head shrink-0 space-y-3 px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <Icon icon="lucide:search" width={18} height={18} className="shrink-0 text-dash-neon" aria-hidden />
+                  <p className="text-sm font-bold text-dash-fg">{tr.searchLabel}</p>
                 </div>
-              ) : (
-                <>
-                  <p className="text-white text-xs font-medium" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
-                    {tr.resultsCount.replace("{{count}}", String(results.length))}
-                  </p>
-                  <div className="space-y-2 max-h-[40vh] lg:max-h-[min(38vh,320px)] overflow-y-auto pr-1">
-                    {results.map((op) => {
-                      const active = op.id === selectedOpId;
-                      return (
-                        <article
-                          key={op.id}
-                          className={`rounded-xl border overflow-hidden transition-colors cursor-pointer ${
-                            active
-                              ? "border-brand-blue bg-white ring-2 ring-brand-blue/40"
-                              : "border-white/10 bg-white/95 hover:border-neutral-300"
-                          }`}
-                          onClick={() => setSelectedOpId(op.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setSelectedOpId(op.id);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <div className="p-3 sm:p-3.5">
-                            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                              <div className="flex flex-wrap items-center gap-1.5 text-sm">
-                                {op.contenedor && <span className="font-semibold text-brand-blue">{op.contenedor}</span>}
-                                {op.ref_asli && (
-                                  <span className="text-neutral-500 text-xs">
-                                    {tr.refAsli}: {op.ref_asli}
-                                  </span>
-                                )}
-                                {opTienePosicionManualVisible(results, op) && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border border-violet-300 bg-violet-50 text-violet-800">
-                                      {tr.manualCoordsBadge}
-                                    </span>
-                                  )}
-                              </div>
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium ${getEstadoStyle(op.estado_operacion)}`}
-                              >
-                                {etiquetaEstado(op.estado_operacion) || "—"}
-                              </span>
-                            </div>
-                            <div className="text-xs text-neutral-600 space-y-1">
-                              <div className="flex items-center gap-1.5">
-                                <Icon icon="lucide:ship" width={14} height={14} className="text-brand-blue shrink-0" />
-                                <span>
-                                  {op.naviera ?? "—"}
-                                  {op.nave ? ` · ${op.nave}` : ""}
-                                </span>
-                              </div>
-                              {op.viaje?.trim() ? (
-                                <div className="flex items-center gap-1.5 text-neutral-500">
-                                  <Icon icon="lucide:compass" width={14} height={14} className="text-brand-blue shrink-0" />
-                                  <span>
-                                    {tr.colViaje}: {op.viaje}
-                                  </span>
-                                </div>
-                              ) : null}
-                              <div className="flex items-center gap-1.5">
-                                <Icon icon="lucide:map-pin" width={14} height={14} className="text-brand-blue shrink-0" />
-                                <span>
-                                  {op.pol ?? "—"} → {op.pod ?? "—"}
-                                </span>
-                              </div>
-                            </div>
-                            {user && op.nave?.trim() && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleQuickAisFromOp(op.nave);
-                                }}
-                                className="mt-2 text-[11px] font-semibold text-brand-blue hover:underline"
-                              >
-                                {tr.aisFromOperation}
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
+                <div className="flex gap-2">
+                  <label htmlFor="tracking-search" className="sr-only">
+                    {tr.searchLabel}
+                  </label>
+                  <input
+                    id="tracking-search"
+                    type="text"
+                    value={termino}
+                    onChange={(e) => setTermino(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={tr.searchPlaceholder}
+                    className="dash-control min-w-0 flex-1 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSearch()}
+                    disabled={loading}
+                    className="dash-cta inline-flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-sm disabled:opacity-60"
+                  >
+                    {loading ? (
+                      <Icon icon="lucide:loader-2" width={18} height={18} className="animate-spin" aria-hidden />
+                    ) : (
+                      <Icon icon="lucide:search" width={18} height={18} aria-hidden />
+                    )}
+                    <span className="hidden sm:inline">{tr.searchButton}</span>
+                  </button>
+                </div>
+                <ul className="grid gap-1.5">
+                  {[tr.feature1, tr.feature2, tr.feature3].map((feat) => (
+                    <li key={feat} className="flex gap-2 text-[11px] leading-snug text-dash-muted">
+                      <Icon icon="lucide:check" width={14} height={14} className="mt-0.5 shrink-0 text-dash-neon" aria-hidden />
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {error && (
+                  <div
+                    className="mx-3 mt-3 flex items-start gap-2 rounded-lg border border-red-400/35 bg-red-500/15 p-3 text-sm text-dash-fg"
+                    role="alert"
+                  >
+                    <Icon icon="lucide:alert-circle" width={16} height={16} className="mt-0.5 shrink-0 text-red-300" aria-hidden />
+                    {error}
                   </div>
-                </>
-              )}
-            </section>
-          )}
+                )}
 
-          {canSetManualCoords && selectedOp && results.length > 0 && (
-            <section
-              className="rounded-xl border border-violet-500/40 bg-violet-950/35 p-3 space-y-2"
-              aria-label={tr.manualCoordsBtn}
-            >
-              <p className="text-[11px] text-violet-100/90 leading-snug">{tr.manualSidebarHint}</p>
-              <button
-                type="button"
-                onClick={() => setManualModalOpen(true)}
-                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-500 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-400/50"
-              >
-                <Icon icon="lucide:crosshair" width={16} height={16} aria-hidden />
-                {tr.manualCoordsBtn}
-              </button>
-            </section>
-          )}
+                {searched && !loading && (
+                  <section className="space-y-2 p-3">
+                    {results.length === 0 ? (
+                      <div className="rounded-xl border border-dash-border bg-dash-control/60 p-5 text-center">
+                        <Icon
+                          icon="lucide:package-search"
+                          width={28}
+                          height={28}
+                          className="mx-auto mb-2 text-dash-neon/50"
+                          aria-hidden
+                        />
+                        <p className="text-sm font-semibold text-dash-fg">{tr.noResults}</p>
+                        <p className="mt-1 text-xs text-dash-muted">{tr.noResultsHint}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="px-0.5 text-xs font-bold uppercase tracking-wide text-dash-neon">
+                          {tr.resultsCount.replace("{{count}}", String(results.length))}
+                        </p>
+                        <div className="space-y-2">
+                          {results.map((op) => {
+                            const active = op.id === selectedOpId;
+                            return (
+                              <article
+                                key={op.id}
+                                className={`cursor-pointer overflow-hidden rounded-xl border transition-all motion-interactive ${
+                                  active
+                                    ? "border-dash-neon/55 bg-dash-neon/10 ring-2 ring-dash-neon/25"
+                                    : "border-dash-border bg-dash-control/50 hover:border-dash-neon/35 hover:bg-dash-control"
+                                }`}
+                                onClick={() => {
+                                  setSelectedOpId(op.id);
+                                  setMobileView("map");
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setSelectedOpId(op.id);
+                                    setMobileView("map");
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={0}
+                              >
+                                <div className="p-3">
+                                  <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
+                                      {op.contenedor && (
+                                        <span className="font-bold text-dash-neon">{op.contenedor}</span>
+                                      )}
+                                      {op.ref_asli && (
+                                        <span className="truncate text-xs text-dash-muted">
+                                          {tr.refAsli}: {op.ref_asli}
+                                        </span>
+                                      )}
+                                      {opTienePosicionManualVisible(results, op) && (
+                                        <span className="rounded border border-violet-400/40 bg-violet-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-dash-fg">
+                                          {tr.manualCoordsBadge}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 text-[10px] font-semibold ${getEstadoStyle(op.estado_operacion)}`}
+                                    >
+                                      {etiquetaEstado(op.estado_operacion) || "—"}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1.5 text-xs text-dash-muted">
+                                    <div className="flex items-center gap-1.5">
+                                      <Icon icon="lucide:ship" width={14} height={14} className="shrink-0 text-dash-neon" aria-hidden />
+                                      <span className="truncate text-dash-fg/90">
+                                        {op.naviera ?? "—"}
+                                        {op.nave ? ` · ${op.nave}` : ""}
+                                      </span>
+                                    </div>
+                                    {op.viaje?.trim() ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <Icon
+                                          icon="lucide:compass"
+                                          width={14}
+                                          height={14}
+                                          className="shrink-0 text-dash-neon"
+                                          aria-hidden
+                                        />
+                                        <span>
+                                          {tr.colViaje}: {op.viaje}
+                                        </span>
+                                      </div>
+                                    ) : null}
+                                    <div className="flex items-center gap-1.5">
+                                      <Icon icon="lucide:map-pin" width={14} height={14} className="shrink-0 text-dash-neon" aria-hidden />
+                                      <span className="truncate">
+                                        {op.pol ?? "—"} → {op.pod ?? "—"}
+                                      </span>
+                                    </div>
+                                    {(op.etd || op.eta) && (
+                                      <div className="flex flex-wrap gap-2 pt-0.5">
+                                        {op.etd && (
+                                          <span className="inline-flex items-center gap-1 rounded-md border border-dash-border bg-dash-control px-2 py-0.5 font-mono text-[10px] text-dash-fg">
+                                            ETD {formatDate(op.etd, locale)}
+                                          </span>
+                                        )}
+                                        {op.eta && (
+                                          <span className="inline-flex items-center gap-1 rounded-md border border-dash-border bg-dash-control px-2 py-0.5 font-mono text-[10px] text-dash-fg">
+                                            ETA {formatDate(op.eta, locale)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {user && op.nave?.trim() && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickAisFromOp(op.nave);
+                                      }}
+                                      className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-dash-neon hover:underline"
+                                    >
+                                      <Icon icon="lucide:radar" width={12} height={12} aria-hidden />
+                                      {tr.aisFromOperation}
+                                    </button>
+                                  )}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </section>
+                )}
 
-          <section className="rounded-2xl border border-cyan-500/25 bg-slate-950/40 p-4 space-y-3">
-            <div className="flex items-center gap-2 text-white">
-              <Icon icon="lucide:radar" width={20} height={20} className="text-cyan-300" aria-hidden />
-              <h2 className="text-sm font-bold">{tr.aisSectionTitle}</h2>
-            </div>
-            <p className="text-[11px] text-white/60 leading-relaxed">{tr.aisSectionHint}</p>
-
-            {!user ? (
-              <p className="text-xs text-amber-200/90">{tr.aisLoginRequired}</p>
-            ) : (
-              <>
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={aisName}
-                      onChange={(e) => setAisName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && void handleAisSearch()}
-                      placeholder={tr.aisVesselPlaceholder}
-                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-white/15 bg-white/10 text-white text-sm placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-                    />
+                {canSetManualCoords && selectedOp && results.length > 0 && (
+                  <section
+                    className="mx-3 mb-3 space-y-2 rounded-xl border border-violet-400/35 bg-violet-500/10 p-3"
+                    aria-label={tr.manualCoordsBtn}
+                  >
+                    <p className="flex items-start gap-1.5 text-[11px] leading-snug text-dash-muted">
+                      <Icon icon="lucide:crosshair" width={14} height={14} className="mt-0.5 shrink-0 text-violet-300" aria-hidden />
+                      {tr.manualSidebarHint}
+                    </p>
                     <button
                       type="button"
-                      onClick={() => void handleAisSearch()}
-                      disabled={aisLoading}
-                      className="px-3 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-500 disabled:opacity-50 shrink-0"
+                      onClick={() => setManualModalOpen(true)}
+                      className="dash-cta inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                     >
-                      {aisLoading ? "…" : tr.aisSearchBtn}
+                      <Icon icon="lucide:crosshair" width={16} height={16} aria-hidden />
+                      {tr.manualCoordsBtn}
                     </button>
+                  </section>
+                )}
+
+                <section className="border-t border-dash-border">
+                  <div className="dash-section-head flex items-center gap-2 px-3 py-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dash-neon/35 bg-dash-neon/15">
+                      <Icon icon="lucide:radar" width={16} height={16} className="text-dash-neon" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-bold text-dash-fg">{tr.aisSectionTitle}</h2>
+                      <p className="line-clamp-2 text-[10px] leading-snug text-dash-muted">{tr.aisSectionHint}</p>
+                    </div>
                   </div>
-                  <label className="flex items-center gap-2 text-[11px] text-white/55 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={extendedAis}
-                      onChange={(e) => setExtendedAis(e.target.checked)}
-                      className="rounded border-white/30"
-                    />
-                    {tr.aisExtended}
-                  </label>
-                  <label className="flex items-center gap-2 text-[11px] text-white/55 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={autoRefresh}
-                      onChange={(e) => setAutoRefresh(e.target.checked)}
-                      className="rounded border-white/30"
-                    />
-                    {tr.aisAutoRefresh.replace("{{seconds}}", String(POLL_MS / 1000))}
-                  </label>
-                </div>
 
-                {aisError && (
-                  <p className="text-xs text-amber-200" role="alert">
-                    {aisError}
-                  </p>
-                )}
-
-                {aisSearched && aisResults.length > 0 && (
-                  <div className="max-h-36 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/10">
-                    {aisResults.map((row) => {
-                      const on = selectedAis?.mmsi === row.mmsi && String(selectedAis?.imo ?? "") === String(row.imo ?? "");
-                      return (
-                        <button
-                          key={`${row.mmsi}-${row.imo ?? "x"}`}
-                          type="button"
-                          onClick={() => handlePickAis(row)}
-                          className={`w-full text-left px-3 py-2 text-xs transition-colors ${
-                            on ? "bg-cyan-500/20 text-white" : "text-white/80 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="font-semibold block">{row.vessel_name}</span>
-                          <span className="text-white/45">
-                            MMSI {row.mmsi}
-                            {row.imo != null ? ` · IMO ${row.imo}` : ""}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {aisSearched && aisResults.length === 0 && !aisError && (
-                  <p className="text-xs text-white/40">{tr.aisNoVessels}</p>
-                )}
-
-                {selectedAis && (
-                  <div className="rounded-lg bg-black/25 border border-white/10 p-3 text-xs text-white/85 space-y-1">
-                    <p className="font-semibold text-white flex items-center gap-2">
-                      <Icon icon="lucide:ship" width={16} height={16} />
-                      {selectedAis.vessel_name}
-                    </p>
-                    {vesselLoading && <p className="text-white/50">{tr.aisLoadingPosition}</p>}
-                    {vesselError && <p className="text-amber-200">{vesselError}</p>}
-                    {!vesselLoading && vesselSnap && !vesselError && (
+                  <div className="space-y-3 p-3">
+                    {!user ? (
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-400/35 bg-amber-500/15 px-3 py-2.5 text-xs text-dash-fg">
+                        <Icon icon="lucide:lock" width={14} height={14} className="mt-0.5 shrink-0 text-amber-300" aria-hidden />
+                        {tr.aisLoginRequired}
+                      </div>
+                    ) : (
                       <>
-                        <p>
-                          {tr.aisSpeed}: {parseNum(vesselSnap.speed) ?? "—"} kn · {tr.aisCourse}:{" "}
-                          {parseNum(vesselSnap.course) ?? "—"}°
-                        </p>
-                        <p className="text-white/60">
-                          {tr.aisSignal}: {typeof vesselSnap.received === "string" ? vesselSnap.received : "—"}
-                        </p>
-                        {typeof vesselSnap.destination === "string" && vesselSnap.destination && (
-                          <p>
-                            {tr.aisDestination}: {vesselSnap.destination}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={aisName}
+                            onChange={(e) => setAisName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && void handleAisSearch()}
+                            placeholder={tr.aisVesselPlaceholder}
+                            className="dash-control min-w-0 flex-1 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleAisSearch()}
+                            disabled={aisLoading}
+                            className="dash-cta shrink-0 px-3 py-2 text-sm disabled:opacity-50"
+                          >
+                            {aisLoading ? "…" : tr.aisSearchBtn}
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="flex cursor-pointer select-none items-center gap-2 text-[11px] text-dash-muted">
+                            <input
+                              type="checkbox"
+                              checked={extendedAis}
+                              onChange={(e) => setExtendedAis(e.target.checked)}
+                              className="rounded border-dash-border text-dash-neon focus:ring-dash-neon/30"
+                            />
+                            {tr.aisExtended}
+                          </label>
+                          <label className="flex cursor-pointer select-none items-center gap-2 text-[11px] text-dash-muted">
+                            <input
+                              type="checkbox"
+                              checked={autoRefresh}
+                              onChange={(e) => setAutoRefresh(e.target.checked)}
+                              className="rounded border-dash-border text-dash-neon focus:ring-dash-neon/30"
+                            />
+                            {tr.aisAutoRefresh.replace("{{seconds}}", String(POLL_MS / 1000))}
+                          </label>
+                        </div>
+
+                        {aisError && (
+                          <p className="flex items-start gap-1.5 text-xs text-red-300" role="alert">
+                            <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" aria-hidden />
+                            {aisError}
                           </p>
                         )}
-                        {lastAisAt && (
-                          <p className="text-[10px] text-white/40">
-                            {tr.aisLastPoll}: {lastAisAt.toLocaleTimeString(locale === "es" ? "es-CL" : "en-US")}
-                          </p>
+
+                        {aisSearched && aisResults.length > 0 && (
+                          <div className="max-h-36 divide-y divide-dash-border overflow-y-auto rounded-lg border border-dash-border">
+                            {aisResults.map((row) => {
+                              const on =
+                                selectedAis?.mmsi === row.mmsi &&
+                                String(selectedAis?.imo ?? "") === String(row.imo ?? "");
+                              return (
+                                <button
+                                  key={`${row.mmsi}-${row.imo ?? "x"}`}
+                                  type="button"
+                                  onClick={() => handlePickAis(row)}
+                                  className={`w-full px-3 py-2 text-left text-xs transition-colors ${
+                                    on
+                                      ? "bg-dash-neon/20 font-semibold text-dash-fg"
+                                      : "text-dash-muted hover:bg-dash-control hover:text-dash-fg"
+                                  }`}
+                                >
+                                  <span className="block truncate">{row.vessel_name}</span>
+                                  <span className="font-normal text-dash-muted/80">
+                                    MMSI {row.mmsi}
+                                    {row.imo != null ? ` · IMO ${row.imo}` : ""}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {aisSearched && aisResults.length === 0 && !aisError && (
+                          <p className="text-xs text-dash-muted">{tr.aisNoVessels}</p>
+                        )}
+
+                        {selectedAis && (
+                          <div className="space-y-1.5 rounded-xl border border-dash-border bg-dash-control/70 p-3 text-xs text-dash-muted">
+                            <p className="flex items-center gap-2 font-bold text-dash-fg">
+                              <Icon icon="lucide:ship" width={16} height={16} className="text-dash-neon" aria-hidden />
+                              <span className="truncate">{selectedAis.vessel_name}</span>
+                            </p>
+                            {vesselLoading && <p>{tr.aisLoadingPosition}</p>}
+                            {vesselError && (
+                              <p className="flex items-start gap-1.5 text-red-300">
+                                <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" aria-hidden />
+                                {vesselError}
+                              </p>
+                            )}
+                            {!vesselLoading && vesselSnap && !vesselError && (
+                              <>
+                                <p className="text-dash-fg/90">
+                                  {tr.aisSpeed}: {parseNum(vesselSnap.speed) ?? "—"} kn · {tr.aisCourse}:{" "}
+                                  {parseNum(vesselSnap.course) ?? "—"}°
+                                </p>
+                                <p>
+                                  {tr.aisSignal}:{" "}
+                                  {typeof vesselSnap.received === "string" ? vesselSnap.received : "—"}
+                                </p>
+                                {typeof vesselSnap.destination === "string" && vesselSnap.destination && (
+                                  <p>
+                                    {tr.aisDestination}: {vesselSnap.destination}
+                                  </p>
+                                )}
+                                {lastAisAt && (
+                                  <p className="text-[10px] text-dash-muted/80">
+                                    {tr.aisLastPoll}:{" "}
+                                    {lastAisAt.toLocaleTimeString(locale === "es" ? "es-CL" : "en-US")}
+                                  </p>
+                                )}
+                              </>
+                            )}
+                            {linkedOps.length > 0 && (
+                              <p className="mt-2 border-t border-dash-border pt-1.5 font-medium text-dash-neon">
+                                {tr.aisLinkedOps.replace("{{count}}", String(linkedOps.length))}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </>
                     )}
-                    {linkedOps.length > 0 && (
-                      <p className="text-cyan-200/90 pt-1 border-t border-white/10 mt-2">
-                        {tr.aisLinkedOps.replace("{{count}}", String(linkedOps.length))}
-                      </p>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div
+              className={`dash-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl ${
+                mobileView === "list" ? "hidden lg:flex" : "flex"
+              }`}
+            >
+              <div className="dash-section-head flex shrink-0 flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setMobileView("list")}
+                  className="inline-flex items-center gap-0.5 text-xs font-semibold text-dash-neon transition-colors hover:text-dash-fg lg:hidden"
+                >
+                  <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
+                  Lista
+                </button>
+
+                {selectedOp ? (
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1 text-[11px]">
+                      <Icon icon="lucide:container" width={12} height={12} className="shrink-0 text-dash-neon" aria-hidden />
+                      <span className="font-bold text-dash-fg">
+                        {selectedOp.contenedor || selectedOp.ref_asli || "—"}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-2.5 py-1 text-[11px] text-dash-fg">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                      POL {selectedOp.pol ?? "—"}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/35 bg-amber-500/15 px-2.5 py-1 text-[11px] text-dash-fg">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-hidden />
+                      POD {selectedOp.pod ?? "—"}
+                    </span>
+                    {selectedOp.nave && (
+                      <span className="hidden truncate text-[11px] text-dash-muted sm:inline">
+                        {selectedOp.nave}
+                        {selectedOp.viaje ? ` · ${selectedOp.viaje}` : ""}
+                      </span>
                     )}
                   </div>
+                ) : (
+                  <p className="min-w-0 flex-1 text-[11px] leading-snug text-dash-muted">
+                    {hasMapFocus ? tr.mapLegendPolPod : tr.searchLabel}
+                  </p>
                 )}
-              </>
-            )}
-          </section>
-        </div>
-      </aside>
 
-      <div className="relative z-10 flex-1 min-h-[min(420px,55dvh)] lg:min-h-0 flex flex-col border-t lg:border-t-0 border-white/10 bg-neutral-100">
-        <div className="absolute top-2 left-2 z-[5] pointer-events-none max-w-[min(100%,320px)]">
-          <p className="text-[10px] font-medium text-neutral-600 bg-white/90 px-2 py-1 rounded border border-neutral-200 shadow-sm leading-snug">
-            {tr.mapLegendPolPod}
-          </p>
-        </div>
-        {canSetManualCoords && selectedOp && (
-          <div className="absolute top-2 right-2 z-[5]">
-            <button
-              type="button"
-              onClick={() => setManualModalOpen(true)}
-              className="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/95 border border-neutral-200 shadow-sm text-xs font-semibold text-violet-800 hover:bg-violet-50 transition-colors"
-            >
-              <Icon icon="lucide:crosshair" width={16} height={16} aria-hidden />
-              {tr.manualCoordsBtn}
-            </button>
+                {canSetManualCoords && selectedOp && (
+                  <button
+                    type="button"
+                    onClick={() => setManualModalOpen(true)}
+                    className="dash-control inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-semibold"
+                  >
+                    <Icon icon="lucide:crosshair" width={14} height={14} aria-hidden />
+                    {tr.manualCoordsBtn}
+                  </button>
+                )}
+              </div>
+
+              <div className="relative min-h-[min(420px,55dvh)] flex-1 overflow-hidden lg:min-h-0">
+                <div className="pointer-events-none absolute bottom-3 left-3 z-[5] hidden max-w-[min(100%,280px)] sm:block">
+                  <p className="rounded-lg border border-dash-border bg-dash-control/95 px-2.5 py-1.5 text-[10px] font-medium leading-snug text-dash-muted shadow-sm backdrop-blur-sm">
+                    {tr.mapLegendPolPod}
+                  </p>
+                </div>
+
+                <ManualTrackingCoordsModal
+                  open={manualModalOpen}
+                  onClose={() => setManualModalOpen(false)}
+                  initialLat={manualModalInitialCoords.lat}
+                  initialLng={manualModalInitialCoords.lng}
+                  vesselLabel={manualModalLabel}
+                  groupHint={manualGroupHint}
+                  tr={tr}
+                  onSave={(lat, lng) => saveManualCoords(lat, lng)}
+                  onClear={() => clearManualCoords()}
+                />
+
+                <TrackingMapView
+                  vessel={vesselOnMap}
+                  fleetManualVessels={fleetManualMerged}
+                  pol={polMarker}
+                  pod={podMarker}
+                  emptyHint={tr.mapLoading}
+                  webglFallback={tr.mapWebGLFallback}
+                  theme={theme}
+                />
+              </div>
+            </div>
           </div>
-        )}
-        <ManualTrackingCoordsModal
-          open={manualModalOpen}
-          onClose={() => setManualModalOpen(false)}
-          initialLat={manualModalInitialCoords.lat}
-          initialLng={manualModalInitialCoords.lng}
-          vesselLabel={manualModalLabel}
-          groupHint={manualGroupHint}
-          tr={tr}
-          onSave={(lat, lng) => saveManualCoords(lat, lng)}
-          onClear={() => clearManualCoords()}
-        />
-        <TrackingMapView
-          vessel={vesselOnMap}
-          fleetManualVessels={fleetManualMerged}
-          pol={polMarker}
-          pod={podMarker}
-          emptyHint={tr.mapLoading}
-          webglFallback={tr.mapWebGLFallback}
-        />
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }

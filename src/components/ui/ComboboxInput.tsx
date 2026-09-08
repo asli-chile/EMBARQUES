@@ -22,6 +22,8 @@ interface ComboboxInputProps {
   disabled?: boolean;
   readOnly?: boolean;
   maxSuggestions?: number;
+  /** Estilo neón; el panel en portal usa clases erp-neon-* + data-erp-neon. */
+  neon?: boolean;
 }
 
 export function ComboboxInput({
@@ -42,6 +44,7 @@ export function ComboboxInput({
   disabled,
   readOnly,
   maxSuggestions = 15,
+  neon = false,
 }: ComboboxInputProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -154,7 +157,11 @@ export function ComboboxInput({
       ? createPortal(
           <div
             ref={listRef}
-            className="bg-white border border-brand-blue/15 rounded-xl shadow-[0_16px_40px_rgba(17,34,78,0.18)] overflow-y-auto py-1.5"
+            className={
+              neon
+                ? "erp-neon-panel rounded-xl border overflow-y-auto py-1.5 shadow-lg"
+                : "bg-white border border-brand-blue/15 rounded-xl shadow-[0_16px_40px_rgba(17,34,78,0.18)] overflow-y-auto py-1.5"
+            }
             style={portalStyle}
             onMouseDown={(e) => e.preventDefault()} // evita que el input pierda foco al hacer click
           >
@@ -166,11 +173,17 @@ export function ComboboxInput({
                     type="button"
                     data-idx={idx}
                     onMouseDown={() => handleSelect(opt)}
-                    className={`w-full px-4 py-2.5 text-left font-semibold transition-colors text-sm last:border-b-0 ${
-                      highlight === idx
-                        ? "bg-brand-blue text-white"
-                        : "text-brand-blue hover:bg-[#EEF3FA]"
-                    }`}
+                    className={
+                      neon
+                        ? `w-full px-4 py-2.5 text-left font-semibold transition-colors text-sm last:border-b-0 ${
+                            highlight === idx ? "erp-neon-option-active" : "erp-neon-option"
+                          }`
+                        : `w-full px-4 py-2.5 text-left font-semibold transition-colors text-sm last:border-b-0 ${
+                            highlight === idx
+                              ? "bg-brand-blue text-white"
+                              : "text-brand-blue hover:bg-[#EEF3FA]"
+                          }`
+                    }
                   >
                     {opt.nombre}
                   </button>
@@ -181,11 +194,17 @@ export function ComboboxInput({
                     data-idx={filtered.length}
                     onMouseDown={() => void handleAdd()}
                     disabled={addingNew}
-                    className={`w-full flex items-center gap-1.5 px-4 py-2.5 font-semibold text-xs border-t border-neutral-100 transition-colors disabled:opacity-50 ${
-                      highlight === filtered.length
-                        ? "bg-brand-blue text-white"
-                        : "text-brand-blue hover:bg-brand-blue/5"
-                    }`}
+                    className={
+                      neon
+                        ? `w-full flex items-center gap-1.5 px-4 py-2.5 font-semibold text-xs border-t border-[color:var(--erp-border)] transition-colors disabled:opacity-50 ${
+                            highlight === filtered.length ? "erp-neon-option-active" : "erp-neon-option"
+                          }`
+                        : `w-full flex items-center gap-1.5 px-4 py-2.5 font-semibold text-xs border-t border-neutral-100 transition-colors disabled:opacity-50 ${
+                            highlight === filtered.length
+                              ? "bg-brand-blue text-white"
+                              : "text-brand-blue hover:bg-brand-blue/5"
+                          }`
+                    }
                   >
                     <Icon icon="typcn:plus" width={14} height={14} />
                     {addNewLabel ? addNewLabel(value.trim()) : `Agregar "${value.trim()}"`}
@@ -193,7 +212,7 @@ export function ComboboxInput({
                 )}
               </>
             ) : (
-              <div className="px-4 py-3 text-sm text-neutral-400 text-center">
+              <div className={`px-4 py-3 text-sm text-center ${neon ? "text-[color:var(--erp-muted)]" : "text-neutral-400"}`}>
                 Sin resultados
               </div>
             )}
@@ -237,7 +256,9 @@ export function ComboboxInput({
           icon="lucide:chevron-down"
           width={18}
           height={18}
-          className={`pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-blue/45 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-transform ${
+            neon ? "text-[color:var(--erp-muted,#64748b)]" : "text-brand-blue/45"
+          } ${open ? "rotate-180" : ""}`}
         />
       </div>
       {dropdown}

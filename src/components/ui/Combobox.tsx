@@ -17,6 +17,8 @@ type ComboboxProps = {
   disabled?: boolean;
   className?: string;
   icon?: string;
+  /** Estilo neón; el panel en portal hereda data-theme de document. */
+  neon?: boolean;
 };
 
 export function Combobox({
@@ -28,6 +30,7 @@ export function Combobox({
   disabled = false,
   className = "",
   icon,
+  neon = false,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -119,7 +122,9 @@ export function Combobox({
         {icon && (
           <Icon
             icon={icon}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none"
+            className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
+              neon ? "text-dash-muted" : "text-neutral-400"
+            }`}
           />
         )}
         <input
@@ -136,7 +141,9 @@ export function Combobox({
         />
         <Icon
           icon={open ? "lucide:chevron-up" : "lucide:chevron-down"}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5 pointer-events-none"
+          className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
+            neon ? "text-dash-muted" : "text-neutral-400"
+          }`}
         />
       </div>
 
@@ -145,10 +152,18 @@ export function Combobox({
           <div
             ref={dropdownRef}
             style={dropdownStyle}
-            className="z-[9999] max-h-48 overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg"
+            className={
+              neon
+                ? "erp-neon-panel z-[9999] max-h-48 overflow-y-auto rounded-xl border py-1 shadow-lg"
+                : "z-[9999] max-h-48 overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg"
+            }
           >
             {filtered.length === 0 ? (
-              <div className="px-3 py-2.5 text-xs text-neutral-400 text-center">
+              <div
+                className={`px-3 py-2.5 text-xs text-center ${
+                  neon ? "text-[color:var(--erp-muted)]" : "text-neutral-400"
+                }`}
+              >
                 {value.trim() ? "Sin coincidencias" : "Sin opciones"}
               </div>
             ) : (
@@ -161,15 +176,23 @@ export function Combobox({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSelect(option)}
                     className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center gap-2 ${
-                      isActive
-                        ? "bg-brand-blue/5 text-brand-blue font-medium"
-                        : "text-neutral-700 hover:bg-neutral-50"
+                      neon
+                        ? isActive
+                          ? "erp-neon-option-active"
+                          : "erp-neon-option"
+                        : isActive
+                          ? "bg-brand-blue/5 text-brand-blue font-medium"
+                          : "text-neutral-700 hover:bg-neutral-50"
                     }`}
                   >
                     <div className="min-w-0 flex-1">
                       <span className="block truncate">{option.label}</span>
                       {option.sublabel && (
-                        <span className="block text-[10px] text-neutral-400 truncate">
+                        <span
+                          className={`block text-[10px] truncate ${
+                            neon ? "text-[color:var(--erp-muted)]" : "text-neutral-400"
+                          }`}
+                        >
                           {option.sublabel}
                         </span>
                       )}
@@ -177,7 +200,9 @@ export function Combobox({
                     {isActive && (
                       <Icon
                         icon="lucide:check"
-                        className="w-3.5 h-3.5 text-brand-blue shrink-0"
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          neon ? "text-[color:var(--erp-neon)]" : "text-brand-blue"
+                        }`}
                       />
                     )}
                   </button>

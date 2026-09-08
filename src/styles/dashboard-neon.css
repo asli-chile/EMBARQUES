@@ -1,4 +1,4 @@
-/* Dashboard neón moderno — temas por data-theme (hex explícitos). */
+/* Dashboard neÃ³n moderno â temas por data-theme (hex explÃ­citos). */
 
 :root {
   --dash-bg: #050914;
@@ -84,7 +84,7 @@
     var(--dash-bg);
 }
 
-/* ── Layout ── */
+/* ââ Layout ââ */
 .dash-neon .dash-page {
   background: transparent !important;
   color: var(--dash-fg) !important;
@@ -114,7 +114,7 @@
   letter-spacing: 0.01em;
 }
 
-/* ── Cards ── */
+/* ââ Cards ââ */
 .dash-neon .dash-card {
   position: relative;
   background: color-mix(in srgb, var(--dash-surface) 92%, transparent) !important;
@@ -200,7 +200,7 @@
   background: color-mix(in srgb, var(--dash-surface) 70%, transparent);
 }
 
-/* ── Controls ── */
+/* ââ Controls ââ */
 .dash-neon .dash-control {
   background: color-mix(in srgb, var(--dash-control) 88%, transparent) !important;
   color: var(--dash-fg) !important;
@@ -349,6 +349,34 @@
   border-color: var(--dash-border) !important;
 }
 
+.dash-neon .border-dash-border,
+.dash-neon .border-t-dash-border,
+.dash-neon .divide-dash-border > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--dash-border) !important;
+}
+
+.dash-neon .bg-dash-control\/80,
+.dash-neon .bg-dash-control\/70,
+.dash-neon .bg-dash-control\/60,
+.dash-neon .bg-dash-control\/50,
+.dash-neon .bg-dash-control\/95 {
+  background-color: color-mix(in srgb, var(--dash-control) 88%, transparent) !important;
+}
+
+.dash-neon .bg-dash-neon\/15,
+.dash-neon .bg-dash-neon\/10 {
+  background-color: color-mix(in srgb, var(--dash-neon) 15%, transparent) !important;
+}
+
+.dash-neon .bg-dash-neon {
+  background-color: var(--dash-neon) !important;
+}
+
+.dash-neon .bg-dash-neon-hot\/20,
+.dash-neon .bg-dash-neon-hot\/15 {
+  background-color: color-mix(in srgb, var(--dash-neon-hot) 16%, transparent) !important;
+}
+
 .dash-neon .bg-dash-neon\/20,
 .dash-neon .bg-dash-neon\/25 {
   background-color: color-mix(in srgb, var(--dash-neon) 22%, transparent) !important;
@@ -407,7 +435,7 @@
   color: var(--dash-muted) !important;
 }
 
-/* ── Auth modal (login / solicitud de acceso) ── */
+/* ââ Auth modal (login / solicitud de acceso) ââ */
 .dash-neon .auth-neon-panel {
   border: 1px solid var(--dash-border);
   border-radius: 1rem;
@@ -439,11 +467,67 @@
     );
 }
 
-.dash-neon .auth-neon-brand::after {
-  content: "";
-  position: absolute;
-  inset: auto -20% -30% 20%;
-  height: 55%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--dash-neon) 18%, transparent), transparent 68%);
-  pointer-events: none;
+.dash-neon .dash-card-static {
+  box-shadow: var(--dash-glow);
+  backdrop-filter: blur(12px);
+}
+.dash-neon .dash-card-static:hover {
+  transform: none !important;
+}
+
+/* -- Portales neón (FormSelect / Combobox fuera de .dash-neon) -- */
+html[data-erp-neon="dark"] {
+  --erp-neon: #00e8ff;
+  --erp-neon-hot: #ff3d7a;
+  --erp-fg: #f4fbff;
+  --erp-muted: #93a4c3;
+  --erp-border: rgba(0, 232, 255, 0.22);
+  --erp-control: #101c38;
+  --erp-control-hover: #182850;
+  --erp-surface: #0c1730;
+}
+
+html[data-erp-neon="light"] {
+  --erp-neon: #0096b8;
+  --erp-neon-hot: #e0255c;
+  --erp-fg: #0a1c3a;
+  --erp-muted: #5a6f8c;
+  --erp-border: rgba(0, 150, 184, 0.28);
+  --erp-control: #e6eef9;
+  --erp-control-hover: #d7e4f5;
+  --erp-surface: #f4f8fc;
+}
+
+.erp-neon-control {
+  background: color-mix(in srgb, var(--erp-control) 88%, transparent) !important;
+  color: var(--erp-fg) !important;
+  border: 1px solid var(--erp-border) !important;
+  backdrop-filter: blur(8px);
+}
+
+.erp-neon-control:hover {
+  background: var(--erp-control-hover) !important;
+  border-color: color-mix(in srgb, var(--erp-neon) 50%, transparent) !important;
+}
+
+.erp-neon-panel {
+  background: var(--erp-surface) !important;
+  color: var(--erp-fg) !important;
+  border-color: var(--erp-border) !important;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px color-mix(in srgb, var(--erp-neon) 18%, transparent);
+}
+
+.erp-neon-option {
+  color: var(--erp-fg) !important;
+}
+
+.erp-neon-option:hover {
+  background: color-mix(in srgb, var(--erp-neon) 12%, transparent) !important;
+}
+
+.erp-neon-option-active {
+  background: color-mix(in srgb, var(--erp-neon) 28%, transparent) !important;
+  color: var(--erp-fg) !important;
 }

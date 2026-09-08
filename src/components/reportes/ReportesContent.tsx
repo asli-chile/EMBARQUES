@@ -1,18 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
-import {
-  moduleCard,
-  moduleHeroRounded,
-  moduleInput,
-  moduleLabel,
-  modulePageBg,
-  moduleSectionTitle,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { FormSelect } from "@/components/ui/FormSelect";
 import {
   ESTADO_META,
   estadosEnOrden,
@@ -56,27 +50,28 @@ type AggregateByKey = {
 const ESTADOS_OPTS = estadosEnOrden();
 
 const ESTADO_CONFIG: Record<GrupoEstado, { color: string; bg: string; dot: string }> = {
-  COMERCIAL:    { color: "text-amber-700",   bg: "bg-amber-50",   dot: "bg-amber-400" },
-  COORDINACION: { color: "text-blue-700",    bg: "bg-blue-50",    dot: "bg-blue-400" },
-  TRANSITO:     { color: "text-indigo-700",  bg: "bg-indigo-50",  dot: "bg-indigo-400" },
-  DOCUMENTAL:   { color: "text-emerald-700", bg: "bg-emerald-50", dot: "bg-emerald-500" },
-  CIERRE:       { color: "text-neutral-600", bg: "bg-neutral-50", dot: "bg-neutral-400" },
-  EXCEPCION:    { color: "text-red-700",     bg: "bg-red-50",     dot: "bg-red-400" },
+  COMERCIAL: { color: "text-dash-fg", bg: "bg-amber-400/15 border border-amber-400/35", dot: "bg-amber-400" },
+  COORDINACION: { color: "text-dash-fg", bg: "bg-sky-400/15 border border-sky-400/35", dot: "bg-sky-400" },
+  TRANSITO: { color: "text-dash-fg", bg: "bg-violet-400/15 border border-violet-400/35", dot: "bg-violet-400" },
+  DOCUMENTAL: { color: "text-dash-fg", bg: "bg-emerald-400/15 border border-emerald-400/35", dot: "bg-emerald-400" },
+  CIERRE: { color: "text-dash-muted", bg: "bg-dash-control border border-dash-border", dot: "bg-neutral-400" },
+  EXCEPCION: { color: "text-dash-fg", bg: "bg-red-400/15 border border-red-400/35", dot: "bg-red-400" },
 };
 
 const ESTADO_BAR: Record<GrupoEstado, string> = {
-  COMERCIAL:    "bg-amber-400",
-  COORDINACION: "bg-blue-400",
-  TRANSITO:     "bg-indigo-400",
-  DOCUMENTAL:   "bg-emerald-500",
-  CIERRE:       "bg-neutral-400",
-  EXCEPCION:    "bg-red-400",
+  COMERCIAL: "bg-amber-400",
+  COORDINACION: "bg-sky-400",
+  TRANSITO: "bg-violet-400",
+  DOCUMENTAL: "bg-emerald-400",
+  CIERRE: "bg-neutral-400",
+  EXCEPCION: "bg-red-400",
 };
 
 export function ReportesContent() {
   const { t, locale } = useLocale();
   const { isCliente, empresaNombres, isLoading: authLoading, isSuperadmin, isAdmin, isEjecutivo, profile } = useAuth();
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
+  const [theme] = useNeonTheme();
 
   const canViewReportes =
     isSuperadmin || isAdmin || isEjecutivo || profile?.rol === "operador";
@@ -132,8 +127,8 @@ export function ReportesContent() {
     setRows((opsRes.data ?? []) as DbOperacion[]);
 
     const sortLocale = locale === "es" ? "es" : undefined;
-    setClientesOpts([...new Set((clientesRes.data ?? []).map((r: any) => r.cliente).filter(Boolean))].sort((a, b) => a.localeCompare(b, sortLocale, { sensitivity: "base" })));
-    setNavierasOpts([...new Set((navierasRes.data ?? []).map((r: any) => r.naviera).filter(Boolean))].sort((a, b) => a.localeCompare(b, sortLocale, { sensitivity: "base" })));
+    setClientesOpts([...new Set((clientesRes.data ?? []).map((r: { cliente: string | null }) => r.cliente).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, sortLocale, { sensitivity: "base" })));
+    setNavierasOpts([...new Set((navierasRes.data ?? []).map((r: { naviera: string | null }) => r.naviera).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, sortLocale, { sensitivity: "base" })));
     setLoading(false);
   }, [supabase, authLoading, temporadaLoading, temporadaActiva, empresaNombres, locale]);
 
@@ -215,7 +210,6 @@ export function ReportesContent() {
         map.set(key, c);
       } catch { /* ignore */ }
     }
-    // Keep insertion order (already chronological desc, reverse for chart)
     return [...map.entries()].slice(0, 12).reverse();
   }, [filteredRows, locale]);
 
@@ -236,59 +230,66 @@ export function ReportesContent() {
     a.click();
   };
 
-  // ── Loading skeleton ────────────────────────────────────────────────────────
-  if (authLoading) {
-    return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-4`}>
-        <p className="text-brand-blue/60 text-base px-4">Cargando…</p>
+  const shell = (children: ReactNode) => (
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
+        {children}
       </main>
+    </div>
+  );
+
+  if (authLoading) {
+    return shell(
+      <div className="relative z-10 p-4">
+        <p className="px-4 text-base text-dash-muted">Cargando…</p>
+      </div>
     );
   }
 
   if (isCliente || !canViewReportes) {
-    return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto w-full p-4 flex items-center justify-center`} role="main">
-        <p className="text-brand-blue/80 text-base px-4 text-center">
+    return shell(
+      <div className="relative z-10 flex flex-1 items-center justify-center p-4">
+        <p className="px-4 text-center text-base text-dash-muted">
           No tienes acceso al módulo de Reportes. Solo personal interno puede ver estos datos.
         </p>
-      </main>
+      </div>
     );
   }
 
   if (loading && !rows.length) {
-    return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-        <div className="max-w-[1600px] mx-auto space-y-4">
-          <div className="motion-skeleton h-24 bg-brand-blue/20 rounded-2xl" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="motion-skeleton motion-skeleton-surface h-24 bg-white rounded-2xl border border-brand-blue/15" />)}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="motion-skeleton motion-skeleton-surface h-56 bg-white rounded-2xl border border-brand-blue/15" />
-            <div className="motion-skeleton motion-skeleton-surface h-56 bg-white rounded-2xl border border-brand-blue/15" />
-          </div>
+    return shell(
+      <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
+        <div className="motion-skeleton h-24 rounded-xl bg-dash-neon/20" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="motion-skeleton motion-skeleton-surface h-24 rounded-xl border border-dash-border bg-dash-control" />
+          ))}
         </div>
-      </main>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="motion-skeleton motion-skeleton-surface h-56 rounded-xl border border-dash-border bg-dash-control" />
+          <div className="motion-skeleton motion-skeleton-surface h-56 rounded-xl border border-dash-border bg-dash-control" />
+        </div>
+      </div>
     );
   }
 
-  // ── KPI card helper ─────────────────────────────────────────────────────────
-  const KpiCard = ({ icon, iconBg, iconColor, label, value, valueColor = "text-neutral-800", borderColor }: {
-    icon: string; iconBg: string; iconColor: string; label: string; value: string;
-    valueColor?: string; borderColor: string;
+  const KpiCard = ({ icon, accent, bar, label, value }: {
+    icon: string; accent: string; bar: string; label: string; value: string;
   }) => (
-    <div className={`${moduleCard} border-t-[3px] ${borderColor} p-4 flex items-start gap-3`}>
-      <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-        <Icon icon={icon} width={18} height={18} className={iconColor} />
+    <div className="dash-card relative overflow-hidden rounded-xl px-3.5 py-3.5">
+      <span className={`absolute inset-x-0 top-0 h-0.5 ${bar}`} aria-hidden />
+      <div className="flex items-center gap-1.5 text-dash-muted">
+        <Icon icon={icon} width={13} height={13} className={accent} />
+        <span className="text-sm font-semibold">{label}</span>
       </div>
-      <div className="min-w-0">
-        <p className="text-base text-neutral-500 font-medium">{label}</p>
-        <p className={`text-xl font-bold mt-0.5 truncate ${valueColor}`}>{value}</p>
-      </div>
+      <p className={`mt-1 truncate text-xl font-bold tabular-nums ${accent}`}>{value}</p>
     </div>
   );
 
-  // ── Bar row helper ──────────────────────────────────────────────────────────
   const BarRow = ({ label, value, displayValue, subValue, maxValue, barColor }: {
     label: string; value: number; displayValue: string; subValue: string; maxValue: number; barColor: string;
   }) => {
@@ -296,53 +297,52 @@ export function ReportesContent() {
     return (
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-base text-neutral-700 truncate max-w-[55%] font-medium">{label}</span>
-          <span className="text-base font-semibold text-neutral-800 flex-shrink-0">{displayValue}</span>
+          <span className="max-w-[55%] truncate text-base font-medium text-dash-fg">{label}</span>
+          <span className="flex-shrink-0 text-base font-semibold text-dash-fg">{displayValue}</span>
         </div>
-        <div className="h-2 bg-[#F4F8FC] rounded-full overflow-hidden">
-          <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+        <div className="h-2 overflow-hidden rounded-full bg-dash-control">
+          <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-sm text-neutral-400">{subValue}</p>
+        <p className="text-sm text-dash-muted">{subValue}</p>
       </div>
     );
   };
 
-  return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto`} role="main">
-      <div className={`${moduleHeroRounded} rounded-none`}>
-        <div className="px-4 sm:px-6 py-5 sm:py-6 max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:bar-chart-3" width={24} height={24} className="text-white" />
+  return shell(
+    <>
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+              <Icon icon="lucide:bar-chart-3" width={22} height={22} className="text-dash-neon" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">{tr.title}</h1>
-              <p className="text-base text-white/75 mt-1">{tr.subtitle}</p>
+              <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+              <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={!filteredRows.length}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-semibold text-brand-blue bg-white rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 flex-shrink-0 shadow-sm"
-          >
-            <Icon icon="lucide:download" width={15} height={15} />
-            {tr.export}
-          </button>
+          <div className="ml-auto">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!filteredRows.length}
+              className="dash-cta inline-flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50"
+            >
+              <Icon icon="lucide:download" width={15} height={15} />
+              {tr.export}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 lg:p-5">
-      <div className="motion-enter max-w-[1600px] mx-auto space-y-4">
-
-        {/* ── Filtros ── */}
-        <div className={`${moduleCard} p-4`}>
-          <div className="flex items-center justify-between mb-3">
+      <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
+        <div className="dash-card rounded-xl p-4">
+          <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Icon icon="typcn:filter" width={16} height={16} className="text-brand-blue" />
-              <span className="text-base font-semibold text-brand-blue">{tr.filters}</span>
+              <Icon icon="typcn:filter" width={16} height={16} className="text-dash-neon" />
+              <span className="text-base font-semibold text-dash-fg">{tr.filters}</span>
               {activeFilterCount > 0 && (
-                <span className="px-2 py-0.5 text-sm font-semibold bg-brand-blue text-white rounded-lg">
+                <span className="rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2 py-0.5 text-sm font-semibold text-dash-fg">
                   {activeFilterCount}
                 </span>
               )}
@@ -351,117 +351,119 @@ export function ReportesContent() {
               <button
                 type="button"
                 onClick={() => setFilters({ fechaDesde: "", fechaHasta: "", estado: "", cliente: "", naviera: "" })}
-                className="text-base text-neutral-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                className="flex items-center gap-1 text-base text-dash-muted transition-colors hover:text-red-400"
               >
                 <Icon icon="lucide:x" width={12} height={12} />
                 {tr.clearFilters}
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
             {[
               { label: tr.dateFrom, type: "date", key: "fechaDesde" as const },
               { label: tr.dateTo, type: "date", key: "fechaHasta" as const },
             ].map(({ label, type, key }) => (
               <div key={key}>
-                <label className={moduleLabel}>{label}</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted">{label}</label>
                 <input
                   type={type}
                   value={filters[key]}
                   onChange={(e) => setFilters((f) => ({ ...f, [key]: e.target.value }))}
-                  className={moduleInput}
+                  className="dash-control w-full rounded-lg px-3 py-2 text-sm text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                 />
               </div>
             ))}
             <div>
-              <label className={moduleLabel}>{tr.state}</label>
-              <select value={filters.estado} onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-                className={moduleInput}>
-                <option value="">{tr.allStates}</option>
-                {ESTADOS_OPTS.map((e) => <option key={e} value={e}>{etiquetaEstado(e)}</option>)}
-              </select>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted">{tr.state}</label>
+              <FormSelect
+                variant="neon"
+                value={filters.estado}
+                placeholder={tr.allStates}
+                options={ESTADOS_OPTS.map((e) => ({ value: e, label: etiquetaEstado(e) }))}
+                onChange={(v) => setFilters((f) => ({ ...f, estado: v }))}
+              />
             </div>
             <div>
-              <label className={moduleLabel}>{tr.client}</label>
-              <select value={filters.cliente} onChange={(e) => setFilters((f) => ({ ...f, cliente: e.target.value }))}
-                className={moduleInput}>
-                <option value="">{tr.allClients}</option>
-                {clientesOpts.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted">{tr.client}</label>
+              <FormSelect
+                variant="neon"
+                value={filters.cliente}
+                placeholder={tr.allClients}
+                options={clientesOpts.map((c) => ({ value: c, label: c }))}
+                onChange={(v) => setFilters((f) => ({ ...f, cliente: v }))}
+              />
             </div>
             <div>
-              <label className={moduleLabel}>{tr.carrier}</label>
-              <select value={filters.naviera} onChange={(e) => setFilters((f) => ({ ...f, naviera: e.target.value }))}
-                className={moduleInput}>
-                <option value="">{tr.allCarriers}</option>
-                {navierasOpts.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-dash-muted">{tr.carrier}</label>
+              <FormSelect
+                variant="neon"
+                value={filters.naviera}
+                placeholder={tr.allCarriers}
+                options={navierasOpts.map((n) => ({ value: n, label: n }))}
+                onChange={(v) => setFilters((f) => ({ ...f, naviera: v }))}
+              />
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-base flex items-center gap-2">
-            <Icon icon="lucide:alert-circle" width={16} height={16} />
+          <div className="flex items-center gap-2 rounded-lg border border-red-400/35 bg-red-400/15 p-3 text-base text-dash-fg">
+            <Icon icon="lucide:alert-circle" width={16} height={16} className="text-red-400" />
             {error}
           </div>
         )}
 
-        {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
-          <KpiCard icon="typcn:document-text" iconBg="bg-slate-100" iconColor="text-slate-600"
-            label={tr.totalOperations} value={fmt(kpis.totalOps)} borderColor="border-t-slate-400" />
-          <KpiCard icon="typcn:th-large" iconBg="bg-amber-50" iconColor="text-amber-600"
-            label={tr.totalPallets} value={fmt(kpis.totalPallets)} borderColor="border-t-amber-400" />
-          <KpiCard icon="typcn:chart-bar" iconBg="bg-blue-50" iconColor="text-blue-600"
-            label={tr.totalNetWeight} value={fmt(kpis.totalPesoNeto)} borderColor="border-t-blue-400" />
-          <KpiCard icon="typcn:dollar" iconBg="bg-emerald-50" iconColor="text-emerald-600"
-            label={tr.totalInvoiced} value={fmtCur(kpis.totalFacturado)} valueColor="text-emerald-700" borderColor="border-t-emerald-400" />
-          <KpiCard icon="lucide:trending-up" iconBg="bg-teal-50" iconColor="text-teal-600"
-            label={tr.totalMargin} value={fmtCur(kpis.totalMargen)} valueColor="text-teal-700" borderColor="border-t-teal-400" />
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
+          <KpiCard icon="typcn:document-text" accent="text-dash-muted" bar="bg-neutral-400"
+            label={tr.totalOperations} value={fmt(kpis.totalOps)} />
+          <KpiCard icon="typcn:th-large" accent="text-amber-300" bar="bg-amber-400"
+            label={tr.totalPallets} value={fmt(kpis.totalPallets)} />
+          <KpiCard icon="typcn:chart-bar" accent="text-sky-300" bar="bg-sky-400"
+            label={tr.totalNetWeight} value={fmt(kpis.totalPesoNeto)} />
+          <KpiCard icon="typcn:dollar" accent="text-emerald-300" bar="bg-emerald-400"
+            label={tr.totalInvoiced} value={fmtCur(kpis.totalFacturado)} />
+          <KpiCard icon="lucide:trending-up" accent="text-dash-neon" bar="bg-dash-neon"
+            label={tr.totalMargin} value={fmtCur(kpis.totalMargen)} />
         </div>
 
         {!filteredRows.length ? (
-          <div className={`${moduleCard} p-12 text-center`}>
-            <div className="w-14 h-14 bg-[#F4F8FC] rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Icon icon="lucide:bar-chart-3" width={28} height={28} className="text-brand-blue/30" />
+          <div className="dash-card rounded-xl p-12 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-dash-border bg-dash-control">
+              <Icon icon="lucide:bar-chart-3" width={28} height={28} className="text-dash-muted" />
             </div>
-            <p className="text-brand-blue/70 text-base">{tr.noData}</p>
+            <p className="text-base text-dash-muted">{tr.noData}</p>
           </div>
         ) : (
           <>
-            {/* ── Estado + Meses ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-
-              {/* Por Estado */}
-              <div className={moduleCard}>
-                <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
-                  <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
-                  <Icon icon="lucide:pie-chart" width={15} height={15} className="text-brand-blue" />
-                  <h2 className={moduleSectionTitle}>{tr.byStatus}</h2>
-                  <span className="ml-auto text-sm text-neutral-400">{filteredRows.length} {tr.opsUnit}</span>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+              <div className="dash-card overflow-hidden rounded-xl">
+                <div className="dash-section-head flex items-center gap-2 px-4 py-3">
+                  <span className="h-4 w-1 flex-shrink-0 rounded-full bg-dash-neon" />
+                  <Icon icon="lucide:pie-chart" width={15} height={15} className="text-dash-neon" />
+                  <h2 className="text-sm font-bold text-dash-fg">{tr.byStatus}</h2>
+                  <span className="ml-auto text-sm text-dash-muted">{filteredRows.length} {tr.opsUnit}</span>
                 </div>
-                <div className="p-4 space-y-2.5">
+                <div className="space-y-2.5 p-4">
                   {byStatus.map(([estado, count]) => {
                     const codigo = normalizarEstado(estado);
                     const grupo = codigo ? ESTADO_META[codigo].grupo : null;
-                    const cfg = grupo ? ESTADO_CONFIG[grupo] : { color: "text-neutral-600", bg: "bg-neutral-50", dot: "bg-neutral-400" };
+                    const cfg = grupo ? ESTADO_CONFIG[grupo] : { color: "text-dash-muted", bg: "bg-dash-control border border-dash-border", dot: "bg-neutral-400" };
                     const bar = grupo ? ESTADO_BAR[grupo] : "bg-neutral-400";
                     const pct = filteredRows.length > 0 ? (count / filteredRows.length) * 100 : 0;
                     return (
                       <div key={estado} className="space-y-1">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                            <span className="text-base text-neutral-700 truncate font-medium">{etiquetaEstado(estado) || estado}</span>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className={`h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
+                            <span className="truncate text-base font-medium text-dash-fg">{etiquetaEstado(estado) || estado}</span>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={`text-sm font-semibold px-2 py-0.5 rounded-lg ${cfg.bg} ${cfg.color}`}>{count}</span>
-                            <span className="text-sm text-neutral-400 w-9 text-right">{pct.toFixed(0)}%</span>
+                          <div className="flex flex-shrink-0 items-center gap-2">
+                            <span className={`rounded-lg px-2 py-0.5 text-sm font-semibold ${cfg.bg} ${cfg.color}`}>{count}</span>
+                            <span className="w-9 text-right text-sm text-dash-muted">{pct.toFixed(0)}%</span>
                           </div>
                         </div>
-                        <div className="h-1.5 bg-[#F4F8FC] rounded-full overflow-hidden">
-                          <div className={`h-full ${bar} rounded-full transition-all duration-700`} style={{ width: `${Math.max(2, pct)}%` }} />
+                        <div className="h-1.5 overflow-hidden rounded-full bg-dash-control">
+                          <div className={`h-full rounded-full transition-all duration-700 ${bar}`} style={{ width: `${Math.max(2, pct)}%` }} />
                         </div>
                       </div>
                     );
@@ -469,29 +471,28 @@ export function ReportesContent() {
                 </div>
               </div>
 
-              {/* Por Mes */}
               {byMonth.length > 0 && (
-                <div className={moduleCard}>
-                  <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
-                    <span className="w-1 h-4 bg-brand-teal rounded-full flex-shrink-0" />
-                    <Icon icon="lucide:calendar-days" width={15} height={15} className="text-brand-teal" />
-                    <h2 className={moduleSectionTitle}>{tr.byMonth}</h2>
+                <div className="dash-card overflow-hidden rounded-xl">
+                  <div className="dash-section-head flex items-center gap-2 px-4 py-3">
+                    <span className="h-4 w-1 flex-shrink-0 rounded-full bg-dash-neon-hot" />
+                    <Icon icon="lucide:calendar-days" width={15} height={15} className="text-dash-neon" />
+                    <h2 className="text-sm font-bold text-dash-fg">{tr.byMonth}</h2>
                   </div>
-                  <div className="p-4 space-y-2.5">
+                  <div className="space-y-2.5 p-4">
                     {(() => {
                       const maxFact = Math.max(...byMonth.map(([, v]) => v.facturado), 1);
                       return byMonth.map(([mes, val]) => (
                         <div key={mes} className="space-y-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-base text-neutral-700 font-medium capitalize w-24 flex-shrink-0">{mes}</span>
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <span className="text-sm text-neutral-400">{val.ops} {tr.opsUnit}</span>
-                              <span className="text-base font-semibold text-neutral-800">{fmtCur(val.facturado)}</span>
+                            <span className="w-24 flex-shrink-0 capitalize text-base font-medium text-dash-fg">{mes}</span>
+                            <div className="flex flex-shrink-0 items-center gap-3">
+                              <span className="text-sm text-dash-muted">{val.ops} {tr.opsUnit}</span>
+                              <span className="text-base font-semibold text-dash-fg">{fmtCur(val.facturado)}</span>
                             </div>
                           </div>
-                          <div className="h-1.5 bg-[#F4F8FC] rounded-full overflow-hidden">
+                          <div className="h-1.5 overflow-hidden rounded-full bg-dash-control">
                             <div
-                              className="h-full bg-brand-teal/70 rounded-full transition-all duration-700"
+                              className="h-full rounded-full bg-dash-neon/70 transition-all duration-700"
                               style={{ width: `${Math.max(2, (val.facturado / maxFact) * 100)}%` }}
                             />
                           </div>
@@ -503,16 +504,14 @@ export function ReportesContent() {
               )}
             </div>
 
-            {/* ── Por Cliente + Por Naviera ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-              {/* Por Cliente */}
-              <div className={moduleCard}>
-                <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
-                  <span className="w-1 h-4 bg-brand-blue rounded-full flex-shrink-0" />
-                  <Icon icon="lucide:building-2" width={15} height={15} className="text-brand-blue" />
-                  <h2 className={moduleSectionTitle}>{tr.byClient}</h2>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+              <div className="dash-card overflow-hidden rounded-xl">
+                <div className="dash-section-head flex items-center gap-2 px-4 py-3">
+                  <span className="h-4 w-1 flex-shrink-0 rounded-full bg-dash-neon" />
+                  <Icon icon="lucide:building-2" width={15} height={15} className="text-dash-neon" />
+                  <h2 className="text-sm font-bold text-dash-fg">{tr.byClient}</h2>
                 </div>
-                <div className="p-4 space-y-3.5">
+                <div className="space-y-3.5 p-4">
                   {byClient.map((item) => (
                     <BarRow
                       key={item.key}
@@ -521,20 +520,19 @@ export function ReportesContent() {
                       displayValue={fmtCur(item.totalMontoFacturado)}
                       subValue={`${item.totalOperaciones} ${tr.opsUnit} · ${fmt(item.totalPallets)} ${tr.palletsUnit} · ${tr.marginLabel} ${fmtCur(item.totalMargenReal)}`}
                       maxValue={byClient[0]?.totalMontoFacturado ?? 1}
-                      barColor="bg-brand-blue/50"
+                      barColor="bg-dash-neon/50"
                     />
                   ))}
                 </div>
               </div>
 
-              {/* Por Naviera */}
-              <div className={moduleCard}>
-                <div className="px-4 py-3 border-b border-brand-blue/10 bg-[#F4F8FC] flex items-center gap-2">
-                  <span className="w-1 h-4 bg-brand-olive rounded-full flex-shrink-0" />
-                  <Icon icon="typcn:anchor" width={17} height={17} className="text-brand-olive" />
-                  <h2 className={moduleSectionTitle}>{tr.byCarrier}</h2>
+              <div className="dash-card overflow-hidden rounded-xl">
+                <div className="dash-section-head flex items-center gap-2 px-4 py-3">
+                  <span className="h-4 w-1 flex-shrink-0 rounded-full bg-emerald-400" />
+                  <Icon icon="typcn:anchor" width={17} height={17} className="text-emerald-300" />
+                  <h2 className="text-sm font-bold text-dash-fg">{tr.byCarrier}</h2>
                 </div>
-                <div className="p-4 space-y-3.5">
+                <div className="space-y-3.5 p-4">
                   {byCarrier.map((item) => (
                     <BarRow
                       key={item.key}
@@ -543,7 +541,7 @@ export function ReportesContent() {
                       displayValue={fmtCur(item.totalMontoFacturado)}
                       subValue={`${item.totalOperaciones} ${tr.opsUnit} · ${fmt(item.totalPallets)} ${tr.palletsUnit} · ${tr.marginLabel} ${fmtCur(item.totalMargenReal)}`}
                       maxValue={byCarrier[0]?.totalMontoFacturado ?? 1}
-                      barColor="bg-brand-olive/60"
+                      barColor="bg-emerald-400/60"
                     />
                   ))}
                 </div>
@@ -552,7 +550,6 @@ export function ReportesContent() {
           </>
         )}
       </div>
-      </div>
-    </main>
+    </>
   );
 }

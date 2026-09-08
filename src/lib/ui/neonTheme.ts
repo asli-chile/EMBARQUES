@@ -1,4 +1,4 @@
-/** Tema neón claro/oscuro compartido (Dashboard + Inicio + Informativos). */
+/** Tema neón claro/oscuro compartido (Dashboard + Inicio + Informativos + Tracking + Tareas + Reservas). */
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -25,6 +25,12 @@ export function readNeonTheme(): NeonTheme {
   return "dark";
 }
 
+/** Expone el tema en <html> para portales (selects/combobox fuera del árbol dash-neon). */
+export function syncNeonThemeToDocument(theme: NeonTheme): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.erpNeon = theme;
+}
+
 export function writeNeonTheme(theme: NeonTheme): void {
   try {
     localStorage.setItem(NEON_THEME_KEY, theme);
@@ -32,6 +38,7 @@ export function writeNeonTheme(theme: NeonTheme): void {
   } catch {
     /* ignore */
   }
+  syncNeonThemeToDocument(theme);
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(NEON_THEME_EVENT, { detail: theme }));
   }
@@ -50,15 +57,20 @@ export function useNeonTheme(): [NeonTheme, (theme: NeonTheme) => void] {
   const [theme, setTheme] = useState<NeonTheme>("dark");
 
   useEffect(() => {
-    setTheme(readNeonTheme());
+    const initial = readNeonTheme();
+    setTheme(initial);
+    syncNeonThemeToDocument(initial);
     const onChange = (e: Event) => {
       const detail = (e as CustomEvent<NeonTheme>).detail;
-      if (detail === "dark" || detail === "light") setTheme(detail);
-      else setTheme(readNeonTheme());
+      const next = detail === "dark" || detail === "light" ? detail : readNeonTheme();
+      setTheme(next);
+      syncNeonThemeToDocument(next);
     };
     const onStorage = (e: StorageEvent) => {
       if (e.key === NEON_THEME_KEY || e.key === LEGACY_INF_THEME_KEY) {
-        setTheme(readNeonTheme());
+        const next = readNeonTheme();
+        setTheme(next);
+        syncNeonThemeToDocument(next);
       }
     };
     window.addEventListener(NEON_THEME_EVENT, onChange);

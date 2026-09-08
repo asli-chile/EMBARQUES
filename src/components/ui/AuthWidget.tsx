@@ -78,19 +78,19 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
         <button
           type="button"
           onClick={handleOpen}
-          className="asli-no-drag group relative inline-flex h-9 items-center pl-0 pr-0 transition-opacity hover:opacity-95"
+          className="asli-no-drag group relative inline-flex h-10 items-center pl-0 pr-0 transition-opacity hover:opacity-95"
           aria-label={`Perfil de ${authUser.name}`}
           title={authUser.name}
         >
-          <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1a3a6e] text-[13px] font-bold text-white ring-2 ring-[#0B1A3D]/50">
+          <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a3a6e] text-[14px] font-bold text-white ring-2 ring-[#0B1A3D]/50">
             <span aria-hidden>{initial}</span>
           </span>
-          <span className="-ml-2.5 flex h-8 items-center gap-1 rounded-full border border-sky-300/35 bg-[#122847]/80 pl-4 pr-2.5 text-[12px] font-medium text-white/95 backdrop-blur-sm">
-            <span className="max-w-[7.5rem] truncate">{firstName}</span>
+          <span className="-ml-3 flex h-9 items-center gap-1.5 rounded-full border border-sky-300/35 bg-[#122847]/80 pl-5 pr-3 text-[13px] font-medium text-white/95 backdrop-blur-sm">
+            <span className="max-w-[8.5rem] truncate">{firstName}</span>
             <Icon
               icon="lucide:chevron-down"
-              width={14}
-              height={14}
+              width={15}
+              height={15}
               className="shrink-0 text-white/55"
               aria-hidden
             />

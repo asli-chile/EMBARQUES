@@ -5,19 +5,12 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
-import {
-  moduleCardAccent,
-  moduleHeroRounded,
-  moduleInput,
-  moduleLabel,
-  modulePageBg,
-  moduleSectionTitle,
-} from "@/lib/ui/moduleStyles";
 import { format } from "date-fns";
 import { sileo } from "sileo";
 import { ESTADO_META, etiquetaEstado, normalizarEstado } from "@/lib/operaciones/estados";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 type Operacion = {
   id: string;
@@ -160,6 +153,7 @@ export function ReservaAsliContent() {
   const canManageTransport = isSuperadmin || isAdmin;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const tr = t.transporteAsli;
+  const [theme] = useNeonTheme();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [empresasTransporte, setEmpresasTransporte] = useState<TransporteEmpresa[]>([]);
@@ -807,8 +801,14 @@ export function ReservaAsliContent() {
     }
   };
 
-  const inputClass = moduleInput;
-  const labelClass = moduleLabel;
+  const inputClass =
+    "dash-control w-full min-h-[2.6rem] px-3.5 py-3 text-base font-semibold text-dash-fg placeholder:text-dash-muted placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40 disabled:opacity-50 disabled:cursor-not-allowed";
+  const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-dash-muted";
+  const sectionTitleClass = "text-base font-bold tracking-wide text-dash-fg";
+  const cardAccent = <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />;
+  const sectionIconWrap =
+    "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dash-neon/35 bg-dash-neon/15";
+
 
   const renderInput = (
     label: string,
@@ -854,690 +854,682 @@ export function ReservaAsliContent() {
 
   if (loading) {
     return (
-      <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-4 flex items-center justify-center`}>
-        <div className="flex items-center gap-3 px-5 py-4 bg-white rounded-2xl border border-brand-blue/15 shadow-sm text-neutral-500 text-sm font-medium">
-          <Icon icon="typcn:refresh" className="w-5 h-5 animate-spin text-brand-blue" />
-          <span>{tr.loading}</span>
-        </div>
-      </main>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
+          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
+            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <span>{tr.loading}</span>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className={`flex-1 ${modulePageBg} min-h-0 overflow-auto p-3 sm:p-4 lg:p-5`}>
-      <div className="w-full max-w-[1600px] mx-auto space-y-4">
+    <>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+          </div>
 
-        {/* Hero */}
-        <div className={moduleHeroRounded}>
-          <div className="px-5 py-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:truck" width={22} height={22} className="text-white" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl font-bold leading-tight">{tr.title}</h1>
-                <p className="text-base text-white/75 mt-0.5">{tr.subtitle}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {operaciones.filter(isPendiente).length > 0 && (
-                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-                  <Icon icon="lucide:alert-circle" width={13} height={13} className="text-amber-300" />
-                  <span className="text-sm font-bold">{operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}</span>
+          <div className="dash-toolbar relative z-10 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+                  <Icon icon="lucide:truck" width={22} height={22} className="text-dash-neon" aria-hidden />
                 </div>
-              )}
-              {formData.operacion_id && (
-                <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
-                  <Icon icon="lucide:check-circle" width={13} height={13} className="text-emerald-300" />
-                  <span className="text-sm font-semibold">Op. seleccionada</span>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
                 </div>
-              )}
-              <button
-                type="button"
-                onClick={() => void fetchData()}
-                className="p-2 bg-white/15 hover:bg-white/25 rounded-xl transition-colors text-white"
-                title={t.misReservas?.refresh ?? "Actualizar"}
-              >
-                <Icon icon="lucide:refresh-cw" width={16} height={16} />
-              </button>
+              </div>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {operaciones.filter(isPendiente).length > 0 && (
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/35 bg-amber-500/15 px-3 py-1.5 text-sm font-bold text-dash-fg">
+                    <Icon icon="lucide:alert-circle" width={13} height={13} className="text-amber-400" />
+                    <span>{operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}</span>
+                  </div>
+                )}
+                {formData.operacion_id && (
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-3 py-1.5 text-sm font-semibold text-dash-fg">
+                    <Icon icon="lucide:check-circle" width={13} height={13} className="text-emerald-400" />
+                    <span>Op. seleccionada</span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void fetchData()}
+                  className="rounded-lg border border-dash-border bg-dash-control p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                  title={t.misReservas?.refresh ?? "Actualizar"}
+                >
+                  <Icon icon="lucide:refresh-cw" width={16} height={16} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Tabs mobile — solo visibles en pantallas < lg */}
-        <div className="lg:hidden flex bg-neutral-100 rounded-2xl p-1 gap-1">
-          <button
-            type="button"
-            onClick={() => setMobilePanel("select")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all ${
-              mobilePanel === "select"
-                ? "bg-white text-brand-blue shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
-            }`}
-          >
-            <Icon icon="lucide:list" width={14} height={14} />
-            {tr.selectOperation}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobilePanel("form")}
-            disabled={!formData.operacion_id}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-base font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-              mobilePanel === "form"
-                ? "bg-white text-brand-blue shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
-            }`}
-          >
-            <Icon icon="lucide:truck" width={14} height={14} />
-            {tr.transportInfo}
-            {formData.operacion_id && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-            )}
-          </button>
-        </div>
+          <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
+            <div className="lg:hidden flex rounded-xl border border-dash-border bg-dash-control/60 p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setMobilePanel("select")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-bold transition-all ${
+                  mobilePanel === "select"
+                    ? "bg-dash-neon/20 text-dash-fg border border-dash-neon/40 shadow-[0_0_20px_-8px_color-mix(in_srgb,var(--dash-neon)_50%,transparent)]"
+                    : "text-dash-muted hover:text-dash-fg border border-transparent"
+                }`}
+              >
+                <Icon icon="lucide:list" width={14} height={14} />
+                {tr.selectOperation}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePanel("form")}
+                disabled={!formData.operacion_id}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                  mobilePanel === "form"
+                    ? "bg-dash-neon/20 text-dash-fg border border-dash-neon/40 shadow-[0_0_20px_-8px_color-mix(in_srgb,var(--dash-neon)_50%,transparent)]"
+                    : "text-dash-muted hover:text-dash-fg border border-transparent"
+                }`}
+              >
+                <Icon icon="lucide:truck" width={14} height={14} />
+                {tr.transportInfo}
+                {formData.operacion_id && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                )}
+              </button>
+            </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Panel selección operación */}
-            <div className={`w-full lg:w-80 lg:flex-shrink-0 ${mobilePanel !== "select" ? "hidden lg:block" : ""}`}>
-              <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden lg:sticky lg:top-0">
-                <div className={moduleCardAccent} />
-                <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                      <Icon icon="typcn:document" className="w-4 h-4 text-brand-blue" />
-                    </span>
-                    <h2 className={moduleSectionTitle}>
-                      {tr.selectOperation}
-                    </h2>
-                  </div>
-                  {operaciones.filter(isPendiente).length > 0 && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-bold flex-shrink-0">
-                      <Icon icon="lucide:alert-circle" width={12} height={12} />
-                      {operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="mb-3 space-y-2">
-                    <div className="relative">
-                      <Icon
-                        icon="typcn:zoom"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 pointer-events-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder={tr.searchPlaceholder}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-3 border border-brand-blue/20 bg-[#F4F8FC] rounded-lg text-base text-brand-blue placeholder:text-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 focus:border-brand-blue focus:bg-white transition-all"
-                      />
+            <form onSubmit={handleSubmit}>
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className={`w-full lg:w-80 lg:flex-shrink-0 ${mobilePanel !== "select" ? "hidden lg:block" : ""}`}>
+                  <div className="dash-card overflow-hidden rounded-xl lg:sticky lg:top-0">
+                    {cardAccent}
+                    <div className="px-4 py-3 border-b border-dash-border flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={sectionIconWrap}>
+                          <Icon icon="typcn:document" className="w-4 h-4 text-dash-neon" />
+                        </span>
+                        <h2 className={sectionTitleClass}>{tr.selectOperation}</h2>
+                      </div>
+                      {operaciones.filter(isPendiente).length > 0 && (
+                        <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-400/35 bg-amber-500/15 text-dash-fg text-sm font-bold flex-shrink-0">
+                          <Icon icon="lucide:alert-circle" width={12} height={12} className="text-amber-400" />
+                          {operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
-                    <label className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-lg hover:bg-neutral-50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={filterPending}
-                        onChange={(e) => setFilterPending(e.target.checked)}
-                        className="w-3.5 h-3.5 rounded border-neutral-300 accent-amber-500"
-                      />
-                      <span className="text-sm text-neutral-600 font-medium">Solo pendientes de completar</span>
-                    </label>
-                  </div>
+                    <div className="p-4">
+                      <div className="mb-3 space-y-2">
+                        <div className="relative">
+                          <Icon
+                            icon="typcn:zoom"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted w-4 h-4 pointer-events-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder={tr.searchPlaceholder}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="dash-control w-full pl-9 pr-4 py-3 text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                          />
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-lg hover:bg-dash-neon/10 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={filterPending}
+                            onChange={(e) => setFilterPending(e.target.checked)}
+                            className="w-3.5 h-3.5 rounded border-dash-border accent-[var(--dash-neon)]"
+                          />
+                          <span className="text-sm text-dash-muted font-medium">Solo pendientes de completar</span>
+                        </label>
+                      </div>
 
-                  {filteredOperaciones.length === 0 ? (
-                    <div className="py-8 text-center">
-                      <span className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-2 inline-flex">
-                        <Icon icon="typcn:document" width={20} height={20} className="text-neutral-400" />
-                      </span>
-                      <p className="text-neutral-500 text-sm font-medium">{tr.noOperations}</p>
-                    </div>
-                  ) : (
-                    <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
-                      {filteredOperaciones.map((op) => {
-                        const isActive = formData.operacion_id === op.id;
-                        const pendientes: string[] = [];
-                        if (!op.transporte) pendientes.push("Empresa");
-                        if (!op.chofer) pendientes.push("Chofer");
-                        if (!op.patente_camion) pendientes.push("Unidad");
-                        if (!op.contenedor) pendientes.push("Contenedor");
-                        if (!op.tramo) pendientes.push("Tramo");
-                        const completo = pendientes.length === 0;
-                        return (
-                          <div
-                            key={op.id}
-                            className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
-                              isActive
-                                ? "border-brand-blue bg-brand-blue/5 ring-2 ring-brand-blue/20"
-                                : completo
-                                  ? "border-emerald-200 bg-emerald-50/40 hover:border-emerald-300 hover:bg-emerald-50"
-                                  : "border-amber-200 bg-amber-50/40 hover:border-amber-300 hover:bg-amber-50"
-                            }`}
-                            onClick={() => handleChange("operacion_id", op.id)}
-                          >
-                            {canManageTransport && (
-                              <button
-                                type="button"
-                                onClick={(ev) => {
-                                  ev.stopPropagation();
-                                  setConfirmDeleteReserva(op.id);
-                                }}
-                                className="absolute top-2 right-2 p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                                title="Quitar de transportes"
+                      {filteredOperaciones.length === 0 ? (
+                        <div className="py-8 text-center">
+                          <span className="w-10 h-10 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center mx-auto mb-2 inline-flex">
+                            <Icon icon="typcn:document" width={20} height={20} className="text-dash-muted" />
+                          </span>
+                          <p className="text-dash-muted text-sm font-medium">{tr.noOperations}</p>
+                        </div>
+                      ) : (
+                        <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
+                          {filteredOperaciones.map((op) => {
+                            const isActive = formData.operacion_id === op.id;
+                            const pendientes: string[] = [];
+                            if (!op.transporte) pendientes.push("Empresa");
+                            if (!op.chofer) pendientes.push("Chofer");
+                            if (!op.patente_camion) pendientes.push("Unidad");
+                            if (!op.contenedor) pendientes.push("Contenedor");
+                            if (!op.tramo) pendientes.push("Tramo");
+                            const completo = pendientes.length === 0;
+                            return (
+                              <div
+                                key={op.id}
+                                className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                                  isActive
+                                    ? "border-dash-neon/50 bg-dash-neon/15 ring-2 ring-dash-neon/25"
+                                    : completo
+                                      ? "border-emerald-400/35 bg-emerald-500/10 hover:border-emerald-400/50 hover:bg-emerald-500/15"
+                                      : "border-amber-400/35 bg-amber-500/10 hover:border-amber-400/50 hover:bg-amber-500/15"
+                                }`}
+                                onClick={() => handleChange("operacion_id", op.id)}
                               >
-                                <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            <div className="flex items-start justify-between gap-2 mb-0.5">
-                              <p className={`font-bold text-sm ${isActive ? "text-brand-blue" : "text-neutral-800"}`}>
-                                {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
+                                {canManageTransport && (
+                                  <button
+                                    type="button"
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      setConfirmDeleteReserva(op.id);
+                                    }}
+                                    className="absolute top-2 right-2 p-1 rounded-lg text-dash-muted hover:text-red-400 hover:bg-red-500/15 opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Quitar de transportes"
+                                  >
+                                    <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <div className="flex items-start justify-between gap-2 mb-0.5">
+                                  <p className={`font-bold text-sm ${isActive ? "text-dash-neon" : "text-dash-fg"}`}>
+                                    {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
+                                  </p>
+                                  <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold border ${
+                                    completo
+                                      ? "bg-emerald-500/15 text-dash-fg border-emerald-400/35"
+                                      : "bg-amber-500/15 text-dash-fg border-amber-400/35"
+                                  }`}>
+                                    <Icon icon={completo ? "lucide:check-circle" : "lucide:alert-circle"} width={10} height={10} />
+                                    {completo ? "Completo" : "Pendiente"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <p className="text-xs text-dash-muted truncate">{op.cliente} · {op.booking}</p>
+                                  {op.booking_doc_url && (
+                                    <a
+                                      href={op.booking_doc_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(ev) => ev.stopPropagation()}
+                                      title="Ver PDF de Booking"
+                                      className="flex-shrink-0 p-0.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15 rounded transition-colors"
+                                    >
+                                      <Icon icon="lucide:paperclip" width={12} height={12} />
+                                    </a>
+                                  )}
+                                </div>
+                                <p className="text-xs text-dash-muted/80 mt-0.5">{op.naviera} · ETD: {formatDate(op.etd)}</p>
+                                {!completo && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {pendientes.map((p) => (
+                                      <span key={p} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/15 text-dash-fg border border-amber-400/35 rounded text-[10px] font-semibold">
+                                        <Icon icon="lucide:x-circle" width={9} height={9} />
+                                        {p}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`flex-1 min-w-0 ${mobilePanel !== "form" ? "hidden lg:block" : ""}`}>
+                  {formData.operacion_id ? (
+                    <div className="space-y-4">
+                      {selectedOperacion && (
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="p-4 bg-dash-neon/10 border-l-4 border-dash-neon flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className={sectionTitleClass}>{tr.selectedOperation}</p>
+                              <p className="text-dash-fg font-bold mt-1 text-sm">
+                                {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} — {selectedOperacion.cliente}
                               </p>
-                              <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                completo
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-amber-100 text-amber-700"
-                              }`}>
-                                <Icon icon={completo ? "lucide:check-circle" : "lucide:alert-circle"} width={10} height={10} />
-                                {completo ? "Completo" : "Pendiente"}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <p className="text-xs text-neutral-600 truncate">{op.cliente} · {op.booking}</p>
-                              {op.booking_doc_url && (
+                              <p className="text-sm text-dash-muted mt-0.5">
+                                {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
+                              </p>
+                              {selectedOperacion.booking_doc_url && (
                                 <a
-                                  href={op.booking_doc_url}
+                                  href={selectedOperacion.booking_doc_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  onClick={(ev) => ev.stopPropagation()}
-                                  title="Ver PDF de Booking"
-                                  className="flex-shrink-0 p-0.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
+                                  className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-dash-fg text-xs font-semibold hover:bg-emerald-500/25 transition-colors"
                                 >
-                                  <Icon icon="lucide:paperclip" width={12} height={12} />
+                                  <Icon icon="lucide:file-text" width={13} height={13} />
+                                  Ver PDF de Booking
+                                  <Icon icon="lucide:external-link" width={11} height={11} className="opacity-70" />
                                 </a>
                               )}
                             </div>
-                            <p className="text-xs text-neutral-400 mt-0.5">{op.naviera} · ETD: {formatDate(op.etd)}</p>
-                            {!completo && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {pendientes.map((p) => (
-                                  <span key={p} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-semibold">
-                                    <Icon icon="lucide:x-circle" width={9} height={9} />
-                                    {p}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => setMobilePanel("select")}
+                              className="lg:hidden flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-dash-fg bg-dash-control border border-dash-neon/35 rounded-lg hover:bg-dash-neon/15 transition-colors"
+                            >
+                              <Icon icon="lucide:list" width={12} height={12} />
+                              Cambiar
+                            </button>
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
+
+                      {selectedOperacion && (
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 flex items-center justify-between gap-3">
+                            <span className={sectionTitleClass}>Estado de la Operación</span>
+                            {(() => {
+                              const codigo = normalizarEstado(selectedOperacion.estado_operacion);
+                              const cancelada = codigo === "CANCELADA";
+                              const avanzada = codigo
+                                ? ESTADO_META[codigo].orden >= ESTADO_META.RESERVA_CONFIRMADA.orden && !cancelada
+                                : false;
+                              const badgeClass = cancelada
+                                ? "bg-red-500/15 text-dash-fg border-red-400/35"
+                                : avanzada
+                                  ? "bg-emerald-500/15 text-dash-fg border-emerald-400/35"
+                                  : "bg-amber-500/15 text-dash-fg border-amber-400/35";
+                              const icono = cancelada
+                                ? "lucide:x-circle"
+                                : avanzada
+                                  ? "lucide:check-circle"
+                                  : "lucide:clock";
+                              return (
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border ${badgeClass}`}>
+                                  <Icon icon={icono} width={13} height={13} />
+                                  {etiquetaEstado(selectedOperacion.estado_operacion)}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedOperacion && (
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 flex items-center gap-3 border-b border-dash-border">
+                            <span className="w-8 h-8 rounded-xl border border-violet-400/35 bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                              <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-300" />
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className={sectionTitleClass}>Instructivo de Embarque</p>
+                                {instrSavedUrl && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-500/15 text-dash-fg border border-emerald-400/35">
+                                    <Icon icon="lucide:check" className="w-3 h-3" />
+                                    Cargado
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-dash-muted mt-0.5">
+                                {instrSavedUrl
+                                  ? "Ya hay un instructivo guardado para esta operación"
+                                  : "Sube el instructivo preparado (Excel o PDF)"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {instrSavedUrl && (
+                            <div className="px-4 py-3 border-b border-emerald-400/25 bg-emerald-500/10 flex items-center gap-3 flex-wrap">
+                              <span className="w-9 h-9 rounded-xl border border-emerald-400/35 bg-dash-control flex items-center justify-center flex-shrink-0">
+                                <Icon icon="lucide:file-check-2" className="w-5 h-5 text-emerald-400" />
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-dash-fg truncate">{instrFilename}</p>
+                                <p className="text-[10px] text-emerald-300/90 mt-0.5">Guardado en Documentos</p>
+                              </div>
+                              <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-dash-fg bg-emerald-500/25 border border-emerald-400/40 hover:bg-emerald-500/35 transition-colors whitespace-nowrap">
+                                <Icon icon="lucide:download" className="w-3.5 h-3.5" />
+                                Descargar
+                              </a>
+                            </div>
+                          )}
+
+                          {instrSaveError && (
+                            <div className="px-4 py-2 border-b border-red-400/25 bg-red-500/10 flex items-center gap-2">
+                              <Icon icon="lucide:cloud-off" className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                              <span className="text-[10px] text-dash-fg flex-1">{instrSaveError}</span>
+                              <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-300">
+                                <Icon icon="lucide:x" className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="px-4 py-3 flex items-center gap-2">
+                            <input
+                              ref={instrFileInputRef}
+                              type="file"
+                              accept=".xlsx,.xls,.pdf"
+                              className="hidden"
+                              onChange={(e) => void handleSubirInstructivo(e)}
+                            />
+                            <button
+                              type="button"
+                              disabled={instrUploading}
+                              onClick={() => {
+                                if (instrSavedUrl) setConfirmReplaceInstr(true);
+                                else instrFileInputRef.current?.click();
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-400/40 text-dash-fg bg-violet-500/15 hover:bg-violet-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {instrUploading
+                                ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
+                                : <><Icon icon="lucide:upload" className="w-3.5 h-3.5" />{instrSavedUrl ? "Reemplazar instructivo" : "Subir instructivo"}</>
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        {selectedOperacion && (
+                          <div className="dash-card overflow-hidden rounded-xl">
+                            {cardAccent}
+                            <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                              <span className={sectionIconWrap}>
+                                <Icon icon="lucide:file-text" className="w-4 h-4 text-dash-neon" />
+                              </span>
+                              <h2 className={sectionTitleClass}>Datos de la Operación</h2>
+                            </div>
+                            <div className="p-4 grid grid-cols-2 gap-3">
+                              {[
+                                { label: "POD", value: selectedOperacion.pod },
+                                { label: "ETD", value: formatDate(selectedOperacion.etd) },
+                                { label: "Naviera", value: selectedOperacion.naviera },
+                                { label: "Nave", value: selectedOperacion.nave },
+                                { label: "Booking", value: selectedOperacion.booking },
+                                { label: "Cliente", value: selectedOperacion.cliente },
+                                ...(selectedOperacion.deposito ? [{ label: "Depósito", value: selectedOperacion.deposito }] : []),
+                              ].map(({ label, value }) => (
+                                <div key={label}>
+                                  <p className="text-sm font-semibold text-dash-neon mb-0.5">{label}</p>
+                                  <p className="text-sm font-semibold text-dash-fg truncate">{value || "-"}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                            <span className={sectionIconWrap}>
+                              <Icon icon="lucide:truck" className="w-4 h-4 text-dash-neon" />
+                            </span>
+                            <h2 className={sectionTitleClass}>{tr.transportInfo}</h2>
+                          </div>
+                          <div className="p-4 grid grid-cols-2 gap-3">
+                            <div>
+                              <label className={labelClass}>{tr.transportCompany}</label>
+                              <Combobox
+                                neon
+                                value={empresaTransporteInput}
+                                onChange={handleEmpresaInputChange}
+                                onBlur={handleEmpresaInputBlur}
+                                options={empresasTransporte.map((e) => ({
+                                  value: e.nombre,
+                                  label: e.nombre,
+                                  sublabel: e.rut || undefined,
+                                }))}
+                                placeholder="Escriba o seleccione empresa..."
+                                className={inputClass}
+                                icon="lucide:building-2"
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>{tr.driverName}</label>
+                              <Combobox
+                                neon
+                                value={choferInput}
+                                onChange={handleChoferInputChange}
+                                onBlur={handleChoferInputBlur}
+                                options={choferes.map((c) => ({
+                                  value: c.nombre,
+                                  label: c.nombre,
+                                  sublabel: c.rut || undefined,
+                                }))}
+                                placeholder="Escriba o seleccione chofer..."
+                                disabled={!empresaTransporteId}
+                                className={inputClass}
+                                icon="lucide:user"
+                              />
+                            </div>
+                            {renderInput(tr.driverRut, "rut_chofer")}
+                            {renderInput(tr.driverPhone, "telefono_chofer", "tel")}
+                            <div>
+                              <label className={labelClass}>{tr.truckPlate}</label>
+                              <Combobox
+                                neon
+                                value={equipoInput}
+                                onChange={(v) => handleEquipoInputChange(v.toUpperCase())}
+                                onBlur={handleEquipoInputBlur}
+                                options={equipos.map((x) => ({
+                                  value: x.patente_camion,
+                                  label: x.patente_camion,
+                                  sublabel: x.patente_remolque ? `Remolque: ${x.patente_remolque}` : undefined,
+                                }))}
+                                placeholder="Escriba o seleccione patente..."
+                                disabled={!empresaTransporteId}
+                                className={inputClass}
+                                icon="lucide:truck"
+                              />
+                            </div>
+                            {renderInput(tr.trailerPlate, "patente_remolque")}
+                          </div>
+                        </div>
+
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                            <span className={sectionIconWrap}>
+                              <Icon icon="typcn:box" className="w-4 h-4 text-dash-neon" />
+                            </span>
+                            <h2 className={sectionTitleClass}>{tr.containerInfo}</h2>
+                          </div>
+                          <div className="p-4 grid grid-cols-2 gap-3">
+                            {renderInput(tr.container, "contenedor")}
+                            {renderInput(tr.seal, "sello")}
+                            {renderInput(tr.tare, "tara", "number")}
+                            <div>
+                              <label className={labelClass}>{tr.warehouse}</label>
+                              <div className="flex items-center gap-2 px-3.5 py-3 rounded-lg border border-dash-border bg-dash-control text-dash-muted text-base">
+                                <Icon icon="typcn:location" className="w-4 h-4 text-dash-muted flex-shrink-0" />
+                                <span className="truncate">{formData.deposito || "Desde la operación"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                            <span className="w-8 h-8 rounded-xl border border-amber-400/35 bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                              <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-300" />
+                            </span>
+                            <h2 className={sectionTitleClass}>Citación a Planta</h2>
+                          </div>
+                          <div className="p-4 grid grid-cols-2 gap-3">
+                            <div className="col-span-2">
+                              {renderInput("Planta de Citación", "planta_presentacion", "text")}
+                            </div>
+                            {renderInput(tr.citation, "citacion", "datetime-local")}
+                            {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
+                            {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
+                          </div>
+                        </div>
+
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                            <span className="w-8 h-8 rounded-xl border border-violet-400/35 bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                              <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-300" />
+                            </span>
+                            <h2 className={sectionTitleClass}>{tr.stacking}</h2>
+                          </div>
+                          <div className="p-4 grid grid-cols-2 gap-3">
+                            {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
+                            {renderInput(tr.stackingEnd, "fin_stacking", "datetime-local")}
+                            <div className="col-span-2">
+                              {renderInput(tr.stackingEntry, "ingreso_stacking", "datetime-local")}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="dash-card overflow-hidden rounded-xl">
+                          {cardAccent}
+                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                            <span className="w-8 h-8 rounded-xl border border-emerald-400/35 bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                              <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-300" />
+                            </span>
+                            <h2 className={sectionTitleClass}>{tr.costs}</h2>
+                          </div>
+                          <div className="p-4 grid grid-cols-2 gap-3">
+                            <div className="col-span-2">
+                              <label className={labelClass}>{tr.section}</label>
+                              <select
+                                value={tramos.find((x) => `${x.origen} - ${x.destino}` === formData.tramo)?.id ?? ""}
+                                onChange={(e) => handleTramoChange(e.target.value)}
+                                className={inputClass}
+                              >
+                                <option value="">{tr.select}</option>
+                                {tramos.map((x) => (
+                                  <option key={x.id} value={x.id}>
+                                    {x.origen} — {x.destino} · {x.moneda}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelClass}>{tr.sectionValue}</label>
+                              <input
+                                type="number"
+                                lang="es-CL"
+                                value={formData.valor_tramo}
+                                onChange={(e) => handleChange("valor_tramo", e.target.value)}
+                                className={inputClass}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>Moneda</label>
+                              <select
+                                value={formData.moneda}
+                                onChange={(e) => handleChange("moneda", e.target.value)}
+                                className={inputClass}
+                              >
+                                <option value="">Seleccionar</option>
+                                <option value="CLP">CLP — Peso chileno</option>
+                                <option value="USD">USD — Dólar</option>
+                                <option value="EUR">EUR — Euro</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="dash-card overflow-hidden rounded-xl">
+                        {cardAccent}
+                        <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
+                          <span className="w-8 h-8 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center flex-shrink-0">
+                            <Icon icon="typcn:notes" className="w-4 h-4 text-dash-muted" />
+                          </span>
+                          <h2 className={sectionTitleClass}>{tr.observations}</h2>
+                        </div>
+                        <div className="p-4">
+                          <textarea
+                            value={formData.observaciones}
+                            onChange={(e) => handleChange("observaciones", e.target.value)}
+                            rows={2}
+                            placeholder={tr.observationsPlaceholder}
+                            className={`${inputClass} resize-none`}
+                          />
+                        </div>
+                      </div>
+
+                      {error && (
+                        <div className="p-4 bg-red-500/15 border border-red-400/35 rounded-xl text-dash-fg text-sm font-medium">
+                          {error}
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 justify-between">
+                        {canManageTransport && formData.operacion_id && (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteReserva(formData.operacion_id)}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-300 bg-red-500/15 border border-red-400/35 rounded-xl hover:bg-red-500/25 transition-colors"
+                          >
+                            <Icon icon="typcn:trash" className="w-4 h-4" />
+                            Eliminar reserva
+                          </button>
+                        )}
+                        <div className="flex gap-3 ml-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(initialFormData);
+                              setError(null);
+                            }}
+                            className="dash-control px-4 py-2.5 text-sm font-semibold text-dash-fg"
+                          >
+                            {tr.cancel}
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={saving}
+                            className="dash-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+                          >
+                            {saving ? (
+                              <>
+                                <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
+                                {tr.saving}
+                              </>
+                            ) : (
+                              <>
+                                <Icon icon="typcn:tick" className="w-4 h-4" />
+                                {tr.save}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="dash-card overflow-hidden rounded-xl flex items-center justify-center min-h-[280px]">
+                      <div className="text-center py-8 px-4">
+                        <span className="w-12 h-12 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center mx-auto mb-3 inline-flex">
+                          <Icon icon="typcn:arrow-left" width={24} height={24} className="text-dash-muted" />
+                        </span>
+                        <p className="text-dash-muted text-sm font-medium">{tr.selectOperation}</p>
+                        <button
+                          type="button"
+                          onClick={() => setMobilePanel("select")}
+                          className="lg:hidden mt-3 dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold"
+                        >
+                          <Icon icon="typcn:document" width={14} height={14} />
+                          Ver operaciones
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-
-            <div className={`flex-1 min-w-0 ${mobilePanel !== "form" ? "hidden lg:block" : ""}`}>
-              {formData.operacion_id ? (
-                <div className="space-y-4">
-                  {selectedOperacion && (
-                    <div className="rounded-2xl bg-white border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="p-4 bg-brand-blue/5 border-l-4 border-brand-blue flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className={moduleSectionTitle}>{tr.selectedOperation}</p>
-                          <p className="text-neutral-800 font-bold mt-1 text-sm">
-                            {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} — {selectedOperacion.cliente}
-                          </p>
-                          <p className="text-sm text-neutral-600 mt-0.5">
-                            {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
-                          </p>
-                          {selectedOperacion.booking_doc_url && (
-                            <a
-                              href={selectedOperacion.booking_doc_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
-                            >
-                              <Icon icon="lucide:file-text" width={13} height={13} />
-                              Ver PDF de Booking
-                              <Icon icon="lucide:external-link" width={11} height={11} className="opacity-70" />
-                            </a>
-                          )}
-                        </div>
-                        {/* Botón "Cambiar" solo en mobile */}
-                        <button
-                          type="button"
-                          onClick={() => setMobilePanel("select")}
-                          className="lg:hidden flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-blue bg-white border border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 transition-colors"
-                        >
-                          <Icon icon="lucide:list" width={12} height={12} />
-                          Cambiar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Estado de la Operación */}
-                  {selectedOperacion && (
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 flex items-center justify-between gap-3">
-                        <span className={moduleSectionTitle}>Estado de la Operación</span>
-                        {(() => {
-                          const codigo = normalizarEstado(selectedOperacion.estado_operacion);
-                          const cancelada = codigo === "CANCELADA";
-                          const avanzada = codigo
-                            ? ESTADO_META[codigo].orden >= ESTADO_META.RESERVA_CONFIRMADA.orden && !cancelada
-                            : false;
-                          const badgeClass = cancelada
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : avanzada
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200";
-                          const icono = cancelada
-                            ? "lucide:x-circle"
-                            : avanzada
-                              ? "lucide:check-circle"
-                              : "lucide:clock";
-                          return (
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border ${badgeClass}`}>
-                              <Icon icon={icono} width={13} height={13} />
-                              {etiquetaEstado(selectedOperacion.estado_operacion)}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Instructivo de Embarque */}
-                  {selectedOperacion && (
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-
-                      {/* Header */}
-                      <div className="px-4 py-3 flex items-center gap-3 border-b border-neutral-100">
-                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-600" />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className={moduleSectionTitle}>Instructivo de Embarque</p>
-                            {instrSavedUrl && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Icon icon="lucide:check" className="w-3 h-3" />
-                                Cargado
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">
-                            {instrSavedUrl
-                              ? "Ya hay un instructivo guardado para esta operación"
-                              : "Sube el instructivo preparado (Excel o PDF)"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Archivo guardado */}
-                      {instrSavedUrl && (
-                        <div className="px-4 py-3 border-b border-emerald-100 bg-emerald-50/70 flex items-center gap-3 flex-wrap">
-                          <span className="w-9 h-9 rounded-xl bg-white border border-emerald-200 flex items-center justify-center flex-shrink-0">
-                            <Icon icon="lucide:file-check-2" className="w-5 h-5 text-emerald-600" />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-emerald-900 truncate">{instrFilename}</p>
-                            <p className="text-[10px] text-emerald-700 mt-0.5">Guardado en Documentos</p>
-                          </div>
-                          <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors whitespace-nowrap">
-                            <Icon icon="lucide:download" className="w-3.5 h-3.5" />
-                            Descargar
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Error */}
-                      {instrSaveError && (
-                        <div className="px-4 py-2 border-b border-red-100 bg-red-50 flex items-center gap-2">
-                          <Icon icon="lucide:cloud-off" className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-                          <span className="text-[10px] text-red-700 flex-1">{instrSaveError}</span>
-                          <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-600">
-                            <Icon icon="lucide:x" className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Acciones */}
-                      <div className="px-4 py-3 flex items-center gap-2">
-                        <input
-                          ref={instrFileInputRef}
-                          type="file"
-                          accept=".xlsx,.xls,.pdf"
-                          className="hidden"
-                          onChange={(e) => void handleSubirInstructivo(e)}
-                        />
-                        <button
-                          type="button"
-                          disabled={instrUploading}
-                          onClick={() => {
-                            if (instrSavedUrl) setConfirmReplaceInstr(true);
-                            else instrFileInputRef.current?.click();
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-300 text-violet-700 bg-white hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {instrUploading
-                            ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
-                            : <><Icon icon="lucide:upload" className="w-3.5 h-3.5" />{instrSavedUrl ? "Reemplazar instructivo" : "Subir instructivo"}</>
-                          }
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    {/* Datos de la Operación */}
-                    {selectedOperacion && (
-                      <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                        <div className={moduleCardAccent} />
-                        <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                          <span className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
-                            <Icon icon="lucide:file-text" className="w-4 h-4 text-indigo-600" />
-                          </span>
-                          <h2 className={moduleSectionTitle}>Datos de la Operación</h2>
-                        </div>
-                        <div className="p-4 grid grid-cols-2 gap-3">
-                          {[
-                            { label: "POD", value: selectedOperacion.pod },
-                            { label: "ETD", value: formatDate(selectedOperacion.etd) },
-                            { label: "Naviera", value: selectedOperacion.naviera },
-                            { label: "Nave", value: selectedOperacion.nave },
-                            { label: "Booking", value: selectedOperacion.booking },
-                            { label: "Cliente", value: selectedOperacion.cliente },
-                            ...(selectedOperacion.deposito ? [{ label: "Depósito", value: selectedOperacion.deposito }] : []),
-                          ].map(({ label, value }) => (
-                            <div key={label}>
-                              <p className="text-sm font-semibold text-brand-blue mb-0.5">{label}</p>
-                              <p className="text-sm font-semibold text-neutral-800 truncate">{value || "-"}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Transporte */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="lucide:truck" className="w-4 h-4 text-blue-600" />
-                        </span>
-                        <h2 className={moduleSectionTitle}>{tr.transportInfo}</h2>
-                      </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
-                        <div>
-                          <label className={labelClass}>{tr.transportCompany}</label>
-                          <Combobox
-                            value={empresaTransporteInput}
-                            onChange={handleEmpresaInputChange}
-                            onBlur={handleEmpresaInputBlur}
-                            options={empresasTransporte.map((e) => ({
-                              value: e.nombre,
-                              label: e.nombre,
-                              sublabel: e.rut || undefined,
-                            }))}
-                            placeholder="Escriba o seleccione empresa..."
-                            className={inputClass}
-                            icon="lucide:building-2"
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass}>{tr.driverName}</label>
-                          <Combobox
-                            value={choferInput}
-                            onChange={handleChoferInputChange}
-                            onBlur={handleChoferInputBlur}
-                            options={choferes.map((c) => ({
-                              value: c.nombre,
-                              label: c.nombre,
-                              sublabel: c.rut || undefined,
-                            }))}
-                            placeholder="Escriba o seleccione chofer..."
-                            disabled={!empresaTransporteId}
-                            className={inputClass}
-                            icon="lucide:user"
-                          />
-                        </div>
-                        {renderInput(tr.driverRut, "rut_chofer")}
-                        {renderInput(tr.driverPhone, "telefono_chofer", "tel")}
-                        <div>
-                          <label className={labelClass}>{tr.truckPlate}</label>
-                          <Combobox
-                            value={equipoInput}
-                            onChange={(v) => handleEquipoInputChange(v.toUpperCase())}
-                            onBlur={handleEquipoInputBlur}
-                            options={equipos.map((x) => ({
-                              value: x.patente_camion,
-                              label: x.patente_camion,
-                              sublabel: x.patente_remolque ? `Remolque: ${x.patente_remolque}` : undefined,
-                            }))}
-                            placeholder="Escriba o seleccione patente..."
-                            disabled={!empresaTransporteId}
-                            className={inputClass}
-                            icon="lucide:truck"
-                          />
-                        </div>
-                        {renderInput(tr.trailerPlate, "patente_remolque")}
-                      </div>
-                    </div>
-
-                    {/* Contenedor */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:box" className="w-4 h-4 text-teal-600" />
-                        </span>
-                        <h2 className={moduleSectionTitle}>{tr.containerInfo}</h2>
-                      </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
-                        {renderInput(tr.container, "contenedor")}
-                        {renderInput(tr.seal, "sello")}
-                        {renderInput(tr.tare, "tara", "number")}
-                        <div>
-                          <label className={labelClass}>{tr.warehouse}</label>
-                          <div className="flex items-center gap-2 px-3.5 py-3 rounded-lg border border-brand-blue/20 bg-[#F4F8FC] text-brand-blue/60 text-base">
-                            <Icon icon="typcn:location" className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                            <span className="truncate">{formData.deposito || "Desde la operación"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Citación a Planta */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-600" />
-                        </span>
-                        <h2 className={moduleSectionTitle}>Citación a Planta</h2>
-                      </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
-                        <div className="col-span-2">
-                          {renderInput("Planta de Citación", "planta_presentacion", "text")}
-                        </div>
-                        {renderInput(tr.citation, "citacion", "datetime-local")}
-                        {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
-                        {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
-                      </div>
-                    </div>
-
-                    {/* Stacking */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-600" />
-                        </span>
-                        <h2 className={moduleSectionTitle}>{tr.stacking}</h2>
-                      </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
-                        {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
-                        {renderInput(tr.stackingEnd, "fin_stacking", "datetime-local")}
-                        <div className="col-span-2">
-                          {renderInput(tr.stackingEntry, "ingreso_stacking", "datetime-local")}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Costos */}
-                    <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                      <div className={moduleCardAccent} />
-                      <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-600" />
-                        </span>
-                        <h2 className={moduleSectionTitle}>{tr.costs}</h2>
-                      </div>
-                      <div className="p-4 grid grid-cols-2 gap-3">
-                        <div className="col-span-2">
-                          <label className={labelClass}>{tr.section}</label>
-                          <select
-                            value={tramos.find((x) => `${x.origen} - ${x.destino}` === formData.tramo)?.id ?? ""}
-                            onChange={(e) => handleTramoChange(e.target.value)}
-                            className={inputClass}
-                          >
-                            <option value="">{tr.select}</option>
-                            {tramos.map((x) => (
-                              <option key={x.id} value={x.id}>
-                                {x.origen} — {x.destino} · {x.moneda}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className={labelClass}>{tr.sectionValue}</label>
-                          <input
-                            type="number"
-                            lang="es-CL"
-                            value={formData.valor_tramo}
-                            onChange={(e) => handleChange("valor_tramo", e.target.value)}
-                            className={inputClass}
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass}>Moneda</label>
-                          <select
-                            value={formData.moneda}
-                            onChange={(e) => handleChange("moneda", e.target.value)}
-                            className={inputClass}
-                          >
-                            <option value="">Seleccionar</option>
-                            <option value="CLP">CLP — Peso chileno</option>
-                            <option value="USD">USD — Dólar</option>
-                            <option value="EUR">EUR — Euro</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Observaciones */}
-                  <div className="bg-white rounded-2xl border border-brand-blue/15 shadow-sm overflow-hidden">
-                    <div className={moduleCardAccent} />
-                    <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
-                        <Icon icon="typcn:notes" className="w-4 h-4 text-neutral-500" />
-                      </span>
-                      <h2 className={moduleSectionTitle}>{tr.observations}</h2>
-                    </div>
-                    <div className="p-4">
-                      <textarea
-                        value={formData.observaciones}
-                        onChange={(e) => handleChange("observaciones", e.target.value)}
-                        rows={2}
-                        placeholder={tr.observationsPlaceholder}
-                        className={`${inputClass} resize-none`}
-                      />
-                    </div>
-                  </div>
-
-                  {error && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
-                      {error}
-                    </div>
-                  )}
-
-
-                  <div className="flex gap-3 justify-between">
-                    {canManageTransport && formData.operacion_id && (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteReserva(formData.operacion_id)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
-                      >
-                        <Icon icon="typcn:trash" className="w-4 h-4" />
-                        Eliminar reserva
-                      </button>
-                    )}
-                    <div className="flex gap-3 ml-auto">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(initialFormData);
-                          setError(null);
-                        }}
-                        className="px-4 py-2.5 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors"
-                      >
-                        {tr.cancel}
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors shadow-sm shadow-brand-blue/20 disabled:opacity-50"
-                      >
-                        {saving ? (
-                          <>
-                            <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
-                            {tr.saving}
-                          </>
-                        ) : (
-                          <>
-                            <Icon icon="typcn:tick" className="w-4 h-4" />
-                            {tr.save}
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-2xl bg-white border border-brand-blue/15 shadow-sm overflow-hidden flex items-center justify-center min-h-[280px]">
-                  <div className="text-center py-8 px-4">
-                    <span className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-3 inline-flex">
-                      <Icon icon="typcn:arrow-left" width={24} height={24} className="text-neutral-400" />
-                    </span>
-                    <p className="text-neutral-500 text-sm font-medium">{tr.selectOperation}</p>
-                    <button
-                      type="button"
-                      onClick={() => setMobilePanel("select")}
-                      className="lg:hidden mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-colors"
-                    >
-                      <Icon icon="typcn:document" width={14} height={14} />
-                      Ver operaciones
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            </form>
           </div>
-        </form>
+        </main>
       </div>
-      {/* Modal de confirmación para crear nuevos elementos */}
+
       {confirmNewItem && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm rounded-xl p-6 shadow-lg">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-brand-blue/10 text-brand-blue flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl border border-dash-neon/40 bg-dash-neon/15 text-dash-neon flex items-center justify-center">
                 {confirmNewItem.type === 'empresa' ? (
                   <Icon icon="lucide:building-2" width={18} height={18} />
                 ) : confirmNewItem.type === 'chofer' ? (
@@ -1547,23 +1539,21 @@ export function ReservaAsliContent() {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-neutral-900">
+                <h3 className="font-semibold text-dash-fg">
                   Crear nuevo {confirmNewItem.type === 'empresa' ? 'empresa' : confirmNewItem.type === 'chofer' ? 'chofer' : 'equipo'}
                 </h3>
-                <p className="text-xs text-neutral-500">¿Confirmas agregar este nuevo elemento?</p>
+                <p className="text-xs text-dash-muted">¿Confirmas agregar este nuevo elemento?</p>
               </div>
             </div>
-            
-            <p className="text-sm text-neutral-700 mb-6">
+            <p className="text-sm text-dash-muted mb-6">
               Se creará {confirmNewItem.type === 'empresa' ? 'la empresa' : confirmNewItem.type === 'chofer' ? 'el chofer' : 'el equipo'}:{" "}
-              <span className="font-medium text-brand-blue">{confirmNewItem.value}</span>
+              <span className="font-medium text-dash-neon">{confirmNewItem.value}</span>
             </p>
-            
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmNewItem(null)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="dash-control flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg"
               >
                 Cancelar
               </button>
@@ -1574,7 +1564,7 @@ export function ReservaAsliContent() {
                   setConfirmNewItem(null);
                 }}
                 disabled={saving}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 transition-colors"
+                className="dash-cta flex-1 px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
               >
                 {saving ? 'Creando...' : 'Confirmar'}
               </button>
@@ -1582,26 +1572,27 @@ export function ReservaAsliContent() {
           </div>
         </div>
       )}
+
       {confirmDeleteReserva && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm rounded-xl p-6 shadow-lg">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl border border-red-400/35 bg-red-500/15 text-red-300 flex items-center justify-center">
                 <Icon icon="typcn:trash" width={18} height={18} />
               </div>
               <div>
-                <h3 className="font-semibold text-neutral-900">Eliminar reserva de transporte</h3>
-                <p className="text-xs text-neutral-500">Se borrarán todos los datos de transporte de esta operación</p>
+                <h3 className="font-semibold text-dash-fg">Eliminar reserva de transporte</h3>
+                <p className="text-xs text-dash-muted">Se borrarán todos los datos de transporte de esta operación</p>
               </div>
             </div>
-            <p className="text-sm text-neutral-700 mb-6">
+            <p className="text-sm text-dash-muted mb-6">
               Esta acción limpiará empresa, chofer, equipo, contenedor, horarios, stacking, tramo y observaciones de la operación seleccionada. ¿Continuar?
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmDeleteReserva(null)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="dash-control flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg"
               >
                 Cancelar
               </button>
@@ -1609,7 +1600,7 @@ export function ReservaAsliContent() {
                 type="button"
                 onClick={() => void handleDeleteReserva(confirmDeleteReserva ?? undefined)}
                 disabled={saving}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg bg-red-500/25 border border-red-400/40 hover:bg-red-500/35 disabled:opacity-50 transition-colors"
               >
                 {saving ? 'Eliminando...' : 'Eliminar'}
               </button>
@@ -1619,26 +1610,26 @@ export function ReservaAsliContent() {
       )}
 
       {confirmReplaceInstr && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-mac-modal max-w-sm w-full p-6">
+        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
+          <div className="dash-card w-full max-w-sm rounded-xl p-6 shadow-lg">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl border border-amber-400/35 bg-amber-500/15 text-amber-300 flex items-center justify-center flex-shrink-0">
                 <Icon icon="lucide:triangle-alert" width={18} height={18} />
               </div>
               <div className="min-w-0">
-                <h3 className="font-semibold text-neutral-900">Reemplazar instructivo</h3>
-                <p className="text-xs text-neutral-500">Ya hay un instructivo cargado</p>
+                <h3 className="font-semibold text-dash-fg">Reemplazar instructivo</h3>
+                <p className="text-xs text-dash-muted">Ya hay un instructivo cargado</p>
               </div>
             </div>
-            <p className="text-sm text-neutral-700 mb-2">
+            <p className="text-sm text-dash-muted mb-2">
               El archivo actual se reemplazará por el que subas y no se podrá recuperar.
             </p>
-            <p className="text-sm font-semibold text-neutral-900 mb-6 break-words">{instrFilename}</p>
+            <p className="text-sm font-semibold text-dash-fg mb-6 break-words">{instrFilename}</p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmReplaceInstr(false)}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                className="dash-control flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg"
               >
                 Cancelar
               </button>
@@ -1648,7 +1639,7 @@ export function ReservaAsliContent() {
                   setConfirmReplaceInstr(false);
                   instrFileInputRef.current?.click();
                 }}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 transition-colors"
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg bg-violet-500/25 border border-violet-400/40 hover:bg-violet-500/35 transition-colors"
               >
                 Elegir archivo
               </button>
@@ -1656,6 +1647,6 @@ export function ReservaAsliContent() {
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }

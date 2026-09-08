@@ -2818,6 +2818,7 @@ export const translations = {
       placeholderPassword: "At least 12 characters",
       showPassword: "Show password",
       hidePassword: "Hide password",
+      rememberCredentials: "Remember username and password",
     },
     visitor: {
       dashboard: {

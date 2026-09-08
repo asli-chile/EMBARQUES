@@ -10,16 +10,13 @@ import {
 } from "@/lib/auth/password";
 import { useLocale } from "@/lib/i18n";
 import { FormSelect } from "@/components/ui/FormSelect";
-import {
-  modulePageBg,
-  moduleHero,
-  moduleLabel,
-  moduleInput,
-  moduleBtnPrimary,
-  moduleBtnSecondary,
-  moduleBtnOnHero,
-  moduleToolbar,
-} from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
+const neonLabel = "block text-sm font-semibold text-dash-muted mb-1.5";
+const neonBtnPrimary = "dash-cta inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold disabled:opacity-40";
+const neonBtnSecondary = "inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3.5 py-2.5 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15";
 
 const ROLES = [
   { value: "superadmin", label: "Superadmin" },
@@ -45,58 +42,58 @@ type RolTheme = {
 /** Colores bien distintos entre roles (ejecutivo ≠ cliente). */
 const ROL_THEME: Record<string, RolTheme> = {
   superadmin: {
-    avatar: "bg-violet-600 text-white",
-    strip: "bg-violet-500",
-    badge: "bg-violet-100 text-violet-800",
-    chip: "bg-violet-50 text-violet-800 border border-violet-200 hover:border-violet-400",
-    chipOn: "bg-violet-600 text-white",
-    countIdle: "text-violet-400",
-    countOn: "text-white/70",
+    avatar: "border border-violet-400/40 bg-violet-500/25 text-violet-200",
+    strip: "bg-violet-400",
+    badge: "border border-violet-400/35 bg-violet-500/15 text-violet-300",
+    chip: "border border-violet-400/35 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20",
+    chipOn: "border border-violet-400/50 bg-violet-500/35 text-violet-100",
+    countIdle: "text-violet-400/70",
+    countOn: "text-violet-100/70",
   },
   admin: {
-    avatar: "bg-[#11224e] text-white",
-    strip: "bg-[#11224e]",
-    badge: "bg-[#11224e]/10 text-[#11224e]",
-    chip: "bg-[#EEF2FA] text-[#11224e] border border-[#11224e]/20 hover:border-[#11224e]/45",
-    chipOn: "bg-[#11224e] text-white",
-    countIdle: "text-[#11224e]/40",
-    countOn: "text-white/70",
+    avatar: "border border-dash-neon/40 bg-dash-neon/25 text-dash-neon",
+    strip: "bg-dash-neon",
+    badge: "border border-dash-neon/35 bg-dash-neon/15 text-dash-neon",
+    chip: "border border-dash-neon/35 bg-dash-neon/10 text-dash-neon hover:bg-dash-neon/20",
+    chipOn: "border border-dash-neon/50 bg-dash-neon/30 text-dash-fg",
+    countIdle: "text-dash-neon/50",
+    countOn: "text-dash-fg/70",
   },
   ejecutivo: {
-    avatar: "bg-amber-500 text-amber-950",
-    strip: "bg-amber-500",
-    badge: "bg-amber-100 text-amber-900",
-    chip: "bg-amber-50 text-amber-900 border border-amber-200 hover:border-amber-400",
-    chipOn: "bg-amber-500 text-amber-950",
-    countIdle: "text-amber-600/70",
-    countOn: "text-amber-950/55",
+    avatar: "border border-amber-400/40 bg-amber-500/150/25 text-amber-200",
+    strip: "bg-amber-400",
+    badge: "border border-amber-400/35 bg-amber-500/150/15 text-amber-300",
+    chip: "border border-amber-400/35 bg-amber-500/150/10 text-amber-300 hover:bg-amber-500/150/20",
+    chipOn: "border border-amber-400/50 bg-amber-500/150/35 text-amber-100",
+    countIdle: "text-amber-400/70",
+    countOn: "text-amber-100/70",
   },
   operador: {
-    avatar: "bg-sky-600 text-white",
-    strip: "bg-sky-500",
-    badge: "bg-sky-100 text-sky-800",
-    chip: "bg-sky-50 text-sky-800 border border-sky-200 hover:border-sky-400",
-    chipOn: "bg-sky-600 text-white",
-    countIdle: "text-sky-400",
-    countOn: "text-white/70",
+    avatar: "border border-sky-400/40 bg-sky-500/25 text-sky-200",
+    strip: "bg-sky-400",
+    badge: "border border-sky-400/35 bg-sky-500/15 text-sky-300",
+    chip: "border border-sky-400/35 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20",
+    chipOn: "border border-sky-400/50 bg-sky-500/35 text-sky-100",
+    countIdle: "text-sky-400/70",
+    countOn: "text-sky-100/70",
   },
   cliente: {
-    avatar: "bg-emerald-600 text-white",
-    strip: "bg-emerald-500",
-    badge: "bg-emerald-100 text-emerald-800",
-    chip: "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:border-emerald-400",
-    chipOn: "bg-emerald-600 text-white",
-    countIdle: "text-emerald-500",
-    countOn: "text-white/70",
+    avatar: "border border-emerald-400/40 bg-emerald-500/25 text-emerald-200",
+    strip: "bg-emerald-400",
+    badge: "border border-emerald-400/35 bg-emerald-500/15 text-emerald-300",
+    chip: "border border-emerald-400/35 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/150/20",
+    chipOn: "border border-emerald-400/50 bg-emerald-500/35 text-emerald-100",
+    countIdle: "text-emerald-400/70",
+    countOn: "text-emerald-100/70",
   },
   usuario: {
-    avatar: "bg-stone-400 text-white",
-    strip: "bg-stone-400",
-    badge: "bg-stone-100 text-stone-600",
-    chip: "bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400",
-    chipOn: "bg-stone-500 text-white",
-    countIdle: "text-stone-400",
-    countOn: "text-white/70",
+    avatar: "border border-dash-border bg-dash-control text-dash-muted",
+    strip: "bg-dash-muted",
+    badge: "border border-dash-border bg-dash-control text-dash-muted",
+    chip: "border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15",
+    chipOn: "border border-dash-neon/40 bg-dash-neon/20 text-dash-fg",
+    countIdle: "text-dash-muted",
+    countOn: "text-dash-fg/70",
   },
 };
 
@@ -134,15 +131,15 @@ function RoleBadge({ rol }: { rol: string }) {
 function AccountBadge({ active }: { active: boolean }) {
   if (active) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
         Activa
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border border-amber-400/35 bg-amber-500/150/15 text-amber-300">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500/150" />
       Pendiente
     </span>
   );
@@ -169,8 +166,8 @@ function CheckBox({
       }}
       className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
         checked
-          ? "bg-brand-blue border-brand-blue text-white"
-          : "border-brand-blue/30 bg-white hover:border-brand-blue/60"
+          ? "border-dash-neon bg-dash-neon text-dash-fg"
+          : "border-dash-neon/35 bg-dash-control hover:border-dash-neon/60"
       }`}
     >
       {checked ? <Icon icon="lucide:check" width={12} height={12} /> : null}
@@ -195,7 +192,7 @@ function RolePicker({ value, onChange }: { value: string; onChange: (rol: string
               active ? theme.chipOn : theme.chip
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white/80" : theme.strip}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-dash-control/80" : theme.strip}`} />
             {r.label}
           </button>
         );
@@ -243,41 +240,41 @@ function EmpresaMultiPicker({
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="block text-base font-semibold text-brand-blue">Empresas asignadas</span>
+        <span className="block text-base font-semibold text-dash-neon">Empresas asignadas</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={markFiltered}
-            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15"
+            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-dash-neon bg-dash-neon/15 hover:bg-dash-neon/15"
           >
             Marcar todas
           </button>
           <button
             type="button"
             onClick={() => onChange([])}
-            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-neutral-500 hover:bg-neutral-100"
+            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-dash-muted hover:bg-dash-control"
           >
             Ninguna
           </button>
         </div>
       </div>
       <div className="relative mb-2">
-        <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/35" />
+        <Icon icon="lucide:search" width={14} height={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-neon/35" />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar empresa…"
-          className={`${moduleInput} pl-9 py-2 text-sm`}
+          className={`${neonInput} pl-9 py-2 text-sm`}
         />
       </div>
-      <p className="text-[11px] text-neutral-400 mb-1.5">
+      <p className="text-[11px] text-dash-muted mb-1.5">
         {selectedIds.length} / {empresas.length} seleccionadas
         {q.trim() ? ` · ${filtered.length} en búsqueda` : ""}
       </p>
-      <div className="max-h-56 overflow-y-auto rounded-xl border border-brand-blue/15 bg-[#F4F8FC] divide-y divide-brand-blue/8">
+      <div className="max-h-56 overflow-y-auto rounded-xl border border-dash-border bg-dash-control divide-y divide-dash-border">
         {filtered.length === 0 ? (
-          <p className="text-sm text-neutral-400 text-center py-6">Sin resultados</p>
+          <p className="text-sm text-dash-muted text-center py-6">Sin resultados</p>
         ) : (
           filtered.map((emp) => {
             const on = selected.has(emp.id);
@@ -287,12 +284,12 @@ function EmpresaMultiPicker({
                 type="button"
                 onClick={() => toggle(emp.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
-                  on ? "bg-brand-blue/10 text-brand-blue" : "bg-white hover:bg-[#EEF3FA] text-neutral-700"
+                  on ? "bg-dash-neon/15 text-dash-neon" : "bg-dash-control hover:bg-dash-control/50 text-dash-fg"
                 }`}
               >
                 <span
                   className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
-                    on ? "bg-brand-blue border-brand-blue text-white" : "border-brand-blue/25 bg-white"
+                    on ? "bg-dash-neon border-dash-neon text-dash-fg" : "border-dash-neon/35 bg-dash-control"
                   }`}
                 >
                   {on ? <Icon icon="lucide:check" width={12} height={12} /> : null}
@@ -309,6 +306,7 @@ function EmpresaMultiPicker({
 
 export function UsuariosContent() {
   const { t } = useLocale();
+  const [theme] = useNeonTheme();
   const { isSuperadmin, profile, isLoading: authLoading } = useAuth();
   const [usuarios, setUsuarios] = useState<DbUsuario[]>([]);
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
@@ -774,57 +772,67 @@ export function UsuariosContent() {
   const apiAuthorized = !loading && usuarios.length > 0 && !error;
   if (error && !loading) {
     return (
-      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}><main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto p-6" role="main">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-brand-blue">{t.sidebar.usuarios}</h1>
-          <p className="mt-2 text-neutral-600">{error}</p>
+          <h1 className="text-2xl font-bold text-dash-neon">{t.sidebar.usuarios}</h1>
+          <p className="mt-2 text-dash-muted">{error}</p>
           {error.includes("superadmin") || error.includes("403") ? (
-            <p className="mt-1 text-sm text-neutral-500">Solo el superadmin puede gestionar usuarios.</p>
+            <p className="mt-1 text-sm text-dash-muted">Solo el superadmin puede gestionar usuarios.</p>
           ) : null}
         </div>
       </main>
+      </div>
     );
   } else if (authLoading && usuarios.length === 0) {
     return (
-      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6 flex items-center justify-center`} role="main">
-        <p className="text-neutral-500">Cargando…</p>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}><main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-6" role="main">
+        <p className="text-dash-muted">Cargando…</p>
       </main>
+      </div>
     );
   } else if (loading && usuarios.length === 0) {
     return (
-      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}><main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto p-6" role="main">
         <div className="flex items-center justify-center h-48">
-          <span className="text-neutral-500">Cargando usuarios…</span>
+          <span className="text-dash-muted">Cargando usuarios…</span>
         </div>
       </main>
+      </div>
     );
   } else if (!profile && !apiAuthorized) {
     return (
-      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
-        <p className="text-neutral-600">Inicia sesión para continuar.</p>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}><main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto p-6" role="main">
+        <p className="text-dash-muted">Inicia sesión para continuar.</p>
       </main>
+      </div>
     );
   } else if (!isSuperadmin && !apiAuthorized) {
     return (
-      <main className={`flex-1 min-h-0 overflow-auto ${modulePageBg} p-6`} role="main">
-        <p className="text-neutral-600">Solo el superadmin puede gestionar usuarios y configuración.</p>
+      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}><main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto p-6" role="main">
+        <p className="text-dash-muted">Solo el superadmin puede gestionar usuarios y configuración.</p>
       </main>
+      </div>
     );
   }
 
   return (
-    <main className={`flex-1 min-h-0 flex flex-col ${modulePageBg} overflow-hidden`} role="main">
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+        </div>
 
-      <div className={`flex-shrink-0 ${moduleHero}`}>
+      <div className="dash-toolbar relative z-10 shrink-0">
         <div className="px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <Icon icon="lucide:users" width={20} height={20} className="text-white" />
+              <div className="w-10 h-10 rounded-xl bg-dash-neon/15 border border-dash-neon/40 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <Icon icon="lucide:users" width={20} height={20} className="text-dash-neon" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl font-bold leading-tight tracking-tight">{t.sidebar.usuarios}</h1>
-                <p className="text-sm text-white/70 truncate">Directorio de cuentas, roles y acceso</p>
+                <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg sm:text-xl">{t.sidebar.usuarios}</h1>
+                <p className="truncate text-sm text-dash-muted">Directorio de cuentas, roles y acceso</p>
               </div>
             </div>
             <button
@@ -834,7 +842,7 @@ export function UsuariosContent() {
                 setCreateSuccess(false);
                 setShowCreateModal(true);
               }}
-              className={moduleBtnOnHero}
+              className={neonBtnPrimary}
             >
               <Icon icon="lucide:user-plus" width={18} height={18} />
               Nueva cuenta
@@ -848,7 +856,7 @@ export function UsuariosContent() {
                 setFilterRol("");
               }}
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
-                !filterCuenta && !filterRol ? "bg-white text-brand-blue" : "bg-white/15 text-white hover:bg-white/25"
+                !filterCuenta && !filterRol ? "bg-dash-control text-dash-neon" : "bg-dash-neon/15 text-dash-fg hover:bg-dash-neon/25"
               }`}
             >
               <Icon icon="lucide:users" width={13} height={13} />
@@ -858,7 +866,7 @@ export function UsuariosContent() {
               type="button"
               onClick={() => setFilterCuenta((v) => (v === "activa" ? "" : "activa"))}
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
-                filterCuenta === "activa" ? "bg-white text-brand-blue" : "bg-white/15 text-white hover:bg-white/25"
+                filterCuenta === "activa" ? "bg-dash-control text-dash-neon" : "bg-dash-neon/15 text-dash-fg hover:bg-dash-neon/25"
               }`}
             >
               <Icon icon="lucide:user-check" width={13} height={13} />
@@ -882,7 +890,7 @@ export function UsuariosContent() {
               type="button"
               onClick={() => setFilterRol((v) => (v === "cliente" ? "" : "cliente"))}
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors ${
-                filterRol === "cliente" ? "bg-white text-brand-blue" : "bg-white/15 text-white hover:bg-white/25"
+                filterRol === "cliente" ? "bg-dash-control text-dash-neon" : "bg-dash-neon/15 text-dash-fg hover:bg-dash-neon/25"
               }`}
             >
               <Icon icon="lucide:building-2" width={13} height={13} />
@@ -892,23 +900,23 @@ export function UsuariosContent() {
         </div>
       </div>
 
-      <section className="flex-1 min-h-0 flex flex-col bg-white border-t border-brand-blue/10">
-        <div className={`flex-shrink-0 px-4 py-2.5 ${moduleToolbar} space-y-2`}>
+      <section className="relative z-10 flex min-h-0 flex-1 flex-col border-t border-dash-border">
+        <div className={`flex-shrink-0 px-4 py-2.5 border-b border-dash-border bg-dash-control/40 space-y-2`}>
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
-              <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue/40" />
+              <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-neon/40" />
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por nombre o correo…"
-                className={`${moduleInput} pl-10 pr-9`}
+                className={`${neonInput} pl-10 pr-9`}
               />
               {searchQuery ? (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-brand-blue/40 hover:text-brand-blue rounded-lg"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-dash-neon/40 hover:text-dash-neon rounded-lg"
                   aria-label="Limpiar búsqueda"
                 >
                   <Icon icon="lucide:x" width={14} height={14} />
@@ -917,6 +925,7 @@ export function UsuariosContent() {
             </div>
             <div className="w-full sm:w-56">
               <FormSelect
+                variant="neon"
                 id="filter-empresa"
                 value={filterEmpresaId}
                 placeholder="Todas las empresas"
@@ -924,7 +933,7 @@ export function UsuariosContent() {
                 onChange={setFilterEmpresaId}
               />
             </div>
-            <p className="text-sm font-semibold text-brand-blue/70 ml-auto">
+            <p className="text-sm font-semibold text-dash-neon/70 ml-auto">
               {filteredUsuarios.length}
               {hasActiveFilters ? ` de ${usuarios.length}` : ""}
             </p>
@@ -935,7 +944,7 @@ export function UsuariosContent() {
               type="button"
               onClick={() => setFilterRol("")}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                !filterRol ? "bg-brand-blue text-white" : "bg-white text-brand-blue/80 border border-brand-blue/15 hover:border-brand-blue/35"
+                !filterRol ? "bg-dash-neon text-dash-fg" : "bg-dash-control text-dash-neon/80 border border-dash-border hover:border-dash-neon/35"
               }`}
             >
               Todos
@@ -952,7 +961,7 @@ export function UsuariosContent() {
                   active ? theme.chipOn : theme.chip
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white/80" : theme.strip}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-dash-control/80" : theme.strip}`} />
                 {r.label}
                 <span className={active ? theme.countOn : theme.countIdle}>
                   {countByRol[r.value] ?? 0}
@@ -969,7 +978,7 @@ export function UsuariosContent() {
                   setSearchQuery("");
                   setFilterCuenta("");
                 }}
-                className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-brand-blue/70 hover:bg-white"
+                className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-dash-neon/70 hover:bg-dash-control"
               >
                 <Icon icon="lucide:filter-x" width={13} height={13} />
                 Limpiar
@@ -978,7 +987,7 @@ export function UsuariosContent() {
           </div>
 
           {selectedUserIds.size > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-blue text-white">
+            <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl bg-dash-neon text-dash-fg">
               {asignablesFromFiltered.length > 0 ? (
                 <CheckBox
                   checked={asignablesFromFiltered.every((u) => selectedUserIds.has(u.id))}
@@ -992,7 +1001,7 @@ export function UsuariosContent() {
               <button
                 type="button"
                 onClick={handleBulkAssignOpen}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-brand-blue hover:bg-white/90"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-dash-control text-dash-neon hover:bg-dash-control"
               >
                 <Icon icon="lucide:building-2" width={14} height={14} />
                 Asignar empresas
@@ -1000,7 +1009,7 @@ export function UsuariosContent() {
               <button
                 type="button"
                 onClick={() => setSelectedUserIds(new Set())}
-                className="text-sm font-medium text-white/80 hover:text-white ml-auto"
+                className="text-sm font-medium text-dash-muted hover:text-dash-fg ml-auto"
               >
                 Desmarcar
               </button>
@@ -1008,7 +1017,7 @@ export function UsuariosContent() {
           ) : null}
 
           {error ? (
-            <div className="px-3 py-2 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200 flex items-center gap-2" role="alert">
+            <div className="px-3 py-2 bg-red-500/10 text-red-300 text-sm rounded-xl border border-red-400/35 flex items-center gap-2" role="alert">
               <Icon icon="lucide:alert-circle" width={14} height={14} className="shrink-0" />
               {error}
             </div>
@@ -1018,22 +1027,22 @@ export function UsuariosContent() {
         <div className="flex-1 min-h-0 overflow-auto">
           {filteredUsuarios.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-20 text-center px-6">
-              <div className="w-16 h-16 rounded-2xl bg-[#F4F8FC] border border-brand-blue/15 flex items-center justify-center">
-                <Icon icon="lucide:users" width={28} height={28} className="text-brand-blue/30" />
+              <div className="w-16 h-16 rounded-2xl bg-dash-control border border-dash-border flex items-center justify-center">
+                <Icon icon="lucide:users" width={28} height={28} className="text-dash-neon/30" />
               </div>
-              <p className="text-base font-semibold text-brand-blue/80">Sin usuarios</p>
-              <p className="text-sm text-neutral-400">Prueba otro filtro o crea una cuenta nueva.</p>
+              <p className="text-base font-semibold text-dash-neon/80">Sin usuarios</p>
+              <p className="text-sm text-dash-muted">Prueba otro filtro o crea una cuenta nueva.</p>
             </div>
           ) : (
-            <ul className="divide-y divide-brand-blue/10">
+            <ul className="divide-y divide-dash-border">
               {asignablesFromFiltered.length > 0 && selectedUserIds.size === 0 ? (
-                <li className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1.5 bg-[#EEF3FA] border-b border-brand-blue/10">
+                <li className="sticky top-0 z-10 flex items-center gap-2 px-4 py-1.5 bg-dash-control/50 border-b border-dash-border">
                   <CheckBox
                     checked={false}
                     onChange={handleSelectAllAsignables}
                     label="Seleccionar clientes y ejecutivos visibles"
                   />
-                  <span className="text-xs font-medium text-brand-blue/50">Seleccionar clientes y ejecutivos</span>
+                  <span className="text-xs font-medium text-dash-neon/50">Seleccionar clientes y ejecutivos</span>
                 </li>
               ) : null}
               {filteredUsuarios.map((u) => {
@@ -1047,7 +1056,7 @@ export function UsuariosContent() {
                   <li key={u.id}>
                     <article
                       className={`relative flex items-center gap-3 w-full px-4 py-1.5 pl-5 ${
-                        selected ? "bg-brand-blue/8" : "bg-white hover:bg-[#F4F8FC]"
+                        selected ? "bg-dash-neon/15" : "bg-dash-control hover:bg-dash-control"
                       }`}
                     >
                       <span
@@ -1070,18 +1079,18 @@ export function UsuariosContent() {
                             <button
                               type="button"
                               onClick={() => handleViewOpen(u)}
-                              className="font-semibold text-brand-blue text-left truncate hover:underline"
+                              className="font-semibold text-dash-neon text-left truncate hover:underline"
                             >
                               {u.nombre || "Sin nombre"}
                             </button>
                             <AccountBadge active={Boolean(u.auth_id)} />
                           </div>
-                          <p className="text-xs text-neutral-500 truncate">{u.email}</p>
+                          <p className="text-xs text-dash-muted truncate">{u.email}</p>
                         </div>
                         <div className="hidden lg:flex min-w-0">
                           <RoleBadge rol={u.rol} />
                         </div>
-                        <p className="hidden lg:block text-xs text-brand-blue/70 truncate">
+                        <p className="hidden lg:block text-xs text-dash-neon/70 truncate">
                           {nombresEmpresas.length > 0 ? nombresEmpresas.join(" · ") : "—"}
                         </p>
                       </div>
@@ -1093,7 +1102,7 @@ export function UsuariosContent() {
                           <button
                             type="button"
                             onClick={() => handleActivateOpen(u)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold text-amber-800 bg-amber-500/15 hover:bg-amber-100 transition-colors"
                           >
                             <Icon icon="lucide:key-round" width={13} height={13} />
                             Activar
@@ -1103,7 +1112,7 @@ export function UsuariosContent() {
                             type="button"
                             onClick={() => handleResetOpen(u)}
                             title="Resetear contraseña"
-                            className="p-1.5 rounded-md text-brand-blue/60 hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+                            className="p-1.5 rounded-md text-dash-neon/60 hover:bg-dash-neon/15 hover:text-dash-neon transition-colors"
                           >
                             <Icon icon="lucide:refresh-cw" width={15} height={15} />
                           </button>
@@ -1111,7 +1120,7 @@ export function UsuariosContent() {
                         <button
                           type="button"
                           onClick={() => handleEditOpen(u)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-blue text-white shadow-sm hover:bg-brand-blue/90 hover:shadow transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-dash-neon text-dash-fg  hover:bg-dash-neon/90 hover:shadow transition-all"
                         >
                           <Icon icon="lucide:pencil" width={13} height={13} />
                           Editar
@@ -1128,31 +1137,31 @@ export function UsuariosContent() {
 
       {showCreateModal && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-user-modal-title"
           onClick={() => setShowCreateModal(false)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-lg max-h-[92dvh] overflow-hidden flex flex-col"
+            className="dash-card flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
-            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-brand-blue/10 flex items-start justify-between gap-3">
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-dash-border flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-blue flex items-center justify-center shrink-0">
-                  <Icon icon="lucide:user-plus" width={18} height={18} className="text-white" />
+                <div className="w-10 h-10 rounded-xl bg-dash-neon flex items-center justify-center shrink-0">
+                  <Icon icon="lucide:user-plus" width={18} height={18} className="text-dash-fg" />
                 </div>
                 <div>
-                  <h2 id="create-user-modal-title" className="text-lg font-bold text-brand-blue">Nueva cuenta</h2>
-                  <p className="text-sm text-neutral-500 mt-0.5">Correo, contraseña, rol y empresas opcionales</p>
+                  <h2 id="create-user-modal-title" className="text-lg font-bold text-dash-neon">Nueva cuenta</h2>
+                  <p className="text-sm text-dash-muted mt-0.5">Correo, contraseña, rol y empresas opcionales</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-dash-muted hover:text-dash-fg hover:bg-dash-control"
                 aria-label="Cerrar"
               >
                 <Icon icon="lucide:x" width={16} height={16} />
@@ -1160,19 +1169,19 @@ export function UsuariosContent() {
             </div>
             <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
-                <label htmlFor="create-email" className={moduleLabel}>Correo</label>
+                <label htmlFor="create-email" className={neonLabel}>Correo</label>
                 <input
                   id="create-email"
                   type="email"
                   required
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className={moduleInput}
+                  className={neonInput}
                   placeholder="usuario@empresa.com"
                 />
               </div>
               <div>
-                <label htmlFor="create-password" className={moduleLabel}>Contraseña</label>
+                <label htmlFor="create-password" className={neonLabel}>Contraseña</label>
                 <div className="relative">
                   <input
                     id="create-password"
@@ -1181,13 +1190,13 @@ export function UsuariosContent() {
                     minLength={PASSWORD_MIN_LENGTH}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className={`${moduleInput} pr-10`}
+                    className={`${neonInput} pr-10`}
                     placeholder={PASSWORD_PLACEHOLDER_SHORT}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((p) => !p)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-brand-blue/40 hover:text-brand-blue rounded-lg"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-dash-neon/40 hover:text-dash-neon rounded-lg"
                     aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   >
                     <Icon icon={showPassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
@@ -1195,18 +1204,18 @@ export function UsuariosContent() {
                 </div>
               </div>
               <div>
-                <label htmlFor="create-nombre" className={moduleLabel}>Nombre</label>
+                <label htmlFor="create-nombre" className={neonLabel}>Nombre</label>
                 <input
                   id="create-nombre"
                   type="text"
                   value={form.nombre}
                   onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                  className={moduleInput}
+                  className={neonInput}
                   placeholder="Nombre completo"
                 />
               </div>
               <div>
-                <span className={moduleLabel}>Rol</span>
+                <span className={neonLabel}>Rol</span>
                 <RolePicker
                   value={form.rol}
                   onChange={(rol) =>
@@ -1229,23 +1238,23 @@ export function UsuariosContent() {
                 <p className="text-amber-600 text-xs">Selecciona al menos una empresa.</p>
               )}
               {createError && (
-                <div className="px-3 py-2 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200" role="alert">
+                <div className="px-3 py-2 bg-red-500/10 text-red-300 text-sm rounded-xl border border-red-400/35" role="alert">
                   {createError}
                 </div>
               )}
               {createSuccess && (
-                <div className="px-3 py-2 bg-emerald-50 text-emerald-700 text-sm rounded-xl border border-emerald-200" role="status">
+                <div className="px-3 py-2 border border-emerald-400/35 bg-emerald-500/15 text-emerald-300 text-sm rounded-xl border border-emerald-400/35" role="status">
                   Cuenta creada correctamente.
                 </div>
               )}
               <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowCreateModal(false)} className={`${moduleBtnSecondary} flex-1 justify-center`}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className={`${neonBtnSecondary} flex-1 justify-center`}>
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating || ((form.rol === "cliente" || form.rol === "ejecutivo") && form.empresaIds.length === 0)}
-                  className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`${neonBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isCreating ? "Creando…" : "Crear cuenta"}
                 </button>
@@ -1257,38 +1266,38 @@ export function UsuariosContent() {
 
       {bulkAssigningUsers.length > 0 && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="assign-modal-title"
           onClick={handleAssignClose}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden flex flex-col"
+            className="dash-card flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
             <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+              <div className="w-10 h-1 rounded-full bg-dash-border" />
             </div>
-            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-dash-border flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-brand-blue flex items-center justify-center flex-shrink-0">
-                  <Icon icon="lucide:building-2" width={15} height={15} className="text-white" />
+                <div className="w-8 h-8 rounded-xl bg-dash-neon flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:building-2" width={15} height={15} className="text-dash-fg" />
                 </div>
                 <div>
-                  <h2 id="assign-modal-title" className="text-base font-bold text-brand-blue">
+                  <h2 id="assign-modal-title" className="text-base font-bold text-dash-neon">
                     Asignar empresas a {bulkAssigningUsers.length} usuario{bulkAssigningUsers.length !== 1 ? "s" : ""}
                   </h2>
-                  <p className="text-sm text-neutral-500 mt-0.5 leading-relaxed">
+                  <p className="text-sm text-dash-muted mt-0.5 leading-relaxed">
                     {bulkAssigningUsers.map((u) => u.nombre || u.email).join(", ")}
                   </p>
-                  <p className="text-sm text-neutral-400 mt-0.5">
+                  <p className="text-sm text-dash-muted mt-0.5">
                     Las empresas seleccionadas se añadirán a las existentes.
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={handleAssignClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+              <button type="button" onClick={handleAssignClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-dash-muted hover:text-dash-fg hover:bg-dash-control transition-colors flex-shrink-0" aria-label="Cerrar">
                 <Icon icon="lucide:x" width={16} height={16} />
               </button>
             </div>
@@ -1300,11 +1309,11 @@ export function UsuariosContent() {
                   onChange={setAssignEmpresaIds}
                 />
               ) : (
-                <p className="text-neutral-500 text-sm">No hay empresas disponibles. Créalas en Configuración.</p>
+                <p className="text-dash-muted text-sm">No hay empresas disponibles. Créalas en Configuración.</p>
               )}
 
               {assignError && (
-                <p className="text-red-600 text-sm" role="alert">
+                <p className="text-red-300 text-sm" role="alert">
                   {assignError}
                 </p>
               )}
@@ -1313,14 +1322,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleAssignClose}
-                  className={`${moduleBtnSecondary} flex-1 justify-center`}
+                  className={`${neonBtnSecondary} flex-1 justify-center`}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isAssigning || assignEmpresaIds.length === 0}
-                  className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`${neonBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isAssigning ? "Guardando…" : "Guardar"}
                 </button>
@@ -1332,38 +1341,38 @@ export function UsuariosContent() {
 
       {activatingUser && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="activate-modal-title"
           onClick={handleActivateClose}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] overflow-hidden flex flex-col"
+            className="dash-card flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
             <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+              <div className="w-10 h-1 rounded-full bg-dash-border" />
             </div>
-            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-dash-border flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-green-500 flex items-center justify-center flex-shrink-0">
-                  <Icon icon="lucide:key-round" width={15} height={15} className="text-white" />
+                  <Icon icon="lucide:key-round" width={15} height={15} className="text-dash-fg" />
                 </div>
                 <div>
-                  <h2 id="activate-modal-title" className="text-base font-bold text-brand-blue">Activar cuenta</h2>
-                  <p className="text-sm text-neutral-500 mt-0.5">{activatingUser.nombre} — {activatingUser.email}</p>
-                  <p className="text-sm text-neutral-400 mt-0.5">Asigna una contraseña para crear la cuenta. El usuario podrá iniciar sesión.</p>
+                  <h2 id="activate-modal-title" className="text-base font-bold text-dash-neon">Activar cuenta</h2>
+                  <p className="text-sm text-dash-muted mt-0.5">{activatingUser.nombre} — {activatingUser.email}</p>
+                  <p className="text-sm text-dash-muted mt-0.5">Asigna una contraseña para crear la cuenta. El usuario podrá iniciar sesión.</p>
                 </div>
               </div>
-              <button type="button" onClick={handleActivateClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+              <button type="button" onClick={handleActivateClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-dash-muted hover:text-dash-fg hover:bg-dash-control transition-colors flex-shrink-0" aria-label="Cerrar">
                 <Icon icon="lucide:x" width={16} height={16} />
               </button>
             </div>
             <form onSubmit={handleActivateSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label htmlFor="activate-password" className={moduleLabel}>
+                <label htmlFor="activate-password" className={neonLabel}>
                   Contraseña (mín. {PASSWORD_MIN_LENGTH} caracteres)
                 </label>
                 <div className="relative">
@@ -1374,7 +1383,7 @@ export function UsuariosContent() {
                     minLength={PASSWORD_MIN_LENGTH}
                     value={activatePassword}
                     onChange={(e) => setActivatePassword(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={`${neonInput} pr-9`}
                     placeholder={PASSWORD_PLACEHOLDER}
                   />
                   <button
@@ -1383,14 +1392,14 @@ export function UsuariosContent() {
                     onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
                     tabIndex={0}
                     aria-label={showActivatePassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-dash-muted hover:text-dash-fg rounded"
                   >
                     <Icon icon={showActivatePassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
                   </button>
                 </div>
               </div>
               {activateError && (
-                <p className="text-red-600 text-sm" role="alert">
+                <p className="text-red-300 text-sm" role="alert">
                   {activateError}
                 </p>
               )}
@@ -1398,14 +1407,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleActivateClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-dash-fg bg-dash-control hover:bg-dash-border transition-colors focus:outline-none focus:ring-2 focus:ring-dash-border"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isActivating || activatePassword.length < PASSWORD_MIN_LENGTH}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-dash-fg bg-dash-neon hover:bg-dash-neon/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-dash-neon/30"
                 >
                   {isActivating ? "Activando…" : "Crear cuenta y vincular"}
                 </button>
@@ -1417,38 +1426,38 @@ export function UsuariosContent() {
 
       {resettingUser && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="reset-modal-title"
           onClick={handleResetClose}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] overflow-hidden flex flex-col"
+            className="dash-card flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="h-[3px] bg-gradient-to-r from-amber-500 to-orange-500 flex-shrink-0" />
             <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+              <div className="w-10 h-1 rounded-full bg-dash-border" />
             </div>
-            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-dash-border flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
-                  <Icon icon="lucide:refresh-cw" width={15} height={15} className="text-white" />
+                <div className="w-8 h-8 rounded-xl bg-amber-500/150 flex items-center justify-center flex-shrink-0">
+                  <Icon icon="lucide:refresh-cw" width={15} height={15} className="text-dash-fg" />
                 </div>
                 <div>
-                  <h2 id="reset-modal-title" className="text-base font-bold text-brand-blue">Resetear usuario</h2>
-                  <p className="text-sm text-neutral-500 mt-0.5">{resettingUser.nombre} — {resettingUser.email}</p>
-                  <p className="text-sm text-neutral-400 mt-0.5">Se borrarán asignaciones y se establecerá nueva contraseña.</p>
+                  <h2 id="reset-modal-title" className="text-base font-bold text-dash-neon">Resetear usuario</h2>
+                  <p className="text-sm text-dash-muted mt-0.5">{resettingUser.nombre} — {resettingUser.email}</p>
+                  <p className="text-sm text-dash-muted mt-0.5">Se borrarán asignaciones y se establecerá nueva contraseña.</p>
                 </div>
               </div>
-              <button type="button" onClick={handleResetClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0" aria-label="Cerrar">
+              <button type="button" onClick={handleResetClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-dash-muted hover:text-dash-fg hover:bg-dash-control transition-colors flex-shrink-0" aria-label="Cerrar">
                 <Icon icon="lucide:x" width={16} height={16} />
               </button>
             </div>
             <form onSubmit={handleResetSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label htmlFor="reset-password" className={moduleLabel}>
+                <label htmlFor="reset-password" className={neonLabel}>
                   Nueva contraseña (mín. {PASSWORD_MIN_LENGTH} caracteres)
                 </label>
                 <div className="relative">
@@ -1459,7 +1468,7 @@ export function UsuariosContent() {
                     minLength={PASSWORD_MIN_LENGTH}
                     value={resetPassword}
                     onChange={(e) => setResetPassword(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 pr-9 text-sm focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue outline-none"
+                    className={`${neonInput} pr-9`}
                     placeholder={PASSWORD_PLACEHOLDER}
                   />
                   <button
@@ -1468,14 +1477,14 @@ export function UsuariosContent() {
                     onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.preventDefault()}
                     tabIndex={0}
                     aria-label={showResetPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-dash-muted hover:text-dash-muted rounded"
                   >
                     <Icon icon={showResetPassword ? "lucide:eye-off" : "lucide:eye"} width={16} height={16} />
                   </button>
                 </div>
               </div>
               {resetError && (
-                <p className="text-red-600 text-sm" role="alert">
+                <p className="text-red-300 text-sm" role="alert">
                   {resetError}
                 </p>
               )}
@@ -1483,14 +1492,14 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleResetClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-dash-fg bg-dash-control hover:bg-dash-border transition-colors focus:outline-none focus:ring-2 focus:ring-dash-border"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isResetting || resetPassword.length < PASSWORD_MIN_LENGTH}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-dash-fg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300"
                 >
                   {isResetting ? "Reseteando…" : "Resetear y guardar contraseña"}
                 </button>
@@ -1502,28 +1511,28 @@ export function UsuariosContent() {
 
       {editingUser && (
         <div
-          className="fixed inset-0 bg-black/45 backdrop-blur-[2px] z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-modal-title"
           onClick={handleEditClose}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-xl max-h-[92dvh] overflow-hidden flex flex-col"
+            className="dash-card flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+            <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
             <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+              <div className="w-10 h-1 rounded-full bg-dash-border" />
             </div>
-            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-brand-blue/10 flex items-start justify-between gap-3 bg-[#F7FAFD]">
+            <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-dash-border flex items-start justify-between gap-3 bg-[#F7FAFD]">
               <div className="flex items-center gap-3 min-w-0">
                 <UserAvatar name={editingUser.nombre || editingUser.email} rol={editForm.rol} />
                 <div className="min-w-0">
-                  <h2 id="edit-modal-title" className="text-lg font-bold text-brand-blue truncate">
+                  <h2 id="edit-modal-title" className="text-lg font-bold text-dash-neon truncate">
                     {editingUser.nombre || "Sin nombre"}
                   </h2>
-                  <p className="text-sm text-neutral-500 truncate">{editingUser.email}</p>
+                  <p className="text-sm text-dash-muted truncate">{editingUser.email}</p>
                   <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                     <RoleBadge rol={editForm.rol} />
                     <AccountBadge active={Boolean(editingUser.auth_id)} />
@@ -1533,7 +1542,7 @@ export function UsuariosContent() {
               <button
                 type="button"
                 onClick={handleEditClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-white shrink-0"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-dash-muted hover:text-dash-fg hover:bg-dash-control shrink-0"
                 aria-label="Cerrar"
               >
                 <Icon icon="lucide:x" width={16} height={16} />
@@ -1543,7 +1552,7 @@ export function UsuariosContent() {
             <form onSubmit={handleEditSubmit} className="flex-1 min-h-0 flex flex-col">
               <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
                 <div>
-                  <span className={moduleLabel}>Rol</span>
+                  <span className={neonLabel}>Rol</span>
                   <RolePicker
                     value={editForm.rol}
                     onChange={(rol) =>
@@ -1564,7 +1573,7 @@ export function UsuariosContent() {
                       onChange={(empresaIds) => setEditForm((f) => ({ ...f, empresaIds }))}
                     />
                   ) : (
-                    <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    <p className="text-sm text-amber-700 bg-amber-500/15 border border-amber-200 rounded-xl px-3 py-2">
                       No hay empresas. Créalas en Configuración → Clientes.
                     </p>
                   )
@@ -1577,13 +1586,13 @@ export function UsuariosContent() {
                 ) : null}
 
                 {editingUser.auth_id ? (
-                  <div className="rounded-xl border border-brand-blue/15 overflow-hidden">
+                  <div className="rounded-xl border border-dash-border overflow-hidden">
                     <button
                       type="button"
                       onClick={() => setEditPasswordOpen((v) => !v)}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#F4F8FC] hover:bg-[#EEF3FA] transition-colors"
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-dash-control hover:bg-dash-control/50 transition-colors"
                     >
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand-blue">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-dash-neon">
                         <Icon icon="lucide:key-round" width={16} height={16} />
                         Cambiar contraseña
                       </span>
@@ -1591,14 +1600,14 @@ export function UsuariosContent() {
                         icon="lucide:chevron-down"
                         width={16}
                         height={16}
-                        className={`text-brand-blue/50 transition-transform ${editPasswordOpen ? "rotate-180" : ""}`}
+                        className={`text-dash-neon/50 transition-transform ${editPasswordOpen ? "rotate-180" : ""}`}
                       />
                     </button>
                     {editPasswordOpen ? (
-                      <div className="p-4 space-y-3 border-t border-brand-blue/10">
+                      <div className="p-4 space-y-3 border-t border-dash-border">
                         {!changePasswordVerified ? (
                           <>
-                            <label htmlFor="edit-change-current" className={moduleLabel}>
+                            <label htmlFor="edit-change-current" className={neonLabel}>
                               Contraseña actual (para autorizar)
                             </label>
                             <div className="relative">
@@ -1607,7 +1616,7 @@ export function UsuariosContent() {
                                 type={showChangePasswordCurrent ? "text" : "password"}
                                 value={changePasswordCurrent}
                                 onChange={(e) => setChangePasswordCurrent(e.target.value)}
-                                className={`${moduleInput} pr-9`}
+                                className={`${neonInput} pr-9`}
                                 placeholder="Ingresa la contraseña actual"
                                 autoComplete="current-password"
                               />
@@ -1615,13 +1624,13 @@ export function UsuariosContent() {
                                 type="button"
                                 onClick={() => setShowChangePasswordCurrent((p) => !p)}
                                 aria-label={showChangePasswordCurrent ? "Ocultar" : "Mostrar"}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-dash-muted hover:text-dash-muted rounded"
                               >
                                 <Icon icon={showChangePasswordCurrent ? "lucide:eye-off" : "lucide:eye"} width={14} height={14} />
                               </button>
                             </div>
                             {changePasswordError ? (
-                              <p className="text-red-600 text-xs" role="alert">{changePasswordError}</p>
+                              <p className="text-red-300 text-xs" role="alert">{changePasswordError}</p>
                             ) : null}
                             <button
                               type="button"
@@ -1630,7 +1639,7 @@ export function UsuariosContent() {
                                 handleVerifyCurrentPassword(e);
                               }}
                               disabled={isVerifying || !changePasswordCurrent}
-                              className={`${moduleBtnSecondary} text-sm disabled:opacity-50`}
+                              className={`${neonBtnSecondary} text-sm disabled:opacity-50`}
                             >
                               {isVerifying ? "Verificando…" : "Verificar y continuar"}
                             </button>
@@ -1638,7 +1647,7 @@ export function UsuariosContent() {
                         ) : (
                           <>
                             <p className="text-xs font-medium text-emerald-600">Contraseña actual verificada</p>
-                            <label htmlFor="edit-change-new" className={moduleLabel}>
+                            <label htmlFor="edit-change-new" className={neonLabel}>
                               Nueva contraseña (mín. {PASSWORD_MIN_LENGTH} caracteres)
                             </label>
                             <div className="relative">
@@ -1648,7 +1657,7 @@ export function UsuariosContent() {
                                 minLength={PASSWORD_MIN_LENGTH}
                                 value={changePasswordNew}
                                 onChange={(e) => setChangePasswordNew(e.target.value)}
-                                className={`${moduleInput} pr-9`}
+                                className={`${neonInput} pr-9`}
                                 placeholder={PASSWORD_PLACEHOLDER}
                                 autoComplete="new-password"
                               />
@@ -1656,12 +1665,12 @@ export function UsuariosContent() {
                                 type="button"
                                 onClick={() => setShowChangePasswordNew((p) => !p)}
                                 aria-label={showChangePasswordNew ? "Ocultar" : "Mostrar"}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-600 rounded"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-dash-muted hover:text-dash-muted rounded"
                               >
                                 <Icon icon={showChangePasswordNew ? "lucide:eye-off" : "lucide:eye"} width={14} height={14} />
                               </button>
                             </div>
-                            <label htmlFor="edit-change-confirm" className={moduleLabel}>
+                            <label htmlFor="edit-change-confirm" className={neonLabel}>
                               Confirmar nueva contraseña
                             </label>
                             <input
@@ -1670,12 +1679,12 @@ export function UsuariosContent() {
                               minLength={PASSWORD_MIN_LENGTH}
                               value={changePasswordConfirm}
                               onChange={(e) => setChangePasswordConfirm(e.target.value)}
-                              className={moduleInput}
+                              className={neonInput}
                               placeholder="Repite la nueva contraseña"
                               autoComplete="new-password"
                             />
                             {changePasswordError ? (
-                              <p className="text-red-600 text-xs" role="alert">{changePasswordError}</p>
+                              <p className="text-red-300 text-xs" role="alert">{changePasswordError}</p>
                             ) : null}
                             <div className="flex gap-2">
                               <button
@@ -1684,7 +1693,7 @@ export function UsuariosContent() {
                                   setChangePasswordVerified(false);
                                   setChangePasswordError(null);
                                 }}
-                                className={`${moduleBtnSecondary} text-sm`}
+                                className={`${neonBtnSecondary} text-sm`}
                               >
                                 Atrás
                               </button>
@@ -1699,7 +1708,7 @@ export function UsuariosContent() {
                                   changePasswordNew.length < PASSWORD_MIN_LENGTH ||
                                   changePasswordNew !== changePasswordConfirm
                                 }
-                                className={`${moduleBtnPrimary} text-sm disabled:opacity-50`}
+                                className={`${neonBtnPrimary} text-sm disabled:opacity-50`}
                               >
                                 {isChangingPassword ? "Actualizando…" : "Cambiar contraseña"}
                               </button>
@@ -1712,14 +1721,14 @@ export function UsuariosContent() {
                 ) : null}
 
                 {editError ? (
-                  <p className="text-red-600 text-sm" role="alert">
+                  <p className="text-red-300 text-sm" role="alert">
                     {editError}
                   </p>
                 ) : null}
               </div>
 
-              <div className="flex-shrink-0 border-t border-brand-blue/10 bg-white px-5 sm:px-6 py-3 flex gap-2">
-                <button type="button" onClick={handleEditClose} className={`${moduleBtnSecondary} flex-1 justify-center`}>
+              <div className="flex-shrink-0 border-t border-dash-border bg-dash-control px-5 sm:px-6 py-3 flex gap-2">
+                <button type="button" onClick={handleEditClose} className={`${neonBtnSecondary} flex-1 justify-center`}>
                   Cancelar
                 </button>
                 <button
@@ -1728,7 +1737,7 @@ export function UsuariosContent() {
                     isUpdating ||
                     ((editForm.rol === "cliente" || editForm.rol === "ejecutivo") && editForm.empresaIds.length === 0)
                   }
-                  className={`${moduleBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`${neonBtnPrimary} flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isUpdating ? "Guardando…" : "Guardar cambios"}
                 </button>
@@ -1743,35 +1752,35 @@ export function UsuariosContent() {
         const nombresEmpresas = ids.map((eid) => empresas.find((e) => e.id === eid)?.nombre).filter(Boolean) as string[];
         return (
           <div
-            className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center sm:p-4"
+            className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" data-theme={theme}
             role="dialog"
             aria-modal="true"
             aria-labelledby="view-user-modal-title"
             onClick={handleViewClose}
           >
             <div
-              className="bg-white rounded-t-2xl sm:rounded-2xl shadow-mac-modal w-full sm:max-w-md max-h-[92dvh] overflow-hidden flex flex-col"
+              className="dash-card flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="h-[3px] bg-gradient-to-r from-brand-blue to-brand-teal flex-shrink-0" />
+              <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
               <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-                <div className="w-10 h-1 rounded-full bg-neutral-200" />
+                <div className="w-10 h-1 rounded-full bg-dash-border" />
               </div>
               {/* Header */}
-              <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-neutral-200 flex items-start justify-between gap-3">
+              <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b border-dash-border flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <UserAvatar name={viewingUser.nombre || viewingUser.email} rol={viewingUser.rol} />
                   <div>
-                    <h2 id="view-user-modal-title" className="text-base font-bold text-brand-blue">
+                    <h2 id="view-user-modal-title" className="text-base font-bold text-dash-neon">
                       {viewingUser.nombre || viewingUser.email}
                     </h2>
-                    <p className="text-xs text-neutral-500 mt-0.5">{viewingUser.email}</p>
+                    <p className="text-xs text-dash-muted mt-0.5">{viewingUser.email}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleViewClose}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors flex-shrink-0"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-dash-muted hover:text-dash-fg hover:bg-dash-control transition-colors flex-shrink-0"
                   aria-label="Cerrar"
                 >
                   <Icon icon="lucide:x" width={16} height={16} />
@@ -1780,67 +1789,67 @@ export function UsuariosContent() {
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
                 {/* Rol */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-                  <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                    <Icon icon="lucide:shield" width={15} height={15} className="text-brand-blue" />
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-dash-control border border-dash-border">
+                  <div className="w-8 h-8 rounded-lg bg-dash-neon/15 flex items-center justify-center flex-shrink-0">
+                    <Icon icon="lucide:shield" width={15} height={15} className="text-dash-neon" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-neutral-500 mb-1">Rol</p>
+                    <p className="text-xs font-medium text-dash-muted mb-1">Rol</p>
                     <RoleBadge rol={viewingUser.rol} />
                   </div>
                 </div>
                 {/* Estado cuenta */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${viewingUser.auth_id ? "bg-green-100" : "bg-neutral-100"}`}>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-dash-control border border-dash-border">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${viewingUser.auth_id ? "bg-green-100" : "bg-dash-control"}`}>
                     <Icon
                       icon={viewingUser.auth_id ? "lucide:check-circle" : "lucide:circle-off"}
                       width={15}
                       height={15}
-                      className={viewingUser.auth_id ? "text-green-600" : "text-neutral-400"}
+                      className={viewingUser.auth_id ? "text-green-600" : "text-dash-muted"}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-neutral-500 mb-1">Estado de cuenta</p>
+                    <p className="text-xs font-medium text-dash-muted mb-1">Estado de cuenta</p>
                     <AccountBadge active={Boolean(viewingUser.auth_id)} />
                   </div>
                 </div>
                 {/* Empresas */}
-                <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
+                <div className="p-3 rounded-xl bg-dash-control border border-dash-border">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
-                      <Icon icon="lucide:building-2" width={15} height={15} className="text-brand-blue" />
+                    <div className="w-8 h-8 rounded-lg bg-dash-neon/15 flex items-center justify-center flex-shrink-0">
+                      <Icon icon="lucide:building-2" width={15} height={15} className="text-dash-neon" />
                     </div>
-                    <p className="text-xs font-medium text-neutral-500">
+                    <p className="text-xs font-medium text-dash-muted">
                       Empresas asignadas
                       {nombresEmpresas.length > 0 && (
-                        <span className="ml-1 text-neutral-400">({nombresEmpresas.length})</span>
+                        <span className="ml-1 text-dash-muted">({nombresEmpresas.length})</span>
                       )}
                     </p>
                   </div>
                   {nombresEmpresas.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5 mt-1 ml-10">
                       {nombresEmpresas.map((n) => (
-                        <span key={n} className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+                        <span key={n} className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-dash-neon/15 text-dash-neon border border-dash-border">
                           {n}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-neutral-400 ml-10">Sin empresas asignadas</p>
+                    <p className="text-xs text-dash-muted ml-10">Sin empresas asignadas</p>
                   )}
                 </div>
                 {/* ID interno */}
-                <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-100">
-                  <p className="text-sm font-medium text-neutral-400 uppercase tracking-wide mb-0.5">ID interno</p>
-                  <p className="text-xs text-neutral-500 font-mono break-all">{viewingUser.id}</p>
+                <div className="p-3 rounded-xl bg-dash-control border border-dash-border">
+                  <p className="text-sm font-medium text-dash-muted uppercase tracking-wide mb-0.5">ID interno</p>
+                  <p className="text-xs text-dash-muted font-mono break-all">{viewingUser.id}</p>
                 </div>
               </div>
               {/* Footer */}
-              <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-neutral-100 flex gap-2">
+              <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-dash-border flex gap-2">
                 <button
                   type="button"
                   onClick={() => { handleViewClose(); handleEditOpen(viewingUser); }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-brand-blue bg-brand-blue/8 hover:bg-brand-blue/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-dash-neon bg-dash-neon/15 hover:bg-dash-neon/15 transition-colors focus:outline-none focus:ring-2 focus:ring-dash-neon/30"
                 >
                   <Icon icon="lucide:pencil" width={14} height={14} />
                   Editar usuario
@@ -1848,7 +1857,7 @@ export function UsuariosContent() {
                 <button
                   type="button"
                   onClick={handleViewClose}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-dash-fg bg-dash-control hover:bg-dash-border transition-colors focus:outline-none focus:ring-2 focus:ring-dash-border"
                 >
                   Cerrar
                 </button>
@@ -1858,5 +1867,6 @@ export function UsuariosContent() {
         );
       })()}
     </main>
+    </div>
   );
 }

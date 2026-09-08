@@ -5,7 +5,11 @@ import { useLocale } from "@/lib/i18n";
 import { sileo } from "sileo";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { getApiOriginPrefix } from "@/lib/basePath";
-import { modulePageBg, moduleHero, moduleCard } from "@/lib/ui/moduleStyles";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { FormSelect } from "@/components/ui/FormSelect";
+
+const neonInput =
+  "dash-control w-full px-3.5 py-2.5 border border-dash-border rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
 
 const AREAS = ["ASIA", "EUROPA", "AMERICA", "MEDIO-ORIENTE", "OCEANIA"] as const;
 
@@ -133,6 +137,7 @@ const defaultServiciosTr: Record<string, string> = {
 export function ServiciosUnicosContent() {
   const { t } = useLocale();
   const { isSuperadmin } = useAuth();
+  const [theme] = useNeonTheme();
   const tr = { ...defaultServiciosTr, ...(t?.serviciosPage as Record<string, string> | undefined) };
   const [servicios, setServicios] = useState<ServicioUnico[]>([]);
   const [navieras, setNavieras] = useState<Naviera[]>([]);
@@ -734,41 +739,48 @@ export function ServiciosUnicosContent() {
 
   return (
     <>
-    <main className={`flex-1 min-h-0 min-w-0 overflow-auto ${modulePageBg}`} role="main">
-      {/* Hero */}
-      <div className={`${moduleHero} px-4 sm:px-6 py-5 sm:py-6`}>
-        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-lg bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Icon icon="lucide:ship" width={24} height={24} className="text-white" />
+    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+      </div>
+
+      <div className="dash-toolbar relative z-10 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 px-3 py-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+              <Icon icon="lucide:ship" width={22} height={22} className="text-dash-neon" aria-hidden />
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">
                 {tr.title}
               </h1>
-              <p className="text-base text-white/75 mt-1">
+              <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">
                 {tr.modalDescNew}
               </p>
             </div>
           </div>
           {isSuperadmin && (
+          <div className="ml-auto">
           <button
             type="button"
             onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-base font-semibold rounded-lg bg-white text-brand-blue hover:bg-white/95 transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
+            className="dash-cta inline-flex items-center gap-2 px-4 py-2 text-sm"
             aria-label={tr.newServiceAria}
           >
-            <Icon icon="lucide:plus" width={18} height={18} />
+            <Icon icon="lucide:plus" width={16} height={16} />
             {tr.newService}
           </button>
+          </div>
           )}
         </div>
       </div>
 
-      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-5 py-4 sm:py-6 space-y-4">
+      <div className="relative z-10 flex-1 space-y-3 p-2 sm:p-3">
 
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700 flex items-start gap-2" role="alert">
+          <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2" role="alert">
             <Icon icon="lucide:alert-triangle" width={18} height={18} className="mt-0.5" aria-hidden />
             <span>{error}</span>
           </div>
@@ -776,10 +788,10 @@ export function ServiciosUnicosContent() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Icon icon="lucide:loader-2" width={32} height={32} className="animate-spin text-brand-blue" aria-hidden />
+            <Icon icon="lucide:loader-2" width={32} height={32} className="animate-spin text-dash-neon" aria-hidden />
           </div>
         ) : servicios.length === 0 ? (
-          <div className={`${moduleCard} p-8 text-center text-neutral-500`}>
+          <div className={`dash-card rounded-xl border border-dash-border p-8 text-center text-dash-muted`}>
             <Icon icon="lucide:ship" width={40} height={40} className="mx-auto mb-3 opacity-50" />
             <p className="font-medium text-base">{tr.noServices}</p>
             <p className="text-base mt-1">{tr.noServicesHint}</p>
@@ -840,32 +852,32 @@ export function ServiciosUnicosContent() {
             return (
               <li
                 key={s.id}
-                className={`${moduleCard} min-w-0 overflow-hidden transition-shadow hover:shadow-md flex flex-col`}
+                className={`dash-card rounded-xl border border-dash-border min-w-0 overflow-hidden transition-shadow hover:shadow-md flex flex-col`}
               >
                 <div className="p-4 flex flex-col h-full">
                   <div className="flex items-start justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => setExpandedCardId((id) => (id === s.id ? null : s.id))}
-                      className="flex-1 min-w-0 text-left focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-inset rounded-lg -m-1 p-1"
+                      className="flex-1 min-w-0 text-left focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:ring-inset rounded-lg -m-1 p-1"
                       aria-expanded={isExpanded}
                       aria-label={isExpanded ? tr.collapseAria : tr.expandAria}
                     >
-                      <p className="text-lg font-extrabold text-neutral-800 truncate" title={navieraLabel}>
+                      <p className="text-lg font-extrabold text-dash-fg truncate" title={navieraLabel}>
                         {navieraLabel}
                       </p>
-                      <p className="font-bold text-brand-blue truncate mt-0.5" title={s.nombre}>{s.nombre}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">
+                      <p className="font-bold text-dash-neon truncate mt-0.5" title={s.nombre}>{s.nombre}</p>
+                      <p className="text-xs text-dash-muted mt-0.5">
                         {tr.origin}: {s.puerto_origen || "—"}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-medium text-neutral-600">
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-medium text-dash-muted">
                         <span>{numNaves === 1 ? tr.vesselCount.replace("{{count}}", String(numNaves)) : tr.vesselCount_other.replace("{{count}}", String(numNaves))}</span>
-                        <span className="text-neutral-300" aria-hidden>·</span>
+                        <span className="text-dash-muted/50" aria-hidden>·</span>
                         <span>{numDestinos === 1 ? tr.destinationCount.replace("{{count}}", String(numDestinos)) : tr.destinationCount_other.replace("{{count}}", String(numDestinos))}</span>
-                        <span className="text-neutral-300" aria-hidden>·</span>
+                        <span className="text-dash-muted/50" aria-hidden>·</span>
                         <span>{numRegiones === 1 ? tr.regionCount.replace("{{count}}", String(numRegiones)) : tr.regionCount_other.replace("{{count}}", String(numRegiones))}</span>
                       </div>
-                      <span className="inline-flex items-center mt-1.5 text-xs text-brand-blue font-medium" aria-hidden>
+                      <span className="inline-flex items-center mt-1.5 text-xs text-dash-neon font-medium" aria-hidden>
                         {isExpanded ? tr.viewLess : tr.viewDetail}
                         <Icon icon={isExpanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={16} height={16} className="ml-0.5" />
                       </span>
@@ -874,7 +886,7 @@ export function ServiciosUnicosContent() {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleOpenEdit(s); }}
-                        className="p-1.5 rounded-lg text-neutral-500 hover:text-brand-blue hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                        className="p-1.5 rounded-lg text-dash-muted hover:text-dash-neon hover:bg-dash-neon/15 transition-colors focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                         aria-label={tr.editAria.replace("{{name}}", s.nombre)}
                         title={tr.edit}
                       >
@@ -884,7 +896,7 @@ export function ServiciosUnicosContent() {
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleOpenCopy(s); }}
-                          className="p-1.5 rounded-lg text-neutral-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                          className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                           aria-label={`Copiar servicio ${s.nombre}`}
                           title="Copiar servicio"
                         >
@@ -895,7 +907,7 @@ export function ServiciosUnicosContent() {
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleDelete(s); }}
                         disabled={deletingId === s.id}
-                        className="p-1.5 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
+                        className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
                         aria-label={tr.deleteAria.replace("{{name}}", s.nombre)}
                         title={tr.delete}
                       >
@@ -904,25 +916,25 @@ export function ServiciosUnicosContent() {
                     </div>
                   </div>
                   {isExpanded && (
-                    <div className="pb-3 pt-2 mt-1 border-t border-neutral-200 space-y-3">
+                    <div className="pb-3 pt-2 mt-1 border-t border-dash-border space-y-3">
                       {numRegiones > 0 && (
                         <div>
-                          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-0.5">{tr.regions}</p>
-                          <p className="text-sm text-neutral-700">{regiones.join(", ")}</p>
+                          <p className="text-xs font-medium text-dash-muted uppercase tracking-wider mb-0.5">{tr.regions}</p>
+                          <p className="text-sm text-dash-fg">{regiones.join(", ")}</p>
                         </div>
                       )}
                       {s.naves?.length > 0 && (
                         <div>
-                          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-0.5">{tr.vessels}</p>
-                          <p className="text-sm text-neutral-700 break-words" title={s.naves.map((n) => n.nave_nombre).join(", ")}>
+                          <p className="text-xs font-medium text-dash-muted uppercase tracking-wider mb-0.5">{tr.vessels}</p>
+                          <p className="text-sm text-dash-fg break-words" title={s.naves.map((n) => n.nave_nombre).join(", ")}>
                             {s.naves.map((n) => n.nave_nombre).join(", ")}
                           </p>
                         </div>
                       )}
                       {s.destinos?.length > 0 && (
                         <div>
-                          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-0.5">{tr.destinations}</p>
-                          <p className="text-sm text-neutral-700 break-words" title={s.destinos.map((d) => d.puerto_nombre || d.puerto).join(" → ")}>
+                          <p className="text-xs font-medium text-dash-muted uppercase tracking-wider mb-0.5">{tr.destinations}</p>
+                          <p className="text-sm text-dash-fg break-words" title={s.destinos.map((d) => d.puerto_nombre || d.puerto).join(" → ")}>
                             {s.destinos.map((d) => d.puerto_nombre || d.puerto).join(" → ")}
                           </p>
                         </div>
@@ -961,11 +973,11 @@ export function ServiciosUnicosContent() {
 
                 return (
                   <section key={areaName} className="min-w-0">
-                    <h2 className="text-base font-bold text-brand-blue mb-1 flex items-center gap-2">
-                      <Icon icon="lucide:map-pin" width={16} height={16} className="text-brand-blue shrink-0" />
+                    <h2 className="text-base font-bold text-dash-neon mb-1 flex items-center gap-2">
+                      <Icon icon="lucide:map-pin" width={16} height={16} className="text-dash-neon shrink-0" />
                       {areaName}
                     </h2>
-                    <p className="text-xs text-neutral-500 mb-3">
+                    <p className="text-xs text-dash-muted mb-3">
                       {totalServices === 1
                         ? tr.servicesInNavieras.replace("{{count}}", String(totalServices)).replace("{{n}}", String(sortedNavierasInArea.length))
                         : tr.servicesInNavieras_other.replace("{{count}}", String(totalServices)).replace("{{n}}", String(sortedNavierasInArea.length))}
@@ -977,20 +989,20 @@ export function ServiciosUnicosContent() {
                         return (
                           <article
                             key={key}
-                            className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden flex flex-col min-w-0"
+                            className="dash-card flex min-w-0 flex-col overflow-hidden rounded-xl border border-dash-border"
                           >
                             <button
                               type="button"
                               onClick={() => toggleNaviera(key)}
-                              className="w-full px-4 py-3 text-left hover:bg-neutral-50/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:ring-inset flex items-center justify-between gap-3"
+                              className="w-full px-4 py-3 text-left hover:bg-dash-neon/10 transition-colors focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:ring-inset flex items-center justify-between gap-3"
                               aria-expanded={isNavieraExpanded}
                               aria-label={isNavieraExpanded ? tr.collapseNavieraAria.replace("{{name}}", navieraName) : tr.expandNavieraAria.replace("{{name}}", navieraName)}
                             >
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-base font-bold text-neutral-800 truncate">
+                                <h3 className="text-base font-bold text-dash-fg truncate">
                                   {navieraName}
                                 </h3>
-                                <p className="text-xs text-neutral-500 mt-0.5">
+                                <p className="text-xs text-dash-muted mt-0.5">
                                   {serviceList.length === 1 ? tr.serviceCount.replace("{{count}}", String(serviceList.length)) : tr.serviceCount_other.replace("{{count}}", String(serviceList.length))}
                                 </p>
                               </div>
@@ -998,12 +1010,12 @@ export function ServiciosUnicosContent() {
                                 icon={isNavieraExpanded ? "lucide:chevron-up" : "lucide:chevron-down"}
                                 width={20}
                                 height={20}
-                                className="flex-shrink-0 text-neutral-500"
+                                className="flex-shrink-0 text-dash-muted"
                                 aria-hidden
                               />
                             </button>
                             {isNavieraExpanded && (
-                              <div className="border-t border-neutral-200 p-3 bg-neutral-50/50 overflow-y-auto flex-1 min-h-0">
+                              <div className="border-t border-dash-border p-3 bg-dash-control/40 overflow-y-auto flex-1 min-h-0">
                                 <ul className="space-y-3" role="list">
                                   {serviceList.map((s) => renderCard(s))}
                                 </ul>
@@ -1023,7 +1035,7 @@ export function ServiciosUnicosContent() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-white"
+          className="dash-neon fixed inset-0 z-50 flex flex-col bg-[var(--dash-bg)]" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-servicio-title"
@@ -1031,10 +1043,10 @@ export function ServiciosUnicosContent() {
           <div ref={modalRef} className="flex flex-col min-h-0 flex-1 overflow-y-auto">
             <div className="p-6 sm:p-8 w-full pb-10">
               <header className="mb-8">
-                <h2 id="modal-servicio-title" className="text-xl font-semibold text-brand-blue tracking-tight">
+                <h2 id="modal-servicio-title" className="text-xl font-semibold text-dash-neon tracking-tight">
                   {editingId ? tr.modalTitleEdit : copyFromServiceId ? "Copiar servicio" : tr.modalTitleNew}
                 </h2>
-                <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
+                <p className="text-sm text-dash-muted mt-2 leading-relaxed">
                   {editingId
                     ? tr.modalDescEdit
                     : copyFromServiceId
@@ -1044,7 +1056,7 @@ export function ServiciosUnicosContent() {
               </header>
 
               {modalError && (
-                <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-sm border border-red-200 flex items-center gap-3" role="alert">
+                <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-400/35 bg-red-500/10 p-4 text-sm text-red-300" role="alert">
                   <Icon icon="lucide:alert-circle" width={20} height={20} className="shrink-0" />
                   <span>{modalError}</span>
                 </div>
@@ -1052,26 +1064,26 @@ export function ServiciosUnicosContent() {
 
               <div className="space-y-8">
                 {!editingId && servicios.length > 0 && (
-                  <section className={`rounded-xl border p-5 sm:p-6 ${copyFromServiceId ? "border-emerald-300 bg-emerald-50/60" : "border-neutral-200 bg-neutral-50/50"}`}>
-                    <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Icon icon="lucide:copy" width={16} height={16} className={copyFromServiceId ? "text-emerald-600" : "text-brand-blue"} />
+                  <section className={`rounded-xl border p-5 sm:p-6 ${copyFromServiceId ? "border-emerald-400/40 bg-emerald-500/10" : "border-dash-border bg-dash-control/40"}`}>
+                    <h3 className="text-sm font-semibold text-dash-fg uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <Icon icon="lucide:copy" width={16} height={16} className={copyFromServiceId ? "text-emerald-600" : "text-dash-neon"} />
                       {tr.copyFromService}
                     </h3>
                     {copyFromServiceId ? (
                       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-emerald-300 text-sm text-neutral-800 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-400/40 bg-emerald-500/10 text-sm text-dash-fg flex-1 min-w-0">
                           <Icon icon="lucide:check-circle-2" width={16} height={16} className="text-emerald-600 shrink-0" />
                           <span className="font-medium truncate">
                             {servicios.find((s) => s.id === copyFromServiceId)?.nombre ?? ""}
                           </span>
-                          <span className="text-neutral-400 text-xs ml-1 truncate">
+                          <span className="text-dash-muted text-xs ml-1 truncate">
                             ({servicios.find((s) => s.id === copyFromServiceId)?.naviera_nombre ?? ""})
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setCopyModalOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-300 text-neutral-600 text-sm font-medium hover:bg-white hover:border-brand-blue/50 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors shrink-0"
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-dash-border px-3 py-2 text-sm font-medium text-dash-muted transition-colors hover:border-dash-neon/40 hover:bg-dash-neon/15 focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                         >
                           <Icon icon="lucide:repeat" width={14} height={14} aria-hidden />
                           Cambiar
@@ -1079,13 +1091,13 @@ export function ServiciosUnicosContent() {
                       </div>
                     ) : (
                       <>
-                        <p className="text-sm text-neutral-600 mb-4">
+                        <p className="text-sm text-dash-muted mb-4">
                           {tr.copyFromServiceHint}
                         </p>
                         <button
                           type="button"
                           onClick={() => setCopyModalOpen(true)}
-                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+                          className="dash-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium"
                         >
                           <Icon icon="lucide:rows" width={16} height={16} aria-hidden />
                           Ver servicios por región
@@ -1095,14 +1107,14 @@ export function ServiciosUnicosContent() {
                   </section>
                 )}
 
-                <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Icon icon="lucide:file-text" width={16} height={16} className="text-brand-blue" />
+                <section className="rounded-xl border border-dash-border bg-dash-control/40 p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold text-dash-fg uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Icon icon="lucide:file-text" width={16} height={16} className="text-dash-neon" />
                     {tr.serviceData}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                      <label htmlFor="servicio-nombre" className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label htmlFor="servicio-nombre" className="block text-sm font-medium text-dash-fg mb-2">
                         {tr.serviceName}
                       </label>
                       <input
@@ -1110,31 +1122,26 @@ export function ServiciosUnicosContent() {
                         type="text"
                         value={form.nombre}
                         onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                        className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white transition-colors"
+                        className={neonInput}
                         placeholder={tr.serviceNamePlaceholder}
                         autoComplete="off"
                       />
                     </div>
                     <div>
-                      <label htmlFor="servicio-naviera" className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label htmlFor="servicio-naviera" className="block text-sm font-medium text-dash-fg mb-2">
                         {tr.carrier}
                       </label>
-                      <select
+                      <FormSelect
                         id="servicio-naviera"
+                        variant="neon"
                         value={form.naviera_id}
-                        onChange={(e) => setForm((f) => ({ ...f, naviera_id: e.target.value }))}
-                        className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white transition-colors"
-                      >
-                        <option value="">{tr.selectCarrier}</option>
-                        {navieras.map((n) => (
-                          <option key={n.id} value={n.id}>
-                            {n.nombre}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder={tr.selectCarrier}
+                        options={navieras.map((n) => ({ value: n.id, label: n.nombre }))}
+                        onChange={(v) => setForm((f) => ({ ...f, naviera_id: v }))}
+                      />
                     </div>
                     <div>
-                      <label htmlFor="servicio-pol" className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label htmlFor="servicio-pol" className="block text-sm font-medium text-dash-fg mb-2">
                         {tr.pol}
                       </label>
                       <input
@@ -1142,7 +1149,7 @@ export function ServiciosUnicosContent() {
                         type="text"
                         value={form.puerto_origen}
                         onChange={(e) => setForm((f) => ({ ...f, puerto_origen: e.target.value }))}
-                        className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white transition-colors"
+                        className={neonInput}
                         placeholder={tr.polPlaceholder}
                         autoComplete="off"
                       />
@@ -1151,16 +1158,16 @@ export function ServiciosUnicosContent() {
                 </section>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6 space-y-4 min-w-0">
-                    <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-2">
-                      <Icon icon="lucide:ship" width={16} height={16} className="text-brand-blue" />
+                  <section className="rounded-xl border border-dash-border bg-dash-control/40 p-5 sm:p-6 space-y-4 min-w-0">
+                    <h3 className="text-sm font-semibold text-dash-fg uppercase tracking-wider flex items-center gap-2">
+                      <Icon icon="lucide:ship" width={16} height={16} className="text-dash-neon" />
                       {tr.vesselsSection}
                     </h3>
-                    <p className="text-sm text-neutral-500">
+                    <p className="text-sm text-dash-muted">
                       {tr.vesselsHint}
                     </p>
                     {!form.naviera_id ? (
-                      <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      <p className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
                         {tr.selectCarrierFirst}
                       </p>
                     ) : (
@@ -1174,7 +1181,7 @@ export function ServiciosUnicosContent() {
                               if (v) handleAddNaveFromSelect(v);
                               e.target.value = "";
                             }}
-                            className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                            className={`${neonInput} flex-1 min-w-0 py-2`} 
                             aria-label={tr.selectVessel}
                             disabled={loadingNaves}
                           >
@@ -1187,7 +1194,7 @@ export function ServiciosUnicosContent() {
                               </option>
                             ))}
                           </select>
-                          <span className="text-neutral-400 self-center text-sm hidden sm:inline">o</span>
+                          <span className="text-dash-muted self-center text-sm hidden sm:inline">o</span>
                           <div className="flex gap-2 flex-1 min-w-0">
                             <input
                               type="text"
@@ -1199,7 +1206,7 @@ export function ServiciosUnicosContent() {
                                   handleAddNaveFromInput();
                                 }
                               }}
-                              className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                              className={`${neonInput} flex-1 min-w-0 py-2`} 
                               placeholder={tr.writeNewVessel}
                               list="naves-datalist"
                               aria-label={tr.writeNewVessel}
@@ -1208,17 +1215,17 @@ export function ServiciosUnicosContent() {
                               type="button"
                               onClick={() => handleAddNaveFromInput()}
                               disabled={!naveInputValue.trim() || savingNewNave}
-                              className="shrink-0 px-3 py-2 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                              className="dash-cta shrink-0 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {savingNewNave ? tr.saving : tr.add}
                             </button>
                           </div>
                         </div>
                         <div className="mt-4">
-                          <label htmlFor="paste-naves" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                          <label htmlFor="paste-naves" className="block text-sm font-medium text-dash-fg mb-1.5">
                             {tr.pasteVessels}
                           </label>
-                          <p className="text-xs text-neutral-500 mb-2">
+                          <p className="text-xs text-dash-muted mb-2">
                             {tr.pasteVesselsHint}
                           </p>
                           <div className="flex gap-2">
@@ -1227,7 +1234,7 @@ export function ServiciosUnicosContent() {
                               value={pasteNavesText}
                               onChange={(e) => setPasteNavesText(e.target.value)}
                               rows={3}
-                              className="flex-1 min-w-0 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white transition-colors resize-y"
+                              className={`${neonInput} flex-1 min-w-0 resize-y`} 
                               placeholder={tr.pasteVessels}
                               aria-label={tr.pasteVesselsAria}
                             />
@@ -1235,7 +1242,7 @@ export function ServiciosUnicosContent() {
                               type="button"
                               onClick={() => handlePasteNavesProcess()}
                               disabled={!pasteNavesText.trim() || savingNewNave}
-                              className="shrink-0 self-end px-3 py-2 rounded-lg bg-neutral-100 text-neutral-700 text-sm font-medium hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 border border-neutral-200"
+                              className="shrink-0 self-end rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-medium text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {savingNewNave ? tr.saving : tr.searchAndAdd}
                             </button>
@@ -1247,35 +1254,30 @@ export function ServiciosUnicosContent() {
                           ))}
                         </datalist>
                         {newNaveFlow && (
-                          <div className="mt-3 p-3 rounded-lg border border-brand-blue/30 bg-brand-blue/5 space-y-2">
-                            <p className="text-sm font-medium text-brand-blue">
+                          <div className="mt-3 p-3 rounded-lg border border-dash-neon/35 bg-dash-neon/10 space-y-2">
+                            <p className="text-sm font-medium text-dash-neon">
                               {tr.newVesselPrompt.replace("{{name}}", newNaveFlow.nombre)}
                             </p>
                             <div className="flex flex-wrap gap-2 items-center">
-                              <select
+                              <FormSelect
+                                variant="neon"
                                 value={newNaveNavieraId}
-                                onChange={(e) => setNewNaveNavieraId(e.target.value)}
-                                className="px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                                aria-label={tr.assignCarrierAria}
-                              >
-                                {navieras.map((n) => (
-                                  <option key={n.id} value={n.id}>
-                                    {n.nombre}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder={tr.assignCarrierAria}
+                                options={navieras.map((n) => ({ value: n.id, label: n.nombre }))}
+                                onChange={setNewNaveNavieraId}
+                              />
                               <button
                                 type="button"
                                 onClick={handleSaveNewNaveAndAdd}
                                 disabled={savingNewNave || !newNaveNavieraId}
-                                className="px-3 py-2 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                                className="dash-cta px-3 py-2 text-sm font-medium disabled:opacity-50"
                               >
                                 {savingNewNave ? tr.saving : tr.saveAndAdd}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setNewNaveFlow(null)}
-                                className="px-3 py-2 rounded-lg border border-neutral-200 text-neutral-600 text-sm hover:bg-neutral-50 transition-colors"
+                                className="rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm text-dash-muted transition-colors hover:bg-dash-neon/15"
                               >
                                 {tr.cancel}
                               </button>
@@ -1285,12 +1287,12 @@ export function ServiciosUnicosContent() {
                         {form.naves.length > 0 && (
                           <ul className="flex flex-wrap gap-2 mt-2" aria-label="Naves del servicio">
                             {form.naves.map((nombre, i) => (
-                              <li key={`${nombre}-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 border border-neutral-200 text-sm">
+                              <li key={`${nombre}-${i}`} className="inline-flex items-center gap-1 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1 text-sm text-dash-fg">
                                 <span>{nombre}</span>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveNave(i)}
-                                  className="p-0.5 text-neutral-500 hover:text-red-600 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                                  className="p-0.5 text-dash-muted hover:text-red-600 rounded focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                                   aria-label={`Quitar nave ${nombre}`}
                                 >
                                   <Icon icon="lucide:x" width={14} height={14} />
@@ -1303,12 +1305,12 @@ export function ServiciosUnicosContent() {
                     )}
                   </section>
 
-                  <section className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-5 sm:p-6 space-y-4 min-w-0">
-                    <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-2">
-                      <Icon icon="lucide:map-pin" width={16} height={16} className="text-brand-blue" />
+                  <section className="rounded-xl border border-dash-border bg-dash-control/40 p-5 sm:p-6 space-y-4 min-w-0">
+                    <h3 className="text-sm font-semibold text-dash-fg uppercase tracking-wider flex items-center gap-2">
+                      <Icon icon="lucide:map-pin" width={16} height={16} className="text-dash-neon" />
                       {tr.destinosSection}
                     </h3>
-                    <p className="text-sm text-neutral-500">
+                    <p className="text-sm text-dash-muted">
                       {tr.destinosHint}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -1322,7 +1324,7 @@ export function ServiciosUnicosContent() {
                           if (d) handleAddDestinoFromSelect(d);
                           e.target.value = "";
                         }}
-                        className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                        className={`${neonInput} flex-1 min-w-0 py-2`} 
                         aria-label={tr.selectDestino}
                         disabled={loadingDestinos}
                       >
@@ -1337,7 +1339,7 @@ export function ServiciosUnicosContent() {
                           </option>
                         ))}
                       </select>
-                      <span className="text-neutral-400 self-center text-sm hidden sm:inline">o</span>
+                      <span className="text-dash-muted self-center text-sm hidden sm:inline">o</span>
                       <div className="flex gap-2 flex-1 min-w-0">
                         <input
                           type="text"
@@ -1349,7 +1351,7 @@ export function ServiciosUnicosContent() {
                               handleAddDestinoFromInput();
                             }
                           }}
-                          className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                          className={`${neonInput} flex-1 min-w-0 py-2`} 
                           placeholder={tr.writeNewDestino}
                           list="destinos-datalist"
                           aria-label={tr.writeNewDestino}
@@ -1358,17 +1360,17 @@ export function ServiciosUnicosContent() {
                           type="button"
                           onClick={handleAddDestinoFromInput}
                           disabled={!destinoInputValue.trim()}
-                          className="shrink-0 px-3 py-2 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                          className="dash-cta shrink-0 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {tr.add}
                         </button>
                       </div>
                     </div>
                     <div className="mt-4">
-                      <label htmlFor="paste-destinos" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      <label htmlFor="paste-destinos" className="block text-sm font-medium text-dash-fg mb-1.5">
                         {tr.pasteDestinos}
                       </label>
-                      <p className="text-xs text-neutral-500 mb-2">
+                      <p className="text-xs text-dash-muted mb-2">
                         {tr.pasteDestinosHint}
                       </p>
                       <div className="flex gap-2">
@@ -1377,7 +1379,7 @@ export function ServiciosUnicosContent() {
                           value={pasteDestinosText}
                           onChange={(e) => setPasteDestinosText(e.target.value)}
                           rows={3}
-                          className="flex-1 min-w-0 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue bg-white transition-colors resize-y"
+                          className={`${neonInput} flex-1 min-w-0 resize-y`} 
                           placeholder={tr.pasteDestinos}
                           aria-label={tr.pasteDestinosAria ?? tr.pasteDestinos}
                         />
@@ -1385,7 +1387,7 @@ export function ServiciosUnicosContent() {
                           type="button"
                           onClick={handlePasteDestinosProcess}
                           disabled={!pasteDestinosText.trim()}
-                          className="shrink-0 self-end px-3 py-2 rounded-lg bg-neutral-100 text-neutral-700 text-sm font-medium hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 border border-neutral-200"
+                          className="shrink-0 self-end rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-medium text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {tr.searchAndAdd}
                         </button>
@@ -1397,28 +1399,28 @@ export function ServiciosUnicosContent() {
                       ))}
                     </datalist>
                     {newDestinoFlow && (
-                      <div className="mt-3 p-3 rounded-lg border border-brand-blue/30 bg-brand-blue/5 space-y-2">
-                        <p className="text-sm font-medium text-brand-blue">
+                      <div className="mt-3 p-3 rounded-lg border border-dash-neon/35 bg-dash-neon/10 space-y-2">
+                        <p className="text-sm font-medium text-dash-neon">
                           {tr.newDestinoPrompt.replace("{{name}}", newDestinoFlow.nombre)}
                         </p>
                         <div className="flex flex-wrap gap-2 items-end">
                           <div>
-                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-0.5">Código (opcional)</label>
+                            <label className="block text-[11px] font-medium text-dash-muted uppercase tracking-wider mb-0.5">Código (opcional)</label>
                             <input
                               type="text"
                               value={newDestinoCodigo}
                               onChange={(e) => setNewDestinoCodigo(e.target.value)}
-                              className="w-28 px-2 py-1.5 rounded-lg border border-neutral-200 text-sm"
+                              className="dash-control w-28 rounded-lg border border-dash-border px-2 py-1.5 text-sm text-dash-fg"
                               placeholder="CNSHA"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-0.5">País (opcional)</label>
+                            <label className="block text-[11px] font-medium text-dash-muted uppercase tracking-wider mb-0.5">País (opcional)</label>
                             <input
                               type="text"
                               value={newDestinoPais}
                               onChange={(e) => setNewDestinoPais(e.target.value)}
-                              className="w-40 px-2 py-1.5 rounded-lg border border-neutral-200 text-sm"
+                              className="dash-control w-40 rounded-lg border border-dash-border px-2 py-1.5 text-sm text-dash-fg"
                               placeholder="China"
                             />
                           </div>
@@ -1426,14 +1428,14 @@ export function ServiciosUnicosContent() {
                             type="button"
                             onClick={handleSaveNewDestinoAndAdd}
                             disabled={savingNewDestino}
-                            className="px-3 py-2 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                            className="dash-cta px-3 py-2 text-sm font-medium disabled:opacity-50"
                           >
                             {savingNewDestino ? tr.saving : tr.saveAndAdd}
                           </button>
                           <button
                             type="button"
                             onClick={() => setNewDestinoFlow(null)}
-                            className="px-3 py-2 rounded-lg border border-neutral-200 text-neutral-600 text-sm hover:bg-neutral-50 transition-colors"
+                            className="rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm text-dash-muted transition-colors hover:bg-dash-neon/15"
                           >
                             {tr.cancel}
                           </button>
@@ -1441,61 +1443,55 @@ export function ServiciosUnicosContent() {
                       </div>
                     )}
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-neutral-500">{tr.destinosDelServicio}</span>
+                      <span className="text-xs text-dash-muted">{tr.destinosDelServicio}</span>
                       <button
                         type="button"
                         onClick={handleAddDestinoBlank}
-                        className="text-xs font-medium text-brand-blue hover:underline focus:outline-none focus:ring-2 focus:ring-brand-blue/30 rounded"
+                        className="text-xs font-medium text-dash-neon hover:underline focus:outline-none focus:ring-2 focus:ring-dash-neon/40 rounded"
                       >
                         {tr.addRowManual}
                       </button>
                     </div>
                     <ul className="space-y-3" aria-label="Lista de destinos">
                       {form.destinos.map((d, i) => (
-                        <li key={i} className="p-3 rounded-lg border border-neutral-100 bg-neutral-50/50">
+                        <li key={i} className="p-3 rounded-lg border border-dash-border bg-dash-control/40">
                           <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
                             <div className="min-w-0">
-                              <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-0.5">Código</label>
+                              <label className="block text-[11px] font-medium text-dash-muted uppercase tracking-wider mb-0.5">Código</label>
                               <input
                                 type="text"
                                 value={d.puerto}
                                 onChange={(e) => handleDestinoChange(i, "puerto", e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                                className={neonInput}
                                 placeholder="CNSHA"
                                 aria-label={`Destino ${i + 1} código`}
                               />
                             </div>
                             <div className="min-w-0">
-                              <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-0.5">Nombre</label>
+                              <label className="block text-[11px] font-medium text-dash-muted uppercase tracking-wider mb-0.5">Nombre</label>
                               <input
                                 type="text"
                                 value={d.puerto_nombre}
                                 onChange={(e) => handleDestinoChange(i, "puerto_nombre", e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
+                                className={neonInput}
                                 placeholder="Shanghai"
                                 aria-label={`Destino ${i + 1} nombre`}
                               />
                             </div>
-                            <div className="min-w-[100px]">
-                              <label className="block text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-0.5">Área</label>
-                              <select
+                            <div className="min-w-[120px]">
+                              <label className="mb-0.5 block text-[11px] font-medium uppercase tracking-wider text-dash-muted">Área</label>
+                              <FormSelect
+                                variant="neon"
                                 value={normalizeArea(d.area)}
-                                onChange={(e) => handleDestinoChange(i, "area", e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue transition-colors"
-                                aria-label={`Destino ${i + 1} área`}
-                              >
-                                {AREAS.map((a) => (
-                                  <option key={a} value={a}>
-                                    {a}
-                                  </option>
-                                ))}
-                              </select>
+                                options={AREAS.map((a) => ({ value: a, label: a }))}
+                                onChange={(v) => handleDestinoChange(i, "area", v || "ASIA")}
+                              />
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveDestino(i)}
                               disabled={form.destinos.length <= 1}
-                              className="p-2 text-neutral-500 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed rounded focus:outline-none focus:ring-2 focus:ring-brand-blue/30 h-[34px] shrink-0"
+                              className="p-2 text-dash-muted hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed rounded focus:outline-none focus:ring-2 focus:ring-dash-neon/40 h-[34px] shrink-0"
                               aria-label={tr.removeDestino}
                             >
                               <Icon icon="lucide:trash-2" width={16} height={16} />
@@ -1508,13 +1504,13 @@ export function ServiciosUnicosContent() {
                 </div>
               </div>
 
-              <footer className="mt-8 flex gap-4 pt-4 border-t border-neutral-200 bg-white">
+              <footer className="mt-8 flex gap-4 border-t border-dash-border pt-4">
                 <div className="w-full flex gap-4">
                   <button
                     type="button"
                     onClick={handleCloseModal}
                     disabled={saving}
-                    className="flex-1 px-5 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                    className="flex-1 rounded-xl border border-dash-border bg-dash-control px-5 py-3 font-medium text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:opacity-60"
                   >
                     {tr.cancel}
                   </button>
@@ -1522,7 +1518,7 @@ export function ServiciosUnicosContent() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={saving}
-                    className="flex-1 px-5 py-3 rounded-xl bg-brand-blue text-white font-medium hover:bg-brand-blue/90 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 transition-colors"
+                    className="dash-cta flex-1 px-5 py-3 rounded-xl font-medium disabled:opacity-60"
                   >
                     {saving ? (
                       <>
@@ -1543,7 +1539,7 @@ export function ServiciosUnicosContent() {
       )}
       {copyModalOpen && servicios.length > 0 && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          className="dash-neon fixed inset-0 z-[60] flex items-center justify-center p-4" data-theme={theme}
           role="dialog"
           aria-modal="true"
           aria-label="Seleccionar servicio para copiar"
@@ -1553,20 +1549,20 @@ export function ServiciosUnicosContent() {
             aria-hidden
             onClick={() => setCopyModalOpen(false)}
           />
-          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 bg-neutral-50">
+          <div className="dash-card relative flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-dash-border">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-dash-border bg-dash-control/50">
               <div>
-                <h2 className="text-sm font-semibold text-neutral-900">
+                <h2 className="text-sm font-semibold text-dash-fg">
                   Usar datos de otro servicio
                 </h2>
-                <p className="text-xs text-neutral-500 mt-0.5">
+                <p className="text-xs text-dash-muted mt-0.5">
                   Explora los servicios por área y selecciona uno para copiar su configuración.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setCopyModalOpen(false)}
-                className="p-2 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                className="p-2 rounded-lg text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
                 aria-label="Cerrar selección de servicio"
               >
                 <Icon icon="lucide:x" width={18} height={18} aria-hidden />
@@ -1604,7 +1600,7 @@ export function ServiciosUnicosContent() {
                 ];
                 if (orderedAreas.length === 0) {
                   return (
-                    <p className="text-sm text-neutral-500">
+                    <p className="text-sm text-dash-muted">
                       No hay servicios con destinos configurados aún.
                     </p>
                   );
@@ -1614,10 +1610,10 @@ export function ServiciosUnicosContent() {
                     {orderedAreas.map((areaKey) => (
                       <section
                         key={areaKey}
-                        className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-3 flex flex-col gap-2"
+                        className="rounded-xl border border-dash-border bg-dash-control/50 p-3 flex flex-col gap-2"
                       >
-                        <h3 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-brand-blue" />
+                        <h3 className="text-xs font-semibold text-dash-fg uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-dash-neon" />
                           {areaLabels[areaKey] ?? areaKey}
                         </h3>
                         <div className="space-y-2">
@@ -1630,72 +1626,28 @@ export function ServiciosUnicosContent() {
                                 setCopyFromServiceId(srv.id);
                                 setCopyModalOpen(false);
                               }}
-                              className="w-full text-left rounded-lg border border-neutral-200 bg-white px-3 py-2.5 hover:border-brand-blue/70 hover:bg-brand-blue/5 transition-colors"
+                              className="w-full rounded-lg border border-dash-border bg-dash-control px-3 py-2.5 text-left transition-colors hover:border-dash-neon/50 hover:bg-dash-neon/10"
                             >
-                              <p className="text-xs font-semibold text-neutral-900 flex items-center justify-between gap-2">
+                              <p className="flex items-center justify-between gap-2 text-xs font-semibold text-dash-fg">
                                 <span className="truncate">{srv.nombre}</span>
-                                <span className="text-[10px] font-medium text-brand-blue uppercase">
+                                <span className="text-[10px] font-medium uppercase text-dash-neon">
                                   {srv.naviera_nombre ?? tr.unassigned}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                                 </span>
                               </p>
-                              <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                              <p className="mt-0.5 truncate text-[11px] text-dash-muted">
                                 POL: {srv.puerto_origen || "—"}
                               </p>
-                              <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                              <p className="mt-0.5 truncate text-[11px] text-dash-muted">
                                 Naves: {(srv.naves ?? []).map((n) => n.nave_nombre).join(", ") || "—"}
                               </p>
-                              <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-2">
+                              <p className="mt-0.5 line-clamp-2 text-[11px] text-dash-muted">
                                 Destinos:{" "}
                                 {(srv.destinos ?? [])
                                   .map((d) => d.puerto_nombre || d.puerto)
                                   .filter(Boolean)
                                   .join(", ") || "—"}
                               </p>
-                              <p className="mt-1 text-[11px] font-medium text-brand-blue">
+                              <p className="mt-1 text-[11px] font-medium text-dash-neon">
                                 Ver detalle
                               </p>
                             </button>
@@ -1711,6 +1663,7 @@ export function ServiciosUnicosContent() {
         </div>
       )}
     </main>
+    </div>
     {confirmDialog && (
       <ConfirmDialog
         title={confirmDialog.title}
