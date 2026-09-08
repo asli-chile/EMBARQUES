@@ -22,6 +22,10 @@ import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
+import {
+  ContenedorTransporteModal,
+  type ContenedorTransporteSaved,
+} from "@/components/reservas/ContenedorTransporteModal";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
 const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 44px" };
@@ -84,7 +88,15 @@ type Operacion = {
   tt: number | null;
   booking: string | null;
   booking_doc_url: string | null;
+  transporte: string | null;
+  chofer: string | null;
+  rut_chofer: string | null;
+  telefono_chofer: string | null;
+  patente_camion: string | null;
+  patente_remolque: string | null;
   contenedor: string | null;
+  sello: string | null;
+  tara: number | null;
   enviado_transporte: boolean | null;
   tipo_reserva_transporte: string | null;
   estado_operacion: string | null;
@@ -375,6 +387,7 @@ function SortableHeader({ field, label, sortField, sortDirection, onSort, classN
 type CardProps = {
   op: Operacion;
   isCliente: boolean;
+  canEditContenedor: boolean;
   selected: boolean;
   actionLoading: boolean;
   tr: ReturnType<typeof useLocale>["t"]["misReservas"];
@@ -382,10 +395,11 @@ type CardProps = {
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
+  onContenedor: (op: Operacion) => void;
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
 };
 
-const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking, onContextMenu }: CardProps) {
+const ReservaCard = memo(function ReservaCard({ op, isCliente, canEditContenedor, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking, onContenedor, onContextMenu }: CardProps) {
   const [expanded, setExpanded] = useState(false);
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
   const transportLabel =
@@ -481,7 +495,29 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, selected, actionL
         <div className="mx-3 mb-2.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
           <CardDetail label={tr.colRefExterna} value={op.referencia_externa || "—"} />
           <CardDetail label={tr.colBooking} value={op.booking || "—"} />
-          <CardDetail label={tr.colContainer} value={op.contenedor || "—"} />
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted mb-0.5">{tr.colContainer}</p>
+            {canEditContenedor ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onContenedor(op);
+                }}
+                className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold ${
+                  op.contenedor
+                    ? "border-dash-border bg-dash-control text-dash-fg hover:border-dash-neon/40 hover:bg-dash-neon/10"
+                    : "border-dashed border-dash-neon/35 text-dash-muted hover:border-dash-neon/50 hover:text-dash-fg hover:bg-dash-neon/10"
+                }`}
+                title={op.contenedor ? tr.editContainerTitle : tr.addContainerTitle}
+              >
+                <Icon icon={op.contenedor ? "lucide:pencil" : "typcn:box"} width={12} height={12} className="shrink-0" />
+                <span className="truncate font-mono">{op.contenedor || tr.inlineAdd}</span>
+              </button>
+            ) : (
+              <p className="text-xs font-semibold text-dash-fg truncate">{op.contenedor || "—"}</p>
+            )}
+          </div>
           <CardDetail label={tr.cardConsignee} value={op.consignatario || "—"} />
           <CardDetail label={tr.cardUnitType} value={op.tipo_unidad || "—"} />
           <CardDetail label={tr.cardPallets} value={op.pallets != null ? String(op.pallets) : "—"} />
@@ -564,6 +600,7 @@ type TableRowProps = {
   selected: boolean;
   isCliente: boolean;
   canInlineEdit: boolean;
+  canEditContenedor: boolean;
   addEmptyLabel: string;
   typeExternal: string;
   typePendiente: string;
@@ -572,10 +609,13 @@ type TableRowProps = {
   editBookingTitle: string;
   confirmBookingTitle: string;
   confirmShort: string;
+  editContainerTitle: string;
+  addContainerTitle: string;
   onSelect: (id: string) => void;
   onCopy: (op: Operacion) => void;
   onEmail: (op: Operacion) => void;
   onBooking: (op: Operacion) => void;
+  onContenedor: (op: Operacion) => void;
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
   onInlineSave: (op: Operacion, field: InlineEditableField, next: string) => Promise<boolean>;
 };
@@ -588,6 +628,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   selected,
   isCliente,
   canInlineEdit,
+  canEditContenedor,
   addEmptyLabel,
   typeExternal,
   typePendiente,
@@ -596,10 +637,13 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   editBookingTitle,
   confirmBookingTitle,
   confirmShort,
+  editContainerTitle,
+  addContainerTitle,
   onSelect,
   onCopy,
   onEmail,
   onBooking,
+  onContenedor,
   onContextMenu,
   onInlineSave,
 }: TableRowProps) {
@@ -666,7 +710,26 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         )}
       </td>
       <td className="px-3 py-2 text-center whitespace-nowrap">
-        {op.contenedor ? (
+        {canEditContenedor ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onContenedor(op);
+            }}
+            className={`inline-flex max-w-[200px] items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold ${
+              op.contenedor
+                ? "border-dash-border bg-dash-control text-dash-fg hover:border-dash-neon/40 hover:bg-dash-neon/10"
+                : "border-dashed border-dash-neon/35 text-dash-muted hover:border-dash-neon/50 hover:text-dash-fg hover:bg-dash-neon/10"
+            }`}
+            title={op.contenedor ? editContainerTitle : addContainerTitle}
+          >
+            <Icon icon={op.contenedor ? "lucide:pencil" : "typcn:box"} width={12} height={12} className="shrink-0" />
+            <span className="truncate font-mono tracking-tight">
+              {op.contenedor || addEmptyLabel}
+            </span>
+          </button>
+        ) : op.contenedor ? (
           <span className="text-[12px] font-mono font-semibold text-dash-fg tracking-tight">{op.contenedor}</span>
         ) : (
           <span className="text-dash-muted text-xs">—</span>
@@ -994,9 +1057,10 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
 
 export function MisReservasContent() {
   const { t } = useLocale();
-  const { isCliente, isEjecutivo, isStaff, empresaNombres, isLoading: authLoading, user, profile } = useAuth();
+  const { isCliente, isEjecutivo, isStaff, isAdmin, isSuperadmin, empresaNombres, isLoading: authLoading, user, profile } = useAuth();
   const [theme] = useNeonTheme();
   const canInlineEdit = isEjecutivo || isStaff;
+  const canEditContenedor = isEjecutivo || isAdmin || isSuperadmin;
   const tr = t.misReservas;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
@@ -1024,6 +1088,7 @@ export function MisReservasContent() {
   );
   const [emailModal, setEmailModal] = useState<Operacion | null>(null);
   const [bookingModal, setBookingModal] = useState<Operacion | null>(null);
+  const [contenedorModal, setContenedorModal] = useState<Operacion | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
     y: number;
@@ -1051,7 +1116,8 @@ export function MisReservasContent() {
       .from("operaciones")
       .select(
         `id, correlativo, ref_asli, referencia_externa, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
-         booking_doc_url, contenedor, enviado_transporte, tipo_reserva_transporte, estado_operacion, solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
+         booking_doc_url, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara,
+         enviado_transporte, tipo_reserva_transporte, estado_operacion, solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
          temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
       .is("deleted_at", null);
@@ -1179,6 +1245,18 @@ export function MisReservasContent() {
 
   const handleOpenEmail = useCallback((op: Operacion) => setEmailModal(op), []);
   const handleOpenBooking = useCallback((op: Operacion) => setBookingModal(op), []);
+  const handleOpenContenedor = useCallback((op: Operacion) => {
+    if (!canEditContenedor) return;
+    setContenedorModal(op);
+  }, [canEditContenedor]);
+
+  const handleContenedorSaved = useCallback((opId: string, updated: ContenedorTransporteSaved) => {
+    setOperaciones((prev) =>
+      prev.map((row) => (row.id === opId ? { ...row, ...updated } : row))
+    );
+    sileo.success({ title: tr.containerSavedMsg });
+    setContenedorModal(null);
+  }, [tr.containerSavedMsg]);
 
   const handleOpenContextMenu = useCallback((event: MouseEvent, op: Operacion) => {
     event.preventDefault();
@@ -1819,6 +1897,7 @@ export function MisReservasContent() {
                         selected={selectedIds.has(op.id)}
                         isCliente={isCliente}
                         canInlineEdit={canInlineEdit}
+                        canEditContenedor={canEditContenedor}
                         addEmptyLabel={tr.inlineAdd}
                         typeExternal={tr.typeExternal}
                         typePendiente={tr.typePendiente}
@@ -1827,10 +1906,13 @@ export function MisReservasContent() {
                         editBookingTitle={tr.editBookingTitle}
                         confirmBookingTitle={tr.confirmBookingTitle}
                         confirmShort={tr.confirmShort}
+                        editContainerTitle={tr.editContainerTitle}
+                        addContainerTitle={tr.addContainerTitle}
                         onSelect={handleSelect}
                         onCopy={handleCopy}
                         onEmail={handleOpenEmail}
                         onBooking={handleOpenBooking}
+                        onContenedor={handleOpenContenedor}
                         onContextMenu={handleOpenContextMenu}
                         onInlineSave={handleInlineSave}
                       />
@@ -1873,6 +1955,7 @@ export function MisReservasContent() {
                     key={op.id}
                     op={op}
                     isCliente={isCliente}
+                    canEditContenedor={canEditContenedor}
                     selected={selectedIds.has(op.id)}
                     actionLoading={actionLoading}
                     tr={tr}
@@ -1880,6 +1963,7 @@ export function MisReservasContent() {
                     onCopy={handleCopy}
                     onEmail={handleOpenEmail}
                     onBooking={handleOpenBooking}
+                    onContenedor={handleOpenContenedor}
                     onContextMenu={handleOpenContextMenu}
                   />
                 ))}
@@ -2059,6 +2143,15 @@ export function MisReservasContent() {
           supabase={supabase}
           onClose={() => setBookingModal(null)}
           onSaved={(updated) => handleBookingSaved(bookingModal.id, updated)}
+        />,
+        document.body
+      )}
+      {contenedorModal && createPortal(
+        <ContenedorTransporteModal
+          op={contenedorModal}
+          supabase={supabase}
+          onClose={() => setContenedorModal(null)}
+          onSaved={(updated) => handleContenedorSaved(contenedorModal.id, updated)}
         />,
         document.body
       )}
