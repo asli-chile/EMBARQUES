@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { goToHomeSection } from '../lib/scrollToHash'
 import { SHOW_COTIZADOR } from '../lib/features'
 import { useLocale } from '../hooks/useLocale'
+import { DolarBadge } from './DolarBadge'
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const DURATION = '0.7s'
@@ -49,6 +50,8 @@ const Hero = () => {
       id="inicio"
       className="section-fit relative overflow-hidden bg-asli-light !py-3 sm:!py-8 lg:!py-[unset]"
     >
+      <DolarBadge className="hero-dolar" />
+
       <div
         className="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full opacity-25"
         style={{
@@ -62,9 +65,8 @@ const Hero = () => {
         }}
       />
 
-      <div className="relative z-10 w-full">
+      <div className="relative z-10 w-full pt-9 sm:pt-10 lg:pt-0">
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-10 lg:items-center lg:container-asli">
-          {/* Copy */}
           <div className="container-asli lg:col-span-5 lg:px-0 order-1">
             <p className="section-label !mb-1.5" style={title}>
               {t.hero.label}
@@ -107,7 +109,6 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* Fachada — plano visual dominante */}
           <div className="lg:col-span-7 order-2" style={image}>
             <div
               className="relative overflow-hidden w-full
