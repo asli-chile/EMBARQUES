@@ -86,12 +86,12 @@ export function LocaleToggle({ className = '' }) {
         onClick={() => setOpen((v) => !v)}
         suppressHydrationWarning
       >
-        <CurrentFlag size={20} />
+        <CurrentFlag size={18} />
         <span className="locale-toggle__code">{current.label}</span>
         <svg
           className={`locale-toggle__chevron ${open ? 'is-open' : ''}`}
-          width="14"
-          height="14"
+          width="12"
+          height="12"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

@@ -183,7 +183,7 @@ const Header = () => {
       }`}
     >
       <nav className="container-asli">
-        <div className="flex h-16 items-center gap-4 sm:gap-5">
+        <div className="flex h-16 items-center gap-3 sm:gap-4">
           <div className="flex shrink-0 items-center gap-3 sm:gap-3.5">
             <a href="/" className="flex items-center" aria-label={t.nav.homeAria}>
               <img
@@ -195,12 +195,12 @@ const Header = () => {
                 className="logo-on-light h-10 sm:h-11 w-auto object-contain"
               />
             </a>
-            <span className="hidden lg:block h-6 w-px bg-asli-dark/15" aria-hidden="true" />
+            <span className="hidden 2xl:block h-6 w-px bg-asli-dark/15" aria-hidden="true" />
             <a
               href="https://www.prochile.gob.cl/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center"
+              className="hidden 2xl:flex items-center"
               aria-label="ProChile"
               title="ProChile"
             >
@@ -215,7 +215,7 @@ const Header = () => {
             </a>
           </div>
 
-          <div className="ml-2 hidden min-w-0 flex-1 items-center gap-x-4 overflow-x-auto xl:ml-4 xl:gap-x-5 lg:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="ml-1 hidden min-w-0 flex-1 items-center justify-end gap-x-3 overflow-x-auto xl:ml-3 xl:gap-x-4 xl:flex 2xl:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -229,15 +229,15 @@ const Header = () => {
             ))}
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
-            <DolarChip className="hidden xl:inline-flex" {...chipProps} />
+          <div className="header-controls ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <DolarChip className="hidden 2xl:inline-flex" {...chipProps} />
             <ThemeToggle className="hidden sm:inline-flex" />
             <span className="header-controls-divider" aria-hidden="true" />
             <LocaleToggle className="hidden sm:inline-flex" />
 
             <button
               type="button"
-              className="lg:hidden inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full"
+              className="xl:hidden inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full"
               onClick={handleToggleMenu}
               onKeyDown={handleKeyDown}
               aria-label={isMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
@@ -257,14 +257,14 @@ const Header = () => {
 
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-asli-ink/40 z-30 lg:hidden"
+          className="fixed inset-0 bg-asli-ink/40 z-30 xl:hidden"
           onClick={handleCloseMenu}
           aria-hidden="true"
         />
       )}
 
       <div
-        className={`site-header-drawer fixed left-0 right-0 z-40 transition-all duration-320 ease-asli lg:hidden top-16 ${
+        className={`site-header-drawer fixed left-0 right-0 z-40 transition-all duration-320 ease-asli xl:hidden top-16 ${
           isMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'
         }`}
         style={{
