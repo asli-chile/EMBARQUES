@@ -183,8 +183,8 @@ const Header = () => {
       }`}
     >
       <nav className="container-asli">
-        <div className="flex h-16 items-center gap-3 sm:gap-4">
-          <div className="flex shrink-0 items-center gap-3 sm:gap-3.5">
+        <div className="site-header__bar">
+          <div className="site-header__brand">
             <a href="/" className="flex items-center" aria-label={t.nav.homeAria}>
               <img
                 src="/img/LOGO%20ASLI%20SIN%20FONDO%20AZUL.png"
@@ -195,12 +195,12 @@ const Header = () => {
                 className="logo-on-light h-10 sm:h-11 w-auto object-contain"
               />
             </a>
-            <span className="hidden 2xl:block h-6 w-px bg-asli-dark/15" aria-hidden="true" />
+            <span className="site-header__brand-divider" aria-hidden="true" />
             <a
               href="https://www.prochile.gob.cl/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden 2xl:flex items-center"
+              className="site-header__prochile"
               aria-label="ProChile"
               title="ProChile"
             >
@@ -215,7 +215,7 @@ const Header = () => {
             </a>
           </div>
 
-          <div className="ml-1 hidden min-w-0 flex-1 items-center justify-end gap-x-3 overflow-x-auto xl:ml-3 xl:gap-x-4 xl:flex 2xl:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="site-header__nav">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -229,8 +229,8 @@ const Header = () => {
             ))}
           </div>
 
-          <div className="header-controls ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <DolarChip className="hidden 2xl:inline-flex" {...chipProps} />
+          <div className="site-header__controls header-controls">
+            <DolarChip className="hidden xl:inline-flex" {...chipProps} />
             <ThemeToggle className="hidden sm:inline-flex" />
             <span className="header-controls-divider" aria-hidden="true" />
             <LocaleToggle className="hidden sm:inline-flex" />
