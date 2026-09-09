@@ -269,15 +269,183 @@
   }
 
   .theme-toggle {
-    @apply inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 text-asli-dark hover:text-asli-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary rounded-full transition-colors;
-    transition-duration: var(--duration-normal);
-    transition-timing-function: var(--ease);
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    overflow: hidden;
+    border-radius: 999px;
+    border-width: 1px;
+    border-style: solid;
+    transition: background-color 300ms ease-out, border-color 300ms ease-out;
+    cursor: pointer;
+  }
+
+  .theme-toggle:focus {
+    outline: none;
+  }
+
+  .theme-toggle:focus-visible {
+    box-shadow: 0 0 0 2px rgb(var(--asli-primary-rgb) / 0.35);
+  }
+
+  .theme-toggle__stars {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    transition: opacity 300ms ease;
+  }
+
+  .theme-toggle__star {
+    position: absolute;
+    border-radius: 999px;
+    background: #fff;
+  }
+
+  .theme-toggle__star--dim {
+    background: rgb(255 255 255 / 0.8);
+  }
+
+  .theme-toggle__cloud {
+    pointer-events: none;
+    position: absolute;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.55);
+    filter: blur(0.5px);
+    transition: opacity 300ms ease;
+  }
+
+  .theme-toggle__knob {
+    position: absolute;
+    border-radius: 999px;
+    transition: transform 300ms ease-out;
+  }
+
+  .locale-toggle-wrap {
+    position: relative;
+    display: inline-flex;
   }
 
   .locale-toggle {
-    @apply inline-flex items-center justify-center min-h-9 min-w-9 px-2 rounded-md text-[0.7rem] font-bold tracking-wider text-asli-dark ring-1 ring-asli-dark/15 hover:text-asli-primary hover:ring-asli-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary transition-colors;
-    transition-duration: var(--duration-normal);
-    transition-timing-function: var(--ease);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-fg);
+    transition: background-color var(--duration-micro) var(--ease), color var(--duration-micro) var(--ease);
+    cursor: pointer;
+  }
+
+  .locale-toggle:hover {
+    background: rgb(var(--asli-fg-rgb) / 0.08);
+  }
+
+  .locale-toggle:focus {
+    outline: none;
+  }
+
+  .locale-toggle:focus-visible {
+    box-shadow: 0 0 0 2px rgb(var(--asli-primary-rgb) / 0.35);
+  }
+
+  .locale-toggle__flag {
+    display: inline-flex;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px rgb(var(--asli-fg-rgb) / 0.12);
+  }
+
+  .locale-toggle__flag svg {
+    display: block;
+  }
+
+  .locale-toggle__code {
+    line-height: 1;
+  }
+
+  .locale-toggle__chevron {
+    color: rgb(var(--asli-fg-rgb) / 0.5);
+    transition: transform var(--duration-micro) var(--ease);
+  }
+
+  .locale-toggle__chevron.is-open {
+    transform: rotate(180deg);
+  }
+
+  .locale-toggle__menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 200;
+    min-width: 10.5rem;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface);
+    padding: 0.25rem 0;
+    box-shadow: var(--shadow-med);
+  }
+
+  .locale-toggle__option {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-fg);
+    transition: background-color var(--duration-micro) var(--ease);
+    cursor: pointer;
+  }
+
+  .locale-toggle__option:hover {
+    background: rgb(var(--asli-fg-rgb) / 0.06);
+  }
+
+  .locale-toggle__option.is-active {
+    background: rgb(var(--asli-primary-rgb) / 0.1);
+    color: var(--color-primary);
+  }
+
+  .locale-toggle__option-name {
+    flex: 1;
+  }
+
+  .locale-toggle__option-code {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: rgb(var(--asli-fg-rgb) / 0.4);
+  }
+
+  .locale-toggle__check {
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  .locale-toggle__check-spacer {
+    width: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .header-controls-divider {
+    display: none;
+    width: 1px;
+    height: 1.25rem;
+    background: rgb(var(--asli-fg-rgb) / 0.15);
+  }
+
+  @media (min-width: 640px) {
+    .header-controls-divider {
+      display: block;
+    }
   }
 
   .site-header {

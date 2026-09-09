@@ -231,8 +231,9 @@ const Header = () => {
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
             <DolarChip className="hidden xl:inline-flex" {...chipProps} />
-            <LocaleToggle className="hidden sm:inline-flex" />
             <ThemeToggle className="hidden sm:inline-flex" />
+            <span className="header-controls-divider" aria-hidden="true" />
+            <LocaleToggle className="hidden sm:inline-flex" />
 
             <button
               type="button"
@@ -276,8 +277,8 @@ const Header = () => {
           <div className="mb-4 flex items-center justify-between gap-3">
             <DolarChip className="dolar-chip--mobile flex-1" {...chipProps} />
             <div className="flex items-center gap-2 shrink-0">
-              <LocaleToggle className="sm:hidden" />
               <ThemeToggle className="sm:hidden" />
+              <LocaleToggle className="sm:hidden" />
             </div>
           </div>
 
