@@ -38,6 +38,9 @@ export type MapFleetManualVessel = {
   lng: number;
   lat: number;
   name: string;
+  /** Nombre de nave en operaciones (para cargar la carga al hacer clic). */
+  nave: string;
+  viaje: string | null;
 };
 
 type TrackingMapViewProps = {
@@ -50,6 +53,9 @@ type TrackingMapViewProps = {
   emptyHint: string;
   webglFallback: string;
   theme?: NeonTheme;
+  /** Clic en marcador de flota (violeta). */
+  onFleetVesselClick?: (vessel: MapFleetManualVessel) => void;
+  selectedFleetKey?: string | null;
 };
 
 function validCoord(lat: number, lng: number) {
@@ -98,6 +104,8 @@ export function TrackingMapView({
   emptyHint,
   webglFallback,
   theme = "dark",
+  onFleetVesselClick,
+  selectedFleetKey = null,
 }: TrackingMapViewProps) {
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -295,17 +303,43 @@ export function TrackingMapView({
               </Marker>
             )}
 
-            {fleetWithoutPrimaryOverlap.map((fv) => (
-              <Marker key={fv.markerKey} longitude={fv.lng} latitude={fv.lat} anchor="bottom">
-                <div className="pointer-events-none flex flex-col items-center gap-0.5">
-                  <span className={`max-w-[min(200px,42vw)] truncate ${labelManualCls}`}>{fv.name}</span>
-                  <VesselTopDownIcon
-                    label={fv.name}
-                    className={`${vesselManualColor} drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]`}
-                  />
-                </div>
-              </Marker>
-            ))}
+            {fleetWithoutPrimaryOverlap.map((fv) => {
+              const selected = selectedFleetKey != null && selectedFleetKey === fv.markerKey;
+              const clickable = Boolean(onFleetVesselClick);
+              return (
+                <Marker key={fv.markerKey} longitude={fv.lng} latitude={fv.lat} anchor="bottom" style={{ zIndex: selected ? 4 : 3 }}>
+                  <button
+                    type="button"
+                    disabled={!clickable}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFleetVesselClick?.(fv);
+                    }}
+                    className={`flex flex-col items-center gap-0.5 ${
+                      clickable
+                        ? "cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                        : "pointer-events-none"
+                    }`}
+                    aria-label={fv.name}
+                    title={clickable ? fv.name : undefined}
+                  >
+                    <span
+                      className={`max-w-[min(200px,42vw)] truncate ${labelManualCls} ${
+                        selected ? "ring-1 ring-violet-300/60" : ""
+                      }`}
+                    >
+                      {fv.name}
+                    </span>
+                    <VesselTopDownIcon
+                      label={fv.name}
+                      className={`${vesselManualColor} drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] ${
+                        selected ? "scale-110" : ""
+                      }`}
+                    />
+                  </button>
+                </Marker>
+              );
+            })}
 
             {showPrimaryVessel && vessel && primaryIsManual && (
               <Marker longitude={vessel.lng} latitude={vessel.lat} anchor="bottom">

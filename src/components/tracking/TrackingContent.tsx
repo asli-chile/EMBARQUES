@@ -239,7 +239,14 @@ function clusterManualFleetFromResults(results: TrackingResult[]): MapFleetManua
       .map((c) => c.id)
       .sort()
       .join("|")}`;
-    out.push({ markerKey, lat, lng, name });
+    out.push({
+      markerKey,
+      lat,
+      lng,
+      name,
+      nave: naveT,
+      viaje: viajT || null,
+    });
   }
   return out;
 }
@@ -357,6 +364,10 @@ export function TrackingContent() {
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [fleetManualVessels, setFleetManualVessels] = useState<MapFleetManualVessel[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [cargoVessel, setCargoVessel] = useState<MapFleetManualVessel | null>(null);
+  const [cargoOps, setCargoOps] = useState<TrackingResult[]>([]);
+  const [cargoLoading, setCargoLoading] = useState(false);
+  const [cargoError, setCargoError] = useState<string | null>(null);
 
   const canSetManualCoords = Boolean(user && profile && isStaff);
 
@@ -609,6 +620,8 @@ export function TrackingContent() {
         lat,
         lng,
         name,
+        nave: naveT,
+        viaje: viajT || null,
       });
     }
     setFleetManualVessels(next);
@@ -630,6 +643,9 @@ export function TrackingContent() {
     setTermino("");
     setSearched(false);
     setError(null);
+    setCargoVessel(null);
+    setCargoOps([]);
+    setCargoError(null);
   }, [viewAsKey, empresasKey]);
 
   useEffect(() => {
@@ -654,6 +670,98 @@ export function TrackingContent() {
     }
     return merged;
   }, [fleetManualVessels, results]);
+
+  const handleFleetVesselClick = useCallback(
+    async (fv: MapFleetManualVessel) => {
+      setCargoVessel(fv);
+      setCargoError(null);
+      setCargoOps([]);
+      setMobileView((v) => (v === "list" ? "map" : v));
+
+      if (!user) {
+        setCargoError(tr.vesselCargoLogin);
+        return;
+      }
+      if (!supabase) {
+        setCargoError(tr.supabaseError);
+        return;
+      }
+      if (
+        scopeToAssignedEmpresas &&
+        shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })
+      ) {
+        setCargoError(tr.vesselCargoEmpty);
+        return;
+      }
+
+      setCargoLoading(true);
+      try {
+        const naveNeedle = sanitizeTrackingTerm(fv.nave);
+        if (!naveNeedle) {
+          setCargoError(tr.vesselCargoEmpty);
+          return;
+        }
+
+        let q = supabase
+          .from("operaciones")
+          .select(TRACKING_OP_SELECT)
+          .is("deleted_at", null)
+          .ilike("nave", `%${naveNeedle}%`)
+          .order("eta", { ascending: true, nullsFirst: false })
+          .limit(80);
+
+        if (scopeToAssignedEmpresas) {
+          q = applyOperacionesClienteFilter(q, {
+            isCliente,
+            isEjecutivo,
+            empresaNombres,
+          });
+        }
+
+        const { data, error: qErr } = await q;
+        if (qErr) {
+          setCargoError(qErr.message);
+          return;
+        }
+
+        const seed: Pick<TrackingResult, "nave" | "viaje"> = {
+          nave: fv.nave,
+          viaje: fv.viaje,
+        };
+        const matched = filterScopedResults((data ?? []) as TrackingResult[]).filter(
+          (op) =>
+            isOperacionActivaEnMapa(op.estado_operacion) &&
+            mismoGrupoTrackingManual(seed, op),
+        );
+
+        setCargoOps(matched);
+        setResults(matched);
+        setSearched(true);
+        setSelectedOpId(matched[0]?.id ?? null);
+        if (matched.length === 0) setCargoError(tr.vesselCargoEmpty);
+      } finally {
+        setCargoLoading(false);
+      }
+    },
+    [
+      user,
+      supabase,
+      tr.vesselCargoLogin,
+      tr.supabaseError,
+      tr.vesselCargoEmpty,
+      scopeToAssignedEmpresas,
+      isCliente,
+      isEjecutivo,
+      empresaNombres,
+      filterScopedResults,
+    ],
+  );
+
+  const closeCargoPanel = useCallback(() => {
+    setCargoVessel(null);
+    setCargoOps([]);
+    setCargoError(null);
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -1295,9 +1403,98 @@ export function TrackingContent() {
               <div className="relative min-h-[min(420px,55dvh)] flex-1 overflow-hidden lg:min-h-0">
                 <div className="pointer-events-none absolute bottom-3 left-3 z-[5] hidden max-w-[min(100%,280px)] sm:block">
                   <p className="rounded-lg border border-dash-border bg-dash-control/95 px-2.5 py-1.5 text-[10px] font-medium leading-snug text-dash-muted shadow-sm backdrop-blur-sm">
-                    {tr.mapLegendPolPod}
+                    {fleetManualMerged.length > 0 ? tr.vesselCargoClickHint : tr.mapLegendPolPod}
                   </p>
                 </div>
+
+                {cargoVessel && (
+                  <div className="absolute inset-x-2 bottom-2 top-auto z-[8] max-h-[min(48%,360px)] overflow-hidden rounded-xl border border-violet-400/40 bg-dash-panel/95 shadow-lg backdrop-blur-md sm:inset-x-auto sm:left-3 sm:right-auto sm:w-[min(100%,380px)]">
+                    <div className="flex items-start justify-between gap-2 border-b border-dash-border px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-dash-fg">
+                          {tr.vesselCargoTitle.replace("{{nave}}", cargoVessel.name)}
+                        </p>
+                        <p className="mt-0.5 text-[10px] leading-snug text-dash-muted">{tr.vesselCargoHint}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={closeCargoPanel}
+                        className="dash-control shrink-0 px-2 py-1 text-[11px] font-semibold"
+                        aria-label={tr.vesselCargoClose}
+                      >
+                        {tr.vesselCargoClose}
+                      </button>
+                    </div>
+                    <div className="max-h-[min(40vh,280px)] overflow-y-auto p-2.5">
+                      {cargoLoading ? (
+                        <p className="flex items-center gap-2 px-1 py-3 text-xs text-dash-muted">
+                          <Icon icon="lucide:loader-2" width={14} height={14} className="animate-spin" aria-hidden />
+                          {tr.vesselCargoLoading}
+                        </p>
+                      ) : cargoError && cargoOps.length === 0 ? (
+                        <p className="px-1 py-3 text-xs text-amber-200/90" role="status">
+                          {cargoError}
+                        </p>
+                      ) : (
+                        <>
+                          <p className="mb-2 px-1 text-[11px] font-semibold text-dash-neon">
+                            {tr.vesselCargoCount.replace("{{count}}", String(cargoOps.length))}
+                          </p>
+                          <ul className="space-y-2">
+                            {cargoOps.map((op) => (
+                              <li key={op.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOpId(op.id)}
+                                  className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                                    selectedOpId === op.id
+                                      ? "border-violet-400/50 bg-violet-500/15"
+                                      : "border-dash-border bg-dash-control/50 hover:border-dash-neon/35"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="truncate text-xs font-bold text-dash-fg">
+                                      {op.contenedor?.trim() || "—"}
+                                    </span>
+                                    <span className="shrink-0 text-[10px] font-semibold text-dash-muted">
+                                      {op.ref_asli || "—"}
+                                    </span>
+                                  </div>
+                                  <dl className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-dash-muted">
+                                    <div>
+                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoSpecies}</dt>
+                                      <dd className="truncate text-dash-fg/90">{op.especie?.trim() || "—"}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoPod}</dt>
+                                      <dd className="truncate text-dash-fg/90">{op.pod?.trim() || "—"}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoEta}</dt>
+                                      <dd className="text-dash-fg/90">{formatDate(op.eta, locale)}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoEtd}</dt>
+                                      <dd className="text-dash-fg/90">{formatDate(op.etd, locale)}</dd>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoBooking}</dt>
+                                      <dd className="truncate text-dash-fg/90">{op.booking?.trim() || "—"}</dd>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoPol}</dt>
+                                      <dd className="truncate text-dash-fg/90">{op.pol?.trim() || "—"}</dd>
+                                    </div>
+                                  </dl>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <ManualTrackingCoordsModal
                   open={manualModalOpen}
@@ -1319,6 +1516,8 @@ export function TrackingContent() {
                   emptyHint={tr.mapLoading}
                   webglFallback={tr.mapWebGLFallback}
                   theme={theme}
+                  onFleetVesselClick={(fv) => void handleFleetVesselClick(fv)}
+                  selectedFleetKey={cargoVessel?.markerKey ?? null}
                 />
               </div>
             </div>
