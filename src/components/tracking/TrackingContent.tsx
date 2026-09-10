@@ -14,12 +14,23 @@ import { getApiOriginPrefix } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import {
+  applyOperacionesClienteFilter,
+  shouldSkipOperacionesForCliente,
+} from "@/lib/auth/operacionesClienteScope";
+import {
   ESTADO_META,
   esEstadoCerrado,
   etiquetaEstado,
   normalizarEstado,
   type GrupoEstado,
 } from "@/lib/operaciones/estados";
+
+const TRACKING_OP_SELECT =
+  "id, correlativo, estado_operacion, cliente, contenedor, booking, ref_asli, tipo_unidad, especie, naviera, nave, viaje, pol, etd, pod, eta, tt, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
+
+function sanitizeTrackingTerm(raw: string): string {
+  return raw.replace(/[%_,.()]/g, " ").replace(/\s+/g, " ").trim();
+}
 
 type TrackingResult = {
   id: string;
@@ -238,12 +249,14 @@ const POLL_MS = 45_000;
 export function TrackingContent() {
   const { t, locale } = useLocale();
   const tr = t.trackingPage;
-  const { user, profile, isStaff, isCliente, isEjecutivo, empresaNombres } = useAuth();
+  const { user, profile, isStaff, isCliente, isEjecutivo, empresaNombres, viewAs } = useAuth();
   const [theme] = useNeonTheme();
 
-  /** Cliente/ejecutivo: solo ops de sus empresas (defensa extra sobre RLS). */
+  /** Cliente/ejecutivo (incl. «Ver como»): solo ops de sus empresas. RLS no alcanza porque el JWT sigue siendo superadmin. */
   const scopeToAssignedEmpresas = isCliente || isEjecutivo;
   const canFreeAisSearch = Boolean(user && isStaff && !isCliente);
+  const empresasKey = useMemo(() => empresaNombres.join("\0"), [empresaNombres]);
+  const viewAsKey = viewAs ? `${viewAs.rol}:${viewAs.usuarioId}` : "";
 
   const filterScopedResults = useCallback(
     (list: TrackingResult[]) => {
@@ -256,6 +269,59 @@ export function TrackingContent() {
       });
     },
     [scopeToAssignedEmpresas, empresaNombres],
+  );
+
+  /** Búsqueda acotada por empresas (view-as / cliente / ejecutivo). */
+  const searchScopedOperaciones = useCallback(
+    async (value: string): Promise<{ list: TrackingResult[]; error: string | null }> => {
+      if (!supabase) return { list: [], error: tr.supabaseError };
+      if (
+        shouldSkipOperacionesForCliente({
+          isCliente,
+          isEjecutivo,
+          empresaNombres,
+        })
+      ) {
+        return { list: [], error: null };
+      }
+
+      const safe = sanitizeTrackingTerm(value);
+      if (!safe) return { list: [], error: null };
+
+      let q = supabase
+        .from("operaciones")
+        .select(TRACKING_OP_SELECT)
+        .is("deleted_at", null)
+        .order("etd", { ascending: false, nullsFirst: false })
+        .limit(40);
+
+      q = applyOperacionesClienteFilter(q, {
+        isCliente,
+        isEjecutivo,
+        empresaNombres,
+      });
+
+      const orParts = [
+        `contenedor.ilike.%${safe}%`,
+        `booking.ilike.%${safe}%`,
+        `ref_asli.ilike.%${safe}%`,
+        `nave.ilike.%${safe}%`,
+      ];
+      if (/^\d+$/.test(safe)) orParts.push(`correlativo.eq.${safe}`);
+      q = q.or(orParts.join(","));
+
+      const { data, error: qErr } = await q;
+      if (qErr) return { list: [], error: qErr.message };
+      return { list: filterScopedResults((data ?? []) as TrackingResult[]), error: null };
+    },
+    [
+      supabase,
+      tr.supabaseError,
+      isCliente,
+      isEjecutivo,
+      empresaNombres,
+      filterScopedResults,
+    ],
   );
 
   const [termino, setTermino] = useState("");
@@ -432,6 +498,19 @@ export function TrackingContent() {
       return;
     }
 
+    if (scopeToAssignedEmpresas) {
+      const { list, error: scopedErr } = await searchScopedOperaciones(value);
+      setLoading(false);
+      if (scopedErr) {
+        setError(scopedErr);
+        setResults([]);
+        return;
+      }
+      setResults(list);
+      if (list.length === 1) setSelectedOpId(list[0].id);
+      return;
+    }
+
     const { data, error: rpcError } = await supabase.rpc("buscar_tracking", { termino: value });
     setLoading(false);
 
@@ -444,23 +523,73 @@ export function TrackingContent() {
     const list = filterScopedResults((data ?? []) as TrackingResult[]);
     setResults(list);
     if (list.length === 1) setSelectedOpId(list[0].id);
-  }, [termino, supabase, tr.supabaseError, filterScopedResults]);
+  }, [
+    termino,
+    supabase,
+    tr.supabaseError,
+    filterScopedResults,
+    scopeToAssignedEmpresas,
+    searchScopedOperaciones,
+  ]);
 
   const refetchTrackingResults = useCallback(async () => {
     const value = termino.trim();
     if (!value || !supabase) return;
+
+    if (scopeToAssignedEmpresas) {
+      const { list } = await searchScopedOperaciones(value);
+      setResults(list);
+      setSelectedOpId((prev) => (prev && list.some((r) => r.id === prev) ? prev : null));
+      return;
+    }
+
     const { data, error: rpcError } = await supabase.rpc("buscar_tracking", { termino: value });
     if (rpcError) return;
     const list = filterScopedResults((data ?? []) as TrackingResult[]);
     setResults(list);
     setSelectedOpId((prev) => (prev && list.some((r) => r.id === prev) ? prev : null));
-  }, [termino, supabase, filterScopedResults]);
+  }, [termino, supabase, filterScopedResults, scopeToAssignedEmpresas, searchScopedOperaciones]);
 
   const loadFleetManualVessels = useCallback(async () => {
     if (!supabase || !user) {
       setFleetManualVessels([]);
       return;
     }
+
+    // «Ver como» cliente/ejecutivo: el JWT sigue siendo superadmin → la RPC devolvería toda la flota.
+    if (scopeToAssignedEmpresas) {
+      if (
+        shouldSkipOperacionesForCliente({
+          isCliente,
+          isEjecutivo,
+          empresaNombres,
+        })
+      ) {
+        setFleetManualVessels([]);
+        return;
+      }
+
+      let q = supabase
+        .from("operaciones")
+        .select(TRACKING_OP_SELECT)
+        .is("deleted_at", null)
+        .not("tracking_manual_lat", "is", null)
+        .not("tracking_manual_lng", "is", null)
+        .limit(400);
+
+      q = applyOperacionesClienteFilter(q, {
+        isCliente,
+        isEjecutivo,
+        empresaNombres,
+      });
+
+      const { data, error: qErr } = await q;
+      if (qErr) return;
+      const ops = filterScopedResults((data ?? []) as TrackingResult[]);
+      setFleetManualVessels(clusterManualFleetFromResults(ops));
+      return;
+    }
+
     const { data, error: rpcError } = await supabase.rpc("listar_tracking_naves_manuales_activas");
     if (rpcError) return;
     const rows = (data ?? []) as FleetManualRpcRow[];
@@ -483,7 +612,25 @@ export function TrackingContent() {
       });
     }
     setFleetManualVessels(next);
-  }, [supabase, user]);
+  }, [
+    supabase,
+    user,
+    scopeToAssignedEmpresas,
+    isCliente,
+    isEjecutivo,
+    empresaNombres,
+    filterScopedResults,
+  ]);
+
+  useEffect(() => {
+    setResults([]);
+    setSelectedOpId(null);
+    setSelectedAis(null);
+    setVesselSnap(null);
+    setTermino("");
+    setSearched(false);
+    setError(null);
+  }, [viewAsKey, empresasKey]);
 
   useEffect(() => {
     void loadFleetManualVessels();
