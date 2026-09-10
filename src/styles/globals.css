@@ -56,6 +56,32 @@ html, body {
   padding-top: env(safe-area-inset-top);
 }
 
+/* Shell Tauri (.exe): arrastre de ventana en zonas data-tauri-drag-region */
+[data-tauri-drag-region] {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
+/* Titlebar custom: controles clicables (no-drag) y altura acotada */
+[data-desktop-titlebar] {
+  line-height: 1;
+}
+[data-desktop-titlebar] button,
+[data-desktop-titlebar] a,
+[data-desktop-titlebar] [role="button"],
+[data-desktop-titlebar] .asli-no-drag {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+  max-height: 36px;
+}
+[data-desktop-titlebar] > div:last-child button {
+  max-height: none;
+}
+[data-desktop-titlebar] img {
+  max-height: 28px;
+  width: auto;
+}
+
 /* ── Ocultar scrollbar manteniendo scroll funcional ── */
 .scrollbar-hide {
   scrollbar-width: none;       /* Firefox */

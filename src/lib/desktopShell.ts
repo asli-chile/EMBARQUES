@@ -1,8 +1,16 @@
-/** Detección del shell Tauri (ASLI Embarques .exe). */
+/** Detección y controles de ventana para el shell Tauri (ASLI Embarques .exe). */
+
+type DesktopWindow = {
+  minimize: () => Promise<void>;
+  toggleMaximize: () => Promise<void>;
+  close: () => Promise<void>;
+  isMaximized: () => Promise<boolean>;
+  startDragging: () => Promise<void>;
+};
 
 type TauriGlobal = {
   window?: {
-    getCurrentWindow?: () => unknown;
+    getCurrentWindow?: () => DesktopWindow;
   };
 };
 
@@ -12,7 +20,16 @@ function getTauriGlobal(): TauriGlobal | null {
   return w.__TAURI__ ?? null;
 }
 
-/** True cuando la página corre dentro del .exe (p. ej. recordar credenciales en login). */
 export function isDesktopShell(): boolean {
   return typeof getTauriGlobal()?.window?.getCurrentWindow === "function";
+}
+
+export function getDesktopWindow(): DesktopWindow | null {
+  const getCurrent = getTauriGlobal()?.window?.getCurrentWindow;
+  if (!getCurrent) return null;
+  try {
+    return getCurrent();
+  } catch {
+    return null;
+  }
 }
