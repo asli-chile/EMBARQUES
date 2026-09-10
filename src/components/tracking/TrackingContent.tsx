@@ -252,6 +252,16 @@ export function TrackingContent() {
   const { user, profile, isStaff, isCliente, isEjecutivo, empresaNombres, viewAs } = useAuth();
   const [theme] = useNeonTheme();
 
+  const supabase = useMemo(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const apiPrefix = useMemo(() => getApiOriginPrefix(), []);
+
   /** Cliente/ejecutivo (incl. «Ver como»): solo ops de sus empresas. RLS no alcanza porque el JWT sigue siendo superadmin. */
   const scopeToAssignedEmpresas = isCliente || isEjecutivo;
   const canFreeAisSearch = Boolean(user && isStaff && !isCliente);
@@ -347,16 +357,6 @@ export function TrackingContent() {
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [fleetManualVessels, setFleetManualVessels] = useState<MapFleetManualVessel[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
-
-  const supabase = useMemo(() => {
-    try {
-      return createClient();
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const apiPrefix = useMemo(() => getApiOriginPrefix(), []);
 
   const canSetManualCoords = Boolean(user && profile && isStaff);
 
