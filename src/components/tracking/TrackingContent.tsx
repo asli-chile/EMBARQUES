@@ -1408,7 +1408,7 @@ export function TrackingContent() {
                 </div>
 
                 {cargoVessel && (
-                  <div className="absolute inset-x-2 bottom-2 top-auto z-[8] max-h-[min(48%,360px)] overflow-hidden rounded-xl border border-violet-400/40 bg-dash-panel/95 shadow-lg backdrop-blur-md sm:inset-x-auto sm:left-3 sm:right-auto sm:w-[min(100%,380px)]">
+                  <div className="absolute inset-x-2 bottom-2 top-auto z-[8] max-h-[min(48%,360px)] overflow-hidden rounded-xl border border-violet-400/40 bg-dash-surface/95 shadow-lg backdrop-blur-md sm:inset-x-auto sm:left-3 sm:right-auto sm:w-[min(100%,380px)]">
                     <div className="flex items-start justify-between gap-2 border-b border-dash-border px-3 py-2.5">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-dash-fg">
