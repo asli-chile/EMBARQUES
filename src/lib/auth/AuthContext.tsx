@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { isStaffRole } from "@/lib/auth/roles";
@@ -25,6 +26,15 @@ export type AuthUser = {
   name: string;
 };
 
+/** Simulación de UI: el JWT real no cambia; RLS sigue viendo al superadmin. */
+export type ViewAsState = {
+  rol: UserRole;
+  usuarioId: string;
+  nombre: string;
+  email: string;
+  empresaNombres: string[];
+};
+
 type AuthContextValue = {
   user: AuthUser | null;
   profile: AuthProfile | null;
@@ -40,6 +50,13 @@ type AuthContextValue = {
   /** Usuario externo: sin sesión. Ve contenido informativo. */
   isExternalUser: boolean;
   refetch: () => Promise<void>;
+  /** Perfil real de la sesión (sin view-as). */
+  realProfile: AuthProfile | null;
+  /** True solo si la sesión real es superadmin (ignora view-as). */
+  isActualSuperadmin: boolean;
+  viewAs: ViewAsState | null;
+  setViewAs: (next: ViewAsState | null) => void;
+  clearViewAs: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -58,7 +75,8 @@ export function getRolLabel(rol: UserRole): string {
 }
 
 const AUTH_CACHE_KEY = "_auth_cache_v3";
-const AUTH_CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutos
+const AUTH_CACHE_TTL_MS = 4 * 60 * 1000;
+const VIEW_AS_KEY = "_asli_view_as_v1";
 
 type AuthCache = {
   user: AuthUser;
@@ -82,24 +100,56 @@ function readAuthCache(): AuthCache | null {
 function writeAuthCache(data: Omit<AuthCache, "cachedAt">) {
   try {
     localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ ...data, cachedAt: Date.now() }));
-  } catch {}
+  } catch {
+    /* ignore */
+  }
 }
 
 function clearAuthCache() {
-  try { localStorage.removeItem(AUTH_CACHE_KEY); } catch {}
+  try {
+    localStorage.removeItem(AUTH_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readViewAs(): ViewAsState | null {
+  try {
+    const raw = sessionStorage.getItem(VIEW_AS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ViewAsState;
+    if (!parsed?.rol || !parsed?.usuarioId) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeViewAs(state: ViewAsState | null) {
+  try {
+    if (!state) sessionStorage.removeItem(VIEW_AS_KEY);
+    else sessionStorage.setItem(VIEW_AS_KEY, JSON.stringify(state));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  /**
-   * Primer render idéntico en SSR y en el cliente: sin leer localStorage en useState.
-   * Si leyéramos el cache aquí, en servidor no hay localStorage → null, en navegador con cache → usuario;
-   * eso rompe la hidratación de React (Header, AuthWidget, VisitCounterBadge, etc.).
-   * El cache se aplica en useEffect tras montar solo en el cliente.
-   */
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [empresaNombres, setEmpresaNombres] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewAs, setViewAsState] = useState<ViewAsState | null>(null);
+
+  const setViewAs = useCallback((next: ViewAsState | null) => {
+    setViewAsState(next);
+    writeViewAs(next);
+  }, []);
+
+  const clearViewAs = useCallback(() => {
+    setViewAsState(null);
+    writeViewAs(null);
+  }, []);
 
   const loadSession = useCallback(async (background = false) => {
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -109,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setIsLoading(false);
       clearAuthCache();
+      clearViewAs();
       return;
     }
 
@@ -125,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setEmpresaNombres([]);
         clearAuthCache();
+        clearViewAs();
         if (!background) setIsLoading(false);
         else setIsLoading(false);
         return;
@@ -140,7 +192,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "Usuario",
       };
 
-      // Lanzar consulta de perfil inmediatamente
       const perfilPromise = supabase
         .from("usuarios")
         .select("id, nombre, email, rol, activo")
@@ -154,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setEmpresaNombres([]);
         clearAuthCache();
+        clearViewAs();
         return;
       }
 
@@ -182,15 +234,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(resolvedProfile);
       setEmpresaNombres(resolvedEmpresas);
       writeAuthCache({ user: authUser, profile: resolvedProfile, empresaNombres: resolvedEmpresas });
+
+      if (resolvedProfile.rol !== "superadmin") {
+        clearViewAs();
+      }
     } catch {
       setUser(null);
       setProfile(null);
       setEmpresaNombres([]);
       clearAuthCache();
+      clearViewAs();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [clearViewAs]);
 
   useEffect(() => {
     const cached = readAuthCache();
@@ -199,6 +256,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(cached.profile);
       setEmpresaNombres(cached.empresaNombres);
       setIsLoading(false);
+    }
+    const storedViewAs = readViewAs();
+    if (storedViewAs && cached?.profile?.rol === "superadmin") {
+      setViewAsState(storedViewAs);
     }
     void loadSession(!!cached);
 
@@ -225,39 +286,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadSession]);
 
+  const isActualSuperadmin = profile?.rol === "superadmin";
+
+  const effectiveProfile = useMemo((): AuthProfile | null => {
+    if (!profile) return null;
+    if (!viewAs || !isActualSuperadmin) return profile;
+    return {
+      id: viewAs.usuarioId,
+      nombre: viewAs.nombre,
+      email: viewAs.email,
+      rol: viewAs.rol,
+      activo: true,
+    };
+  }, [profile, viewAs, isActualSuperadmin]);
+
+  const effectiveEmpresas = useMemo(() => {
+    if (viewAs && isActualSuperadmin) return viewAs.empresaNombres;
+    return empresaNombres;
+  }, [viewAs, isActualSuperadmin, empresaNombres]);
+
   const value: AuthContextValue = {
     user,
-    profile,
+    profile: effectiveProfile,
     isLoading,
-    isSuperadmin: profile?.rol === "superadmin",
-    isAdmin: profile?.rol === "admin",
-    isEjecutivo: profile?.rol === "ejecutivo",
-    isCliente: profile?.rol === "cliente",
-    isStaff: isStaffRole(profile?.rol),
-    empresaNombres,
+    isSuperadmin: effectiveProfile?.rol === "superadmin",
+    isAdmin: effectiveProfile?.rol === "admin",
+    isEjecutivo: effectiveProfile?.rol === "ejecutivo",
+    isCliente: effectiveProfile?.rol === "cliente",
+    isStaff: isStaffRole(effectiveProfile?.rol),
+    empresaNombres: effectiveEmpresas,
     isExternalUser: !user,
     refetch: loadSession,
+    realProfile: profile,
+    isActualSuperadmin,
+    viewAs: isActualSuperadmin ? viewAs : null,
+    setViewAs,
+    clearViewAs,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+const EMPTY_AUTH: AuthContextValue = {
+  user: null,
+  profile: null,
+  isLoading: true,
+  isSuperadmin: false,
+  isAdmin: false,
+  isEjecutivo: false,
+  isCliente: false,
+  isStaff: false,
+  empresaNombres: [],
+  isExternalUser: true,
+  refetch: async () => {},
+  realProfile: null,
+  isActualSuperadmin: false,
+  viewAs: null,
+  setViewAs: () => {},
+  clearViewAs: () => {},
+};
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    return {
-      user: null,
-      profile: null,
-      isLoading: true,
-      isSuperadmin: false,
-      isAdmin: false,
-      isEjecutivo: false,
-      isCliente: false,
-      isStaff: false,
-      empresaNombres: [],
-      isExternalUser: true,
-      refetch: async () => {},
-    };
-  }
-  return ctx;
+  return ctx ?? EMPTY_AUTH;
 }

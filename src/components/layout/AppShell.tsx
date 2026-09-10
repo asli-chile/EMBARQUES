@@ -1,4 +1,5 @@
 import { Header } from "./Header";
+import { ViewAsBanner } from "./ViewAsControl";
 import { NavBanner } from "./NavBanner";
 import { AppIconRail } from "./AppIconRail";
 import { ConfigGuard } from "./ConfigGuard";
@@ -345,13 +346,14 @@ function AppChromeFrame({
   hideAppChrome: boolean;
   children: ReactNode;
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, viewAs, isActualSuperadmin } = useAuth();
   const chrome = getRouteChrome(pathname);
   const isMarketing = chrome === "marketing";
   // /inicio siempre usa chrome minimalista (rail + header compact), con o sin sesión
   const showRail =
     pathname === "/inicio" ||
     (!!user && !isLoading && !isMarketing);
+  const showViewAsBanner = isActualSuperadmin && !!viewAs;
 
   if (hideAppChrome) {
     // Informativos: rail global + sin Header/NavBanner (el estudio es pantalla completa)
@@ -359,6 +361,7 @@ function AppChromeFrame({
       <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
         {showRail ? <AppIconRail pathname={pathname} /> : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {showViewAsBanner ? <ViewAsBanner /> : null}
           {children}
         </div>
       </div>
@@ -368,6 +371,7 @@ function AppChromeFrame({
   if (showRail) {
     // En /inicio el fondo debe pasar detrás del header; en el resto se reserva espacio.
     const contentClearsHeader = pathname !== "/inicio";
+    const topPad = (contentClearsHeader ? 60 : 0) + (showViewAsBanner ? 34 : 0);
     return (
       <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
         <AppIconRail pathname={pathname} />
@@ -375,12 +379,12 @@ function AppChromeFrame({
           <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
             <div className="pointer-events-auto">
               <Header compact />
+              {showViewAsBanner ? <ViewAsBanner /> : null}
             </div>
           </div>
           <div
-            className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
-              contentClearsHeader ? "pt-[60px]" : ""
-            }`}
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            style={topPad > 0 ? { paddingTop: topPad } : undefined}
           >
             {children}
           </div>
@@ -392,6 +396,7 @@ function AppChromeFrame({
   return (
     <div className="flex h-dvh max-w-full min-w-0 flex-col overflow-hidden">
       <Header />
+      {showViewAsBanner ? <ViewAsBanner /> : null}
       <NavBanner pathname={pathname} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {children}

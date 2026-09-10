@@ -9,6 +9,7 @@ import { NeonThemeToggle } from "@/components/ui/NeonThemeToggle";
 import { HeaderTitle } from "./HeaderTitle";
 import { LocaleToggle } from "./LocaleToggle";
 import { HeaderChrome } from "./HeaderChrome";
+import { ViewAsControl } from "./ViewAsControl";
 import type { HeaderChromeTone } from "./HeaderActionIcons";
 
 type HeaderProps = {
@@ -62,6 +63,8 @@ export function Header({ compact = false }: HeaderProps) {
           <span className="mx-0.5 hidden h-4 w-px bg-white/20 sm:block" aria-hidden />
           <LocaleToggle variant="dark" />
           <span className="mx-0.5 h-4 w-px bg-white/20" aria-hidden />
+          <ViewAsControl tone={tone} />
+          <span className="mx-0.5 h-4 w-px bg-white/20" aria-hidden />
           <NotificationsBell tone={tone} />
           <span className="mx-0.5 h-4 w-px bg-white/20" aria-hidden />
           <AuthWidget tone={tone} />
@@ -103,6 +106,7 @@ export function Header({ compact = false }: HeaderProps) {
         </div>
         <NeonThemeToggle variant="header" />
         <LocaleToggle />
+        <ViewAsControl tone={tone} />
         <NotificationsBell tone={tone} />
         <AuthWidget />
       </div>

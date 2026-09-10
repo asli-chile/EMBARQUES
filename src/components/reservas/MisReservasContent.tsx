@@ -901,6 +901,24 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const acceptFile = (next: File | null) => {
+    if (!next) {
+      setFile(null);
+      return;
+    }
+    const okType =
+      next.type === "application/pdf" ||
+      next.type.startsWith("image/") ||
+      /\.(pdf|png|jpe?g|webp)$/i.test(next.name);
+    if (!okType) {
+      setError("Solo se permiten PDF o imágenes.");
+      return;
+    }
+    setError(null);
+    setFile(next);
+  };
 
   const handleSave = async () => {
     if (!supabase) return;
@@ -945,108 +963,191 @@ function BookingModal({ op, supabase, onClose, onSaved }: BookingModalProps) {
   const hasDoc = !!op.booking_doc_url;
 
   return (
-    <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" data-theme={theme}>
-      <div className="dash-card motion-enter-lift w-full max-w-sm overflow-hidden rounded-2xl">
-        <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
-        <div className="p-6">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/35 bg-amber-500/15">
-              <Icon icon="lucide:bookmark-check" width={20} height={20} className="text-amber-300" />
+    <div
+      className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      data-theme={theme}
+      onClick={onClose}
+    >
+      <div
+        className="dash-card motion-enter-lift flex max-h-[min(92dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="h-[3px] shrink-0 bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
+          <div className="mb-6 flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-500/15 shadow-[0_0_24px_-8px_rgba(251,191,36,0.45)]">
+              <Icon icon="lucide:bookmark-check" width={24} height={24} className="text-amber-300" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-dash-fg">{tr.confirmBookingModal}</h3>
-              <p className="text-xs text-dash-muted">{displayRefAsli(op.ref_asli, op.correlativo)} · {op.cliente ?? ""}</p>
+            <div className="min-w-0 pt-0.5">
+              <h3 className="text-lg font-bold tracking-tight text-dash-fg sm:text-xl">
+                {tr.confirmBookingModal}
+              </h3>
+              <p className="mt-1 font-mono text-sm font-semibold tracking-wider text-dash-neon/90 sm:text-base">
+                {displayRefAsli(op.ref_asli, op.correlativo)}
+                <span className="mx-2 text-dash-muted/50">·</span>
+                <span className="font-sans font-medium tracking-normal text-dash-muted">
+                  {op.cliente ?? ""}
+                </span>
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="ml-auto -mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-control hover:text-dash-fg"
+              aria-label={tr.close}
+            >
+              <Icon icon="lucide:x" width={18} height={18} />
+            </button>
           </div>
 
           {error && (
-            <div className="mb-4 rounded-xl border border-red-400/35 bg-red-500/15 p-3 text-xs text-dash-fg">{error}</div>
+            <div className="mb-5 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-3 text-sm text-dash-fg">
+              {error}
+            </div>
           )}
 
-          {/* Número de booking */}
-          <div className="mb-4">
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
+          <div className="mb-7">
+            <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-dash-muted">
               {tr.bookingNumberLabel}
             </label>
-            <input
-              type="text"
-              value={bookingInput}
-              onChange={(e) => setBookingInput(e.target.value)}
-              placeholder="Ej: ABC123456"
-              className="dash-control w-full px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={bookingInput}
+                onChange={(e) => setBookingInput(e.target.value.toUpperCase())}
+                placeholder="ABC123456"
+                spellCheck={false}
+                autoComplete="off"
+                className="dash-control w-full rounded-2xl border-dash-neon/30 bg-dash-control/90 px-5 py-5 text-center font-mono text-2xl font-bold tracking-[0.18em] text-dash-fg shadow-[inset_0_0_0_1px_rgba(45,212,191,0.08),0_0_28px_-14px_rgba(45,212,191,0.35)] placeholder:tracking-[0.12em] placeholder:text-dash-muted/35 focus:border-dash-neon/55 focus:outline-none focus:ring-2 focus:ring-dash-neon/35 sm:py-6 sm:text-3xl sm:tracking-[0.22em]"
+              />
+            </div>
           </div>
 
-          {/* Documento */}
-          <div className="mb-5">
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-dash-muted">
+          <div className="mb-2">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-dash-muted">
               {tr.bookingDocFieldLabel}
             </label>
 
             {hasDoc && !file && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-400/35 bg-emerald-500/15 p-2.5">
-                <Icon icon="lucide:paperclip" width={14} height={14} className="shrink-0 text-emerald-300" />
-                <span className="flex-1 truncate text-xs font-medium text-emerald-300">{tr.docAttached}</span>
+              <div className="mb-3 flex items-center gap-3 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 py-3">
+                <Icon icon="lucide:paperclip" width={18} height={18} className="shrink-0 text-emerald-300" />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-emerald-200">
+                  {tr.docAttached}
+                </span>
                 <a
                   href={op.booking_doc_url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 text-xs font-semibold text-emerald-300 hover:underline"
+                  className="shrink-0 text-sm font-semibold text-emerald-300 hover:underline"
                 >
                   {tr.view}
                 </a>
               </div>
             )}
 
-            <label className="group flex cursor-pointer items-center gap-2">
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+            <label
+              className={`group relative flex min-h-[11rem] cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-5 py-8 text-center transition-all duration-200 ${
                 file
-                  ? "border-amber-400/40 bg-amber-500/15 text-dash-fg"
-                  : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40 hover:text-dash-fg"
-              }`}>
-                <Icon icon={file ? "lucide:file-check" : "lucide:upload"} width={14} height={14} />
-                {file ? file.name : (hasDoc ? tr.replaceDoc : tr.uploadDoc)}
+                  ? "border-dash-neon/55 bg-dash-neon/10 shadow-[0_0_32px_-12px_rgba(45,212,191,0.45)]"
+                  : dragging
+                    ? "border-dash-neon bg-dash-neon/15 scale-[1.01]"
+                    : "border-dash-neon/35 bg-dash-control/80 hover:border-dash-neon/60 hover:bg-dash-neon/10"
+              }`}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragging(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragging(false);
+                acceptFile(e.dataTransfer.files?.[0] ?? null);
+              }}
+            >
+              <div
+                className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition-colors ${
+                  file
+                    ? "border-dash-neon/50 bg-dash-neon/20 text-dash-neon"
+                    : "border-dash-neon/40 bg-dash-neon/15 text-dash-neon group-hover:bg-dash-neon/25"
+                }`}
+              >
+                <Icon icon={file ? "lucide:file-check-2" : "lucide:upload-cloud"} width={28} height={28} />
               </div>
+
+              {file ? (
+                <>
+                  <p className="max-w-full truncate px-2 text-base font-bold text-dash-fg">{file.name}</p>
+                  <p className="text-sm text-dash-muted">
+                    {(file.size / 1024).toFixed(0)} KB · {hasDoc ? tr.replaceDoc : tr.uploadDoc}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-base font-bold text-dash-fg">{tr.uploadDropHint}</p>
+                  <p className="text-sm font-medium text-dash-neon">{tr.uploadDropOr}</p>
+                  <p className="text-xs text-dash-muted">{tr.uploadDropFormats}</p>
+                </>
+              )}
+
               <input
                 type="file"
                 accept="application/pdf,image/*"
                 className="hidden"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => acceptFile(e.target.files?.[0] ?? null)}
               />
             </label>
+
             {file && (
               <button
                 type="button"
                 onClick={() => setFile(null)}
-                className="mt-1.5 text-xs text-dash-muted transition-colors hover:text-red-300"
+                className="mt-2.5 text-sm font-medium text-dash-muted transition-colors hover:text-red-300"
               >
                 {tr.removeFile}
               </button>
             )}
           </div>
+        </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={uploading}
-              className="dash-control flex-1 px-4 py-2.5 text-xs font-semibold disabled:opacity-60"
-            >
-              {tr.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={uploading || (!bookingInput.trim() && !file)}
-              className="dash-cta inline-flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {uploading ? (
-                <><Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />{tr.saving}</>
-              ) : (
-                <><Icon icon="lucide:save" width={14} height={14} />{tr.save}</>
-              )}
-            </button>
-          </div>
+        <div className="flex shrink-0 gap-3 border-t border-dash-border/60 bg-dash-control/40 px-6 py-4 sm:px-8">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={uploading}
+            className="dash-control flex-1 px-4 py-3 text-sm font-semibold disabled:opacity-60"
+          >
+            {tr.cancel}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={uploading || (!bookingInput.trim() && !file)}
+            className="dash-cta inline-flex flex-[1.35] items-center justify-center gap-2 px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {uploading ? (
+              <>
+                <Icon icon="typcn:refresh" width={16} height={16} className="animate-spin" />
+                {tr.saving}
+              </>
+            ) : (
+              <>
+                <Icon icon="lucide:save" width={16} height={16} />
+                {tr.save}
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
