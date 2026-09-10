@@ -538,13 +538,47 @@ const ReservaCard = memo(function ReservaCard({
             <p className="text-xs text-dash-muted truncate mt-0.5 font-medium">{op.cliente ?? "-"}</p>
           </div>
         </div>
-        <InlineEstadoSelect
-          value={op.estado_operacion}
-          canEdit={canEditEstado}
-          allowAny={allowAnyEstado}
-          stopCardClick
-          onSave={(next) => onEstadoSave(op, next)}
-        />
+        <div className="flex max-w-[58%] shrink-0 flex-col items-end gap-1.5">
+          <InlineEstadoSelect
+            value={op.estado_operacion}
+            canEdit={canEditEstado}
+            allowAny={allowAnyEstado}
+            stopCardClick
+            onSave={(next) => onEstadoSave(op, next)}
+          />
+          {!isCliente ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBooking(op);
+              }}
+              className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${bookingChipClass(
+                op.booking,
+                !!op.booking_doc_url,
+                "hover:border-dash-neon/50 hover:text-dash-fg hover:bg-dash-neon/10",
+              )}`}
+              title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
+            >
+              {op.booking_doc_url ? (
+                <IcoPaperclip size={13} className="shrink-0" />
+              ) : (
+                <IcoBookmark size={13} className="shrink-0" />
+              )}
+              <BookingMono value={op.booking} emptyLabel={tr.confirmShort} />
+            </button>
+          ) : op.booking ? (
+            <span
+              className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold ${bookingChipClass(
+                op.booking,
+                !!op.booking_doc_url,
+              )}`}
+            >
+              {op.booking_doc_url ? <IcoPaperclip size={12} className="shrink-0" /> : null}
+              <BookingMono value={op.booking} />
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {op.solicitud_ventana ? (
@@ -594,7 +628,6 @@ const ReservaCard = memo(function ReservaCard({
       {expanded && (
         <div className="mx-3 mb-2.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
           <CardDetail label={tr.colRefExterna} value={op.referencia_externa || "—"} />
-          <CardDetail label={tr.colBooking} value={op.booking || "—"} />
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted mb-0.5">{tr.colContainer}</p>
             {canEditContenedor ? (
@@ -661,32 +694,33 @@ const ReservaCard = memo(function ReservaCard({
         <Icon icon={expanded ? "lucide:chevron-up" : "lucide:chevron-down"} width={14} height={14} />
       </button>
 
-      <div className="px-2.5 py-1.5 border-t border-dash-border flex items-center justify-between bg-dash-control/40">
-        {!isCliente ? (
+      <div className="border-t border-dash-border bg-dash-control/50 px-3 py-2.5">
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onBooking(op); }}
-            className={`inline-flex items-center gap-1 max-w-[58%] px-2 py-1 rounded-md text-[11px] font-semibold border truncate ${
-              op.booking_doc_url
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : op.booking
-                ? "bg-amber-50 text-amber-700 border-amber-200"
-                : "bg-dash-control text-dash-muted border-dashed border-dash-neon/35"
-            }`}
-            title={op.booking ? tr.editBookingTitle : tr.confirmBookingTitle}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopy(op);
+            }}
+            className={cardActionBtnClass}
+            title={tr.copyTitle}
+            aria-label={tr.copyTitle}
           >
-            {op.booking_doc_url ? <IcoPaperclip size={12} className="shrink-0" /> : <IcoBookmark size={12} className="shrink-0" />}
-            <span className="font-mono truncate">{op.booking ?? tr.confirmShort}</span>
+            <IcoCopy size={15} className="shrink-0 opacity-90 group-hover:opacity-100" />
+            <span className="text-[11px] font-semibold tracking-wide">{tr.copyShort}</span>
           </button>
-        ) : (
-          <span className="font-mono text-[11px] text-dash-muted truncate max-w-[58%]">{op.booking || "—"}</span>
-        )}
-        <div className="flex items-center">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onCopy(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors" title={tr.copyTitle}>
-            <IcoCopy size={16} />
-          </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onEmail(op); }} className="p-2 min-h-[40px] min-w-[40px] inline-flex items-center justify-center text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors" title={tr.emailTitle}>
-            <IcoMail size={16} />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEmail(op);
+            }}
+            className={cardActionBtnClass}
+            title={tr.emailTitle}
+            aria-label={tr.emailTitle}
+          >
+            <IcoMail size={15} className="shrink-0 opacity-90 group-hover:opacity-100" />
+            <span className="text-[11px] font-semibold tracking-wide">{tr.emailShort}</span>
           </button>
         </div>
       </div>
@@ -723,7 +757,32 @@ type TableRowProps = {
   onEstadoSave: (op: Operacion, next: EstadoOperacion) => Promise<boolean>;
 };
 
-type InlineEditableField = "referencia_externa" | "nave" | "pol" | "pod";
+function bookingChipClass(booking: string | null | undefined, hasDoc: boolean, emptyExtra = ""): string {
+  if (hasDoc) {
+    return "bg-emerald-500/20 text-emerald-200 border-emerald-400/45 shadow-[0_0_18px_-8px_rgba(52,211,153,0.55)] ring-1 ring-emerald-400/25";
+  }
+  if (booking) {
+    return "bg-dash-neon/20 text-dash-fg border-dash-neon/50 shadow-[0_0_20px_-8px_rgba(45,212,191,0.55)] ring-1 ring-dash-neon/30 font-bold";
+  }
+  return `bg-dash-control text-dash-muted border-dash-border border-dashed ${emptyExtra}`.trim();
+}
+
+function BookingMono({ value, emptyLabel }: { value: string | null | undefined; emptyLabel?: string }) {
+  if (!value) {
+    return <span className="font-mono truncate font-semibold opacity-80">{emptyLabel ?? "—"}</span>;
+  }
+  return (
+    <span className="font-mono truncate text-[12px] font-bold tracking-[0.06em] tabular-nums uppercase">
+      {value}
+    </span>
+  );
+}
+
+const cardActionBtnClass =
+  "group inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-dash-border/80 bg-dash-control px-2.5 text-dash-muted shadow-sm transition-all duration-150 hover:border-dash-neon/45 hover:bg-dash-neon/15 hover:text-dash-fg hover:shadow-[0_0_16px_-8px_rgba(45,212,191,0.45)] active:scale-[0.97]";
+
+const tableActionBtnClass =
+  "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dash-border/70 bg-dash-control text-dash-muted transition-all duration-150 hover:border-dash-neon/45 hover:bg-dash-neon/15 hover:text-dash-fg active:scale-[0.96]";
 
 const MisReservasTableRow = memo(function MisReservasTableRow({
   op,
@@ -780,39 +839,42 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           onSave={(next) => onInlineSave(op, "referencia_externa", next)}
         />
       </td>
-      <td className="px-3 py-2 min-w-[9rem] text-center">
+      <td className="px-3 py-2 min-w-[10rem] text-center">
         {!isCliente ? (
           <div className="inline-flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => onBooking(op)}
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border max-w-[200px] ${
-                op.booking_doc_url
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                  : op.booking
-                  ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                  : "bg-dash-control text-dash-muted border-dash-border border-dashed hover:border-amber-400/60 hover:text-amber-500 hover:bg-amber-500/10"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border max-w-[220px] transition-colors ${bookingChipClass(
+                op.booking,
+                !!op.booking_doc_url,
+                "hover:border-dash-neon/50 hover:text-dash-fg hover:bg-dash-neon/10",
+              )}`}
               title={op.booking ? editBookingTitle : confirmBookingTitle}
             >
-              {op.booking_doc_url ? <IcoPaperclip size={12} className="shrink-0" /> : <IcoBookmark size={12} className="shrink-0" />}
-              <span className="font-mono truncate">{op.booking ?? confirmShort}</span>
+              {op.booking_doc_url ? <IcoPaperclip size={13} className="shrink-0" /> : <IcoBookmark size={13} className="shrink-0" />}
+              <BookingMono value={op.booking} emptyLabel={confirmShort} />
             </button>
             {op.booking_doc_url && (
-              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded">
+              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" title="Ver documento" className="p-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded">
+                <IcoExternal size={13} />
+              </a>
+            )}
+          </div>
+        ) : op.booking ? (
+          <div className="inline-flex items-center gap-1">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border ${bookingChipClass(op.booking, !!op.booking_doc_url)}`}>
+              {op.booking_doc_url ? <IcoPaperclip size={12} className="shrink-0" /> : null}
+              <BookingMono value={op.booking} />
+            </span>
+            {op.booking_doc_url && (
+              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">
                 <IcoExternal size={13} />
               </a>
             )}
           </div>
         ) : (
-          <div className="inline-flex items-center gap-1">
-            <span className="text-[12px] font-mono text-dash-fg/90">{op.booking || "—"}</span>
-            {op.booking_doc_url && (
-              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-700">
-                <IcoPaperclip size={12} />
-              </a>
-            )}
-          </div>
+          <span className="text-[12px] font-mono text-dash-muted">—</span>
         )}
       </td>
       <td className="px-3 py-2 text-center whitespace-nowrap">
@@ -902,12 +964,24 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         )}
       </td>
       <td className="px-2 py-2 text-center">
-        <div className="flex items-center justify-center">
-          <button type="button" onClick={() => onCopy(op)} className="p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-md" title={copyShort}>
-            <IcoCopy size={15} />
+        <div className="flex items-center justify-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onCopy(op)}
+            className={tableActionBtnClass}
+            title={copyShort}
+            aria-label={copyShort}
+          >
+            <IcoCopy size={14} />
           </button>
-          <button type="button" onClick={() => onEmail(op)} className="p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-md" title={emailTitle}>
-            <IcoMail size={15} />
+          <button
+            type="button"
+            onClick={() => onEmail(op)}
+            className={tableActionBtnClass}
+            title={emailTitle}
+            aria-label={emailTitle}
+          >
+            <IcoMail size={14} />
           </button>
         </div>
       </td>
