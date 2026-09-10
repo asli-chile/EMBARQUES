@@ -18,7 +18,12 @@ import { withBase } from "@/lib/basePath";
 import { goBackOr } from "@/lib/navigation";
 import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
-import { etiquetaEstado } from "@/lib/operaciones/estados";
+import {
+  etiquetaEstado,
+  normalizarEstado,
+  opcionesCambioEstado,
+  type EstadoOperacion,
+} from "@/lib/operaciones/estados";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
@@ -384,10 +389,87 @@ function SortableHeader({ field, label, sortField, sortDirection, onSort, classN
 
 // ─── ReservaCard ──────────────────────────────────────────────────────────────
 
+function InlineEstadoSelect({
+  value,
+  canEdit,
+  allowAny,
+  onSave,
+  stopCardClick,
+}: {
+  value: string | null;
+  canEdit: boolean;
+  allowAny: boolean;
+  onSave: (next: EstadoOperacion) => Promise<boolean>;
+  /** Evita que el click abra/seleccione la tarjeta. */
+  stopCardClick?: boolean;
+}) {
+  const [saving, setSaving] = useState(false);
+  const codigo = normalizarEstado(value);
+  const cfg = getEstadoOperacionStyle(value);
+  const opciones = useMemo(() => {
+    const list = opcionesCambioEstado(value, { allowAny });
+    if (codigo && !list.includes(codigo)) return [codigo, ...list];
+    return list;
+  }, [value, allowAny, codigo]);
+
+  const badgeClass = cfg
+    ? `${cfg.bg} ${cfg.text} ${cfg.border}`
+    : "bg-dash-control text-dash-muted border-dash-border";
+
+  if (!canEdit || opciones.length <= 1) {
+    return cfg ? (
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap ${badgeClass}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
+        {etiquetaEstado(value)}
+      </span>
+    ) : (
+      <span className="text-dash-muted text-xs">—</span>
+    );
+  }
+
+  return (
+    <label
+      className={`relative inline-flex max-w-full items-center ${stopCardClick ? "cursor-pointer" : ""}`}
+      onClick={stopCardClick ? (e) => e.stopPropagation() : undefined}
+      title="Cambiar estado"
+    >
+      <span className={`pointer-events-none absolute left-1.5 top-1/2 z-[1] h-1.5 w-1.5 -translate-y-1/2 rounded-full ${cfg?.dot ?? "bg-dash-muted"}`} aria-hidden />
+      <select
+        value={codigo ?? ""}
+        disabled={saving}
+        aria-label="Estado de la operación"
+        onChange={(e) => {
+          const next = e.target.value as EstadoOperacion;
+          if (!next || next === codigo) return;
+          setSaving(true);
+          void onSave(next).finally(() => setSaving(false));
+        }}
+        className={`appearance-none cursor-pointer rounded-md border py-0.5 pl-4 pr-5 text-[10px] font-bold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-dash-neon/35 disabled:opacity-60 ${badgeClass}`}
+        style={{ backgroundImage: "none" }}
+      >
+        {opciones.map((e) => (
+          <option key={e} value={e} className="bg-white text-neutral-800 normal-case tracking-normal font-medium">
+            {etiquetaEstado(e)}
+          </option>
+        ))}
+      </select>
+      <Icon
+        icon="lucide:chevron-down"
+        width={11}
+        height={11}
+        className={`pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 opacity-70 ${cfg?.text ?? "text-dash-muted"}`}
+        aria-hidden
+      />
+    </label>
+  );
+}
+
 type CardProps = {
   op: Operacion;
   isCliente: boolean;
   canEditContenedor: boolean;
+  canEditEstado: boolean;
+  allowAnyEstado: boolean;
   selected: boolean;
   actionLoading: boolean;
   tr: ReturnType<typeof useLocale>["t"]["misReservas"];
@@ -397,9 +479,26 @@ type CardProps = {
   onBooking: (op: Operacion) => void;
   onContenedor: (op: Operacion) => void;
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
+  onEstadoSave: (op: Operacion, next: EstadoOperacion) => Promise<boolean>;
 };
 
-const ReservaCard = memo(function ReservaCard({ op, isCliente, canEditContenedor, selected, actionLoading: _actionLoading, tr, onSelect, onCopy, onEmail, onBooking, onContenedor, onContextMenu }: CardProps) {
+const ReservaCard = memo(function ReservaCard({
+  op,
+  isCliente,
+  canEditContenedor,
+  canEditEstado,
+  allowAnyEstado,
+  selected,
+  actionLoading: _actionLoading,
+  tr,
+  onSelect,
+  onCopy,
+  onEmail,
+  onBooking,
+  onContenedor,
+  onContextMenu,
+  onEstadoSave,
+}: CardProps) {
   const [expanded, setExpanded] = useState(false);
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
   const transportLabel =
@@ -439,12 +538,13 @@ const ReservaCard = memo(function ReservaCard({ op, isCliente, canEditContenedor
             <p className="text-xs text-dash-muted truncate mt-0.5 font-medium">{op.cliente ?? "-"}</p>
           </div>
         </div>
-        {cfg && (
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
-            {etiquetaEstado(op.estado_operacion)}
-          </span>
-        )}
+        <InlineEstadoSelect
+          value={op.estado_operacion}
+          canEdit={canEditEstado}
+          allowAny={allowAnyEstado}
+          stopCardClick
+          onSave={(next) => onEstadoSave(op, next)}
+        />
       </div>
 
       {op.solicitud_ventana ? (
@@ -601,6 +701,8 @@ type TableRowProps = {
   isCliente: boolean;
   canInlineEdit: boolean;
   canEditContenedor: boolean;
+  canEditEstado: boolean;
+  allowAnyEstado: boolean;
   addEmptyLabel: string;
   typeExternal: string;
   typePendiente: string;
@@ -618,6 +720,7 @@ type TableRowProps = {
   onContenedor: (op: Operacion) => void;
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
   onInlineSave: (op: Operacion, field: InlineEditableField, next: string) => Promise<boolean>;
+  onEstadoSave: (op: Operacion, next: EstadoOperacion) => Promise<boolean>;
 };
 
 type InlineEditableField = "referencia_externa" | "nave" | "pol" | "pod";
@@ -629,6 +732,8 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   isCliente,
   canInlineEdit,
   canEditContenedor,
+  canEditEstado,
+  allowAnyEstado,
   addEmptyLabel,
   typeExternal,
   typePendiente,
@@ -646,6 +751,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   onContenedor,
   onContextMenu,
   onInlineSave,
+  onEstadoSave,
 }: TableRowProps) {
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
   return (
@@ -773,12 +879,12 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         <VentanaBadge value={op.solicitud_ventana} />
       </td>
       <td className="px-3 py-2 text-center">
-        {cfg ? (
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
-            {etiquetaEstado(op.estado_operacion)}
-          </span>
-        ) : <span className="text-dash-muted text-xs">—</span>}
+        <InlineEstadoSelect
+          value={op.estado_operacion}
+          canEdit={canEditEstado}
+          allowAny={allowAnyEstado}
+          onSave={(next) => onEstadoSave(op, next)}
+        />
       </td>
       <td className="px-3 py-2 text-center">
         {op.tipo_reserva_transporte === "asli" ? (
@@ -1162,6 +1268,8 @@ export function MisReservasContent() {
   const [theme] = useNeonTheme();
   const canInlineEdit = isEjecutivo || isStaff;
   const canEditContenedor = isEjecutivo || isAdmin || isSuperadmin;
+  const canEditEstado = !isCliente && isStaff;
+  const allowAnyEstado = isSuperadmin;
   const tr = t.misReservas;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
@@ -1402,6 +1510,41 @@ export function MisReservasContent() {
     sileo.success({ title: tr.inlineSaved });
     return true;
   }, [supabase, canInlineEdit, user, profile, tr.inlineSaved]);
+
+  const handleEstadoSave = useCallback(async (op: Operacion, next: EstadoOperacion) => {
+    if (!supabase || !canEditEstado) return false;
+    const previous = op.estado_operacion ?? null;
+    if (normalizarEstado(previous) === next) return true;
+
+    const { error } = await supabase
+      .from("operaciones")
+      .update({ estado_operacion: next })
+      .eq("id", op.id);
+
+    if (error) {
+      sileo.error({ title: error.message || "No se pudo cambiar el estado" });
+      return false;
+    }
+
+    const { error: auditError } = await supabase.from("operaciones_cambios").insert({
+      operacion_id: op.id,
+      campo: "estado_operacion",
+      valor_anterior: previous,
+      valor_nuevo: next,
+      usuario_auth_id: user?.id ?? null,
+      usuario_nombre: profile?.nombre ?? user?.name ?? null,
+      usuario_email: profile?.email ?? user?.email ?? null,
+    });
+    if (auditError) {
+      console.error("Auditoría operaciones_cambios:", auditError.message);
+    }
+
+    setOperaciones((prev) =>
+      prev.map((row) => (row.id === op.id ? { ...row, estado_operacion: next } : row)),
+    );
+    sileo.success({ title: tr.estadoSaved });
+    return true;
+  }, [supabase, canEditEstado, user, profile, tr.estadoSaved]);
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -1999,6 +2142,8 @@ export function MisReservasContent() {
                         isCliente={isCliente}
                         canInlineEdit={canInlineEdit}
                         canEditContenedor={canEditContenedor}
+                        canEditEstado={canEditEstado}
+                        allowAnyEstado={allowAnyEstado}
                         addEmptyLabel={tr.inlineAdd}
                         typeExternal={tr.typeExternal}
                         typePendiente={tr.typePendiente}
@@ -2016,6 +2161,7 @@ export function MisReservasContent() {
                         onContenedor={handleOpenContenedor}
                         onContextMenu={handleOpenContextMenu}
                         onInlineSave={handleInlineSave}
+                        onEstadoSave={handleEstadoSave}
                       />
                     ))
                   )}
@@ -2057,6 +2203,8 @@ export function MisReservasContent() {
                     op={op}
                     isCliente={isCliente}
                     canEditContenedor={canEditContenedor}
+                    canEditEstado={canEditEstado}
+                    allowAnyEstado={allowAnyEstado}
                     selected={selectedIds.has(op.id)}
                     actionLoading={actionLoading}
                     tr={tr}
@@ -2066,6 +2214,7 @@ export function MisReservasContent() {
                     onBooking={handleOpenBooking}
                     onContenedor={handleOpenContenedor}
                     onContextMenu={handleOpenContextMenu}
+                    onEstadoSave={handleEstadoSave}
                   />
                 ))}
               </div>

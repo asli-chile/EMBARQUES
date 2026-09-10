@@ -174,6 +174,26 @@ export function transicionesDesde(desde: string | null | undefined): EstadoOpera
 }
 
 /**
+ * Opciones para cambiar estado en UI (Mis Reservas, etc.).
+ * Incluye avance/atajos + CANCELADA desde estados no finales.
+ * Con `allowAny` (superadmin) ofrece el catálogo completo.
+ */
+export function opcionesCambioEstado(
+  desde: string | null | undefined,
+  opts?: { allowAny?: boolean },
+): EstadoOperacion[] {
+  if (opts?.allowAny) return estadosEnOrden();
+
+  const codigo = normalizarEstado(desde);
+  if (!codigo) return estadosEnOrden().filter((e) => !ESTADO_META[e].esFinal || e === "CANCELADA");
+  if (esEstadoCerrado(codigo)) return [];
+
+  const result = [...transicionesDesde(codigo)];
+  if (!result.includes("CANCELADA")) result.push("CANCELADA");
+  return result.sort((a, b) => ESTADO_META[a].orden - ESTADO_META[b].orden);
+}
+
+/**
  * Próximo estado sugerido al avanzar desde Tareas.
  * Prefiere el hito más lejano permitido (p. ej. SOLICITADA → RESERVA_CONFIRMADA).
  */
