@@ -6,6 +6,7 @@ export const PORTS_COORDINATES: Record<string, [number, number] | null> = {
   "VALPARAISO": [-71.6297, -33.0472],
   "VAP": [-71.6297, -33.0472],
   "SAN ANTONIO": [-71.6178, -33.5944],
+  "SAN ANTONO": [-71.6178, -33.5944],
   "SAI": [-71.6178, -33.5944],
   "LIRQUEN": [-72.9767, -36.7083],
   "CORONEL": [-73.1517, -37.0167],
@@ -105,11 +106,17 @@ export const PORTS_COORDINATES: Record<string, [number, number] | null> = {
   "LA GUAIRA": [-66.9344, 10.6011],
   "PUERTO CABELLO": [-68.0122, 10.4731],
   "LISBOA": [-9.1393, 38.7223],
+  "LEIXOES": [-8.689, 41.184],
+  "LEIXÕES": [-8.689, 41.184],
+  "PORTO": [-8.689, 41.184],
+  "OPORTO": [-8.689, 41.184],
   "LISBON": [-9.1393, 38.7223],
   "LIVORNO": [10.3157, 43.55],
   "CIVITAVECCHIA": [11.7967, 42.0911],
   "GENOA VADO LIGURE": [8.9463, 44.4056],
   "GENOVA": [8.9463, 44.4056],
+  "GENOA": [8.9463, 44.4056],
+  "GÉNOVA": [8.9463, 44.4056],
   "SALERNO": [14.7673, 40.6824],
   "LEGHORN": [10.3157, 43.55],
   "PHILADELPHIA": [-75.1652, 39.9526],
@@ -421,6 +428,24 @@ export function getPortCoordinates(name: string | null | undefined): [number, nu
   if (name == null || String(name).trim() === "") return null;
   const raw = String(name).trim();
   const upper = raw.toUpperCase();
-  const coords = PORTS_COORDINATES[upper] ?? PORTS_COORDINATES[raw] ?? PORTS_COORDINATES[raw.toUpperCase()];
-  return coords ?? null;
+  const noAccents = upper.normalize("NFD").replace(/\p{M}/gu, "");
+  const compact = noAccents.replace(/[^A-Z0-9]+/g, " ").trim();
+
+  const direct =
+    PORTS_COORDINATES[upper] ??
+    PORTS_COORDINATES[raw] ??
+    PORTS_COORDINATES[raw.toUpperCase()] ??
+    PORTS_COORDINATES[noAccents] ??
+    PORTS_COORDINATES[compact];
+  if (direct) return direct;
+
+  // Coincidencia parcial (ej. "PORT OF SEATTLE" → SEATTLE)
+  if (compact.length >= 3) {
+    for (const [key, coords] of Object.entries(PORTS_COORDINATES)) {
+      if (!coords) continue;
+      const k = key.toUpperCase().normalize("NFD").replace(/\p{M}/gu, "");
+      if (k === compact || k.includes(compact) || compact.includes(k)) return coords;
+    }
+  }
+  return null;
 }

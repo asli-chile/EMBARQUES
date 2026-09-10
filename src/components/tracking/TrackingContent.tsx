@@ -238,8 +238,25 @@ const POLL_MS = 45_000;
 export function TrackingContent() {
   const { t, locale } = useLocale();
   const tr = t.trackingPage;
-  const { user, profile, isStaff } = useAuth();
+  const { user, profile, isStaff, isCliente, isEjecutivo, empresaNombres } = useAuth();
   const [theme] = useNeonTheme();
+
+  /** Cliente/ejecutivo: solo ops de sus empresas (defensa extra sobre RLS). */
+  const scopeToAssignedEmpresas = isCliente || isEjecutivo;
+  const canFreeAisSearch = Boolean(user && isStaff && !isCliente);
+
+  const filterScopedResults = useCallback(
+    (list: TrackingResult[]) => {
+      if (!scopeToAssignedEmpresas) return list;
+      if (!empresaNombres.length) return [];
+      const allowed = new Set(empresaNombres.map((n) => n.trim().toUpperCase()));
+      return list.filter((r) => {
+        const c = (r.cliente ?? "").trim().toUpperCase();
+        return c !== "" && allowed.has(c);
+      });
+    },
+    [scopeToAssignedEmpresas, empresaNombres],
+  );
 
   const [termino, setTermino] = useState("");
   const [loading, setLoading] = useState(false);
@@ -282,26 +299,33 @@ export function TrackingContent() {
     [results, selectedOpId],
   );
 
+  /** Op para POL/POD: la seleccionada, o la única del resultado si aún no hay click. */
+  const portSourceOp = useMemo(() => {
+    if (selectedOp) return selectedOp;
+    if (results.length === 1) return results[0];
+    return null;
+  }, [selectedOp, results]);
+
   const linkedOps = useMemo(() => {
     if (!selectedAis) return [];
     return results.filter((op) => namesMatchForAis(op.nave, selectedAis.vessel_name));
   }, [results, selectedAis]);
 
   const polMarker: MapMarkerPort | null = useMemo(() => {
-    const pod = selectedOp?.pol;
-    if (!pod?.trim()) return null;
-    const c = getPortCoordinates(pod);
+    const name = portSourceOp?.pol;
+    if (!name?.trim()) return null;
+    const c = getPortCoordinates(name);
     if (!c) return null;
-    return { lng: c[0], lat: c[1], label: `POL · ${pod}`, variant: "pol" };
-  }, [selectedOp?.pol]);
+    return { lng: c[0], lat: c[1], label: `POL · ${name}`, variant: "pol" };
+  }, [portSourceOp?.pol]);
 
   const podMarker: MapMarkerPort | null = useMemo(() => {
-    const pod = selectedOp?.pod;
-    if (!pod?.trim()) return null;
-    const c = getPortCoordinates(pod);
+    const name = portSourceOp?.pod;
+    if (!name?.trim()) return null;
+    const c = getPortCoordinates(name);
     if (!c) return null;
-    return { lng: c[0], lat: c[1], label: `POD · ${pod}`, variant: "pod" };
-  }, [selectedOp?.pod]);
+    return { lng: c[0], lat: c[1], label: `POD · ${name}`, variant: "pod" };
+  }, [portSourceOp?.pod]);
 
   const vesselFromAis: MapVesselPosition | null = useMemo(() => {
     if (!vesselSnap) return null;
@@ -417,18 +441,20 @@ export function TrackingContent() {
       return;
     }
 
-    setResults((data ?? []) as TrackingResult[]);
-  }, [termino, supabase, tr.supabaseError]);
+    const list = filterScopedResults((data ?? []) as TrackingResult[]);
+    setResults(list);
+    if (list.length === 1) setSelectedOpId(list[0].id);
+  }, [termino, supabase, tr.supabaseError, filterScopedResults]);
 
   const refetchTrackingResults = useCallback(async () => {
     const value = termino.trim();
     if (!value || !supabase) return;
     const { data, error: rpcError } = await supabase.rpc("buscar_tracking", { termino: value });
     if (rpcError) return;
-    const list = (data ?? []) as TrackingResult[];
+    const list = filterScopedResults((data ?? []) as TrackingResult[]);
     setResults(list);
     setSelectedOpId((prev) => (prev && list.some((r) => r.id === prev) ? prev : null));
-  }, [termino, supabase]);
+  }, [termino, supabase, filterScopedResults]);
 
   const loadFleetManualVessels = useCallback(async () => {
     if (!supabase || !user) {
@@ -928,6 +954,11 @@ export function TrackingContent() {
                         <Icon icon="lucide:lock" width={14} height={14} className="mt-0.5 shrink-0 text-amber-300" aria-hidden />
                         {tr.aisLoginRequired}
                       </div>
+                    ) : !canFreeAisSearch ? (
+                      <div className="flex items-start gap-2 rounded-lg border border-dash-border bg-dash-control/60 px-3 py-2.5 text-xs text-dash-muted">
+                        <Icon icon="lucide:ship" width={14} height={14} className="mt-0.5 shrink-0 text-dash-neon" aria-hidden />
+                        {tr.aisClientOnlyOwnHint}
+                      </div>
                     ) : (
                       <>
                         <div className="flex gap-2">
@@ -1007,8 +1038,10 @@ export function TrackingContent() {
                         {aisSearched && aisResults.length === 0 && !aisError && (
                           <p className="text-xs text-dash-muted">{tr.aisNoVessels}</p>
                         )}
+                      </>
+                    )}
 
-                        {selectedAis && (
+                    {user && selectedAis && (
                           <div className="space-y-1.5 rounded-xl border border-dash-border bg-dash-control/70 p-3 text-xs text-dash-muted">
                             <p className="flex items-center gap-2 font-bold text-dash-fg">
                               <Icon icon="lucide:ship" width={16} height={16} className="text-dash-neon" aria-hidden />
@@ -1051,8 +1084,6 @@ export function TrackingContent() {
                             )}
                           </div>
                         )}
-                      </>
-                    )}
                   </div>
                 </section>
               </div>

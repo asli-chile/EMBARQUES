@@ -149,20 +149,67 @@ export function TrackingMapView({
     }
   }, []);
 
+  const fitPoints = useCallback((points: { lng: number; lat: number }[]) => {
+    const raw = mapRef.current as unknown as {
+      getMap?: () => {
+        flyTo: (o: object) => void;
+        fitBounds: (b: [[number, number], [number, number]], o?: object) => void;
+      };
+    } | null;
+    const map = raw?.getMap?.();
+    if (!map) return;
+    const valid = points.filter((p) => validCoord(p.lat, p.lng));
+    if (valid.length === 0) return;
+    if (valid.length === 1) {
+      map.flyTo({ center: [valid[0].lng, valid[0].lat], zoom: 5, duration: 900, essential: true });
+      return;
+    }
+    const lngs = valid.map((p) => p.lng);
+    const lats = valid.map((p) => p.lat);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    // Evitar bounds degenerados
+    const padLng = Math.max((maxLng - minLng) * 0.12, 2);
+    const padLat = Math.max((maxLat - minLat) * 0.12, 1.5);
+    try {
+      map.fitBounds(
+        [
+          [minLng - padLng, minLat - padLat],
+          [maxLng + padLng, maxLat + padLat],
+        ],
+        { padding: 56, duration: 1000, maxZoom: 6, essential: true },
+      );
+    } catch {
+      flyTo(valid[0].lng, valid[0].lat, 4.5);
+    }
+  }, [flyTo]);
+
   useEffect(() => {
     if (!mapRef.current) return;
-    if (vessel && validCoord(vessel.lat, vessel.lng)) {
-      flyTo(vessel.lng, vessel.lat, 5.5);
+    const pts: { lng: number; lat: number }[] = [];
+    if (pol && validCoord(pol.lat, pol.lng)) pts.push(pol);
+    if (pod && validCoord(pod.lat, pod.lng)) pts.push(pod);
+    if (vessel && validCoord(vessel.lat, vessel.lng)) pts.push(vessel);
+    if (pts.length > 0) {
+      fitPoints(pts);
       return;
     }
-    if (pod && validCoord(pod.lat, pod.lng)) {
-      flyTo(pod.lng, pod.lat, 4.5);
-      return;
+    // Solo flota: encuadrar naves manuales visibles
+    if (fleetManualVessels.length > 0) {
+      fitPoints(fleetManualVessels);
     }
-    if (pol && validCoord(pol.lat, pol.lng)) {
-      flyTo(pol.lng, pol.lat, 4.5);
-    }
-  }, [vessel?.lat, vessel?.lng, pod?.lat, pod?.lng, pol?.lat, pol?.lng, flyTo]);
+  }, [
+    vessel?.lat,
+    vessel?.lng,
+    pod?.lat,
+    pod?.lng,
+    pol?.lat,
+    pol?.lng,
+    fleetManualVessels,
+    fitPoints,
+  ]);
 
   useEffect(() => {
     if (!containerReady) return;
@@ -227,22 +274,22 @@ export function TrackingMapView({
             <NavigationControl position="top-right" showCompass={false} />
 
             {pol && validCoord(pol.lat, pol.lng) && (
-              <Marker longitude={pol.lng} latitude={pol.lat} anchor="bottom">
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className={`max-w-[140px] truncate ${labelCls}`}>{pol.label}</span>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-md">
-                    <Icon icon="lucide:anchor" width={16} height={16} aria-hidden />
+              <Marker longitude={pol.lng} latitude={pol.lat} anchor="bottom" style={{ zIndex: 2 }}>
+                <div className="pointer-events-none flex flex-col items-center gap-0.5">
+                  <span className={`max-w-[160px] truncate ${labelCls}`}>{pol.label}</span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/50">
+                    <Icon icon="lucide:anchor" width={17} height={17} aria-hidden />
                   </div>
                 </div>
               </Marker>
             )}
 
             {pod && validCoord(pod.lat, pod.lng) && (
-              <Marker longitude={pod.lng} latitude={pod.lat} anchor="bottom">
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className={`max-w-[140px] truncate ${labelCls}`}>{pod.label}</span>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-white shadow-md">
-                    <Icon icon="lucide:map-pin" width={16} height={16} aria-hidden />
+              <Marker longitude={pod.lng} latitude={pod.lat} anchor="bottom" style={{ zIndex: 2 }}>
+                <div className="pointer-events-none flex flex-col items-center gap-0.5">
+                  <span className={`max-w-[160px] truncate ${labelCls}`}>{pod.label}</span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-white shadow-lg ring-2 ring-amber-400/50">
+                    <Icon icon="lucide:map-pin" width={17} height={17} aria-hidden />
                   </div>
                 </div>
               </Marker>

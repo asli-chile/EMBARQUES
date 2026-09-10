@@ -1774,6 +1774,8 @@ export const translations = {
       aisSectionHint:
         "Datos MyShipTracking (cobertura terrestre). No reemplaza el tracking de contenedor de la naviera. Requiere sesión en el ERP.",
       aisLoginRequired: "Inicia sesión para consultar la posición AIS.",
+      aisClientOnlyOwnHint:
+        "Como cliente solo puedes ver AIS desde tus operaciones (botón «Ver posición AIS de esta nave»).",
       aisVesselPlaceholder: "Nombre del buque (mín. 3 caracteres)",
       aisSearchBtn: "Buscar buque",
       aisExtended: "Respuesta ampliada (más datos; más créditos API)",
@@ -4344,6 +4346,8 @@ export const translations = {
       aisSectionHint:
         "MyShipTracking data (terrestrial coverage). Does not replace carrier container tracking. ERP login required.",
       aisLoginRequired: "Sign in to query AIS position.",
+      aisClientOnlyOwnHint:
+        "As a client you can only open AIS from your shipments (button «View AIS position for this vessel»).",
       aisVesselPlaceholder: "Vessel name (min. 3 characters)",
       aisSearchBtn: "Search vessel",
       aisExtended: "Extended response (more fields; higher API credit use)",
