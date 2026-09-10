@@ -24,12 +24,12 @@ const PINNED_NAV = [
   { labelKey: "tracking" as const, href: "/tracking" },
 ];
 
-// Ítems del menú público para el drawer
+// Ítems del menú público para el drawer (páginas marketing: inicio/servicios/sobre nosotros).
+// Tracking ya no va aquí: es módulo ERP con rail, no chrome NavBanner antiguo.
 const PUBLIC_NAV_CARDS = [
   { labelKey: "inicio"        as const, href: "/inicio" },
   { labelKey: "servicios"     as const, href: "/servicios" },
   { labelKey: "sobreNosotros" as const, href: "/sobre-nosotros" },
-  { labelKey: "tracking"      as const, href: "/tracking" },
 ];
 
 type SidebarItem = (typeof siteConfig.sidebarItems)[number] & {

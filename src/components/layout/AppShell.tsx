@@ -336,7 +336,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
   );
 }
 
-/** Chrome: rail navy en módulos ERP logueados; Header+NavBanner en marketing/invitados. */
+/** Chrome: rail navy en módulos ERP (logueados) y en /inicio + /tracking (también sin sesión). */
 function AppChromeFrame({
   pathname,
   hideAppChrome,
@@ -349,9 +349,11 @@ function AppChromeFrame({
   const { user, isLoading, viewAs, isActualSuperadmin } = useAuth();
   const chrome = getRouteChrome(pathname);
   const isMarketing = chrome === "marketing";
-  // /inicio siempre usa chrome minimalista (rail + header compact), con o sin sesión
+  // /inicio y /tracking usan siempre el chrome ERP (rail + header compact), con o sin sesión.
+  // Evita el Header claro + NavBanner público (interfaz antigua) en Tracking.
   const showRail =
     pathname === "/inicio" ||
+    pathname === "/tracking" ||
     (!!user && !isLoading && !isMarketing);
   const showViewAsBanner = isActualSuperadmin && !!viewAs;
 
