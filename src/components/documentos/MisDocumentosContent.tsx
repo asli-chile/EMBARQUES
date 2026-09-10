@@ -409,38 +409,60 @@ export function MisDocumentosContent() {
 
   const handleUpload = async (tipo: TipoDocumento, file: File) => {
     if (!supabase || !selectedOperacion) return;
+    const ext = (file.name.split(".").pop() ?? "pdf").toLowerCase();
+    const contentType =
+      file.type === "application/pdf" || file.type === "application/x-pdf"
+        ? "application/pdf"
+        : file.type === "application/vnd.ms-excel"
+        ? "application/vnd.ms-excel"
+        : file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        : ext === "pdf"
+        ? "application/pdf"
+        : ext === "xls"
+        ? "application/vnd.ms-excel"
+        : ext === "xlsx"
+        ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        : "";
     const allowedTypes = [
       "application/pdf",
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ];
-    if (!allowedTypes.includes(file.type)) { setError(tr.invalidFileType); return; }
-    if (file.size > 10 * 1024 * 1024) { setError(tr.fileTooLarge); return; }
+    if (!contentType || !allowedTypes.includes(contentType)) {
+      setError(tr.invalidFileType);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(tr.fileTooLarge);
+      return;
+    }
 
     setUploading(tipo);
     setError(null);
 
     const operacion = operaciones.find((op) => op.id === selectedOperacion);
     const ref = operacion ? opRef(operacion) : "DOC";
-    const ext = (file.name.split(".").pop() ?? "pdf").toLowerCase();
-    const fileName = `${ref}_${tipo}_${Date.now()}.${ext}`;
+    const fileName = `${ref}_${tipo}_${Date.now()}.${ext === "pdf" || ext === "xls" || ext === "xlsx" ? ext : "pdf"}`;
     const filePath = `${selectedOperacion}/${fileName}`;
-    const contentType =
-      file.type ||
-      (ext === "pdf"
-        ? "application/pdf"
-        : ext === "xls"
-        ? "application/vnd.ms-excel"
-        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
+    // Nombre único → INSERT puro (upsert exige SELECT/UPDATE y en prod fallaba con 400).
     const { error: uploadError } = await supabase.storage
       .from("documentos")
-      .upload(filePath, file, { upsert: true, contentType });
-    if (uploadError) { setError(uploadError.message); setUploading(null); return; }
+      .upload(filePath, file, { upsert: false, contentType, cacheControl: "3600" });
+    if (uploadError) {
+      setError(uploadError.message || "Error al subir el archivo");
+      setUploading(null);
+      return;
+    }
 
     const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(filePath);
     const existingDoc = documentosPorTipo.get(tipo);
     if (existingDoc && !existingDoc.id.startsWith("__booking_url__")) {
+      const marker = "/object/public/documentos/";
+      const idx = existingDoc.url.indexOf(marker);
+      const oldPath = idx >= 0 ? decodeURIComponent(existingDoc.url.slice(idx + marker.length)) : null;
+      if (oldPath) await supabase.storage.from("documentos").remove([oldPath]);
       await supabase.from("documentos").delete().eq("id", existingDoc.id);
     }
 
@@ -450,7 +472,7 @@ export function MisDocumentosContent() {
       nombre_archivo: file.name,
       url: urlData.publicUrl,
       tamano: file.size,
-      mime_type: file.type,
+      mime_type: contentType,
     });
     if (dbError) setError(dbError.message);
 

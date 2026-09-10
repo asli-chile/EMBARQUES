@@ -33,6 +33,22 @@ npm run build
 npm start
 ```
 
+## Idiomas (i18n)
+
+- **Español (es)** — predeterminado
+- **中文 / 简体中文 (zh)** — clientes de China continental
+- **English (en)** — también disponible
+
+El idioma se guarda en `localStorage` (`asli-locale`). También puedes forzar con query:
+
+- `https://www.asli.cl/?lang=zh`
+- `https://www.asli.cl/?lang=es`
+- `https://www.asli.cl/?lang=en`
+
+Las URLs de rutas **no** cambian (no hay `/zh/...`), para no romper enlaces existentes. SEO usa `hreflang` con `?lang=`.
+
+Diccionarios: `src/lib/i18n/dictionaries.js`, `zh.js`, `extraLocales.js`.
+
 ## Design DNA
 
 El rediseño sigue el flujo de [design-dna](https://github.com/zanwei/design-dna):

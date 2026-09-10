@@ -85,7 +85,11 @@ const Servicios = ({ limit = null, showCta = true }) => {
               {t.servicios.viewAll}
             </a>
             <a
-              href={SHOW_COTIZADOR ? '/#cotizar' : 'https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=Cotización de servicios'}
+              href={
+                SHOW_COTIZADOR
+                  ? '/#cotizar'
+                  : `https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(t.cotizar.mailSubject)}`
+              }
               {...(SHOW_COTIZADOR
                 ? {}
                 : { target: '_blank', rel: 'noopener noreferrer' })}

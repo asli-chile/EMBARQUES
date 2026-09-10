@@ -32,7 +32,8 @@ npx supabase functions deploy stacking-pil-sync --project-ref yerufjewdvzijfzdpa
 
 Opcional, en Supabase → Edge Functions → Secrets:
 
-- `STACKING_SYNC_TOKEN` — token extra
+- `STACKING_SYNC_TOKEN` — **obligatorio** (salvo cron de Vercel con `CRON_SECRET` / header `x-vercel-cron`)
+
 - `STACKING_PIL_MAILBOX` — por defecto `rodrigo.caceres@asli.cl`
 
 `GOOGLE_SERVICE_ACCOUNT` ya está configurado (el mismo de `send-email`).
@@ -52,7 +53,7 @@ En `WEB/.env.local` (y en Vercel del sitio público):
 PUBLIC_SUPABASE_URL=https://yerufjewdvzijfzdpaai.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<la misma de ERP/.env.local>
 SUPABASE_STACKING_BUCKET=stacking-navieras
-STACKING_SYNC_TOKEN=<opcional>
+STACKING_SYNC_TOKEN=<obligatorio>
 ```
 
 Reinicia `npm run dev` después de guardar.

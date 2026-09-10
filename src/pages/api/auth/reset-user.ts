@@ -1,22 +1,10 @@
 import type { APIRoute } from "astro";
-import { createClient as createServerClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { isPasswordLongEnough, PASSWORD_MIN_LENGTH_MESSAGE_NEW } from "@/lib/auth/password";
-
-function isSupabaseConfigured(): boolean {
-  return !!(
-    import.meta.env.PUBLIC_SUPABASE_URL?.trim() &&
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY?.trim()
-  );
-}
-
-function isAdminConfigured(): boolean {
-  return !!import.meta.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-}
+import { requireSuperadmin } from "@/lib/auth/requireSuperadmin";
 
 /**
  * Resetear usuario: borra todas las asociaciones (empresas) y establece una nueva contraseña.
- * Mantiene nombre, email y rol. Solo superadmin.
+ * Mantiene nombre, email y rol. Solo superadmin activo.
  */
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (!request.headers.get("content-type")?.includes("application/json")) {
@@ -26,39 +14,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
-  if (!isSupabaseConfigured() || !isAdminConfigured()) {
+  const auth = await requireSuperadmin(cookies);
+  if (!auth.authorized) {
     return new Response(
-      JSON.stringify({ success: false, error: "API de administración no configurada" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: auth.error }),
+      { status: auth.status, headers: { "Content-Type": "application/json" } }
     );
   }
-
-  const supabase = createServerClient(cookies);
-  const {
-    data: { user: currentUser },
-    error: sessionError,
-  } = await supabase.auth.getUser();
-
-  if (sessionError || !currentUser) {
-    return new Response(
-      JSON.stringify({ success: false, error: "Debes iniciar sesión" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const adminClient = createAdminClient();
-  const { data: perfil } = await adminClient
-    .from("usuarios")
-    .select("rol")
-    .eq("auth_id", currentUser.id)
-    .single();
-
-  if (!perfil || perfil.rol !== "superadmin") {
-    return new Response(
-      JSON.stringify({ success: false, error: "Solo el superadmin puede resetear usuarios" }),
-      { status: 403, headers: { "Content-Type": "application/json" } }
-    );
-  }
+  const adminClient = auth.admin;
 
   let body: { usuarioId?: string; newPassword?: string };
   try {

@@ -1,3 +1,6 @@
+import { zh } from './zh'
+import { esExtras, enExtras, esLandings, enLandings } from './extraLocales'
+
 const es = {
   nav: {
     historia: 'Historia',
@@ -653,4 +656,19 @@ const en = {
   },
 }
 
-export const dictionaries = { es, en }
+function mergeLocale(base, extras, landingsMap) {
+  return {
+    ...base,
+    homeSeo: extras.homeSeo,
+    presentacion: extras.presentacion,
+    serviceLanding: extras.serviceLanding,
+    locale: { ...base.locale, ...extras.locale },
+    landings: landingsMap ?? {},
+  }
+}
+
+export const dictionaries = {
+  es: mergeLocale(es, esExtras, esLandings),
+  en: mergeLocale(en, enExtras, enLandings),
+  zh,
+}

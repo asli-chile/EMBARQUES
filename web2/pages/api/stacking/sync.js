@@ -21,11 +21,21 @@ export default async function handler(req, res) {
     Boolean(cronSecret) &&
     (authHeader === `Bearer ${cronSecret}` || providedToken === cronSecret)
 
-  if (isGet && !isVercelCron && !isCronSecret && providedToken !== syncToken) {
-    return jsonError(res, 405, 'Usa POST /api/stacking/sync')
-  }
+  // Obligatorio: token de sync, cron de Vercel o CRON_SECRET. Nunca abierto sin auth.
+  const authorized =
+    (Boolean(syncToken) && providedToken === syncToken) || isVercelCron || isCronSecret
 
-  if (syncToken && providedToken !== syncToken && !isVercelCron && !isCronSecret) {
+  if (!authorized) {
+    if (!syncToken && !cronSecret) {
+      return jsonError(
+        res,
+        503,
+        'Configura STACKING_SYNC_TOKEN (o CRON_SECRET) antes de sincronizar'
+      )
+    }
+    if (isGet) {
+      return jsonError(res, 405, 'Usa POST /api/stacking/sync')
+    }
     return jsonError(res, 401, 'Token inválido para sincronización')
   }
 

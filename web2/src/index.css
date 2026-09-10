@@ -28,8 +28,8 @@
     --color-border-strong: rgba(17, 34, 78, 0.15);
     --color-nav: rgba(17, 34, 78, 0.88);
 
-    --font-heading: 'Syne', sans-serif;
-    --font-body: 'Manrope', sans-serif;
+    --font-heading: 'Syne', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-body: 'Manrope', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     --radius-sm: 10px;
     --radius-md: 14px;
     --radius-lg: 22px;
@@ -191,6 +191,20 @@
     @apply inline-flex items-center gap-2 text-asli-primary uppercase font-bold mb-4;
     font-size: 0.8125rem;
     letter-spacing: 0.14em;
+  }
+
+  /* Chino: menos tracking (CJK no necesita letter-spacing latino) */
+  html[lang='zh-CN'] .section-label,
+  html[data-locale='zh'] .section-label,
+  html[lang='zh-CN'] .nav-link,
+  html[data-locale='zh'] .nav-link {
+    letter-spacing: 0.02em;
+    text-transform: none;
+  }
+
+  html[lang='zh-CN'] .font-display,
+  html[data-locale='zh'] .font-display {
+    letter-spacing: 0;
   }
 
   .nav-link {
@@ -359,7 +373,7 @@
     right: 0;
     top: calc(100% + 6px);
     z-index: 200;
-    min-width: 10.5rem;
+    min-width: 11.5rem;
     overflow: hidden;
     border-radius: 0.75rem;
     border: 1px solid var(--color-border-strong);

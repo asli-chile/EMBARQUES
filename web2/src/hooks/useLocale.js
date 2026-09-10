@@ -1,8 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { applyLocale, readLocale, setLocale as persistLocale, toggleLocale } from '../lib/i18n/locale'
+import {
+  applyLocale,
+  isAsliLocale,
+  readLocale,
+  setLocale as persistLocale,
+  toggleLocale,
+} from '../lib/i18n/locale'
 import { dictionaries } from '../lib/i18n/dictionaries'
 
 const LocaleContext = createContext(null)
+
+function dateLocaleFor(locale) {
+  if (locale === 'en') return 'en-US'
+  if (locale === 'zh') return 'zh-CN'
+  return 'es-CL'
+}
 
 export function LocaleProvider({ children }) {
   const [locale, setLocaleState] = useState('es')
@@ -16,7 +28,7 @@ export function LocaleProvider({ children }) {
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key !== 'asli-locale') return
-      if (e.newValue === 'es' || e.newValue === 'en') {
+      if (isAsliLocale(e.newValue)) {
         setLocaleState(e.newValue)
         applyLocale(e.newValue)
       }
@@ -26,6 +38,7 @@ export function LocaleProvider({ children }) {
   }, [])
 
   const changeLocale = useCallback((next) => {
+    if (!isAsliLocale(next)) return
     persistLocale(next)
     setLocaleState(next)
   }, [])
@@ -37,10 +50,10 @@ export function LocaleProvider({ children }) {
   const value = useMemo(
     () => ({
       locale,
-      t: dictionaries[locale],
+      t: dictionaries[locale] ?? dictionaries.es,
       changeLocale,
       onToggle,
-      dateLocale: locale === 'en' ? 'en-US' : 'es-CL',
+      dateLocale: dateLocaleFor(locale),
     }),
     [locale, changeLocale, onToggle]
   )

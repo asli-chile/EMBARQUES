@@ -3,6 +3,9 @@ import Footer from './Footer'
 import Seo, { buildServicePageJsonLd } from './Seo'
 import { getRelatedLandings } from '../data/landings'
 import { SITE } from '../lib/site'
+import { useLocale } from '../hooks/useLocale'
+import { localizeLanding, localizeLandings } from '../lib/i18n/localizeLanding'
+import { htmlLang } from '../lib/i18n/locale'
 
 const MAIL_COTIZAR =
   'https://mail.google.com/mail/?view=cm&fs=1&to=informaciones@asli.cl&su='
@@ -10,16 +13,23 @@ const MAIL_COTIZAR =
 /**
  * Plantilla SEO para landings de servicio (H1, secciones, FAQ, Schema, enlaces internos).
  */
-export default function ServiceLanding({ landing }) {
-  const related = getRelatedLandings(landing.slug)
+export default function ServiceLanding({ landing: landingProp }) {
+  const { t, locale } = useLocale()
+  const sl = t.serviceLanding
+  const landing = localizeLanding(landingProp, t)
+  const related = localizeLandings(getRelatedLandings(landing.slug), t)
   const jsonLd = buildServicePageJsonLd({
     path: `/${landing.slug}`,
     name: landing.h1,
     description: landing.description,
     faqs: landing.faqs,
     serviceType: landing.serviceType,
+    breadcrumbHome: sl.home,
+    breadcrumbServices: sl.services,
   })
-  const mailHref = `${MAIL_COTIZAR}${encodeURIComponent(`Cotización: ${landing.h1}`)}`
+  const mailHref = `${MAIL_COTIZAR}${encodeURIComponent(`${sl.mailSubjectPrefix} ${landing.h1}`)}`
+  const hours =
+    typeof sl.officeHours === 'function' ? sl.officeHours(SITE.address.street) : sl.officeHours
 
   return (
     <>
@@ -27,7 +37,12 @@ export default function ServiceLanding({ landing }) {
         title={landing.title}
         description={landing.description}
         path={`/${landing.slug}`}
-        jsonLd={jsonLd}
+        jsonLd={{
+          ...jsonLd,
+          '@graph': jsonLd['@graph']?.map((node) =>
+            node['@type'] === 'Service' ? { ...node, inLanguage: htmlLang(locale) } : node
+          ),
+        }}
       />
 
       <div className="min-h-screen flex flex-col bg-asli-light">
@@ -41,15 +56,15 @@ export default function ServiceLanding({ landing }) {
             />
             <div className="absolute inset-0 bg-gradient-to-r from-asli-ink via-asli-ink/85 to-asli-ink/55" />
             <div className="relative z-10 container-asli max-w-3xl">
-              <nav className="text-sm text-white/60 mb-5" aria-label="Miga de pan">
+              <nav className="text-sm text-white/60 mb-5" aria-label={sl.breadcrumbAria}>
                 <a href="/" className="hover:text-white transition-colors">
-                  Inicio
+                  {sl.home}
                 </a>
                 <span className="mx-2" aria-hidden="true">
                   /
                 </span>
                 <a href="/servicios" className="hover:text-white transition-colors">
-                  Servicios
+                  {sl.services}
                 </a>
                 <span className="mx-2" aria-hidden="true">
                   /
@@ -70,13 +85,13 @@ export default function ServiceLanding({ landing }) {
                   rel="noopener noreferrer"
                   className="btn-primary !py-3 !px-6 justify-center"
                 >
-                  Cotizar este servicio
+                  {sl.quoteService}
                 </a>
                 <a
                   href="/#contacto"
                   className="btn-ghost-dark !py-3 !px-6 !text-white !border-white/30 hover:!bg-white hover:!text-asli-ink justify-center"
                 >
-                  Hablar con el equipo
+                  {sl.talkTeam}
                 </a>
               </div>
             </div>
@@ -115,11 +130,9 @@ export default function ServiceLanding({ landing }) {
                   />
                   <div className="p-6">
                     <h2 className="font-display text-lg font-bold text-asli-dark mb-2">
-                      ASLI · Curicó, Maule
+                      {sl.officeTitle}
                     </h2>
-                    <p className="text-muted-strong text-sm leading-relaxed mb-4">
-                      {SITE.address.street}. Atención lun–vie 09:00–18:00.
-                    </p>
+                    <p className="text-muted-strong text-sm leading-relaxed mb-4">{hours}</p>
                     <a
                       href={`tel:${SITE.phone}`}
                       className="block text-asli-primary font-semibold text-sm mb-1"
@@ -138,7 +151,7 @@ export default function ServiceLanding({ landing }) {
                 {related.length > 0 ? (
                   <div className="card-soft p-6">
                     <h2 className="font-display text-lg font-bold text-asli-dark mb-4">
-                      Servicios relacionados
+                      {sl.relatedTitle}
                     </h2>
                     <ul className="space-y-3">
                       {related.map((item) => (
@@ -156,7 +169,7 @@ export default function ServiceLanding({ landing }) {
                           href="/servicios"
                           className="text-asli-dark/70 font-semibold text-sm hover:text-asli-primary"
                         >
-                          Ver todos los servicios →
+                          {sl.viewAllServices}
                         </a>
                       </li>
                       <li>
@@ -164,7 +177,7 @@ export default function ServiceLanding({ landing }) {
                           href="/tracking"
                           className="text-asli-dark/70 font-semibold text-sm hover:text-asli-primary"
                         >
-                          Tracking de cargas →
+                          {sl.trackingLink}
                         </a>
                       </li>
                       <li>
@@ -172,7 +185,7 @@ export default function ServiceLanding({ landing }) {
                           href="/stacking"
                           className="text-asli-dark/70 font-semibold text-sm hover:text-asli-primary"
                         >
-                          Stacking de navieras →
+                          {sl.stackingLink}
                         </a>
                       </li>
                     </ul>
@@ -186,7 +199,7 @@ export default function ServiceLanding({ landing }) {
             <section className="bg-asli-surface py-14 md:py-20 border-y border-asli-dark/5">
               <div className="container-asli max-w-3xl">
                 <h2 className="font-display text-asli-dark text-2xl md:text-3xl font-bold tracking-tight mb-8">
-                  Preguntas frecuentes
+                  {sl.faqTitle}
                 </h2>
                 <div className="space-y-6">
                   {landing.faqs.map((faq) => (
@@ -214,18 +227,16 @@ export default function ServiceLanding({ landing }) {
           <section className="py-14 md:py-20 text-center">
             <div className="container-asli max-w-2xl">
               <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight mb-4 text-asli-dark">
-                ¿Listo para cotizar?
+                {sl.finalCtaTitle}
               </h2>
-              <p className="text-muted-strong mb-8 text-lg">
-                Cuéntanos tu operación y armamos la mejor solución logística contigo.
-              </p>
+              <p className="text-muted-strong mb-8 text-lg">{sl.finalCtaBody}</p>
               <a
                 href={mailHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary"
               >
-                Escribir a ASLI
+                {sl.finalCtaButton}
               </a>
             </div>
           </section>

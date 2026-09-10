@@ -1,9 +1,17 @@
+import { useLocale } from '../hooks/useLocale'
+
 /**
  * Skeleton de carga de la landing — shimmer mientras hidrata / cambia de ruta
  */
 const PageSkeleton = () => {
+  const { locale } = useLocale()
+  const loadingLabel =
+    locale === 'zh' ? '正在加载页面' : locale === 'en' ? 'Loading page' : 'Cargando página'
+  const loadingContent =
+    locale === 'zh' ? '正在加载内容…' : locale === 'en' ? 'Loading content…' : 'Cargando contenido…'
+
   return (
-    <div className="min-h-screen bg-asli-light" role="status" aria-live="polite" aria-label="Cargando página">
+    <div className="min-h-screen bg-asli-light" role="status" aria-live="polite" aria-label={loadingLabel}>
       {/* Header */}
       <div className="h-[4.25rem] border-b border-asli-dark/5 bg-asli-surface/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <div className="skeleton-bone h-9 w-28 rounded-lg" />
@@ -65,7 +73,7 @@ const PageSkeleton = () => {
           ))}
         </div>
       </div>
-      <span className="sr-only">Cargando contenido…</span>
+      <span className="sr-only">{loadingContent}</span>
     </div>
   )
 }

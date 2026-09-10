@@ -20,8 +20,20 @@ module.exports = {
         'asli-accent': 'rgb(var(--asli-accent-rgb) / <alpha-value>)',
       },
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        sans: ['Manrope', 'sans-serif'],
+        display: [
+          'Syne',
+          'Noto Sans SC',
+          'PingFang SC',
+          'Microsoft YaHei',
+          'sans-serif',
+        ],
+        sans: [
+          'Manrope',
+          'Noto Sans SC',
+          'PingFang SC',
+          'Microsoft YaHei',
+          'sans-serif',
+        ],
       },
       maxWidth: {
         asli: '76rem',

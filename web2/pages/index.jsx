@@ -9,18 +9,27 @@ import Cotizar from '../src/components/Cotizar'
 import Ubicacion from '../src/components/Ubicacion'
 import Footer from '../src/components/Footer'
 import Seo, { buildHomeJsonLd } from '../src/components/Seo'
+import { useLocale } from '../src/hooks/useLocale'
+import { htmlLang } from '../src/lib/i18n/locale'
 
 /**
  * Home ASLI — landing conversional con scroll suave y reveals
  */
 const Home = () => {
+  const { t, locale } = useLocale()
+  const seo = t.homeSeo
+
   return (
     <>
       <Seo
-        title="ASLI — Asesoría logística, exportación e importación | Curicó"
-        description="Asesoría logística en Curicó para PYMEs y exportadores: exportación de fruta fresca, importación de mercancías, contenedores, carga aérea y marítima. ASLI, Maule."
+        title={seo.title}
+        description={seo.description}
         path="/"
-        jsonLd={buildHomeJsonLd()}
+        jsonLd={buildHomeJsonLd({
+          inLanguage: htmlLang(locale),
+          description: seo.description,
+          websiteDescription: t.footer?.tagline,
+        })}
       />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />

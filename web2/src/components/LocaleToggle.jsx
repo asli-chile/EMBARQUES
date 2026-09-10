@@ -3,11 +3,7 @@ import { useLocale } from '../hooks/useLocale'
 
 function FlagChile({ size = 20 }) {
   return (
-    <span
-      className="locale-toggle__flag"
-      style={{ width: size, height: size }}
-      aria-hidden="true"
-    >
+    <span className="locale-toggle__flag" style={{ width: size, height: size }} aria-hidden="true">
       <svg width={size} height={size} viewBox="0 0 24 24">
         <rect width="24" height="12" y="12" fill="#D52B1E" />
         <rect width="24" height="12" fill="#fff" />
@@ -21,13 +17,23 @@ function FlagChile({ size = 20 }) {
   )
 }
 
+function FlagChina({ size = 20 }) {
+  return (
+    <span className="locale-toggle__flag" style={{ width: size, height: size }} aria-hidden="true">
+      <svg width={size} height={size} viewBox="0 0 24 24">
+        <rect width="24" height="24" fill="#DE2910" />
+        <path
+          fill="#FFDE00"
+          d="M4.8 3.2l.72 2.22H7.9l-1.9 1.38.73 2.23L4.8 7.75 2.88 9.03l.73-2.23L1.7 5.42h2.38zm5.3 1.1l.38 1.16h1.22l-.99.72.38 1.16-.99-.72-.99.72.38-1.16-.99-.72h1.22zm2.85 2.85l.38 1.16h1.22l-.99.72.38 1.16-.99-.72-.99.72.38-1.16-.99-.72h1.22zm0 3.9l.38 1.16h1.22l-.99.72.38 1.16-.99-.72-.99.72.38-1.16-.99-.72h1.22zm-2.85 2.1l.38 1.16h1.22l-.99.72.38 1.16-.99-.72-.99.72.38-1.16-.99-.72h1.22z"
+        />
+      </svg>
+    </span>
+  )
+}
+
 function FlagUS({ size = 20 }) {
   return (
-    <span
-      className="locale-toggle__flag"
-      style={{ width: size, height: size }}
-      aria-hidden="true"
-    >
+    <span className="locale-toggle__flag" style={{ width: size, height: size }} aria-hidden="true">
       <svg width={size} height={size} viewBox="0 0 24 24">
         <rect width="24" height="24" fill="#B22234" />
         <path
@@ -41,17 +47,25 @@ function FlagUS({ size = 20 }) {
 }
 
 const OPTIONS = [
-  { locale: 'es', label: 'ES', name: 'Español', Flag: FlagChile },
-  { locale: 'en', label: 'EN', name: 'English', Flag: FlagUS },
+  { locale: 'es', label: 'ES', nameKey: 'es', Flag: FlagChile },
+  { locale: 'zh', label: '中文', nameKey: 'zh', Flag: FlagChina },
+  { locale: 'en', label: 'EN', nameKey: 'en', Flag: FlagUS },
 ]
 
-/** Selector de idioma con desplegable (Chile = ES, EE.UU. = EN). */
+function switchTitle(locale, t) {
+  if (locale === 'es') return t.locale.switchToZh || t.locale.switchToEn
+  if (locale === 'zh') return t.locale.switchToEs
+  return t.locale.switchToEs
+}
+
+/** Selector de idioma: Español / 中文 / English. */
 export function LocaleToggle({ className = '' }) {
   const { locale, changeLocale, t } = useLocale()
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
   const current = OPTIONS.find((o) => o.locale === locale) ?? OPTIONS[0]
   const CurrentFlag = current.Flag
+  const names = t.locale.languages || { es: 'Español', zh: '中文', en: 'English' }
 
   useEffect(() => {
     if (!open) return
@@ -79,8 +93,8 @@ export function LocaleToggle({ className = '' }) {
       <button
         type="button"
         className="locale-toggle"
-        title={locale === 'es' ? t.locale.switchToEn : t.locale.switchToEs}
-        aria-label="Elegir idioma"
+        title={switchTitle(locale, t)}
+        aria-label={t.locale.chooseLanguage || 'Elegir idioma'}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -105,7 +119,11 @@ export function LocaleToggle({ className = '' }) {
       </button>
 
       {open && (
-        <div className="locale-toggle__menu" role="listbox" aria-label="Idiomas">
+        <div
+          className="locale-toggle__menu"
+          role="listbox"
+          aria-label={t.locale.chooseLanguage || 'Idiomas'}
+        >
           {OPTIONS.map((opt) => {
             const active = opt.locale === locale
             const Flag = opt.Flag
@@ -119,7 +137,7 @@ export function LocaleToggle({ className = '' }) {
                 onClick={() => pick(opt.locale)}
               >
                 <Flag size={22} />
-                <span className="locale-toggle__option-name">{opt.name}</span>
+                <span className="locale-toggle__option-name">{names[opt.nameKey]}</span>
                 <span className="locale-toggle__option-code">{opt.label}</span>
                 {active ? (
                   <svg
