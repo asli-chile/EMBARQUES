@@ -99,16 +99,15 @@ npm run desktop:dev
 npm run desktop:build
 ```
 
-## Barra de título integrada (v0.1.2+)
+## Barra de título (v0.1.8+)
 
-La ventana va **sin decoraciones nativas** de Windows. El header del ERP (visitas, tema, idioma, notificaciones, usuario) actúa como barra de título y muestra min/max/cerrar solo cuando corre dentro del `.exe`.
+La ventana usa **decoraciones nativas de Windows**: se puede mover, maximizar,
+arrastrar a otra pantalla y cerrar como cualquier otra aplicación.
 
-Orden seguro al publicar:
+Orden al publicar un shell nuevo:
 
-1. **Deploy del ERP web** (controles solo aparecen si detectan Tauri).
-2. **Release del shell** `0.1.2+` con `decorations: false`.
-
-Si publicas el shell antes que la web, la ventana quedaría sin botones de cerrar/minimizar hasta que el ERP se despliegue.
+1. **Deploy del ERP web** (sin controles custom de ventana en el header).
+2. **Release del shell** `0.1.8+` con `decorations: true`.
 
 ## Notas
 
