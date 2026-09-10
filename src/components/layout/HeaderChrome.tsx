@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { getDesktopWindow, isDesktopShell } from "@/lib/desktopShell";
+import { getDesktopWindow, ensureCustomTitlebarShell, isDesktopShell } from "@/lib/desktopShell";
 import { DesktopWindowControls } from "./DesktopWindowControls";
 import type { HeaderChromeTone } from "./HeaderActionIcons";
 
@@ -19,7 +19,9 @@ export function HeaderChrome({ compact = false, tone = "light", children }: Prop
   const dark = tone === "dark";
 
   useEffect(() => {
-    setDesktop(isDesktopShell());
+    const desktop = isDesktopShell();
+    setDesktop(desktop);
+    if (desktop) ensureCustomTitlebarShell();
   }, []);
 
   /** Oscuro fijo: no depende del tema de la página. */

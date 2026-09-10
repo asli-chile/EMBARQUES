@@ -6,6 +6,7 @@ type DesktopWindow = {
   close: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
   startDragging: () => Promise<void>;
+  setDecorations?: (decorations: boolean) => Promise<void>;
 };
 
 type TauriGlobal = {
@@ -32,4 +33,11 @@ export function getDesktopWindow(): DesktopWindow | null {
   } catch {
     return null;
   }
+}
+
+/** Quita la barra blanca de Windows; el header del ERP es la titlebar. */
+export function ensureCustomTitlebarShell(): void {
+  const win = getDesktopWindow();
+  if (!win?.setDecorations) return;
+  void win.setDecorations(false).catch(() => {});
 }

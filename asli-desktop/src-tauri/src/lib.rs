@@ -11,6 +11,17 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            // Siempre sin chrome nativo: el header del ERP es la barra de título.
+            #[cfg(desktop)]
+            {
+                use tauri::Manager;
+                if let Some(win) = app.get_webview_window("main") {
+                    if let Err(err) = win.set_decorations(false) {
+                        eprintln!("[asli-desktop] set_decorations: {err}");
+                    }
+                }
+            }
+
             // Registrar en el inicio de Windows (HKCU Run) si aún no está.
             #[cfg(desktop)]
             {
