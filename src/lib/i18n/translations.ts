@@ -2542,6 +2542,9 @@ export const translations = {
       dropHint:
         "Sube o pega la ficha en este orden: Nombre → Bandera → IMO → MMSI. Opcional: tooltip del mapa con (lat, lng).",
       dropBrowse: "Elegir imágenes",
+      dropPaste: "Pegar captura",
+      dropPasteShortcut: "También puedes pegar con Ctrl+V en esta página",
+      dropPasteHint: "Copia la captura y pega con Ctrl+V aquí (haz clic en la zona primero).",
       dropAnalyzing: "Leyendo imágenes…",
       dropApply: "Aplicar a la lista",
       dropClear: "Limpiar",
@@ -5273,6 +5276,9 @@ export const translations = {
       dropHint:
         "Upload or paste the card in this order: Name → Flag → IMO → MMSI. Optional: map tooltip with (lat, lng).",
       dropBrowse: "Choose images",
+      dropPaste: "Paste screenshot",
+      dropPasteShortcut: "You can also paste with Ctrl+V on this page",
+      dropPasteHint: "Copy the screenshot and paste with Ctrl+V here (click the drop zone first).",
       dropAnalyzing: "Reading images…",
       dropApply: "Apply to list",
       dropClear: "Clear",

@@ -243,6 +243,7 @@ export function NavesTrackingContent() {
   const [ocrText, setOcrText] = useState<string>("");
   const [ocrDrag, setOcrDrag] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dropZoneRef = useRef<HTMLElement | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -390,25 +391,72 @@ export function NavesTrackingContent() {
     sileo.success({ title: tr.dropApplied });
   }, [ocrFields, rows, tr.dropApplied, tr.dropNoMatch, updateRow]);
 
-  useEffect(() => {
-    const onPaste = (e: ClipboardEvent) => {
-      if (!isSuperadmin || ocrBusy) return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const files: File[] = [];
-      for (const item of items) {
-        if (item.type.startsWith("image/")) {
-          const f = item.getAsFile();
-          if (f) files.push(f);
+  const collectClipboardImages = useCallback((data: DataTransfer | null): File[] => {
+    if (!data) return [];
+    const files: File[] = [];
+    const seen = new Set<string>();
+    const push = (f: File | null) => {
+      if (!f || !f.type.startsWith("image/")) return;
+      const key = `${f.type}:${f.size}:${f.name}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      files.push(f);
+    };
+    if (data.items) {
+      for (const item of data.items) {
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          push(item.getAsFile());
         }
       }
+    }
+    if (data.files) {
+      for (const f of data.files) push(f);
+    }
+    return files;
+  }, []);
+
+  const handlePasteEvent = useCallback(
+    (e: { clipboardData: DataTransfer | null; preventDefault: () => void; stopPropagation: () => void }) => {
+      if (!isSuperadmin || ocrBusy) return;
+      const files = collectClipboardImages(e.clipboardData);
       if (files.length === 0) return;
       e.preventDefault();
+      e.stopPropagation();
       void runOcrOnFiles(files);
-    };
+    },
+    [collectClipboardImages, isSuperadmin, ocrBusy, runOcrOnFiles],
+  );
+
+  const handlePasteButton = useCallback(async () => {
+    if (ocrBusy) return;
+    // API moderna del portapapeles (Chrome/Edge con permiso)
+    try {
+      if (navigator.clipboard && "read" in navigator.clipboard) {
+        const items = await navigator.clipboard.read();
+        const files: File[] = [];
+        for (const item of items) {
+          const type = item.types.find((t) => t.startsWith("image/"));
+          if (!type) continue;
+          const blob = await item.getType(type);
+          files.push(new File([blob], `captura-${Date.now()}.png`, { type: blob.type || "image/png" }));
+        }
+        if (files.length > 0) {
+          void runOcrOnFiles(files);
+          return;
+        }
+      }
+    } catch {
+      // Sin permiso o sin imagen: pedir Ctrl+V en la zona
+    }
+    dropZoneRef.current?.focus();
+    sileo.info({ title: tr.dropPasteHint });
+  }, [ocrBusy, runOcrOnFiles, tr.dropPasteHint]);
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => handlePasteEvent(e);
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [isSuperadmin, ocrBusy, runOcrOnFiles]);
+  }, [handlePasteEvent]);
 
   const handleSave = useCallback(
     async (row: VesselDraft) => {
@@ -576,7 +624,11 @@ export function NavesTrackingContent() {
         </header>
 
         <section
-          className={`dash-card rounded-xl p-4 border-2 border-dashed transition-colors ${
+          ref={dropZoneRef}
+          tabIndex={0}
+          role="region"
+          aria-label={tr.dropTitle}
+          className={`dash-card rounded-xl p-4 border-2 border-dashed transition-colors outline-none focus:border-dash-neon focus:ring-2 focus:ring-dash-neon/30 ${
             ocrDrag ? "border-dash-neon bg-dash-neon/10" : "border-dash-border"
           }`}
           onDragOver={(e) => {
@@ -590,6 +642,7 @@ export function NavesTrackingContent() {
             const files = [...e.dataTransfer.files];
             void runOcrOnFiles(files);
           }}
+          onPaste={(e) => handlePasteEvent(e)}
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
@@ -598,6 +651,7 @@ export function NavesTrackingContent() {
                 {tr.dropTitle}
               </p>
               <p className="mt-1 text-xs text-dash-muted max-w-xl">{tr.dropHint}</p>
+              <p className="mt-1 text-xs font-semibold text-dash-neon/90">{tr.dropPasteShortcut}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
               <input
@@ -620,6 +674,16 @@ export function NavesTrackingContent() {
               >
                 <Icon icon="lucide:upload" width={14} height={14} />
                 {tr.dropBrowse}
+              </button>
+              <button
+                type="button"
+                disabled={ocrBusy}
+                onClick={() => void handlePasteButton()}
+                className={neonBtnSecondary}
+                title={tr.dropPasteShortcut}
+              >
+                <Icon icon="lucide:clipboard-paste" width={14} height={14} />
+                {tr.dropPaste}
               </button>
               {ocrFields && (
                 <>
