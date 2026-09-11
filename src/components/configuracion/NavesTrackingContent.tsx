@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -9,6 +9,10 @@ import { createClient } from "@/lib/supabase/client";
 import { esEstadoCerrado } from "@/lib/operaciones/estados";
 import { getApiOriginPrefix } from "@/lib/basePath";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
+import {
+  normalizeVesselNameKey,
+  type VesselTrackingOcrFields,
+} from "@/lib/vessel-tracking-parse";
 
 type OpRow = {
   id: string;
@@ -233,6 +237,11 @@ export function NavesTrackingContent() {
   const [search, setSearch] = useState("");
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrPct, setOcrPct] = useState(0);
+  const [ocrFields, setOcrFields] = useState<VesselTrackingOcrFields | null>(null);
+  const [ocrDrag, setOcrDrag] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -314,6 +323,89 @@ export function NavesTrackingContent() {
   const updateRow = useCallback((key: string, patch: Partial<VesselDraft>) => {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }, []);
+
+  const runOcrOnFiles = useCallback(
+    async (fileList: Array<File | Blob>) => {
+      const images = fileList.filter((f) => {
+        if (f instanceof File) return f.type.startsWith("image/");
+        return true;
+      });
+      if (images.length === 0) return;
+
+      setOcrBusy(true);
+      setOcrPct(0);
+      setOcrFields(null);
+      try {
+        const { analyzeVesselTrackingImages } = await import("@/lib/vessel-tracking-ocr");
+        const { fields } = await analyzeVesselTrackingImages(images, setOcrPct);
+        if (!fields.nombre && !fields.imo && !fields.mmsi && fields.lat == null && fields.lng == null) {
+          sileo.error({ title: tr.dropEmpty });
+          return;
+        }
+        setOcrFields(fields);
+      } catch (e) {
+        sileo.error({ title: e instanceof Error ? e.message : tr.dropError });
+      } finally {
+        setOcrBusy(false);
+        setOcrPct(0);
+      }
+    },
+    [tr.dropEmpty, tr.dropError],
+  );
+
+  const applyOcrToRows = useCallback(() => {
+    if (!ocrFields) return;
+    const nombreKey = ocrFields.nombre ? normalizeVesselNameKey(ocrFields.nombre) : "";
+
+    let match =
+      (nombreKey
+        ? rows.find((r) => {
+            const k = normalizeVesselNameKey(r.catalogNombre);
+            return k === nombreKey || k.includes(nombreKey) || nombreKey.includes(k);
+          })
+        : null) ?? null;
+
+    // Si solo hay coords/IMO y una sola fila incompleta, úsala
+    if (!match && rows.length === 1) match = rows[0]!;
+    if (!match && !nombreKey) {
+      const incomplete = rows.filter(isIncomplete);
+      if (incomplete.length === 1) match = incomplete[0]!;
+    }
+
+    if (!match) {
+      sileo.error({ title: tr.dropNoMatch });
+      return;
+    }
+
+    updateRow(match.key, {
+      ...(ocrFields.imo ? { imo: ocrFields.imo } : {}),
+      ...(ocrFields.mmsi ? { mmsi: ocrFields.mmsi } : {}),
+      ...(ocrFields.lat != null ? { lat: String(ocrFields.lat) } : {}),
+      ...(ocrFields.lng != null ? { lng: String(ocrFields.lng) } : {}),
+    });
+    setSearch(match.catalogNombre);
+    sileo.success({ title: tr.dropApplied });
+  }, [ocrFields, rows, tr.dropApplied, tr.dropNoMatch, updateRow]);
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (!isSuperadmin || ocrBusy) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const files: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const f = item.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length === 0) return;
+      e.preventDefault();
+      void runOcrOnFiles(files);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [isSuperadmin, ocrBusy, runOcrOnFiles]);
 
   const handleSave = useCallback(
     async (row: VesselDraft) => {
@@ -479,6 +571,107 @@ export function NavesTrackingContent() {
             {tr.refresh}
           </button>
         </header>
+
+        <section
+          className={`dash-card rounded-xl p-4 border-2 border-dashed transition-colors ${
+            ocrDrag ? "border-dash-neon bg-dash-neon/10" : "border-dash-border"
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setOcrDrag(true);
+          }}
+          onDragLeave={() => setOcrDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setOcrDrag(false);
+            const files = [...e.dataTransfer.files];
+            void runOcrOnFiles(files);
+          }}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-dash-fg flex items-center gap-2">
+                <Icon icon="lucide:image-plus" width={16} height={16} className="text-dash-neon" />
+                {tr.dropTitle}
+              </p>
+              <p className="mt-1 text-xs text-dash-muted max-w-xl">{tr.dropHint}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = [...(e.target.files ?? [])];
+                  e.target.value = "";
+                  void runOcrOnFiles(files);
+                }}
+              />
+              <button
+                type="button"
+                disabled={ocrBusy}
+                onClick={() => fileInputRef.current?.click()}
+                className={neonBtnSecondary}
+              >
+                <Icon icon="lucide:upload" width={14} height={14} />
+                {tr.dropBrowse}
+              </button>
+              {ocrFields && (
+                <>
+                  <button type="button" disabled={ocrBusy} onClick={applyOcrToRows} className={neonBtn}>
+                    <Icon icon="lucide:check" width={14} height={14} />
+                    {tr.dropApply}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={ocrBusy}
+                    onClick={() => setOcrFields(null)}
+                    className={neonBtnSecondary}
+                  >
+                    {tr.dropClear}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {ocrBusy && (
+            <p className="mt-3 text-sm text-dash-neon font-semibold">
+              {tr.dropAnalyzing} {ocrPct > 0 ? `${ocrPct}%` : ""}
+            </p>
+          )}
+
+          {ocrFields && !ocrBusy && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
+                <p className="text-dash-muted font-semibold">{tr.ocrNombre}</p>
+                <p className="text-dash-fg font-bold mt-0.5 truncate">{ocrFields.nombre ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
+                <p className="text-dash-muted font-semibold">{tr.imo}</p>
+                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">{ocrFields.imo ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
+                <p className="text-dash-muted font-semibold">{tr.mmsi}</p>
+                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">{ocrFields.mmsi ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
+                <p className="text-dash-muted font-semibold">{tr.lat}</p>
+                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">
+                  {ocrFields.lat != null ? String(ocrFields.lat) : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
+                <p className="text-dash-muted font-semibold">{tr.lng}</p>
+                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">
+                  {ocrFields.lng != null ? String(ocrFields.lng) : "—"}
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
 
         <div className="dash-card rounded-xl p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">

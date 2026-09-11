@@ -60,6 +60,7 @@
     "react-email": "^6.9.3",
     "react-map-gl": "^8.1.0",
     "sileo": "^0.1.5",
+    "tesseract.js": "^5.1.1",
     "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0"
   },
