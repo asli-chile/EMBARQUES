@@ -240,6 +240,7 @@ export function NavesTrackingContent() {
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrPct, setOcrPct] = useState(0);
   const [ocrFields, setOcrFields] = useState<VesselTrackingOcrFields | null>(null);
+  const [ocrText, setOcrText] = useState<string>("");
   const [ocrDrag, setOcrDrag] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -335,9 +336,11 @@ export function NavesTrackingContent() {
       setOcrBusy(true);
       setOcrPct(0);
       setOcrFields(null);
+      setOcrText("");
       try {
         const { analyzeVesselTrackingImages } = await import("@/lib/vessel-tracking-ocr");
-        const { fields } = await analyzeVesselTrackingImages(images, setOcrPct);
+        const { fields, text } = await analyzeVesselTrackingImages(images, setOcrPct);
+        setOcrText(text);
         if (!fields.nombre && !fields.imo && !fields.mmsi && fields.lat == null && fields.lng == null) {
           sileo.error({ title: tr.dropEmpty });
           return;
@@ -627,7 +630,10 @@ export function NavesTrackingContent() {
                   <button
                     type="button"
                     disabled={ocrBusy}
-                    onClick={() => setOcrFields(null)}
+                    onClick={() => {
+                      setOcrFields(null);
+                      setOcrText("");
+                    }}
                     className={neonBtnSecondary}
                   >
                     {tr.dropClear}
@@ -644,6 +650,7 @@ export function NavesTrackingContent() {
           )}
 
           {ocrFields && !ocrBusy && (
+            <>
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
               <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
                 <p className="text-dash-muted font-semibold">{tr.ocrNombre}</p>
@@ -670,6 +677,17 @@ export function NavesTrackingContent() {
                 </p>
               </div>
             </div>
+            {ocrText.trim() && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-semibold text-dash-muted">
+                  {tr.ocrPreview}
+                </summary>
+                <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-dash-border bg-dash-control p-2 text-[11px] text-dash-fg whitespace-pre-wrap">
+                  {ocrText}
+                </pre>
+              </details>
+            )}
+            </>
           )}
         </section>
 
