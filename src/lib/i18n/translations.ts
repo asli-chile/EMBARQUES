@@ -2540,7 +2540,7 @@ export const translations = {
       complete: "Completo",
       dropTitle: "Pegar o subir capturas",
       dropHint:
-        "Arrastra aquí la ficha (Name/IMO/MMSI) y el tooltip del mapa (lat, lng), o pega con Ctrl+V.",
+        "Sube o pega la ficha en este orden: Nombre → Bandera → IMO → MMSI. Opcional: tooltip del mapa con (lat, lng).",
       dropBrowse: "Elegir imágenes",
       dropAnalyzing: "Leyendo imágenes…",
       dropApply: "Aplicar a la lista",
@@ -5271,7 +5271,7 @@ export const translations = {
       complete: "Complete",
       dropTitle: "Paste or upload screenshots",
       dropHint:
-        "Drop the vessel card (Name/IMO/MMSI) and the map tooltip (lat, lng) here, or paste with Ctrl+V.",
+        "Upload or paste the card in this order: Name → Flag → IMO → MMSI. Optional: map tooltip with (lat, lng).",
       dropBrowse: "Choose images",
       dropAnalyzing: "Reading images…",
       dropApply: "Apply to list",
