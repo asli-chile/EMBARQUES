@@ -879,11 +879,11 @@ export function DashboardContent({
                   onClick={() => setShowOrigins((v) => !v)}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
                     showOrigins
-                      ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
+                      ? "border-sky-500/55 bg-sky-500/20 text-sky-700 dash-map-toggle-origen"
                       : "border-dash-border bg-dash-control text-dash-muted"
                   }`}
                 >
-                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  <span className="h-2 w-2 rounded-full bg-sky-500" />
                   {tr.mapOrigins}
                 </button>
                 <button
@@ -891,11 +891,11 @@ export function DashboardContent({
                   onClick={() => setShowDestinations((v) => !v)}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
                     showDestinations
-                      ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
+                      ? "border-emerald-500/55 bg-emerald-500/20 text-emerald-700 dash-map-toggle-destino"
                       : "border-dash-border bg-dash-control text-dash-muted"
                   }`}
                 >
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   {tr.mapDestinations}
                 </button>
               </div>
