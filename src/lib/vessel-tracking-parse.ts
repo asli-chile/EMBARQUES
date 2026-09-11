@@ -1,8 +1,10 @@
 /**
- * Parsea texto OCR de capturas VesselFinder / mapas AIS.
- * Formatos esperados:
- * - Ficha: Name / IMO / MMSI (a veces etiquetas en columna y valores abajo)
- * - Mapa: (lat, lng) en grados decimales
+ * Parsea texto OCR de fichas VesselFinder.
+ * Formato fijo siempre:
+ *   1. Nombre de nave
+ *   2. Bandera
+ *   3. IMO (7 dígitos)
+ *   4. MMSI (9 dígitos)
  */
 
 export type VesselTrackingOcrFields = {
@@ -13,18 +15,19 @@ export type VesselTrackingOcrFields = {
   lng: number | null;
 };
 
-/** Normaliza confusiones típicas de OCR cerca de etiquetas. */
 function normalizeOcrText(text: string): string {
   return text
     .replace(/\u00a0/g, " ")
-    // O/o confusos dentro de números sueltos: "O9702106" → "09702106" (luego se recorta)
     .replace(/(?<=\d)[Oo]/g, "0")
     .replace(/[Oo](?=\d)/g, "0")
     .replace(/\bIM[O0]\b/gi, "IMO")
     .replace(/\b[Il1]MO\b/gi, "IMO")
     .replace(/\b[Il1]M[O0]\b/gi, "IMO")
     .replace(/\bMM[S5][Il1]\b/gi, "MMSI")
-    .replace(/\bMMS[Il1]\b/gi, "MMSI");
+    .replace(/\bMMS[Il1]\b/gi, "MMSI")
+    .replace(/\bNane\b/gi, "Name")
+    .replace(/\bNarne\b/gi, "Name")
+    .replace(/\bFiag\b/gi, "Flag");
 }
 
 function cleanLines(text: string): string[] {
@@ -34,237 +37,171 @@ function cleanLines(text: string): string[] {
     .filter(Boolean);
 }
 
-const IMO_LABEL = String.raw`(?:IMO|IM0|[Il1]MO|[Il1]M0)`;
-const MMSI_LABEL = String.raw`(?:MMSI|MMS1|MM5I|MMS[Il1]|MM5[Il1])`;
-const NAME_LABEL = String.raw`(?:Name|Nombre|Vessel|Ship|Nave)`;
-const FLAG_LABEL = String.raw`(?:Flag|Bandera)`;
-const ANY_LABEL = String.raw`(?:${NAME_LABEL}|${FLAG_LABEL}|${IMO_LABEL}|${MMSI_LABEL})`;
-
-function isLabelOnlyLine(line: string): boolean {
-  return new RegExp(`^${ANY_LABEL}\\s*[:#.\\-]?\\s*$`, "i").test(line);
-}
-
-function labelKind(line: string): "name" | "flag" | "imo" | "mmsi" | null {
-  if (new RegExp(`^${NAME_LABEL}\\b`, "i").test(line)) return "name";
-  if (new RegExp(`^${FLAG_LABEL}\\b`, "i").test(line)) return "flag";
-  if (new RegExp(`^${IMO_LABEL}\\b`, "i").test(line)) return "imo";
-  if (new RegExp(`^${MMSI_LABEL}\\b`, "i").test(line)) return "mmsi";
-  return null;
-}
-
-/** Primer bloque de exactamente `len` dígitos (permite basura alrededor). */
-function firstDigitsOfLength(raw: string | null | undefined, len: number): string | null {
+function digitsOfLength(raw: string | null | undefined, len: number): string | null {
   if (!raw) return null;
   const only = raw.replace(/\D/g, "");
   if (only.length === len) return only;
-  // Si OCR antepuso un 0 por confusión O→0: "09702106" → "9702106"
   if (len === 7 && only.length === 8 && only.startsWith("0")) return only.slice(1);
   const m = raw.match(new RegExp(`(?:^|\\D)(\\d{${len}})(?:\\D|$)`));
-  if (m?.[1]) return m[1];
-  const spaced = raw.match(new RegExp(`(?:^|\\D)((?:\\d[\\s.\\-]*){${len}})(?:\\D|$)`));
-  if (spaced?.[1]) {
-    const d = spaced[1].replace(/\D/g, "");
-    if (d.length === len) return d;
-  }
-  return null;
+  return m?.[1] ?? null;
 }
 
-function allDigitBlocks(text: string, len: number): string[] {
-  const out: string[] = [];
-  const re = new RegExp(`(?:^|\\D)(\\d{${len}})(?:\\D|$)`, "g");
-  let m: RegExpExecArray | null;
-  const src = text.replace(/(\d)[\s.\-](?=\d)/g, "$1");
-  while ((m = re.exec(src)) !== null) {
-    out.push(m[1]!);
-  }
-  // También bloques pegados con espacios: "9702 106"
-  const spacedRe = new RegExp(`(?:^|\\D)((?:\\d[\\s.\\-]*){${len}})(?:\\D|$)`, "g");
-  while ((m = spacedRe.exec(text)) !== null) {
-    const d = m[1]!.replace(/\D/g, "");
-    if (d.length === len && !out.includes(d)) out.push(d);
-  }
-  return out;
+function stripLabelPrefix(line: string): string {
+  return line
+    .replace(/^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne)\s*[:#.\-]?\s*/i, "")
+    .replace(/^(Flag|Bandera|Fiag)\s*[:#.\-]?\s*/i, "")
+    .replace(/^(IMO|IM0|[Il1]MO)\s*[:#.\-]?\s*/i, "")
+    .replace(/^(MMSI|MMS1|MM5I)\s*[:#.\-]?\s*/i, "")
+    .trim();
 }
 
-function valueAfterLabel(text: string, labelRe: string): string | null {
-  const re = new RegExp(`${labelRe}\\s*[:#.\\-]?\\s*([^\\n]{0,48})`, "i");
-  const m = text.match(re);
-  return m?.[1]?.trim() ?? null;
+function isLabelOnly(line: string): boolean {
+  return /^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne|Flag|Bandera|Fiag|IMO|IM0|[Il1]MO|MMSI|MMS1|MM5I)\s*[:#.\-]?\s*$/i.test(
+    line,
+  );
+}
+
+function isFlagValue(line: string): boolean {
+  return /^(portugal|panama|liberia|malta|china|bahamas|singapore|marshall|hong\s*kong|cyprus|greece|denmark|norway|germany|italy|spain|france|belgium|netherlands|japan|korea|taiwan|vietnam|india|turkey|antigua|barbados|cayman|isle\s*of\s*man|united\s*kingdom|united\s*states|usa|uk)\b/i.test(
+    line.trim(),
+  );
+}
+
+function cleanNombre(raw: string): string {
+  return raw
+    .replace(/\s+Flag\b.*$/i, "")
+    .replace(/\s*\[[^\]]*\]\s*$/, "")
+    .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
- * Layout VesselFinder frecuente en OCR:
- *   Name
- *   Flag
- *   IMO
- *   MMSI
- *   MSC SENEGAL
- *   PORTUGAL
- *   9702106
- *   636025657
- * Las etiquetas vienen juntas y los valores después, en el mismo orden.
+ * Caso A — etiquetas y valores en la misma línea:
+ *   Name   MSC SENEGAL
+ *   Flag   PORTUGAL
+ *   IMO    9961234
+ *   MMSI   636025657
+ *
+ * Caso B — columnas apiladas (OCR lee etiquetas y luego valores):
+ *   Name / Flag / IMO / MMSI
+ *   MSC SENEGAL / PORTUGAL / 9961234 / 636025657
  */
-function extractFromStackedColumns(lines: string[]): Partial<VesselTrackingOcrFields> {
-  const kinds: Array<"name" | "flag" | "imo" | "mmsi"> = [];
-  let lastLabelIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const kind = labelKind(lines[i]!);
-    if (!kind) {
-      // Solo aceptamos bloque inicial de etiquetas consecutivas
-      if (kinds.length > 0) break;
-      continue;
-    }
-    // Si la línea ya trae valor ("IMO 9702106"), no es layout apilado puro
-    if (!isLabelOnlyLine(lines[i]!) && firstDigitsOfLength(lines[i], 7)) return {};
-    if (!isLabelOnlyLine(lines[i]!) && firstDigitsOfLength(lines[i], 9)) return {};
-    if (kind === "name" && !isLabelOnlyLine(lines[i]!)) {
-      // "Name MSC SENEGAL" — no es columna apilada
-      return {};
-    }
-    kinds.push(kind);
-    lastLabelIdx = i;
-  }
+function parseFixedVesselCard(lines: string[]): VesselTrackingOcrFields {
+  let nombre: string | null = null;
+  let imo: string | null = null;
+  let mmsi: string | null = null;
 
-  if (kinds.length < 3 || lastLabelIdx < 0) return {};
-
-  const values = lines
-    .slice(lastLabelIdx + 1)
-    .filter((l) => !labelKind(l));
-
-  if (values.length < 2) return {};
-
-  const out: Partial<VesselTrackingOcrFields> = {};
-  for (let i = 0; i < kinds.length; i++) {
-    const kind = kinds[i]!;
-    const val = values[i];
-    if (!val) continue;
-    if (kind === "name") {
-      const nombre = val
-        .replace(/\s*\[[^\]]*\]\s*$/, "")
-        .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
-        .trim();
-      if (nombre && !/^(portugal|panama|liberia|malta|china|bahamas)\b/i.test(nombre)) {
-        out.nombre = nombre;
-      }
-    } else if (kind === "imo") {
-      out.imo = firstDigitsOfLength(val, 7) ?? undefined;
-    } else if (kind === "mmsi") {
-      out.mmsi = firstDigitsOfLength(val, 9) ?? undefined;
-    }
-  }
-
-  // Si el orden de valores se desalinea, busca 7 y 9 dígitos en el bloque de valores
-  if (!out.imo || !out.mmsi) {
-    const block = values.join("\n");
-    const sevens = allDigitBlocks(block, 7);
-    const nines = allDigitBlocks(block, 9);
-    if (!out.imo && sevens[0]) out.imo = sevens[0];
-    if (!out.mmsi && nines[0]) out.mmsi = nines[0];
-  }
-
-  return out;
-}
-
-function extractImo(text: string, lines: string[], mmsi: string | null): string | null {
-  const joined = lines.join("\n");
-
-  const after = valueAfterLabel(joined, IMO_LABEL);
-  const fromAfter = firstDigitsOfLength(after, 7);
-  if (fromAfter && fromAfter !== mmsi?.slice(0, 7)) return fromAfter;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    if (new RegExp(`^${IMO_LABEL}\\b`, "i").test(line)) {
-      const same = firstDigitsOfLength(line, 7);
-      if (same) return same;
-      // Buscar más abajo: en layout apilado el valor puede estar varias líneas después
-      for (let j = i + 1; j < lines.length; j++) {
-        if (labelKind(lines[j]!)) continue;
-        const next = firstDigitsOfLength(lines[j], 7);
-        if (next && next !== mmsi?.slice(0, 7)) return next;
-      }
-    }
-  }
-
-  const pair = joined.match(/(?:^|\D)(\d{7})\s+(\d{9})(?:\D|$)/);
-  if (pair?.[1]) return pair[1];
-
-  const m = joined.match(new RegExp(`${IMO_LABEL}\\D{0,12}(\\d{7})`, "i"));
-  if (m?.[1]) return m[1];
-
-  // Fallback: único bloque de 7 dígitos que no sea prefijo del MMSI
-  const sevens = allDigitBlocks(joined, 7).filter((d) => !mmsi || !mmsi.includes(d));
-  if (sevens.length === 1) return sevens[0]!;
-  // Si hay varios, preferir el que aparece antes del MMSI en el texto
-  if (mmsi && sevens.length > 0) {
-    const mmsiPos = joined.indexOf(mmsi);
-    if (mmsiPos > 0) {
-      const before = sevens.find((d) => {
-        const p = joined.indexOf(d);
-        return p >= 0 && p < mmsiPos;
-      });
-      if (before) return before;
-    }
-  }
-  return sevens[0] ?? null;
-}
-
-function extractMmsi(_text: string, lines: string[]): string | null {
-  const joined = lines.join("\n");
-
-  const after = valueAfterLabel(joined, MMSI_LABEL);
-  const fromAfter = firstDigitsOfLength(after, 9);
-  if (fromAfter) return fromAfter;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    if (new RegExp(`^${MMSI_LABEL}\\b`, "i").test(line)) {
-      const same = firstDigitsOfLength(line, 9);
-      if (same) return same;
-      for (let j = i + 1; j < lines.length; j++) {
-        if (labelKind(lines[j]!) && labelKind(lines[j]!) !== "mmsi") continue;
-        const next = firstDigitsOfLength(lines[j], 9);
-        if (next) return next;
-      }
-    }
-  }
-
-  const pair = joined.match(/(?:^|\D)(\d{7})\s+(\d{9})(?:\D|$)/);
-  if (pair?.[2]) return pair[2];
-
-  const m = joined.match(new RegExp(`${MMSI_LABEL}\\D{0,12}(\\d{9})`, "i"));
-  if (m?.[1]) return m[1];
-
-  const nines = allDigitBlocks(joined, 9);
-  return nines[0] ?? null;
-}
-
-function extractNombre(lines: string[]): string | null {
+  // --- Caso A: valor en la misma línea que la etiqueta ---
   for (const line of lines) {
-    const m = line.match(new RegExp(`^${NAME_LABEL}\\s*[:#.\\-]?\\s*(.+)$`, "i"));
-    if (m?.[1]) {
-      let nombre = m[1].trim();
-      nombre = nombre.replace(/\s+Flag\b.*$/i, "").trim();
-      nombre = nombre
-        .replace(/\s*\[[^\]]*\]\s*$/, "")
-        .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
-        .trim();
-      if (nombre) return nombre;
+    if (/^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne)\b/i.test(line) && !isLabelOnly(line)) {
+      const v = cleanNombre(stripLabelPrefix(line));
+      if (v && !isFlagValue(v) && !digitsOfLength(v, 7) && !digitsOfLength(v, 9)) nombre = v;
+    }
+    if (/^(IMO|IM0|[Il1]MO)\b/i.test(line)) {
+      imo = digitsOfLength(stripLabelPrefix(line), 7) ?? imo;
+    }
+    if (/^(MMSI|MMS1|MM5I)\b/i.test(line)) {
+      mmsi = digitsOfLength(stripLabelPrefix(line), 9) ?? mmsi;
     }
   }
-  for (let i = 0; i < lines.length - 1; i++) {
-    if (new RegExp(`^${NAME_LABEL}\\s*[:#.\\-]?\\s*$`, "i").test(lines[i]!)) {
-      let nombre = lines[i + 1]!.trim();
-      // En layout apilado, la siguiente línea puede ser "Flag" — no es el nombre
-      if (labelKind(nombre)) continue;
-      nombre = nombre
-        .replace(/\s*\[[^\]]*\]\s*$/, "")
-        .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
-        .trim();
-      if (nombre) return nombre;
+
+  // --- Caso B: bloque de 4 etiquetas + bloque de 4 valores en orden fijo ---
+  const labelIdx: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isLabelOnly(lines[i]!)) labelIdx.push(i);
+  }
+
+  if (labelIdx.length >= 4) {
+    // Busca una secuencia Name → Flag → IMO → MMSI
+    for (let s = 0; s <= labelIdx.length - 4; s++) {
+      const i0 = labelIdx[s]!;
+      const i1 = labelIdx[s + 1]!;
+      const i2 = labelIdx[s + 2]!;
+      const i3 = labelIdx[s + 3]!;
+      // Deben ser consecutivas o casi (sin otras líneas de valor entremedio)
+      if (i1 !== i0 + 1 || i2 !== i0 + 2 || i3 !== i0 + 3) continue;
+
+      const l0 = lines[i0]!;
+      const l1 = lines[i1]!;
+      const l2 = lines[i2]!;
+      const l3 = lines[i3]!;
+      const isName = /^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne)\b/i.test(l0);
+      const isFlag = /^(Flag|Bandera|Fiag)\b/i.test(l1);
+      const isImo = /^(IMO|IM0|[Il1]MO)\b/i.test(l2);
+      const isMmsi = /^(MMSI|MMS1|MM5I)\b/i.test(l3);
+      if (!isName || !isFlag || !isImo || !isMmsi) continue;
+
+      const values = lines.slice(i3 + 1).filter((l) => !isLabelOnly(l));
+      // Orden fijo: [0]=nombre, [1]=bandera, [2]=imo, [3]=mmsi
+      if (!nombre && values[0]) {
+        const v = cleanNombre(values[0]);
+        if (v && !isFlagValue(v)) nombre = v;
+      }
+      if (!imo && values[2]) imo = digitsOfLength(values[2], 7) ?? imo;
+      if (!mmsi && values[3]) mmsi = digitsOfLength(values[3], 9) ?? mmsi;
+
+      // Si el desfase movió dígitos, busca en el bloque de valores por posición relativa
+      if (!imo || !mmsi) {
+        const digitLines = values.filter((v) => digitsOfLength(v, 7) || digitsOfLength(v, 9));
+        if (!imo) {
+          for (const v of digitLines) {
+            const d = digitsOfLength(v, 7);
+            if (d) {
+              imo = d;
+              break;
+            }
+          }
+        }
+        if (!mmsi) {
+          for (const v of digitLines) {
+            const d = digitsOfLength(v, 9);
+            if (d) {
+              mmsi = d;
+              break;
+            }
+          }
+        }
+      }
+      break;
     }
   }
-  return null;
+
+  // Fallback de orden fijo sin etiquetas claras: primera línea nombre, luego bandera, luego 7 y 9 dígitos
+  if (!nombre || !imo || !mmsi) {
+    const content = lines.map(stripLabelPrefix).filter((l) => l && !isLabelOnly(l));
+    if (!nombre) {
+      for (const line of content) {
+        if (isFlagValue(line)) continue;
+        if (digitsOfLength(line, 7) || digitsOfLength(line, 9)) continue;
+        const v = cleanNombre(line);
+        if (v.length >= 3) {
+          nombre = v;
+          break;
+        }
+      }
+    }
+    if (!imo) {
+      for (const line of content) {
+        const d = digitsOfLength(line, 7);
+        if (d) {
+          imo = d;
+          break;
+        }
+      }
+    }
+    if (!mmsi) {
+      for (const line of content) {
+        const d = digitsOfLength(line, 9);
+        if (d) {
+          mmsi = d;
+          break;
+        }
+      }
+    }
+  }
+
+  return { nombre, imo, mmsi, lat: null, lng: null };
 }
 
 function extractCoords(text: string): { lat: number; lng: number } | null {
@@ -277,38 +214,23 @@ function extractCoords(text: string): { lat: number; lng: number } | null {
       return { lat, lng };
     }
   }
-
-  const latM = normalized.match(/\b(?:lat(?:itude)?|latitud)\b\s*[:=]?\s*(-?\d{1,3}(?:[.,]\d+)?)/i);
-  const lngM = normalized.match(/\b(?:lng|lon(?:gitude)?|longitud)\b\s*[:=]?\s*(-?\d{1,3}(?:[.,]\d+)?)/i);
-  if (latM && lngM) {
-    const lat = Number(latM[1]!.replace(",", "."));
-    const lng = Number(lngM[1]!.replace(",", "."));
-    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
-      return { lat, lng };
-    }
-  }
-
   return null;
 }
 
 export function parseVesselTrackingFromText(text: string): VesselTrackingOcrFields {
   const normalized = normalizeOcrText(text);
   const lines = cleanLines(normalized);
-  const stacked = extractFromStackedColumns(lines);
-  const mmsi = stacked.mmsi ?? extractMmsi(normalized, lines);
-  const imo = stacked.imo ?? extractImo(normalized, lines, mmsi);
-  const nombre = stacked.nombre ?? extractNombre(lines);
+  const card = parseFixedVesselCard(lines);
   const coords = extractCoords(normalized);
   return {
-    nombre: nombre ?? null,
-    imo: imo ?? null,
-    mmsi: mmsi ?? null,
+    nombre: card.nombre,
+    imo: card.imo,
+    mmsi: card.mmsi,
     lat: coords?.lat ?? null,
     lng: coords?.lng ?? null,
   };
 }
 
-/** Combina varias capturas (ficha + mapa) en un solo resultado. */
 export function mergeVesselTrackingOcr(
   parts: VesselTrackingOcrFields[],
 ): VesselTrackingOcrFields {
