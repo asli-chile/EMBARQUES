@@ -69,12 +69,9 @@ $json = ($latestObj | ConvertTo-Json -Depth 6 -Compress)
 $notes = @"
 Shell de escritorio $version.
 
-Al abrir, la ventana arranca maximizada (pantalla completa con barra de tareas visible).
-Barra de titulo integrada (sin chrome nativo de Windows): visitas, tema, idioma y min/max/cerrar en el header del ERP.
-Arrastra desde la barra superior para mover la ventana o pasarla a otra pantalla.
-Auto-update con feedback al pulsar Actualizar ahora e instalador con UI basica.
-
-El ERP web sigue actualizandose con cada deploy; este release solo actualiza el contenedor (.exe).
+Corrige el boton Actualizar ahora del dialogo de auto-update (IPC directo en lugar de document.title).
+Al abrir, la ventana arranca maximizada.
+Barra de titulo integrada en el header del ERP.
 "@
 
 Write-Host "Creando release $tag..."

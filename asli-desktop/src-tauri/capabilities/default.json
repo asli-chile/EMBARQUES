@@ -22,6 +22,7 @@
     "core:window:allow-is-maximized",
     "core:window:allow-set-decorations",
     "core:window:allow-set-focus",
+    "allow-asli-desktop-update-choice",
     "opener:default",
     "updater:default",
     "process:default",

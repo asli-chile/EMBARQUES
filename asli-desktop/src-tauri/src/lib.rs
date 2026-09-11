@@ -1,3 +1,17 @@
+use std::sync::Mutex;
+
+use tauri::State;
+
+/// Elección del diálogo de update (true = instalar, false = más tarde).
+struct UpdateChoiceSlot(Mutex<Option<bool>>);
+
+#[tauri::command]
+fn asli_desktop_update_choice(choice: bool, slot: State<'_, UpdateChoiceSlot>) {
+    if let Ok(mut guard) = slot.0.lock() {
+        *guard = Some(choice);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -10,6 +24,8 @@ pub fn run() {
                 .app_name("ASLI Embarques")
                 .build(),
         )
+        .manage(UpdateChoiceSlot(Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![asli_desktop_update_choice])
         .setup(|app| {
             // Siempre sin chrome nativo: el header del ERP es la barra de título.
             #[cfg(desktop)]
@@ -181,6 +197,11 @@ fn show_error_overlay(app: &tauri::AppHandle, title: &str, body: &str) {
 async fn ask_update_in_webview(app: &tauri::AppHandle, current: &str, next: &str) -> bool {
     use tauri::Manager;
 
+    // Reset slot antes de mostrar el diálogo.
+    if let Ok(mut guard) = app.state::<UpdateChoiceSlot>().0.lock() {
+        *guard = None;
+    }
+
     let title = escape_js("Actualización ASLI Embarques");
     let body = escape_js(&format!(
         "Hay una nueva versión del acceso de escritorio ({current} → {next}).\n\n\
@@ -198,17 +219,31 @@ El ERP web ya se actualiza solo con cada deploy; esto solo actualiza el contened
   el = document.createElement('div');
   el.id = 'asli-desktop-update-overlay';
   el.setAttribute('role', 'alertdialog');
-  el.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(10,18,36,.72);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+  el.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(10,18,36,.72);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;pointer-events:auto;';
   el.innerHTML = '<div style="width:min(420px,92vw);background:#fff;color:#11224E;border-radius:4px;padding:22px 24px;box-shadow:0 16px 48px rgba(0,0,0,.35);text-align:left">' +
     '<div style="font-weight:700;font-size:16px;margin-bottom:8px">{title}</div>' +
     '<div style="font-size:13px;color:#5a6b85;line-height:1.45;white-space:pre-wrap;margin-bottom:18px">{body}</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end">' +
-    '<button id="asli-desktop-update-later" style="appearance:none;border:1px solid #d5dde8;background:#fff;color:#3d4f6f;font-weight:600;font-size:13px;padding:10px 14px;border-radius:4px;cursor:pointer">Más tarde</button>' +
-    '<button id="asli-desktop-update-now" style="appearance:none;border:0;background:#11224E;color:#fff;font-weight:600;font-size:13px;padding:10px 14px;border-radius:4px;cursor:pointer">Actualizar ahora</button>' +
+    '<button type="button" id="asli-desktop-update-later" style="appearance:none;border:1px solid #d5dde8;background:#fff;color:#3d4f6f;font-weight:600;font-size:13px;padding:10px 14px;border-radius:4px;cursor:pointer">Más tarde</button>' +
+    '<button type="button" id="asli-desktop-update-now" style="appearance:none;border:0;background:#11224E;color:#fff;font-weight:600;font-size:13px;padding:10px 14px;border-radius:4px;cursor:pointer">Actualizar ahora</button>' +
     '</div></div>';
   document.documentElement.appendChild(el);
-  document.getElementById('asli-desktop-update-now').onclick = function(){{ window.__ASLI_UPDATE_CHOICE = true; }};
-  document.getElementById('asli-desktop-update-later').onclick = function(){{ window.__ASLI_UPDATE_CHOICE = false; }};
+  function report(choice) {{
+    window.__ASLI_UPDATE_CHOICE = choice;
+    try {{
+      var t = window.__TAURI__;
+      if (t && t.core && typeof t.core.invoke === 'function') {{
+        t.core.invoke('asli_desktop_update_choice', {{ choice: choice }});
+      }}
+    }} catch (_) {{}}
+    try {{ document.title = choice ? '__ASLI_UPD_1__' : '__ASLI_UPD_0__'; }} catch (_) {{}}
+  }}
+  document.getElementById('asli-desktop-update-now').onclick = function(e){{
+    e.preventDefault(); e.stopPropagation(); report(true);
+  }};
+  document.getElementById('asli-desktop-update-later').onclick = function(e){{
+    e.preventDefault(); e.stopPropagation(); report(false);
+  }};
 }})();"#
         ),
     );
@@ -219,9 +254,18 @@ El ERP web ya se actualiza solo con cada deploy; esto solo actualiza el contened
 
     let original_title = win.title().unwrap_or_else(|_| "ASLI Embarques".into());
 
-    // Poll: los botones setean __ASLI_UPDATE_CHOICE; lo leemos vía document.title.
+    // Preferir IPC (invoke); title queda como respaldo por si el ACL falla.
     for _ in 0..3_600 {
         tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+
+        if let Ok(mut guard) = app.state::<UpdateChoiceSlot>().0.lock() {
+            if let Some(choice) = guard.take() {
+                let _ = win.set_title(&original_title);
+                hide_update_overlay(app);
+                return choice;
+            }
+        }
+
         let _ = win.eval(
             r#"(function(){
   var v = window.__ASLI_UPDATE_CHOICE;
