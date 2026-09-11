@@ -113,49 +113,94 @@ export function InicioFooter({
   t,
   brand,
 }: {
-  t: { footerLocation: string; footerEmail: string; footerPhone: string; footerCopyright: string };
-  brand: { logoWhite: string; companyTitle: string };
+  t: {
+    footerTagline: string;
+    footerSlogan: string;
+    footerLocation: string;
+    footerEmail: string;
+    footerPhone: string;
+    footerCopyright: string;
+  };
+  brand: { logoWhite: string; companyTitle: string; companyShort?: string };
 }) {
+  const social = [
+    { href: "https://www.linkedin.com/company/aslichile/posts/?feedView=all", icon: "mdi:linkedin", label: "LinkedIn" },
+    { href: "https://www.instagram.com/asli_chile/", icon: "mdi:instagram", label: "Instagram" },
+    { href: "https://wa.me/56968394225", icon: "mdi:whatsapp", label: "WhatsApp" },
+  ] as const;
+
+  const contacts = [
+    { icon: "lucide:map-pin", text: t.footerLocation, href: null as string | null },
+    { icon: "lucide:mail", text: t.footerEmail, href: `mailto:${t.footerEmail}` },
+    { icon: "lucide:phone", text: t.footerPhone, href: "tel:+56968394225" },
+  ] as const;
+
   return (
-    <footer data-inicio-reveal className="inicio-footer-neon relative z-10 py-10 sm:py-12 text-white">
-      <div className="relative max-w-5xl mx-auto px-4">
-        <div className="flex flex-col items-center text-center">
-          <img src={brand.logoWhite} alt={brand.companyTitle} width={160} height={80} className="h-9 w-auto object-contain mb-5" loading="lazy" />
-          <div className="flex gap-2.5 mb-5">
-            {[
-              { href: "https://www.linkedin.com/company/aslichile/posts/?feedView=all", icon: "mdi:linkedin", label: "LinkedIn" },
-              { href: "https://www.instagram.com/asli_chile/", icon: "mdi:instagram", label: "Instagram" },
-              { href: "https://wa.me/56968394225", icon: "mdi:whatsapp", label: "WhatsApp" },
-            ].map(({ href, icon, label }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-md border border-white/20 flex items-center justify-center text-white/70 transition-colors hover:border-[var(--inicio-teal)] hover:text-white"
-                aria-label={label}
-              >
-                <Icon icon={icon} width={17} height={17} />
-              </a>
-            ))}
-          </div>
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-white/70">
-            <span className="inline-flex items-center gap-2">
-              <Icon icon="lucide:map-pin" width={13} height={13} className="inicio-accent-text" />
-              {t.footerLocation}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Icon icon="lucide:mail" width={13} height={13} className="inicio-accent-text" />
-              {t.footerEmail}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Icon icon="lucide:phone" width={13} height={13} className="inicio-accent-text" />
-              {t.footerPhone}
-            </span>
-          </div>
-          <p className="mt-6 text-[11px] text-white/45">
-            © {new Date().getFullYear()} {brand.companyTitle} · {t.footerCopyright}
+    <footer data-inicio-reveal className="inicio-footer-neon relative z-10 py-12 sm:py-16 text-white">
+      <div className="relative mx-auto flex max-w-5xl flex-col items-center px-4 text-center">
+        <img
+          src={brand.logoWhite}
+          alt={brand.companyShort ?? brand.companyTitle}
+          width={180}
+          height={72}
+          className="mb-3 h-11 w-auto object-contain sm:h-12"
+          loading="lazy"
+        />
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/90 sm:text-xs">
+          {t.footerTagline}
+        </p>
+
+        <div className="mt-8 flex w-full max-w-3xl items-center gap-4 sm:mt-10 sm:gap-5">
+          <span className="inicio-footer-rule h-px flex-1" aria-hidden />
+          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-white sm:text-sm sm:tracking-[0.2em]">
+            {t.footerSlogan}
           </p>
+          <span className="inicio-footer-rule h-px flex-1" aria-hidden />
+        </div>
+
+        <div className="mt-7 flex items-center justify-center gap-3 sm:mt-8 sm:gap-3.5">
+          {social.map(({ href, icon, label }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inicio-footer-social"
+              aria-label={label}
+            >
+              <Icon icon={icon} width={18} height={18} />
+            </a>
+          ))}
+        </div>
+
+        <div className="mt-8 flex w-full max-w-4xl flex-col items-center gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-0">
+          {contacts.map((item, idx) => {
+            const inner = (
+              <>
+                <Icon icon={item.icon} width={14} height={14} className="inicio-footer-contact-icon shrink-0" />
+                <span>{item.text}</span>
+              </>
+            );
+            return (
+              <div key={item.text} className="flex items-center">
+                {idx > 0 ? (
+                  <span className="inicio-footer-divider mx-4 hidden h-4 w-px sm:mx-5 sm:block" aria-hidden />
+                ) : null}
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    className="inline-flex items-center gap-2 text-xs text-white/85 transition-colors hover:text-white sm:text-[13px]"
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-xs text-white/85 sm:text-[13px]">
+                    {inner}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </footer>

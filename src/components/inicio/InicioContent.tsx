@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type Lenis from "lenis";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n";
 import { brand } from "@/lib/brand";
@@ -30,6 +31,7 @@ export function InicioContent() {
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva({ enabled: isLoggedIn });
   const mainRef = useRef<HTMLElement>(null);
   const bgParallaxRef = useRef<HTMLDivElement>(null);
+  const lenisRef = useRef<Lenis | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [kpiData, setKpiData] = useState<KpiData>(emptyKpiData);
   const [loadingKpis, setLoadingKpis] = useState(true);
@@ -64,6 +66,39 @@ export function InicioContent() {
     mainElement.addEventListener("scroll", handleScroll);
     return () => mainElement.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main || authLoading || !shouldUseHeavyVisualEffects()) return;
+
+    let cancelled = false;
+    let teardown = () => {};
+
+    void Promise.all([import("lenis"), import("gsap"), import("gsap/ScrollTrigger")]).then(
+      ([{ default: Lenis }, { default: gsap }, { ScrollTrigger }]) => {
+        if (cancelled) return;
+        const lenis = new Lenis({ wrapper: main, content: main, lerp: 0.085 });
+        lenisRef.current = lenis;
+        lenis.on("scroll", ScrollTrigger.update);
+
+        const tick = (time: number) => lenis.raf(time * 1000);
+        gsap.ticker.add(tick);
+        gsap.ticker.lagSmoothing(0);
+
+        teardown = () => {
+          gsap.ticker.remove(tick);
+          gsap.ticker.lagSmoothing(500, 33);
+          lenis.destroy();
+          lenisRef.current = null;
+        };
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      teardown();
+    };
+  }, [authLoading, isLoggedIn]);
 
   useLayoutEffect(() => {
     const main = mainRef.current;
@@ -138,7 +173,10 @@ export function InicioContent() {
   useEffect(() => {
     if (loadingKpis || authLoading || !shouldUseHeavyVisualEffects()) return;
     void import("gsap/ScrollTrigger").then(({ ScrollTrigger }) => {
-      requestAnimationFrame(() => ScrollTrigger.refresh());
+      requestAnimationFrame(() => {
+        lenisRef.current?.resize();
+        ScrollTrigger.refresh();
+      });
     });
   }, [loadingKpis, isLoggedIn, authLoading]);
 
@@ -204,13 +242,15 @@ export function InicioContent() {
   }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, isEjecutivo, empresaNombres, isLoggedIn]);
 
   const handleScrollToTop = () => {
-    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    const lenis = lenisRef.current;
+    if (lenis) lenis.scrollTo(0);
+    else mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <main
       ref={mainRef}
-      className="inicio-surface relative isolate min-h-0 flex-1 scroll-smooth overflow-auto"
+      className="inicio-surface relative isolate min-h-0 flex-1 overflow-auto"
       data-theme={theme}
       role="main"
     >

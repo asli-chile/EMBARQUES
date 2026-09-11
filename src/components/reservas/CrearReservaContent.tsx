@@ -42,20 +42,31 @@ type ReservaDateFieldProps = {
   onChange: (iso: string) => void;
   placeholder: string;
   inputClass: string;
+  labelClass?: string;
+  icon?: string;
+  help?: string;
   min?: string;
 };
 
-function ReservaDateField({ id, label, value, onChange, placeholder, inputClass, min }: ReservaDateFieldProps) {
+function ReservaDateField({ id, label, value, onChange, placeholder, inputClass, labelClass, icon, help, min }: ReservaDateFieldProps) {
   const display = value
     ? format(parse(value, "yyyy-MM-dd", new Date()), "dd-MM-yyyy")
     : "";
 
   return (
     <div className="min-w-0">
-      <label htmlFor={id} className="mb-1 block text-[11px] font-bold uppercase tracking-[0.08em] text-dash-muted">
+      <label htmlFor={id} className={labelClass ?? "mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-dash-muted"}>
         {label}
       </label>
-      <div className={`relative flex items-center ${inputClass} pr-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-dash-neon/40 focus-within:border-dash-neon/50`}>
+      <div className={`relative flex items-center ${inputClass} ${icon ? "pl-12" : ""} pr-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-dash-neon/40 focus-within:border-dash-neon/50`}>
+        {icon ? (
+          <Icon
+            icon={icon}
+            width={22}
+            height={22}
+            className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+          />
+        ) : null}
         <span className={`block truncate pointer-events-none ${display ? "text-dash-fg" : "text-dash-muted font-medium"}`}>
           {display || placeholder}
         </span>
@@ -76,6 +87,7 @@ function ReservaDateField({ id, label, value, onChange, placeholder, inputClass,
           aria-label={display || placeholder}
         />
       </div>
+      {help ? <p className="mt-2 text-sm leading-snug text-dash-muted">{help}</p> : null}
     </div>
   );
 }
@@ -95,6 +107,9 @@ type ReservaDateTimeFieldProps = {
   datePlaceholder: string;
   inputClass: string;
   labelClass: string;
+  dateLabel?: string;
+  timeLabel?: string;
+  help?: string;
 };
 
 /** Fecha + hora en controles separados (sin el picker nativo datetime-local). */
@@ -106,6 +121,9 @@ function ReservaDateTimeField({
   datePlaceholder,
   inputClass,
   labelClass,
+  dateLabel,
+  timeLabel,
+  help,
 }: ReservaDateTimeFieldProps) {
   const [datePart, timePart] = value.includes("T")
     ? value.split("T")
@@ -135,53 +153,72 @@ function ReservaDateTimeField({
   return (
     <div className="min-w-0">
       <p className={labelClass}>{label}</p>
-      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-2">
-        <div className={`relative flex items-center ${inputClass} pr-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-dash-neon/40 focus-within:border-dash-neon/50`}>
-          <span className={`block truncate pointer-events-none ${dateDisplay ? "text-dash-fg" : "text-dash-muted font-medium"}`}>
-            {dateDisplay || datePlaceholder}
-          </span>
-          <Icon
-            icon="lucide:calendar"
-            width={16}
-            height={16}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted"
-          />
-          <input
-            id={`${id}-date`}
-            type="date"
-            lang="es-CL"
-            value={datePart}
-            onChange={(e) => emit(e.target.value, timePart)}
-            className="asli-date-hit"
-            aria-label={typeof label === "string" ? `${label} fecha` : "Fecha"}
-          />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="min-w-0">
+          {dateLabel ? <p className="mb-1 text-[11px] font-semibold text-dash-muted">{dateLabel}</p> : null}
+          <div className={`relative flex items-center ${inputClass} pl-12 pr-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-dash-neon/40 focus-within:border-dash-neon/50`}>
+            <Icon
+              icon="lucide:calendar-days"
+              width={22}
+              height={22}
+              className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+            />
+            <span className={`block truncate pointer-events-none ${dateDisplay ? "text-dash-fg" : "text-dash-muted font-medium"}`}>
+              {dateDisplay || datePlaceholder}
+            </span>
+            <Icon
+              icon="lucide:calendar"
+              width={16}
+              height={16}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted"
+            />
+            <input
+              id={`${id}-date`}
+              type="date"
+              lang="es-CL"
+              value={datePart}
+              onChange={(e) => emit(e.target.value, timePart)}
+              className="asli-date-hit"
+              aria-label={typeof label === "string" ? `${label} fecha` : "Fecha"}
+            />
+          </div>
         </div>
-        <div className="relative min-w-0">
-          <select
-            id={`${id}-time`}
-            value={timePart && TIME_OPTIONS_30M.includes(timePart) ? timePart : timePart || ""}
-            onChange={(e) => emit(datePart || format(new Date(), "yyyy-MM-dd"), e.target.value)}
-            className={`${inputClass} appearance-none pr-9`}
-            aria-label={typeof label === "string" ? `${label} hora` : "Hora"}
-          >
-            <option value="">{datePart ? "Hora..." : "—:—"}</option>
-            {timePart && !TIME_OPTIONS_30M.includes(timePart) ? (
-              <option value={timePart}>{timePart}</option>
-            ) : null}
-            {TIME_OPTIONS_30M.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <Icon
-            icon="lucide:clock"
-            width={16}
-            height={16}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted"
-          />
+        <div className="min-w-0">
+          {timeLabel ? <p className="mb-1 text-[11px] font-semibold text-dash-muted">{timeLabel}</p> : null}
+          <div className="relative min-w-0">
+            <Icon
+              icon="lucide:clock"
+              width={22}
+              height={22}
+              className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+            />
+            <select
+              id={`${id}-time`}
+              value={timePart && TIME_OPTIONS_30M.includes(timePart) ? timePart : timePart || ""}
+              onChange={(e) => emit(datePart || format(new Date(), "yyyy-MM-dd"), e.target.value)}
+              className={`${inputClass} appearance-none pl-12 pr-9`}
+              aria-label={typeof label === "string" ? `${label} hora` : "Hora"}
+            >
+              <option value="">{datePart ? "Hora..." : "—:—"}</option>
+              {timePart && !TIME_OPTIONS_30M.includes(timePart) ? (
+                <option value={timePart}>{timePart}</option>
+              ) : null}
+              {TIME_OPTIONS_30M.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            <Icon
+              icon="lucide:chevron-down"
+              width={16}
+              height={16}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted"
+            />
+          </div>
         </div>
       </div>
+      {help ? <p className="mt-2 text-sm leading-snug text-dash-muted">{help}</p> : null}
     </div>
   );
 }
@@ -1848,7 +1885,8 @@ export function CrearReservaContent() {
     label: string,
     required?: boolean,
     /** Si true, el desplegable muestra solo el valor (p. ej. FOB) sin descripción. */
-    valorOnly?: boolean
+    valorOnly?: boolean,
+    icon?: string,
   ) => {
     const items = catalogos[categoria] ?? [];
     return (
@@ -1857,12 +1895,13 @@ export function CrearReservaContent() {
           {label}{required && reqMark}
         </label>
         <FormSelect
-          variant="neon" id={name}
+          variant="neon"
+          id={name}
           name={name === "forma_pago" ? "sale_clause_field" : name}
+          icon={icon}
           value={formData[name] as string}
           placeholder={tr.selectPlaceholder}
           disabled={loadingCatalogos}
-          variant="neon"
           options={items.map((item) => ({
             value: item.valor,
             label: valorOnly || !item.descripcion ? item.valor : `${item.valor} — ${item.descripcion}`,
@@ -1889,7 +1928,8 @@ export function CrearReservaContent() {
     name: keyof FormData,
     options: SelectOption[],
     label: string,
-    required?: boolean
+    required?: boolean,
+    icon?: string,
   ) => (
     <div className="min-w-0">
       <label htmlFor={name} className={labelClass}>
@@ -1899,12 +1939,13 @@ export function CrearReservaContent() {
         )}
       </label>
       <FormSelect
-        variant="neon" id={name}
+        variant="neon"
+        id={name}
         name={name}
+        icon={icon}
         value={formData[name] as string}
         placeholder={tr.selectPlaceholder}
         disabled={loadingCatalogos}
-        variant="neon"
         options={options.map((opt) => ({ value: opt.id, label: opt.nombre }))}
         onChange={(value) => {
           if (name === "nave") {
@@ -2595,7 +2636,7 @@ export function CrearReservaContent() {
     ),
     comercial: (
       <div className="flex min-h-0 flex-col gap-4">
-        <div className="grid w-full min-w-0 grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
           {(
             [
               {
@@ -2605,7 +2646,6 @@ export function CrearReservaContent() {
                 icon: "lucide:globe",
                 placeholder: tr.selectIncoterm,
                 help: tr.helpIncoterm,
-                desc: tr.descIncoterm,
                 options: (catalogos.incoterm ?? []).map((item) => ({
                   value: item.valor,
                   label: item.valor,
@@ -2618,7 +2658,6 @@ export function CrearReservaContent() {
                 icon: "lucide:credit-card",
                 placeholder: tr.selectFormaPago,
                 help: tr.helpFormaPago,
-                desc: tr.descFormaPago,
                 options: (catalogos.forma_pago ?? []).map((item) => ({
                   value: item.valor,
                   label: item.descripcion ? `${item.valor} — ${item.descripcion}` : item.valor,
@@ -2631,32 +2670,21 @@ export function CrearReservaContent() {
                 icon: "lucide:building-2",
                 placeholder: tr.selectConsignatario,
                 help: tr.helpConsignatario,
-                desc: tr.descConsignatario,
                 options: consignatarios.map((opt) => ({ value: opt.id, label: opt.nombre })),
                 count: consignatarios.length,
               },
             ] as const
           ).map((field) => (
             <div key={field.name} className="min-w-0">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <label htmlFor={field.name} className={`${labelClass} mb-0`}>
-                  {field.label}
-                  {field.required ? reqMark : null}
-                  {"count" in field && field.count > 0 ? (
-                    <span className="ml-2 font-semibold normal-case tracking-normal text-dash-muted">
-                      ({field.count})
-                    </span>
-                  ) : null}
-                </label>
-                <button
-                  type="button"
-                  title={field.desc}
-                  className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-dash-neon transition-colors hover:text-dash-fg"
-                >
-                  <Icon icon="lucide:info" width={14} height={14} />
-                  {tr.whatIs}
-                </button>
-              </div>
+              <label htmlFor={field.name} className={labelClass}>
+                {field.label}
+                {field.required ? reqMark : null}
+                {"count" in field && field.count > 0 ? (
+                  <span className="ml-2 font-semibold normal-case tracking-normal text-dash-muted">
+                    ({field.count})
+                  </span>
+                ) : null}
+              </label>
               <FormSelect
                 variant="neon"
                 id={field.name}
@@ -2668,109 +2696,155 @@ export function CrearReservaContent() {
                 options={[...field.options]}
                 onChange={(value) => setFormData((prev) => ({ ...prev, [field.name]: value }))}
               />
-              <p className="mt-1.5 text-xs leading-snug text-dash-muted">{field.help}</p>
+              <p className="mt-2 text-sm leading-snug text-dash-muted">{field.help}</p>
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3.5 py-3 sm:max-w-xl">
-          <Icon icon="lucide:info" width={28} height={28} className="shrink-0 self-center text-dash-neon" />
-          <p className="min-w-0 flex-1 self-center text-sm leading-snug text-dash-muted">
+        <div className="flex min-h-[3.25rem] items-center gap-3.5 rounded-xl border border-dash-border bg-dash-control px-4 py-3.5">
+          <Icon icon="lucide:info" width={32} height={32} className="shrink-0 self-center text-dash-neon" />
+          <p className="min-w-0 flex-1 self-center text-sm leading-snug text-dash-muted sm:text-base">
             {tr.comercialFooterHint}
           </p>
         </div>
       </div>
     ),
     carga: (
-      <FieldGrid>
-        <ComboboxInput
-          neon id="especie"
-          label={tr.especie}
-          labelExtra={reqMark}
-          labelClass={labelClass}
-          inputClass={inputClass}
-          value={especieInput}
-          options={especies}
-          onSelect={(opt) => {
-            setEspecieInput(opt.nombre);
-            setFormData((prev) => ({ ...prev, especie: opt.id }));
-          }}
-          onChange={(val) => {
-            setEspecieInput(val);
-            setFormData((prev) => ({ ...prev, especie: "" }));
-          }}
-          onAddNew={handleAddEspecie}
-          addNewLabel={(text) => `${tr.addNewEspecie} "${text}"`}
-          addingNew={addingEspecie}
-          placeholder={tr.searchEspecie}
-          disabled={loadingCatalogos}
-        />
-        {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true, true)}
-        {renderInput("temperatura", tr.temperatura, "text", tr.placeholderTemperatura)}
-        <div>
-          <label htmlFor="ventilacion" className={labelClass}>
-            {tr.ventilacion}
-            {formData.tipo_atmosfera && (
-              <span className="ml-2 text-dash-muted font-normal normal-case tracking-normal">· {tr.ventilacionNote}</span>
-            )}
-          </label>
-          <input
-            id="ventilacion"
-            name="ventilacion"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            data-field="ventilacion"
-            autoComplete="off"
-            value={formData.ventilacion}
-            onChange={handleChange}
-            placeholder={tr.placeholderVentilacion}
-            className={inputClass}
-            disabled={loadingCatalogos || !!formData.tipo_atmosfera}
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ComboboxInput
+            neon
+            id="especie"
+            icon="lucide:leaf"
+            label={tr.especie}
+            labelExtra={reqMark}
+            labelClass={labelClass}
+            inputClass={inputClass}
+            value={especieInput}
+            options={especies}
+            onSelect={(opt) => {
+              setEspecieInput(opt.nombre);
+              setFormData((prev) => ({ ...prev, especie: opt.id }));
+            }}
+            onChange={(val) => {
+              setEspecieInput(val);
+              setFormData((prev) => ({ ...prev, especie: "" }));
+            }}
+            onAddNew={handleAddEspecie}
+            addNewLabel={(text) => `${tr.addNewEspecie} "${text}"`}
+            addingNew={addingEspecie}
+            placeholder={tr.searchEspecie}
+            disabled={loadingCatalogos}
           />
-        </div>
-        <div className="min-w-0">
-          <p className={labelClass}>{tr.tratamientoFrio}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              { value: "SI", label: tr.si },
-              { value: "NO", label: tr.no },
-            ] as const).map((opt) => {
-              const selected = formData.tratamiento_frio === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => {
-                      if (opt.value === "NO") {
-                        return {
-                          ...prev,
-                          tratamiento_frio: "NO",
-                          tipo_atmosfera: "",
-                          tratamiento_frio_o2: "",
-                          tratamiento_frio_co2: "",
-                        };
-                      }
-                      return { ...prev, tratamiento_frio: "SI" };
-                    });
-                  }}
-                  className={`px-3 py-2.5 rounded-lg border text-sm font-bold transition-all ${
-                    selected
-                      ? "bg-dash-neon/25 text-dash-fg border-dash-neon/50 shadow-sm"
-                      : "bg-dash-control text-dash-fg border-dash-border hover:border-dash-neon/40"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
+          {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true, true, "lucide:box")}
+          <div className="min-w-0">
+            <label htmlFor="temperatura" className={labelClass}>{tr.temperatura}</label>
+            <div className="relative">
+              <Icon
+                icon="lucide:thermometer"
+                width={22}
+                height={22}
+                className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+              />
+              <input
+                id="temperatura"
+                name="temperatura"
+                type="text"
+                value={formData.temperatura}
+                onChange={handleChange}
+                placeholder={tr.placeholderTemperatura}
+                className={`${inputClass} pl-12`}
+                disabled={loadingCatalogos}
+              />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="ventilacion" className={labelClass}>
+              {tr.ventilacion}
+              {formData.tipo_atmosfera && (
+                <span className="ml-2 font-normal normal-case tracking-normal text-dash-muted">· {tr.ventilacionNote}</span>
+              )}
+            </label>
+            <div className="relative">
+              <Icon
+                icon="lucide:wind"
+                width={22}
+                height={22}
+                className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+              />
+              <input
+                id="ventilacion"
+                name="ventilacion"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                data-field="ventilacion"
+                autoComplete="off"
+                value={formData.ventilacion}
+                onChange={handleChange}
+                placeholder={tr.placeholderVentilacion}
+                className={`${inputClass} pl-12`}
+                disabled={loadingCatalogos || !!formData.tipo_atmosfera}
+              />
+            </div>
+          </div>
+          <div className="min-w-0 sm:col-span-2">
+            <p className={labelClass}>{tr.tratamientoFrio}</p>
+            <div className="grid gap-2.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-stretch">
+              <div className="flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3 py-2">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dash-neon/35 bg-dash-neon/10 text-dash-neon">
+                  <Icon icon="lucide:thermometer-snowflake" width={22} height={22} />
+                </span>
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+                  {([
+                    { value: "SI", label: tr.si },
+                    { value: "NO", label: tr.no },
+                  ] as const).map((opt) => {
+                    const selected = formData.tratamiento_frio === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => {
+                            if (opt.value === "NO") {
+                              return {
+                                ...prev,
+                                tratamiento_frio: "NO",
+                                tipo_atmosfera: "",
+                                tratamiento_frio_o2: "",
+                                tratamiento_frio_co2: "",
+                              };
+                            }
+                            return { ...prev, tratamiento_frio: "SI" };
+                          });
+                        }}
+                        className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors ${
+                          selected
+                            ? "border-dash-neon/60 bg-dash-neon text-[#041018] shadow-[0_0_18px_-8px_color-mix(in_srgb,var(--dash-neon)_60%,transparent)]"
+                            : "border-dash-border bg-dash-control text-dash-fg hover:border-dash-neon/40"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3.5 py-2.5">
+                <Icon icon="lucide:info" width={28} height={28} className="shrink-0 self-center text-dash-neon" />
+                <div className="min-w-0 flex-1 self-center">
+                  <p className="text-sm font-bold text-dash-fg">{tr.tratamientoFrioWhatTitle}</p>
+                  <p className="mt-0.5 text-sm leading-snug text-dash-muted">{tr.tratamientoFrioWhatBody}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         {formData.tratamiento_frio === "SI" ? (
-          <>
-            {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera, false, true)}
-            <div>
+          <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+            {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera, false, true, "lucide:cloud")}
+            <div className="min-w-0">
               <label htmlFor="tratamiento_frio_o2" className={labelClass}>{tr.o2}</label>
               <input
                 id="tratamiento_frio_o2"
@@ -2786,7 +2860,7 @@ export function CrearReservaContent() {
                 className={inputClass}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label htmlFor="tratamiento_frio_co2" className={labelClass}>{tr.co2}</label>
               <input
                 id="tratamiento_frio_co2"
@@ -2802,168 +2876,290 @@ export function CrearReservaContent() {
                 className={inputClass}
               />
             </div>
-          </>
+          </div>
         ) : null}
-      </FieldGrid>
+      </div>
     ),
     naviera: (
-      <FieldGrid>
-        {isAereo ? (
-          <ComboboxInput
-            neon id="naviera"
-            label={tr.aerolinea}
-            labelExtra={reqMark}
-            labelClass={labelClass}
-            inputClass={inputClass}
-            value={navieraInput}
-            options={carriersFiltered}
-            maxSuggestions={80}
-            onSelect={(opt) => {
-              setNavieraInput(opt.nombre);
-              setFormData((prev) => ({ ...prev, naviera: opt.id, nave: "", viaje: "" }));
-              setNaveInput("");
-              setViajesSugeridos([]);
-            }}
-            onChange={(val) => {
-              setNavieraInput(val);
-              const q = val.trim().toUpperCase();
-              const match = q
-                ? carriersFiltered.find((n) => n.nombre.toUpperCase() === q)
-                : undefined;
-              setFormData((prev) => ({
-                ...prev,
-                naviera: match?.id ?? "",
-                nave: match && match.id === prev.naviera ? prev.nave : "",
-                viaje: match && match.id === prev.naviera ? prev.viaje : "",
-              }));
-              if (!match) {
-                setNaveInput("");
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+          {isAereo ? (
+            <div className="min-w-0">
+              <ComboboxInput
+                neon
+                id="naviera"
+                icon="lucide:plane"
+                label={tr.aerolinea}
+                labelExtra={reqMark}
+                labelClass={labelClass}
+                inputClass={inputClass}
+                value={navieraInput}
+                options={carriersFiltered}
+                maxSuggestions={80}
+                onSelect={(opt) => {
+                  setNavieraInput(opt.nombre);
+                  setFormData((prev) => ({ ...prev, naviera: opt.id, nave: "", viaje: "" }));
+                  setNaveInput("");
+                  setViajesSugeridos([]);
+                }}
+                onChange={(val) => {
+                  setNavieraInput(val);
+                  const q = val.trim().toUpperCase();
+                  const match = q
+                    ? carriersFiltered.find((n) => n.nombre.toUpperCase() === q)
+                    : undefined;
+                  setFormData((prev) => ({
+                    ...prev,
+                    naviera: match?.id ?? "",
+                    nave: match && match.id === prev.naviera ? prev.nave : "",
+                    viaje: match && match.id === prev.naviera ? prev.viaje : "",
+                  }));
+                  if (!match) {
+                    setNaveInput("");
+                    setViajesSugeridos([]);
+                  }
+                }}
+                onAddNew={handleAddCarrier}
+                addNewLabel={(text) => `${tr.addNewAerolinea} "${text}"`}
+                addingNew={addingNaviera}
+                placeholder={tr.searchAerolinea}
+                disabled={loadingCatalogos}
+              />
+              <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpAerolinea}</p>
+            </div>
+          ) : (
+            <div className="min-w-0">
+              <label htmlFor="naviera" className={labelClass}>
+                {tr.naviera}{reqMark}
+                {carriersFiltered.length > 0 && (
+                  <span className="ml-2 font-semibold normal-case tracking-normal text-dash-muted">
+                    ({carriersFiltered.length})
+                  </span>
+                )}
+              </label>
+              <FormSelect
+                variant="neon"
+                id="naviera"
+                name="naviera"
+                icon="lucide:building-2"
+                value={formData.naviera}
+                placeholder={tr.selectPlaceholder}
+                disabled={loadingCatalogos}
+                options={carriersFiltered.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+                onChange={(value) => {
+                  setNaveInput("");
+                  setViajesSugeridos([]);
+                  setFormData((prev) => ({ ...prev, naviera: value, nave: "", viaje: "" }));
+                }}
+              />
+              <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpNaviera}</p>
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <ComboboxInput
+              neon
+              id="nave"
+              icon={isAereo ? "lucide:plane" : "lucide:ship"}
+              label={isAereo ? tr.naveAerea : tr.nave}
+              labelExtra={reqMark}
+              labelClass={labelClass}
+              inputClass={inputClass}
+              value={naveInput}
+              options={navesFiltered}
+              maxSuggestions={80}
+              onSelect={(opt) => {
+                setNaveInput(opt.nombre);
                 setViajesSugeridos([]);
+                setFormData((prev) => ({ ...prev, nave: opt.id, viaje: "" }));
+              }}
+              onChange={(val) => {
+                setNaveInput(val);
+                const q = val.trim().toUpperCase();
+                const match = q
+                  ? navesFiltered.find((n) => n.nombre.toUpperCase() === q) ??
+                    navesPorModo.find((n) => n.nombre.toUpperCase() === q)
+                  : undefined;
+                setViajesSugeridos((prev) => (match ? prev : []));
+                setFormData((prev) => ({
+                  ...prev,
+                  nave: match?.id ?? "",
+                  viaje: match && match.id === prev.nave ? prev.viaje : "",
+                }));
+              }}
+              onAddNew={handleAddNave}
+              addNewLabel={(text) => `${isAereo ? tr.addNewNaveAerea : tr.addNewNave} "${text}"`}
+              addingNew={addingNave}
+              placeholder={isAereo ? tr.searchNaveAerea : tr.searchNave}
+              disabled={loadingCatalogos}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{isAereo ? tr.helpNaveAerea : tr.helpNave}</p>
+          </div>
+
+          <div className="min-w-0">
+            <ComboboxInput
+              neon
+              id="viaje"
+              icon="lucide:file-text"
+              label={isAereo ? tr.numeroVuelo : tr.viaje}
+              labelExtra={
+                <>
+                  {reqMark}
+                  {!isAereo && viajesSugeridos.length > 0 && (
+                    <span className="ml-2 font-normal normal-case text-dash-fg">{tr.fromItinerary}</span>
+                  )}
+                </>
               }
-            }}
-            onAddNew={handleAddCarrier}
-            addNewLabel={(text) => `${tr.addNewAerolinea} "${text}"`}
-            addingNew={addingNaviera}
-            placeholder={tr.searchAerolinea}
-            disabled={loadingCatalogos}
-          />
-        ) : (
-          renderSelect("naviera", carriersFiltered, tr.naviera, true)
-        )}
-        <ComboboxInput
-          neon id="nave"
-          label={isAereo ? tr.naveAerea : tr.nave}
-          labelExtra={reqMark}
-          labelClass={labelClass}
-          inputClass={inputClass}
-          value={naveInput}
-          options={navesFiltered}
-          maxSuggestions={80}
-          onSelect={(opt) => {
-            setNaveInput(opt.nombre);
-            setViajesSugeridos([]);
-            setFormData((prev) => ({ ...prev, nave: opt.id, viaje: "" }));
-          }}
-          onChange={(val) => {
-            setNaveInput(val);
-            const q = val.trim().toUpperCase();
-            const match = q
-              ? navesFiltered.find((n) => n.nombre.toUpperCase() === q) ??
-                navesPorModo.find((n) => n.nombre.toUpperCase() === q)
-              : undefined;
-            setViajesSugeridos((prev) => (match ? prev : []));
-            setFormData((prev) => ({
-              ...prev,
-              nave: match?.id ?? "",
-              viaje: match && match.id === prev.nave ? prev.viaje : "",
-            }));
-          }}
-          onAddNew={handleAddNave}
-          addNewLabel={(text) => `${isAereo ? tr.addNewNaveAerea : tr.addNewNave} "${text}"`}
-          addingNew={addingNave}
-          placeholder={isAereo ? tr.searchNaveAerea : tr.searchNave}
-          disabled={loadingCatalogos}
-        />
-        <ComboboxInput
-          neon id="viaje"
-          label={isAereo ? tr.numeroVuelo : tr.viaje}
-          labelExtra={
-            <>
-              {reqMark}
-              {!isAereo && viajesSugeridos.length > 0 && (
-                <span className="ml-2 text-dash-fg font-normal normal-case">{tr.fromItinerary}</span>
+              labelClass={labelClass}
+              inputClass={inputClass}
+              value={formData.viaje}
+              options={isAereo ? [] : viajesSugeridos.map((v) => ({ id: v, nombre: v }))}
+              maxSuggestions={80}
+              onSelect={(opt) => setFormData((prev) => ({ ...prev, viaje: opt.nombre }))}
+              onChange={(val) => setFormData((prev) => ({ ...prev, viaje: val }))}
+              placeholder={isAereo ? tr.searchVuelo : tr.searchViaje}
+              disabled={loadingCatalogos}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{isAereo ? tr.helpVuelo : tr.helpViaje}</p>
+          </div>
+
+          <div className="min-w-0">
+            <label htmlFor="booking" className={labelClass}>{tr.booking}</label>
+            <div className="relative">
+              <Icon
+                icon="lucide:ticket"
+                width={22}
+                height={22}
+                className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+              />
+              <input
+                id="booking"
+                name="booking"
+                type="text"
+                value={formData.booking}
+                onChange={handleChange}
+                placeholder={tr.placeholderBooking}
+                className={`${inputClass} pl-12`}
+                disabled={loadingCatalogos}
+              />
+            </div>
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpBooking}</p>
+          </div>
+
+          <div className="min-w-0">
+            <label htmlFor="pol" className={labelClass}>
+              {tr.pol}{reqMark}
+              {puertosOrigen.length > 0 && (
+                <span className="ml-2 font-semibold normal-case tracking-normal text-dash-muted">
+                  ({puertosOrigen.length})
+                </span>
               )}
-            </>
-          }
-          labelClass={labelClass}
-          inputClass={inputClass}
-          value={formData.viaje}
-          options={isAereo ? [] : viajesSugeridos.map((v) => ({ id: v, nombre: v }))}
-          maxSuggestions={80}
-          onSelect={(opt) => setFormData((prev) => ({ ...prev, viaje: opt.nombre }))}
-          onChange={(val) => setFormData((prev) => ({ ...prev, viaje: val }))}
-          placeholder={isAereo ? tr.searchVuelo : tr.searchViaje}
-          disabled={loadingCatalogos}
-        />
-        {renderInput("booking", tr.booking, "text", tr.placeholderBooking)}
-        {renderSelect("pol", puertosOrigen, tr.pol, true)}
-        <ComboboxInput
-          neon id="pod"
-          label={tr.pod}
-          labelExtra={reqMark}
-          labelClass={labelClass}
-          inputClass={inputClass}
-          value={podInput}
-          options={destinos}
-          onSelect={(opt) => {
-            setPodInput(opt.nombre);
-            setFormData((prev) => ({ ...prev, pod: opt.id }));
-          }}
-          onChange={(val) => {
-            setPodInput(val);
-            setFormData((prev) => ({ ...prev, pod: "" }));
-          }}
-          onAddNew={handleAddDestino}
-          addNewLabel={(text) => `${tr.addNewDestino} "${text}"`}
-          addingNew={addingDestino}
-          placeholder={tr.searchDestino}
-          disabled={loadingCatalogos}
-        />
-        <ReservaDateField
-          id="etd"
-          label={<>{tr.etd}{reqMark}</>}
-          value={formData.etd}
-          onChange={(iso) => setFormData((prev) => ({ ...prev, etd: iso }))}
-          placeholder={tr.datePlaceholder}
-          inputClass={inputClass}
-        />
-        <ReservaDateField
-          id="eta"
-          label={tr.eta}
-          value={formData.eta}
-          onChange={(iso) => setFormData((prev) => ({ ...prev, eta: iso }))}
-          placeholder={tr.datePlaceholder}
-          inputClass={inputClass}
-          min={formData.etd || undefined}
-        />
-        <div>
-          <label className={labelClass}>{tr.ttDays}</label>
-          <div className="flex min-h-[2.6rem] items-center justify-center gap-2 rounded-lg border border-dash-neon/40 bg-dash-neon/15 px-3 text-dash-fg">
-            <span className="text-lg font-bold tabular-nums leading-none">
-              {transitTime !== null ? transitTime : "—"}
-            </span>
-            {transitTime !== null && (
-              <span className="text-xs font-semibold text-dash-muted">{tr.transitDays}</span>
-            )}
+            </label>
+            <FormSelect
+              variant="neon"
+              id="pol"
+              name="pol"
+              icon="lucide:map-pin"
+              value={formData.pol}
+              placeholder={tr.selectPlaceholder}
+              disabled={loadingCatalogos}
+              options={puertosOrigen.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+              onChange={(value) => setFormData((prev) => ({ ...prev, pol: value }))}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPol}</p>
+          </div>
+
+          <div className="min-w-0">
+            <ComboboxInput
+              neon
+              id="pod"
+              icon="lucide:map-pin"
+              label={tr.pod}
+              labelExtra={reqMark}
+              labelClass={labelClass}
+              inputClass={inputClass}
+              value={podInput}
+              options={destinos}
+              onSelect={(opt) => {
+                setPodInput(opt.nombre);
+                setFormData((prev) => ({ ...prev, pod: opt.id }));
+              }}
+              onChange={(val) => {
+                setPodInput(val);
+                setFormData((prev) => ({ ...prev, pod: "" }));
+              }}
+              onAddNew={handleAddDestino}
+              addNewLabel={(text) => `${tr.addNewDestino} "${text}"`}
+              addingNew={addingDestino}
+              placeholder={tr.searchDestino}
+              disabled={loadingCatalogos}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPod}</p>
+          </div>
+
+          <ReservaDateField
+            id="etd"
+            label={<>{tr.etd}{reqMark}</>}
+            value={formData.etd}
+            onChange={(iso) => setFormData((prev) => ({ ...prev, etd: iso }))}
+            placeholder={tr.datePlaceholder}
+            inputClass={inputClass}
+            labelClass={labelClass}
+            icon="lucide:calendar-days"
+            help={tr.helpEtd}
+          />
+          <ReservaDateField
+            id="eta"
+            label={tr.eta}
+            value={formData.eta}
+            onChange={(iso) => setFormData((prev) => ({ ...prev, eta: iso }))}
+            placeholder={tr.datePlaceholder}
+            inputClass={inputClass}
+            labelClass={labelClass}
+            icon="lucide:calendar-days"
+            help={tr.helpEta}
+            min={formData.etd || undefined}
+          />
+        </div>
+
+        <div className="grid gap-2.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-stretch">
+          <div className="min-w-0">
+            <label className={labelClass}>{tr.ttDays}</label>
+            <div className="relative flex min-h-[3.25rem] items-center rounded-lg border border-dash-border bg-dash-control px-3.5 pl-12">
+              <Icon
+                icon="lucide:clock"
+                width={22}
+                height={22}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-dash-neon"
+              />
+              <span className="text-base font-bold tabular-nums text-dash-fg">
+                {transitTime !== null ? transitTime : "—"}
+                {transitTime !== null ? (
+                  <span className="ml-1.5 text-sm font-semibold text-dash-muted">{tr.transitDays}</span>
+                ) : null}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpTt}</p>
+          </div>
+          <div className="flex items-center gap-3.5 rounded-xl border border-dash-border bg-dash-control px-4 py-3.5">
+            <Icon icon="lucide:info" width={32} height={32} className="shrink-0 self-center text-dash-neon" />
+            <div className="min-w-0 flex-1 self-center">
+              <p className="text-sm font-bold text-dash-neon">{tr.navieraInfoTitle}</p>
+              <p className="mt-0.5 text-sm leading-snug text-dash-muted sm:text-base">
+                {isAereo ? tr.aerolineaInfoBody : tr.navieraInfoBody}
+              </p>
+            </div>
           </div>
         </div>
-      </FieldGrid>
+      </div>
     ),
     planta: (
-      <FieldGrid>
-        <div className="sm:col-span-2 xl:col-span-3 2xl:col-span-4 space-y-2.5">
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="min-w-0">
           <ComboboxInput
-            neon id="planta_presentacion"
+            neon
+            id="planta_presentacion"
+            icon="lucide:building-2"
             label={tr.planta}
             labelExtra={reqMark}
             labelClass={labelClass}
@@ -2992,30 +3188,38 @@ export function CrearReservaContent() {
             placeholder={tr.searchPlanta}
             disabled={loadingCatalogos || formData.planta_por_informar}
           />
-          <div className="rounded-xl border border-dash-border bg-dash-control p-3 space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-dash-muted">{tr.plantaPorInformarTitle}</p>
-            <p className="text-xs text-dash-muted">{tr.plantaPorInformarHint}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setPlantaInput("");
-                setFormData((prev) => ({
-                  ...prev,
-                  planta_presentacion: "",
-                  planta_por_informar: !prev.planta_por_informar,
-                }));
-              }}
-              className={`w-full sm:w-auto px-4 py-2.5 rounded-lg border text-sm font-bold transition-all ${
-                formData.planta_por_informar
-                  ? "bg-dash-neon/25 text-dash-fg border-dash-neon/50 shadow-sm"
-                  : "bg-dash-control text-dash-fg border-dash-border hover:border-dash-neon/40"
-              }`}
-            >
-              {tr.plantaPorInformar}
-            </button>
-          </div>
+          <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPlanta}</p>
         </div>
-        <div>
+
+        <div className="min-w-0">
+          <label htmlFor="planta_situacion" className={labelClass}>
+            {tr.plantaPorInformarTitle}{reqMark}
+          </label>
+          <FormSelect
+            variant="neon"
+            id="planta_situacion"
+            name="planta_situacion"
+            icon="lucide:package"
+            value={formData.planta_por_informar ? "por_informar" : "definida"}
+            placeholder={tr.selectPlaceholder}
+            options={[
+              { value: "definida", label: tr.plantaSituacionDefinida },
+              { value: "por_informar", label: tr.plantaPorInformar },
+            ]}
+            onChange={(value) => {
+              const porInformar = value === "por_informar";
+              if (porInformar) setPlantaInput("");
+              setFormData((prev) => ({
+                ...prev,
+                planta_por_informar: porInformar,
+                planta_presentacion: porInformar ? "" : prev.planta_presentacion,
+              }));
+            }}
+          />
+          <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPlantaSituacion}</p>
+        </div>
+
+        <div className="min-w-0 sm:max-w-2xl">
           <ReservaDateTimeField
             id="citacion"
             label={tr.citacion}
@@ -3024,25 +3228,65 @@ export function CrearReservaContent() {
             datePlaceholder={tr.datePlaceholder}
             inputClass={inputClass}
             labelClass={labelClass}
+            dateLabel={tr.citacionFecha}
+            timeLabel={tr.citacionHora}
+            help={tr.helpCitacion}
           />
         </div>
-      </FieldGrid>
+      </div>
     ),
     deposito: (
-      <div className="flex flex-col gap-3 min-h-0 overflow-auto">
-        <div className="sm:max-w-md">
-          {renderSelect("deposito", depositos, tr.deposito)}
+      <div className="flex min-h-0 flex-col gap-4 overflow-auto">
+        <div className="min-w-0">
+          <label htmlFor="deposito" className={labelClass}>
+            {tr.deposito}
+            {depositos.length > 0 && (
+              <span className="ml-2 font-semibold normal-case tracking-normal text-dash-muted">
+                ({depositos.length})
+              </span>
+            )}
+          </label>
+          <FormSelect
+            variant="neon"
+            id="deposito"
+            name="deposito"
+            icon="lucide:warehouse"
+            value={formData.deposito}
+            placeholder={tr.selectPlaceholder}
+            disabled={loadingCatalogos}
+            options={depositos.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+            onChange={(value) => setFormData((prev) => ({ ...prev, deposito: value }))}
+          />
+          <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpDeposito}</p>
         </div>
 
-        <div className="rounded-xl border border-dash-border bg-dash-control p-3 space-y-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-dash-muted">{tr.solicitudVentana}</p>
-          <p className="text-xs text-dash-muted">{tr.solicitudVentanaHint}</p>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="min-w-0 rounded-xl border border-dash-border bg-dash-control/50 p-4 sm:p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <p className={`${labelClass} mb-0`}>{tr.solicitudVentana}</p>
+            <Icon icon="lucide:info" width={14} height={14} className="shrink-0 text-dash-neon" aria-hidden />
+          </div>
+          <p className="mb-4 text-sm leading-snug text-dash-muted">{tr.solicitudVentanaHint}</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
             {(
               [
-                { value: "NORMAL" as const, label: tr.ventanaNormal },
-                { value: "LATE" as const, label: tr.ventanaLate },
-                { value: "EXTRA_LATE" as const, label: tr.ventanaExtraLate },
+                {
+                  value: "NORMAL" as const,
+                  label: tr.ventanaNormal,
+                  hint: tr.ventanaNormalHint,
+                  icon: "lucide:boxes",
+                },
+                {
+                  value: "LATE" as const,
+                  label: tr.ventanaLate,
+                  hint: tr.ventanaLateHint,
+                  icon: "lucide:boxes",
+                },
+                {
+                  value: "EXTRA_LATE" as const,
+                  label: tr.ventanaExtraLate,
+                  hint: tr.ventanaExtraLateHint,
+                  icon: "lucide:timer",
+                },
               ]
             ).map((opt) => {
               const selected = formData.solicitud_ventana === opt.value;
@@ -3078,22 +3322,45 @@ export function CrearReservaContent() {
                       };
                     });
                   }}
-                  className={`px-2.5 py-2.5 rounded-lg border text-xs sm:text-sm font-bold transition-all ${
+                  className={`relative flex h-full min-h-[5.75rem] w-full min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3.5 text-left transition-colors ${
                     selected
-                      ? "bg-dash-neon/25 text-dash-fg border-dash-neon/50 shadow-sm"
-                      : "bg-dash-control text-dash-fg border-dash-border hover:border-dash-neon/40"
+                      ? "border-dash-neon/70 bg-dash-neon/10 shadow-[0_0_24px_-10px_color-mix(in_srgb,var(--dash-neon)_60%,transparent)]"
+                      : "border-dash-border/80 bg-[color-mix(in_srgb,var(--dash-surface)_70%,transparent)] hover:border-dash-neon/30"
                   }`}
                 >
-                  {opt.label}
+                  <Icon
+                    icon={opt.icon}
+                    width={32}
+                    height={32}
+                    className={`shrink-0 self-center ${selected ? "text-dash-neon" : "text-dash-fg/80"}`}
+                  />
+                  <span className="min-w-0 flex-1 self-center">
+                    <span className="block text-base font-bold leading-tight text-dash-fg">
+                      {opt.label}
+                    </span>
+                    <span className="mt-1 block text-xs leading-snug text-dash-muted sm:text-[13px]">
+                      {opt.hint}
+                    </span>
+                  </span>
+                  <span
+                    className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
+                      selected
+                        ? "border-dash-neon"
+                        : "border-dash-muted/50"
+                    }`}
+                    aria-hidden
+                  >
+                    {selected ? <span className="h-2 w-2 rounded-full bg-dash-neon" /> : null}
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="rounded-xl border border-dash-border bg-dash-control p-3 space-y-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-dash-muted">{tr.groupStacking}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="min-w-0">
+          <p className={labelClass}>{tr.groupStacking}</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <ReservaDateTimeField
               id="inicio_stacking"
               label={tr.inicioStacking}
@@ -3102,6 +3369,9 @@ export function CrearReservaContent() {
               datePlaceholder={tr.datePlaceholder}
               inputClass={inputClass}
               labelClass={labelClass}
+              dateLabel={tr.citacionFecha}
+              timeLabel={tr.citacionHora}
+              help={tr.helpInicioStacking}
             />
             <ReservaDateTimeField
               id="fin_stacking"
@@ -3111,29 +3381,41 @@ export function CrearReservaContent() {
               datePlaceholder={tr.datePlaceholder}
               inputClass={inputClass}
               labelClass={labelClass}
+              dateLabel={tr.citacionFecha}
+              timeLabel={tr.citacionHora}
+              help={tr.helpFinStacking}
             />
           </div>
         </div>
 
-        <div className="rounded-xl border border-dash-border bg-dash-control p-3 space-y-2.5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-dash-muted">{tr.groupCorteDocumental}</p>
-          <div className="sm:max-w-md">
-            <ReservaDateTimeField
-              id="corte_documental"
-              label={tr.corteDocumental}
-              value={formData.corte_documental}
-              onChange={(v) => setFormData((prev) => ({ ...prev, corte_documental: v }))}
-              datePlaceholder={tr.datePlaceholder}
-              inputClass={inputClass}
-              labelClass={labelClass}
-            />
+        <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-stretch">
+          <ReservaDateTimeField
+            id="corte_documental"
+            label={tr.corteDocumental}
+            value={formData.corte_documental}
+            onChange={(v) => setFormData((prev) => ({ ...prev, corte_documental: v }))}
+            datePlaceholder={tr.datePlaceholder}
+            inputClass={inputClass}
+            labelClass={labelClass}
+            dateLabel={tr.citacionFecha}
+            timeLabel={tr.citacionHora}
+            help={tr.helpCorteDocumental}
+          />
+          <div className="flex items-center gap-3.5 rounded-xl border border-dash-border bg-dash-control px-4 py-3.5">
+            <Icon icon="lucide:info" width={32} height={32} className="shrink-0 self-center text-dash-neon" />
+            <div className="min-w-0 flex-1 self-center">
+              <p className="text-sm font-bold text-dash-neon">{tr.corteDocumentalInfoTitle}</p>
+              <p className="mt-0.5 text-sm leading-snug text-dash-muted sm:text-base">
+                {tr.corteDocumentalInfoBody}
+              </p>
+            </div>
           </div>
         </div>
 
         {formData.solicitud_ventana === "LATE" ? (
-          <div className="space-y-2.5 rounded-xl border border-amber-400/35 bg-amber-500/10 p-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-amber-300">{tr.groupLate}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="space-y-2.5 rounded-xl border border-amber-400/35 bg-amber-500/10 p-3.5">
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-amber-300">{tr.groupLate}</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <ReservaDateTimeField
                 id="late_inicio"
                 label={tr.lateInicio}
@@ -3142,6 +3424,8 @@ export function CrearReservaContent() {
                 datePlaceholder={tr.datePlaceholder}
                 inputClass={inputClass}
                 labelClass={labelClass}
+                dateLabel={tr.citacionFecha}
+                timeLabel={tr.citacionHora}
               />
               <ReservaDateTimeField
                 id="late_fin"
@@ -3151,15 +3435,17 @@ export function CrearReservaContent() {
                 datePlaceholder={tr.datePlaceholder}
                 inputClass={inputClass}
                 labelClass={labelClass}
+                dateLabel={tr.citacionFecha}
+                timeLabel={tr.citacionHora}
               />
             </div>
           </div>
         ) : null}
 
         {formData.solicitud_ventana === "EXTRA_LATE" ? (
-          <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-3 space-y-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-orange-800/80">{tr.groupExtraLate}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="space-y-2.5 rounded-xl border border-orange-400/35 bg-orange-500/10 p-3.5">
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-orange-300">{tr.groupExtraLate}</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <ReservaDateTimeField
                 id="xlate_inicio"
                 label={tr.xlateInicio}
@@ -3168,6 +3454,8 @@ export function CrearReservaContent() {
                 datePlaceholder={tr.datePlaceholder}
                 inputClass={inputClass}
                 labelClass={labelClass}
+                dateLabel={tr.citacionFecha}
+                timeLabel={tr.citacionHora}
               />
               <ReservaDateTimeField
                 id="xlate_fin"
@@ -3177,6 +3465,8 @@ export function CrearReservaContent() {
                 datePlaceholder={tr.datePlaceholder}
                 inputClass={inputClass}
                 labelClass={labelClass}
+                dateLabel={tr.citacionFecha}
+                timeLabel={tr.citacionHora}
               />
             </div>
           </div>
@@ -3287,48 +3577,70 @@ export function CrearReservaContent() {
       </header>
 
       <div ref={mainRef} className="relative z-10 min-h-0 flex-1 overflow-hidden">
-        <div className="grid h-full min-h-0 w-full gap-3 px-3 py-2.5 sm:px-4 xl:grid-cols-[270px_minmax(0,1fr)]">
+        <div className="grid h-full min-h-0 w-full gap-3 px-3 py-2.5 sm:px-4 xl:grid-cols-[300px_minmax(0,1fr)]">
           <nav className="hidden min-h-0 xl:flex" aria-label={tr.stepsPanelTitle}>
-            <ol className="flex h-full w-full flex-col gap-1 overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)] p-2">
+            <ol className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)] p-3.5">
               {sectionOrder.map((key, idx) => {
                 const isActive = idx === currentStep;
                 const isComplete = sectionValidation[key];
+                const prevActive = idx - 1 === currentStep;
+                const nextActive = idx + 1 === currentStep;
                 return (
-                  <li key={key} className="min-h-0 flex-1">
+                  <li key={key} className="relative z-[1] flex min-h-0 flex-1">
+                    {!isActive && idx > 0 && (
+                      <span
+                        className={`pointer-events-none absolute bottom-[calc(50%_+_2rem)] left-[2.1875rem] z-0 w-px bg-[color-mix(in_srgb,var(--dash-fg)_28%,transparent)] ${
+                          prevActive ? "top-1.5" : "top-0"
+                        }`}
+                        aria-hidden
+                      />
+                    )}
+                    {!isActive && idx < sectionOrder.length - 1 && (
+                      <span
+                        className={`pointer-events-none absolute left-[2.1875rem] top-[calc(50%_+_2rem)] z-0 w-px bg-[color-mix(in_srgb,var(--dash-fg)_28%,transparent)] ${
+                          nextActive ? "bottom-1.5" : "bottom-0"
+                        }`}
+                        aria-hidden
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setCurrentStep(idx)}
                       aria-current={isActive ? "step" : undefined}
-                      className={`flex h-full w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
+                      className={`flex h-full w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors ${
                         isActive
-                          ? "border border-dash-neon/50 bg-dash-neon/20 shadow-[0_0_20px_-10px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]"
-                          : "border border-transparent hover:bg-dash-control"
+                          ? "border-dash-neon bg-gradient-to-r from-[color-mix(in_srgb,var(--dash-neon)_14%,transparent)] to-[color-mix(in_srgb,var(--dash-neon)_4%,transparent)] shadow-[inset_5px_0_0_0_var(--dash-neon),inset_0_1px_0_0_rgba(255,255,255,0.18),inset_0_-1px_0_0_rgba(0,0,0,0.28),inset_0_0_24px_-10px_color-mix(in_srgb,var(--dash-neon)_55%,transparent),0_0_0_1px_color-mix(in_srgb,var(--dash-neon)_45%,transparent),0_6px_18px_-6px_rgba(0,0,0,0.5),0_0_22px_color-mix(in_srgb,var(--dash-neon)_28%,transparent),0_0_48px_-12px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]"
+                          : "border-transparent hover:bg-dash-control/40"
                       }`}
                     >
                       <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-bold tabular-nums ${
                           isActive
-                            ? "bg-dash-neon text-[#041018]"
+                            ? "bg-dash-neon text-[#041018] shadow-[0_0_14px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]"
                             : isComplete
                               ? "bg-emerald-500/85 text-white"
-                              : "bg-dash-control text-dash-muted"
+                              : "border border-[color-mix(in_srgb,var(--dash-fg)_30%,transparent)] bg-dash-control text-dash-fg"
                         }`}
                       >
                         {isComplete && !isActive ? (
-                          <Icon icon="lucide:check" width={13} height={13} />
+                          <Icon icon="lucide:check" width={16} height={16} />
                         ) : (
                           idx + 1
                         )}
                       </span>
                       <span className="min-w-0">
                         <span
-                          className={`block truncate text-sm font-bold leading-tight ${
+                          className={`block truncate text-base font-bold leading-tight ${
                             isActive ? "text-dash-neon" : "text-dash-fg"
                           }`}
                         >
                           {sectionTitles[key]}
                         </span>
-                        <span className="mt-0.5 block truncate text-xs leading-snug text-dash-muted">
+                        <span
+                          className={`mt-1 block truncate text-sm leading-snug ${
+                            isActive ? "text-dash-fg/85" : "text-dash-muted"
+                          }`}
+                        >
                           {sectionStepHints[key]}
                         </span>
                       </span>
