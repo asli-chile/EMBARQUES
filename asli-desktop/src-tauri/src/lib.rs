@@ -176,47 +176,102 @@ fn show_error_overlay(app: &tauri::AppHandle, title: &str, body: &str) {
     );
 }
 
-/// Confirmación de update con diálogo nativo de Windows (fiable; el overlay web no reporta clics bien).
-#[cfg(not(debug_assertions))]
-async fn ask_update_install(app: &tauri::AppHandle, current: &str, next: &str) -> bool {
-    use tauri::Manager;
-    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+/// MessageBox de Win32 siempre encima (MB_TOPMOST). Evita overlay web y dialog Tauri.
+#[cfg(all(not(debug_assertions), windows))]
+fn ask_update_win32(current: &str, next: &str) -> bool {
+    use std::os::windows::ffi::OsStrExt;
 
-    // Quitar overlay viejo si quedó de un intento anterior.
-    hide_update_overlay(app);
-
-    if let Some(win) = app.get_webview_window("main") {
-        let _ = win.set_focus();
-        let _ = win.set_always_on_top(true);
+    fn wide(s: &str) -> Vec<u16> {
+        std::ffi::OsStr::new(s)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
     }
 
-    let message = format!(
+    #[link(name = "user32")]
+    extern "system" {
+        fn MessageBoxW(
+            h_wnd: *mut core::ffi::c_void,
+            lp_text: *const u16,
+            lp_caption: *const u16,
+            u_type: u32,
+        ) -> i32;
+    }
+
+    const MB_YESNO: u32 = 0x0000_0004;
+    const MB_ICONINFORMATION: u32 = 0x0000_0040;
+    const MB_TOPMOST: u32 = 0x0004_0000;
+    const MB_SETFOREGROUND: u32 = 0x0001_0000;
+    const IDYES: i32 = 6;
+
+    let body = format!(
         "Hay una nueva versión del acceso de escritorio ({current} → {next}).\n\n\
 El ERP web ya se actualiza solo con cada deploy; esto solo actualiza el contenedor (.exe).\n\n\
 ¿Instalar ahora?"
     );
+    let title = wide("Actualización ASLI Embarques");
+    let text = wide(&body);
+    let flags = MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST | MB_SETFOREGROUND;
 
-    let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-    app.dialog()
-        .message(message)
-        .title("Actualización ASLI Embarques")
-        .kind(MessageDialogKind::Info)
-        .buttons(MessageDialogButtons::OkCancelCustom(
-            "Actualizar ahora".into(),
-            "Más tarde".into(),
-        ))
-        .show(move |answer| {
-            let _ = tx.send(answer);
-        });
+    unsafe {
+        MessageBoxW(
+            std::ptr::null_mut(),
+            text.as_ptr(),
+            title.as_ptr(),
+            flags,
+        ) == IDYES
+    }
+}
 
-    let choice = tokio::time::timeout(std::time::Duration::from_secs(900), rx)
-        .await
-        .ok()
-        .and_then(|r| r.ok())
-        .unwrap_or(false);
+/// Confirmación de update: Win32 MessageBox (fiable con ventana maximizada sin chrome).
+#[cfg(not(debug_assertions))]
+async fn ask_update_install(app: &tauri::AppHandle, current: &str, next: &str) -> bool {
+    use tauri::Manager;
+
+    hide_update_overlay(app);
 
     if let Some(win) = app.get_webview_window("main") {
-        let _ = win.set_always_on_top(false);
+        let _ = win.set_focus();
+    }
+
+    let current = current.to_string();
+    let next = next.to_string();
+
+    #[cfg(windows)]
+    let choice = {
+        let cur = current.clone();
+        let nxt = next.clone();
+        tokio::task::spawn_blocking(move || ask_update_win32(&cur, &nxt))
+            .await
+            .unwrap_or(false)
+    };
+
+    #[cfg(not(windows))]
+    let choice = {
+        use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+        let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+        let message = format!(
+            "Hay una nueva versión del acceso de escritorio ({current} → {next}).\n\n¿Instalar ahora?"
+        );
+        app.dialog()
+            .message(message)
+            .title("Actualización ASLI Embarques")
+            .kind(MessageDialogKind::Info)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Actualizar ahora".into(),
+                "Más tarde".into(),
+            ))
+            .show(move |answer| {
+                let _ = tx.send(answer);
+            });
+        tokio::time::timeout(std::time::Duration::from_secs(900), rx)
+            .await
+            .ok()
+            .and_then(|r| r.ok())
+            .unwrap_or(false)
+    };
+
+    if let Some(win) = app.get_webview_window("main") {
         let _ = win.set_focus();
     }
 

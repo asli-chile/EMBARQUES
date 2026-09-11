@@ -69,7 +69,8 @@ $json = ($latestObj | ConvertTo-Json -Depth 6 -Compress)
 $notes = @"
 Shell de escritorio $version.
 
-El aviso de actualizacion usa el dialogo nativo de Windows (el boton del overlay web no respondia).
+Aviso de actualizacion con MessageBox de Windows (siempre visible).
+Corrige el boton que no respondia en 0.1.10.
 Al abrir, la ventana arranca maximizada.
 "@
 
