@@ -339,6 +339,25 @@ function iconForTipo(valor: string) {
   return "lucide:globe";
 }
 
+function hintKeyForTipo(valor: string):
+  | "tipoHintExportMaritimo"
+  | "tipoHintImportMaritimo"
+  | "tipoHintExportAereo"
+  | "tipoHintImportAereo"
+  | "tipoHintDefault" {
+  const v = valor
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const aereo = v.includes("AERE");
+  const importacion = v.includes("IMPORT");
+  if (aereo && importacion) return "tipoHintImportAereo";
+  if (aereo) return "tipoHintExportAereo";
+  if (importacion) return "tipoHintImportMaritimo";
+  if (v.includes("EXPORT") || v.includes("MARIT")) return "tipoHintExportMaritimo";
+  return "tipoHintDefault";
+}
+
 export function CrearReservaContent() {
   const { t } = useLocale();
   const tr = t.crearReserva;
@@ -1817,9 +1836,9 @@ export function CrearReservaContent() {
   };
 
   const inputClass =
-    "dash-control w-full min-h-[2.6rem] px-3 py-2 text-base font-semibold placeholder:text-dash-muted placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40 disabled:opacity-50 disabled:cursor-not-allowed";
+    "dash-control w-full min-h-[3.25rem] px-3.5 py-2.5 text-base font-semibold placeholder:text-dash-muted placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40 disabled:opacity-70 disabled:cursor-not-allowed";
 
-  const labelClass = "mb-1 block text-[11px] font-bold uppercase tracking-[0.08em] text-dash-muted";
+  const labelClass = "mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-dash-muted";
 
   const reqMark = <span className="ml-0.5 font-bold text-red-400" aria-hidden="true">*</span>;
 
@@ -2394,6 +2413,16 @@ export function CrearReservaContent() {
     observaciones: tr.sectionObservacionesDesc,
   };
 
+  const sectionStepHints: Record<SectionKey, string> = {
+    general: tr.stepHintGeneral,
+    comercial: tr.stepHintComercial,
+    carga: tr.stepHintCarga,
+    naviera: isAereo ? tr.stepHintAerolinea : tr.stepHintNaviera,
+    planta: tr.stepHintPlanta,
+    deposito: tr.stepHintDeposito,
+    observaciones: tr.stepHintObservaciones,
+  };
+
   const sectionFieldsMap: Record<SectionKey, ReactNode> = {
     general: (
       <>
@@ -2401,7 +2430,7 @@ export function CrearReservaContent() {
           <p className={labelClass}>
             {tr.tipoOperacion}{reqMark}
           </p>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))]">
             {(catalogos.tipo_operacion ?? []).map((item) => {
               const selected = formData.tipo_operacion === item.valor;
               return (
@@ -2409,45 +2438,72 @@ export function CrearReservaContent() {
                   key={item.id}
                   type="button"
                   onClick={() => setFormData((prev) => ({ ...prev, tipo_operacion: item.valor }))}
-                  className={`flex min-h-[3rem] items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
+                  className={`relative flex h-full min-h-[6.5rem] min-w-0 w-full items-start gap-3.5 rounded-xl border px-4 py-3.5 text-left transition-colors ${
                     selected
-                      ? "border-dash-neon/55 bg-dash-neon/20 text-dash-fg shadow-[0_0_20px_-8px_color-mix(in_srgb,var(--dash-neon)_50%,transparent)]"
-                      : "border-dash-border bg-dash-control/60 text-dash-fg hover:border-dash-neon/40"
+                      ? "border-dash-neon/60 bg-dash-neon/15 text-dash-fg shadow-[0_0_24px_-10px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]"
+                      : "border-dash-border bg-dash-control text-dash-fg hover:border-dash-neon/35"
                   }`}
                 >
                   <Icon
                     icon={iconForTipo(item.valor)}
-                    width={18}
-                    height={18}
-                    className={selected ? "shrink-0 text-dash-neon" : "shrink-0 text-dash-muted"}
+                    width={40}
+                    height={40}
+                    className={`shrink-0 self-center ${selected ? "text-dash-neon" : "text-dash-muted"}`}
                   />
-                  <span className="text-xs font-bold leading-snug tracking-wide">
-                    {item.valor}
+                  <span className="min-w-0 flex-1 self-center">
+                    <span className="line-clamp-2 block text-sm font-bold leading-snug tracking-wide uppercase">
+                      {item.valor}
+                    </span>
+                    <span className="mt-1 line-clamp-2 block text-xs leading-snug text-dash-muted">
+                      {tr[hintKeyForTipo(item.valor)]}
+                    </span>
+                  </span>
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      selected
+                        ? "border-dash-neon bg-dash-neon"
+                        : "border-dash-border bg-transparent"
+                    }`}
+                    aria-hidden
+                  >
+                    {selected ? <span className="h-2 w-2 rounded-full bg-[#041018]" /> : null}
                   </span>
                 </button>
               );
             })}
           </div>
         </div>
-        {/* El estado no se elige al crear: una reserva nueva nace siempre en el
-            primer estado del flujo y avanza después desde Registros. */}
         <div>
           <p className={labelClass}>{tr.estadoOperacion}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-dash-neon/45 bg-dash-neon/20 px-3 py-1.5 text-xs font-bold tracking-wide text-dash-fg">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-dash-neon" />
-              {ESTADO_META[ESTADO_INICIAL].etiqueta}
-            </span>
-            <span className="text-xs text-dash-muted">{tr.estadoInicialHint}</span>
+          <div className="grid gap-2.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-stretch">
+            <div className="flex min-h-[3.25rem] items-center justify-between gap-3 rounded-xl border border-dash-border bg-dash-control px-3 py-2">
+              <span className="inline-flex items-center gap-2 rounded-lg border border-dash-neon/35 bg-dash-neon/10 px-3 py-1.5">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-dash-neon shadow-[0_0_10px_color-mix(in_srgb,var(--dash-neon)_70%,transparent)]" />
+                <span className="text-sm font-bold text-dash-fg">{ESTADO_META[ESTADO_INICIAL].etiqueta}</span>
+              </span>
+              <Icon icon="lucide:chevron-down" width={18} height={18} className="shrink-0 text-dash-muted" aria-hidden />
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3.5 py-2.5">
+              <Icon icon="lucide:info" width={28} height={28} className="shrink-0 self-center text-dash-neon" />
+              <p className="min-w-0 flex-1 self-center text-sm leading-snug text-dash-muted">
+                <span className="block">
+                  {tr.estadoInicialHintLead}{" "}
+                  <span className="font-bold text-dash-fg">{ESTADO_META[ESTADO_INICIAL].etiqueta}</span>.
+                </span>
+                <span className="mt-0.5 block">{tr.estadoInicialHintTail}</span>
+              </p>
+            </div>
           </div>
         </div>
         <FieldGrid>
-          <div className="sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+          <div className="min-w-0">
             {(() => {
               const isReadOnly = profile?.rol === "cliente" && clientesFiltradosPorRol.length >= 1;
               return (
                 <ComboboxInput
-                  neon id="cliente"
+                  neon
+                  id="cliente"
+                  icon="lucide:building-2"
                   label={tr.cliente}
                   labelClass={labelClass}
                   inputClass={`${inputClass}${isReadOnly ? " opacity-70 cursor-default" : ""}`}
@@ -2481,7 +2537,9 @@ export function CrearReservaContent() {
               )}
             </label>
             <FormSelect
-              variant="neon" id="ejecutivo"
+              variant="neon"
+              id="ejecutivo"
+              icon="lucide:user-round"
               name="ejecutivo"
               value={formData.ejecutivo}
               placeholder={formData.cliente ? tr.selectPlaceholder : "Selecciona primero el cliente"}
@@ -2490,18 +2548,20 @@ export function CrearReservaContent() {
               onChange={(value) => setFormData((prev) => ({ ...prev, ejecutivo: value }))}
             />
             {formData.cliente && ejecutivosFiltrados.length === 0 ? (
-              <p className="text-xs text-amber-700 mt-1.5">
+              <p className="mt-1.5 text-xs text-amber-700">
                 Este cliente no tiene ejecutivos asignados. Asígnalos en Configuración → Asignar ejecutivos a clientes.
               </p>
             ) : null}
           </div>
           {isCliente ? (
-            <div className="min-w-0 sm:col-span-2 xl:col-span-1">
+            <div className="min-w-0">
               <label htmlFor="dueno_reserva" className={labelClass}>
                 {tr.duenoReserva}
               </label>
               <FormSelect
-                variant="neon" id="dueno_reserva"
+                variant="neon"
+                id="dueno_reserva"
+                icon="lucide:building-2"
                 name="dueno_reserva"
                 value={formData.dueno_reserva}
                 disabled={loadingCatalogos}
@@ -2510,9 +2570,11 @@ export function CrearReservaContent() {
               />
             </div>
           ) : (
-            <div className="min-w-0 sm:col-span-2 xl:col-span-1">
+            <div className="min-w-0">
               <ComboboxInput
-                neon id="dueno_reserva"
+                neon
+                id="dueno_reserva"
+                icon="lucide:building-2"
                 label={tr.duenoReserva}
                 labelClass={labelClass}
                 inputClass={inputClass}
@@ -2532,11 +2594,91 @@ export function CrearReservaContent() {
       </>
     ),
     comercial: (
-      <FieldGrid>
-        {renderCatalogoSelect("incoterm", "incoterm", tr.incoterm, true, true)}
-        {renderCatalogoSelect("forma_pago", "forma_pago", tr.formaPago, true)}
-        {renderSelect("consignatario", consignatarios, tr.consignatario)}
-      </FieldGrid>
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+          {(
+            [
+              {
+                name: "incoterm" as const,
+                label: tr.incoterm,
+                required: true,
+                icon: "lucide:globe",
+                placeholder: tr.selectIncoterm,
+                help: tr.helpIncoterm,
+                desc: tr.descIncoterm,
+                options: (catalogos.incoterm ?? []).map((item) => ({
+                  value: item.valor,
+                  label: item.valor,
+                })),
+              },
+              {
+                name: "forma_pago" as const,
+                label: tr.formaPago,
+                required: true,
+                icon: "lucide:credit-card",
+                placeholder: tr.selectFormaPago,
+                help: tr.helpFormaPago,
+                desc: tr.descFormaPago,
+                options: (catalogos.forma_pago ?? []).map((item) => ({
+                  value: item.valor,
+                  label: item.descripcion ? `${item.valor} — ${item.descripcion}` : item.valor,
+                })),
+              },
+              {
+                name: "consignatario" as const,
+                label: tr.consignatario,
+                required: false,
+                icon: "lucide:building-2",
+                placeholder: tr.selectConsignatario,
+                help: tr.helpConsignatario,
+                desc: tr.descConsignatario,
+                options: consignatarios.map((opt) => ({ value: opt.id, label: opt.nombre })),
+                count: consignatarios.length,
+              },
+            ] as const
+          ).map((field) => (
+            <div key={field.name} className="min-w-0">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label htmlFor={field.name} className={`${labelClass} mb-0`}>
+                  {field.label}
+                  {field.required ? reqMark : null}
+                  {"count" in field && field.count > 0 ? (
+                    <span className="ml-2 font-semibold normal-case tracking-normal text-dash-muted">
+                      ({field.count})
+                    </span>
+                  ) : null}
+                </label>
+                <button
+                  type="button"
+                  title={field.desc}
+                  className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-dash-neon transition-colors hover:text-dash-fg"
+                >
+                  <Icon icon="lucide:info" width={14} height={14} />
+                  {tr.whatIs}
+                </button>
+              </div>
+              <FormSelect
+                variant="neon"
+                id={field.name}
+                name={field.name === "forma_pago" ? "sale_clause_field" : field.name}
+                icon={field.icon}
+                value={formData[field.name] as string}
+                placeholder={field.placeholder}
+                disabled={loadingCatalogos}
+                options={[...field.options]}
+                onChange={(value) => setFormData((prev) => ({ ...prev, [field.name]: value }))}
+              />
+              <p className="mt-1.5 text-xs leading-snug text-dash-muted">{field.help}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3.5 py-3 sm:max-w-xl">
+          <Icon icon="lucide:info" width={28} height={28} className="shrink-0 self-center text-dash-neon" />
+          <p className="min-w-0 flex-1 self-center text-sm leading-snug text-dash-muted">
+            {tr.comercialFooterHint}
+          </p>
+        </div>
+      </div>
     ),
     carga: (
       <FieldGrid>
@@ -3097,7 +3239,7 @@ export function CrearReservaContent() {
       </div>
 
       <header className="dash-toolbar relative z-10 shrink-0">
-        <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-5">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
@@ -3109,17 +3251,12 @@ export function CrearReservaContent() {
               <Icon icon="lucide:arrow-left" width={18} height={18} className="shrink-0" />
               <span className="hidden sm:inline">{tr.btnBack}</span>
             </button>
-            <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dash-neon/40 bg-dash-neon/15 sm:flex">
-              <Icon icon="lucide:ship" width={16} height={16} className="text-dash-neon" />
-            </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg" title={pageSubtitle}>{pageTitle}</h1>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dash-neon">
-                {tr.stepLabel} {currentStep + 1} {tr.stepOf} {sectionOrder.length} · {sectionTitles[activeKey]}
-              </p>
+              <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg sm:text-xl">{pageTitle}</h1>
+              <p className="mt-0.5 truncate text-sm text-dash-muted">{pageSubtitle}</p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-3">
             {isSuperadmin && (
               <button
                 type="button"
@@ -3131,9 +3268,14 @@ export function CrearReservaContent() {
                 {tr.testDataBtn}
               </button>
             )}
-            <div className="flex min-w-[6.5rem] items-center gap-2">
-              <span className="text-xs font-bold tabular-nums text-dash-fg">{progressPct}%</span>
-              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-dash-control">
+            <div className="min-w-[8.5rem] text-right">
+              <p className="text-xs font-bold text-dash-fg">
+                {tr.stepLabel} {currentStep + 1} {tr.stepOf} {sectionOrder.length}
+              </p>
+              <p className="text-[11px] tabular-nums text-dash-muted">
+                {progressPct}% {tr.progressCompleted}
+              </p>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-dash-control">
                 <div
                   className="h-full rounded-full bg-dash-neon transition-all duration-500 ease-out"
                   style={{ width: `${progressPct}%` }}
@@ -3142,18 +3284,12 @@ export function CrearReservaContent() {
             </div>
           </div>
         </div>
-        <div className="h-0.5 bg-dash-control">
-          <div
-            className="h-full bg-dash-neon transition-all duration-500 ease-out"
-            style={{ width: `${Math.max(((currentStep + (sectionValidation[activeKey] ? 1 : 0.4)) / sectionOrder.length) * 100, 6)}%` }}
-          />
-        </div>
       </header>
 
       <div ref={mainRef} className="relative z-10 min-h-0 flex-1 overflow-hidden">
-        <div className="grid h-full min-h-0 w-full gap-3 px-3 py-2.5 sm:px-4 xl:grid-cols-[200px_minmax(0,1fr)]">
+        <div className="grid h-full min-h-0 w-full gap-3 px-3 py-2.5 sm:px-4 xl:grid-cols-[270px_minmax(0,1fr)]">
           <nav className="hidden min-h-0 xl:flex" aria-label={tr.stepsPanelTitle}>
-            <ol className="dash-card flex w-full flex-col rounded-xl p-1.5">
+            <ol className="flex h-full w-full flex-col gap-1 overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)] p-2">
               {sectionOrder.map((key, idx) => {
                 const isActive = idx === currentStep;
                 const isComplete = sectionValidation[key];
@@ -3163,29 +3299,38 @@ export function CrearReservaContent() {
                       type="button"
                       onClick={() => setCurrentStep(idx)}
                       aria-current={isActive ? "step" : undefined}
-                      className={`flex h-full w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
+                      className={`flex h-full w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
                         isActive
-                          ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40"
-                          : "text-dash-muted hover:bg-dash-control hover:text-dash-fg border border-transparent"
+                          ? "border border-dash-neon/50 bg-dash-neon/20 shadow-[0_0_20px_-10px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]"
+                          : "border border-transparent hover:bg-dash-control"
                       }`}
                     >
                       <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
                           isActive
-                            ? "bg-dash-neon/30 text-dash-neon"
+                            ? "bg-dash-neon text-[#041018]"
                             : isComplete
-                              ? "bg-emerald-500/80 text-white"
+                              ? "bg-emerald-500/85 text-white"
                               : "bg-dash-control text-dash-muted"
                         }`}
                       >
                         {isComplete && !isActive ? (
-                          <Icon icon="lucide:check" width={11} height={11} />
+                          <Icon icon="lucide:check" width={13} height={13} />
                         ) : (
                           idx + 1
                         )}
                       </span>
-                      <span className={`block truncate text-xs font-bold leading-tight ${isActive ? "text-dash-fg" : ""}`}>
-                        {sectionTitles[key]}
+                      <span className="min-w-0">
+                        <span
+                          className={`block truncate text-sm font-bold leading-tight ${
+                            isActive ? "text-dash-neon" : "text-dash-fg"
+                          }`}
+                        >
+                          {sectionTitles[key]}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs leading-snug text-dash-muted">
+                          {sectionStepHints[key]}
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -3279,11 +3424,11 @@ export function CrearReservaContent() {
                 ? "border-emerald-400/35 bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]"
                 : "border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]"
             }`}>
-              <div className={`dash-section-head flex shrink-0 items-center justify-between gap-3 px-4 py-2 ${
+              <div className={`dash-section-head flex shrink-0 items-start justify-between gap-3 px-4 py-3 ${
                 sectionValidation[activeKey] ? "border-emerald-400/25" : ""
               }`}>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <span className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
                     sectionValidation[activeKey]
                       ? "bg-emerald-500/80"
                       : "bg-dash-neon/25 border border-dash-neon/40"
@@ -3291,11 +3436,11 @@ export function CrearReservaContent() {
                     <Icon icon={sectionValidation[activeKey] ? "lucide:check" : sectionIcons[activeKey]} width={16} height={16} className="text-dash-fg" />
                   </span>
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-bold leading-tight text-dash-fg">{sectionTitles[activeKey]}</h2>
-                    <p className="truncate text-xs text-dash-muted">{sectionDescs[activeKey]}</p>
+                    <h2 className="text-base font-bold leading-tight text-dash-fg sm:text-lg">{sectionTitles[activeKey]}</h2>
+                    <p className="mt-0.5 text-xs leading-relaxed text-dash-muted sm:line-clamp-2">{sectionDescs[activeKey]}</p>
                   </div>
                 </div>
-                <span className="shrink-0 text-[11px] text-dash-muted">
+                <span className="shrink-0 pt-1 text-[11px] text-dash-muted">
                   <span className="font-bold text-red-400">*</span> {tr.requiredHint}
                 </span>
               </div>
@@ -3303,7 +3448,7 @@ export function CrearReservaContent() {
               <div
                 id="reserva-form"
                 key={activeKey}
-                className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-4 py-3"
+                className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-x-hidden overflow-y-auto px-4 py-3"
               >
                 {sectionFieldsMap[activeKey]}
               </div>
@@ -3315,67 +3460,53 @@ export function CrearReservaContent() {
 
       {/* Barra de acciones */}
       <div
-        className="relative z-10 shrink-0 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_78%,transparent)] px-3 py-2 backdrop-blur-md sm:px-4"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}
+        className="relative z-10 shrink-0 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_78%,transparent)] px-3 py-2.5 backdrop-blur-md sm:px-4"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}
       >
-        <div className="flex w-full items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2">
           <button
             type="button"
             onClick={resetFormulario}
-            className="dash-control shrink-0 px-3 py-2 text-sm font-medium"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-dash-muted transition-colors hover:bg-dash-control hover:text-dash-fg"
           >
-            {tr.limpiar}
+            <Icon icon="lucide:trash-2" width={16} height={16} />
+            <span className="hidden sm:inline">{tr.limpiar}</span>
           </button>
-          <div
-            className="flex shrink-0 items-center overflow-hidden rounded-lg border border-dash-border bg-dash-control/80"
-            role="group"
-            aria-label={`${tr.btnPrev} / ${tr.btnNext}`}
-          >
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
               disabled={currentStep === 0}
               title={tr.btnPrev}
               aria-label={tr.btnPrev}
-              className="inline-flex h-10 w-10 items-center justify-center text-dash-fg transition-colors hover:bg-dash-control-hover disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent"
+              className="dash-control inline-flex h-10 w-10 items-center justify-center disabled:cursor-not-allowed disabled:opacity-35"
             >
               <Icon icon="lucide:chevron-left" width={18} height={18} />
             </button>
-            <span className="h-6 w-px bg-dash-border" aria-hidden />
-            <button
-              type="button"
-              onClick={() => setCurrentStep((s) => Math.min(sectionOrder.length - 1, s + 1))}
-              disabled={isLastStep}
-              title={tr.btnNext}
-              aria-label={tr.btnNext}
-              className="inline-flex h-10 w-10 items-center justify-center text-dash-fg transition-colors hover:bg-dash-control-hover disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent"
-            >
-              <Icon icon="lucide:chevron-right" width={18} height={18} />
-            </button>
+            {!isLastStep ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep((s) => s + 1)}
+                className="dash-cta inline-flex min-w-[9.5rem] items-center justify-center gap-2 px-5 py-2.5 text-base active:scale-[0.99]"
+              >
+                {tr.btnNext}
+                <Icon icon="lucide:arrow-right" width={16} height={16} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowPreview(true)}
+                disabled={submitting || progressPct < 100}
+                className="dash-cta inline-flex min-w-[9.5rem] items-center justify-center gap-2 px-5 py-2.5 text-base active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <><Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" />{tr.guardando}</>
+                ) : (
+                  <><Icon icon="lucide:eye" width={16} height={16} />{tr.btnReview}</>
+                )}
+              </button>
+            )}
           </div>
-          {!isLastStep ? (
-            <button
-              type="button"
-              onClick={() => setCurrentStep((s) => s + 1)}
-              className="dash-cta flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-base active:scale-[0.99]"
-            >
-              {tr.btnNext}
-              <Icon icon="lucide:arrow-right" width={16} height={16} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              disabled={submitting || progressPct < 100}
-              className="dash-cta flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-base active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? (
-                <><Icon icon="lucide:loader-2" width={16} height={16} className="animate-spin" />{tr.guardando}</>
-              ) : (
-                <><Icon icon="lucide:eye" width={16} height={16} />{tr.btnReview}</>
-              )}
-            </button>
-          )}
         </div>
       </div>
 

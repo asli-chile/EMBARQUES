@@ -139,30 +139,33 @@ export function InicioLoggedInHome({
   );
 
   const shortcuts = (
-    <section data-inicio-section className="relative z-10 py-16 sm:py-20 lg:py-24 inicio-shortcuts-band">
-      <div className={inicioStyles.shell}>
-        <div className="mb-10 sm:mb-12 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <section
+      data-inicio-section
+      className="relative z-10 flex min-h-dvh flex-col justify-center py-16 sm:py-20 lg:py-24 inicio-shortcuts-band"
+    >
+      <div className={`${inicioStyles.shell} w-full`}>
+        <div className="mb-10 flex flex-col gap-6 sm:mb-12 lg:mb-14 lg:flex-row lg:items-end lg:justify-between">
           <div data-inicio-reveal className="max-w-2xl">
-            <span className="inline-flex items-center gap-2.5 mb-3 text-xs font-semibold uppercase tracking-[0.14em] inicio-accent-text">
+            <span className="mb-3 inline-flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.14em] inicio-accent-text">
               <span className="h-px w-7 bg-[color-mix(in_srgb,var(--inicio-teal)_60%,transparent)]" />
               {t.inicio.quickLinksTag}
             </span>
-            <h2 className="inicio-display inicio-ink text-3xl sm:text-4xl lg:text-[2.75rem] font-bold leading-[1.08]">
+            <h2 className="inicio-display text-3xl font-bold leading-[1.08] inicio-ink sm:text-4xl lg:text-5xl">
               {t.inicio.quickLinksTitle}
             </h2>
-            <p className="mt-3 text-sm sm:text-base inicio-ink-mute leading-relaxed max-w-xl">
+            <p className="mt-3 max-w-xl text-base leading-relaxed inicio-ink-mute sm:text-lg">
               {t.inicio.quickLinksSubtitle}
             </p>
           </div>
           <p
             data-inicio-reveal
-            className="hidden lg:block max-w-[11rem] text-right text-[10px] font-semibold uppercase tracking-[0.18em] leading-relaxed inicio-ink-faint"
+            className="hidden max-w-[12rem] text-right text-[11px] font-semibold uppercase leading-relaxed tracking-[0.18em] inicio-ink-faint lg:block"
           >
             {t.inicio.quickLinksAside}
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 xl:gap-6">
           {links.map(({ key, descKey, footKey, href, icon, mark, accent }) => (
             <a
               key={key}
@@ -173,24 +176,24 @@ export function InicioLoggedInHome({
               <Icon
                 icon={mark}
                 className="inicio-shortcut-mark"
-                width={140}
-                height={140}
+                width={160}
+                height={160}
                 aria-hidden
               />
               <span className="inicio-shortcut-icon" aria-hidden>
-                <Icon icon={icon} width={28} height={28} />
+                <Icon icon={icon} width={32} height={32} />
               </span>
-              <span className="relative z-[1] min-w-0 flex-1 flex flex-col justify-center gap-1 pr-2">
-                <span className="block text-base font-semibold leading-snug inicio-ink sm:text-[1.05rem]">
+              <span className="relative z-[1] flex min-w-0 flex-1 flex-col justify-center gap-1.5 pr-2">
+                <span className="block text-lg font-semibold leading-snug inicio-ink sm:text-xl">
                   {t.inicio[key]}
                 </span>
-                <span className="block text-xs leading-snug inicio-ink-mute sm:text-[13px]">
+                <span className="block text-sm leading-snug inicio-ink-mute sm:text-[15px]">
                   {t.inicio[descKey]}
                 </span>
-                <span className="inicio-shortcut-foot mt-2.5">{t.inicio[footKey]}</span>
+                <span className="inicio-shortcut-foot mt-3">{t.inicio[footKey]}</span>
               </span>
               <span className="inicio-shortcut-chevron relative z-[1]" aria-hidden>
-                <Icon icon="lucide:arrow-right" width={16} height={16} />
+                <Icon icon="lucide:arrow-right" width={18} height={18} />
               </span>
             </a>
           ))}

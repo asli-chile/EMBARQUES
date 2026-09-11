@@ -22,6 +22,8 @@ interface ComboboxInputProps {
   disabled?: boolean;
   readOnly?: boolean;
   maxSuggestions?: number;
+  /** Icono a la izquierda del campo (p. ej. lucide:building-2). */
+  icon?: string;
   /** Estilo neón; el panel en portal usa clases erp-neon-* + data-erp-neon. */
   neon?: boolean;
 }
@@ -44,6 +46,7 @@ export function ComboboxInput({
   disabled,
   readOnly,
   maxSuggestions = 15,
+  icon,
   neon = false,
 }: ComboboxInputProps) {
   const [open, setOpen] = useState(false);
@@ -227,12 +230,24 @@ export function ComboboxInput({
         <label htmlFor={id} className={labelClass}>
           {label}
           {options.length > 0 && (
-            <span className="ml-2 text-neutral-400 font-normal">({options.length})</span>
+            <span className={`ml-2 font-normal ${neon ? "text-[color:var(--erp-muted)]" : "text-neutral-400"}`}>
+              ({options.length})
+            </span>
           )}
           {labelExtra}
         </label>
       )}
       <div className="relative">
+        {icon ? (
+          <Icon
+            icon={icon}
+            width={22}
+            height={22}
+            className={`pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 ${
+              neon ? "text-[color:var(--erp-neon)]" : "text-brand-blue"
+            }`}
+          />
+        ) : null}
         <input
           ref={inputRef}
           id={id}
@@ -244,7 +259,7 @@ export function ComboboxInput({
           onClick={() => { if (!readOnly) setOpen(true); }}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className={`${inputClass} pr-11`}
+          className={`${inputClass} ${icon ? "pl-12" : ""} pr-11`}
           autoComplete="nope"
           data-lpignore="true"
           data-1p-ignore="true"

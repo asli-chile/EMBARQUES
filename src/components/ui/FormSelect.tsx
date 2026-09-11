@@ -12,6 +12,8 @@ type FormSelectProps = {
   placeholder?: string;
   disabled?: boolean;
   onChange: (value: string) => void;
+  /** Icono a la izquierda del campo. */
+  icon?: string;
   /** Estilo neón (páginas dash-neon). El panel en portal respeta data-erp-neon. */
   variant?: "default" | "neon";
 };
@@ -24,6 +26,7 @@ export function FormSelect({
   placeholder = "Seleccionar...",
   disabled,
   onChange,
+  icon,
   variant = "default",
 }: FormSelectProps) {
   const [open, setOpen] = useState(false);
@@ -96,10 +99,10 @@ export function FormSelect({
   };
 
   const btnClass = neon
-    ? `relative w-full min-h-[2.6rem] px-3 pr-10 rounded-lg border text-left text-base font-semibold transition-all erp-neon-control ${
+    ? `relative flex w-full min-h-[3.25rem] items-center gap-3 rounded-lg border px-3.5 pr-10 text-left text-base font-semibold transition-all erp-neon-control ${
         open ? "ring-2 ring-[color-mix(in_srgb,var(--erp-neon)_40%,transparent)]" : ""
-      } ${selected ? "" : "opacity-80"} disabled:opacity-50 disabled:cursor-not-allowed`
-    : `relative w-full min-h-[2.6rem] px-3 pr-10 rounded-lg border text-left text-base font-semibold transition-all ${
+      } ${selected ? "" : "text-[color:var(--erp-muted)]"} disabled:cursor-not-allowed disabled:opacity-70`
+    : `relative flex w-full min-h-[3.25rem] items-center gap-3 rounded-lg border px-3.5 pr-10 text-left text-base font-semibold transition-all ${
         open
           ? "border-brand-blue bg-white ring-2 ring-brand-blue/25 shadow-sm"
           : "border-brand-blue/20 bg-white hover:border-brand-blue/45 shadow-[0_1px_2px_rgba(17,34,78,0.06)]"
@@ -121,7 +124,15 @@ export function FormSelect({
         onKeyDown={onKeyDown}
         className={btnClass}
       >
-        <span className="block truncate">{selected?.label || placeholder}</span>
+        {icon ? (
+          <Icon
+            icon={icon}
+            width={22}
+            height={22}
+            className={`shrink-0 ${neon ? "text-[color:var(--erp-neon)]" : "text-brand-blue"}`}
+          />
+        ) : null}
+        <span className="block min-w-0 flex-1 truncate">{selected?.label || placeholder}</span>
         <Icon
           icon="lucide:chevron-down"
           width={18}
