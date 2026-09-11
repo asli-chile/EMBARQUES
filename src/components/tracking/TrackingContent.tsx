@@ -55,14 +55,6 @@ type TrackingResult = {
   tracking_manual_updated_at?: string | null;
 };
 
-type FleetManualRpcRow = {
-  nave: string;
-  viaje: string | null;
-  lat: number;
-  lng: number;
-  ref_asli: string | null;
-};
-
 type AisSearchRow = {
   mmsi: number;
   imo: number | null;
@@ -134,6 +126,27 @@ function isOperacionActivaEnMapa(estado: string | null): boolean {
   return !esEstadoCerrado(estado);
 }
 
+/** Fecha local YYYY-MM-DD (misma lógica que filtros ETD/ETA del mapa). */
+function todayDateISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Viaje vigente para pintar POL/POD: ETD y ETA registrados, y ETA ≥ hoy
+ * (próximo zarpe o en tránsito). Sin ETA no se marca en el mapa.
+ */
+function tieneEtdActivo(op: Pick<TrackingResult, "etd" | "eta">, today = todayDateISO()): boolean {
+  const etd = op.etd?.trim();
+  const eta = op.eta?.trim();
+  if (!etd || !eta) return false;
+  if (eta < today) return false;
+  return true;
+}
+
 /** Alineado con la RPC: trim, minúsculas y espacios internos colapsados. */
 function normalizeTrackingField(s: string | null | undefined): string {
   return String(s ?? "")
@@ -197,6 +210,31 @@ const FLEET_POS_EPS = 1.5e-4;
 
 function fleetCoordsClose(a: MapFleetManualVessel, b: MapFleetManualVessel, eps = FLEET_POS_EPS): boolean {
   return Math.abs(a.lat - b.lat) < eps && Math.abs(a.lng - b.lng) < eps;
+}
+
+/** POL/POD únicos a partir de ops con ETD activo (dedupe por coordenadas). */
+function buildPortMarkersFromOps(ops: TrackingResult[]): MapMarkerPort[] {
+  const byKey = new Map<string, MapMarkerPort>();
+  const today = todayDateISO();
+  for (const op of ops) {
+    if (!isOperacionActivaEnMapa(op.estado_operacion)) continue;
+    if (!tieneEtdActivo(op, today)) continue;
+    for (const variant of ["pol", "pod"] as const) {
+      const name = (variant === "pol" ? op.pol : op.pod)?.trim();
+      if (!name) continue;
+      const c = getPortCoordinates(name);
+      if (!c) continue;
+      const key = `${variant}:${c[0].toFixed(3)},${c[1].toFixed(3)}`;
+      if (byKey.has(key)) continue;
+      byKey.set(key, {
+        lng: c[0],
+        lat: c[1],
+        label: `${variant.toUpperCase()} · ${name}`,
+        variant,
+      });
+    }
+  }
+  return [...byKey.values()];
 }
 
 function clusterManualFleetFromResults(results: TrackingResult[]): MapFleetManualVessel[] {
@@ -363,6 +401,8 @@ export function TrackingContent() {
   const [lastAisAt, setLastAisAt] = useState<Date | null>(null);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [fleetManualVessels, setFleetManualVessels] = useState<MapFleetManualVessel[]>([]);
+  /** Ops con ETD activo (fuente de POL/POD cuando no hay nave seleccionada). */
+  const [fleetOps, setFleetOps] = useState<TrackingResult[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [cargoVessel, setCargoVessel] = useState<MapFleetManualVessel | null>(null);
   const [cargoOps, setCargoOps] = useState<TrackingResult[]>([]);
@@ -376,33 +416,16 @@ export function TrackingContent() {
     [results, selectedOpId],
   );
 
-  /** Op para POL/POD: la seleccionada, o la única del resultado si aún no hay click. */
-  const portSourceOp = useMemo(() => {
-    if (selectedOp) return selectedOp;
-    if (results.length === 1) return results[0];
-    return null;
-  }, [selectedOp, results]);
-
   const linkedOps = useMemo(() => {
     if (!selectedAis) return [];
     return results.filter((op) => namesMatchForAis(op.nave, selectedAis.vessel_name));
   }, [results, selectedAis]);
 
-  const polMarker: MapMarkerPort | null = useMemo(() => {
-    const name = portSourceOp?.pol;
-    if (!name?.trim()) return null;
-    const c = getPortCoordinates(name);
-    if (!c) return null;
-    return { lng: c[0], lat: c[1], label: `POL · ${name}`, variant: "pol" };
-  }, [portSourceOp?.pol]);
-
-  const podMarker: MapMarkerPort | null = useMemo(() => {
-    const name = portSourceOp?.pod;
-    if (!name?.trim()) return null;
-    const c = getPortCoordinates(name);
-    if (!c) return null;
-    return { lng: c[0], lat: c[1], label: `POD · ${name}`, variant: "pod" };
-  }, [portSourceOp?.pod]);
+  /** Sin nave del mapa: todos los POL/POD de flota activa. Con nave: solo los de su carga. */
+  const mapPorts = useMemo(() => {
+    if (cargoVessel) return buildPortMarkersFromOps(cargoOps);
+    return buildPortMarkersFromOps(fleetOps);
+  }, [cargoVessel, cargoOps, fleetOps]);
 
   const vesselFromAis: MapVesselPosition | null = useMemo(() => {
     if (!vesselSnap) return null;
@@ -564,67 +587,61 @@ export function TrackingContent() {
   const loadFleetManualVessels = useCallback(async () => {
     if (!supabase || !user) {
       setFleetManualVessels([]);
+      setFleetOps([]);
       return;
     }
 
-    // «Ver como» cliente/ejecutivo: el JWT sigue siendo superadmin → la RPC devolvería toda la flota.
-    if (scopeToAssignedEmpresas) {
-      if (
-        shouldSkipOperacionesForCliente({
-          isCliente,
-          isEjecutivo,
-          empresaNombres,
-        })
-      ) {
-        setFleetManualVessels([]);
-        return;
-      }
-
-      let q = supabase
-        .from("operaciones")
-        .select(TRACKING_OP_SELECT)
-        .is("deleted_at", null)
-        .not("tracking_manual_lat", "is", null)
-        .not("tracking_manual_lng", "is", null)
-        .limit(400);
-
-      q = applyOperacionesClienteFilter(q, {
+    if (
+      scopeToAssignedEmpresas &&
+      shouldSkipOperacionesForCliente({
         isCliente,
         isEjecutivo,
         empresaNombres,
-      });
-
-      const { data, error: qErr } = await q;
-      if (qErr) return;
-      const ops = filterScopedResults((data ?? []) as TrackingResult[]);
-      setFleetManualVessels(clusterManualFleetFromResults(ops));
+      })
+    ) {
+      setFleetManualVessels([]);
+      setFleetOps([]);
       return;
     }
 
-    const { data, error: rpcError } = await supabase.rpc("listar_tracking_naves_manuales_activas");
-    if (rpcError) return;
-    const rows = (data ?? []) as FleetManualRpcRow[];
-    const next: MapFleetManualVessel[] = [];
-    for (const r of rows) {
-      const lat = parseNum(r.lat);
-      const lng = parseNum(r.lng);
-      if (lat == null || lng == null) continue;
-      if (lat === 0 && lng === 0) continue;
-      const naveT = String(r.nave ?? "").trim();
-      if (!naveT) continue;
-      const viajT = r.viaje != null ? String(r.viaje).trim() : "";
-      const name =
-        [naveT, viajT || null].filter(Boolean).join(" · ") || String(r.ref_asli ?? "").trim() || "—";
-      next.push({
-        markerKey: `${naveT.toLowerCase()}|${viajT.toLowerCase()}`,
-        lat,
-        lng,
-        name,
-        nave: naveT,
-        viaje: viajT || null,
-      });
+    // Flota: ops con coords manuales. POL/POD: ops con ETD+ETA y ETA ≥ hoy.
+    const base = () => {
+      let q = supabase
+        .from("operaciones")
+        .select(TRACKING_OP_SELECT)
+        .is("deleted_at", null);
+      if (scopeToAssignedEmpresas) {
+        q = applyOperacionesClienteFilter(q, {
+          isCliente,
+          isEjecutivo,
+          empresaNombres,
+        });
+      }
+      return q;
+    };
+
+    const today = todayDateISO();
+    const [fleetRes, portsRes] = await Promise.all([
+      base().not("tracking_manual_lat", "is", null).not("tracking_manual_lng", "is", null).limit(400),
+      base()
+        .not("etd", "is", null)
+        .not("eta", "is", null)
+        .gte("eta", today)
+        .order("etd", { ascending: false, nullsFirst: false })
+        .limit(500),
+    ]);
+
+    if (!fleetRes.error) {
+      const withCoords = filterScopedResults((fleetRes.data ?? []) as TrackingResult[]);
+      setFleetManualVessels(clusterManualFleetFromResults(withCoords));
     }
-    setFleetManualVessels(next);
+
+    if (!portsRes.error) {
+      const activeOps = filterScopedResults((portsRes.data ?? []) as TrackingResult[]).filter(
+        (op) => isOperacionActivaEnMapa(op.estado_operacion) && tieneEtdActivo(op, today),
+      );
+      setFleetOps(activeOps);
+    }
   }, [
     supabase,
     user,
@@ -646,6 +663,8 @@ export function TrackingContent() {
     setCargoVessel(null);
     setCargoOps([]);
     setCargoError(null);
+    setFleetOps([]);
+    setFleetManualVessels([]);
   }, [viewAsKey, empresasKey]);
 
   useEffect(() => {
@@ -1511,8 +1530,7 @@ export function TrackingContent() {
                 <TrackingMapView
                   vessel={vesselOnMap}
                   fleetManualVessels={fleetManualMerged}
-                  pol={polMarker}
-                  pod={podMarker}
+                  ports={mapPorts}
                   emptyHint={tr.mapLoading}
                   webglFallback={tr.mapWebGLFallback}
                   theme={theme}

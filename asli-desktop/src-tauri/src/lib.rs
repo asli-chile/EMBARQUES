@@ -19,6 +19,10 @@ pub fn run() {
                     if let Err(err) = win.set_decorations(false) {
                         eprintln!("[asli-desktop] set_decorations: {err}");
                     }
+                    // Maximizada al abrir (llena el monitor; sigue viéndose la barra de tareas).
+                    if let Err(err) = win.maximize() {
+                        eprintln!("[asli-desktop] maximize: {err}");
+                    }
                 }
             }
 

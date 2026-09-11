@@ -58,7 +58,7 @@ dependencies = [
 
 [[package]]
 name = "asli-desktop"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "serde",
  "serde_json",

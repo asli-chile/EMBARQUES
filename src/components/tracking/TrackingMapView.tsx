@@ -48,8 +48,8 @@ type TrackingMapViewProps = {
   vessel: MapVesselPosition | null;
   /** Todas las naves activas con coordenadas manuales (una por nave+viaje). */
   fleetManualVessels: MapFleetManualVessel[];
-  pol: MapMarkerPort | null;
-  pod: MapMarkerPort | null;
+  /** POL/POD a pintar (varios cuando no hay nave seleccionada). */
+  ports: MapMarkerPort[];
   emptyHint: string;
   webglFallback: string;
   theme?: NeonTheme;
@@ -99,8 +99,7 @@ function VesselTopDownIcon({ className, label }: { className?: string; label: st
 export function TrackingMapView({
   vessel,
   fleetManualVessels,
-  pol,
-  pod,
+  ports,
   emptyHint,
   webglFallback,
   theme = "dark",
@@ -197,27 +196,15 @@ export function TrackingMapView({
   useEffect(() => {
     if (!mapRef.current) return;
     const pts: { lng: number; lat: number }[] = [];
-    if (pol && validCoord(pol.lat, pol.lng)) pts.push(pol);
-    if (pod && validCoord(pod.lat, pod.lng)) pts.push(pod);
+    for (const p of ports) {
+      if (validCoord(p.lat, p.lng)) pts.push(p);
+    }
     if (vessel && validCoord(vessel.lat, vessel.lng)) pts.push(vessel);
-    if (pts.length > 0) {
-      fitPoints(pts);
-      return;
+    for (const f of fleetManualVessels) {
+      if (validCoord(f.lat, f.lng)) pts.push(f);
     }
-    // Solo flota: encuadrar naves manuales visibles
-    if (fleetManualVessels.length > 0) {
-      fitPoints(fleetManualVessels);
-    }
-  }, [
-    vessel?.lat,
-    vessel?.lng,
-    pod?.lat,
-    pod?.lng,
-    pol?.lat,
-    pol?.lng,
-    fleetManualVessels,
-    fitPoints,
-  ]);
+    if (pts.length > 0) fitPoints(pts);
+  }, [vessel?.lat, vessel?.lng, ports, fleetManualVessels, fitPoints]);
 
   useEffect(() => {
     if (!containerReady) return;
@@ -228,7 +215,7 @@ export function TrackingMapView({
     } catch {
       /* ignore */
     }
-  }, [containerReady, vessel, pol, pod, fleetManualVessels]);
+  }, [containerReady, vessel, ports, fleetManualVessels]);
 
   const showPrimaryVessel = vessel && validCoord(vessel.lat, vessel.lng);
   const primaryIsManual = Boolean(vessel?.isManual);
@@ -281,26 +268,34 @@ export function TrackingMapView({
           >
             <NavigationControl position="top-right" showCompass={false} />
 
-            {pol && validCoord(pol.lat, pol.lng) && (
-              <Marker longitude={pol.lng} latitude={pol.lat} anchor="bottom" style={{ zIndex: 2 }}>
-                <div className="pointer-events-none flex flex-col items-center gap-0.5">
-                  <span className={`max-w-[160px] truncate ${labelCls}`}>{pol.label}</span>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/50">
-                    <Icon icon="lucide:anchor" width={17} height={17} aria-hidden />
+            {ports.map((port) =>
+              validCoord(port.lat, port.lng) ? (
+                <Marker
+                  key={`${port.variant}-${port.lng.toFixed(4)}-${port.lat.toFixed(4)}-${port.label}`}
+                  longitude={port.lng}
+                  latitude={port.lat}
+                  anchor="bottom"
+                  style={{ zIndex: 2 }}
+                >
+                  <div className="pointer-events-none flex flex-col items-center gap-0.5">
+                    <span className={`max-w-[160px] truncate ${labelCls}`}>{port.label}</span>
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-white shadow-lg ring-2 ${
+                        port.variant === "pol"
+                          ? "bg-emerald-600 ring-emerald-400/50"
+                          : "bg-amber-500 ring-amber-400/50"
+                      }`}
+                    >
+                      <Icon
+                        icon={port.variant === "pol" ? "lucide:anchor" : "lucide:map-pin"}
+                        width={17}
+                        height={17}
+                        aria-hidden
+                      />
+                    </div>
                   </div>
-                </div>
-              </Marker>
-            )}
-
-            {pod && validCoord(pod.lat, pod.lng) && (
-              <Marker longitude={pod.lng} latitude={pod.lat} anchor="bottom" style={{ zIndex: 2 }}>
-                <div className="pointer-events-none flex flex-col items-center gap-0.5">
-                  <span className={`max-w-[160px] truncate ${labelCls}`}>{pod.label}</span>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-white shadow-lg ring-2 ring-amber-400/50">
-                    <Icon icon="lucide:map-pin" width={17} height={17} aria-hidden />
-                  </div>
-                </div>
-              </Marker>
+                </Marker>
+              ) : null,
             )}
 
             {fleetWithoutPrimaryOverlap.map((fv) => {
