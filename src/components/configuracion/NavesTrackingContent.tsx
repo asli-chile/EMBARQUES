@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -9,10 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { esEstadoCerrado } from "@/lib/operaciones/estados";
 import { getApiOriginPrefix } from "@/lib/basePath";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
-import {
-  normalizeVesselNameKey,
-  type VesselTrackingOcrFields,
-} from "@/lib/vessel-tracking-parse";
+import { VesselOcrDialog, type VesselOcrMode } from "@/components/configuracion/VesselOcrDialog";
 
 type OpRow = {
   id: string;
@@ -67,6 +64,9 @@ const neonBtn =
   "inline-flex items-center justify-center gap-1.5 rounded-lg border border-dash-neon/40 bg-dash-neon/15 px-3 py-2 text-sm font-semibold text-dash-neon transition-colors hover:bg-dash-neon/25 disabled:opacity-50";
 const neonBtnSecondary =
   "inline-flex items-center justify-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:opacity-50";
+/** Variante de una sola línea para las celdas de la tabla: evita que el texto parta y engrose la fila. */
+const compactBtn =
+  "inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-border bg-dash-control px-2.5 py-1.5 text-xs font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:opacity-50";
 
 function todayDateISO(): string {
   const d = new Date();
@@ -74,6 +74,16 @@ function todayDateISO(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Días de tránsito entre ETD y ETA; null si falta alguna o la fecha no parsea. */
+function transitDays(etd: string, eta: string): number | null {
+  if (!etd || !eta) return null;
+  const from = Date.parse(`${etd}T12:00:00`);
+  const to = Date.parse(`${eta}T12:00:00`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return null;
+  const days = Math.round((to - from) / 86_400_000);
+  return days >= 0 ? days : null;
 }
 
 function normalizeField(s: string | null | undefined): string {
@@ -237,13 +247,6 @@ export function NavesTrackingContent() {
   const [search, setSearch] = useState("");
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [ocrBusy, setOcrBusy] = useState(false);
-  const [ocrPct, setOcrPct] = useState(0);
-  const [ocrFields, setOcrFields] = useState<VesselTrackingOcrFields | null>(null);
-  const [ocrText, setOcrText] = useState<string>("");
-  const [ocrDrag, setOcrDrag] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const dropZoneRef = useRef<HTMLElement | null>(null);
 
   const supabase = useMemo(() => {
     try {
@@ -326,137 +329,12 @@ export function NavesTrackingContent() {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }, []);
 
-  const runOcrOnFiles = useCallback(
-    async (fileList: Array<File | Blob>) => {
-      const images = fileList.filter((f) => {
-        if (f instanceof File) return f.type.startsWith("image/");
-        return true;
-      });
-      if (images.length === 0) return;
+  const [ocrDialog, setOcrDialog] = useState<{ key: string; mode: VesselOcrMode } | null>(null);
 
-      setOcrBusy(true);
-      setOcrPct(0);
-      setOcrFields(null);
-      setOcrText("");
-      try {
-        const { analyzeVesselTrackingImages } = await import("@/lib/vessel-tracking-ocr");
-        const { fields, text } = await analyzeVesselTrackingImages(images, setOcrPct);
-        setOcrText(text);
-        if (!fields.nombre && !fields.imo && !fields.mmsi && fields.lat == null && fields.lng == null) {
-          sileo.error({ title: tr.dropEmpty });
-          return;
-        }
-        setOcrFields(fields);
-      } catch (e) {
-        sileo.error({ title: e instanceof Error ? e.message : tr.dropError });
-      } finally {
-        setOcrBusy(false);
-        setOcrPct(0);
-      }
-    },
-    [tr.dropEmpty, tr.dropError],
+  const dialogRow = useMemo(
+    () => (ocrDialog ? (rows.find((r) => r.key === ocrDialog.key) ?? null) : null),
+    [ocrDialog, rows],
   );
-
-  const applyOcrToRows = useCallback(() => {
-    if (!ocrFields) return;
-    const nombreKey = ocrFields.nombre ? normalizeVesselNameKey(ocrFields.nombre) : "";
-
-    let match =
-      (nombreKey
-        ? rows.find((r) => {
-            const k = normalizeVesselNameKey(r.catalogNombre);
-            return k === nombreKey || k.includes(nombreKey) || nombreKey.includes(k);
-          })
-        : null) ?? null;
-
-    // Si solo hay coords/IMO y una sola fila incompleta, úsala
-    if (!match && rows.length === 1) match = rows[0]!;
-    if (!match && !nombreKey) {
-      const incomplete = rows.filter(isIncomplete);
-      if (incomplete.length === 1) match = incomplete[0]!;
-    }
-
-    if (!match) {
-      sileo.error({ title: tr.dropNoMatch });
-      return;
-    }
-
-    updateRow(match.key, {
-      ...(ocrFields.imo ? { imo: ocrFields.imo } : {}),
-      ...(ocrFields.mmsi ? { mmsi: ocrFields.mmsi } : {}),
-      ...(ocrFields.lat != null ? { lat: String(ocrFields.lat) } : {}),
-      ...(ocrFields.lng != null ? { lng: String(ocrFields.lng) } : {}),
-    });
-    setSearch(match.catalogNombre);
-    sileo.success({ title: tr.dropApplied });
-  }, [ocrFields, rows, tr.dropApplied, tr.dropNoMatch, updateRow]);
-
-  const collectClipboardImages = useCallback((data: DataTransfer | null): File[] => {
-    if (!data) return [];
-    const files: File[] = [];
-    const seen = new Set<string>();
-    const push = (f: File | null) => {
-      if (!f || !f.type.startsWith("image/")) return;
-      const key = `${f.type}:${f.size}:${f.name}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      files.push(f);
-    };
-    if (data.items) {
-      for (const item of data.items) {
-        if (item.kind === "file" && item.type.startsWith("image/")) {
-          push(item.getAsFile());
-        }
-      }
-    }
-    if (data.files) {
-      for (const f of data.files) push(f);
-    }
-    return files;
-  }, []);
-
-  const handlePasteEvent = useCallback(
-    (e: { clipboardData: DataTransfer | null; preventDefault: () => void; stopPropagation: () => void }) => {
-      if (!isSuperadmin || ocrBusy) return;
-      const files = collectClipboardImages(e.clipboardData);
-      if (files.length === 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      void runOcrOnFiles(files);
-    },
-    [collectClipboardImages, isSuperadmin, ocrBusy, runOcrOnFiles],
-  );
-
-  const handlePasteButton = useCallback(async () => {
-    if (ocrBusy) return;
-    // API moderna del portapapeles (Chrome/Edge con permiso)
-    try {
-      if (navigator.clipboard && "read" in navigator.clipboard) {
-        const items = await navigator.clipboard.read();
-        const files: File[] = [];
-        for (const item of items) {
-          const type = item.types.find((t) => t.startsWith("image/"));
-          if (!type) continue;
-          const blob = await item.getType(type);
-          files.push(new File([blob], `captura-${Date.now()}.png`, { type: blob.type || "image/png" }));
-        }
-        if (files.length > 0) {
-          void runOcrOnFiles(files);
-          return;
-        }
-      }
-    } catch {
-      // Sin permiso o sin imagen: pedir Ctrl+V en la zona
-    }
-    dropZoneRef.current?.focus();
-    sileo.info({ title: tr.dropPasteHint });
-  }, [ocrBusy, runOcrOnFiles, tr.dropPasteHint]);
-
-  useEffect(() => {
-    const onPaste = (e: ClipboardEvent) => handlePasteEvent(e);
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [handlePasteEvent]);
 
   const handleSave = useCallback(
     async (row: VesselDraft) => {
@@ -608,7 +486,7 @@ export function NavesTrackingContent() {
 
   return (
     <main className="dash-neon flex-1 min-h-0 overflow-auto p-4 sm:p-6" data-theme={theme} role="main">
-      <div className="mx-auto max-w-7xl space-y-4">
+      <div className="w-full space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-dash-fg flex items-center gap-2">
@@ -622,138 +500,6 @@ export function NavesTrackingContent() {
             {tr.refresh}
           </button>
         </header>
-
-        <section
-          ref={dropZoneRef}
-          tabIndex={0}
-          role="region"
-          aria-label={tr.dropTitle}
-          className={`dash-card rounded-xl p-4 border-2 border-dashed transition-colors outline-none focus:border-dash-neon focus:ring-2 focus:ring-dash-neon/30 ${
-            ocrDrag ? "border-dash-neon bg-dash-neon/10" : "border-dash-border"
-          }`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setOcrDrag(true);
-          }}
-          onDragLeave={() => setOcrDrag(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setOcrDrag(false);
-            const files = [...e.dataTransfer.files];
-            void runOcrOnFiles(files);
-          }}
-          onPaste={(e) => handlePasteEvent(e)}
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-dash-fg flex items-center gap-2">
-                <Icon icon="lucide:image-plus" width={16} height={16} className="text-dash-neon" />
-                {tr.dropTitle}
-              </p>
-              <p className="mt-1 text-xs text-dash-muted max-w-xl">{tr.dropHint}</p>
-              <p className="mt-1 text-xs font-semibold text-dash-neon/90">{tr.dropPasteShortcut}</p>
-            </div>
-            <div className="flex flex-wrap gap-2 shrink-0">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = [...(e.target.files ?? [])];
-                  e.target.value = "";
-                  void runOcrOnFiles(files);
-                }}
-              />
-              <button
-                type="button"
-                disabled={ocrBusy}
-                onClick={() => fileInputRef.current?.click()}
-                className={neonBtnSecondary}
-              >
-                <Icon icon="lucide:upload" width={14} height={14} />
-                {tr.dropBrowse}
-              </button>
-              <button
-                type="button"
-                disabled={ocrBusy}
-                onClick={() => void handlePasteButton()}
-                className={neonBtnSecondary}
-                title={tr.dropPasteShortcut}
-              >
-                <Icon icon="lucide:clipboard-paste" width={14} height={14} />
-                {tr.dropPaste}
-              </button>
-              {ocrFields && (
-                <>
-                  <button type="button" disabled={ocrBusy} onClick={applyOcrToRows} className={neonBtn}>
-                    <Icon icon="lucide:check" width={14} height={14} />
-                    {tr.dropApply}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={ocrBusy}
-                    onClick={() => {
-                      setOcrFields(null);
-                      setOcrText("");
-                    }}
-                    className={neonBtnSecondary}
-                  >
-                    {tr.dropClear}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {ocrBusy && (
-            <p className="mt-3 text-sm text-dash-neon font-semibold">
-              {tr.dropAnalyzing} {ocrPct > 0 ? `${ocrPct}%` : ""}
-            </p>
-          )}
-
-          {ocrFields && !ocrBusy && (
-            <>
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
-                <p className="text-dash-muted font-semibold">{tr.ocrNombre}</p>
-                <p className="text-dash-fg font-bold mt-0.5 truncate">{ocrFields.nombre ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
-                <p className="text-dash-muted font-semibold">{tr.imo}</p>
-                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">{ocrFields.imo ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
-                <p className="text-dash-muted font-semibold">{tr.mmsi}</p>
-                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">{ocrFields.mmsi ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
-                <p className="text-dash-muted font-semibold">{tr.lat}</p>
-                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">
-                  {ocrFields.lat != null ? String(ocrFields.lat) : "—"}
-                </p>
-              </div>
-              <div className="rounded-lg border border-dash-border bg-dash-control px-2.5 py-2">
-                <p className="text-dash-muted font-semibold">{tr.lng}</p>
-                <p className="text-dash-fg font-bold mt-0.5 tabular-nums">
-                  {ocrFields.lng != null ? String(ocrFields.lng) : "—"}
-                </p>
-              </div>
-            </div>
-            {ocrText.trim() && (
-              <details className="mt-3">
-                <summary className="cursor-pointer text-xs font-semibold text-dash-muted">
-                  {tr.ocrPreview}
-                </summary>
-                <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-dash-border bg-dash-control p-2 text-[11px] text-dash-fg whitespace-pre-wrap">
-                  {ocrText}
-                </pre>
-              </details>
-            )}
-            </>
-          )}
-        </section>
 
         <div className="dash-card rounded-xl p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
@@ -796,6 +542,7 @@ export function NavesTrackingContent() {
               {filtered.map((row) => {
                 const busy = savingKey === row.key;
                 const dirty = isDirty(row);
+                const hasIds = Boolean(row.savedImo.trim() && row.savedMmsi.trim());
                 return (
                   <article key={row.key} className="dash-card rounded-xl p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -806,19 +553,52 @@ export function NavesTrackingContent() {
                             .filter(Boolean)
                             .join(" · ") || "—"}
                         </p>
-                        <p className="text-xs text-dash-muted mt-1">
-                          {row.pol || "—"} → {row.pod || "—"} · ETA {row.eta || "—"} · {row.opsCount}{" "}
-                          {tr.ops.toLowerCase()}
-                        </p>
                       </div>
                       <StatusBadges row={row} tr={tr} />
                     </div>
                     {!row.naveId && <p className="text-xs text-amber-300">{tr.noCatalog}</p>}
+                    <div className="rounded-lg border border-dash-border bg-dash-control/50 px-3 py-2.5">
+                      <VoyageLeg row={row} tr={tr} />
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Field label={tr.imo} value={row.imo} onChange={(v) => updateRow(row.key, { imo: v })} inputMode="numeric" />
                       <Field label={tr.mmsi} value={row.mmsi} onChange={(v) => updateRow(row.key, { mmsi: v })} inputMode="numeric" />
                       <Field label={tr.lat} value={row.lat} onChange={(v) => updateRow(row.key, { lat: v })} inputMode="decimal" />
                       <Field label={tr.lng} value={row.lng} onChange={(v) => updateRow(row.key, { lng: v })} inputMode="decimal" />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {hasIds ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setOcrDialog({ key: row.key, mode: "coords" })}
+                          className={`${neonBtnSecondary} flex-1`}
+                        >
+                          <Icon icon="lucide:map-pin" width={14} height={14} />
+                          {tr.btnUpdatePosition}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setOcrDialog({ key: row.key, mode: "ids" })}
+                            className={`${neonBtnSecondary} flex-1`}
+                          >
+                            <Icon icon="lucide:image-plus" width={14} height={14} />
+                            {tr.btnAddIds}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setOcrDialog({ key: row.key, mode: "coords" })}
+                            className={`${neonBtnSecondary} flex-1`}
+                          >
+                            <Icon icon="lucide:map-pin" width={14} height={14} />
+                            {tr.btnAddCoords}
+                          </button>
+                        </>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -848,24 +628,25 @@ export function NavesTrackingContent() {
             {/* Tabla desktop */}
             <div className="hidden md:block dash-card rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-left text-sm">
+                <table className="w-full min-w-[1180px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-dash-border bg-dash-control/60 text-dash-muted">
                       <th className="px-3 py-2.5 font-semibold">{tr.nave}</th>
-                      <th className="px-3 py-2.5 font-semibold">{tr.viaje}</th>
-                      <th className="px-3 py-2.5 font-semibold">{tr.ruta}</th>
-                      <th className="px-3 py-2.5 font-semibold">{tr.eta}</th>
+                      <th className="px-3 py-2.5 font-semibold min-w-[320px]">{tr.viaje}</th>
                       <th className="px-3 py-2.5 font-semibold w-28">{tr.imo}</th>
                       <th className="px-3 py-2.5 font-semibold w-32">{tr.mmsi}</th>
-                      <th className="px-3 py-2.5 font-semibold w-28">{tr.lat}</th>
-                      <th className="px-3 py-2.5 font-semibold w-28">{tr.lng}</th>
-                      <th className="px-3 py-2.5 font-semibold w-40">{tr.ops}</th>
+                      <th className="px-3 py-2.5 font-semibold w-32">{tr.lat}</th>
+                      <th className="px-3 py-2.5 font-semibold w-32">{tr.lng}</th>
+                      <th className="px-3 py-2.5 font-semibold w-40">{tr.colCapturaIds}</th>
+                      <th className="px-3 py-2.5 font-semibold w-44">{tr.colCapturaCoords}</th>
+                      <th className="px-3 py-2.5 font-semibold w-32">{tr.acciones}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dash-border/70">
                     {filtered.map((row) => {
                       const busy = savingKey === row.key;
                       const dirty = isDirty(row);
+                      const hasIds = Boolean(row.savedImo.trim() && row.savedMmsi.trim());
                       return (
                         <tr key={row.key} className="align-top hover:bg-dash-control/30">
                           <td className="px-3 py-2.5">
@@ -876,18 +657,9 @@ export function NavesTrackingContent() {
                               <StatusBadges row={row} tr={tr} />
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 text-dash-fg tabular-nums">
-                            {row.viajes.length > 0 ? row.viajes.join(", ") : "—"}
+                          <td className="px-3 py-2.5">
+                            <VoyageLeg row={row} tr={tr} />
                           </td>
-                          <td className="px-3 py-2.5 text-dash-fg">
-                            <span className="text-dash-muted">{row.pol || "—"}</span>
-                            <span className="mx-1 text-dash-muted">→</span>
-                            <span>{row.pod || "—"}</span>
-                            <p className="text-xs text-dash-muted mt-0.5">
-                              ETD {row.etd || "—"} · {row.opsCount} ops
-                            </p>
-                          </td>
-                          <td className="px-3 py-2.5 text-dash-fg tabular-nums whitespace-nowrap">{row.eta || "—"}</td>
                           <td className="px-3 py-2.5">
                             <input
                               value={row.imo}
@@ -927,26 +699,56 @@ export function NavesTrackingContent() {
                             />
                           </td>
                           <td className="px-3 py-2.5">
+                            {hasIds ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-dash-muted">
+                                <Icon icon="lucide:check" width={14} height={14} className="text-emerald-400" />
+                                {tr.complete}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => setOcrDialog({ key: row.key, mode: "ids" })}
+                                className={compactBtn}
+                              >
+                                <Icon icon="lucide:image-plus" width={14} height={14} />
+                                {tr.btnAddIds}
+                              </button>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
                             <div className="flex flex-col gap-1.5">
                               <button
                                 type="button"
-                                disabled={busy || !dirty}
-                                onClick={() => void handleSave(row)}
-                                className={neonBtn}
+                                disabled={busy}
+                                onClick={() => setOcrDialog({ key: row.key, mode: "coords" })}
+                                className={compactBtn}
                               >
-                                {busy ? tr.saving : tr.save}
+                                <Icon icon="lucide:map-pin" width={14} height={14} />
+                                {hasIds ? tr.btnUpdatePosition : tr.btnAddCoords}
                               </button>
                               {(row.savedLat || row.savedLng) && (
                                 <button
                                   type="button"
                                   disabled={busy}
                                   onClick={() => void handleClearCoords(row)}
-                                  className={neonBtnSecondary}
+                                  className={compactBtn}
                                 >
+                                  <Icon icon="lucide:eraser" width={14} height={14} />
                                   {tr.clearCoords}
                                 </button>
                               )}
                             </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <button
+                              type="button"
+                              disabled={busy || !dirty}
+                              onClick={() => void handleSave(row)}
+                              className={`${neonBtn} w-full whitespace-nowrap px-2.5 py-1.5 text-xs`}
+                            >
+                              {busy ? tr.saving : tr.save}
+                            </button>
                           </td>
                         </tr>
                       );
@@ -958,7 +760,84 @@ export function NavesTrackingContent() {
           </>
         )}
       </div>
+
+      {ocrDialog && dialogRow && (
+        <VesselOcrDialog
+          mode={ocrDialog.mode}
+          vesselName={dialogRow.catalogNombre}
+          initial={{ imo: dialogRow.imo, mmsi: dialogRow.mmsi, lat: dialogRow.lat, lng: dialogRow.lng }}
+          tr={tr}
+          onClose={() => setOcrDialog(null)}
+          onApply={(values) => {
+            updateRow(dialogRow.key, values);
+            sileo.success({ title: tr.ocrApplied });
+          }}
+        />
+      )}
     </main>
+  );
+}
+
+/** Tramo del viaje: POL y POD anclados a los extremos, unidos por la línea con los días de tránsito. */
+function VoyageLeg({
+  row,
+  tr,
+}: {
+  row: VesselDraft;
+  tr: { etd: string; eta: string; viaje: string; ops: string; transitLabel: string };
+}) {
+  const days = transitDays(row.etd, row.eta);
+  return (
+    <div>
+      <div className="flex items-end gap-2">
+        <div className="min-w-0 max-w-[42%] shrink">
+          <span className="block text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">POL</span>
+          <span className="block truncate text-[13px] font-semibold leading-tight text-dash-fg">
+            {row.pol || "—"}
+          </span>
+          <span className="mt-1 block whitespace-nowrap text-[11px] tabular-nums text-dash-muted">
+            {tr.etd} {row.etd || "—"}
+          </span>
+        </div>
+
+        <div className="flex min-w-[4rem] flex-1 flex-col items-center pb-4">
+          {days != null && (
+            <span
+              className="mb-1 text-[10px] font-semibold tabular-nums text-dash-muted"
+              title={tr.transitLabel}
+            >
+              {days} d
+            </span>
+          )}
+          <span className="flex w-full items-center gap-1" aria-hidden>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+            <span className="h-px flex-1 bg-gradient-to-r from-emerald-400/70 to-amber-400/70" />
+            <span className="h-1.5 w-1.5 shrink-0 rotate-45 bg-amber-400" />
+          </span>
+        </div>
+
+        <div className="min-w-0 max-w-[42%] shrink text-right">
+          <span className="block text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">POD</span>
+          <span className="block truncate text-[13px] font-semibold leading-tight text-dash-fg">
+            {row.pod || "—"}
+          </span>
+          <span className="mt-1 block whitespace-nowrap text-[11px] tabular-nums text-dash-muted">
+            {tr.eta} {row.eta || "—"}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dash-border/60 pt-1.5 text-[11px] text-dash-muted">
+        {row.viajes.length > 0 && (
+          <span className="rounded border border-dash-border bg-dash-control px-1.5 py-0.5 font-mono font-semibold text-dash-fg">
+            {tr.viaje} {row.viajes.join(", ")}
+          </span>
+        )}
+        <span className="tabular-nums">
+          {row.opsCount} {tr.ops.toLowerCase()}
+        </span>
+      </div>
+    </div>
   );
 }
 

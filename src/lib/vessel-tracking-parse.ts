@@ -15,6 +15,21 @@ export type VesselTrackingOcrFields = {
   lng: number | null;
 };
 
+const NAME_LABEL = String.raw`(?:Name|Nombre|Vessel|Ship|Nave|Nane|Narne)`;
+const FLAG_LABEL = String.raw`(?:Flag|Bandera|Fiag)`;
+/** Las fichas en español anteponen "Número"/"Nº" a IMO: sin esto la etiqueta no matchea. */
+const IMO_LABEL = String.raw`(?:(?:N(?:[uú]mero|ro\.?|[.°º]{1,2})\s*)?(?:IMO|IM0|[Il1]MO))`;
+const MMSI_LABEL = String.raw`(?:MMSI|MMS1|MM5I)`;
+
+const RE_NAME_START = new RegExp(String.raw`^${NAME_LABEL}\b`, "i");
+const RE_FLAG_START = new RegExp(String.raw`^${FLAG_LABEL}\b`, "i");
+const RE_IMO_START = new RegExp(String.raw`^${IMO_LABEL}\b`, "i");
+const RE_MMSI_START = new RegExp(String.raw`^${MMSI_LABEL}\b`, "i");
+const RE_LABEL_ONLY = new RegExp(
+  String.raw`^(?:${NAME_LABEL}|${FLAG_LABEL}|${IMO_LABEL}|${MMSI_LABEL})\s*[:#.\-]?\s*$`,
+  "i",
+);
+
 function normalizeOcrText(text: string): string {
   return text
     .replace(/\u00a0/g, " ")
@@ -48,17 +63,15 @@ function digitsOfLength(raw: string | null | undefined, len: number): string | n
 
 function stripLabelPrefix(line: string): string {
   return line
-    .replace(/^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne)\s*[:#.\-]?\s*/i, "")
-    .replace(/^(Flag|Bandera|Fiag)\s*[:#.\-]?\s*/i, "")
-    .replace(/^(IMO|IM0|[Il1]MO)\s*[:#.\-]?\s*/i, "")
-    .replace(/^(MMSI|MMS1|MM5I)\s*[:#.\-]?\s*/i, "")
+    .replace(new RegExp(String.raw`^${NAME_LABEL}\s*[:#.\-]?\s*`, "i"), "")
+    .replace(new RegExp(String.raw`^${FLAG_LABEL}\s*[:#.\-]?\s*`, "i"), "")
+    .replace(new RegExp(String.raw`^${IMO_LABEL}\s*[:#.\-]?\s*`, "i"), "")
+    .replace(new RegExp(String.raw`^${MMSI_LABEL}\s*[:#.\-]?\s*`, "i"), "")
     .trim();
 }
 
 function isLabelOnly(line: string): boolean {
-  return /^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne|Flag|Bandera|Fiag|IMO|IM0|[Il1]MO|MMSI|MMS1|MM5I)\s*[:#.\-]?\s*$/i.test(
-    line,
-  );
+  return RE_LABEL_ONLY.test(line);
 }
 
 function isFlagValue(line: string): boolean {
@@ -68,12 +81,22 @@ function isFlagValue(line: string): boolean {
 }
 
 function cleanNombre(raw: string): string {
-  return raw
-    .replace(/\s+Flag\b.*$/i, "")
-    .replace(/\s*\[[^\]]*\]\s*$/, "")
-    .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    raw
+      .replace(/\s+Flag\b.*$/i, "")
+      .replace(/\s*\[[^\]]*\]\s*$/, "")
+      // Código de viaje pegado al nombre ("MSC BRUNELLA 635R"). Exige sufijo de letra: un número
+      // suelto al final suele ser parte del nombre real (WAN HAI 517, MAERSK 336).
+      .replace(/\s+\d{2,5}[A-Za-z]\s*$/, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      // Basura de OCR pegada al inicio: símbolos sueltos (bordes, iconos de bandera) y letras
+      // minúsculas huérfanas — el nombre en estas fichas siempre viene en mayúsculas, así que
+      // un token minúsculo antes de él no es parte del nombre (caso "e MSC SERENA").
+      .replace(/^[^\p{L}\p{N}]+/u, "")
+      .replace(/^\p{Ll}{1,2}\s+(?=[\p{Lu}\p{N}])/u, "")
+      .trim()
+  );
 }
 
 /**
@@ -94,14 +117,14 @@ function parseFixedVesselCard(lines: string[]): VesselTrackingOcrFields {
 
   // --- Caso A: valor en la misma línea que la etiqueta ---
   for (const line of lines) {
-    if (/^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne)\b/i.test(line) && !isLabelOnly(line)) {
+    if (RE_NAME_START.test(line) && !isLabelOnly(line)) {
       const v = cleanNombre(stripLabelPrefix(line));
       if (v && !isFlagValue(v) && !digitsOfLength(v, 7) && !digitsOfLength(v, 9)) nombre = v;
     }
-    if (/^(IMO|IM0|[Il1]MO)\b/i.test(line)) {
+    if (RE_IMO_START.test(line)) {
       imo = digitsOfLength(stripLabelPrefix(line), 7) ?? imo;
     }
-    if (/^(MMSI|MMS1|MM5I)\b/i.test(line)) {
+    if (RE_MMSI_START.test(line)) {
       mmsi = digitsOfLength(stripLabelPrefix(line), 9) ?? mmsi;
     }
   }
@@ -126,10 +149,10 @@ function parseFixedVesselCard(lines: string[]): VesselTrackingOcrFields {
       const l1 = lines[i1]!;
       const l2 = lines[i2]!;
       const l3 = lines[i3]!;
-      const isName = /^(Name|Nombre|Vessel|Ship|Nave|Nane|Narne)\b/i.test(l0);
-      const isFlag = /^(Flag|Bandera|Fiag)\b/i.test(l1);
-      const isImo = /^(IMO|IM0|[Il1]MO)\b/i.test(l2);
-      const isMmsi = /^(MMSI|MMS1|MM5I)\b/i.test(l3);
+      const isName = RE_NAME_START.test(l0);
+      const isFlag = RE_FLAG_START.test(l1);
+      const isImo = RE_IMO_START.test(l2);
+      const isMmsi = RE_MMSI_START.test(l3);
       if (!isName || !isFlag || !isImo || !isMmsi) continue;
 
       const values = lines.slice(i3 + 1).filter((l) => !isLabelOnly(l));
@@ -249,13 +272,4 @@ export function mergeVesselTrackingOcr(
     if (out.lng == null && p.lng != null) out.lng = p.lng;
   }
   return out;
-}
-
-export function normalizeVesselNameKey(nombre: string): string {
-  return nombre
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/\s+/g, " ");
 }
