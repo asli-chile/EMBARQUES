@@ -195,6 +195,122 @@
   opacity: 0.92;
 }
 
+/* KPI cards — tip de color + spark + borde de acento */
+.dash-neon .dash-kpi-card {
+  --dash-kpi-accent: var(--dash-neon);
+  border-color: color-mix(in srgb, var(--dash-kpi-accent) 42%, transparent) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--dash-kpi-accent) 16%, transparent),
+    0 14px 32px -22px color-mix(in srgb, var(--dash-kpi-accent) 45%, transparent);
+  background:
+    radial-gradient(
+      120% 90% at 0% 0%,
+      color-mix(in srgb, var(--dash-kpi-accent) 16%, transparent) 0%,
+      transparent 52%
+    ),
+    color-mix(in srgb, var(--dash-surface) 94%, transparent) !important;
+}
+
+.dash-neon .dash-kpi-card::before {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--dash-kpi-accent) 70%, transparent),
+    transparent 70%
+  );
+  opacity: 0.85;
+}
+
+.dash-neon .dash-kpi-card:hover {
+  border-color: color-mix(in srgb, var(--dash-kpi-accent) 62%, transparent) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--dash-kpi-accent) 28%, transparent),
+    0 16px 36px -18px color-mix(in srgb, var(--dash-kpi-accent) 55%, transparent);
+}
+
+.dash-neon .dash-kpi-card--cyan { --dash-kpi-accent: #22d3ee; }
+.dash-neon .dash-kpi-card--amber { --dash-kpi-accent: #f59e0b; }
+.dash-neon .dash-kpi-card--sky { --dash-kpi-accent: #38bdf8; }
+.dash-neon .dash-kpi-card--blue { --dash-kpi-accent: #60a5fa; }
+.dash-neon .dash-kpi-card--violet { --dash-kpi-accent: #a78bfa; }
+.dash-neon .dash-kpi-card--emerald { --dash-kpi-accent: #34d399; }
+.dash-neon .dash-kpi-card--rose { --dash-kpi-accent: #fb7185; }
+.dash-neon .dash-kpi-card--red { --dash-kpi-accent: #f43f5e; }
+
+.dash-neon .dash-kpi-icon {
+  display: inline-flex;
+  height: 2.15rem;
+  width: 2.15rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  color: #fff;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--dash-kpi-accent) 92%, #fff) 0%,
+    color-mix(in srgb, var(--dash-kpi-accent) 72%, #0b1220) 100%
+  );
+  box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--dash-kpi-accent) 70%, transparent);
+}
+
+.dash-neon .dash-kpi-icon-alt {
+  color: color-mix(in srgb, var(--dash-kpi-accent) 75%, var(--dash-muted));
+  opacity: 0.85;
+}
+
+.dash-neon .dash-kpi-card .dash-kpi-value {
+  color: var(--dash-kpi-accent);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--dash-kpi-accent) 45%, transparent);
+}
+
+.dash-neon[data-theme="light"] .dash-kpi-card .dash-kpi-value {
+  text-shadow: none;
+}
+
+.dash-neon .dash-kpi-hint {
+  color: var(--dash-muted);
+}
+
+.dash-neon .dash-kpi-spark {
+  display: flex;
+  height: 2.35rem;
+  width: 2.85rem;
+  flex-shrink: 0;
+  align-items: flex-end;
+  gap: 0.16rem;
+}
+
+.dash-neon .dash-kpi-spark > span {
+  flex: 1;
+  border-radius: 9999px 9999px 1px 1px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--dash-kpi-accent) 95%, #fff) 0%,
+    color-mix(in srgb, var(--dash-kpi-accent) 30%, transparent) 100%
+  );
+  opacity: 0.9;
+}
+
+.dash-neon .dash-status-donut {
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 28px -10px color-mix(in srgb, var(--dash-neon) 45%, transparent);
+}
+
+.dash-neon .dash-status-donut-hole {
+  width: 5.6rem;
+  height: 5.6rem;
+  border-radius: 9999px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--dash-surface) 96%, #000);
+  border: 1px solid color-mix(in srgb, var(--dash-border) 80%, transparent);
+}
+
 .dash-neon .dash-section-head {
   border-bottom: 1px solid color-mix(in srgb, var(--dash-border) 70%, transparent) !important;
   background: color-mix(in srgb, var(--dash-surface) 70%, transparent);

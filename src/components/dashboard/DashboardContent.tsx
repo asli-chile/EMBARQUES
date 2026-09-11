@@ -119,6 +119,8 @@ export function DashboardContent({
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [mapOperations, setMapOperations] = useState<OperacionResumen[]>([]);
   const [carrierModes, setCarrierModes] = useState<Map<string, TransportMode>>(new Map());
+  const [showOrigins, setShowOrigins] = useState(true);
+  const [showDestinations, setShowDestinations] = useState(true);
   const mapRef = useRef<MapRef | null>(null);
 
   const supabase = useMemo(() => {
@@ -385,10 +387,14 @@ export function DashboardContent({
     return { maritima, aereo, desconocida, clasificadas, total: mapOperations.length };
   }, [mapOperations, carrierModes]);
 
-  const donutProgress =
-    transportDistribution.clasificadas > 0
-      ? (transportDistribution.maritima / transportDistribution.clasificadas) * 100
-      : 0;
+  const modeDonutStyle = useMemo(() => {
+    const total = Math.max(transportDistribution.total, 1);
+    const pMar = (transportDistribution.maritima / total) * 100;
+    const pAir = (transportDistribution.aereo / total) * 100;
+    const pUnk = (transportDistribution.desconocida / total) * 100;
+    if (transportDistribution.total === 0) return "conic-gradient(#1e293b 0 100%)";
+    return `conic-gradient(#38bdf8 0% ${pMar}%, #a78bfa ${pMar}% ${pMar + pAir}%, #64748b ${pMar + pAir}% ${pMar + pAir + pUnk}%)`;
+  }, [transportDistribution]);
 
   const regionDistribution = useMemo(() => {
     const counts = new Map<RegionKey, number>();
@@ -529,8 +535,8 @@ export function DashboardContent({
         </div>
         <div className="dash-toolbar relative shrink-0 h-14" />
         <div className="relative p-4 flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:p-4 lg:gap-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 h-28 lg:h-14">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 h-28 lg:h-14">
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl" />
             ))}
           </div>
@@ -550,7 +556,6 @@ export function DashboardContent({
   }
 
   const opsHref = withBase(isCliente ? "/reservas/mis-reservas" : "/registros");
-  const transportHref = withBase(isCliente ? "/reservas/mis-reservas" : "/transportes/reserva-asli");
 
   const kpiCards = [
     {
@@ -558,9 +563,9 @@ export function DashboardContent({
       label: tr.totalOperations,
       value: operationalKpis.total,
       hint: `${operationalKpis.active} ${tr.activeOps}`,
-      icon: "lucide:layers",
-      accent: "text-cyan-300",
-      ring: "border-cyan-300/25",
+      icon: "lucide:ship",
+      iconAlt: "lucide:users",
+      tone: "cyan" as const,
       href: opsHref,
     },
     {
@@ -568,9 +573,9 @@ export function DashboardContent({
       label: tr.pending,
       value: operationalKpis.pending,
       hint: `${operationalKpis.confirmed} ${tr.confirmed}`,
-      icon: "lucide:clock-3",
-      accent: "text-amber-300",
-      ring: "border-amber-300/25",
+      icon: "lucide:calendar-days",
+      iconAlt: "lucide:clock-3",
+      tone: "amber" as const,
       href: opsHref,
     },
     {
@@ -578,9 +583,9 @@ export function DashboardContent({
       label: tr.upcomingDepartures,
       value: operationalKpis.etdNext7,
       hint: `${operationalKpis.etdToday} ${tr.today} · ${operationalKpis.etdTomorrow} ${tr.tomorrow}`,
-      icon: "lucide:ship",
-      accent: "text-sky-300",
-      ring: "border-sky-300/25",
+      icon: "lucide:calendar-check-2",
+      iconAlt: "lucide:ship",
+      tone: "sky" as const,
       href: opsHref,
     },
     {
@@ -588,9 +593,9 @@ export function DashboardContent({
       label: tr.docCutoffSoon,
       value: operationalKpis.cutoffNext3,
       hint: tr.docCutoffSoonHint,
-      icon: "lucide:file-warning",
-      accent: "text-orange-300",
-      ring: "border-orange-300/25",
+      icon: "lucide:file-text",
+      iconAlt: "lucide:info",
+      tone: "blue" as const,
       href: withBase("/documentos/mis-documentos"),
     },
     {
@@ -598,30 +603,10 @@ export function DashboardContent({
       label: tr.stackingClosing,
       value: operationalKpis.stackingClosing,
       hint: tr.stackingClosingHint,
-      icon: "lucide:calendar-clock",
-      accent: "text-violet-300",
-      ring: "border-violet-300/25",
+      icon: "lucide:box",
+      iconAlt: "lucide:package",
+      tone: "violet" as const,
       href: opsHref,
-    },
-    {
-      key: "transport",
-      label: tr.transportPending,
-      value: operationalKpis.transportPending,
-      hint: `${operationalKpis.notSentToTransport} ${tr.notSentToTransport}`,
-      icon: "lucide:truck",
-      accent: "text-emerald-300",
-      ring: "border-emerald-300/25",
-      href: transportHref,
-    },
-    {
-      key: "docs",
-      label: tr.missingBookingDoc,
-      value: operationalKpis.noBookingDoc,
-      hint: tr.missingBookingDocHint,
-      icon: "lucide:file-x",
-      accent: "text-rose-300",
-      ring: "border-rose-300/25",
-      href: withBase("/documentos/mis-documentos"),
     },
     {
       key: "critical",
@@ -631,8 +616,8 @@ export function DashboardContent({
         ? `${operationalKpis.invoicePending} ${tr.invoicePending}`
         : `${operationalKpis.rolled} ${tr.rolled}`,
       icon: "lucide:alert-triangle",
-      accent: "text-red-300",
-      ring: "border-red-300/30",
+      iconAlt: "lucide:flag",
+      tone: "red" as const,
       href: opsHref,
     },
   ] as const;
@@ -694,30 +679,64 @@ export function DashboardContent({
       <div className="relative flex flex-col gap-4 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:flex-1 lg:min-h-0 lg:overflow-hidden lg:gap-3 lg:p-4">
 
         {/* KPIs */}
-        <div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-          {kpiCards.map((kpi) => (
-            <a
-              key={kpi.key}
-              href={kpi.href}
-              className="dash-card min-w-0 rounded-2xl px-3.5 py-3.5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="dash-kpi-label text-dash-fg leading-snug line-clamp-2">{kpi.label}</p>
-                <Icon icon={kpi.icon} width={18} height={18} className={`shrink-0 mt-0.5 ${kpi.accent}`} />
-              </div>
-              <p className={`dash-kpi-value text-3xl sm:text-4xl font-bold mt-2.5 ${kpi.accent}`}>{kpi.value}</p>
-              <p className="text-sm text-dash-muted leading-snug line-clamp-2 mt-2">{kpi.hint}</p>
-            </a>
-          ))}
+        <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+          {kpiCards.map((kpi) => {
+            const spark = Array.from({ length: 7 }, (_, i) => {
+              const n = ((Math.abs(kpi.value) + 1) * (i + 3) * 19) % 51;
+              return 0.28 + (n / 51) * 0.72;
+            });
+            return (
+              <a
+                key={kpi.key}
+                href={kpi.href}
+                className={`dash-card dash-kpi-card dash-kpi-card--${kpi.tone} min-w-0 rounded-2xl px-3 py-3`}
+              >
+                <div className="relative z-[1] flex items-start justify-between gap-2">
+                  <span className="dash-kpi-icon" aria-hidden>
+                    <Icon icon={kpi.icon} width={18} height={18} />
+                  </span>
+                  <Icon
+                    icon={kpi.iconAlt}
+                    width={15}
+                    height={15}
+                    className="dash-kpi-icon-alt shrink-0 mt-0.5"
+                    aria-hidden
+                  />
+                </div>
+                <p className="dash-kpi-label relative z-[1] mt-2.5 text-dash-fg leading-snug line-clamp-2">
+                  {kpi.label}
+                </p>
+                <div className="relative z-[1] mt-2 flex items-end justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="dash-kpi-value text-3xl font-bold sm:text-[2rem]">{kpi.value}</p>
+                    <p className="dash-kpi-hint mt-1 text-[11px] leading-snug line-clamp-2 sm:text-xs">
+                      {kpi.hint}
+                    </p>
+                  </div>
+                  <div className="dash-kpi-spark" aria-hidden>
+                    {spark.map((h, i) => (
+                      <span key={i} style={{ height: `${Math.round(h * 100)}%` }} />
+                    ))}
+                  </div>
+                </div>
+              </a>
+            );
+          })}
         </div>
 
-        {/* Fila media: zarpes | estados | mapa — en móvil cada bloque tiene su altura; en desktop llenan la fila */}
-        <div className="grid grid-cols-1 gap-4 lg:flex-1 lg:min-h-[280px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)] lg:gap-3">
+        {/* Fila media: zarpes | estados | mapa */}
+        <div className="grid grid-cols-1 gap-4 lg:flex-1 lg:min-h-[280px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)_minmax(0,1.1fr)] lg:gap-3">
           {/* Zarpes */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
             <div className="dash-section-head shrink-0 px-4 py-3 flex items-center justify-between gap-2">
-              <p className="text-base font-bold text-dash-fg truncate">{tr.upcomingDepartures}</p>
-              <a href={opsHref} className="text-sm font-semibold text-dash-neon hover:text-cyan-200">{tr.viewAll}</a>
+              <p className="inline-flex items-center gap-2 text-base font-bold text-dash-fg truncate">
+                <Icon icon="lucide:ship" width={18} height={18} className="text-dash-neon shrink-0" />
+                {tr.upcomingDepartures}
+              </p>
+              <a href={opsHref} className="inline-flex items-center gap-1 text-sm font-semibold text-dash-neon hover:text-cyan-200">
+                {tr.viewAll}
+                <Icon icon="lucide:arrow-right" width={14} height={14} />
+              </a>
             </div>
             <div className="lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {upcomingRows.length === 0 ? (
@@ -732,6 +751,7 @@ export function DashboardContent({
                       <th className="px-4 py-2.5 font-bold hidden sm:table-cell">{tr.colClient}</th>
                       <th className="px-4 py-2.5 font-bold">{tr.colPod}</th>
                       <th className="px-4 py-2.5 font-bold">{tr.colWhen}</th>
+                      <th className="px-4 py-2.5 font-bold hidden md:table-cell">{tr.colEtd}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-cyan-300/10">
@@ -744,7 +764,7 @@ export function DashboardContent({
                         <td className="px-4 py-2.5 text-dash-fg/90 truncate max-w-[8rem] hidden sm:table-cell">{item.cliente}</td>
                         <td className="px-4 py-2.5 text-dash-fg/85 truncate max-w-[6rem]">{item.pod}</td>
                         <td className="px-4 py-2.5">
-                          <span className={`text-sm font-bold px-2.5 py-1 rounded-sm border ${
+                          <span className={`text-sm font-bold px-2.5 py-1 rounded-md border ${
                             item.days === 0
                               ? "bg-red-500/15 text-red-300 border-red-400/30"
                               : item.days === 1
@@ -754,6 +774,9 @@ export function DashboardContent({
                             {item.days === 0 ? tr.today : item.days === 1 ? tr.tomorrow : `${item.days}d`}
                           </span>
                         </td>
+                        <td className="px-4 py-2.5 text-dash-muted whitespace-nowrap hidden md:table-cell">
+                          {format(item.etd, "d MMM yyyy", { locale: locale === "es" ? es : undefined })}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -762,76 +785,147 @@ export function DashboardContent({
             </div>
           </div>
 
-          {/* Estados */}
+          {/* Estados — donut */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
             <div className="dash-section-head shrink-0 px-4 py-3">
-              <p className="text-base font-bold text-dash-fg">{tr.byStatus}</p>
+              <p className="inline-flex items-center gap-2 text-base font-bold text-dash-fg">
+                <Icon icon="lucide:layout-grid" width={18} height={18} className="text-dash-neon shrink-0" />
+                {tr.byStatus}
+              </p>
             </div>
-            <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-              {operationalKpis.statusItems.slice(0, 6).map((item) => {
-                const pct = operationalKpis.total > 0 ? Math.round((item.cantidad / operationalKpis.total) * 100) : 0;
-                const tone =
-                  item.estado === "CANCELADA" ? "bg-red-400"
-                    : item.estado === "SOLICITADA" ? "bg-amber-400"
-                      : item.estado === "RESERVA_CONFIRMADA" ? "bg-emerald-400"
-                        : item.estado === "ROLEADA" ? "bg-violet-400"
-                          : item.estado === "ZARPADA" ? "bg-sky-400"
-                            : "bg-cyan-400";
-                return (
-                  <div key={item.estado}>
-                    <div className="flex items-center justify-between gap-2 text-base mb-1">
-                      <span className="font-semibold text-dash-fg truncate">{etiquetaEstado(item.estado) || item.estado}</span>
-                      <span className="tabular-nums text-dash-fg shrink-0 font-semibold">{item.cantidad}</span>
+            {(() => {
+              const confirmed = operationalKpis.confirmed;
+              const cancelled = operationalKpis.cancelled;
+              const requested = operationalKpis.pending;
+              const total = operationalKpis.total;
+              const other = Math.max(0, total - confirmed - cancelled - requested);
+              const safeTotal = total > 0 ? total : 1;
+              const pConf = (confirmed / safeTotal) * 100;
+              const pCanc = (cancelled / safeTotal) * 100;
+              const pReq = (requested / safeTotal) * 100;
+              const pOther = (other / safeTotal) * 100;
+              const a0 = 0;
+              const a1 = a0 + pConf;
+              const a2 = a1 + pCanc;
+              const a3 = a2 + pReq;
+              const donut =
+                total === 0
+                  ? "conic-gradient(#1e293b 0 100%)"
+                  : `conic-gradient(
+                      #38bdf8 ${a0}% ${a1}%,
+                      #f87171 ${a1}% ${a2}%,
+                      #fbbf24 ${a2}% ${a3}%,
+                      #64748b ${a3}% ${a3 + pOther}%
+                    )`;
+              const legend = [
+                { label: etiquetaEstado("RESERVA_CONFIRMADA"), value: confirmed, color: "bg-sky-400" },
+                { label: etiquetaEstado("CANCELADA"), value: cancelled, color: "bg-red-400" },
+                { label: etiquetaEstado("SOLICITADA"), value: requested, color: "bg-amber-400" },
+              ];
+              return (
+                <>
+                  <div className="px-4 py-4 flex flex-1 min-h-0 items-center gap-4">
+                    <div
+                      className="dash-status-donut relative shrink-0"
+                      style={{ background: donut }}
+                      aria-hidden
+                    >
+                      <div className="dash-status-donut-hole">
+                        <p className="text-2xl font-bold text-dash-fg tabular-nums leading-none">{total}</p>
+                        <p className="text-[11px] text-dash-muted mt-1">{tr.statusTotal}</p>
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-cyan-950/60 overflow-hidden">
-                      <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(pct, 3)}%` }} />
+                    <ul className="min-w-0 flex-1 space-y-2.5">
+                      {legend.map((item) => (
+                        <li key={item.label} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="inline-flex items-center gap-2 text-dash-fg truncate">
+                            <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${item.color}`} />
+                            {item.label}
+                          </span>
+                          <span className="tabular-nums font-semibold text-dash-fg shrink-0">{item.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="shrink-0 px-4 py-3 border-t border-cyan-300/15 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-emerald-300 tabular-nums">{confirmed}</p>
+                      <p className="text-xs text-dash-muted mt-0.5">{tr.confirmedTitle}</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-red-300 tabular-nums">{cancelled}</p>
+                      <p className="text-xs text-dash-muted mt-0.5">{tr.cancelledTitle}</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-amber-300 tabular-nums">{requested}</p>
+                      <p className="text-xs text-dash-muted mt-0.5">{tr.requestedTitle}</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-            <div className="shrink-0 px-4 py-3 border-t border-cyan-300/15 grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-lg font-bold text-emerald-300 tabular-nums">{operationalKpis.arrived}</p>
-                <p className="text-sm text-dash-muted mt-0.5">{tr.arrived}</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-violet-300 tabular-nums">{operationalKpis.rolled}</p>
-                <p className="text-sm text-dash-muted mt-0.5">{tr.rolled}</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-red-300 tabular-nums">{operationalKpis.cancelled}</p>
-                <p className="text-sm text-dash-muted mt-0.5">{tr.cancelled}</p>
-              </div>
-            </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* Mapa */}
-          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 dash-card rounded-xl overflow-hidden">
-            <MapLibreMap
-              ref={mapRef}
-              initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
-              mapStyle={theme === "light" ? DASHBOARD_MAP_STYLE_LIGHT : DASHBOARD_MAP_STYLE_DARK}
-              style={{ width: "100%", height: "100%" }}
-              dragRotate={false}
-              attributionControl={false}
-            >
-              <NavigationControl position="top-right" showCompass={false} />
-              {portMarkers.map((marker) => {
-                const isOrigin = marker.type === "origen";
-                return (
-                  <Marker key={marker.key} longitude={marker.lng} latitude={marker.lat} anchor="center">
-                    <div
-                      title={`${marker.label} (${marker.count})`}
-                      className={`h-3.5 w-3.5 rounded-full border-2 border-white ${isOrigin ? "bg-red-500" : "bg-emerald-500"}`}
-                    />
-                  </Marker>
-                );
-              })}
-            </MapLibreMap>
-            <div className="absolute bottom-2 left-2 z-10 flex items-center gap-3 rounded-sm bg-dash-header/85 px-2.5 py-1.5 text-sm text-dash-fg backdrop-blur">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />{tr.mapOrigins}</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{tr.mapDestinations}</span>
+          <div className="relative isolate z-0 h-64 sm:h-72 lg:h-full lg:min-h-0 dash-card rounded-xl overflow-hidden flex flex-col">
+            <div className="dash-section-head relative z-20 shrink-0 px-4 py-3 flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-base font-bold text-dash-fg truncate">
+                <Icon icon="lucide:box" width={18} height={18} className="text-dash-neon shrink-0" />
+                {tr.shipmentMap}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowOrigins((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
+                    showOrigins
+                      ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
+                      : "border-dash-border bg-dash-control text-dash-muted"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  {tr.mapOrigins}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDestinations((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
+                    showDestinations
+                      ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
+                      : "border-dash-border bg-dash-control text-dash-muted"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  {tr.mapDestinations}
+                </button>
+              </div>
+            </div>
+            <div className="relative flex-1 min-h-0">
+              <MapLibreMap
+                ref={mapRef}
+                initialViewState={{ longitude: -30, latitude: 5, zoom: 0.45 }}
+                mapStyle={theme === "light" ? DASHBOARD_MAP_STYLE_LIGHT : DASHBOARD_MAP_STYLE_DARK}
+                style={{ width: "100%", height: "100%" }}
+                dragRotate={false}
+                attributionControl={false}
+              >
+                <NavigationControl position="top-right" showCompass={false} />
+                {portMarkers
+                  .filter((m) => (m.type === "origen" ? showOrigins : showDestinations))
+                  .map((marker) => {
+                    const isOrigin = marker.type === "origen";
+                    return (
+                      <Marker key={marker.key} longitude={marker.lng} latitude={marker.lat} anchor="center">
+                        <div
+                          title={`${marker.label} (${marker.count})`}
+                          className={`h-3.5 w-3.5 rounded-full border-2 border-white shadow-[0_0_12px_currentColor] ${
+                            isOrigin ? "bg-sky-400 text-sky-400" : "bg-emerald-400 text-emerald-400"
+                          }`}
+                        />
+                      </Marker>
+                    );
+                  })}
+              </MapLibreMap>
             </div>
           </div>
         </div>
@@ -840,43 +934,77 @@ export function DashboardContent({
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-3 lg:shrink-0 lg:min-h-[200px]">
           {/* Clientes */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-            <div className="dash-section-head shrink-0 px-4 py-3 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-dash-fg">{tr.activeClients}</p>
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-base font-bold text-dash-fg truncate">
+                <Icon icon="lucide:users" width={18} height={18} className="text-dash-neon shrink-0" />
+                {tr.activeClients}
+              </p>
               <p className="text-2xl font-bold text-dash-neon tabular-nums">{activeClientsCount}</p>
             </div>
-            <ul className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
+            <div className="lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topClients.length === 0 ? (
-                <li className="text-base text-dash-muted py-2">—</li>
+                <p className="px-4 py-3 text-base text-dash-muted">—</p>
               ) : (
-                topClients.map((item) => (
-                  <li key={item.cliente} className="flex items-center justify-between gap-2 text-base">
-                    <span className="text-dash-fg truncate">{item.cliente}</span>
-                    <span className="text-cyan-200/80 tabular-nums shrink-0 font-semibold">{item.cantidad}</span>
-                  </li>
-                ))
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-dash-surface">
+                    <tr className="text-dash-muted border-b border-cyan-300/10">
+                      <th className="px-4 py-2 font-bold">{tr.colClient}</th>
+                      <th className="px-2 py-2 font-bold text-right">{tr.colOperations}</th>
+                      <th className="px-4 py-2 font-bold w-[40%]">{tr.colPct}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-cyan-300/10">
+                    {topClients.map((item) => {
+                      const pct =
+                        operationalKpis.total > 0
+                          ? Math.round((item.cantidad / operationalKpis.total) * 100)
+                          : 0;
+                      return (
+                        <tr key={item.cliente}>
+                          <td className="px-4 py-2.5 text-dash-fg font-semibold truncate max-w-[7rem]">{item.cliente}</td>
+                          <td className="px-2 py-2.5 text-right tabular-nums text-dash-fg font-semibold">{item.cantidad}</td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 flex-1 rounded-full bg-cyan-950/50 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-sky-400"
+                                  style={{ width: `${Math.max(pct, 4)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs tabular-nums text-dash-neon font-bold w-9 text-right">{pct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
-            </ul>
+            </div>
           </div>
 
           {/* Zarpes por semana */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-            <div className="dash-section-head shrink-0 px-4 py-3 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-dash-fg">{tr.weeklyDepartures}</p>
-              <p className="text-sm text-dash-muted">{tr.weeklyDeparturesHint}</p>
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-base font-bold text-dash-fg truncate">
+                <Icon icon="lucide:send" width={18} height={18} className="text-dash-neon shrink-0" />
+                {tr.weeklyDepartures}
+              </p>
+              <p className="text-xs text-dash-muted shrink-0">{tr.weeklyDeparturesHint}</p>
             </div>
             <div className="px-4 py-3 flex items-end gap-2 lg:flex-1 lg:min-h-0">
               {weeklyDepartures.buckets.map((bucket) => {
                 const height = (bucket.count / weeklyDepartures.max) * 100;
                 return (
                   <div key={bucket.start.toISOString()} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-                    <span className="text-sm font-semibold text-dash-fg tabular-nums">{bucket.count}</span>
-                    <div className="w-full h-16 lg:h-full flex items-end bg-cyan-950/45 rounded-sm overflow-hidden">
+                    <span className="text-sm font-semibold text-dash-neon tabular-nums">{bucket.count}</span>
+                    <div className="w-full h-16 lg:h-full flex items-end bg-cyan-950/45 rounded-md overflow-hidden">
                       <div
-                        className="w-full bg-sky-400/80 rounded-sm"
-                        style={{ height: `${bucket.count > 0 ? Math.max(height, 6) : 0}%` }}
+                        className="w-full bg-gradient-to-t from-sky-500/70 to-cyan-300 rounded-md"
+                        style={{ height: `${bucket.count > 0 ? Math.max(height, 8) : 0}%` }}
                       />
                     </div>
-                    <span className="text-xs text-dash-muted tabular-nums">
+                    <span className="text-[10px] text-dash-muted tabular-nums">
                       {format(bucket.start, "d MMM", { locale: locale === "es" ? es : undefined })}
                     </span>
                   </div>
@@ -887,63 +1015,83 @@ export function DashboardContent({
 
           {/* Vía + región */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col p-4 gap-3 lg:min-h-0">
-            <div className="flex items-baseline justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <Icon icon="lucide:container" width={18} height={18} className="text-dash-neon shrink-0" />
               <p className="text-base font-bold text-dash-fg">{tr.byMode}</p>
-              <p className="text-sm text-dash-muted truncate">{tr.byRegion}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <div
-                className="relative h-16 w-16 rounded-full shrink-0"
-                style={{ background: `conic-gradient(#2563eb 0% ${donutProgress}%, #22c55e ${donutProgress}% 100%)` }}
-              >
-                <div className="absolute inset-[9px] rounded-full bg-dash-surface flex items-center justify-center">
-                  <span className="text-sm font-bold text-dash-fg">{transportDistribution.total > 0 ? `${Math.round(donutProgress)}%` : "0%"}</span>
+              <div className="relative h-16 w-16 rounded-full shrink-0" style={{ background: modeDonutStyle }}>
+                <div className="absolute inset-[9px] rounded-full bg-dash-surface flex items-center justify-center border border-cyan-300/10">
+                  <span className="text-sm font-bold text-dash-fg">
+                    {transportDistribution.total > 0
+                      ? `${Math.round((transportDistribution.maritima / transportDistribution.total) * 100)}%`
+                      : "0%"}
+                  </span>
                 </div>
               </div>
-              <div className="text-base space-y-1.5 min-w-0">
-                <p className="text-dash-fg truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 mr-2" />{tr.maritime} {transportDistribution.maritima}</p>
-                <p className="text-dash-fg truncate"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />{tr.air} {transportDistribution.aereo}</p>
-                {transportDistribution.desconocida > 0 && (
-                  <p className="text-dash-muted truncate text-sm"><span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-500 mr-2" />{tr.modeUnknown} {transportDistribution.desconocida}</p>
-                )}
+              <div className="text-sm space-y-1.5 min-w-0">
+                <p className="text-dash-fg truncate">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-sky-400 mr-2" />
+                  {tr.maritime} <strong className="tabular-nums">{transportDistribution.maritima}</strong>
+                </p>
+                <p className="text-dash-fg truncate">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-400 mr-2" />
+                  {tr.air} <strong className="tabular-nums">{transportDistribution.aereo}</strong>
+                </p>
+                <p className="text-dash-muted truncate">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-neutral-500 mr-2" />
+                  {tr.modeUnknown}
+                  {transportDistribution.desconocida > 0 ? (
+                    <> <strong className="tabular-nums text-dash-fg">{transportDistribution.desconocida}</strong></>
+                  ) : null}
+                </p>
               </div>
             </div>
-            <div className="space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-              {regionDistribution.items.slice(0, 5).map((item) => {
-                const width = (item.count / regionDistribution.max) * 100;
-                return (
-                  <div key={item.region}>
-                    <div className="flex justify-between text-base text-dash-fg mb-1">
-                      <span className="truncate">{regionLabels[item.region]}</span>
-                      <span className="tabular-nums text-dash-fg font-semibold">{item.count}</span>
+            <div>
+              <p className="text-sm font-semibold text-dash-muted mb-2">{tr.byRegion}</p>
+              <div className="space-y-2 lg:max-h-[7.5rem] lg:overflow-auto">
+                {regionDistribution.items.slice(0, 5).map((item) => {
+                  const width = (item.count / regionDistribution.max) * 100;
+                  return (
+                    <div key={item.region}>
+                      <div className="flex justify-between text-sm text-dash-fg mb-1">
+                        <span className="truncate">{regionLabels[item.region]}</span>
+                        <span className="tabular-nums font-semibold">{item.count}</span>
+                      </div>
+                      <div className="h-2 bg-cyan-950/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-sky-400 rounded-full" style={{ width: `${width}%` }} />
+                      </div>
                     </div>
-                    <div className="h-2 bg-cyan-950/50 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${width}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           {/* Navieras */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-            <div className="dash-section-head shrink-0 px-4 py-3 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-dash-fg">{tr.topCarriers}</p>
+            <div className="dash-section-head shrink-0 px-4 py-3 flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-base font-bold text-dash-fg truncate">
+                <Icon icon="lucide:ship" width={18} height={18} className="text-dash-neon shrink-0" />
+                {tr.topCarriers}
+              </p>
               <p className="text-2xl font-bold text-dash-neon tabular-nums">{topNavieras.distinct}</p>
             </div>
             <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topNav.length === 0 ? (
                 <p className="text-base text-dash-muted">{tr.noCarriers}</p>
               ) : (
-                topNav.map((item, idx) => (
+                topNav.map((item) => (
                   <div key={item.naviera}>
-                    <div className="flex justify-between gap-2 text-base mb-1">
-                      <span className="text-dash-fg truncate">{idx + 1}. {item.naviera}</span>
-                      <span className="tabular-nums text-dash-fg shrink-0 font-semibold">{item.cantidad}</span>
+                    <div className="flex justify-between gap-2 text-sm mb-1">
+                      <span className="text-dash-fg truncate font-semibold">{item.naviera}</span>
+                      <span className="tabular-nums text-dash-neon shrink-0 font-bold">{item.cantidad}</span>
                     </div>
                     <div className="h-2 bg-cyan-950/45 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${Math.max((item.cantidad / topNavieras.max) * 100, 8)}%` }} />
+                      <div
+                        className="h-full bg-sky-400 rounded-full"
+                        style={{ width: `${Math.max((item.cantidad / topNavieras.max) * 100, 8)}%` }}
+                      />
                     </div>
                   </div>
                 ))
@@ -951,23 +1099,26 @@ export function DashboardContent({
             </div>
           </div>
 
-          {/* Especies / POD */}
+          {/* Especies */}
           <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-            <div className="shrink-0 px-4 py-3 border-b border-fuchsia-300/15 flex items-baseline justify-between gap-2">
-              <p className="text-base font-bold text-fuchsia-200/90">{tr.species}</p>
-              <p className="text-2xl font-bold text-fuchsia-200 tabular-nums">{speciesStats.distinct}</p>
+            <div className="shrink-0 px-4 py-3 border-b border-fuchsia-300/15 flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-base font-bold text-fuchsia-200/90 truncate">
+                <Icon icon="lucide:sprout" width={18} height={18} className="text-fuchsia-300 shrink-0" />
+                {tr.species}
+              </p>
+              <p className="text-2xl font-bold text-fuchsia-300 tabular-nums">{speciesStats.distinct}</p>
             </div>
-            <div className="px-4 py-3 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
+            <div className="px-4 py-3 space-y-2.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
               {topSpecies.length === 0 ? (
                 <p className="text-base text-dash-muted">{tr.noData}</p>
               ) : (
                 topSpecies.map((item, idx) => (
-                  <div key={item.especie} className="flex items-center justify-between gap-2 text-base">
-                    <span className="text-dash-fg truncate min-w-0">
-                      {idx + 1}. {item.especie}
-                      {item.pod ? <span className="text-emerald-300/85"> · {item.pod}</span> : null}
+                  <div key={item.especie} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-dash-fg truncate min-w-0 font-semibold">
+                      <span className="text-fuchsia-300/80 tabular-nums mr-1.5">{idx + 1}.</span>
+                      {item.especie}
                     </span>
-                    <span className="tabular-nums text-fuchsia-200 font-semibold shrink-0">{item.cantidad}</span>
+                    <span className="tabular-nums text-fuchsia-300 font-bold shrink-0">{item.cantidad}</span>
                   </div>
                 ))
               )}
