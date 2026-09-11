@@ -55,6 +55,7 @@ const ROUTE_RULES: Record<string, RouteRule> = {
   "/configuracion/formatos-documentos": { kind: "admin" },
   "/configuracion/usuarios": { kind: "superadmin" },
   "/configuracion/temporadas": { kind: "superadmin" },
+  "/configuracion/naves-tracking": { kind: "superadmin" },
   "/cartolas-nubox": { kind: "cartolasNubox" },
   "/cliente": { kind: "operational" },
 };

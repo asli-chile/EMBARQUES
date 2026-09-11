@@ -25,6 +25,7 @@ export const SIDEBAR_ICONS: Record<string, string> = {
   consignatarios: "lucide:handshake",
   "formatos-documentos": "lucide:file-stack",
   temporadas: "lucide:calendar-range",
+  "naves-tracking": "lucide:radar",
   tracking: "lucide:map",
 };
 

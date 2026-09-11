@@ -65,6 +65,11 @@ const LazyTemporadasContent = lazy(() =>
     default: m.TemporadasContent,
   })),
 );
+const LazyNavesTrackingContent = lazy(() =>
+  import("@/components/configuracion/NavesTrackingContent").then((m) => ({
+    default: m.NavesTrackingContent,
+  })),
+);
 const LazyUsuariosContent = lazy(() =>
   import("@/components/usuarios/UsuariosContent").then((m) => ({ default: m.UsuariosContent })),
 );
@@ -222,6 +227,15 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ConfigGuard allowAdmin={false}>
         <Sus>
           <LazyTemporadasContent />
+        </Sus>
+      </ConfigGuard>
+    ) : pathname === "/configuracion/naves-tracking" ? (
+      <ConfigGuard
+        allowAdmin={false}
+        forbiddenMessage="No tienes acceso a Naves tracking. Solo el superadmin puede gestionarla."
+      >
+        <Sus>
+          <LazyNavesTrackingContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/configuracion/formatos-documentos" ? (

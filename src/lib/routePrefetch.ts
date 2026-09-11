@@ -22,6 +22,8 @@ const prefetchers: Record<string, PrefetchFn> = {
   "/configuracion/usuarios": () => import("@/components/usuarios/UsuariosContent"),
   "/configuracion/formatos-documentos": () =>
     import("@/components/configuracion/FormatosDocumentosContent"),
+  "/configuracion/naves-tracking": () =>
+    import("@/components/configuracion/NavesTrackingContent"),
   "/reservas/crear": () => import("@/components/reservas"),
   "/reservas/mis-reservas": () => import("@/components/reservas"),
   "/reservas/papelera": () => import("@/components/reservas"),

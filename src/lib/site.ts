@@ -69,6 +69,7 @@ export const siteConfig = {
         { labelKey: "consignatarios", id: "consignatarios", href: "/configuracion/consignatarios" },
         { labelKey: "formatosDocumentos", id: "formatos-documentos", href: "/configuracion/formatos-documentos" },
         { labelKey: "temporadas", id: "temporadas", href: "/configuracion/temporadas", superadminOnly: true },
+        { labelKey: "navesTracking", id: "naves-tracking", href: "/configuracion/naves-tracking", superadminOnly: true },
       ],
     },
     { labelKey: "tracking", id: "tracking", href: "/tracking" },
