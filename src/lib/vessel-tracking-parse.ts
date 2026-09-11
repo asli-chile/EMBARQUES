@@ -13,86 +13,149 @@ export type VesselTrackingOcrFields = {
   lng: number | null;
 };
 
-function cleanLines(text: string): string[] {
+/** Normaliza confusiones típicas de OCR cerca de etiquetas. */
+function normalizeOcrText(text: string): string {
   return text
     .replace(/\u00a0/g, " ")
+    .replace(/\bIM[O0]\b/gi, "IMO")
+    .replace(/\b[Il1]MO\b/gi, "IMO")
+    .replace(/\b[Il1]M[O0]\b/gi, "IMO")
+    .replace(/\bMM[S5][Il1]\b/gi, "MMSI")
+    .replace(/\bMMS[Il1]\b/gi, "MMSI");
+}
+
+function cleanLines(text: string): string[] {
+  return normalizeOcrText(text)
     .split(/\r?\n/)
     .map((l) => l.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 }
 
-function pickLabeledValue(lines: string[], labels: string[]): string | null {
-  const labelRe = new RegExp(`^(?:${labels.join("|")})\\s*[:#.\\-]?\\s*(.+)$`, "i");
-  for (const line of lines) {
-    const m = line.match(labelRe);
-    if (m?.[1]) return m[1].trim();
+const IMO_LABEL = String.raw`(?:IMO|IM0|[Il1]MO|[Il1]M0)`;
+const MMSI_LABEL = String.raw`(?:MMSI|MMS1|MM5I|MMS[Il1]|MM5[Il1])`;
+
+/** Primer bloque de exactamente `len` dígitos (permite basura alrededor). */
+function firstDigitsOfLength(raw: string | null | undefined, len: number): string | null {
+  if (!raw) return null;
+  const only = raw.replace(/\D/g, "");
+  if (only.length === len) return only;
+  const m = raw.match(new RegExp(`(?:^|\\D)(\\d{${len}})(?:\\D|$)`));
+  if (m?.[1]) return m[1];
+  // Dígitos con espacios internos: "9 7 0 2 1 0 6" o "9702 106"
+  const spaced = raw.match(new RegExp(`(?:^|\\D)((?:\\d[\\s.\\-]*){${len}})(?:\\D|$)`));
+  if (spaced?.[1]) {
+    const d = spaced[1].replace(/\D/g, "");
+    if (d.length === len) return d;
   }
-  // Misma línea partida: "IMO" en una, valor en la siguiente
+  return null;
+}
+
+function valueAfterLabel(text: string, labelRe: string): string | null {
+  const re = new RegExp(`${labelRe}\\s*[:#.\\-]?\\s*([^\\n]{0,48})`, "i");
+  const m = text.match(re);
+  return m?.[1]?.trim() ?? null;
+}
+
+function extractImo(_text: string, lines: string[]): string | null {
+  const joined = lines.join("\n");
+
+  // "IMO 9702106" o "IMO 9702106 MMSI 255806491" → toma solo los 7 dígitos
+  const after = valueAfterLabel(joined, IMO_LABEL);
+  const fromAfter = firstDigitsOfLength(after, 7);
+  if (fromAfter) return fromAfter;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (new RegExp(`^${IMO_LABEL}\\b`, "i").test(line)) {
+      const same = firstDigitsOfLength(line, 7);
+      if (same) return same;
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const next = firstDigitsOfLength(lines[j], 7);
+        if (next) return next;
+      }
+    }
+  }
+
+  // Pareja típica OCR de dos columnas: "9702106 255806491"
+  const pair = joined.match(/(?:^|\D)(\d{7})\s+(\d{9})(?:\D|$)/);
+  if (pair?.[1]) return pair[1];
+
+  const m = joined.match(new RegExp(`${IMO_LABEL}\\D{0,12}(\\d{7})`, "i"));
+  return m?.[1] ?? null;
+}
+
+function extractMmsi(_text: string, lines: string[]): string | null {
+  const joined = lines.join("\n");
+
+  const after = valueAfterLabel(joined, MMSI_LABEL);
+  const fromAfter = firstDigitsOfLength(after, 9);
+  if (fromAfter) return fromAfter;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (new RegExp(`^${MMSI_LABEL}\\b`, "i").test(line)) {
+      const same = firstDigitsOfLength(line, 9);
+      if (same) return same;
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const next = firstDigitsOfLength(lines[j], 9);
+        if (next) return next;
+      }
+    }
+  }
+
+  const pair = joined.match(/(?:^|\D)(\d{7})\s+(\d{9})(?:\D|$)/);
+  if (pair?.[2]) return pair[2];
+
+  const m = joined.match(new RegExp(`${MMSI_LABEL}\\D{0,12}(\\d{9})`, "i"));
+  if (m?.[1]) return m[1];
+
+  const nine = joined.match(/(?:^|\D)(\d{9})(?:\D|$)/);
+  return nine?.[1] ?? null;
+}
+
+function extractNombre(lines: string[]): string | null {
+  const nameLabel = String.raw`(?:Name|Nombre|Vessel|Ship|Nave)`;
+  for (const line of lines) {
+    const m = line.match(new RegExp(`^${nameLabel}\\s*[:#.\\-]?\\s*(.+)$`, "i"));
+    if (m?.[1]) {
+      let nombre = m[1].trim();
+      nombre = nombre.replace(/\s+Flag\b.*$/i, "").trim();
+      nombre = nombre
+        .replace(/\s*\[[^\]]*\]\s*$/, "")
+        .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
+        .trim();
+      if (nombre) return nombre;
+    }
+  }
   for (let i = 0; i < lines.length - 1; i++) {
-    if (new RegExp(`^(?:${labels.join("|")})\\s*[:#.\\-]?\\s*$`, "i").test(lines[i]!)) {
-      const next = lines[i + 1]!.trim();
-      if (next) return next;
+    if (new RegExp(`^${nameLabel}\\s*[:#.\\-]?\\s*$`, "i").test(lines[i]!)) {
+      let nombre = lines[i + 1]!.trim();
+      nombre = nombre
+        .replace(/\s*\[[^\]]*\]\s*$/, "")
+        .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
+        .trim();
+      if (nombre && !/^(flag|imo|mmsi)\b/i.test(nombre)) return nombre;
     }
   }
   return null;
 }
 
-function extractImo(text: string, lines: string[]): string | null {
-  const labeled = pickLabeledValue(lines, ["IMO", "1MO", "lMO"]);
-  const fromLabel = labeled?.replace(/\D/g, "") ?? "";
-  if (/^\d{7}$/.test(fromLabel)) return fromLabel;
-
-  const m = text.match(/\bIMO\b\D{0,8}(\d{7})\b/i);
-  if (m?.[1]) return m[1];
-
-  // Evitar confundir con MMSI: buscar 7 dígitos que no formen parte de 9
-  const all = [...text.matchAll(/\b(\d{7})\b/g)].map((x) => x[1]!);
-  const nine = new Set([...text.matchAll(/\b(\d{9})\b/g)].map((x) => x[1]!));
-  for (const d of all) {
-    if (![...nine].some((n) => n.includes(d))) return d;
-  }
-  return null;
-}
-
-function extractMmsi(text: string, lines: string[]): string | null {
-  const labeled = pickLabeledValue(lines, ["MMSI", "MMS1", "MM5I"]);
-  const fromLabel = labeled?.replace(/\D/g, "") ?? "";
-  if (/^\d{9}$/.test(fromLabel)) return fromLabel;
-
-  const m = text.match(/\bMMSI\b\D{0,8}(\d{9})\b/i);
-  if (m?.[1]) return m[1];
-
-  const nine = text.match(/\b(\d{9})\b/);
-  return nine?.[1] ?? null;
-}
-
-function extractNombre(lines: string[]): string | null {
-  const labeled = pickLabeledValue(lines, ["Name", "Nombre", "Vessel", "Ship", "Nave"]);
-  if (!labeled) return null;
-  // Quitar viaje embebido: "MSC BRUNELLA 635R"
-  return labeled
-    .replace(/\s*\[[^\]]*\]\s*$/, "")
-    .replace(/\s+\d{2,5}[A-Za-z]?\s*$/, "")
-    .trim() || null;
-}
-
 function extractCoords(text: string): { lat: number; lng: number } | null {
-  // (9.623768, -79.948883)
-  const paren = text.match(/\(\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*\)/);
+  const normalized = normalizeOcrText(text);
+  const paren = normalized.match(/\(\s*(-?\d{1,3}(?:[.,]\d+)?)\s*,\s*(-?\d{1,3}(?:[.,]\d+)?)\s*\)/);
   if (paren) {
-    const lat = Number(paren[1]);
-    const lng = Number(paren[2]);
+    const lat = Number(paren[1]!.replace(",", "."));
+    const lng = Number(paren[2]!.replace(",", "."));
     if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
       return { lat, lng };
     }
   }
 
-  // Lat: 9.623768  Lng: -79.948883
-  const latM = text.match(/\b(?:lat(?:itude)?|latitud)\b\s*[:=]?\s*(-?\d{1,3}(?:\.\d+)?)/i);
-  const lngM = text.match(/\b(?:lng|lon(?:gitude)?|longitud)\b\s*[:=]?\s*(-?\d{1,3}(?:\.\d+)?)/i);
+  const latM = normalized.match(/\b(?:lat(?:itude)?|latitud)\b\s*[:=]?\s*(-?\d{1,3}(?:[.,]\d+)?)/i);
+  const lngM = normalized.match(/\b(?:lng|lon(?:gitude)?|longitud)\b\s*[:=]?\s*(-?\d{1,3}(?:[.,]\d+)?)/i);
   if (latM && lngM) {
-    const lat = Number(latM[1]);
-    const lng = Number(lngM[1]);
+    const lat = Number(latM[1]!.replace(",", "."));
+    const lng = Number(lngM[1]!.replace(",", "."));
     if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
       return { lat, lng };
     }
@@ -102,12 +165,13 @@ function extractCoords(text: string): { lat: number; lng: number } | null {
 }
 
 export function parseVesselTrackingFromText(text: string): VesselTrackingOcrFields {
-  const lines = cleanLines(text);
-  const coords = extractCoords(text);
+  const normalized = normalizeOcrText(text);
+  const lines = cleanLines(normalized);
+  const coords = extractCoords(normalized);
   return {
     nombre: extractNombre(lines),
-    imo: extractImo(text, lines),
-    mmsi: extractMmsi(text, lines),
+    imo: extractImo(normalized, lines),
+    mmsi: extractMmsi(normalized, lines),
     lat: coords?.lat ?? null,
     lng: coords?.lng ?? null,
   };

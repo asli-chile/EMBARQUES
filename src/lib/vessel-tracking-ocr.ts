@@ -18,8 +18,15 @@ export async function analyzeVesselTrackingImages(
     throw new Error("No hay imágenes para analizar.");
   }
 
-  const worker = await createWorker("eng");
+  const worker = await createWorker("eng", 1, {
+    logger: () => undefined,
+  });
   try {
+    await worker.setParameters({
+      // Bloque de texto / tabla clave-valor
+      tessedit_pageseg_mode: "6",
+      preserve_interword_spaces: "1",
+    });
     const parts: VesselTrackingOcrFields[] = [];
     const texts: string[] = [];
     for (let i = 0; i < files.length; i++) {
