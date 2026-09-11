@@ -50,14 +50,20 @@ export function InicioAuthSkeleton() {
 
 export function KpiSkeletonCard() {
   return (
-    <div className="inicio-card rounded-lg p-5 sm:p-6 relative overflow-hidden">
+    <div className="inicio-kpi-card inicio-kpi-card--blue rounded-[1.15rem] p-5 relative overflow-hidden opacity-70">
       <div className="flex items-start justify-between mb-5">
-        <Bone className="h-11 w-11 rounded-md" />
-        <Bone className="h-6 w-12 rounded" />
+        <Bone className="h-10 w-10 rounded-xl" />
+        <Bone className="h-6 w-14 rounded-full" />
       </div>
-      <Bone className="h-10 w-16 rounded-md mb-3" />
-      <Bone className="h-4 w-28 rounded mb-2" />
-      <Bone className="h-3 w-20 rounded" />
+      <div className="flex items-end justify-between gap-3 mb-4">
+        <div>
+          <Bone className="h-10 w-16 rounded-md mb-3" />
+          <Bone className="h-4 w-28 rounded mb-2" />
+          <Bone className="h-3 w-24 rounded" />
+        </div>
+        <Bone className="h-11 w-16 rounded-md" />
+      </div>
+      <Bone className="h-7 w-24 rounded-full" />
     </div>
   );
 }

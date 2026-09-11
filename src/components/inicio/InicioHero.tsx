@@ -4,7 +4,7 @@ import { withBase } from "@/lib/basePath";
 import { useLocale } from "@/lib/i18n";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import type { AuthProfile } from "@/lib/auth/AuthContext";
-import { GlassCard, GhostButton, PrimaryButton, inicioButtonBase, inicioStyles } from "./inicio-ui";
+import { GlassCard, inicioButtonBase, inicioStyles } from "./inicio-ui";
 
 const flowStepIcons = [
   "lucide:calendar-plus",
@@ -38,16 +38,80 @@ export function InicioHero({
 
   const quickTiles = isCliente
     ? [
-        { href: "/reservas/crear", icon: "lucide:plus-circle", label: i.heroCtaNewBooking },
-        { href: "/reservas/mis-reservas", icon: "lucide:package", label: i.heroCtaMyBookings },
-        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: i.heroCtaDocuments },
-        { href: "/dashboard", icon: "lucide:layout-dashboard", label: i.quickDashboard },
+        {
+          href: "/reservas/crear",
+          icon: "lucide:box",
+          mark: "lucide:ship",
+          label: i.heroCtaNewBooking,
+          desc: i.heroQuickCreateDesc,
+          foot: i.heroQuickCreateFoot,
+          accent: "blue" as const,
+        },
+        {
+          href: "/reservas/mis-reservas",
+          icon: "lucide:boxes",
+          mark: "lucide:clipboard-list",
+          label: i.heroCtaMyBookings,
+          desc: i.heroQuickReservasDesc,
+          foot: i.heroQuickReservasFoot,
+          accent: "teal" as const,
+        },
+        {
+          href: "/documentos/mis-documentos",
+          icon: "lucide:file-text",
+          mark: "lucide:files",
+          label: i.heroCtaDocuments,
+          desc: i.heroQuickDocsDesc,
+          foot: i.heroQuickDocsFoot,
+          accent: "amber" as const,
+        },
+        {
+          href: "/dashboard",
+          icon: "lucide:layout-dashboard",
+          mark: "lucide:bar-chart-3",
+          label: i.quickDashboard,
+          desc: i.heroQuickDashboardDesc,
+          foot: i.heroQuickDashboardFoot,
+          accent: "violet" as const,
+        },
       ]
     : [
-        { href: "/reservas/crear", icon: "lucide:plus-circle", label: i.heroCtaCreateBooking },
-        { href: "/reservas/mis-reservas", icon: "lucide:package", label: i.heroCtaMyBookings },
-        { href: "/documentos/mis-documentos", icon: "lucide:file-text", label: i.heroCtaDocuments },
-        { href: "/transportes/reserva-asli", icon: "lucide:truck", label: i.heroCtaTransport },
+        {
+          href: "/reservas/crear",
+          icon: "lucide:box",
+          mark: "lucide:ship",
+          label: i.heroCtaCreateBooking,
+          desc: i.heroQuickCreateDesc,
+          foot: i.heroQuickCreateFoot,
+          accent: "blue" as const,
+        },
+        {
+          href: "/reservas/mis-reservas",
+          icon: "lucide:boxes",
+          mark: "lucide:clipboard-list",
+          label: i.heroCtaMyBookings,
+          desc: i.heroQuickReservasDesc,
+          foot: i.heroQuickReservasFoot,
+          accent: "teal" as const,
+        },
+        {
+          href: "/documentos/mis-documentos",
+          icon: "lucide:file-text",
+          mark: "lucide:files",
+          label: i.heroCtaDocuments,
+          desc: i.heroQuickDocsDesc,
+          foot: i.heroQuickDocsFoot,
+          accent: "amber" as const,
+        },
+        {
+          href: "/transportes/reserva-asli",
+          icon: "lucide:truck",
+          mark: "lucide:container",
+          label: i.heroCtaTransport,
+          desc: i.heroQuickTransportDesc,
+          foot: i.heroQuickTransportFoot,
+          accent: "violet" as const,
+        },
       ];
 
   return (
@@ -84,7 +148,7 @@ export function InicioHero({
                     weekday: "short",
                     day: "numeric",
                     month: "short",
-                  })}
+                  }).replace(/\./g, "").toUpperCase()}
                 </span>
               </div>
             ) : (
@@ -124,12 +188,12 @@ export function InicioHero({
                 {isLoggedIn ? (
                   <>
                     {i.heroTitleLoggedIn}{" "}
-                    <span className="inicio-accent-text">{i.heroTitleLoggedInAccent}</span>
+                    <span className="inicio-accent-gradient">{i.heroTitleLoggedInAccent}</span>
                   </>
                 ) : (
                   <>
                     {i.heroTitleGuest}{" "}
-                    <span className="inicio-accent-text">{i.heroTitleGuestAccent}</span>
+                    <span className="inicio-accent-gradient">{i.heroTitleGuestAccent}</span>
                   </>
                 )}
               </span>
@@ -150,45 +214,37 @@ export function InicioHero({
               )}
             </p>
 
-            <div data-hero-item className="mt-10 flex flex-col flex-wrap gap-3.5 sm:flex-row">
+            <div data-hero-item className="mt-10">
               {isLoggedIn ? (
-                isCliente ? (
-                  <>
-                    <PrimaryButton href={withBase("/dashboard")}>
-                      <Icon icon="lucide:layout-dashboard" width={20} height={20} />
-                      {i.heroCtaDashboard}
-                    </PrimaryButton>
-                    <GhostButton href={withBase("/reservas/mis-reservas")}>
-                      <Icon icon="lucide:package" width={20} height={20} />
-                      {i.heroCtaMyBookings}
-                    </GhostButton>
-                    <GhostButton href={withBase("/reservas/crear")}>
-                      <Icon icon="lucide:plus" width={20} height={20} />
-                      {i.heroCtaNewBooking}
-                    </GhostButton>
-                    <GhostButton href={withBase("/documentos/mis-documentos")}>
-                      <Icon icon="lucide:file-text" width={20} height={20} />
-                      {i.heroCtaDocuments}
-                    </GhostButton>
-                  </>
-                ) : (
-                  <>
-                    <PrimaryButton href={withBase("/dashboard")}>
-                      <Icon icon="lucide:layout-dashboard" width={20} height={20} />
-                      {i.heroCtaDashboard}
-                    </PrimaryButton>
-                    <GhostButton href={withBase("/reservas/mis-reservas")}>
-                      <Icon icon="lucide:package" width={20} height={20} />
-                      {i.heroCtaMyBookingsStaff}
-                    </GhostButton>
-                    <GhostButton href={withBase("/reservas/crear")} className="hidden md:inline-flex">
-                      <Icon icon="lucide:plus" width={20} height={20} />
-                      {i.heroCtaNewBooking}
-                    </GhostButton>
-                  </>
-                )
+                <div className="inicio-hero-actions">
+                  <a href={withBase("/dashboard")} className="inicio-hero-chip inicio-hero-chip--primary">
+                    <Icon icon="lucide:layout-dashboard" width={22} height={22} />
+                    <span>{i.heroCtaDashboard}</span>
+                    <Icon icon="lucide:arrow-right" width={16} height={16} className="inicio-hero-chip-arrow" />
+                  </a>
+                  <a href={withBase("/reservas/mis-reservas")} className="inicio-hero-chip inicio-hero-chip--ghost">
+                    <Icon icon="lucide:box" width={22} height={22} />
+                    <span>{isCliente ? i.heroCtaMyBookings : i.heroCtaMyBookingsStaff}</span>
+                    <Icon icon="lucide:arrow-right" width={16} height={16} className="inicio-hero-chip-arrow" />
+                  </a>
+                  <a
+                    href={withBase("/reservas/crear")}
+                    className={`inicio-hero-chip inicio-hero-chip--ghost ${isCliente ? "" : "hidden md:inline-flex"}`}
+                  >
+                    <Icon icon="lucide:plus-circle" width={22} height={22} />
+                    <span>{i.heroCtaNewBooking}</span>
+                    <Icon icon="lucide:arrow-right" width={16} height={16} className="inicio-hero-chip-arrow" />
+                  </a>
+                  {isCliente ? (
+                    <a href={withBase("/documentos/mis-documentos")} className="inicio-hero-chip inicio-hero-chip--ghost">
+                      <Icon icon="lucide:file-text" width={22} height={22} />
+                      <span>{i.heroCtaDocuments}</span>
+                      <Icon icon="lucide:arrow-right" width={16} height={16} className="inicio-hero-chip-arrow" />
+                    </a>
+                  ) : null}
+                </div>
               ) : (
-                <>
+                <div className="flex flex-col flex-wrap gap-3.5 sm:flex-row">
                   <AuthFormTrigger
                     mode="login"
                     className={`${inicioButtonBase} inicio-btn-primary px-8 py-3.5 text-base`}
@@ -203,7 +259,7 @@ export function InicioHero({
                     <Icon icon="lucide:user-plus" width={20} height={20} />
                     {i.heroCtaRequestAccess}
                   </AuthFormTrigger>
-                </>
+                </div>
               )}
             </div>
 
@@ -227,23 +283,57 @@ export function InicioHero({
 
           {compact && isLoggedIn && (
             <div data-hero-item className="hidden lg:block">
-              <GlassCard className="p-7 sm:p-8" reveal={false}>
-                <p className="mb-6 text-sm uppercase tracking-[0.14em] inicio-accent-text font-semibold">
-                  {i.heroQuickAccess}
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  {quickTiles.map(({ href, icon, label }) => (
-                    <a
-                      key={href}
-                      href={withBase(href)}
-                      className="inicio-tile group flex min-h-[7.5rem] flex-col justify-center rounded-lg p-6"
-                    >
-                      <Icon icon={icon} className="inicio-accent-text mb-3.5" width={28} height={28} />
-                      <p className="text-base font-semibold leading-snug inicio-ink">{label}</p>
-                    </a>
-                  ))}
+              <div className="mb-5 flex items-end justify-between gap-4">
+                <div>
+                  <p className="mb-1.5 inline-flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] inicio-accent-text">
+                    <span className="h-px w-6 bg-[color-mix(in_srgb,var(--inicio-teal)_60%,transparent)]" />
+                    {i.heroQuickAccess}
+                  </p>
+                  <p className="max-w-xs text-sm leading-snug inicio-ink-mute">
+                    {i.heroQuickSubtitle}
+                  </p>
                 </div>
-              </GlassCard>
+                <p className="max-w-[7.5rem] text-right text-[9px] font-semibold uppercase tracking-[0.16em] leading-relaxed inicio-ink-faint">
+                  <span className="mb-1.5 ml-auto grid w-fit grid-cols-3 gap-0.5" aria-hidden>
+                    {Array.from({ length: 9 }).map((_, n) => (
+                      <span key={n} className="h-1 w-1 rounded-full bg-current opacity-45" />
+                    ))}
+                  </span>
+                  {i.heroQuickAside}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3.5">
+                {quickTiles.map(({ href, icon, mark, label, desc, foot, accent }) => (
+                  <a
+                    key={href}
+                    href={withBase(href)}
+                    className={`inicio-shortcut-card inicio-shortcut-card--${accent} inicio-shortcut-card--hero group`}
+                  >
+                    <Icon
+                      icon={mark}
+                      className="inicio-shortcut-mark"
+                      width={120}
+                      height={120}
+                      aria-hidden
+                    />
+                    <span className="inicio-shortcut-icon" aria-hidden>
+                      <Icon icon={icon} width={26} height={26} />
+                    </span>
+                    <span className="relative z-[1] min-w-0 flex-1 flex flex-col justify-center gap-1 pr-1">
+                      <span className="block text-sm font-semibold leading-snug inicio-ink">
+                        {label}
+                      </span>
+                      <span className="block text-[11px] leading-snug inicio-ink-mute">
+                        {desc}
+                      </span>
+                      <span className="inicio-shortcut-foot mt-2">{foot}</span>
+                    </span>
+                    <span className="inicio-shortcut-chevron relative z-[1]" aria-hidden>
+                      <Icon icon="lucide:arrow-right" width={14} height={14} />
+                    </span>
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
