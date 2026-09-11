@@ -11,10 +11,51 @@ import type { NeonTheme } from "@/lib/ui/neonTheme";
 const MAP_STYLE_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const MAP_STYLE_LIGHT = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
+/** Los basemaps de CARTO pintan mar y tierra en gris; acá se repintan con la paleta corporativa.
+ *  Son solo el respaldo: el valor real sale de --trk-water / --trk-land (tracking-brand.css). */
+const WATER_COLOR_DARK = "#0a3556";
+const WATER_COLOR_LIGHT = "#a9cfee";
+const LAND_COLOR_DARK = "#141e2e";
+const LAND_COLOR_LIGHT = "#f6eee8";
+
 /** Zoom bajo + Pacífico central: encuadra bien rutas Chile–Asia al abrir; el usuario puede alejar y desplazarse con copias del mundo. */
 const DEFAULT_CENTER = { longitude: -160, latitude: 5, zoom: 1.35 };
 
 const COORD_CLOSE_EPS = 1.5e-4;
+
+type StyleableMap = {
+  getStyle?: () => { layers?: { id: string; type: string }[] } | undefined;
+  getPaintProperty?: (layer: string, prop: string) => unknown;
+  setPaintProperty?: (layer: string, prop: string, value: string) => void;
+};
+
+/** Repinta mar y tierra del basemap con la paleta corporativa.
+ *  `water` es el océano; `background` es el lienzo base, que a bajo zoom se ve como tierra
+ *  (`landcover` recién entra desde zoom 8). Pintarlos del mismo color deja el mapa plano. */
+function paintBrandBasemap(map: StyleableMap, sea: string, land: string) {
+  for (const layer of map.getStyle?.()?.layers ?? []) {
+    let prop = "";
+    let color = "";
+    if (layer.type === "background") {
+      prop = "background-color";
+      color = land;
+    } else if (layer.type === "fill" && layer.id === "water") {
+      prop = "fill-color";
+      color = sea;
+    } else {
+      continue;
+    }
+    // setPaintProperty emite `styledata`: sin este chequeo, reaplicar desde ese evento sería un bucle.
+    if (map.getPaintProperty?.(layer.id, prop) === color) continue;
+    map.setPaintProperty?.(layer.id, prop, color);
+  }
+}
+
+/** Zoom al clickear un marcador: el puerto se mira de cerca, la nave necesita algo de mar alrededor. */
+const PORT_FOCUS_ZOOM = 9;
+const VESSEL_FOCUS_ZOOM = 6.5;
+/** Ventana en que el auto-encuadre cede ante el clic del usuario (cubre la animación de flyTo). */
+const FOCUS_GUARD_MS = 1500;
 
 export type MapMarkerPort = {
   lng: number;
@@ -113,16 +154,14 @@ export function TrackingMapView({
   const [mapError, setMapError] = useState(false);
   const mapStyle = theme === "light" ? MAP_STYLE_LIGHT : MAP_STYLE_DARK;
   const isDark = theme !== "light";
-  const shellBg = isDark ? "bg-[#0B1428]" : "bg-[#E8F0FA]";
-  const overlayBg = isDark ? "bg-[#101c38] text-dash-muted" : "bg-[#F4F8FC] text-brand-blue/50";
-  const labelCls = isDark
-    ? "rounded border border-cyan-400/40 bg-[#101c38]/95 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-100 shadow"
-    : "rounded border border-neutral-200 bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-brand-blue shadow";
-  const labelManualCls = isDark
-    ? "rounded border border-violet-400/45 bg-[#101c38]/95 px-1.5 py-0.5 text-[10px] font-semibold text-violet-200 shadow"
-    : "rounded border border-violet-200 bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800 shadow";
-  const vesselColor = isDark ? "text-cyan-300" : "text-brand-blue";
-  const vesselManualColor = isDark ? "text-violet-300" : "text-violet-600";
+  const shellBg = "bg-[var(--trk-water)]";
+  const overlayBg = "bg-dash-control text-dash-muted";
+  const labelCls =
+    "rounded-md border border-[color-mix(in_srgb,var(--trk-vessel)_45%,transparent)] bg-dash-surface/95 px-1.5 py-0.5 text-[10px] font-semibold text-dash-fg shadow-sm";
+  const labelManualCls =
+    "rounded-md border border-[color-mix(in_srgb,var(--trk-vessel-manual)_45%,transparent)] bg-dash-surface/95 px-1.5 py-0.5 text-[10px] font-semibold text-dash-fg shadow-sm";
+  const vesselColor = "text-[var(--trk-vessel)]";
+  const vesselManualColor = "text-[var(--trk-vessel-manual)]";
 
   /** No duplicar icono si la flota ya marca el mismo punto (AIS o manual primario). */
   const fleetWithoutPrimaryOverlap = useMemo(() => {
@@ -141,6 +180,8 @@ export function TrackingMapView({
     const ro = new ResizeObserver(() => {
       const { width, height } = el.getBoundingClientRect();
       if (width > 0 && height > 0) setContainerReady(true);
+      // Al colapsar el panel lateral cambia el ancho del contenedor: sin esto el canvas queda del tamaño viejo.
+      (mapRef.current as unknown as { getMap?: () => { resize: () => void } } | null)?.getMap?.()?.resize();
     });
     ro.observe(el);
     const { width, height } = el.getBoundingClientRect();
@@ -155,6 +196,45 @@ export function TrackingMapView({
       map.flyTo({ center: [lng, lat], zoom, duration: 1000, essential: true });
     }
   }, []);
+
+  const applyBasemapColors = useCallback(() => {
+    const map = (mapRef.current as unknown as { getMap?: () => StyleableMap } | null)?.getMap?.();
+    if (!map) return;
+    const el = containerRef.current;
+    const css = (name: string) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : "");
+    paintBrandBasemap(
+      map,
+      css("--trk-water") || (isDark ? WATER_COLOR_DARK : WATER_COLOR_LIGHT),
+      css("--trk-land") || (isDark ? LAND_COLOR_DARK : LAND_COLOR_LIGHT),
+    );
+  }, [isDark]);
+
+  /** El cambio de tema reemplaza el estilo del basemap, lo que descarta el repintado.
+   *  `styledata` avisa cada vez que el estilo vuelve a cargar. */
+  useEffect(() => {
+    const map = (
+      mapRef.current as unknown as {
+        getMap?: () => { on: (e: string, h: () => void) => void; off: (e: string, h: () => void) => void };
+      } | null
+    )?.getMap?.();
+    if (!map) return;
+    const onStyleData = () => applyBasemapColors();
+    map.on("styledata", onStyleData);
+    applyBasemapColors();
+    return () => map.off("styledata", onStyleData);
+  }, [applyBasemapColors, containerReady]);
+
+  /** Acercarse a un marcador clickeado. Clicar una nave cambia `ports` (se carga su carga),
+   *  lo que dispara el auto-encuadre; esta marca de tiempo hace que gane el gesto del usuario. */
+  const manualFocusAt = useRef(0);
+  const focusOn = useCallback(
+    (lng: number, lat: number, zoom: number) => {
+      if (!validCoord(lat, lng)) return;
+      manualFocusAt.current = Date.now();
+      flyTo(lng, lat, zoom);
+    },
+    [flyTo],
+  );
 
   const fitPoints = useCallback((points: { lng: number; lat: number }[]) => {
     const raw = mapRef.current as unknown as {
@@ -195,6 +275,8 @@ export function TrackingMapView({
 
   useEffect(() => {
     if (!mapRef.current) return;
+    // El usuario acaba de acercarse a un marcador: no volver a encuadrar todo encima del gesto.
+    if (Date.now() - manualFocusAt.current < FOCUS_GUARD_MS) return;
     const pts: { lng: number; lat: number }[] = [];
     for (const p of ports) {
       if (validCoord(p.lat, p.lng)) pts.push(p);
@@ -230,7 +312,7 @@ export function TrackingMapView({
             icon="lucide:loader-2"
             width={24}
             height={24}
-            className={`animate-spin ${isDark ? "text-cyan-400/60" : "text-brand-blue/40"}`}
+            className="animate-spin text-dash-neon"
             aria-hidden
           />
           {emptyHint}
@@ -248,7 +330,6 @@ export function TrackingMapView({
           }
         >
           <Map
-            key={mapStyle}
             ref={mapRef}
             initialViewState={DEFAULT_CENTER}
             style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
@@ -263,6 +344,7 @@ export function TrackingMapView({
               };
               m.resize?.();
               if (typeof m.setRenderWorldCopies === "function") m.setRenderWorldCopies(true);
+              applyBasemapColors();
             }}
             onError={() => setMapError(true)}
           >
@@ -277,13 +359,22 @@ export function TrackingMapView({
                   anchor="bottom"
                   style={{ zIndex: 2 }}
                 >
-                  <div className="pointer-events-none flex flex-col items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      focusOn(port.lng, port.lat, PORT_FOCUS_ZOOM);
+                    }}
+                    aria-label={port.label}
+                    title={port.label}
+                    className="flex cursor-pointer flex-col items-center gap-0.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon"
+                  >
                     <span className={`max-w-[160px] truncate ${labelCls}`}>{port.label}</span>
-                    <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-white shadow-lg ring-2 ${
+                    <span
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-white shadow-lg ring-2 transition-transform hover:scale-110 ${
                         port.variant === "pol"
-                          ? "bg-emerald-600 ring-emerald-400/50"
-                          : "bg-amber-500 ring-amber-400/50"
+                          ? "bg-[var(--trk-pol)] ring-[color-mix(in_srgb,var(--trk-pol)_50%,transparent)]"
+                          : "bg-[var(--trk-pod)] ring-[color-mix(in_srgb,var(--trk-pod)_50%,transparent)]"
                       }`}
                     >
                       <Icon
@@ -292,35 +383,30 @@ export function TrackingMapView({
                         height={17}
                         aria-hidden
                       />
-                    </div>
-                  </div>
+                    </span>
+                  </button>
                 </Marker>
               ) : null,
             )}
 
             {fleetWithoutPrimaryOverlap.map((fv) => {
               const selected = selectedFleetKey != null && selectedFleetKey === fv.markerKey;
-              const clickable = Boolean(onFleetVesselClick);
               return (
                 <Marker key={fv.markerKey} longitude={fv.lng} latitude={fv.lat} anchor="bottom" style={{ zIndex: selected ? 4 : 3 }}>
                   <button
                     type="button"
-                    disabled={!clickable}
                     onClick={(e) => {
                       e.stopPropagation();
+                      focusOn(fv.lng, fv.lat, VESSEL_FOCUS_ZOOM);
                       onFleetVesselClick?.(fv);
                     }}
-                    className={`flex flex-col items-center gap-0.5 ${
-                      clickable
-                        ? "cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
-                        : "pointer-events-none"
-                    }`}
+                    className="flex cursor-pointer flex-col items-center gap-0.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--trk-vessel-manual)_70%,transparent)]"
                     aria-label={fv.name}
-                    title={clickable ? fv.name : undefined}
+                    title={fv.name}
                   >
                     <span
                       className={`max-w-[min(200px,42vw)] truncate ${labelManualCls} ${
-                        selected ? "ring-1 ring-violet-300/60" : ""
+                        selected ? "ring-1 ring-[color-mix(in_srgb,var(--trk-vessel-manual)_60%,transparent)]" : ""
                       }`}
                     >
                       {fv.name}
@@ -338,34 +424,49 @@ export function TrackingMapView({
 
             {showPrimaryVessel && vessel && primaryIsManual && (
               <Marker longitude={vessel.lng} latitude={vessel.lat} anchor="bottom">
-                <div className="group relative z-10 flex cursor-default flex-col items-center justify-center px-1 py-0.5">
-                  <div
-                    className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 max-w-[min(240px,85vw)] min-w-0 -translate-x-1/2 text-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${labelManualCls}`}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    focusOn(vessel.lng, vessel.lat, VESSEL_FOCUS_ZOOM);
+                  }}
+                  title={vessel.name}
+                  aria-label={vessel.name}
+                  className="group relative z-10 flex cursor-pointer flex-col items-center justify-center rounded-lg px-1 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--trk-vessel-manual)_70%,transparent)]"
+                >
+                  <span
+                    className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 max-w-[min(240px,85vw)] min-w-0 -translate-x-1/2 truncate text-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${labelManualCls}`}
                   >
-                    <span className="block truncate">{vessel.name}</span>
-                  </div>
+                    {vessel.name}
+                  </span>
                   <span className={`mb-0.5 max-w-[min(200px,42vw)] truncate ${labelManualCls}`}>{vessel.name}</span>
                   <VesselTopDownIcon
                     label={vessel.name}
-                    className={`${vesselManualColor} drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]`}
+                    className={`${vesselManualColor} drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] transition-transform group-hover:scale-110`}
                   />
-                </div>
+                </button>
               </Marker>
             )}
 
             {showPrimaryVessel && vessel && !primaryIsManual && (
               <Marker longitude={vessel.lng} latitude={vessel.lat} anchor="bottom">
-                <div
-                  className="group relative z-10 flex cursor-default flex-col items-center justify-center px-1.5 py-1.5"
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    focusOn(vessel.lng, vessel.lat, VESSEL_FOCUS_ZOOM);
+                  }}
                   title={vessel.name}
+                  aria-label={vessel.name}
+                  className="group relative z-10 flex cursor-pointer flex-col items-center justify-center rounded-lg px-1.5 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--trk-vessel)_70%,transparent)]"
                 >
-                  <div
-                    className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 max-w-[min(240px,85vw)] min-w-0 -translate-x-1/2 text-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${labelCls}`}
+                  <span
+                    className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-0.5 max-w-[min(240px,85vw)] min-w-0 -translate-x-1/2 truncate text-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${labelCls}`}
                   >
-                    <span className="block truncate">{vessel.name}</span>
-                  </div>
+                    {vessel.name}
+                  </span>
                   <span className={`mb-0.5 max-w-[min(200px,42vw)] truncate ${labelCls}`}>{vessel.name}</span>
-                  <div
+                  <span
                     className="flex items-center justify-center [transform-origin:center]"
                     style={{ transform: `rotate(${courseDeg}deg)` }}
                   >
@@ -373,8 +474,8 @@ export function TrackingMapView({
                       label={vessel.name}
                       className={`${vesselColor} drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]`}
                     />
-                  </div>
-                </div>
+                  </span>
+                </button>
               </Marker>
             )}
           </Map>

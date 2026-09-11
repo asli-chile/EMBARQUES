@@ -10,6 +10,7 @@ import {
   type MapVesselPosition,
 } from "@/components/tracking/TrackingMapView";
 import { ManualTrackingCoordsModal } from "@/components/tracking/ManualTrackingCoordsModal";
+import "@/styles/tracking-brand.css";
 import { getApiOriginPrefix } from "@/lib/basePath";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
@@ -404,6 +405,7 @@ export function TrackingContent() {
   /** Ops con ETD activo (fuente de POL/POD cuando no hay nave seleccionada). */
   const [fleetOps, setFleetOps] = useState<TrackingResult[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [cargoVessel, setCargoVessel] = useState<MapFleetManualVessel | null>(null);
   const [cargoOps, setCargoOps] = useState<TrackingResult[]>([]);
   const [cargoLoading, setCargoLoading] = useState(false);
@@ -953,7 +955,7 @@ export function TrackingContent() {
   const hasMapFocus = Boolean(selectedOpId || vesselOnMap || fleetManualMerged.length > 0);
 
   return (
-    <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
+    <div className="dash-neon tracking-brand flex min-h-0 flex-1 flex-col" data-theme={theme}>
       <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
           <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
@@ -1001,14 +1003,28 @@ export function TrackingContent() {
         <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-2.5">
           <div className="flex h-full min-h-0 w-full flex-col gap-2 lg:flex-row">
             <div
+              id="tracking-sidebar"
               className={`dash-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl transition-all duration-300 ease-out ${
                 mobileView === "map" ? "hidden lg:flex" : "flex"
-              } lg:w-[min(100%,400px)] lg:shrink-0 xl:w-[420px]`}
+              } ${
+                sidebarCollapsed ? "lg:hidden" : "lg:w-[min(100%,400px)] lg:shrink-0 xl:w-[420px]"
+              }`}
             >
               <div className="dash-section-head shrink-0 space-y-3 px-3 py-3">
                 <div className="flex items-center gap-2">
                   <Icon icon="lucide:search" width={18} height={18} className="shrink-0 text-dash-neon" aria-hidden />
-                  <p className="text-sm font-bold text-dash-fg">{tr.searchLabel}</p>
+                  <p className="min-w-0 flex-1 truncate text-sm font-bold text-dash-fg">{tr.searchLabel}</p>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(true)}
+                    aria-controls="tracking-sidebar"
+                    aria-expanded
+                    title={tr.panelCollapse}
+                    aria-label={tr.panelCollapse}
+                    className="dash-control hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg lg:inline-flex"
+                  >
+                    <Icon icon="lucide:panel-left-close" width={15} height={15} aria-hidden />
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   <label htmlFor="tracking-search" className="sr-only">
@@ -1103,71 +1119,73 @@ export function TrackingContent() {
                                 tabIndex={0}
                               >
                                 <div className="p-3">
-                                  <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
-                                      {op.contenedor && (
-                                        <span className="font-bold text-dash-neon">{op.contenedor}</span>
-                                      )}
-                                      {op.ref_asli && (
-                                        <span className="truncate text-xs text-dash-muted">
-                                          {tr.refAsli}: {op.ref_asli}
-                                        </span>
-                                      )}
-                                      {opTienePosicionManualVisible(results, op) && (
-                                        <span className="rounded border border-violet-400/40 bg-violet-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-dash-fg">
-                                          {tr.manualCoordsBadge}
-                                        </span>
-                                      )}
-                                    </div>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="truncate font-mono text-[13px] font-bold tabular-nums tracking-tight text-dash-fg">
+                                      {op.contenedor || op.ref_asli || "—"}
+                                    </span>
                                     <span
-                                      className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 text-[10px] font-semibold ${getEstadoStyle(op.estado_operacion)}`}
+                                      className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${getEstadoStyle(op.estado_operacion)}`}
                                     >
                                       {etiquetaEstado(op.estado_operacion) || "—"}
                                     </span>
                                   </div>
-                                  <div className="space-y-1.5 text-xs text-dash-muted">
-                                    <div className="flex items-center gap-1.5">
-                                      <Icon icon="lucide:ship" width={14} height={14} className="shrink-0 text-dash-neon" aria-hidden />
-                                      <span className="truncate text-dash-fg/90">
-                                        {op.naviera ?? "—"}
-                                        {op.nave ? ` · ${op.nave}` : ""}
+
+                                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                    {op.contenedor && op.ref_asli && (
+                                      <span className="truncate font-mono text-[10px] text-dash-muted">
+                                        {tr.refAsli}: {op.ref_asli}
                                       </span>
-                                    </div>
-                                    {op.viaje?.trim() ? (
-                                      <div className="flex items-center gap-1.5">
-                                        <Icon
-                                          icon="lucide:compass"
-                                          width={14}
-                                          height={14}
-                                          className="shrink-0 text-dash-neon"
-                                          aria-hidden
-                                        />
-                                        <span>
-                                          {tr.colViaje}: {op.viaje}
-                                        </span>
-                                      </div>
-                                    ) : null}
-                                    <div className="flex items-center gap-1.5">
-                                      <Icon icon="lucide:map-pin" width={14} height={14} className="shrink-0 text-dash-neon" aria-hidden />
-                                      <span className="truncate">
-                                        {op.pol ?? "—"} → {op.pod ?? "—"}
+                                    )}
+                                    {opTienePosicionManualVisible(results, op) && (
+                                      <span className="rounded border border-[color-mix(in_srgb,var(--trk-vessel-manual)_45%,transparent)] bg-[color-mix(in_srgb,var(--trk-vessel-manual)_18%,transparent)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-dash-fg">
+                                        {tr.manualCoordsBadge}
                                       </span>
-                                    </div>
-                                    {(op.etd || op.eta) && (
-                                      <div className="flex flex-wrap gap-2 pt-0.5">
-                                        {op.etd && (
-                                          <span className="inline-flex items-center gap-1 rounded-md border border-dash-border bg-dash-control px-2 py-0.5 font-mono text-[10px] text-dash-fg">
-                                            ETD {formatDate(op.etd, locale)}
-                                          </span>
-                                        )}
-                                        {op.eta && (
-                                          <span className="inline-flex items-center gap-1 rounded-md border border-dash-border bg-dash-control px-2 py-0.5 font-mono text-[10px] text-dash-fg">
-                                            ETA {formatDate(op.eta, locale)}
-                                          </span>
-                                        )}
-                                      </div>
                                     )}
                                   </div>
+
+                                  <p className="mt-2 flex items-center gap-1.5 text-xs">
+                                    <Icon icon="lucide:ship" width={14} height={14} className="shrink-0 text-dash-neon" aria-hidden />
+                                    <span className="truncate text-dash-fg/90">
+                                      {op.naviera ?? "—"}
+                                      {op.nave ? ` · ${op.nave}` : ""}
+                                      {op.viaje?.trim() ? ` · ${op.viaje}` : ""}
+                                    </span>
+                                  </p>
+
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <div className="min-w-0 flex-1">
+                                      <span className="block text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">
+                                        POL
+                                      </span>
+                                      <span className="block truncate text-[11px] font-semibold text-dash-fg">
+                                        {op.pol ?? "—"}
+                                      </span>
+                                      {op.etd && (
+                                        <span className="mt-0.5 block truncate text-[10px] tabular-nums text-dash-muted">
+                                          ETD {formatDate(op.etd, locale)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-1" aria-hidden>
+                                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--trk-pol)]" />
+                                      <span className="h-px w-5 bg-gradient-to-r from-[var(--trk-pol)] to-[var(--trk-pod)] opacity-60" />
+                                      <span className="h-1.5 w-1.5 rotate-45 bg-[var(--trk-pod)]" />
+                                    </div>
+                                    <div className="min-w-0 flex-1 text-right">
+                                      <span className="block text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">
+                                        POD
+                                      </span>
+                                      <span className="block truncate text-[11px] font-semibold text-dash-fg">
+                                        {op.pod ?? "—"}
+                                      </span>
+                                      {op.eta && (
+                                        <span className="mt-0.5 block truncate text-[10px] tabular-nums text-dash-muted">
+                                          ETA {formatDate(op.eta, locale)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
                                   {user && op.nave?.trim() && (
                                     <button
                                       type="button"
@@ -1175,7 +1193,7 @@ export function TrackingContent() {
                                         e.stopPropagation();
                                         handleQuickAisFromOp(op.nave);
                                       }}
-                                      className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-dash-neon hover:underline"
+                                      className="mt-2.5 inline-flex items-center gap-1 border-t border-dash-border/60 pt-2 text-[11px] font-semibold text-dash-neon hover:underline"
                                     >
                                       <Icon icon="lucide:radar" width={12} height={12} aria-hidden />
                                       {tr.aisFromOperation}
@@ -1193,11 +1211,11 @@ export function TrackingContent() {
 
                 {canSetManualCoords && selectedOp && results.length > 0 && (
                   <section
-                    className="mx-3 mb-3 space-y-2 rounded-xl border border-violet-400/35 bg-violet-500/10 p-3"
+                    className="mx-3 mb-3 space-y-2 rounded-xl border border-[color-mix(in_srgb,var(--trk-vessel-manual)_38%,transparent)] bg-[color-mix(in_srgb,var(--trk-vessel-manual)_12%,transparent)] p-3"
                     aria-label={tr.manualCoordsBtn}
                   >
                     <p className="flex items-start gap-1.5 text-[11px] leading-snug text-dash-muted">
-                      <Icon icon="lucide:crosshair" width={14} height={14} className="mt-0.5 shrink-0 text-violet-300" aria-hidden />
+                      <Icon icon="lucide:crosshair" width={14} height={14} className="mt-0.5 shrink-0 text-[var(--trk-vessel-manual)]" aria-hidden />
                       {tr.manualSidebarHint}
                     </p>
                     <button
@@ -1378,6 +1396,20 @@ export function TrackingContent() {
                   Lista
                 </button>
 
+                {sidebarCollapsed && (
+                  <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(false)}
+                    aria-controls="tracking-sidebar"
+                    aria-expanded={false}
+                    title={tr.panelExpand}
+                    className="dash-control hidden shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold lg:inline-flex"
+                  >
+                    <Icon icon="lucide:panel-left-open" width={15} height={15} aria-hidden />
+                    {tr.panelExpand}
+                  </button>
+                )}
+
                 {selectedOp ? (
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2.5 py-1 text-[11px]">
@@ -1386,12 +1418,12 @@ export function TrackingContent() {
                         {selectedOp.contenedor || selectedOp.ref_asli || "—"}
                       </span>
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-2.5 py-1 text-[11px] text-dash-fg">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--trk-pol)_38%,transparent)] bg-[color-mix(in_srgb,var(--trk-pol)_15%,transparent)] px-2.5 py-1 text-[11px] text-dash-fg">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--trk-pol)]" aria-hidden />
                       POL {selectedOp.pol ?? "—"}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/35 bg-amber-500/15 px-2.5 py-1 text-[11px] text-dash-fg">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-hidden />
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--trk-pod)_38%,transparent)] bg-[color-mix(in_srgb,var(--trk-pod)_15%,transparent)] px-2.5 py-1 text-[11px] text-dash-fg">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--trk-pod)]" aria-hidden />
                       POD {selectedOp.pod ?? "—"}
                     </span>
                     {selectedOp.nave && (
@@ -1427,24 +1459,40 @@ export function TrackingContent() {
                 </div>
 
                 {cargoVessel && (
-                  <div className="absolute inset-x-2 bottom-2 top-auto z-[8] max-h-[min(48%,360px)] overflow-hidden rounded-xl border border-violet-400/40 bg-dash-surface/95 shadow-lg backdrop-blur-md sm:inset-x-auto sm:left-3 sm:right-auto sm:w-[min(100%,380px)]">
-                    <div className="flex items-start justify-between gap-2 border-b border-dash-border px-3 py-2.5">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-dash-fg">
-                          {tr.vesselCargoTitle.replace("{{nave}}", cargoVessel.name)}
-                        </p>
-                        <p className="mt-0.5 text-[10px] leading-snug text-dash-muted">{tr.vesselCargoHint}</p>
-                      </div>
+                  <section
+                    aria-label={tr.vesselCargoTitle.replace("{{nave}}", cargoVessel.name)}
+                    className="absolute inset-x-2 bottom-2 top-auto z-[8] flex max-h-[min(56%,440px)] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--trk-vessel)_55%,transparent)] bg-dash-surface shadow-[0_20px_56px_-16px_rgba(0,0,0,0.45)] sm:inset-x-auto sm:left-3 sm:right-auto sm:w-[min(100%,400px)]">
+                    <header className="flex shrink-0 items-start gap-2.5 border-b border-dash-border bg-[color-mix(in_srgb,var(--trk-vessel)_12%,transparent)] px-3.5 py-3">
+                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--trk-vessel)_50%,transparent)] bg-[color-mix(in_srgb,var(--trk-vessel)_20%,transparent)] text-dash-fg">
+                        <Icon icon="lucide:ship" width={18} height={18} aria-hidden />
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-[15px] font-bold leading-tight tracking-tight text-dash-fg">
+                        {cargoVessel.name}
+                      </p>
                       <button
                         type="button"
                         onClick={closeCargoPanel}
-                        className="dash-control shrink-0 px-2 py-1 text-[11px] font-semibold"
+                        className="dash-control -mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
                         aria-label={tr.vesselCargoClose}
+                        title={tr.vesselCargoClose}
                       >
-                        {tr.vesselCargoClose}
+                        <Icon icon="lucide:x" width={14} height={14} aria-hidden />
                       </button>
-                    </div>
-                    <div className="max-h-[min(40vh,280px)] overflow-y-auto p-2.5">
+                    </header>
+
+                    {!cargoLoading && cargoOps.length > 0 && (
+                      <div className="shrink-0 border-b border-dash-border/60 px-3.5 py-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--trk-vessel)_45%,transparent)] bg-[color-mix(in_srgb,var(--trk-vessel)_18%,transparent)] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-dash-fg">
+                          <Icon icon="lucide:container" width={11} height={11} aria-hidden />
+                          {(cargoOps.length === 1 ? tr.vesselCargoCountOne : tr.vesselCargoCount).replace(
+                            "{{count}}",
+                            String(cargoOps.length),
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
                       {cargoLoading ? (
                         <p className="flex items-center gap-2 px-1 py-3 text-xs text-dash-muted">
                           <Icon icon="lucide:loader-2" width={14} height={14} className="animate-spin" aria-hidden />
@@ -1455,64 +1503,84 @@ export function TrackingContent() {
                           {cargoError}
                         </p>
                       ) : (
-                        <>
-                          <p className="mb-2 px-1 text-[11px] font-semibold text-dash-neon">
-                            {tr.vesselCargoCount.replace("{{count}}", String(cargoOps.length))}
-                          </p>
-                          <ul className="space-y-2">
-                            {cargoOps.map((op) => (
-                              <li key={op.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedOpId(op.id)}
-                                  className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
-                                    selectedOpId === op.id
-                                      ? "border-violet-400/50 bg-violet-500/15"
-                                      : "border-dash-border bg-dash-control/50 hover:border-dash-neon/35"
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="truncate text-xs font-bold text-dash-fg">
-                                      {op.contenedor?.trim() || "—"}
+                        <ul className="space-y-2">
+                          {cargoOps.map((op) => (
+                            <li key={op.id}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOpId(op.id)}
+                                className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                                  selectedOpId === op.id
+                                    ? "border-[color-mix(in_srgb,var(--trk-vessel)_60%,transparent)] bg-[color-mix(in_srgb,var(--trk-vessel)_10%,transparent)] shadow-[inset_3px_0_0_0_var(--trk-vessel)]"
+                                    : "border-dash-border bg-dash-control/40 hover:border-[color-mix(in_srgb,var(--trk-vessel)_38%,transparent)] hover:bg-dash-control/70"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="truncate font-mono text-[13px] font-bold tabular-nums tracking-tight text-dash-fg">
+                                    {op.contenedor?.trim() || "—"}
+                                  </span>
+                                  <span className="shrink-0 rounded-md border border-dash-border bg-dash-surface/70 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-dash-muted">
+                                    {op.ref_asli || "—"}
+                                  </span>
+                                </div>
+
+                                <div className="mt-2.5 flex items-center gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">
+                                      {tr.vesselCargoPol}
                                     </span>
-                                    <span className="shrink-0 text-[10px] font-semibold text-dash-muted">
-                                      {op.ref_asli || "—"}
+                                    <span className="block truncate text-[11px] font-semibold text-dash-fg">
+                                      {op.pol?.trim() || "—"}
+                                    </span>
+                                    <span className="mt-0.5 block truncate text-[10px] tabular-nums text-dash-muted">
+                                      <span className="text-dash-muted/70">{tr.vesselCargoEtd}</span>{" "}
+                                      {formatDate(op.etd, locale)}
                                     </span>
                                   </div>
-                                  <dl className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-dash-muted">
-                                    <div>
-                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoSpecies}</dt>
-                                      <dd className="truncate text-dash-fg/90">{op.especie?.trim() || "—"}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoPod}</dt>
-                                      <dd className="truncate text-dash-fg/90">{op.pod?.trim() || "—"}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoEta}</dt>
-                                      <dd className="text-dash-fg/90">{formatDate(op.eta, locale)}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoEtd}</dt>
-                                      <dd className="text-dash-fg/90">{formatDate(op.etd, locale)}</dd>
-                                    </div>
-                                    <div className="col-span-2">
-                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoBooking}</dt>
-                                      <dd className="truncate text-dash-fg/90">{op.booking?.trim() || "—"}</dd>
-                                    </div>
-                                    <div className="col-span-2">
-                                      <dt className="font-semibold text-dash-muted/80">{tr.vesselCargoPol}</dt>
-                                      <dd className="truncate text-dash-fg/90">{op.pol?.trim() || "—"}</dd>
-                                    </div>
-                                  </dl>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </>
+                                  <div className="flex shrink-0 items-center gap-1" aria-hidden>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--trk-pol)]" />
+                                    <span className="h-px w-5 bg-gradient-to-r from-[var(--trk-pol)] to-[var(--trk-pod)] opacity-60" />
+                                    <span className="h-1.5 w-1.5 rotate-45 bg-[var(--trk-pod)]" />
+                                  </div>
+                                  <div className="min-w-0 flex-1 text-right">
+                                    <span className="block text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">
+                                      {tr.vesselCargoPod}
+                                    </span>
+                                    <span className="block truncate text-[11px] font-semibold text-dash-fg">
+                                      {op.pod?.trim() || "—"}
+                                    </span>
+                                    <span className="mt-0.5 block truncate text-[10px] tabular-nums text-dash-muted">
+                                      <span className="text-dash-muted/70">{tr.vesselCargoEta}</span>{" "}
+                                      {formatDate(op.eta, locale)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <dl className="mt-2.5 grid grid-cols-2 gap-x-3 border-t border-dash-border/60 pt-2 text-[10px]">
+                                  <div className="min-w-0">
+                                    <dt className="text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">
+                                      {tr.vesselCargoSpecies}
+                                    </dt>
+                                    <dd className="truncate text-dash-fg/90">{op.especie?.trim() || "—"}</dd>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <dt className="text-[9px] font-semibold uppercase tracking-wider text-dash-muted/70">
+                                      {tr.vesselCargoBooking}
+                                    </dt>
+                                    <dd className="truncate font-mono text-dash-fg/90">{op.booking?.trim() || "—"}</dd>
+                                  </div>
+                                </dl>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
-                  </div>
+
+                    <p className="shrink-0 border-t border-dash-border/60 px-3.5 py-2 text-[10px] leading-snug text-dash-muted/80">
+                      {tr.vesselCargoHint}
+                    </p>
+                  </section>
                 )}
 
                 <ManualTrackingCoordsModal

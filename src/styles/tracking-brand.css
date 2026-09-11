@@ -1,0 +1,66 @@
+/**
+ * Paleta corporativa ASLI acotada al módulo de tracking.
+ *
+ * El sistema `dash-neon` usa un acento cian (#00e8ff) que no pertenece al manual
+ * de identidad. Acá se remapean las mismas variables a los colores de marca, así
+ * toda la sección cambia de paleta sin tocar clase por clase. La especificidad
+ * (.dash-neon.tracking-brand[data-theme]) gana sobre la declaración base.
+ *
+ * Manual: cream #F6EEE8 · teal #007A7B · petróleo #003F5A · navy #11224E · oliva #669900
+ * En tema oscuro los corporativos se aclaran, porque a valor nominal no tienen
+ * contraste suficiente sobre el navy de fondo.
+ */
+
+.dash-neon.tracking-brand[data-theme="dark"] {
+  --dash-bg: #080f26;
+  --dash-header: #0d1836;
+  --dash-surface: #11224e;
+  --dash-surface-hover: #1a2f63;
+  --dash-control: #16274f;
+  --dash-control-hover: #1f3768;
+  --dash-fg: #f6eee8;
+  --dash-muted: #9bb4c4;
+  --dash-neon: #33bdbd;
+  --dash-neon-hot: #8cc63f;
+  --dash-border: rgba(51, 189, 189, 0.26);
+  --dash-glow: 0 0 0 1px rgba(51, 189, 189, 0.22), 0 12px 40px -18px rgba(51, 189, 189, 0.45);
+
+  --trk-pol: #8cc63f;
+  --trk-pod: #e3a857;
+  --trk-vessel: #33bdbd;
+  --trk-vessel-manual: #4e9fc4;
+  --trk-water: #0a3556;
+  --trk-land: #141e2e;
+
+  background:
+    radial-gradient(900px 480px at 0% -10%, rgba(51, 189, 189, 0.13), transparent 55%),
+    radial-gradient(700px 400px at 100% 0%, rgba(140, 198, 63, 0.08), transparent 50%),
+    var(--dash-bg);
+}
+
+.dash-neon.tracking-brand[data-theme="light"] {
+  --dash-bg: #f6eee8;
+  --dash-header: #fffaf6;
+  --dash-surface: #ffffff;
+  --dash-surface-hover: #fbf4ee;
+  --dash-control: #f0e6dd;
+  --dash-control-hover: #e6d8cc;
+  --dash-fg: #11224e;
+  --dash-muted: #5d7385;
+  --dash-neon: #007a7b;
+  --dash-neon-hot: #669900;
+  --dash-border: rgba(0, 122, 123, 0.28);
+  --dash-glow: 0 0 0 1px rgba(0, 122, 123, 0.18), 0 14px 36px -20px rgba(17, 34, 78, 0.28);
+
+  --trk-pol: #669900;
+  --trk-pod: #c0762a;
+  --trk-vessel: #007a7b;
+  --trk-vessel-manual: #003f5a;
+  --trk-water: #a9cfee;
+  --trk-land: #f6eee8;
+
+  background:
+    radial-gradient(1000px 460px at 8% -8%, rgba(0, 122, 123, 0.12), transparent 55%),
+    radial-gradient(800px 400px at 100% 0%, rgba(102, 153, 0, 0.07), transparent 50%),
+    var(--dash-bg);
+}

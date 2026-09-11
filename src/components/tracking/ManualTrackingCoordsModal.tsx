@@ -134,7 +134,7 @@ export function ManualTrackingCoordsModal({
               {vesselLabel}
             </p>
             {groupHint ? (
-              <p className="mt-2 text-[11px] leading-snug text-violet-300/90">{groupHint}</p>
+              <p className="mt-2 text-[11px] leading-snug text-[var(--trk-vessel-manual)]">{groupHint}</p>
             ) : null}
           </div>
           <button
