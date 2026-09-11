@@ -150,6 +150,29 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           <span className={labelCls}>{t.sidebar.tracking}</span>
         </a>
 
+        {!user ? (
+          <>
+            <a
+              href={withBase("/servicios")}
+              className={`${navBtn} ${pathname === "/servicios" ? navActive : ""}`}
+              title={t.nav.servicios}
+              {...navPrefetch("/servicios")}
+            >
+              <Icon icon="lucide:briefcase" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
+              <span className={labelCls}>{t.nav.servicios}</span>
+            </a>
+            <a
+              href={withBase("/sobre-nosotros")}
+              className={`${navBtn} ${pathname === "/sobre-nosotros" ? navActive : ""}`}
+              title={t.nav.sobreNosotros}
+              {...navPrefetch("/sobre-nosotros")}
+            >
+              <Icon icon="lucide:building-2" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
+              <span className={labelCls}>{t.nav.sobreNosotros}</span>
+            </a>
+          </>
+        ) : null}
+
         <div className="mx-2 my-1.5 h-px bg-white/10" />
 
         {items.map((item) => {

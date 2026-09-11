@@ -7,11 +7,6 @@ export const marketingHomeUrl = "/" as const;
 export const siteConfig = {
   logo: brand.logo,
   companyTitle: brand.companyTitle,
-  navItems: [
-    { labelKey: "inicio", href: "/inicio" },
-    { labelKey: "servicios", href: "/servicios" },
-    { labelKey: "sobreNosotros", href: "/sobre-nosotros" },
-  ] as const,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
     { labelKey: "tareas", id: "tareas", href: "/tareas", superadminOnly: true },

@@ -257,36 +257,26 @@ text-brand-blue font-medium hover:underline focus:outline-none focus:underline
 
 ## Layout y estructura
 
-### Header
+### AppIconRail
 
-- Altura fija: `h-[50px] min-h-[50px]`
-- Fondo: `bg-white`
-- Posición: `sticky top-0 z-50`
-- Flex: `flex items-center justify-between px-4`
+- Ancho colapsado: `w-[64px]`; expandido al hover: `w-[248px]`
+- Fondo: `bg-[#0B1A3D]`
+- Borde: `border-r border-black/20`
 
-### NavBanner
+### Header (compacto)
 
-- Altura: `h-[30px] min-h-[30px]`
-- Fondo: `bg-neutral-600`
-- Sombra: `shadow-md`
-
-### Sidebar
-
-- Ancho: `w-40`
-- Fondo: `bg-neutral-600`
-- Padding: `pt-16 pb-3 px-2`
-- Sombra: `shadow-lg`
+- Altura fija: `h-[60px]`
+- Fondo: `bg-[#0B1A3D]/95` (tone dark, sobre el rail)
+- Posición: overlay absoluto sobre el contenido (`z-50`)
 
 ### Main (contenido)
 
-```
-flex-1 bg-brand-blue min-h-0 overflow-auto
-```
+Fondo según ruta (`routeChrome`): módulo `#D9E3F2`, marketing/dashboard `#050914`.
 
 ### Layout auth (login / registro)
 
-- Fondo: `min-h-screen bg-brand-blue p-4`
-- Contenedor: `max-w-md` centrado
+- Fondo: `bg-[#050914]`
+- Contenedor centrado en el área de contenido (con rail + header)
 - Logo: `absolute top-6 left-1/2 -translate-x-1/2`
 - Footer: `text-xs text-white/60 text-center`
 

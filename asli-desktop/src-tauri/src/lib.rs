@@ -1,3 +1,6 @@
+#[cfg(not(debug_assertions))]
+const ERP_URL: &str = "https://www.asli.cl/embarques/";
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -45,25 +48,54 @@ pub fn run() {
             {
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    // Esperar a que la webview cargue; si no, el overlay no se ve.
-                    tokio::time::sleep(std::time::Duration::from_millis(1800)).await;
+                    // Splash local primero: no abrir el ERP hasta terminar el check.
+                    // Así el MessageBox no queda encima de una UI web (a veces cacheada).
                     if let Err(err) = run_updater(handle.clone()).await {
                         eprintln!("[asli-desktop] updater: {err}");
                         hide_update_overlay(&handle);
-                        show_error_overlay(
+                        show_error_message(
                             &handle,
                             "No se pudo actualizar el acceso de escritorio",
                             &format!(
                                 "{err}\n\nPuedes instalar a mano desde GitHub Releases (desktop-v más reciente)."
                             ),
-                        );
+                        )
+                        .await;
                     }
+                    // Si hubo install + restart, este punto no se alcanza.
+                    navigate_to_erp(&handle);
                 });
             }
+
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running ASLI Embarques");
+}
+
+#[cfg(not(debug_assertions))]
+fn navigate_to_erp(app: &tauri::AppHandle) {
+    use tauri::{Manager, Url};
+
+    let bust = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let raw = format!("{ERP_URL}?desktop={bust}");
+
+    let Some(win) = app.get_webview_window("main") else {
+        eprintln!("[asli-desktop] navigate: ventana main no encontrada");
+        return;
+    };
+
+    match Url::parse(&raw) {
+        Ok(url) => {
+            if let Err(err) = win.navigate(url) {
+                eprintln!("[asli-desktop] navigate: {err}");
+            }
+        }
+        Err(err) => eprintln!("[asli-desktop] navigate parse: {err}"),
+    }
 }
 
 #[cfg(not(debug_assertions))]
@@ -151,29 +183,76 @@ fn set_update_progress(app: &tauri::AppHandle, pct: u32) {
     );
 }
 
+/// Error de update: MessageBox nativo (el splash aún no es el ERP).
 #[cfg(not(debug_assertions))]
-fn show_error_overlay(app: &tauri::AppHandle, title: &str, body: &str) {
-    let title = escape_js(title);
-    let body = escape_js(body);
-    eval_main(
-        app,
-        &format!(
-            r#"(function(){{
-  var el = document.getElementById('asli-desktop-update-overlay');
-  if (el) el.remove();
-  el = document.createElement('div');
-  el.id = 'asli-desktop-update-overlay';
-  el.setAttribute('role', 'alertdialog');
-  el.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(10,18,36,.72);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
-  el.innerHTML = '<div style="width:min(420px,92vw);background:#fff;color:#11224E;border-radius:4px;padding:22px 24px;box-shadow:0 16px 48px rgba(0,0,0,.35);text-align:left">' +
-    '<div style="font-weight:700;font-size:16px;margin-bottom:8px">{title}</div>' +
-    '<div style="font-size:13px;color:#5a6b85;line-height:1.45;white-space:pre-wrap;margin-bottom:18px">{body}</div>' +
-    '<div style="text-align:right"><button id="asli-desktop-update-ok" style="appearance:none;border:0;background:#11224E;color:#fff;font-weight:600;font-size:13px;padding:10px 16px;border-radius:4px;cursor:pointer">Entendido</button></div></div>';
-  document.documentElement.appendChild(el);
-  document.getElementById('asli-desktop-update-ok').onclick = function(){{ el.remove(); }};
-}})();"#
-        ),
-    );
+async fn show_error_message(app: &tauri::AppHandle, title: &str, body: &str) {
+    use tauri::Manager;
+
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_focus();
+    }
+
+    #[cfg(windows)]
+    {
+        let title = title.to_string();
+        let body = body.to_string();
+        let _ = tokio::task::spawn_blocking(move || show_error_win32(&title, &body)).await;
+    }
+
+    #[cfg(not(windows))]
+    {
+        use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        app.dialog()
+            .message(body)
+            .title(title)
+            .kind(MessageDialogKind::Error)
+            .buttons(MessageDialogButtons::Ok)
+            .show(move |_| {
+                let _ = tx.send(());
+            });
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(900), rx).await;
+    }
+}
+
+#[cfg(all(not(debug_assertions), windows))]
+fn show_error_win32(title: &str, body: &str) {
+    use std::os::windows::ffi::OsStrExt;
+
+    fn wide(s: &str) -> Vec<u16> {
+        std::ffi::OsStr::new(s)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
+    }
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn MessageBoxW(
+            h_wnd: *mut core::ffi::c_void,
+            lp_text: *const u16,
+            lp_caption: *const u16,
+            u_type: u32,
+        ) -> i32;
+    }
+
+    const MB_OK: u32 = 0x0000_0000;
+    const MB_ICONERROR: u32 = 0x0000_0010;
+    const MB_TOPMOST: u32 = 0x0004_0000;
+    const MB_SETFOREGROUND: u32 = 0x0001_0000;
+
+    let title = wide(title);
+    let text = wide(body);
+    let flags = MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND;
+
+    unsafe {
+        MessageBoxW(
+            std::ptr::null_mut(),
+            text.as_ptr(),
+            title.as_ptr(),
+            flags,
+        );
+    }
 }
 
 /// MessageBox de Win32 siempre encima (MB_TOPMOST). Evita overlay web y dialog Tauri.

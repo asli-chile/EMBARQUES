@@ -1,15 +1,11 @@
 /**
  * Estado de carga de una ruta (fallback de Suspense y de los guards de rol).
  *
- * Pinta el fondo de la página que está por llegar, no siempre el de un módulo:
- * mostrar el esqueleto azul antes de una landing crema se ve como un pestañeo.
- * La clasificación vive en `src/lib/ui/routeChrome.ts`.
+ * Pinta el fondo de la página que está por llegar. El chrome exterior (rail)
+ * lo monta `AppChromeFrame`; este fallback solo llena el área de contenido.
  *
  * En los módulos, además, reserva la misma estructura que tendrá el contenido
  * real (hero, toolbar, card) para que al llegar no salte el layout.
- *
- * Debe mantenerse visualmente idéntico al loader pre-hidratación de
- * `layouts/BaseLayout.astro`. Si cambias uno, cambia el otro.
  *
  * Sistema de motion: docs/MOTION-DESIGN.md
  */

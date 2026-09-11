@@ -1,6 +1,5 @@
 import { Header } from "./Header";
 import { ViewAsBanner } from "./ViewAsControl";
-import { NavBanner } from "./NavBanner";
 import { AppIconRail } from "./AppIconRail";
 import { ConfigGuard } from "./ConfigGuard";
 import { CartolasNuboxGuard } from "./CartolasNuboxGuard";
@@ -139,32 +138,16 @@ type AppShellProps = {
 };
 
 export function AppShell({ children, pathname }: AppShellProps) {
-  const isAuthRoute = pathname.startsWith("/auth");
-
   useEffect(() => {
     prefetchFrequentRoutes();
   }, []);
 
-  if (isAuthRoute) {
-    return (
-      <LocaleProvider>
-        <AuthProvider>
-          <AuthFormModalProvider>
-            <div className="h-dvh max-w-full min-w-0 flex flex-col overflow-hidden">
-              <Header />
-              <NavBanner pathname={pathname} />
-              <main className="flex-1 min-h-0 overflow-auto bg-brand-blue p-4 flex flex-col items-center justify-center">
-                {children}
-              </main>
-            </div>
-          </AuthFormModalProvider>
-        </AuthProvider>
-      </LocaleProvider>
-    );
-  }
-
   const mainContent =
-    pathname === "/dashboard" ? (
+    pathname.startsWith("/auth") ? (
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto bg-[#050914] p-4">
+        {children}
+      </main>
+    ) : pathname === "/dashboard" ? (
       <Sus>
         <LazyDashboardPanel />
       </Sus>
@@ -336,7 +319,7 @@ export function AppShell({ children, pathname }: AppShellProps) {
   );
 }
 
-/** Chrome: rail navy en módulos ERP (logueados) y en /inicio + /tracking (también sin sesión). */
+/** Chrome único del ERP: rail navy + header compact. Sin Header claro ni NavBanner. */
 function AppChromeFrame({
   pathname,
   hideAppChrome,
@@ -346,22 +329,13 @@ function AppChromeFrame({
   hideAppChrome: boolean;
   children: ReactNode;
 }) {
-  const { user, isLoading, viewAs, isActualSuperadmin } = useAuth();
-  const chrome = getRouteChrome(pathname);
-  const isMarketing = chrome === "marketing";
-  // /inicio y /tracking usan siempre el chrome ERP (rail + header compact), con o sin sesión.
-  // Evita el Header claro + NavBanner público (interfaz antigua) en Tracking.
-  const showRail =
-    pathname === "/inicio" ||
-    pathname === "/tracking" ||
-    (!!user && !isLoading && !isMarketing);
+  const { viewAs, isActualSuperadmin } = useAuth();
   const showViewAsBanner = isActualSuperadmin && !!viewAs;
 
   if (hideAppChrome) {
-    // Informativos: rail global + sin Header/NavBanner (el estudio es pantalla completa)
     return (
       <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
-        {showRail ? <AppIconRail pathname={pathname} /> : null}
+        <AppIconRail pathname={pathname} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {showViewAsBanner ? <ViewAsBanner /> : null}
           {children}
@@ -370,38 +344,26 @@ function AppChromeFrame({
     );
   }
 
-  if (showRail) {
-    // En /inicio el fondo debe pasar detrás del header; en el resto se reserva espacio.
-    const contentClearsHeader = pathname !== "/inicio";
-    const topPad = (contentClearsHeader ? 60 : 0) + (showViewAsBanner ? 34 : 0);
-    return (
-      <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
-        <AppIconRail pathname={pathname} />
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
-            <div className="pointer-events-auto">
-              <Header compact />
-              {showViewAsBanner ? <ViewAsBanner /> : null}
-            </div>
-          </div>
-          <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-            style={topPad > 0 ? { paddingTop: topPad } : undefined}
-          >
-            {children}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // En /inicio el fondo pasa detrás del header; en el resto se reserva espacio.
+  const contentClearsHeader = pathname !== "/inicio";
+  const topPad = (contentClearsHeader ? 60 : 0) + (showViewAsBanner ? 34 : 0);
 
   return (
-    <div className="flex h-dvh max-w-full min-w-0 flex-col overflow-hidden">
-      <Header />
-      {showViewAsBanner ? <ViewAsBanner /> : null}
-      <NavBanner pathname={pathname} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {children}
+    <div className="flex h-dvh max-w-full min-w-0 overflow-hidden">
+      <AppIconRail pathname={pathname} />
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-50">
+          <div className="pointer-events-auto">
+            <Header />
+            {showViewAsBanner ? <ViewAsBanner /> : null}
+          </div>
+        </div>
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+          style={topPad > 0 ? { paddingTop: topPad } : undefined}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

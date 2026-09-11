@@ -1,22 +1,8 @@
 import { RoleForbidden } from "./RoleForbidden";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
-import { ModuleInfoPlaceholder } from "./ModuleInfoPlaceholder";
 import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
-import { RegistrosVisitorPreview } from "@/components/registros/RegistrosVisitorPreview";
-import { CrearReservaVisitorPreview } from "@/components/reservas/CrearReservaVisitorPreview";
-import { MisReservasVisitorPreview } from "@/components/reservas/MisReservasVisitorPreview";
-import { PapeleraVisitorPreview } from "@/components/reservas/PapeleraVisitorPreview";
-import { ReservaAsliVisitorPreview } from "@/components/transportes/ReservaAsliVisitorPreview";
-import { ReservaExtVisitorPreview } from "@/components/transportes/ReservaExtVisitorPreview";
-import { PapeleraTransportesVisitorPreview } from "@/components/transportes/PapeleraTransportesVisitorPreview";
-import { FacturacionVisitorPreview } from "@/components/transportes/FacturacionVisitorPreview";
-import { MisDocumentosVisitorPreview } from "@/components/documentos/MisDocumentosVisitorPreview";
-import { CrearInstructivoVisitorPreview } from "@/components/documentos/CrearInstructivoVisitorPreview";
-import { CrearProformaVisitorPreview } from "@/components/documentos/CrearProformaVisitorPreview";
-import { ReportesVisitorPreview } from "@/components/reportes/ReportesVisitorPreview";
-import { FinanzasVisitorPreview } from "@/components/finanzas/FinanzasVisitorPreview";
-import { withBase } from "@/lib/basePath";
+import { VisitorModuleGate } from "./VisitorModuleGate";
 
 export type VisitorModuleKey =
   | "registros"
@@ -32,22 +18,6 @@ export type VisitorModuleKey =
   | "crearProforma"
   | "reportes"
   | "finanzas";
-
-const MODULE_KEY_TO_HREF: Record<VisitorModuleKey, string> = {
-  registros: withBase("/registros"),
-  crearReserva: withBase("/reservas/crear"),
-  misReservas: withBase("/reservas/mis-reservas"),
-  papelera: withBase("/reservas/papelera"),
-  papeleraTransportes: withBase("/transportes/papelera"),
-  reservaAsli: withBase("/transportes/reserva-asli"),
-  reservaExt: withBase("/transportes/reserva-ext"),
-  facturacion: withBase("/transportes/facturacion"),
-  misDocumentos: withBase("/documentos/mis-documentos"),
-  crearInstructivo: withBase("/documentos/crear-instructivo"),
-  crearProforma: withBase("/documentos/crear-proforma"),
-  reportes: withBase("/reportes"),
-  finanzas: withBase("/finanzas"),
-};
 
 const STAFF_ONLY_MODULES = new Set<VisitorModuleKey>([
   "registros",
@@ -68,14 +38,37 @@ const OPERATIONAL_MODULES = new Set<VisitorModuleKey>([
   "misDocumentos",
 ]);
 
+type ModuleInfo = {
+  title?: string;
+  description?: string;
+  highlight1?: string;
+  highlight2?: string;
+  highlight3?: string;
+};
+
+function readModuleInfo(visitor: unknown, moduleKey: VisitorModuleKey): ModuleInfo {
+  if (!visitor || typeof visitor !== "object") return {};
+  const entry = (visitor as Record<string, unknown>)[moduleKey];
+  if (!entry || typeof entry !== "object") return {};
+  const raw = entry as Record<string, unknown>;
+  const asText = (v: unknown) => (typeof v === "string" ? v : undefined);
+  return {
+    title: asText(raw.title),
+    description: asText(raw.description),
+    highlight1: asText(raw.highlight1),
+    highlight2: asText(raw.highlight2),
+    highlight3: asText(raw.highlight3),
+  };
+}
+
 type ModuleWithVisitorInfoProps = {
   moduleKey: VisitorModuleKey;
   children: React.ReactNode;
 };
 
 /**
- * Muestra contenido del módulo a usuarios autenticados según rol.
- * A usuarios externos (sin sesión) muestra descripción informativa del módulo.
+ * Muestra el módulo a usuarios autenticados según rol.
+ * Sin sesión: gate neon (sin layout/UI antiguos de preview).
  */
 export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitorInfoProps) {
   const { isExternalUser, isStaff, isCliente, isLoading } = useAuth();
@@ -86,21 +79,16 @@ export function ModuleWithVisitorInfo({ moduleKey, children }: ModuleWithVisitor
   }
 
   if (isExternalUser) {
-    if (moduleKey === "registros") return <RegistrosVisitorPreview />;
-    if (moduleKey === "crearReserva") return <CrearReservaVisitorPreview />;
-    if (moduleKey === "misReservas") return <MisReservasVisitorPreview />;
-    if (moduleKey === "papelera") return <PapeleraVisitorPreview />;
-    if (moduleKey === "papeleraTransportes") return <PapeleraTransportesVisitorPreview />;
-    if (moduleKey === "reservaAsli") return <ReservaAsliVisitorPreview />;
-    if (moduleKey === "reservaExt") return <ReservaExtVisitorPreview />;
-    if (moduleKey === "facturacion") return <FacturacionVisitorPreview />;
-    if (moduleKey === "misDocumentos") return <MisDocumentosVisitorPreview />;
-    if (moduleKey === "crearInstructivo") return <CrearInstructivoVisitorPreview />;
-    if (moduleKey === "crearProforma") return <CrearProformaVisitorPreview />;
-    if (moduleKey === "reportes") return <ReportesVisitorPreview />;
-    if (moduleKey === "finanzas") return <FinanzasVisitorPreview />;
-    const info = t.visitor[moduleKey];
-    return <ModuleInfoPlaceholder info={info} currentHref={MODULE_KEY_TO_HREF[moduleKey]} />;
+    const info = readModuleInfo(t.visitor, moduleKey);
+    return (
+      <VisitorModuleGate
+        title={info.title ?? t.visitor.moduleTitle}
+        description={info.description ?? ""}
+        highlights={[info.highlight1, info.highlight2, info.highlight3].filter(
+          (v): v is string => typeof v === "string" && v.length > 0,
+        )}
+      />
+    );
   }
 
   if (STAFF_ONLY_MODULES.has(moduleKey) && !isStaff) {

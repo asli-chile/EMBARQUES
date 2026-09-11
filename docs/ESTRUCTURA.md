@@ -22,15 +22,14 @@ El proyecto usa **Astro 5** como framework base con **React** para componentes i
 ```
 src/layouts/BaseLayout.astro
     └── AppShell (React, client:load)
-            ├── LocaleProvider (contexto de idioma)
-            ├── Header
-            ├── NavBanner
-            ├── Sidebar
+            ├── LocaleProvider / AuthProvider / …
+            ├── AppIconRail (rail navy)
+            ├── Header (compact, sobre el contenido)
             └── {children}  ← contenido de cada página
 ```
 
-- **BaseLayout.astro**: Define la fuente (Open Sans), metadata y el contenedor `AppShell`. Entrega el pathname actual para rutas de auth.
-- **AppShell**: Componente React que renderiza Header, NavBanner, Sidebar y envuelve todo con `LocaleProvider`.
+- **BaseLayout.astro**: Define la fuente (Open Sans), metadata, loader pre-hidratación (rail + fondo de ruta) y el contenedor `AppShell`.
+- **AppShell**: Componente React que monta el chrome único del ERP (`AppIconRail` + `Header` compacto) y envuelve todo con providers.
 - **LocaleProvider**: Contexto de React que expone `locale`, `setLocale` y `t` (traducciones) a los componentes hijos.
 
 ---
@@ -61,15 +60,15 @@ Las rutas de autenticación usan API en `src/pages/api/auth/` (login, signup, si
 ### AppShell (`src/components/layout/AppShell.tsx`)
 
 - **Componente React** con `client:load` (se hidrata en el cliente).
-- Recibe `pathname` para detectar rutas de auth y ocultar Header/Sidebar en login/registro.
-- Orquesta Header, NavBanner, Sidebar y el área de contenido.
-- Envuelve todo en `LocaleProvider`.
-- Layout flex: Header arriba, NavBanner debajo, Sidebar + contenido ocupando el resto.
+- Recibe `pathname` para elegir el contenido de cada ruta.
+- Orquesta `AppIconRail`, `Header` compacto y el área de contenido.
+- Envuelve todo en providers (`Locale`, `Auth`, notificaciones, etc.).
+- Layout flex: rail a la izquierda; columna derecha con header overlay + contenido.
 
 ### Flujo de datos
 
-1. `siteConfig` (lib/site.ts) define `navItems` y `sidebarItems`.
-2. `Header`, `NavBanner` y `Sidebar` importan `siteConfig` y lo usan para renderizar enlaces.
+1. `siteConfig` (`lib/site.ts`) define `sidebarItems` (menú del rail).
+2. `AppIconRail` filtra ítems con `getVisibleSidebarItems` según rol.
 3. Los textos visibles vienen de `translations` vía `useLocale().t` según el idioma activo.
 
 ---
@@ -107,9 +106,8 @@ t.nav.inicio  // "INICIO" o "HOME" según locale
 
 `src/lib/site.ts` centraliza la configuración editable:
 
-- **navItems**: Enlaces del NavBanner. Cada item tiene `labelKey` (clave en translations) y `href`.
-- **sidebarItems**: Estructura anidada. Items sin hijos son enlaces directos; items con `children` son submenús colapsables.
-- **user**: Datos estáticos del modal de perfil (hasta integrar autenticación real).
+- **sidebarItems**: Estructura anidada del rail. Items sin hijos son enlaces directos; items con `children` son submenús.
+- Flags por ítem (`staffOnly`, `operational`, `adminAndAbove`, etc.) controlan visibilidad por rol.
 
 ---
 
@@ -118,12 +116,10 @@ t.nav.inicio  // "INICIO" o "HOME" según locale
 | Componente | Tipo | Motivo |
 |------------|------|--------|
 | `BaseLayout.astro`, páginas `.astro` | Astro (estático) | Zero JS, renderizado en servidor. |
-| `Header` | React (dentro de AppShell) | Usa AuthWidget, HeaderTitle. |
-| `HeaderTitle` | React | Usa `useLocale()`. |
-| `NavBanner` | React | Usa `useLocale()`, recibe `pathname` como prop. |
-| `Sidebar` | React | Estado colapsado, `useLocale()`, eventos. |
-| `AppShell` | React (`client:load`) | Compositor que incluye `LocaleProvider`. |
-| `AuthWidget`, `AuthModal` | React | Estado del modal, Supabase, eventos. |
-| `LoginForm`, `RegistroForm` | React (`client:load`) | Formularios con `fetch` a API auth. |
+| `Header` | React (dentro de AppShell) | Controles de sesión, idioma, tema, notificaciones. |
+| `AppIconRail` | React | Navegación ERP; filtra por rol. |
+| `AppShell` | React (`client:load`) | Compositor + providers + rutas lazy. |
+| `AuthWidget`, `AuthFormModalOverlay` | React | Estado del modal, Supabase, eventos. |
+| `LoginForm`, `RegistroForm` | React | Formularios con `fetch` a API auth. |
 
 **Regla:** Páginas Astro por defecto (cero JS); componentes React con `client:load` solo donde se necesita interactividad (hooks, eventos, Supabase).

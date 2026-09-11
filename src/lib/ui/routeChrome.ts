@@ -2,28 +2,25 @@
  * Clasifica cada ruta según el aspecto base de su página.
  *
  * Existe para que el estado de carga tenga el color de la página que está por
- * llegar. Antes se mostraba el esqueleto azul de módulo en todas las rutas, así
- * que al entrar a `/inicio` (crema) o `/dashboard` (casi negro) se veía un
- * pestañeo azul que no tenía nada que ver con la página.
+ * llegar. Lo consumen el loader pre-hidratación de `layouts/BaseLayout.astro`
+ * y el fallback de Suspense de `components/layout/AppShell.tsx`.
  *
- * Lo consumen el loader pre-hidratación de `layouts/BaseLayout.astro` y el
- * fallback de Suspense de `components/layout/AppShell.tsx`, para que ambos
- * pinten el mismo fondo.
+ * El chrome exterior es siempre AppIconRail; aquí solo se elige el fondo del
+ * área de contenido.
  */
 
 export type RouteChrome =
   /** Módulo ERP: fondo azul claro, hero navy y barra de herramientas. */
   | "module"
-  /** Landing pública: superficie crema, sin estructura fija que anticipar. */
+  /** Landing / marketing: superficie neon oscura. */
   | "marketing"
-  /** Dashboard: fondo casi negro. */
+  /** Dashboard / tracking: fondo casi negro. */
   | "dashboard"
 
 const MARKETING_ROUTES = new Set(["/inicio", "/servicios", "/sobre-nosotros"]);
 
 export function getRouteChrome(pathname: string): RouteChrome {
   if (MARKETING_ROUTES.has(pathname)) return "marketing";
-  // Tracking es módulo dash (oscuro), no marketing: sin sesión también usa rail ERP.
   if (pathname === "/dashboard" || pathname === "/tracking") return "dashboard";
   return "module";
 }
@@ -32,10 +29,6 @@ export function getRouteChrome(pathname: string): RouteChrome {
  * Fondo de cada aspecto. Debe coincidir con el fondo real de la página:
  * `modulePageBg`, `--inicio-cream` (src/styles/inicio.css) y la raíz de
  * DashboardContent.
- *
- * En marketing se repite el crema como literal en vez de usar `.inicio-surface`
- * a propósito: esa clase además aplica `zoom: 1.2` y una familia tipográfica,
- * que acá escalarían el loader entero.
  */
 export const routeChromeBg: Record<RouteChrome, string> = {
   module: "bg-[#D9E3F2]",
@@ -45,8 +38,7 @@ export const routeChromeBg: Record<RouteChrome, string> = {
 
 /**
  * Solo los módulos tienen una estructura fija (hero + toolbar + card) que valga
- * la pena anticipar con huesos. En el resto, dibujarlos sería inventar un
- * layout que no existe: basta el fondo correcto.
+ * la pena anticipar con huesos. En el resto basta el fondo correcto.
  */
 export function hasSkeletonBones(chrome: RouteChrome): boolean {
   return chrome === "module";

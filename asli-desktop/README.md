@@ -7,6 +7,14 @@ Contenedor Windows que abre el ERP web. **Sigues desarrollando solo la web**; es
 | ERP (producto) | `https://www.asli.cl/embarques/` — cada deploy actualiza a todos |
 | Shell (este proyecto) | Ventana + auto-update del instalador + inicio con Windows |
 
+### Arranque (release)
+
+1. La ventana abre un **splash local** (`index.html`), no el ERP.
+2. Comprueba updates del `.exe` (MessageBox nativo si hay uno nuevo).
+3. Solo después navega a `https://www.asli.cl/embarques/` (con query anti-caché).
+
+Así no se ve la UI web detrás del diálogo de actualización.
+
 ## Arranque con el sistema
 
 Al abrir el `.exe` (release), se registra solo en el inicio de sesión de Windows
