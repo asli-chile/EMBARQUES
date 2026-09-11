@@ -1,4 +1,0 @@
-[[permission]]
-identifier = "allow-asli-desktop-update-choice"
-description = "Permite que el diálogo de actualización reporte la elección del usuario"
-commands.allow = ["asli_desktop_update_choice"]

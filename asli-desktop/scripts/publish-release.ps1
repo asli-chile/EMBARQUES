@@ -69,9 +69,8 @@ $json = ($latestObj | ConvertTo-Json -Depth 6 -Compress)
 $notes = @"
 Shell de escritorio $version.
 
-Corrige el boton Actualizar ahora del dialogo de auto-update (IPC directo en lugar de document.title).
+El aviso de actualizacion usa el dialogo nativo de Windows (el boton del overlay web no respondia).
 Al abrir, la ventana arranca maximizada.
-Barra de titulo integrada en el header del ERP.
 "@
 
 Write-Host "Creando release $tag..."
