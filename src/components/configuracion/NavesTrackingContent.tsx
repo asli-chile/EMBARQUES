@@ -34,9 +34,12 @@ type NaveCatalog = {
 
 type VesselDraft = {
   key: string;
-  naveRaw: string;
+  /** Nombre limpio sin viaje (para catálogo y UI). */
   catalogNombre: string;
-  viaje: string;
+  /** Viajes distintos detectados (campo viaje o sufijo en el nombre). */
+  viajes: string[];
+  /** Pares nave cruda + viaje para sincronizar coords en operaciones. */
+  syncTargets: { nave: string; viaje: string }[];
   naviera: string;
   pol: string;
   pod: string;
@@ -76,9 +79,32 @@ function normalizeField(s: string | null | undefined): string {
     .replace(/\s+/g, " ");
 }
 
-/** Quita sufijo de viaje tipo `[2538W]` embebido en el nombre de la operación. */
-function catalogNombreFromNave(nave: string): string {
-  return nave.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+/**
+ * Separa nombre de buque y viaje.
+ * Ej: "MSC BRUNELLA 635R" → nombre MSC BRUNELLA, viaje 635R
+ *     "HMM BLESSING [2538W]" → nombre HMM BLESSING, viaje 2538W
+ */
+function splitNaveYViaje(
+  naveRaw: string,
+  viajeField: string | null | undefined,
+): { nombre: string; viaje: string } {
+  let nombre = naveRaw.trim().replace(/\s+/g, " ");
+  let viaje = String(viajeField ?? "").trim();
+
+  const bracket = nombre.match(/^(.*?)\s*\[([^\]]+)\]\s*$/);
+  if (bracket) {
+    nombre = bracket[1].trim();
+    if (!viaje) viaje = bracket[2].trim();
+  }
+
+  // Sufijo de viaje suelto: 635R, 2538W, 546N, 2539w
+  const suffix = nombre.match(/^(.*?)\s+(\d{2,5}[A-Za-z]?)\s*$/);
+  if (suffix) {
+    nombre = suffix[1].trim();
+    if (!viaje) viaje = suffix[2].trim();
+  }
+
+  return { nombre, viaje };
 }
 
 function normalizeCatalogKey(nombre: string): string {
@@ -119,19 +145,37 @@ function groupOps(ops: OpRow[], catalogByKey: Map<string, NaveCatalog>): VesselD
   for (const op of ops) {
     const nave = (op.nave ?? "").trim();
     if (!nave) continue;
-    const key = `${normalizeField(nave)}|${normalizeField(op.viaje)}`;
+    const { nombre } = splitNaveYViaje(nave, op.viaje);
+    if (!nombre) continue;
+    const key = normalizeCatalogKey(nombre);
     const list = groups.get(key) ?? [];
     list.push(op);
     groups.set(key, list);
   }
 
   const rows: VesselDraft[] = [];
-  for (const [, list] of groups) {
+  for (const [key, list] of groups) {
     const sorted = [...list].sort((a, b) => String(a.eta ?? "").localeCompare(String(b.eta ?? "")));
     const primary = sorted[0]!;
-    const naveRaw = (primary.nave ?? "").trim();
-    const catalogNombre = catalogNombreFromNave(naveRaw);
-    const cat = catalogByKey.get(normalizeCatalogKey(catalogNombre)) ?? null;
+    const primarySplit = splitNaveYViaje((primary.nave ?? "").trim(), primary.viaje);
+    const catalogNombre = primarySplit.nombre;
+    const cat = catalogByKey.get(key) ?? catalogByKey.get(normalizeCatalogKey(catalogNombre)) ?? null;
+
+    const viajesSet = new Set<string>();
+    const syncKey = new Set<string>();
+    const syncTargets: { nave: string; viaje: string }[] = [];
+    for (const op of list) {
+      const raw = (op.nave ?? "").trim();
+      if (!raw) continue;
+      const split = splitNaveYViaje(raw, op.viaje);
+      if (split.viaje) viajesSet.add(split.viaje);
+      const sk = `${normalizeField(raw)}|${normalizeField(op.viaje)}`;
+      if (syncKey.has(sk)) continue;
+      syncKey.add(sk);
+      // RPC compara el texto crudo de operaciones.nave / .viaje
+      syncTargets.push({ nave: raw, viaje: (op.viaje ?? "").trim() });
+    }
+
     const coords = bestManualCoords(list);
     const imo = cat?.imo?.trim() ?? "";
     const mmsi = cat?.mmsi?.trim() ?? "";
@@ -139,10 +183,10 @@ function groupOps(ops: OpRow[], catalogByKey: Map<string, NaveCatalog>): VesselD
     const lng = coordToStr(coords?.lng);
 
     rows.push({
-      key: `${normalizeField(naveRaw)}|${normalizeField(primary.viaje)}`,
-      naveRaw,
+      key,
       catalogNombre,
-      viaje: (primary.viaje ?? "").trim(),
+      viajes: [...viajesSet].sort((a, b) => a.localeCompare(b)),
+      syncTargets,
       naviera: (primary.naviera ?? "").trim(),
       pol: (primary.pol ?? "").trim(),
       pod: (primary.pod ?? "").trim(),
@@ -161,7 +205,9 @@ function groupOps(ops: OpRow[], catalogByKey: Map<string, NaveCatalog>): VesselD
     });
   }
 
-  return rows.sort((a, b) => a.eta.localeCompare(b.eta) || a.naveRaw.localeCompare(b.naveRaw));
+  return rows.sort(
+    (a, b) => a.eta.localeCompare(b.eta) || a.catalogNombre.localeCompare(b.catalogNombre),
+  );
 }
 
 function isDirty(row: VesselDraft): boolean {
@@ -254,8 +300,8 @@ export function NavesTrackingContent() {
       if (onlyIncomplete && !isIncomplete(r)) return false;
       if (!q) return true;
       return (
-        r.naveRaw.toLowerCase().includes(q) ||
-        r.viaje.toLowerCase().includes(q) ||
+        r.catalogNombre.toLowerCase().includes(q) ||
+        r.viajes.some((v) => v.toLowerCase().includes(q)) ||
         r.naviera.toLowerCase().includes(q) ||
         r.pol.toLowerCase().includes(q) ||
         r.pod.toLowerCase().includes(q) ||
@@ -333,31 +379,22 @@ export function NavesTrackingContent() {
 
         const coordsChanged = latRaw !== row.savedLat.trim() || lngRaw !== row.savedLng.trim();
         if (coordsChanged) {
-          if (!hasAnyCoord) {
+          for (const target of row.syncTargets) {
             const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
-              p_nave: row.naveRaw,
-              p_viaje: row.viaje,
-              p_lat: 0,
-              p_lng: 0,
-              p_clear: true,
+              p_nave: target.nave,
+              p_viaje: target.viaje,
+              p_lat: hasAnyCoord ? lat : 0,
+              p_lng: hasAnyCoord ? lng : 0,
+              p_clear: !hasAnyCoord,
             });
             if (error) {
               sileo.error({ title: error.message || tr.saveError });
               return;
             }
+          }
+          if (!hasAnyCoord) {
             updateRow(row.key, { lat: "", lng: "", savedLat: "", savedLng: "" });
           } else {
-            const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
-              p_nave: row.naveRaw,
-              p_viaje: row.viaje,
-              p_lat: lat,
-              p_lng: lng,
-              p_clear: false,
-            });
-            if (error) {
-              sileo.error({ title: error.message || tr.saveError });
-              return;
-            }
             updateRow(row.key, {
               lat: String(lat),
               lng: String(lng),
@@ -380,16 +417,18 @@ export function NavesTrackingContent() {
       if (!supabase) return;
       setSavingKey(row.key);
       try {
-        const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
-          p_nave: row.naveRaw,
-          p_viaje: row.viaje,
-          p_lat: 0,
-          p_lng: 0,
-          p_clear: true,
-        });
-        if (error) {
-          sileo.error({ title: error.message || tr.saveError });
-          return;
+        for (const target of row.syncTargets) {
+          const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
+            p_nave: target.nave,
+            p_viaje: target.viaje,
+            p_lat: 0,
+            p_lng: 0,
+            p_clear: true,
+          });
+          if (error) {
+            sileo.error({ title: error.message || tr.saveError });
+            return;
+          }
         }
         updateRow(row.key, { lat: "", lng: "", savedLat: "", savedLng: "" });
         sileo.success({ title: tr.coordsCleared });
@@ -486,9 +525,11 @@ export function NavesTrackingContent() {
                   <article key={row.key} className="dash-card rounded-xl p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-bold text-dash-fg">{row.naveRaw}</p>
+                        <p className="font-bold text-dash-fg">{row.catalogNombre}</p>
                         <p className="text-xs text-dash-muted mt-0.5">
-                          {[row.viaje, row.naviera].filter(Boolean).join(" · ") || "—"}
+                          {[row.viajes.length ? `${tr.viaje}: ${row.viajes.join(", ")}` : null, row.naviera]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
                         </p>
                         <p className="text-xs text-dash-muted mt-1">
                           {row.pol || "—"} → {row.pod || "—"} · ETA {row.eta || "—"} · {row.opsCount}{" "}
@@ -553,14 +594,16 @@ export function NavesTrackingContent() {
                       return (
                         <tr key={row.key} className="align-top hover:bg-dash-control/30">
                           <td className="px-3 py-2.5">
-                            <p className="font-semibold text-dash-fg">{row.naveRaw}</p>
+                            <p className="font-semibold text-dash-fg">{row.catalogNombre}</p>
                             <p className="text-xs text-dash-muted">{row.naviera || "—"}</p>
                             {!row.naveId && <p className="text-[11px] text-amber-300 mt-0.5">{tr.noCatalog}</p>}
                             <div className="mt-1">
                               <StatusBadges row={row} tr={tr} />
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 text-dash-fg tabular-nums">{row.viaje || "—"}</td>
+                          <td className="px-3 py-2.5 text-dash-fg tabular-nums">
+                            {row.viajes.length > 0 ? row.viajes.join(", ") : "—"}
+                          </td>
                           <td className="px-3 py-2.5 text-dash-fg">
                             <span className="text-dash-muted">{row.pol || "—"}</span>
                             <span className="mx-1 text-dash-muted">→</span>
