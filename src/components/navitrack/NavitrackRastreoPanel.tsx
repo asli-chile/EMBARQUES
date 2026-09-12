@@ -21,11 +21,58 @@ type NaveRastreo = {
 
 type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "sin_fecha";
 
+/** Lo que costaría una actualización manual. Se pide antes de ofrecerla. */
+type Presupuesto = {
+  costo: number;
+  /** Null cuando el proveedor no respondió: nunca se inventa un saldo. */
+  saldo: number | null;
+  saldoDespues: number | null;
+  naves: string[];
+  omitidas: string[];
+  /** Última consulta registrada, sea de la vía que sea. */
+  ultima: { at: string; origen: string } | null;
+  hayClave: boolean;
+};
+
+/** Cómo se originó una lectura, en palabras. */
+const ORIGEN_LECTURA: Record<string, string> = {
+  cron: "revisión automática",
+  manual: "actualización manual",
+  pantalla: "al abrir un embarque",
+};
+
+/**
+ * Fecha y hora de Chile, más el "hace cuánto".
+ *
+ * Las dos cosas juntas a propósito: la hora exacta sirve para el registro y el
+ * relativo para decidir. Saber que la última fue "hace 2 h" es lo que evita
+ * pagar por repetirla.
+ */
+function cuandoFue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const exacto = d.toLocaleString("es-CL", {
+    timeZone: "America/Santiago",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  const horas = (Date.now() - d.getTime()) / 3_600_000;
+  const hace =
+    horas < 1 ? "hace menos de 1 h" : horas < 24 ? `hace ${Math.round(horas)} h` : `hace ${Math.round(horas / 24)} días`;
+  return `${exacto} · ${hace}`;
+}
+
+/** Segundos que hay que esperar antes de poder confirmar el gasto. */
+const ESPERA_SEG = 15;
+
 type Estado = {
   creditos: { total: number; hoy: number };
   topeDia: number;
   ttlMin: number;
   hayClave: boolean;
+  /** Saldo que informa el proveedor. Null si no se pudo consultar. */
+  saldo: number | null;
   /** Hora local del chequeo automático; la manda el servidor, no se inventa. */
   revisionDiaria: string;
   naves: NaveRastreo[];
@@ -105,6 +152,18 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
   const [aviso, setAviso] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<NaveRastreo | null>(null);
 
+  /*
+   * Actualización manual, en dos pasos a propósito.
+   *
+   * `paso` 1 explica lo que cuesta; `paso` 2 obliga a esperar con el botón
+   * apagado. La espera no es decorativa: es el tiempo mínimo para leer lo que
+   * dice la pantalla y, si hace falta, preguntar antes de gastar.
+   */
+  const [presupuesto, setPresupuesto] = useState<Presupuesto | null>(null);
+  const [paso, setPaso] = useState<0 | 1 | 2>(0);
+  const [restante, setRestante] = useState(ESPERA_SEG);
+  const [actualizando, setActualizando] = useState(false);
+
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
@@ -121,6 +180,68 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  // La cuenta atrás solo corre en el segundo paso y se reinicia si se cancela.
+  useEffect(() => {
+    if (paso !== 2) return;
+    setRestante(ESPERA_SEG);
+    const id = setInterval(() => {
+      setRestante((r) => (r <= 1 ? 0 : r - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [paso]);
+
+  /** Pide el presupuesto al servidor. No gasta nada: solo cuenta. */
+  const abrirActualizacion = useCallback(async () => {
+    setAviso(null);
+    try {
+      const r = await fetch(`${apiPrefix}/api/navitrack/actualizar`, { credentials: "same-origin" });
+      const j = (await r.json()) as { ok: boolean } & Presupuesto;
+      if (!j.ok) {
+        setAviso(tr.rastreoErrorCarga);
+        return;
+      }
+      setPresupuesto(j);
+      setPaso(1);
+    } catch {
+      setAviso(tr.rastreoErrorCarga);
+    }
+  }, [apiPrefix, tr]);
+
+  const ejecutarActualizacion = useCallback(async () => {
+    setActualizando(true);
+    try {
+      const r = await fetch(`${apiPrefix}/api/navitrack/actualizar`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmar: true }),
+      });
+      const j = (await r.json()) as {
+        ok: boolean;
+        code?: string;
+        actualizadas?: number;
+        errores?: number;
+        avisado?: boolean;
+      };
+      if (!j.ok) {
+        setAviso(MOTIVO[j.code ?? ""] ?? tr.rastreoErrorCarga);
+      } else {
+        setAviso(
+          tr.rastreoActualizadoOk
+            .replace("{{n}}", String(j.actualizadas ?? 0))
+            .replace("{{aviso}}", j.avisado ? tr.rastreoAvisoEnviado : tr.rastreoAvisoNoEnviado),
+        );
+        await cargar();
+      }
+    } catch {
+      setAviso(MOTIVO.NETWORK);
+    } finally {
+      setActualizando(false);
+      setPaso(0);
+      setPresupuesto(null);
+    }
+  }, [apiPrefix, cargar, tr]);
 
   const accion = useCallback(
     async (nave: NaveRastreo, tipo: "seguir" | "dejar" | "resolver") => {
@@ -180,18 +301,42 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
         </header>
 
         {/* Consumo: lo primero que hay que ver antes de apretar nada. */}
-        <div className="grid grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-5">
           {[
             { l: tr.rastreoCreditosHoy, v: `${estado?.creditos.hoy ?? 0} / ${estado?.topeDia ?? 0}` },
             { l: tr.rastreoCreditosTotal, v: String(estado?.creditos.total ?? 0) },
             { l: tr.rastreoNavesSeguidas, v: String(siguiendo) },
             { l: tr.rastreoRevision, v: estado?.revisionDiaria ?? "07:00" },
+            { l: tr.rastreoSaldo, v: estado?.saldo == null ? "—" : String(estado.saldo) },
           ].map((k) => (
             <div key={k.l} className="rounded-xl border border-dash-border bg-dash-control/60 px-3 py-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">{k.l}</p>
               <p className="mt-0.5 text-lg font-extrabold text-dash-fg tabular-nums">{k.v}</p>
             </div>
           ))}
+        </div>
+
+        {/*
+          * Actualizar a mano es lo más caro que se puede apretar aquí, así que
+          * el botón lo dice en su propia etiqueta y no se disfraza de "refrescar".
+          */}
+        <div className="flex items-center justify-between gap-3 px-4 pb-3">
+          <p className="text-[11px] leading-snug text-dash-muted">{tr.rastreoActualizarAyuda}</p>
+          <button
+            type="button"
+            disabled={!estado?.hayClave || actualizando}
+            onClick={() => void abrirActualizacion()}
+            className="dash-control motion-interactive inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-[12px] font-bold disabled:opacity-40"
+          >
+            <Icon
+              icon={actualizando ? "lucide:loader-2" : "lucide:refresh-cw"}
+              width={14}
+              height={14}
+              className={actualizando ? "animate-spin" : ""}
+              aria-hidden
+            />
+            {tr.rastreoActualizarBoton}
+          </button>
         </div>
 
         {estado && !estado.hayClave && (
@@ -287,6 +432,161 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
           <p className="text-[11px] leading-snug text-dash-muted">{tr.rastreoNota}</p>
         </footer>
       </section>
+
+      {/* ── Paso 1: qué cuesta ──────────────────────────────────────────── */}
+      {paso === 1 && presupuesto && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/70 p-4">
+          <div className="dash-card dash-card-static w-full max-w-md p-5">
+            <div className="flex items-center gap-2 text-amber-400">
+              <Icon icon="lucide:alert-triangle" width={18} height={18} aria-hidden />
+              <p className="text-[11px] font-bold uppercase tracking-wider">{tr.rastreoGastoTitulo}</p>
+            </div>
+
+            {/* El número grande es el costo: es el dato que hay que entender. */}
+            <p className="mt-3 text-[42px] font-extrabold leading-none text-dash-fg tabular-nums">
+              {presupuesto.costo}
+            </p>
+            <p className="mt-1 text-[13px] font-semibold text-dash-fg">
+              {presupuesto.costo === 1 ? tr.rastreoGastoUna : tr.rastreoGastoVarias}
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-dash-border bg-dash-control/60 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                  {tr.rastreoSaldoAhora}
+                </p>
+                <p className="text-lg font-extrabold text-dash-fg tabular-nums">
+                  {presupuesto.saldo ?? "—"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                  {tr.rastreoSaldoDespues}
+                </p>
+                <p className="text-lg font-extrabold text-dash-fg tabular-nums">
+                  {presupuesto.saldoDespues ?? "—"}
+                </p>
+              </div>
+            </div>
+
+            {/*
+              * La última actualización va junto al costo a propósito: si fue
+              * hace un rato, lo más barato es no apretar nada.
+              */}
+            <div className="mt-3 rounded-lg border border-dash-border bg-dash-control/50 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                {tr.rastreoUltimaVez}
+              </p>
+              <p className="mt-0.5 text-[12.5px] font-semibold text-dash-fg">
+                {presupuesto.ultima
+                  ? cuandoFue(presupuesto.ultima.at)
+                  : tr.rastreoNuncaActualizado}
+              </p>
+              {presupuesto.ultima && (
+                <p className="text-[11px] text-dash-muted">
+                  {ORIGEN_LECTURA[presupuesto.ultima.origen] ?? presupuesto.ultima.origen}
+                </p>
+              )}
+            </div>
+
+            {presupuesto.naves.length > 0 && (
+              <p className="mt-3 text-[11.5px] leading-snug text-dash-muted">
+                {tr.rastreoGastoNaves}: {presupuesto.naves.join(", ")}
+              </p>
+            )}
+            {presupuesto.omitidas.length > 0 && (
+              <p className="mt-1.5 text-[11.5px] leading-snug text-dash-muted">
+                {tr.rastreoGastoOmitidas.replace("{{n}}", String(presupuesto.omitidas.length))}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaso(0);
+                  setPresupuesto(null);
+                }}
+                className="dash-control motion-interactive px-3 py-2 text-xs font-semibold"
+              >
+                {tr.cancelar}
+              </button>
+              <button
+                type="button"
+                disabled={presupuesto.costo === 0}
+                onClick={() => setPaso(2)}
+                className="dash-cta motion-interactive px-3 py-2 text-xs disabled:opacity-40"
+              >
+                {tr.rastreoGastoSeguir}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paso 2: la espera ───────────────────────────────────────────────
+        * Quince segundos con el botón apagado. No es un trámite: es el tiempo
+        * para releer la cifra y, si hay dudas, preguntar antes de gastar.
+        */}
+      {paso === 2 && presupuesto && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4">
+          <div className="dash-card dash-card-static w-full max-w-md border-amber-400/40 p-5 text-center">
+            <p className="text-[22px] font-extrabold leading-tight text-dash-fg">
+              {tr.rastreoSeguroTitulo}
+            </p>
+            <p className="mt-2 text-[13.5px] leading-snug text-dash-fg">
+              {tr.rastreoSeguroTexto
+                .replace("{{n}}", String(presupuesto.costo))
+                .replace("{{saldo}}", presupuesto.saldoDespues == null ? "—" : String(presupuesto.saldoDespues))}
+            </p>
+
+            <p className="mt-3 rounded-lg border border-dash-border bg-dash-control/60 px-3 py-2 text-[12px] leading-snug text-dash-muted">
+              {tr.rastreoSeguroConsultar}{" "}
+              <a
+                href="mailto:rodrigo.caceres@asli.cl"
+                className="font-bold text-dash-fg underline underline-offset-2"
+              >
+                rodrigo.caceres@asli.cl
+              </a>
+            </p>
+
+            <p className="mt-4 text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+              {restante > 0 ? tr.rastreoSeguroEspera.replace("{{s}}", String(restante)) : tr.rastreoSeguroListo}
+            </p>
+
+            {/* Barra que se llena: hace visible la espera en vez de solo contarla. */}
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-dash-control">
+              <div
+                className="h-1.5 rounded-full bg-amber-400 transition-[width] duration-1000 ease-linear"
+                style={{ width: `${((ESPERA_SEG - restante) / ESPERA_SEG) * 100}%` }}
+              />
+            </div>
+
+            <div className="mt-4 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaso(0);
+                  setPresupuesto(null);
+                }}
+                className="dash-control motion-interactive px-4 py-2 text-xs font-semibold"
+              >
+                {tr.cancelar}
+              </button>
+              <button
+                type="button"
+                disabled={restante > 0 || actualizando}
+                onClick={() => void ejecutarActualizacion()}
+                className="dash-cta motion-interactive px-4 py-2 text-xs disabled:opacity-35"
+              >
+                {actualizando
+                  ? tr.loading
+                  : tr.rastreoSeguroAceptar.replace("{{n}}", String(presupuesto.costo))}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmación explícita: es la única acción del panel que gasta. */}
       {confirmar && (

@@ -25,7 +25,7 @@ const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
  * Minutos que una lectura se considera vigente.
  *
  * 6 h son 4 lecturas al día por nave. Para el viaje en curso (San Antonio a
- * Hamburgo, 30 días) eso son ~120 créditos de los 150 del plan: alcanza para
+ * Hamburgo, 30 días) eso son ~120 créditos: alcanza para
  * seguirlo entero con margen. Bajarlo multiplica el gasto en proporción directa.
  */
 const TTL_MIN = Number(import.meta.env.NAVITRACK_AIS_TTL_MIN ?? 360);
@@ -263,6 +263,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       eta: fecha(d.etaUtc),
       posicion_recibida_at: fecha(d.positionReceived),
       tipo: "posicion",
+      origen: "pantalla",
       crudo: d,
     };
 

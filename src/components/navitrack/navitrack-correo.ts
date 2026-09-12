@@ -179,3 +179,159 @@ ${fila("Llegada estimada", op.eta)}
 
   return { asunto, cuerpo };
 }
+
+/**
+ * Aviso de que alguien actualizó las posiciones a mano.
+ *
+ * El valor de este correo no es informar, es dejar rastro: gastar créditos a
+ * mano es una decisión con costo, y toda decisión con costo tiene que quedar
+ * registrada en algún lado que no sea la base de datos. Por eso lleva quién,
+ * cuándo, cuánto costó y cuánto queda.
+ *
+ * Tono neutro a propósito: no es una alerta ni un reproche, es un registro.
+ */
+export function correoActualizacionManual(datos: {
+  usuario: string;
+  email?: string | null;
+  naves: string[];
+  creditos: number;
+  errores: number;
+  /** Saldo del proveedor. Null si no se pudo consultar; no se inventa. */
+  saldoAntes: number | null;
+  saldoDespues: number | null;
+  /** Actualización anterior a esta. Null si es la primera de todas. */
+  ultima?: { at: string; origen: string } | null;
+}): { asunto: string; cuerpo: string } {
+  const asunto = `Actualización manual de posiciones · ${datos.creditos} ${
+    datos.creditos === 1 ? "consulta" : "consultas"
+  }`;
+
+  /** Todo en hora de Chile: quien lee el correo está acá, no en UTC. */
+  const enChile = (d: Date) =>
+    d.toLocaleString("es-CL", {
+      timeZone: "America/Santiago",
+      dateStyle: "long",
+      timeStyle: "short",
+    });
+
+  const cuando = enChile(new Date());
+
+  const COMO: Record<string, string> = {
+    cron: "revisión automática",
+    manual: "actualización manual",
+    pantalla: "al abrir un embarque",
+  };
+
+  let anterior = "Es la primera actualización registrada";
+  if (datos.ultima?.at) {
+    const d = new Date(datos.ultima.at);
+    if (!Number.isNaN(d.getTime())) {
+      const horas = (Date.now() - d.getTime()) / 3_600_000;
+      const hace =
+        horas < 1
+          ? "hace menos de una hora"
+          : horas < 24
+            ? `hace ${Math.round(horas)} h`
+            : `hace ${Math.round(horas / 24)} días`;
+      anterior = `${enChile(d)} · ${COMO[datos.ultima.origen] ?? datos.ultima.origen} · ${hace}`;
+    }
+  }
+
+  const lista = datos.naves.length
+    ? datos.naves.map((n) => `<li style="padding:2px 0">${esc(n)}</li>`).join("")
+    : `<li style="padding:2px 0;color:${SUAVE}">Ninguna</li>`;
+
+  const saldoTexto = (v: number | null | undefined) => (v == null ? "sin dato" : String(v));
+
+  /*
+   * Aviso de saldo bajo.
+   *
+   * Sin plan contratado conocido no hay porcentaje que mostrar, así que se usa
+   * un umbral absoluto: por debajo de 30 consultas conviene reponer antes de
+   * que el chequeo diario se quede sin con qué correr.
+   */
+  const saldoBajo = datos.saldoDespues != null && datos.saldoDespues < 30;
+
+  const cuerpo = `
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(datos.usuario)} gastó ${datos.creditos} consultas. Quedan ${datos.saldoDespues}.</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:${CREMA};padding:24px 12px;font-family:'Segoe UI',Arial,Helvetica,sans-serif">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDE}">
+
+        <tr>
+          <td style="background:${NAVY};padding:20px 28px">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Registro de consumo</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 28px 0">
+            <div style="color:${NAVY};font-size:19px;font-weight:700;line-height:1.35">
+              Se actualizaron las posiciones manualmente
+            </div>
+            <p style="margin:8px 0 0;color:${TEXTO};font-size:14px;line-height:1.6">
+              <strong>${esc(datos.usuario)}</strong>${datos.email ? ` (${esc(datos.email)})` : ""}
+              ejecutó una actualización desde el panel de Rastreo.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:22px 28px 0">
+            <table width="100%" cellpadding="0" cellspacing="0">
+${fila("Esta actualización", cuando, true)}
+${fila("Actualización anterior", anterior)}
+${fila("Consultas usadas", String(datos.creditos), true)}
+${fila("Saldo antes", saldoTexto(datos.saldoAntes))}
+${fila("Saldo después", saldoTexto(datos.saldoDespues), true)}
+${datos.errores > 0 ? fila("Naves sin respuesta", String(datos.errores)) : ""}
+            </table>
+          </td>
+        </tr>
+
+${
+  saldoBajo
+    ? `        <tr>
+          <td style="padding:18px 28px 0">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:${AMBAR_FONDO};border-left:4px solid ${AMBAR};border-radius:0 10px 10px 0">
+              <tr>
+                <td style="padding:13px 16px;color:${TEXTO};font-size:13px;line-height:1.5">
+                  <strong style="color:${AMBAR}">Saldo bajo.</strong> Quedan ${datos.saldoDespues} consultas.
+                  Conviene reponer antes de que la revisión diaria se quede sin con qué correr.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+    : ""
+}
+
+        <tr>
+          <td style="padding:22px 28px 0">
+            <div style="color:${SUAVE};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding-bottom:6px">Naves consultadas</div>
+            <ul style="margin:0;padding-left:18px;color:${TEXTO};font-size:13.5px;line-height:1.55">${lista}</ul>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 28px 24px">
+            <div style="border-top:1px solid ${BORDE};padding-top:14px;color:${SUAVE};font-size:12px;line-height:1.55">
+              Registro automático · ASLI<br>
+              Las posiciones se actualizan solas una vez al día. Esta consulta fue adicional y a pedido.
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>`.trim();
+
+  return { asunto, cuerpo };
+}

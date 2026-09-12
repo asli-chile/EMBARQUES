@@ -12,6 +12,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
+import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 const TTL_MIN = Number(import.meta.env.NAVITRACK_AIS_TTL_MIN ?? 360);
@@ -105,7 +106,7 @@ export const GET: APIRoute = async ({ cookies }) => {
 
   const desde = new Date(Date.now() - VENTANA_DIAS * 86_400_000).toISOString().slice(0, 10);
 
-  const [opsRes, navesRes, transRes, lecturasRes, gasto] = await Promise.all([
+  const [opsRes, navesRes, transRes, lecturasRes, gasto, saldo] = await Promise.all([
     supabase
       .from("operaciones")
       .select("id, nave, etd, eta, arribo_confirmado")
@@ -123,6 +124,8 @@ export const GET: APIRoute = async ({ cookies }) => {
       .order("consultado_at", { ascending: false })
       .limit(500),
     creditos(supabase),
+    // Saldo real del proveedor. Es gratis y evita mostrar un número inventado.
+    consultarSaldo(import.meta.env.DATADOCKED_API_KEY),
   ]);
 
   // Operaciones con transbordo confirmado: pesan más que las fechas.
@@ -201,6 +204,8 @@ export const GET: APIRoute = async ({ cookies }) => {
     topeDia: MAX_DIA,
     ttlMin: TTL_MIN,
     hayClave: Boolean(import.meta.env.DATADOCKED_API_KEY),
+    /** Saldo que informa el proveedor. Null si no se pudo consultar. */
+    saldo: saldo.creditos,
     /** Hora local de la revisión automática, para que el panel no la invente. */
     revisionDiaria: import.meta.env.NAVITRACK_CHEQUEO_HORA ?? "07:00",
     naves,
@@ -299,6 +304,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         if (/^\d{9}$/.test(mmsi)) cambios.mmsi = mmsi;
         if (Object.keys(cambios).length === 0) break;
         await supabase.from("naves").update(cambios).eq("id", naveId);
+        invalidarSaldo();
         return json({ ok: true, imo: cambios.imo ?? null, mmsi: cambios.mmsi ?? null });
       }
 

@@ -616,6 +616,27 @@ en orden**. No toca `operaciones`, que está en producción.
 semanas no genere catorce correos idénticos. Un destino declarado **distinto**
 sí vuelve a avisar.
 
+```
+supabase/migrations/20260912000004_navitrack_lecturas_origen.sql
+```
+
+Agrega `navitrack_ais_lecturas.origen` (`cron`, `manual`, `pantalla`) para saber
+**quién** pidió cada consulta. **Aplicada el 12-09-2026.** Sin esa columna, una
+consulta automática y una que alguien disparó a mano se ven iguales, y el gasto
+manual —que es una decisión, no presupuesto— no se puede auditar.
+
+### El saldo de créditos no se configura
+
+Lo responde el proveedor en `my-credits`, y **esa consulta es gratis**
+(comprobado: dos llamadas seguidas no mueven el saldo). Lo lee
+`src/lib/navitrack/saldo.ts`, con caché en memoria de 3 minutos porque el
+proveedor limita a 50 llamadas por minuto; el caché se invalida apenas se gasta.
+
+Antes el panel calculaba `plan contratado − filas registradas`. Ese número solo
+ve las consultas que pasan por los endpoints: mostraba 148 cuando el saldo real
+era 216. **Si el proveedor no responde se muestra "—", nunca un número
+estimado.**
+
 ### Chequeo diario y alerta por correo
 
 `src/pages/api/navitrack/chequeo-diario.ts` lo dispara el cron de Vercel

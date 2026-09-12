@@ -126,6 +126,7 @@ export const GET: APIRoute = async ({ request }) => {
       eta: fecha(detalle.etaUtc),
       posicion_recibida_at: fecha(detalle.positionReceived),
       tipo: "posicion",
+      origen: "cron",
       crudo: detalle,
     });
 
