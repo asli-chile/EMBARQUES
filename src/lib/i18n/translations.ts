@@ -2530,6 +2530,9 @@ export const translations = {
       rastreoCreditosTotal: "Consultas totales",
       rastreoNavesSeguidas: "Naves seguidas",
       rastreoFrecuencia: "Se actualiza cada",
+      rastreoRevision: "Revisión diaria",
+      rastreoZarpe: "Zarpe",
+      rastreoLlegada: "Llegada",
       rastreoSinNaves: "No hay naves con viaje vigente.",
       rastreoSinIdentificador: "Sin IMO ni MMSI",
       rastreoOps: "embarques",
@@ -2545,7 +2548,7 @@ export const translations = {
         "Buscar el IMO de {{nave}} gasta una consulta del plan. Se hace una sola vez por nave.",
       rastreoConfirmarGastar: "Buscar (1 consulta)",
       rastreoNota:
-        "Seguir o dejar de seguir una nave no consulta nada. Cada nave seguida se actualiza como mucho una vez por período, y solo cuando alguien abre su embarque.",
+        "Seguir o dejar de seguir una nave no consulta nada. Cada nave seguida se revisa una vez al día a la hora indicada, y al abrir su embarque solo si el dato guardado ya venció.",
       volverEmbarques: "Volver a embarques",
       anteriorEmbarque: "Embarque anterior",
       siguienteEmbarque: "Embarque siguiente",
@@ -2704,7 +2707,6 @@ export const translations = {
       alertaSinRutaDetalle: "Falta la coordenada del puerto {{puerto}} para trazar el viaje.",
 
       transbordoFlujoTitle: "Qué ocurrió",
-      buqueActual: "Buque actual",
       buqueSiguiente: "Buque siguiente",
       buqueSiguienteDesconocido: "Por confirmar",
       confirmarTransbordo: "Confirmar transbordo",
@@ -5481,6 +5483,9 @@ export const translations = {
       rastreoCreditosTotal: "Total queries",
       rastreoNavesSeguidas: "Tracked vessels",
       rastreoFrecuencia: "Updates every",
+      rastreoRevision: "Daily check",
+      rastreoZarpe: "Departure",
+      rastreoLlegada: "Arrival",
       rastreoSinNaves: "No vessels with an active voyage.",
       rastreoSinIdentificador: "No IMO or MMSI",
       rastreoOps: "shipments",
@@ -5496,7 +5501,7 @@ export const translations = {
         "Finding the IMO for {{nave}} uses one query from the plan. It is done once per vessel.",
       rastreoConfirmarGastar: "Search (1 query)",
       rastreoNota:
-        "Tracking or untracking a vessel queries nothing. Each tracked vessel refreshes at most once per period, and only when someone opens its shipment.",
+        "Tracking or untracking a vessel queries nothing. Each tracked vessel is checked once a day at the time shown, and when opening its shipment only if the stored reading has expired.",
       volverEmbarques: "Back to shipments",
       anteriorEmbarque: "Previous shipment",
       siguienteEmbarque: "Next shipment",
@@ -5655,7 +5660,6 @@ export const translations = {
       alertaSinRutaDetalle: "Missing coordinates for port {{puerto}} to draw the voyage.",
 
       transbordoFlujoTitle: "What happened",
-      buqueActual: "Current vessel",
       buqueSiguiente: "Next vessel",
       buqueSiguienteDesconocido: "To be confirmed",
       confirmarTransbordo: "Confirm transshipment",

@@ -75,6 +75,29 @@ export const prerender = false;
 
 /* ────────────────────────────── Estado ─────────────────────────────────── */
 
+/**
+ * Etapa gruesa del viaje, la que se muestra en la lista del panel.
+ *
+ * Deliberadamente más simple que `resolverEstado()`: aquí no hay AIS ni ruta,
+ * solo las fechas comprometidas, y responde una única pregunta —¿todavía no
+ * zarpa, va navegando o ya llegó?—. Un transbordo confirmado pisa a las fechas
+ * porque cambia el viaje entero.
+ */
+type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "sin_fecha";
+
+function etapaDe(
+  op: { etd: string | null; eta: string | null; arribo_confirmado: boolean | null },
+  tieneTransbordo: boolean,
+  hoy: string,
+): EtapaRastreo {
+  if (tieneTransbordo) return "transbordo";
+  if (op.arribo_confirmado) return "arribado";
+  if (op.eta && op.eta < hoy) return "arribado";
+  if (op.etd && op.etd > hoy) return "origen";
+  if (op.etd) return "transito";
+  return "sin_fecha";
+}
+
 export const GET: APIRoute = async ({ cookies }) => {
   const supabase = createClient(cookies);
   const auth = await exigirSuperadmin(supabase);
@@ -82,15 +105,17 @@ export const GET: APIRoute = async ({ cookies }) => {
 
   const desde = new Date(Date.now() - VENTANA_DIAS * 86_400_000).toISOString().slice(0, 10);
 
-  const [opsRes, navesRes, lecturasRes, gasto] = await Promise.all([
+  const [opsRes, navesRes, transRes, lecturasRes, gasto] = await Promise.all([
     supabase
       .from("operaciones")
-      .select("nave, eta")
+      .select("id, nave, etd, eta, arribo_confirmado")
       .is("deleted_at", null)
       .not("nave", "is", null)
       .gte("eta", desde)
       .limit(2000),
     supabase.from("naves").select("id, nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(2000),
+    // Transbordos ya confirmados: cambian la etapa que se muestra.
+    supabase.from("navitrack_transbordos").select("operacion_id, estado"),
     supabase
       .from("navitrack_ais_lecturas")
       .select("identificador, consultado_at")
@@ -100,14 +125,45 @@ export const GET: APIRoute = async ({ cookies }) => {
     creditos(supabase),
   ]);
 
-  // Viajes vigentes por nave: son las que vale la pena rastrear.
-  const vigentes = new Map<string, { ops: number; proximaEta: string | null }>();
-  for (const o of (opsRes.data ?? []) as { nave: string | null; eta: string | null }[]) {
+  // Operaciones con transbordo confirmado: pesan más que las fechas.
+  const conTransbordo = new Set(
+    ((transRes.data ?? []) as { operacion_id: string; estado: string }[])
+      .filter((t) => t.estado === "confirmado")
+      .map((t) => t.operacion_id),
+  );
+
+  type OpFila = {
+    id: string;
+    nave: string | null;
+    etd: string | null;
+    eta: string | null;
+    arribo_confirmado: boolean | null;
+  };
+
+  /*
+   * Viajes vigentes por nave.
+   *
+   * Una nave puede llevar varios embarques a la vez. El que manda es el de ETA
+   * más próxima: es el viaje en curso, y del que salen las fechas y la etapa
+   * que se muestran en la lista.
+   */
+  const vigentes = new Map<
+    string,
+    { ops: number; proximaEta: string | null; etd: string | null; etapa: EtapaRastreo }
+  >();
+
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  for (const o of (opsRes.data ?? []) as OpFila[]) {
     const k = claveNave(o.nave);
     if (!k) continue;
-    const a = vigentes.get(k) ?? { ops: 0, proximaEta: null };
+    const a = vigentes.get(k) ?? { ops: 0, proximaEta: null, etd: null, etapa: "sin_fecha" as EtapaRastreo };
     a.ops += 1;
-    if (o.eta && (!a.proximaEta || o.eta < a.proximaEta)) a.proximaEta = o.eta;
+    if (o.eta && (!a.proximaEta || o.eta < a.proximaEta)) {
+      a.proximaEta = o.eta;
+      a.etd = o.etd;
+      a.etapa = etapaDe(o, conTransbordo.has(o.id), hoy);
+    }
     vigentes.set(k, a);
   }
 
@@ -129,7 +185,9 @@ export const GET: APIRoute = async ({ cookies }) => {
         mmsi: n.mmsi,
         siguiendo: Boolean(n.tracking_activo),
         ops: v?.ops ?? 0,
+        etd: v?.etd ?? null,
         proximaEta: v?.proximaEta ?? null,
+        etapa: v?.etapa ?? "sin_fecha",
         ultimaLectura: ultima,
       };
     })
@@ -143,6 +201,8 @@ export const GET: APIRoute = async ({ cookies }) => {
     topeDia: MAX_DIA,
     ttlMin: TTL_MIN,
     hayClave: Boolean(import.meta.env.DATADOCKED_API_KEY),
+    /** Hora local de la revisión automática, para que el panel no la invente. */
+    revisionDiaria: import.meta.env.NAVITRACK_CHEQUEO_HORA ?? "07:00",
     naves,
   });
 };

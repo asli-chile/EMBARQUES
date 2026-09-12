@@ -410,16 +410,43 @@ export function buildJourney(
 
     if (f == null) {
       remaining = full;
+    } else if (isValidCoord(position)) {
+      /*
+       * La línea se dibuja en dos tramos que pasan por el buque: origen →
+       * posición y posición → destino.
+       *
+       * Antes se recortaba la geodésica origen → destino y se le reemplazaba el
+       * último punto por la posición real. Eso dibujaba un zigzag cada vez que
+       * el buque no iba sobre la línea teórica, que es casi siempre: un barco
+       * de San Antonio a Hamburgo sube por el Pacífico hasta Panamá, mientras
+       * la geodésica cruza Sudamérica hacia el Atlántico. La línea salía hacia
+       * el noreste y volvía de un salto al oeste a buscar el buque.
+       *
+       * Sigue siendo una aproximación —no conoce el canal ni las costas—, pero
+       * es coherente: una sola línea continua que pasa por donde está el buque.
+       */
+      const p = { lng: position.lng, lat: position.lat };
+      traveled = greatCirclePath(origen, p);
+      remaining = greatCirclePath(p, destino);
+
+      /*
+       * Los dos tramos se desenrollan por separado, así que el buque puede
+       * quedar en copias distintas del mundo (lng y lng ± 360) y la línea se
+       * partiría en dos. Se alinea el segundo tramo con el final del primero.
+       */
+      const fin = traveled[traveled.length - 1];
+      const salto = fin.lng - remaining[0].lng;
+      if (salto !== 0) {
+        remaining = remaining.map((q) => ({ lng: q.lng + salto, lat: q.lat }));
+      }
+
+      // Lo que falta se mide desde el buque, no desde el punto teórico.
+      remainingNm = haversineKm(p, destino) * KM_TO_NM;
     } else {
       const cut = Math.round(clamp01(f) * (full.length - 1));
       traveled = full.slice(0, cut + 1);
       remaining = full.slice(cut);
       remainingNm = totalNm * (1 - clamp01(f));
-      // El tramo recorrido termina en el buque, no en el punto teórico de la geodésica.
-      if (position && traveled.length > 0) {
-        traveled[traveled.length - 1] = { lng: position.lng, lat: position.lat };
-        remaining[0] = { lng: position.lng, lat: position.lat };
-      }
     }
   }
 

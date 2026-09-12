@@ -13,17 +13,71 @@ type NaveRastreo = {
   mmsi: string | null;
   siguiendo: boolean;
   ops: number;
+  etd: string | null;
   proximaEta: string | null;
+  etapa: EtapaRastreo;
   ultimaLectura: string | null;
 };
+
+type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "sin_fecha";
 
 type Estado = {
   creditos: { total: number; hoy: number };
   topeDia: number;
   ttlMin: number;
   hayClave: boolean;
+  /** Hora local del chequeo automático; la manda el servidor, no se inventa. */
+  revisionDiaria: string;
   naves: NaveRastreo[];
 };
+
+/**
+ * Etapa del viaje, con el mismo criterio de color del resto de NaviTrack:
+ * el ámbar se reserva para lo que pide atención, no para lo que simplemente
+ * está en marcha.
+ */
+const ETAPA: Record<EtapaRastreo, { texto: string; clase: string; icono: string }> = {
+  origen: {
+    texto: "En origen",
+    clase: "border-dash-border bg-dash-control text-dash-muted",
+    icono: "lucide:anchor",
+  },
+  transito: {
+    texto: "En tránsito",
+    clase:
+      "border-[color-mix(in_srgb,var(--dash-neon)_45%,transparent)] bg-[color-mix(in_srgb,var(--dash-neon)_14%,transparent)] text-dash-fg",
+    icono: "lucide:ship",
+  },
+  transbordo: {
+    texto: "Transbordo",
+    clase: "border-amber-400/45 bg-amber-400/12 text-dash-fg",
+    icono: "lucide:arrow-left-right",
+  },
+  arribado: {
+    texto: "Arribado",
+    clase: "border-dash-border bg-dash-control/60 text-dash-muted",
+    icono: "lucide:flag",
+  },
+  sin_fecha: {
+    texto: "Sin fechas",
+    clase: "border-dash-border bg-dash-control/40 text-dash-muted",
+    icono: "lucide:calendar-off",
+  },
+};
+
+/**
+ * Fecha corta.
+ *
+ * `etd` y `eta` son columnas `date`: se parten a mano en vez de pasarlas por
+ * `new Date()`, que las interpretaría en UTC y en Chile restaría un día.
+ */
+function fechaCorta(iso: string | null): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return "—";
+  const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${String(d).padStart(2, "0")} ${meses[m - 1]}`;
+}
 
 /** Mensajes por código del servidor. Nunca se muestra el texto crudo del proveedor. */
 const MOTIVO: Record<string, string> = {
@@ -131,7 +185,7 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
             { l: tr.rastreoCreditosHoy, v: `${estado?.creditos.hoy ?? 0} / ${estado?.topeDia ?? 0}` },
             { l: tr.rastreoCreditosTotal, v: String(estado?.creditos.total ?? 0) },
             { l: tr.rastreoNavesSeguidas, v: String(siguiendo) },
-            { l: tr.rastreoFrecuencia, v: `${Math.round((estado?.ttlMin ?? 360) / 60)} h` },
+            { l: tr.rastreoRevision, v: estado?.revisionDiaria ?? "07:00" },
           ].map((k) => (
             <div key={k.l} className="rounded-xl border border-dash-border bg-dash-control/60 px-3 py-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">{k.l}</p>
@@ -165,6 +219,7 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
               {estado?.naves.map((n) => {
                 const tieneId = Boolean(n.imo || n.mmsi);
                 const esperando = ocupado === n.id;
+                const etapa = ETAPA[n.etapa] ?? ETAPA.sin_fecha;
                 return (
                   <li key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                     <div className="min-w-0 flex-1">
@@ -175,6 +230,20 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
                           : tr.rastreoSinIdentificador}
                         {n.ops > 0 ? ` · ${n.ops} ${tr.rastreoOps}` : ""}
                       </p>
+                      {n.ops > 0 && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10.5px] font-bold ${etapa.clase}`}
+                          >
+                            <Icon icon={etapa.icono} width={11} height={11} aria-hidden />
+                            {etapa.texto}
+                          </span>
+                          <span className="text-[10.5px] text-dash-muted tabular-nums">
+                            {tr.rastreoZarpe} {fechaCorta(n.etd)} · {tr.rastreoLlegada}{" "}
+                            {fechaCorta(n.proximaEta)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {tieneId ? (
