@@ -87,6 +87,9 @@ export function NavitrackContent() {
   /** Naves con rastreo habilitado; define si el botón de escalas puede consultar. */
   const [navesSeguidas, setNavesSeguidas] = useState<Set<string>>(new Set());
 
+  /** Últimas posiciones guardadas por identificador, para toda la flota. */
+  const [aisCache, setAisCache] = useState<Map<string, AisSnapshot>>(new Map());
+
   const [ais, setAis] = useState<AisSnapshot | null>(null);
   const [aisCargando, setAisCargando] = useState(false);
 
@@ -111,7 +114,7 @@ export function NavitrackContent() {
     setRefrescando(true);
     const desde = isoHaceDias(VENTANA_DIAS);
 
-    const [opsRes, navesRes, navierasRes, decRes] = await Promise.all([
+    const [opsRes, navesRes, navierasRes, decRes, lecturasRes] = await Promise.all([
       supabase
         .from("operaciones")
         .select(NAVITRACK_OP_SELECT)
@@ -124,10 +127,44 @@ export function NavitrackContent() {
       supabase.from("naves").select("nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(5000),
       supabase.from("navieras").select("nombre, logo_url"),
       supabase.from("navitrack_transbordos").select("operacion_id, estado, puerto, nave_siguiente"),
+      /*
+       * Últimas posiciones guardadas. Es una lectura de base de datos: no gasta
+       * créditos y no llama al proveedor.
+       *
+       * Sin esto la flota solo conocía la coordenada pegada a mano, así que la
+       * columna "última actualización" quedaba vacía justamente en las naves que
+       * sí se están rastreando, que es lo contrario de lo que debería mostrar.
+       */
+      supabase
+        .from("navitrack_ais_lecturas")
+        .select("identificador, lat, lng, speed, course, destino, nav_status, eta, posicion_recibida_at, consultado_at, nave_nombre")
+        .eq("tipo", "posicion")
+        .order("consultado_at", { ascending: false })
+        .limit(600),
     ]);
 
     const filas = (opsRes.data ?? []) as unknown as NavitrackOperacion[];
     setOps(filas);
+
+    // La consulta viene ordenada de más nueva a más vieja: la primera manda.
+    const porIdent = new Map<string, AisSnapshot>();
+    for (const l of (lecturasRes.data ?? []) as Record<string, unknown>[]) {
+      const ident = String(l.identificador ?? "").trim();
+      if (!ident || porIdent.has(ident)) continue;
+      const snap = parseAisSnapshot({
+        latitude: l.lat,
+        longitude: l.lng,
+        speed: l.speed,
+        course: l.course,
+        destination: l.destino,
+        navigationalStatus: l.nav_status,
+        etaUtc: l.eta,
+        positionReceived: l.posicion_recibida_at ?? l.consultado_at,
+        name: l.nave_nombre,
+      });
+      if (snap) porIdent.set(ident, snap);
+    }
+    setAisCache(porIdent);
 
     const mapaNaves = new Map<string, NaveIdent>();
     const seguidas = new Set<string>();
@@ -286,15 +323,28 @@ export function NavitrackContent() {
 
   /* -------------------------------- Derivados ------------------------------ */
 
-  /** Flota sin AIS: la posición y la etapa salen de ruta, fechas y coordenada cargada. */
+  /*
+   * Flota: cada embarque usa la última posición **guardada** de su nave.
+   *
+   * No se consulta al proveedor desde aquí —eso sigue siendo cosa del embarque
+   * abierto y del chequeo diario—, pero sí se aprovecha lo que ya se pagó. Si
+   * una nave no tiene lectura, la posición y la etapa se estiman con la ruta y
+   * las fechas, como antes.
+   *
+   * Un embarque arribado se deja sin AIS a propósito: el buque ya va en otro
+   * viaje y su posición actual no dice nada de esa carga.
+   */
   const filas = useMemo<FleetRow[]>(
     () =>
       ops.map((op) => {
-        const journey = buildJourney(op, null, ahora);
-        const estado = resolverEstado(op, null, journey, decisiones.get(op.id) ?? null, ahora);
-        return { op, ais: null, journey, estado };
+        const ident = naves.get(claveNave(op.nave));
+        const clave = (ident?.mmsi ?? "").trim() || (ident?.imo ?? "").trim();
+        const guardada = !estaArribado(op) && clave ? (aisCache.get(clave) ?? null) : null;
+        const journey = buildJourney(op, guardada, ahora);
+        const estado = resolverEstado(op, guardada, journey, decisiones.get(op.id) ?? null, ahora);
+        return { op, ais: guardada, journey, estado };
       }),
-    [ops, decisiones, ahora],
+    [ops, decisiones, ahora, naves, aisCache],
   );
 
   const conteos = useMemo(() => {

@@ -264,10 +264,11 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           <LocaleToggle variant="dark" className="shrink-0" />
         </div>
         <a
-          href={withBase("/inicio")}
+          href="https://www.asli.cl"
+          target="_blank"
+          rel="noopener noreferrer"
           className={navBtn}
           title={t.nav.website}
-          {...navPrefetch("/inicio")}
         >
           <Icon icon="lucide:globe" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>{t.nav.website}</span>
