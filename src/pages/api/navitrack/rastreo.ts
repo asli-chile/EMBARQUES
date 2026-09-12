@@ -49,7 +49,14 @@ async function exigirSuperadmin(supabase: Sesion) {
 
 /** Nombre comparable: sin el viaje pegado, pero conservando números propios del barco. */
 function claveNave(raw: string | null | undefined): string {
-  let s = String(raw ?? "").toUpperCase().replace(/\s+/g, " ").trim();
+  // El proveedor devuelve los nombres con guión bajo ("CALLAO_EXPRESS"), así que
+  // los separadores se unifican antes de comparar. Sin esto, ninguna búsqueda
+  // por nombre calzaba nunca: gastaba el crédito y devolvía "sin resultado".
+  let s = String(raw ?? "")
+    .toUpperCase()
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   s = s.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
   const ultimo = s.split(" ").pop() ?? "";
   // "635R" o "W012" son viaje; "512" en "WAN HAI 512" es parte del nombre.
@@ -264,7 +271,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const nombre = claveNave(nave.nombre as string);
     try {
       const r = await fetch(
-        `${DATADOCKED_BASE}/vessels-by-vessel-name?vessel_name=${encodeURIComponent(nombre)}`,
+        `${DATADOCKED_BASE}/vessels-by-vessel-name?name=${encodeURIComponent(nombre)}`,
         { headers: { "x-api-key": apiKey, Accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
       );
 
@@ -284,25 +291,39 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       // La búsqueda por nombre puede venir como arreglo suelto o envuelta;
       // por eso aquí no sirve `cuerpoProveedor`, que resuelve objetos.
       const data = (await r.json()) as unknown;
+      // El proveedor responde { total, items: [...] }.
       const lista = Array.isArray(data)
         ? data
-        : ((data as Record<string, unknown>)?.detail ??
+        : ((data as Record<string, unknown>)?.items ??
+            (data as Record<string, unknown>)?.detail ??
             (data as Record<string, unknown>)?.data ??
             (data as Record<string, unknown>)?.vessels ??
             []);
       const items = (Array.isArray(lista) ? lista : [lista]) as Record<string, unknown>[];
 
-      for (const v of items) {
-        if (!v || typeof v !== "object") continue;
-        const nom = String(v.name ?? v.vessel_name ?? "");
-        // El nombre debe calzar: un parecido llevaría a seguir otro barco.
-        if (claveNave(nom) !== nombre) continue;
-        const imo = String(v.imo ?? "").replace(/\D/g, "");
-        const mmsi = String(v.mmsi ?? "").replace(/\D/g, "");
-        const cambios: Record<string, string> = {};
-        if (/^\d{7}$/.test(imo)) cambios.imo = imo;
-        if (/^\d{9}$/.test(mmsi)) cambios.mmsi = mmsi;
-        if (Object.keys(cambios).length === 0) break;
+      // El nombre debe calzar: un parecido llevaría a seguir otro barco.
+      const candidatos = items.filter(
+        (v) => v && typeof v === "object" && claveNave(String(v.name ?? "")) === nombre,
+      );
+
+      /*
+       * El mismo barco puede venir en varias fichas, con un MMSI por cada
+       * registro de bandera. El IMO va con el casco y no cambia; el MMSI sí.
+       * Ante dos matrículas distintas se guarda solo el IMO: una vieja
+       * devolvería la posición de otro barco con apariencia de correcta.
+       */
+      const imos = new Set(
+        candidatos.map((v) => String(v.imo ?? "").replace(/\D/g, "")).filter((x) => /^\d{7}$/.test(x)),
+      );
+      const mmsis = new Set(
+        candidatos.map((v) => String(v.mmsi ?? "").replace(/\D/g, "")).filter((x) => /^\d{9}$/.test(x)),
+      );
+
+      const cambios: Record<string, string> = {};
+      if (imos.size === 1) cambios.imo = [...imos][0];
+      if (mmsis.size === 1) cambios.mmsi = [...mmsis][0];
+
+      if (Object.keys(cambios).length > 0) {
         await supabase.from("naves").update(cambios).eq("id", naveId);
         invalidarSaldo();
         return json({ ok: true, imo: cambios.imo ?? null, mmsi: cambios.mmsi ?? null });

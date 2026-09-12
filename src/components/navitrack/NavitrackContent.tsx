@@ -17,11 +17,14 @@ import {
   type FleetVista,
 } from "./NavitrackFleet";
 import { NavitrackShipment, type Escala } from "./NavitrackShipment";
+import { NavitrackRecalada, type NaveCatalogo, type Recalada } from "./NavitrackRecalada";
 import { NavitrackRastreoPanel } from "./NavitrackRastreoPanel";
 import {
   NAVITRACK_OP_SELECT,
   buildJourney,
   parseAisSnapshot,
+  NAVITRACK_TRAMO_SELECT,
+  type Tramo,
   type AisSnapshot,
   type NaveIdent,
   type NavitrackOperacion,
@@ -48,6 +51,8 @@ function claveNave(raw: string | null | undefined): string {
     .toUpperCase()
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
+    // El proveedor usa guión bajo en los nombres ("CALLAO_EXPRESS").
+    .replace(/[_]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   const bracket = s.match(/^(.*?)\s*\[[^\]]+\]\s*$/);
@@ -87,6 +92,21 @@ export function NavitrackContent() {
   /** Naves con rastreo habilitado; define si el botón de escalas puede consultar. */
   const [navesSeguidas, setNavesSeguidas] = useState<Set<string>>(new Set());
 
+  /*
+   * Recaladas del embarque abierto.
+   *
+   * Se cargan al abrirlo y no para toda la flota: son el detalle de un viaje,
+   * y traerlas de los 300 embarques sería pedir una tabla entera para mostrar
+   * una línea de tiempo.
+   */
+  const [recaladas, setRecaladas] = useState<Recalada[]>([]);
+  const [catalogoNaves, setCatalogoNaves] = useState<NaveCatalogo[]>([]);
+  const [recaladaAbierta, setRecaladaAbierta] = useState<Recalada | null>(null);
+  const [avisoRecalada, setAvisoRecalada] = useState<string | null>(null);
+
+  /** Tramos por operación. Vacío = viaje directo. */
+  const [tramos, setTramos] = useState<Map<string, Tramo[]>>(new Map());
+
   /** Últimas posiciones guardadas por identificador, para toda la flota. */
   const [aisCache, setAisCache] = useState<Map<string, AisSnapshot>>(new Map());
 
@@ -114,7 +134,7 @@ export function NavitrackContent() {
     setRefrescando(true);
     const desde = isoHaceDias(VENTANA_DIAS);
 
-    const [opsRes, navesRes, navierasRes, decRes, lecturasRes] = await Promise.all([
+    const [opsRes, navesRes, navierasRes, decRes, tramosRes, lecturasRes] = await Promise.all([
       supabase
         .from("operaciones")
         .select(NAVITRACK_OP_SELECT)
@@ -127,6 +147,13 @@ export function NavitrackContent() {
       supabase.from("naves").select("nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(5000),
       supabase.from("navieras").select("nombre, logo_url"),
       supabase.from("navitrack_transbordos").select("operacion_id, estado, puerto, nave_siguiente"),
+      /*
+       * Tramos de los viajes con transbordo.
+       *
+       * Sin filas para una operación, su viaje es directo. Con filas, la ruta
+       * son esos tramos: es la regla de lectura de `navitrack_tramos`.
+       */
+      supabase.from("navitrack_tramos").select(NAVITRACK_TRAMO_SELECT).order("orden"),
       /*
        * Últimas posiciones guardadas. Es una lectura de base de datos: no gasta
        * créditos y no llama al proveedor.
@@ -145,6 +172,14 @@ export function NavitrackContent() {
 
     const filas = (opsRes.data ?? []) as unknown as NavitrackOperacion[];
     setOps(filas);
+
+    const porOperacion = new Map<string, Tramo[]>();
+    for (const t of (tramosRes.data ?? []) as (Tramo & { operacion_id: string })[]) {
+      const lista = porOperacion.get(t.operacion_id) ?? [];
+      lista.push(t);
+      porOperacion.set(t.operacion_id, lista);
+    }
+    setTramos(porOperacion);
 
     // La consulta viene ordenada de más nueva a más vieja: la primera manda.
     const porIdent = new Map<string, AisSnapshot>();
@@ -218,13 +253,35 @@ export function NavitrackContent() {
     [ops, seleccionId],
   );
 
+  /**
+   * Nave que lleva la carga ahora.
+   *
+   * Con transbordo no es `operaciones.nave`: esa columna guarda el primer buque,
+   * que ya soltó la carga en el puerto de conexión y navega otro viaje. Lo que
+   * se sigue es la carga, así que la nave del tramo en curso es la que manda.
+   */
+  const naveDeLaCarga = useCallback(
+    (op: NavitrackOperacion): string | null => {
+      const lista = tramos.get(op.id) ?? [];
+      if (!lista.length) return op.nave;
+      const hoy = new Date().toISOString().slice(0, 10);
+      const enCurso = [...lista]
+        .sort((a, b) => a.orden - b.orden)
+        .find((t) => !(t.eta && t.eta < hoy));
+      return enCurso?.nave ?? lista[lista.length - 1]?.nave ?? op.nave;
+    },
+    [tramos],
+  );
+
   const identSeleccion = useMemo(() => {
-    if (!seleccion?.nave) return null;
+    if (!seleccion) return null;
     // Embarque cerrado: no se consulta al proveedor. El buque ya zarpó en otro
     // viaje y su posición actual no tiene nada que ver con esta carga.
     if (estaArribado(seleccion)) return null;
-    return naves.get(claveNave(seleccion.nave)) ?? null;
-  }, [seleccion, naves]);
+    const nave = naveDeLaCarga(seleccion);
+    if (!nave) return null;
+    return naves.get(claveNave(nave)) ?? null;
+  }, [seleccion, naves, naveDeLaCarga]);
 
   /**
    * El AIS se consulta solo para el embarque abierto.
@@ -313,6 +370,34 @@ export function NavitrackContent() {
   }, [seleccionId, identSeleccion, user, cargarEscalas]);
 
   /**
+   * Recaladas del embarque abierto y catálogo de naves para el selector.
+   *
+   * Consulta a la base, no al proveedor: no gasta créditos. Se recarga tras
+   * cada decisión para que el historial refleje lo recién guardado.
+   */
+  const cargarRecaladas = useCallback(async () => {
+    if (!seleccionId) {
+      setRecaladas([]);
+      return;
+    }
+    try {
+      const r = await fetch(`${apiPrefix}/api/navitrack/recalada?op=${encodeURIComponent(seleccionId)}`, {
+        credentials: "same-origin",
+      });
+      const j = (await r.json()) as { ok: boolean; recaladas?: Recalada[]; naves?: NaveCatalogo[] };
+      setRecaladas(j.ok && Array.isArray(j.recaladas) ? j.recaladas : []);
+      if (j.ok && Array.isArray(j.naves)) setCatalogoNaves(j.naves);
+    } catch {
+      setRecaladas([]);
+    }
+  }, [apiPrefix, seleccionId]);
+
+  useEffect(() => {
+    if (!user) return;
+    void cargarRecaladas();
+  }, [user, cargarRecaladas]);
+
+  /**
    * No hay sondeo automático a propósito.
    *
    * Cada lectura del proveedor cuesta un crédito, y refrescar cada 5 minutos un
@@ -337,14 +422,14 @@ export function NavitrackContent() {
   const filas = useMemo<FleetRow[]>(
     () =>
       ops.map((op) => {
-        const ident = naves.get(claveNave(op.nave));
+        const ident = naves.get(claveNave(naveDeLaCarga(op) ?? ""));
         const clave = (ident?.mmsi ?? "").trim() || (ident?.imo ?? "").trim();
         const guardada = !estaArribado(op) && clave ? (aisCache.get(clave) ?? null) : null;
-        const journey = buildJourney(op, guardada, ahora);
+        const journey = buildJourney(op, guardada, ahora, tramos.get(op.id) ?? []);
         const estado = resolverEstado(op, guardada, journey, decisiones.get(op.id) ?? null, ahora);
         return { op, ais: guardada, journey, estado };
       }),
-    [ops, decisiones, ahora, naves, aisCache],
+    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga],
   );
 
   const conteos = useMemo(() => {
@@ -392,7 +477,9 @@ export function NavitrackContent() {
     return filas.filter((f) => {
       const etapa = f.estado.etapa;
       const arribado = etapa === "ARRIBADO";
-      if (vista === "arribados" ? !arribado : arribado) return false;
+      // "todos" no filtra por arribo: es la vista para buscar sin pensar en
+      // qué pestaña vive el embarque.
+      if (vista !== "todos" && (vista === "arribados" ? !arribado : arribado)) return false;
       if (filtro === "transito" && etapa === "EN_ORIGEN") return false;
       if (filtro === "proximos" && etapa !== "PROXIMO_DESTINO") return false;
       if (filtro === "retrasos" && etapa !== "POSIBLE_RETRASO") return false;
@@ -407,16 +494,16 @@ export function NavitrackContent() {
   const detalle = useMemo(() => {
     if (!seleccion) return null;
     const decision = decisiones.get(seleccion.id) ?? null;
-    const journey = buildJourney(seleccion, ais, ahora);
+    const journey = buildJourney(seleccion, ais, ahora, tramos.get(seleccion.id) ?? []);
     const estado = resolverEstado(seleccion, ais, journey, decision, ahora);
     return {
       journey,
       estado,
       decision,
       alertas: construirAlertas(seleccion, ais, journey, estado),
-      eventos: construirTimeline(seleccion, ais, estado, decision, ahora),
+      eventos: construirTimeline(seleccion, ais, estado, decision, ahora, tramos.get(seleccion.id) ?? []),
     };
-  }, [seleccion, ais, decisiones, ahora]);
+  }, [seleccion, ais, decisiones, ahora, tramos]);
 
   /*
    * Enlace profundo: `/navitrack?op=<referencia>`.
@@ -586,6 +673,10 @@ export function NavitrackContent() {
         <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
           {seleccion && detalle ? (
             <NavitrackShipment
+              tramos={tramos.get(seleccion.id) ?? []}
+              recaladas={recaladas}
+              onVerificarRecalada={(r: Recalada) => setRecaladaAbierta(r)}
+              avisoRecalada={avisoRecalada}
               op={seleccion}
               ais={ais}
               journey={detalle.journey}
@@ -596,7 +687,7 @@ export function NavitrackContent() {
               navieraLogoUrl={
                 logosNaviera.get((seleccion.naviera ?? "").trim().toUpperCase()) ?? null
               }
-              naveIdent={naves.get(claveNave(seleccion.nave)) ?? null}
+              naveIdent={naves.get(claveNave(naveDeLaCarga(seleccion) ?? "")) ?? null}
               escalas={escalas}
               escalasCargando={escalasCargando}
               escalasEdadH={escalasEdadH}
@@ -623,7 +714,13 @@ export function NavitrackContent() {
           ) : (
             <NavitrackFleet
               rows={filasVisibles}
-              total={vista === "arribados" ? conteos.arribados : filas.length - conteos.arribados}
+              total={
+                vista === "todos"
+                  ? filas.length
+                  : vista === "arribados"
+                    ? conteos.arribados
+                    : filas.length - conteos.arribados
+              }
               conteos={conteos}
               vista={vista}
               onVista={(v) => {
@@ -643,7 +740,27 @@ export function NavitrackContent() {
           )}
         </div>
 
-        {panelRastreo && (
+        {/* Decisión sobre una recalada: qué pasó en el puerto anunciado. */}
+      {recaladaAbierta && (
+        <NavitrackRecalada
+          recalada={recaladaAbierta}
+          naves={catalogoNaves}
+          operacionId={seleccionId ?? ""}
+          naveActual={detalle?.journey.naveActual ?? seleccion?.nave ?? null}
+          tr={tr}
+          apiPrefix={apiPrefix}
+          onCerrar={() => setRecaladaAbierta(null)}
+          onGuardado={(mensaje) => {
+            setRecaladaAbierta(null);
+            setAvisoRecalada(mensaje);
+            // El cambio toca tramos, naves y el propio historial: se recarga todo.
+            void cargarRecaladas();
+            void cargar();
+          }}
+        />
+      )}
+
+      {panelRastreo && (
           <NavitrackRastreoPanel
             tr={tr}
             onCerrar={() => {

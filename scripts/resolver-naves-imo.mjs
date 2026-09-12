@@ -186,7 +186,7 @@ async function wikidata(nombre) {
 /* ─── Fuente 2: Data Docked (1 crédito por nave) ──────────────────────────── */
 
 async function datadocked(nombre) {
-  const url = `https://datadocked.com/api/vessels_operations/vessels-by-vessel-name?vessel_name=${encodeURIComponent(nombre)}`;
+  const url = `https://datadocked.com/api/vessels_operations/vessels-by-vessel-name?name=${encodeURIComponent(nombre)}`;
   const r = await fetch(url, { headers: { "x-api-key": DATADOCKED_KEY, Accept: "application/json" } });
   if (!r.ok) return { error: `HTTP ${r.status}` };
   const body = await r.json();

@@ -27,8 +27,8 @@ type Presupuesto = {
   /** Null cuando el proveedor no respondió: nunca se inventa un saldo. */
   saldo: number | null;
   saldoDespues: number | null;
-  naves: string[];
-  omitidas: string[];
+  naves: { nombre: string; ops: number; ruta: string | null; ultimaAt: string | null }[];
+  omitidas: { nombre: string; etd: string | null }[];
   /** Última consulta registrada, sea de la vía que sea. */
   ultima: { at: string; origen: string } | null;
   hayClave: boolean;
@@ -489,15 +489,65 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
               )}
             </div>
 
+            {/*
+              * Una fila por nave, no una lista corrida.
+              *
+              * Cada consulta es un crédito, así que hay que poder ver qué se
+              * está pagando: qué nave, qué ruta, cuántos embarques dependen de
+              * ella y hace cuánto que no se mira. Ordenadas por la más
+              * desactualizada, que es la que más falta hace.
+              */}
             {presupuesto.naves.length > 0 && (
-              <p className="mt-3 text-[11.5px] leading-snug text-dash-muted">
-                {tr.rastreoGastoNaves}: {presupuesto.naves.join(", ")}
-              </p>
+              <div className="mt-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                  {tr.rastreoGastoNaves} ({presupuesto.naves.length})
+                </p>
+                <ul className="mt-1.5 max-h-[30dvh] divide-y divide-dash-border overflow-y-auto rounded-lg border border-dash-border">
+                  {presupuesto.naves.map((n) => (
+                    <li key={n.nombre} className="flex items-baseline gap-2 px-2.5 py-1.5">
+                      <Icon
+                        icon="lucide:ship"
+                        width={12}
+                        height={12}
+                        className="shrink-0 translate-y-0.5 text-dash-muted"
+                        aria-hidden
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[12.5px] font-bold text-dash-fg">{n.nombre}</p>
+                        <p className="truncate text-[10.5px] text-dash-muted">
+                          {n.ruta ?? "—"}
+                          {n.ops > 0 ? ` · ${n.ops} ${tr.rastreoOps}` : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-[10.5px] text-dash-muted tabular-nums">
+                        {n.ultimaAt ? cuandoFue(n.ultimaAt).split(" · ")[1] : tr.rastreoNunca}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[10.5px] text-dash-muted">{tr.rastreoGastoUnaCadaUna}</p>
+              </div>
             )}
+
             {presupuesto.omitidas.length > 0 && (
-              <p className="mt-1.5 text-[11.5px] leading-snug text-dash-muted">
-                {tr.rastreoGastoOmitidas.replace("{{n}}", String(presupuesto.omitidas.length))}
-              </p>
+              <div className="mt-2.5 rounded-lg border border-dash-border bg-dash-control/40 px-2.5 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                  {tr.rastreoGastoOmitidasTitulo} ({presupuesto.omitidas.length})
+                </p>
+                <ul className="mt-1 space-y-0.5">
+                  {presupuesto.omitidas.map((n) => (
+                    <li key={n.nombre} className="flex items-baseline justify-between gap-2 text-[11px]">
+                      <span className="truncate text-dash-fg">{n.nombre}</span>
+                      <span className="shrink-0 text-dash-muted tabular-nums">
+                        {n.etd ? `${tr.rastreoZarpe} ${fechaCorta(n.etd)}` : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[10.5px] leading-snug text-dash-muted">
+                  {tr.rastreoGastoOmitidasPorque}
+                </p>
+              </div>
             )}
 
             <div className="mt-4 flex justify-end gap-2">

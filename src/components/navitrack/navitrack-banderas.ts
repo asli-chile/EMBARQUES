@@ -90,6 +90,108 @@ const PUERTO_ISO: Record<string, string> = {
   BUENAVENTURA: "CO",
   CARTAGENA: "CO",
   BALBOA: "PA",
+  CRISTOBAL: "PA",
+  "MANZANILLO PANAMA": "PA",
+  COLON: "PA",
+  // ─── Destinos. Sin estos, la columna Ruta solo mostraba bandera de origen ───
+  HAMBURGO: "DE",
+  HAMBURG: "DE",
+  BREMERHAVEN: "DE",
+  ROTTERDAM: "NL",
+  AMBERES: "BE",
+  ANTWERP: "BE",
+  ZEEBRUGGE: "BE",
+  LEIXOES: "PT",
+  LISBOA: "PT",
+  SINES: "PT",
+  GENOA: "IT",
+  GENOVA: "IT",
+  "GIOIA TAURO": "IT",
+  LIVORNO: "IT",
+  "LA SPEZIA": "IT",
+  SALERNO: "IT",
+  VADO: "IT",
+  "FOS SUR MER": "FR",
+  FOS: "FR",
+  "LE HAVRE": "FR",
+  MARSELLA: "FR",
+  DUNKERQUE: "FR",
+  VALENCIA: "ES",
+  BARCELONA: "ES",
+  ALGECIRAS: "ES",
+  BILBAO: "ES",
+  VIGO: "ES",
+  CADIZ: "ES",
+  LONDRES: "GB",
+  LONDON: "GB",
+  FELIXSTOWE: "GB",
+  TILBURY: "GB",
+  SOUTHAMPTON: "GB",
+  SEATTLE: "US",
+  TACOMA: "US",
+  "LOS ANGELES": "US",
+  "LONG BEACH": "US",
+  OAKLAND: "US",
+  FILADELFIA: "US",
+  PHILADELPHIA: "US",
+  "NEW YORK": "US",
+  "NUEVA YORK": "US",
+  MIAMI: "US",
+  HOUSTON: "US",
+  CHARLESTON: "US",
+  SAVANNAH: "US",
+  WILMINGTON: "US",
+  "PORT EVERGLADES": "US",
+  VANCOUVER: "CA",
+  MONTREAL: "CA",
+  TOKYO: "JP",
+  TOKIO: "JP",
+  YOKOHAMA: "JP",
+  KOBE: "JP",
+  OSAKA: "JP",
+  NAGOYA: "JP",
+  SHANGHAI: "CN",
+  NINGBO: "CN",
+  SHENZHEN: "CN",
+  QINGDAO: "CN",
+  XINGANG: "CN",
+  DALIAN: "CN",
+  "HONG KONG": "HK",
+  BUSAN: "KR",
+  PUSAN: "KR",
+  KAOHSIUNG: "TW",
+  KEELUNG: "TW",
+  SINGAPUR: "SG",
+  SINGAPORE: "SG",
+  "PORT KLANG": "MY",
+  TANJUNG: "MY",
+  "JEBEL ALI": "AE",
+  DUBAI: "AE",
+  DAMMAM: "SA",
+  JEDDAH: "SA",
+  "NOVOROSSIYSK": "RU",
+  "SAN PETERSBURGO": "RU",
+  SANTOS: "BR",
+  PARANAGUA: "BR",
+  ITAPOA: "BR",
+  NAVEGANTES: "BR",
+  "RIO GRANDE": "BR",
+  "BUENOS AIRES": "AR",
+  MONTEVIDEO: "UY",
+  "PUERTO CABELLO": "VE",
+  KINGSTON: "JM",
+  CAUCEDO: "DO",
+  "PUERTO LIMON": "CR",
+  MOIN: "CR",
+  VERACRUZ: "MX",
+  MANZANILLO: "MX",
+  LAZARO: "MX",
+  DURBAN: "ZA",
+  "CIUDAD DEL CABO": "ZA",
+  "CAPE TOWN": "ZA",
+  SYDNEY: "AU",
+  MELBOURNE: "AU",
+  AUCKLAND: "NZ",
 };
 
 function normalizar(s: string | null | undefined): string {
@@ -117,4 +219,21 @@ export function banderaDePais(pais: string | null | undefined): string | null {
 export function banderaDePuerto(puerto: string | null | undefined): string | null {
   const iso = PUERTO_ISO[normalizar(puerto)];
   return iso ? isoAEmoji(iso) : null;
+}
+
+/*
+ * Código ISO en vez del emoji.
+ *
+ * Los emoji de bandera se arman con dos "indicadores regionales" y dependen de
+ * que el sistema tenga una fuente que los combine. Windows no la trae: en vez
+ * de la bandera de Chile se ve un literal "CL", que es peor que no mostrar
+ * nada. Con el código ISO la pantalla puede dibujar un SVG, que se ve igual en
+ * todas partes.
+ */
+export function isoDePuerto(puerto: string | null | undefined): string | null {
+  return PUERTO_ISO[normalizar(puerto)] ?? null;
+}
+
+export function isoDePais(pais: string | null | undefined): string | null {
+  return PAIS_ISO[normalizar(pais)] ?? null;
 }

@@ -16,6 +16,7 @@ import {
   type Journey,
   type LngLat,
   type NavitrackOperacion,
+  type Tramo,
 } from "./navitrack-model";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
 import { normalizarEstado, ESTADO_META } from "@/lib/operaciones/estados";
@@ -133,6 +134,11 @@ export type DestinoEvaluado = "coincide" | "en_ruta" | "fuera_de_ruta" | "descon
  * Si el puerto declarado está más cerca del POD que el buque ahora, es una
  * escala en ruta. Si no, algo pasa y vale la pena preguntar.
  *
+ * Ya no decide si se avisa: eso lo decide la fecha anunciada, porque el
+ * operador quiere revisar **todas** las recaladas, también las que van en ruta.
+ * Se conserva para presentarlas: una parada en ruta y un desvío evidente no
+ * merecen el mismo tono en pantalla.
+ *
  * Es geometría de círculo máximo sobre un mundo con continentes y canales, así
  * que es una aproximación. Sirve para separar lo evidente —Callao camino a
  * Europa— de lo que no lo es, y el margen evita que un puerto casi equidistante
@@ -208,8 +214,26 @@ export function resolverEstado(
     posAt != null &&
     now.getTime() - posAt.getTime() > POSICION_ANTIGUA_HORAS * HOUR_MS;
 
+  /*
+   * Sospecha de transbordo: el destino declarado **y** que ya haya llegado.
+   *
+   * Que el buque declare otro puerto no es noticia por sí solo: va anunciando
+   * su próxima escala durante todo el viaje. Un embarque a Génova que anuncia
+   * Gioia Tauro con tres semanas de anticipación no tiene nada de anómalo, y
+   * marcarlo "posible transbordo" durante veinte días entrena a cualquiera a
+   * ignorar ese estado.
+   *
+   * La pregunta se abre el día que el buque dice que llega a ese puerto: ahí
+   * es cuando o siguió viaje o cambió de barco, y alguien tiene que mirarlo.
+   */
+  const llegadaAnunciada = ais?.eta ?? null;
+  const yaLlegoAlPuertoAnunciado =
+    llegadaAnunciada == null || llegadaAnunciada.getTime() <= now.getTime();
+
   const sospecha =
-    decision?.estado !== "descartado" && destinoAisDiscrepa(op.pod, ais?.destination ?? null);
+    decision?.estado !== "descartado" &&
+    destinoAisDiscrepa(op.pod, ais?.destination ?? null) &&
+    yaLlegoAlPuertoAnunciado;
   const transbordoSospechado = sospecha && decision?.estado !== "confirmado";
 
   const etapa = ((): NavitrackEtapa => {
@@ -364,6 +388,10 @@ export type EventoViaje = {
   cumplido: boolean;
   /** Es el punto en que está el viaje ahora mismo. */
   actual: boolean;
+  /** Nave que recibe la carga, en un transbordo. */
+  nave?: string | null;
+  /** Nave que la entrega. Sin esto el hito no dice de qué a qué. */
+  naveAnterior?: string | null;
 };
 
 /**
@@ -379,6 +407,7 @@ export function construirTimeline(
   estado: EstadoEmbarque,
   decision: TransbordoDecision | null,
   now = new Date(),
+  tramos: Tramo[] = [],
 ): EventoViaje[] {
   const pol = (op.pol ?? "").trim();
   const pod = (op.pod ?? "").trim();
@@ -436,7 +465,40 @@ export function construirTimeline(
     });
   }
 
-  if (decision?.estado === "confirmado") {
+  /*
+   * Transbordos registrados.
+   *
+   * Cada cambio de nave entre tramos consecutivos es un hito del viaje: ahí la
+   * carga se bajó de un barco y se subió a otro. Sin esto, el historial de un
+   * embarque con tres buques contaba solo el zarpe del primero y el arribo del
+   * último, como si hubiera sido directo.
+   *
+   * La fecha es la de llegada del tramo que termina, que es cuando la carga
+   * tocó el puerto de conexión.
+   */
+  const cadena = [...tramos].sort((a, b) => a.orden - b.orden);
+  for (let i = 1; i < cadena.length; i += 1) {
+    const anterior = cadena[i - 1];
+    const siguiente = cadena[i];
+    // Mismo buque en los dos tramos: es una escala del itinerario, no un transbordo.
+    if (!siguiente.nave || anterior.nave === siguiente.nave) continue;
+
+    const cuando = parseOpDate(anterior.eta) ?? parseOpDate(siguiente.etd);
+    eventos.push({
+      codigo: "TRANSBORDO",
+      fecha: cuando,
+      lugar: siguiente.pol ?? anterior.pod ?? "",
+      nave: siguiente.nave,
+      naveAnterior: anterior.nave,
+      certeza: anterior.confirmado ? "CONFIRMADO" : "ESTIMADO",
+      cumplido: pasado(cuando),
+      actual: false,
+    });
+  }
+
+  if (cadena.length > 1) {
+    // Con cadena registrada, la sospecha y la decisión vieja sobran.
+  } else if (decision?.estado === "confirmado") {
     eventos.push({
       codigo: "TRANSBORDO",
       fecha: null,

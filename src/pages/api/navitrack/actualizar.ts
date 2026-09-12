@@ -23,6 +23,7 @@ import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 import { correoActualizacionManual } from "@/components/navitrack/navitrack-correo";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
+import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Tope duro de esta acción, pase lo que pase con la lista blanca. */
@@ -62,7 +63,14 @@ async function exigirSuperadmin(supabase: Sesion) {
 }
 
 function claveNave(raw: string | null | undefined): string {
-  let s = String(raw ?? "").toUpperCase().replace(/\s+/g, " ").trim();
+  // El proveedor devuelve los nombres con guión bajo ("CALLAO_EXPRESS"), así que
+  // los separadores se unifican antes de comparar. Sin esto, ninguna búsqueda
+  // por nombre calzaba nunca: gastaba el crédito y devolvía "sin resultado".
+  let s = String(raw ?? "")
+    .toUpperCase()
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   s = s.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
   const ultimo = s.split(" ").pop() ?? "";
   if (/\d/.test(ultimo) && /[A-Z]/.test(ultimo) && ultimo.length <= 5 && s.split(" ").length > 1) {
@@ -94,6 +102,14 @@ type NaveObjetivo = {
   nombre: string;
   identificador: string;
   zarpo: boolean;
+  /** Embarques vivos de esa nave: es lo que se deja de ver si no se consulta. */
+  ops: number;
+  /** Ruta del viaje en curso, para reconocerla sin abrir nada. */
+  ruta: string | null;
+  /** Cuándo se consultó su posición por última vez. */
+  ultimaAt: string | null;
+  /** Zarpe más próximo. En las omitidas explica por qué se omiten. */
+  etd: string | null;
 };
 
 /**
@@ -103,6 +119,10 @@ type NaveObjetivo = {
  * número que se muestra en pantalla es exactamente el que se va a gastar.
  */
 async function planificar(supabase: Sesion) {
+  // El presupuesto se calcula sobre las naves que llevan la carga hoy, así que
+  // primero se traspasa el seguimiento a quien corresponde.
+  await sincronizarSeguimiento(supabase);
+
   const desde = new Date(Date.now() - VENTANA_DIAS * 86_400_000).toISOString().slice(0, 10);
   const hoy = new Date().toISOString().slice(0, 10);
 
@@ -115,7 +135,7 @@ async function planificar(supabase: Sesion) {
       .limit(MAX_NAVES),
     supabase
       .from("operaciones")
-      .select("nave, etd, eta, arribo_confirmado")
+      .select("nave, pol, pod, etd, eta, arribo_confirmado")
       .is("deleted_at", null)
       .not("nave", "is", null)
       .gte("eta", desde)
@@ -129,40 +149,79 @@ async function planificar(supabase: Sesion) {
      */
     supabase
       .from("navitrack_ais_lecturas")
-      .select("consultado_at, origen")
+      .select("identificador, consultado_at, origen")
       .eq("tipo", "posicion")
       .order("consultado_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(400),
   ]);
 
-  /** Naves con al menos un embarque que ya zarpó y todavía no llega. */
-  const navegando = new Set<string>();
+  /*
+   * Resumen por nave: si navega, cuántos embarques lleva, su ruta y su zarpe.
+   *
+   * Todo esto va a la pantalla de confirmación. Una lista de nombres sueltos no
+   * alcanza para decidir si vale la pena gastar: hace falta saber qué embarques
+   * hay detrás de cada nave y cuándo se miró por última vez.
+   */
+  const resumen = new Map<
+    string,
+    { navega: boolean; ops: number; ruta: string | null; etd: string | null }
+  >();
+
   for (const o of (opsRes.data ?? []) as {
     nave: string | null;
+    pol: string | null;
+    pod: string | null;
     etd: string | null;
     eta: string | null;
     arribo_confirmado: boolean | null;
   }[]) {
-    if (o.arribo_confirmado) continue;
-    if (!o.etd || o.etd > hoy) continue;
     const k = claveNave(o.nave);
-    if (k) navegando.add(k);
+    if (!k) continue;
+    const a = resumen.get(k) ?? { navega: false, ops: 0, ruta: null, etd: null };
+    if (!o.arribo_confirmado) {
+      a.ops += 1;
+      if (!a.ruta && (o.pol || o.pod)) a.ruta = `${o.pol ?? "—"} → ${o.pod ?? "—"}`;
+      // El zarpe que se muestra es el más próximo de la nave.
+      if (o.etd && (!a.etd || o.etd < a.etd)) a.etd = o.etd;
+      if (o.etd && o.etd <= hoy) a.navega = true;
+    }
+    resumen.set(k, a);
   }
 
   const todas: NaveObjetivo[] = ((navesRes.data ?? []) as Record<string, unknown>[])
-    .map((n) => ({
-      id: String(n.id),
-      nombre: String(n.nombre ?? ""),
-      identificador: (String(n.mmsi ?? "").trim() || String(n.imo ?? "").trim()).trim(),
-      zarpo: navegando.has(claveNave(String(n.nombre ?? ""))),
-    }))
-    .filter((n) => /^\d{7}$|^\d{9}$/.test(n.identificador));
+    .map((n) => {
+      const nombre = String(n.nombre ?? "");
+      const r = resumen.get(claveNave(nombre));
+      const identificador = (String(n.mmsi ?? "").trim() || String(n.imo ?? "").trim()).trim();
+      return {
+        id: String(n.id),
+        nombre,
+        identificador,
+        zarpo: Boolean(r?.navega),
+        ops: r?.ops ?? 0,
+        ruta: r?.ruta ?? null,
+        ultimaAt: ultimaPorIdent.get(identificador) ?? null,
+        etd: r?.etd ?? null,
+      };
+    })
+    .filter((n) => /^\d{7}$|^\d{9}$/.test(n.identificador))
+    // Primero lo que hace más rato que no se mira: es lo que más falta hace.
+    .sort((a, b) => (a.ultimaAt ?? "").localeCompare(b.ultimaAt ?? "") || a.nombre.localeCompare(b.nombre));
 
   const objetivo = todas.filter((n) => n.zarpo);
   const gastados = gastoRes.count ?? 0;
 
-  const ultimaFila = ultimaRes.data as { consultado_at: string; origen: string } | null;
+  // Viene ordenado de más nuevo a más viejo: la primera de cada nave manda.
+  const lecturas = (ultimaRes.data ?? []) as {
+    identificador: string;
+    consultado_at: string;
+    origen: string;
+  }[];
+  const ultimaPorIdent = new Map<string, string>();
+  for (const l of lecturas) {
+    if (!ultimaPorIdent.has(l.identificador)) ultimaPorIdent.set(l.identificador, l.consultado_at);
+  }
+  const ultimaFila = lecturas[0] ?? null;
 
   // El saldo lo dice el proveedor. Consultarlo no cuesta nada.
   const saldo = await consultarSaldo(import.meta.env.DATADOCKED_API_KEY);
@@ -195,8 +254,13 @@ export const GET: APIRoute = async ({ cookies }) => {
     gastados: p.gastados,
     // Sin saldo conocido no se inventa uno: la pantalla lo dirá.
     saldoDespues: p.saldo == null ? null : Math.max(0, p.saldo - p.costo),
-    naves: p.objetivo.map((n) => n.nombre),
-    omitidas: p.omitidas.map((n) => n.nombre),
+    naves: p.objetivo.map((n) => ({
+      nombre: n.nombre,
+      ops: n.ops,
+      ruta: n.ruta,
+      ultimaAt: n.ultimaAt,
+    })),
+    omitidas: p.omitidas.map((n) => ({ nombre: n.nombre, etd: n.etd })),
     ultima: p.ultima,
     hayClave: Boolean(import.meta.env.DATADOCKED_API_KEY),
   });

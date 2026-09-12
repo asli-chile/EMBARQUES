@@ -117,7 +117,10 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
   const isDark = theme !== "light";
   const mapStyle = isDark ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
 
-  const { origen, destino, position, traveled, remaining } = journey;
+  const { origen, destino, position, traveled, remaining, escalas } = journey;
+
+  /** Puertos de conexión de un viaje con transbordo. Vacío si es directo. */
+  const conexiones = (escalas ?? []).filter((e) => e.tipo === "conexion");
   const esReal = position?.source === "AIS";
 
   const traveledData = useMemo(
@@ -215,6 +218,8 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
     const pts: LngLat[] = [];
     if (isValidCoord(origen.coord)) pts.push(origen.coord);
     if (isValidCoord(destino.coord)) pts.push(destino.coord);
+    // Sin esto, un transbordo lejos de la recta origen-destino queda fuera de cuadro.
+    for (const c of conexiones) if (isValidCoord(c.coord)) pts.push(c.coord);
     if (position) pts.push(position);
     for (const p of traveled) pts.push(p);
     for (const p of remaining) pts.push(p);
@@ -244,7 +249,7 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
     } catch {
       map.flyTo({ center: [pts[0].lng, pts[0].lat], zoom: 3, duration: 900, essential: true });
     }
-  }, [ready, origen.coord, destino.coord, position, traveled, remaining, pantallaCompleta]);
+  }, [ready, origen.coord, destino.coord, conexiones, position, traveled, remaining, pantallaCompleta]);
 
   const courseDeg = position?.course != null && Number.isFinite(position.course) ? position.course : 0;
   const sinRuta = !isValidCoord(origen.coord) && !isValidCoord(destino.coord) && !position;
@@ -346,6 +351,29 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
                 </div>
               </Marker>
             )}
+
+            {/*
+              * Puertos de conexión.
+              *
+              * Se dibujan más discretos que origen y destino a propósito: son
+              * parte del recorrido, no los extremos del compromiso con el
+              * cliente. El chip lleva la nave que zarpa desde ahí, que es lo
+              * que convierte el punto en un transbordo y no en una escala más.
+              */}
+            {conexiones.map((c) => (
+              <Marker key={`${c.nombre}-${c.coord.lng}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="nt-map-chip nt-map-chip--conexion">
+                    {c.nombre}
+                    {c.nave ? ` · ${c.nave}` : ""}
+                  </span>
+                  <span
+                    className={`nt-port-dot nt-port-dot--conexion${c.cumplida ? " is-cumplida" : ""}`}
+                    aria-hidden
+                  />
+                </div>
+              </Marker>
+            ))}
 
             {position && (
               <Marker longitude={position.lng} latitude={position.lat} anchor="center">

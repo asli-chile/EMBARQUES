@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import type { Locale } from "@/lib/i18n/translations";
 import { ETAPA_LABEL_KEY } from "./NavitrackShipment";
 import { fmtFecha, fmtRelativo, interpolar } from "./navitrack-format";
 import { parseOpDate, type AisSnapshot, type Journey, type NavitrackOperacion } from "./navitrack-model";
 import { ETAPA_META, PROXIMO_DIAS, type EstadoEmbarque } from "./navitrack-estado";
+import { isoDePuerto } from "./navitrack-banderas";
 
 type Textos = Record<string, string>;
 
@@ -29,7 +31,22 @@ export function requiereAtencion(estado: EstadoEmbarque): boolean {
 
 export type FleetFiltro = "transito" | "proximos" | "retrasos" | "transbordos" | null;
 /** Dos listas distintas, no dos filtros: lo que se opera y lo que ya cerró. */
-export type FleetVista = "activos" | "arribados";
+export type FleetVista = "activos" | "arribados" | "todos";
+
+/** Columnas por las que se puede ordenar la tabla. */
+type Orden =
+  | "contenedor"
+  | "reserva"
+  | "cliente"
+  | "ruta"
+  | "buque"
+  | "etd"
+  | "eta"
+  | "estado"
+  | "actualizado";
+
+/** Embarques por página: entran en pantalla sin scroll en un portátil. */
+const POR_PAGINA = 11;
 
 type KpiProps = {
   label: string;
@@ -67,18 +84,42 @@ function Kpi({ label, hint, valor, icon, acento, activo, onClick }: KpiProps) {
 
 /* --------------------------------- Estado ---------------------------------- */
 
-function EtapaChip({ row, tr }: { row: FleetRow; tr: Textos }) {
+function EtapaChip({ row, tr, locale }: { row: FleetRow; tr: Textos; locale: Locale }) {
   const meta = ETAPA_META[row.estado.etapa];
   const enCurso = row.estado.etapa !== "ARRIBADO" && row.estado.etapa !== "EN_ORIGEN";
+
+  /*
+   * En una sospecha de transbordo, el estado solo no alcanza.
+   *
+   * La tabla muestra el ETA del destino final, así que "Posible transbordo"
+   * junto a una fecha lejana parece un error del sistema. Lo que lo explica es
+   * el otro dato: qué puerto declaró el buque y cuándo dijo que llegaba ahí.
+   * Sin eso, una alerta correcta se lee como una falsa.
+   */
+  const sospecha = row.estado.etapa === "POSIBLE_TRANSBORDO";
+  const puerto = sospecha ? (row.ais?.destination ?? "").trim() : "";
+  const llegada = sospecha ? fmtFecha(row.ais?.eta ?? null, locale) : null;
+
   return (
-    <span className={`nt-tone--${meta.tono} nt-stage text-[11.5px]`}>
-      <span className="nt-stage-icon !h-6 !w-6">
-        <Icon icon={meta.icon} width={13} height={13} aria-hidden />
+    <span className="inline-flex flex-col items-center gap-0.5">
+      <span
+        className={`nt-tone--${meta.tono} nt-stage text-[12.5px]`}
+        title={puerto ? `${puerto}${llegada ? ` · ${llegada}` : ""}` : undefined}
+      >
+        <span className="nt-stage-icon !h-6 !w-6">
+          <Icon icon={meta.icon} width={13} height={13} aria-hidden />
+        </span>
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
+          {enCurso && <span className="nt-live-dot" aria-hidden />}
+          {tr[ETAPA_LABEL_KEY[row.estado.etapa]]}
+        </span>
       </span>
-      <span className="flex items-center gap-1.5 whitespace-nowrap">
-        {enCurso && <span className="nt-live-dot" aria-hidden />}
-        {tr[ETAPA_LABEL_KEY[row.estado.etapa]]}
-      </span>
+      {puerto && (
+        <span className="max-w-[170px] truncate text-[10.5px] font-semibold text-dash-fg/60">
+          {puerto}
+          {llegada ? ` · ${llegada}` : ""}
+        </span>
+      )}
     </span>
   );
 }
@@ -107,6 +148,57 @@ type FleetProps = {
   cargando: boolean;
 };
 
+/** Texto por el que se ordena cada columna. Las fechas ya vienen comparables en ISO. */
+function valorDeOrden(row: FleetRow, col: Orden, tr: Record<string, string>): string {
+  switch (col) {
+    case "contenedor":
+      return (row.op.contenedor || row.op.booking || row.op.ref_asli || "").toUpperCase();
+    case "reserva":
+      return (row.op.booking ?? "").toUpperCase();
+    case "cliente":
+      return (row.op.cliente ?? "").toUpperCase();
+    case "ruta":
+      return `${row.journey.origen.nombre}${row.journey.destino.nombre}`.toUpperCase();
+    case "buque":
+      return (row.journey.naveActual || row.op.nave || "").toUpperCase();
+    case "etd":
+      return row.op.etd ?? "";
+    case "eta":
+      return row.op.eta ?? "";
+    case "estado":
+      return tr[ETAPA_LABEL_KEY[row.estado.etapa]] ?? row.estado.etapa;
+    case "actualizado":
+      // Al revés a propósito: lo más reciente primero al ordenar descendente.
+      return row.journey.position?.at?.toISOString() ?? "";
+    default:
+      return "";
+  }
+}
+
+/**
+ * Bandera del puerto, en SVG.
+ *
+ * No se usa el emoji: Windows no trae la fuente que combina los indicadores
+ * regionales y dibuja un literal "CL" en vez de la bandera de Chile. El icono
+ * de Iconify es un SVG y se ve igual en cualquier sistema.
+ *
+ * Sin país conocido no se dibuja nada. Una bandera equivocada en logística
+ * internacional se nota, y un hueco es más honesto.
+ */
+function BanderaPuerto({ puerto }: { puerto: string | null | undefined }) {
+  const iso = isoDePuerto(puerto);
+  if (!iso) return null;
+  return (
+    <Icon
+      icon={`circle-flags:${iso.toLowerCase()}`}
+      width={14}
+      height={14}
+      className="shrink-0"
+      aria-hidden
+    />
+  );
+}
+
 export function NavitrackFleet({
   rows,
   total,
@@ -122,6 +214,44 @@ export function NavitrackFleet({
   onSelect,
   cargando,
 }: FleetProps) {
+  /*
+   * Orden y paginación viven aquí, no en el contenedor.
+   *
+   * Son preferencias de lectura de esta tabla: nadie las necesita fuera, y
+   * subirlas obligaría a redibujar el módulo entero al cambiar de página.
+   */
+  const [orden, setOrden] = useState<{ col: Orden; desc: boolean }>({ col: "eta", desc: false });
+  const [pagina, setPagina] = useState(1);
+
+  const ordenar = (col: Orden) => {
+    setPagina(1);
+    setOrden((o) => (o.col === col ? { col, desc: !o.desc } : { col, desc: false }));
+  };
+
+  // Cambiar de vista o de filtro deja la página vieja fuera de rango.
+  useEffect(() => {
+    setPagina(1);
+  }, [vista, filtro, busqueda]);
+
+  const ordenadas = useMemo(() => {
+    const copia = [...rows];
+    copia.sort((a, b) => {
+      const va = valorDeOrden(a, orden.col, tr);
+      const vb = valorDeOrden(b, orden.col, tr);
+      // Lo vacío siempre al final: un dato que falta no es "el menor".
+      if (!va && vb) return 1;
+      if (va && !vb) return -1;
+      const cmp = va.localeCompare(vb, undefined, { numeric: true });
+      return orden.desc ? -cmp : cmp;
+    });
+    return copia;
+  }, [rows, orden, tr]);
+
+  const paginas = Math.max(1, Math.ceil(ordenadas.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, paginas);
+  const desde = (paginaActual - 1) * POR_PAGINA;
+  const visibles = ordenadas.slice(desde, desde + POR_PAGINA);
+
   const relativos = {
     haceMenosDeUnMinuto: tr.haceMenosDeUnMinuto,
     haceMinutos: tr.haceMinutos,
@@ -188,28 +318,28 @@ export function NavitrackFleet({
       <section className="dash-card dash-card-static flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="dash-section-head flex shrink-0 flex-wrap items-center justify-between gap-2.5 px-3.5 py-3">
           <div className="min-w-0">
-            <h2 className="text-[15px] font-bold tracking-tight text-dash-fg">{tr.tableTitle}</h2>
-            <p className="mt-0.5 text-[11.5px] text-dash-muted">
+            <h2 className="text-[16px] font-extrabold tracking-tight text-dash-fg">{tr.tableTitle}</h2>
+            <p className="mt-0.5 text-[12px] text-dash-muted">
               {interpolar(tr.tableSubtitle, { n: String(total) })}
             </p>
           </div>
 
           <div className="flex shrink-0 rounded-xl border border-dash-border bg-dash-control/80 p-0.5">
-            {(["activos", "arribados"] as const).map((v) => (
+            {(["activos", "arribados", "todos"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => onVista(v)}
                 aria-pressed={vista === v}
-                className={`motion-interactive inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold ${
+                className={`motion-interactive inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-bold ${
                   vista === v
                     ? "border border-dash-neon/40 bg-dash-neon/25 text-dash-fg"
                     : "border border-transparent text-dash-muted hover:text-dash-fg"
                 }`}
               >
-                {v === "activos" ? tr.vistaActivos : tr.vistaArribados}
+                {v === "activos" ? tr.vistaActivos : v === "arribados" ? tr.vistaArribados : tr.vistaTodos}
                 <span className="tabular-nums opacity-70">
-                  {v === "activos" ? conteos.transito : conteos.arribados}
+                  {v === "activos" ? conteos.transito : v === "arribados" ? conteos.arribados : total}
                 </span>
               </button>
             ))}
@@ -286,9 +416,12 @@ export function NavitrackFleet({
                             </p>
                             <p className="mt-0.5 truncate text-[11.5px] text-dash-muted">
                               {row.op.cliente || "—"}
+                              {/* En móvil no hay columnas: la reserva va detrás
+                                  del cliente, que es como se la nombra al hablar. */}
+                              {row.op.booking ? ` · ${tr.colReserva} ${row.op.booking}` : ""}
                             </p>
                           </div>
-                          <EtapaChip row={row} tr={tr} />
+                          <EtapaChip row={row} tr={tr} locale={locale} />
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-dash-muted">
                           <span className="flex min-w-0 items-center gap-1 truncate">
@@ -312,31 +445,76 @@ export function NavitrackFleet({
             </div>
 
             <div className="hidden min-h-0 flex-1 overflow-auto md:block">
-              <table className="w-full border-collapse text-left text-[13px]">
-                <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,var(--dash-surface)_96%,transparent)] backdrop-blur">
+              <table className="nt-tabla w-full border-collapse text-left text-[14.5px]">
+                <thead className="sticky top-0 z-[1] backdrop-blur">
                   <tr className="border-b border-dash-border">
-                    {[
-                      tr.colContenedor,
-                      tr.colCliente,
-                      tr.colRuta,
-                      tr.colBuque,
-                      tr.colEtd,
-                      tr.colEta,
-                      tr.colEstado,
-                      tr.colActualizado,
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        scope="col"
-                        className="whitespace-nowrap px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-dash-muted"
-                      >
-                        {h}
-                      </th>
-                    ))}
+                    {(
+                      [
+                        ["contenedor", tr.colContenedor],
+                        ["reserva", tr.colReserva],
+                        ["cliente", tr.colCliente],
+                        ["ruta", tr.colRuta],
+                        ["buque", tr.colBuque],
+                        ["etd", tr.colEtd],
+                        ["eta", tr.colEta],
+                        ["estado", tr.colEstado],
+                        ["actualizado", tr.colActualizado],
+                      ] as [Orden, string][]
+                    ).map(([col, h]) => {
+                      const activa = orden.col === col;
+                      return (
+                        <th
+                          key={col}
+                          scope="col"
+                          aria-sort={activa ? (orden.desc ? "descending" : "ascending") : "none"}
+                          className={`whitespace-nowrap py-3.5 text-center text-[12.5px] font-semibold uppercase tracking-[0.07em] text-dash-fg/60 ${
+                            col === "actualizado" ? "px-2" : "px-3.5"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => ordenar(col)}
+                            title={h}
+                            aria-label={h}
+                            className="motion-interactive mx-auto inline-flex items-center gap-1 hover:text-dash-fg"
+                          >
+                            {/* La última actualización se rotula con el ícono de
+                                refresco: el texto ocupaba más que el propio dato
+                                y empujaba a las columnas que sí se leen. */}
+                            {col === "actualizado" ? (
+                              <Icon icon="lucide:refresh-cw" width={13} height={13} aria-hidden />
+                            ) : (
+                              h
+                            )}
+                            {/* La flecha solo se pinta en la columna activa; en
+                                las demás queda tenue para invitar sin gritar. */}
+                            <Icon
+                              icon={
+                                activa
+                                  ? orden.desc
+                                    ? "lucide:arrow-down"
+                                    : "lucide:arrow-up"
+                                  : "lucide:chevrons-up-down"
+                              }
+                              width={12}
+                              height={12}
+                              className={activa ? "text-dash-neon" : "opacity-35"}
+                              aria-hidden
+                            />
+                          </button>
+                        </th>
+                      );
+                    })}
+                    <th
+                      scope="col"
+                      className="whitespace-nowrap px-3.5 py-3.5 text-center text-[12.5px] font-semibold uppercase tracking-[0.07em] text-dash-fg/60"
+                    >
+                      {tr.colAcciones}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dash-border">
-                  {rows.map((row) => {
+                  {visibles.map((row) => {
                     const meta = ETAPA_META[row.estado.etapa];
                     const flag = requiereAtencion(row.estado);
                     const actualizado = fmtRelativo(row.journey.position?.at ?? null, relativos);
@@ -357,18 +535,29 @@ export function NavitrackFleet({
                           flag ? "nt-row--flag" : ""
                         } cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/50`}
                       >
-                        <td className="px-3 py-2.5">
-                          <span className="block max-w-[150px] truncate font-bold text-dash-fg">
+                        <td className="px-3.5 py-3 text-center">
+                          <span className="mx-auto block max-w-[170px] truncate text-[15px] font-bold tracking-tight text-dash-fg">
                             {row.op.contenedor || row.op.booking || row.op.ref_asli || "—"}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">
-                          <span className="block max-w-[170px] truncate text-dash-muted">
+                        <td className="px-3.5 py-3">
+                          {/* El booking es como la naviera y el cliente nombran
+                              el embarque; el contenedor es lo que se mueve. Se
+                              muestran los dos porque cada área busca por el suyo. */}
+                          <span className="mx-auto block max-w-[150px] truncate font-semibold text-dash-fg/85 tabular-nums">
+                            {row.op.booking || "—"}
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-3">
+                          <span className="mx-auto block max-w-[170px] truncate font-medium text-dash-fg/75">
                             {row.op.cliente || "—"}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">
-                          <span className="flex max-w-[230px] items-center gap-1.5 truncate text-dash-fg">
+                        <td className="px-3.5 py-3">
+                          {/* Las banderas se leen antes que el texto: de un
+                              vistazo se ve de dónde a dónde va la carga. */}
+                          <span className="mx-auto flex max-w-[260px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg">
+                            <BanderaPuerto puerto={row.journey.origen.nombre} />
                             <span className="truncate">{row.journey.origen.nombre || "—"}</span>
                             <Icon
                               icon="lucide:arrow-right"
@@ -377,25 +566,66 @@ export function NavitrackFleet({
                               className="shrink-0 text-dash-muted"
                               aria-hidden
                             />
+                            <BanderaPuerto puerto={row.journey.destino.nombre} />
                             <span className="truncate">{row.journey.destino.nombre || "—"}</span>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">
-                          <span className="block max-w-[150px] truncate text-dash-fg">
-                            {row.op.nave || "—"}
+                        <td className="px-3.5 py-3">
+                          <span className="mx-auto flex max-w-[180px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg/90">
+                            <Icon
+                              icon="lucide:ship"
+                              width={13}
+                              height={13}
+                              className="shrink-0 text-dash-muted"
+                              aria-hidden
+                            />
+                            {/* La nave que lleva la carga ahora, no la del
+                                primer tramo: con transbordo no son la misma. */}
+                            <span className="truncate">
+                              {row.journey.naveActual || row.op.nave || "—"}
+                            </span>
+                            {row.journey.tramoActual && row.journey.escalas.length > 2 && (
+                              <Icon
+                                icon="lucide:git-branch"
+                                width={11}
+                                height={11}
+                                className="shrink-0 text-dash-neon"
+                                aria-label={tr.cadenaTitulo}
+                              />
+                            )}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-dash-muted tabular-nums">
+                        <td className="whitespace-nowrap px-3.5 py-3 text-center text-[13px] font-medium text-dash-fg/60 tabular-nums">
                           {fmtFecha(parseOpDate(row.op.etd), locale) ?? "—"}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-dash-fg tabular-nums">
+                        {/* El ETA es el compromiso con el cliente: es el dato
+                            que más se mira, y se nota. */}
+                        <td className="whitespace-nowrap px-3.5 py-3 text-center text-[15px] font-bold text-dash-fg tabular-nums">
                           {fmtFecha(row.estado.eta.erp, locale) ?? "—"}
                         </td>
-                        <td className="px-3 py-2.5">
-                          <EtapaChip row={row} tr={tr} />
+                        <td className="px-3.5 py-3 text-center">
+                          <EtapaChip row={row} tr={tr} locale={locale} />
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-[11.5px] text-dash-muted">
+                        {/* Solo el valor, sin repetir la etiqueta: el ícono de
+                            la cabecera ya dice de qué se trata. */}
+                        <td
+                          className="whitespace-nowrap px-2 py-3 text-center text-[12px] font-medium text-dash-fg/55"
+                          title={actualizado ?? undefined}
+                        >
                           {actualizado ?? "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3.5 py-3 text-center">
+                          {/* La fila entera ya abre el embarque; el botón está
+                              para quien navega con teclado o busca el gesto
+                              explícito. */}
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            aria-hidden
+                            className="nt-row-accion inline-flex h-7 w-7 items-center justify-center rounded-lg border border-dash-border text-dash-muted"
+                          >
+                            <Icon icon="lucide:eye" width={13} height={13} />
+                          </span>
                         </td>
                       </tr>
                     );
@@ -403,6 +633,56 @@ export function NavitrackFleet({
                 </tbody>
               </table>
             </div>
+
+            {/* Pie: cuántos se ven de cuántos, y el paso de página.
+              * Se oculta si todo cabe en una: un paginador de una sola página
+              * es ruido. */}
+            {paginas > 1 && (
+              <div className="flex shrink-0 items-center justify-between gap-3 border-t border-dash-border px-4 py-2.5">
+                <p className="text-[11.5px] text-dash-muted tabular-nums">
+                  {interpolar(tr.paginacion, {
+                    desde: String(desde + 1),
+                    hasta: String(desde + visibles.length),
+                    total: String(ordenadas.length),
+                  })}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPagina((n) => Math.max(1, n - 1))}
+                    disabled={paginaActual <= 1}
+                    aria-label={tr.paginaAnterior}
+                    className="dash-control motion-interactive flex h-7 w-7 items-center justify-center disabled:opacity-35"
+                  >
+                    <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
+                  </button>
+                  {Array.from({ length: paginas }, (_, i) => i + 1).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPagina(n)}
+                      aria-current={n === paginaActual ? "page" : undefined}
+                      className={`motion-interactive h-7 min-w-7 rounded-lg px-2 text-[11.5px] font-bold tabular-nums ${
+                        n === paginaActual
+                          ? "border border-dash-neon/40 bg-dash-neon/25 text-dash-fg"
+                          : "border border-dash-border text-dash-muted hover:text-dash-fg"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setPagina((n) => Math.min(paginas, n + 1))}
+                    disabled={paginaActual >= paginas}
+                    aria-label={tr.paginaSiguiente}
+                    className="dash-control motion-interactive flex h-7 w-7 items-center justify-center disabled:opacity-35"
+                  >
+                    <Icon icon="lucide:chevron-right" width={14} height={14} aria-hidden />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </section>

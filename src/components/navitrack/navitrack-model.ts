@@ -139,6 +139,84 @@ export function greatCirclePoint(a: LngLat, b: LngLat, f: number): LngLat {
  * Sin desenrollar, una ruta Shanghái-San Antonio salta de +180 a -180 y MapLibre
  * la dibuja como una línea que cruza el mundo entero al revés.
  */
+/*
+ * Centroides gruesos de los continentes.
+ *
+ * Solo sirven para decidir **hacia qué lado** combar una línea: la que se aleja
+ * del continente más cercano es, casi siempre, la que va hacia el mar. No
+ * pretenden ser exactos y no se usan para medir nada.
+ */
+const CONTINENTES: LngLat[] = [
+  { lng: -58, lat: -15 }, // Sudamérica
+  { lng: -100, lat: 42 }, // Norteamérica
+  { lng: 20, lat: 3 }, // África
+  { lng: 15, lat: 50 }, // Europa
+  { lng: 95, lat: 40 }, // Asia
+  { lng: 134, lat: -25 }, // Australia
+];
+
+/**
+ * Curva la ruta hacia mar abierto.
+ *
+ * Una geodésica entre dos puertos es la línea más corta sobre la esfera, y por
+ * eso cruza continentes: Valparaíso a Cristóbal se dibujaba atravesando Perú y
+ * Colombia por tierra. Ningún barco hace eso, y la línea recta delataba que el
+ * dibujo no entendía de qué estaba hablando.
+ *
+ * La comba desplaza el centro del tramo perpendicularmente, hacia el lado que
+ * se aleja del continente más cercano —que es, en la práctica, el lado del
+ * mar—, y se desvanece hacia los extremos con un seno para que los puertos
+ * queden clavados en su sitio.
+ *
+ * **Es cosmético y hay que decirlo:** hace que la línea parezca la derrota de
+ * un barco, pero no lo es. No conoce canales, estrechos ni costas. Para la
+ * derrota real haría falta una red de rutas marítimas de verdad.
+ */
+function curvaMaritima(a: LngLat, b: LngLat, steps = 96): LngLat[] {
+  const base = greatCirclePath(a, b, steps);
+  if (base.length < 3) return base;
+
+  const medio = base[Math.floor(base.length / 2)];
+  const largoKm = haversineKm(a, b);
+  // Tramos cortos no se comban: en el Mediterráneo la curva estorbaría más de
+  // lo que ayuda, y el error de una recta de 300 km es imperceptible.
+  if (largoKm < 800) return base;
+
+  // Perpendicular al tramo, en grados. La longitud se encoge con la latitud.
+  const cosLat = Math.max(0.2, Math.cos((medio.lat * Math.PI) / 180));
+  const dx = (b.lng - a.lng) * cosLat;
+  const dy = b.lat - a.lat;
+  const norma = Math.hypot(dx, dy) || 1;
+  const perpX = -dy / norma;
+  const perpY = dx / norma;
+
+  // Hacia el lado que se aleja del continente más cercano.
+  let masCerca = CONTINENTES[0];
+  let mejor = Infinity;
+  for (const c of CONTINENTES) {
+    const d = haversineKm(medio, c);
+    if (d < mejor) {
+      mejor = d;
+      masCerca = c;
+    }
+  }
+  const haciaTierraX = (masCerca.lng - medio.lng) * cosLat;
+  const haciaTierraY = masCerca.lat - medio.lat;
+  const signo = perpX * haciaTierraX + perpY * haciaTierraY > 0 ? -1 : 1;
+
+  // Proporcional al tramo y con tope: una comba enorme sería tan falsa como la recta.
+  const amplitud = Math.min(14, (largoKm / 111) * 0.16);
+
+  return base.map((p, i) => {
+    const t = i / (base.length - 1);
+    const peso = Math.sin(Math.PI * t) * amplitud * signo;
+    return {
+      lng: p.lng + (perpX * peso) / cosLat,
+      lat: Math.max(-82, Math.min(82, p.lat + perpY * peso)),
+    };
+  });
+}
+
 export function greatCirclePath(a: LngLat, b: LngLat, steps = 96): LngLat[] {
   const pts: LngLat[] = [];
   let prevLng: number | null = null;
@@ -359,9 +437,50 @@ export type JourneyProgress = {
   basis: "posicion" | "tiempo";
 };
 
+/** Un tramo del viaje, tal como vive en `navitrack_tramos`. */
+export type Tramo = {
+  orden: number;
+  nave: string | null;
+  viaje: string | null;
+  pol: string | null;
+  pod: string | null;
+  etd: string | null;
+  eta: string | null;
+  confirmado: boolean;
+};
+
+export const NAVITRACK_TRAMO_SELECT =
+  "operacion_id, orden, nave, viaje, pol, pod, etd, eta, origen, confirmado";
+
+/** Punto de la ruta: los puertos de conexión se dibujan distinto que los extremos. */
+export type Escala = {
+  nombre: string;
+  coord: LngLat;
+  tipo: "origen" | "conexion" | "destino";
+  /** Nave que sale desde aquí. Null en el destino final. */
+  nave: string | null;
+  /** Ya pasó por aquí. */
+  cumplida: boolean;
+};
+
 export type Journey = {
   origen: { nombre: string; coord: LngLat | null };
   destino: { nombre: string; coord: LngLat | null };
+  /** Puertos de la ruta. Con transbordo son más de dos. */
+  escalas: Escala[];
+  /** Tramo en curso, 1-based. Null si el viaje es directo o no se sabe. */
+  tramoActual: number | null;
+  /**
+   * Nave que lleva la carga **ahora**.
+   *
+   * No tiene por qué ser `operaciones.nave`: en un viaje con transbordo, esa
+   * columna guarda la nave del primer tramo, que ya soltó la carga y anda en
+   * otro viaje. Seguir su AIS mostraría una posición real pero falsa para este
+   * embarque, que es peor que no mostrar nada.
+   */
+  naveActual: string | null;
+  /** Viaje de la nave actual, si se conoce. */
+  viajeActual: string | null;
   position: TrackPosition | null;
   progress: JourneyProgress | null;
   /** Tramo recorrido y tramo restante, listos para pintar. */
@@ -372,11 +491,176 @@ export type Journey = {
   remainingNm: number | null;
 };
 
+/**
+ * Une varias geodésicas en una sola línea continua.
+ *
+ * Cada tramo se desenrolla desde su propio punto de partida, así que dos tramos
+ * seguidos pueden quedar en copias distintas del mundo (lng y lng ± 360). Se
+ * alinea cada uno con el final del anterior y se evita repetir el punto de
+ * unión, que si no aparece dos veces.
+ */
+function unirTramos(tramos: LngLat[][]): LngLat[] {
+  const salida: LngLat[] = [];
+  for (const tramo of tramos) {
+    if (!tramo.length) continue;
+    if (!salida.length) {
+      salida.push(...tramo);
+      continue;
+    }
+    const salto = salida[salida.length - 1].lng - tramo[0].lng;
+    for (let i = 1; i < tramo.length; i += 1) {
+      salida.push({ lng: tramo[i].lng + salto, lat: tramo[i].lat });
+    }
+  }
+  return salida;
+}
+
+/**
+ * Viaje con transbordo: la ruta es la cadena de tramos, no una recta.
+ *
+ * Sin esto un embarque Valparaíso → Génova se dibujaba como una línea directa
+ * por el Atlántico, cuando en realidad pasó por Cristóbal y Gioia Tauro en tres
+ * buques distintos. La línea recta no solo era fea: era falsa, y el progreso
+ * calculado sobre ella tampoco correspondía a nada.
+ *
+ * El tramo en curso se decide por fechas; si hay posición real del buque, la
+ * línea pasa por ella igual que en un viaje directo.
+ */
+function viajePorTramos(
+  op: NavitrackOperacion,
+  tramos: Tramo[],
+  ais: AisSnapshot | null,
+  now: Date,
+): Journey | null {
+  const ordenados = [...tramos].sort((a, b) => a.orden - b.orden);
+
+  type Paso = { desde: LngLat; hasta: LngLat; t: Tramo; nombreDesde: string; nombreHasta: string };
+  const pasos: Paso[] = [];
+  for (const t of ordenados) {
+    const a = getPortCoordinates(t.pol ?? "");
+    const b = getPortCoordinates(t.pod ?? "");
+    // Un tramo sin coordenadas no se puede dibujar; se ignora en vez de inventarlo.
+    if (!a || !b) continue;
+    pasos.push({
+      desde: { lng: a[0], lat: a[1] },
+      hasta: { lng: b[0], lat: b[1] },
+      t,
+      nombreDesde: (t.pol ?? "").trim(),
+      nombreHasta: (t.pod ?? "").trim(),
+    });
+  }
+  if (pasos.length < 2) return null;
+
+  const hoy = now.toISOString().slice(0, 10);
+
+  /*
+   * Tramo en curso: el primero que todavía no terminó.
+   *
+   * Un tramo se da por cerrado si está confirmado y su ETA ya pasó. Así, cuando
+   * la carga espera en el puerto de conexión, el viaje se muestra en el tramo
+   * siguiente y no en el que ya se completó.
+   */
+  let indiceActual = pasos.findIndex((p) => !(p.t.eta && p.t.eta < hoy));
+  if (indiceActual < 0) indiceActual = pasos.length - 1;
+
+  const posicion = resolvePosition(
+    op,
+    ais,
+    { origen: pasos[indiceActual].desde, destino: pasos[indiceActual].hasta },
+    now,
+  );
+
+  const anteriores = pasos.slice(0, indiceActual).map((p) => curvaMaritima(p.desde, p.hasta));
+  const posteriores = pasos.slice(indiceActual + 1).map((p) => curvaMaritima(p.desde, p.hasta));
+  const actual = pasos[indiceActual];
+
+  let traveled: LngLat[];
+  let remaining: LngLat[];
+
+  if (isValidCoord(posicion)) {
+    const aqui = { lng: posicion.lng, lat: posicion.lat };
+    traveled = unirTramos([...anteriores, curvaMaritima(actual.desde, aqui)]);
+    remaining = unirTramos([curvaMaritima(aqui, actual.hasta), ...posteriores]);
+  } else {
+    traveled = unirTramos(anteriores);
+    remaining = unirTramos([curvaMaritima(actual.desde, actual.hasta), ...posteriores]);
+  }
+
+  // La línea es una sola: el tramo restante arranca donde terminó el recorrido.
+  if (traveled.length && remaining.length) {
+    const salto = traveled[traveled.length - 1].lng - remaining[0].lng;
+    if (salto !== 0) remaining = remaining.map((q) => ({ lng: q.lng + salto, lat: q.lat }));
+  }
+
+  /*
+   * Las distancias se miden entre puertos, no sobre la línea dibujada.
+   *
+   * La curva hacia mar abierto es cosmética: si se midiera sobre ella, cada
+   * comba sumaría millas que nadie navega y el avance se correría. La geometría
+   * del dibujo y la del cálculo son cosas distintas a propósito.
+   */
+  const kmDeTramo = (i: number) => haversineKm(pasos[i].desde, pasos[i].hasta);
+  const totalKm = pasos.reduce((acc, _p, i) => acc + kmDeTramo(i), 0);
+
+  let recorridoKm = 0;
+  for (let i = 0; i < indiceActual; i += 1) recorridoKm += kmDeTramo(i);
+  if (isValidCoord(posicion)) {
+    recorridoKm += haversineKm(actual.desde, { lng: posicion.lng, lat: posicion.lat });
+  }
+  const faltaKm = Math.max(0, totalKm - recorridoKm);
+
+  const escalas: Escala[] = pasos.map((p, i) => ({
+    nombre: p.nombreDesde,
+    coord: p.desde,
+    tipo: i === 0 ? "origen" : "conexion",
+    nave: p.t.nave,
+    cumplida: i < indiceActual,
+  }));
+  const ultimo = pasos[pasos.length - 1];
+  escalas.push({
+    nombre: ultimo.nombreHasta,
+    coord: ultimo.hasta,
+    tipo: "destino",
+    nave: null,
+    cumplida: Boolean(op.arribo_confirmado),
+  });
+
+  return {
+    origen: { nombre: pasos[0].nombreDesde, coord: pasos[0].desde },
+    destino: { nombre: ultimo.nombreHasta, coord: ultimo.hasta },
+    escalas,
+    tramoActual: indiceActual + 1,
+    naveActual: actual.t.nave,
+    viajeActual: actual.t.viaje,
+    position: posicion,
+    progress: totalKm > 0
+      ? {
+          pct: op.arribo_confirmado ? 100 : Math.round((recorridoKm / totalKm) * 100),
+          basis: posicion && posicion.source !== "ESTIMADA" ? "posicion" : "tiempo",
+        }
+      : null,
+    traveled,
+    remaining,
+    totalNm: totalKm * KM_TO_NM,
+    remainingNm: op.arribo_confirmado ? 0 : faltaKm * KM_TO_NM,
+  };
+}
+
 export function buildJourney(
   op: NavitrackOperacion,
   ais: AisSnapshot | null,
   now = new Date(),
+  tramos: Tramo[] = [],
 ): Journey {
+  /*
+   * Con tramos cargados, el viaje son ellos. Sin tramos es directo y vale lo
+   * que dice la operación: es la misma regla de lectura que define la tabla.
+   */
+  if (tramos.length > 0) {
+    const porTramos = viajePorTramos(op, tramos, ais, now);
+    if (porTramos) return porTramos;
+  }
+
   const origenNombre = (op.pol ?? "").trim();
   const destinoNombre = (op.pod ?? "").trim();
   const oc = getPortCoordinates(origenNombre);
@@ -393,7 +677,7 @@ export function buildJourney(
   let remainingNm: number | null = null;
 
   if (isValidCoord(origen) && isValidCoord(destino)) {
-    const full = greatCirclePath(origen, destino);
+    const full = curvaMaritima(origen, destino);
     totalNm = haversineKm(origen, destino) * KM_TO_NM;
 
     let f: number | null = null;
@@ -426,8 +710,8 @@ export function buildJourney(
        * es coherente: una sola línea continua que pasa por donde está el buque.
        */
       const p = { lng: position.lng, lat: position.lat };
-      traveled = greatCirclePath(origen, p);
-      remaining = greatCirclePath(p, destino);
+      traveled = curvaMaritima(origen, p);
+      remaining = curvaMaritima(p, destino);
 
       /*
        * Los dos tramos se desenrollan por separado, así que el buque puede
@@ -455,9 +739,25 @@ export function buildJourney(
     remainingNm = 0;
   }
 
+  const escalas: Escala[] = [];
+  if (origen) escalas.push({ nombre: origenNombre, coord: origen, tipo: "origen", nave: op.nave, cumplida: true });
+  if (destino) {
+    escalas.push({
+      nombre: destinoNombre,
+      coord: destino,
+      tipo: "destino",
+      nave: null,
+      cumplida: Boolean(op.arribo_confirmado),
+    });
+  }
+
   return {
     origen: { nombre: origenNombre, coord: origen },
     destino: { nombre: destinoNombre, coord: destino },
+    escalas,
+    tramoActual: null,
+    naveActual: op.nave,
+    viajeActual: op.viaje ?? null,
     position,
     progress,
     traveled,

@@ -637,6 +637,27 @@ ve las consultas que pasan por los endpoints: mostraba 148 cuando el saldo real
 era 216. **Si el proveedor no responde se muestra "—", nunca un número
 estimado.**
 
+```
+supabase/migrations/20260912000005_navitrack_recaladas.sql
+```
+
+Crea `navitrack_recaladas`: los puertos que el buque va anunciando y la decisión
+humana sobre cada uno. **Aplicada el 12-09-2026.**
+
+El AIS declara el **próximo puerto**, no el destino final, así que un viaje
+anuncia varios puertos y cada uno abre la misma pregunta: ¿parada del itinerario
+o transbordo? Esa pregunta se responde una vez **por puerto**, no una vez por
+embarque, y por eso no alcanzaba `navitrack_transbordos`.
+
+Ciclo: `anunciada` → `por_verificar` (llegó la fecha anunciada) →
+`parada_programada` o `transbordo`. Solo `por_verificar` genera correo y cambia
+el estado en pantalla; el resto es historial del viaje.
+
+**El aviso lo dispara la fecha, no la discrepancia.** Un buque que anuncia
+Callao con diez días de anticipación no es noticia; que haya llegado a Callao
+sí. La misma regla vale para el estado en pantalla (`resolverEstado`), para que
+correo y pantalla nunca digan cosas distintas.
+
 ### Chequeo diario y alerta por correo
 
 `src/pages/api/navitrack/chequeo-diario.ts` lo dispara el cron de Vercel

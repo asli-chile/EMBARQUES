@@ -39,10 +39,15 @@
   border-radius: 0.85rem;
   border: 1px solid color-mix(in srgb, var(--nt-accent) 45%, transparent);
   background: color-mix(in srgb, var(--nt-accent) 14%, transparent);
-  padding: 0.4rem 0.85rem 0.4rem 0.6rem;
+  padding: 0.42rem 0.9rem 0.42rem 0.62rem;
   color: var(--dash-fg);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.01em;
+  /* Un halo del propio tono lo despega del fondo: el chip deja de ser una
+     etiqueta pegada y pasa a leerse como una pastilla. */
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in srgb, #fff 10%, transparent),
+    0 1px 6px -2px color-mix(in srgb, var(--nt-accent) 55%, transparent);
 }
 
 .navitrack .nt-stage-icon {
@@ -314,6 +319,63 @@
   background: color-mix(in srgb, var(--dash-neon) 8%, transparent);
 }
 
+/* ─── Relieve de la tabla ────────────────────────────────────────────────────
+ *
+ * Una tabla plana obliga a leerla entera para encontrar una fila. Estas tres
+ * cosas le dan profundidad sin decorarla:
+ *
+ *   1. Cada fila lleva en el borde izquierdo el color de su etapa. Se puede
+ *      barrer la columna de la izquierda y saber el estado sin leer una letra.
+ *   2. La fila bajo el cursor se levanta un punto y ese filete se engrosa.
+ *   3. Las cifras van en tabulares, para que las fechas se alineen en columna
+ *      y las diferencias salten a la vista.
+ */
+.navitrack .nt-tabla {
+  font-variant-numeric: tabular-nums;
+}
+
+.navitrack .nt-tabla tbody tr {
+  /* El tono de la etapa llega en --nt-accent desde `nt-tone--*`. */
+  box-shadow: inset 2px 0 0 0 color-mix(in srgb, var(--nt-accent) 45%, transparent);
+}
+
+.navitrack .nt-tabla tbody tr:hover {
+  box-shadow:
+    inset 3px 0 0 0 var(--nt-accent),
+    0 1px 0 0 color-mix(in srgb, var(--dash-neon) 22%, transparent);
+}
+
+/* La franja de incidencia pisa al tono normal: es más urgente. */
+.navitrack .nt-tabla tbody tr.nt-row--flag {
+  box-shadow: inset 3px 0 0 0 var(--nt-accent);
+}
+
+/* Encabezado.
+ *
+ * Va sobre una banda propia, apenas más oscura que la superficie. No es adorno:
+ * al hacer scroll el encabezado queda fijo, y sin fondo propio las filas se le
+ * transparentaban por debajo y los títulos se volvían ilegibles.
+ */
+.navitrack .nt-tabla thead tr {
+  background: color-mix(in srgb, var(--dash-navy, #11224e) 55%, var(--dash-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--dash-neon) 30%, var(--dash-border));
+}
+
+.dash-neon[data-theme="light"].navitrack .nt-tabla thead tr {
+  background: color-mix(in srgb, var(--dash-border) 32%, var(--dash-surface));
+}
+
+/* Filas con altura de verdad: a 14,5px, apretarlas las vuelve una pared de texto. */
+.navitrack .nt-tabla tbody td {
+  line-height: 1.4;
+  height: 52px;
+}
+
+/* Separadores tenues: marcan la fila sin dibujar una reja. */
+.navitrack .nt-tabla tbody tr + tr {
+  border-top: 1px solid color-mix(in srgb, var(--dash-border) 55%, transparent);
+}
+
 /* Franja de incidencia: se ve al barrer la tabla sin leer una sola columna. */
 .navitrack .nt-row--flag {
   box-shadow: inset 3px 0 0 0 var(--nt-accent);
@@ -519,4 +581,46 @@
 .navitrack .nt-tl-row--now {
   border-radius: 0.6rem;
   background: color-mix(in srgb, var(--nt-accent) 12%, transparent);
+}
+
+/* ─── Puertos de conexión (transbordo) ──────────────────────────────────────
+ *
+ * Más discretos que origen y destino: son parte del recorrido, no los extremos
+ * del compromiso con el cliente. Una conexión ya cumplida se rellena; la que
+ * falta queda hueca, igual que en la línea de tiempo.
+ */
+.nt-port-dot--conexion {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: 2px solid color-mix(in srgb, var(--dash-neon) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dash-neon) 12%, transparent);
+}
+
+.nt-port-dot--conexion.is-cumplida {
+  background: color-mix(in srgb, var(--dash-neon) 85%, transparent);
+}
+
+.nt-map-chip--conexion {
+  font-size: 9.5px;
+  padding: 2px 6px;
+  opacity: 0.92;
+}
+
+/* ─── Acción de fila ────────────────────────────────────────────────────────
+ *
+ * La fila entera ya abre el embarque; este botón es la pista visual de que se
+ * puede. Se enciende con la fila para que no compita por atención cuando el ojo
+ * está recorriendo la tabla.
+ */
+.nt-row-accion {
+  transition: color 0.14s ease, border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.nt-row:hover .nt-row-accion,
+.nt-row:focus-visible .nt-row-accion {
+  color: var(--dash-fg);
+  border-color: color-mix(in srgb, var(--dash-neon) 45%, transparent);
+  background: color-mix(in srgb, var(--dash-neon) 12%, transparent);
 }

@@ -166,7 +166,7 @@ async function verActivas() {
 
 async function buscarPorNombre(nombre) {
   console.log(`Buscando "${nombre}" en el proveedor. Esto gasta 1 crédito.\n`);
-  const url = `${BASE}/vessels-by-vessel-name?vessel_name=${encodeURIComponent(nombre)}`;
+  const url = `${BASE}/vessels-by-vessel-name?name=${encodeURIComponent(nombre)}`;
   const r = await fetch(url, { headers: { "x-api-key": API_KEY, Accept: "application/json" } });
   if (!r.ok) {
     console.log(`  HTTP ${r.status}`);

@@ -11,8 +11,11 @@
  */
 import type { APIRoute } from "astro";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { evaluarDestinoAis } from "@/components/navitrack/navitrack-estado";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
+import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
+import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
+import { correoSeguimiento } from "@/components/navitrack/navitrack-correo";
+import { marcarPorVerificar, registrarAnuncio } from "@/lib/navitrack/recaladas";
 import { correoDesvio } from "@/components/navitrack/navitrack-correo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
@@ -77,6 +80,26 @@ export const GET: APIRoute = async ({ request }) => {
   const sitio = (import.meta.env.PUBLIC_SITE_URL ?? "https://www.asli.cl").replace(/\/+$/, "");
   const supabase = createAdminClient();
 
+  /*
+   * Antes de gastar, que la lista blanca apunte a donde está la carga.
+   *
+   * Si un embarque se transbordó, seguir al primer buque es pagar por una
+   * posición que ya no dice nada de esa caja. El traspaso se hace aquí para que
+   * el desfase no dure más de un día, aunque los tramos se hayan cargado por
+   * fuera de la pantalla.
+   */
+  const sincro = await sincronizarSeguimiento(supabase);
+
+  /*
+   * Las naves que aparecieron por transbordo no suelen estar en el catálogo.
+   * Se dan de alta y se les busca el IMO aquí mismo: si se esperara a que
+   * alguien lo notara, esa carga quedaría sin posición indefinidamente.
+   *
+   * Cuesta una búsqueda por nave, y se compensa sola: la nave anterior dejó de
+   * consultarse en esta misma corrida.
+   */
+  const altas = await resolverNavesSinIdentificador(supabase, apiKey, sincro.sinCatalogo);
+
   const { data: naves } = await supabase
     .from("naves")
     .select("id, nombre, imo, mmsi")
@@ -84,7 +107,21 @@ export const GET: APIRoute = async ({ request }) => {
     .eq("activo", true)
     .limit(MAX_NAVES);
 
-  const resultado = { revisadas: 0, creditos: 0, desvios: 0, escalas: 0, correos: 0, errores: 0 };
+  const resultado = {
+    porVerificar: 0,
+    revisadas: 0,
+    creditos: 0,
+    desvios: 0,
+    escalas: 0,
+    correos: 0,
+    errores: 0,
+    traspasos: sincro.traspasos.length,
+    encendidas: sincro.encendidas,
+    apagadas: sincro.apagadas,
+    // Las que siguen sin poder seguirse después de intentar resolverlas.
+    sinSeguimiento: altas.filter((a) => !a.resuelta).map((a) => a.nombre),
+    resueltas: altas.filter((a) => a.resuelta).map((a) => a.nombre),
+  };
 
   for (const nave of naves ?? []) {
     const id = (String(nave.mmsi ?? "").trim() || String(nave.imo ?? "").trim()).trim();
@@ -152,97 +189,137 @@ export const GET: APIRoute = async ({ request }) => {
       if (op.arribo_confirmado) continue;
 
       /*
-       * El AIS declara el próximo puerto, no el destino final. Callao camino a
-       * Hamburgo es una escala, no un desvío, y avisarlo cada día entrenaría a
-       * todo el mundo a ignorar estos correos.
+       * El puerto declarado se anota, no se avisa todavía.
        *
-       * Solo se avisa de lo que no acerca la carga a su destino. Un puerto que
-       * no está en el catálogo tampoco se avisa: sin coordenadas no hay forma
-       * de juzgarlo, y una alerta que no se puede sostener es peor que ninguna.
+       * Que un buque anuncie Callao con diez días de anticipación no es noticia;
+       * que haya llegado a Callao sí. El aviso sale el día que se cumple la
+       * fecha anunciada, y lo dispara `marcarPorVerificar`.
        */
-      const veredicto = evaluarDestinoAis(op.pod, destinoAis, posicion);
-      if (veredicto !== "fuera_de_ruta") {
-        if (veredicto === "en_ruta") resultado.escalas += 1;
-        continue;
-      }
-
-      // Una decisión previa cierra el tema: no se vuelve a avisar.
-      const { data: decision } = await supabase
-        .from("navitrack_transbordos")
-        .select("estado")
-        .eq("operacion_id", op.id)
-        .maybeSingle();
-      if (decision) continue;
-
-      resultado.desvios += 1;
-
-      // El mismo destino no se avisa dos veces; uno nuevo sí.
-      const { data: avisado } = await supabase
-        .from("navitrack_avisos")
-        .select("id")
-        .eq("operacion_id", op.id)
-        .eq("tipo", "desvio")
-        .eq("detalle", destinoAis)
-        .maybeSingle();
-      if (avisado) continue;
-
-      if (!destinatario) continue;
-
-      const { asunto, cuerpo } = correoDesvio({
-        referencia: String(op.ref_asli ?? ""),
-        contenedor: String(op.contenedor ?? ""),
-        cliente: String(op.cliente ?? ""),
+      const anuncio = await registrarAnuncio(supabase, {
+        operacionId: op.id,
+        puertoDeclarado: destinoAis,
         nave: String(op.nave ?? nave.nombre),
-        naviera: op.naviera ?? null,
-        pol: op.pol ?? null,
-        pod: String(op.pod ?? ""),
-        eta: fechaLarga(op.eta),
-        destinoAis,
-        // Al embarque concreto, no al listado: quien recibe el aviso quiere
-        // ver ese contenedor. `ref_asli` es estable; el uuid sirve de respaldo.
-        enlace: sitio
-          ? `${sitio}/navitrack?op=${encodeURIComponent(String(op.ref_asli ?? op.id))}`
-          : null,
+        etaDeclarada: fecha(detalle.etaUtc),
+        pod: op.pod,
       });
+      if (anuncio === "nueva") resultado.escalas += 1;
 
-      try {
-        // La Edge Function acepta esta vía con el secreto del cron y envía
-        // siempre desde el buzón corporativo, nunca suplantando a una persona.
-        const env = await fetch(
-          `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`,
-          {
-            method: "POST",
-            headers: {
-              // Supabase valida el JWT antes de entrar a la función.
-              Authorization: `Bearer ${import.meta.env.SUPABASE_SERVICE_ROLE_KEY}`,
-              "x-cron-secret": secreto,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              to: destinatario,
-              subject: asunto,
-              body: cuerpo,
-              sendFrom: "informaciones",
-              skipSignature: true,
-            }),
-            signal: AbortSignal.timeout(20_000),
-          },
-        );
-        const envJson = (await env.json()) as { success?: boolean };
-        if (envJson?.success) {
-          resultado.correos += 1;
-          await supabase.from("navitrack_avisos").insert({
-            operacion_id: op.id,
-            tipo: "desvio",
-            detalle: destinoAis,
-            enviado_a: destinatario,
-          });
-        } else {
-          resultado.errores += 1;
-        }
-      } catch {
+    }
+  }
+
+  /*
+   * ── Las recaladas que vencen hoy ────────────────────────────────────────
+   *
+   * Aquí es donde el anuncio se convierte en pregunta. El buque dijo que
+   * llegaría a este puerto en esta fecha, la fecha llegó, y ahora alguien tiene
+   * que decir si la carga siguió viaje o cambió de barco.
+   *
+   * Un solo correo por recalada: esta lista ya viene filtrada por estado, así
+   * que lo que se avisó ayer no se repite hoy.
+   */
+  const vencidas = await marcarPorVerificar(supabase);
+  resultado.porVerificar = vencidas.length;
+
+  for (const r of vencidas) {
+    if (!destinatario) break;
+
+    const { data: op } = await supabase
+      .from("operaciones")
+      .select("ref_asli, contenedor, cliente, nave, naviera, pol, pod, eta")
+      .eq("id", r.operacionId)
+      .maybeSingle();
+    if (!op) continue;
+
+    const { asunto, cuerpo } = correoDesvio({
+      referencia: String(op.ref_asli ?? ""),
+      contenedor: String(op.contenedor ?? ""),
+      cliente: String(op.cliente ?? ""),
+      nave: r.nave ?? String(op.nave ?? ""),
+      naviera: op.naviera ?? null,
+      pol: op.pol ?? null,
+      pod: String(op.pod ?? ""),
+      eta: fechaLarga(op.eta),
+      destinoAis: r.puerto,
+      // Al embarque concreto: quien recibe el aviso quiere ver ese contenedor.
+      enlace: sitio
+        ? `${sitio}/navitrack?op=${encodeURIComponent(String(op.ref_asli ?? r.operacionId))}`
+        : null,
+    });
+
+    try {
+      const env = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "x-cron-secret": secreto,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: destinatario,
+          subject: asunto,
+          body: cuerpo,
+          sendFrom: "informaciones",
+          skipSignature: true,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (((await env.json()) as { success?: boolean })?.success) {
+        resultado.correos += 1;
+        resultado.desvios += 1;
+        await supabase.from("navitrack_avisos").insert({
+          operacion_id: r.operacionId,
+          tipo: "desvio",
+          detalle: r.puerto,
+          enviado_a: destinatario,
+        });
+      } else {
         resultado.errores += 1;
       }
+    } catch {
+      resultado.errores += 1;
+    }
+  }
+
+  /*
+   * Aviso de transbordo.
+   *
+   * Va aparte del aviso de desvío porque responde otra pregunta: no "¿este
+   * buque se está desviando?", sino "¿esta carga sigue estando vigilada?". Y se
+   * envía sobre todo cuando la respuesta es no.
+   */
+  const avisoSeguimiento = correoSeguimiento({
+    traspasos: sincro.traspasos,
+    resueltas: altas.filter((a) => a.resuelta).map((a) => ({ nombre: a.nombre, imo: a.imo })),
+    sinSeguimiento: altas
+      .filter((a) => !a.resuelta)
+      .map((a) => ({
+        nombre: a.nombre,
+        motivo: a.motivo,
+        reemplazaA: sincro.traspasos.find((t) => t.hacia === a.nombre)?.desde ?? null,
+      })),
+  });
+
+  if (avisoSeguimiento && destinatario) {
+    try {
+      const env = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "x-cron-secret": secreto,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: destinatario,
+          subject: avisoSeguimiento.asunto,
+          body: avisoSeguimiento.cuerpo,
+          sendFrom: "informaciones",
+          skipSignature: true,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (((await env.json()) as { success?: boolean })?.success) resultado.correos += 1;
+    } catch {
+      resultado.errores += 1;
     }
   }
 

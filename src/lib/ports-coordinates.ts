@@ -134,6 +134,7 @@ export const PORTS_COORDINATES: Record<string, [number, number] | null> = {
   "CHICAGO": [-87.6298, 41.8781],
   "HOUSTON": [-95.3698, 29.7604],
   "MEMPHIS": [-90.049, 35.1495],
+  "GIOIA TAURO": [15.8986, 38.4244],
   "ROTTERDAM": [4.4777, 51.9225],
   "MAASVLAKTE": [4.03, 51.95],
   "VLISSINGEN": [3.5736, 51.4428],

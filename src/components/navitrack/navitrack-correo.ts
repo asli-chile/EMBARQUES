@@ -335,3 +335,136 @@ ${
 
   return { asunto, cuerpo };
 }
+
+/**
+ * Aviso de cambio de nave por transbordo.
+ *
+ * Lo importante de este correo no es la buena noticia sino la mala: **qué carga
+ * quedó sin seguir**. Cuando el buque siguiente no aparece en el proveedor, esa
+ * caja deja de tener posición, y si nadie lo dice el sistema se ve exactamente
+ * igual que cuando todo funciona. Un hueco silencioso es el peor resultado
+ * posible en una herramienta de seguimiento.
+ *
+ * Por eso lo que no se pudo resolver va primero, en ámbar, y lo que sí se
+ * resolvió va después como confirmación.
+ */
+export function correoSeguimiento(datos: {
+  traspasos: { desde: string; hacia: string; referencia: string }[];
+  resueltas: { nombre: string; imo: string | null }[];
+  sinSeguimiento: { nombre: string; motivo: string | null; reemplazaA: string | null }[];
+}): { asunto: string; cuerpo: string } | null {
+  if (!datos.traspasos.length && !datos.sinSeguimiento.length) return null;
+
+  const hayProblema = datos.sinSeguimiento.length > 0;
+  const asunto = hayProblema
+    ? `Carga sin seguimiento tras un transbordo · ${datos.sinSeguimiento.length} ${
+        datos.sinSeguimiento.length === 1 ? "nave" : "naves"
+      }`
+    : `Cambio de nave por transbordo · ${datos.traspasos.length}`;
+
+  const aviso = hayProblema
+    ? `
+        <tr>
+          <td style="padding:26px 28px 0">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:${AMBAR_FONDO};border-left:4px solid ${AMBAR};border-radius:0 10px 10px 0">
+              <tr>
+                <td style="padding:16px 18px">
+                  <div style="color:${AMBAR};font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;padding-bottom:5px">No se está siguiendo</div>
+                  <div style="color:${NAVY};font-size:17px;font-weight:700;line-height:1.4">
+                    ${datos.sinSeguimiento
+                      .map(
+                        (n) =>
+                          `${esc(n.nombre)}${n.reemplazaA ? `, que reemplazó a ${esc(n.reemplazaA)}` : ""}`,
+                      )
+                      .join("<br>")}
+                  </div>
+                  <div style="color:${TEXTO};font-size:13px;line-height:1.55;padding-top:8px">
+                    ${datos.sinSeguimiento
+                      .map((n) => `${esc(n.nombre)}: ${esc(n.motivo ?? "no se pudo identificar")}`)
+                      .join("<br>")}
+                  </div>
+                  <div style="color:${TEXTO};font-size:13px;line-height:1.55;padding-top:10px">
+                    Esa carga <strong>queda sin posición</strong> hasta que la nave tenga IMO.
+                    Se puede cargar a mano en Configuración › Naves.
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+    : "";
+
+  const cambios = datos.traspasos.length
+    ? `
+        <tr>
+          <td style="padding:24px 28px 0">
+            <div style="color:${SUAVE};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding-bottom:8px">Cambios de nave</div>
+            <table width="100%" cellpadding="0" cellspacing="0">
+${datos.traspasos
+  .map(
+    (t) => `              <tr>
+                <td style="padding:8px 0;border-bottom:1px solid ${BORDE};font-size:13.5px;color:${TEXTO}">
+                  <strong style="color:${NAVY}">${esc(t.referencia)}</strong><br>
+                  <span style="color:${SUAVE}">${esc(t.desde)}</span>
+                  <span style="color:${SUAVE}"> → </span>
+                  <strong style="color:${NAVY}">${esc(t.hacia)}</strong>
+                </td>
+              </tr>`,
+  )
+  .join("\n")}
+            </table>
+            <p style="margin:10px 0 0;color:${SUAVE};font-size:12px;line-height:1.5">
+              Se dejó de consultar la nave anterior: ya no lleva esa carga y su posición
+              no dice nada del embarque.
+            </p>
+          </td>
+        </tr>`
+    : "";
+
+  const ok = datos.resueltas.length
+    ? `
+        <tr>
+          <td style="padding:20px 28px 0">
+            <div style="color:${SUAVE};font-size:12px;line-height:1.55">
+              Se identificaron y ya se están siguiendo:
+              ${datos.resueltas
+                .map((n) => `<strong style="color:${NAVY}">${esc(n.nombre)}</strong>${n.imo ? ` (IMO ${esc(n.imo)})` : ""}`)
+                .join(", ")}.
+            </div>
+          </td>
+        </tr>`
+    : "";
+
+  const cuerpo = `
+<table width="100%" cellpadding="0" cellspacing="0" style="background:${CREMA};padding:24px 12px;font-family:'Segoe UI',Arial,Helvetica,sans-serif">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDE}">
+        <tr>
+          <td style="background:${NAVY};padding:20px 28px">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Transbordo</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+${aviso}
+${cambios}
+${ok}
+        <tr>
+          <td style="padding:26px 28px 24px">
+            <div style="border-top:1px solid ${BORDE};padding-top:14px;color:${SUAVE};font-size:12px;line-height:1.55">
+              Aviso automático de seguimiento · ASLI<br>
+              El seguimiento sigue a la carga: al transbordar, se deja de consultar el buque anterior.
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`.trim();
+
+  return { asunto, cuerpo };
+}
