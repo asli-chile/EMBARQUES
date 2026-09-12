@@ -9,25 +9,42 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
+    /*
+     * ── 0. Vía para tareas programadas ────────────────────────────────────
+     *
+     * Las alertas automáticas de NaviTrack corren en un cron, sin sesión de
+     * usuario, así que no pueden presentar un JWT. Se identifican con un
+     * secreto compartido y solo pueden enviar desde el buzón corporativo:
+     * nunca suplantan a una persona.
+     *
+     * Es una rama aparte y anterior: el camino de los usuarios queda igual.
+     */
+    const cronSecret = (Deno.env.get("NAVITRACK_CRON_SECRET") ?? "").trim();
+    const cronHeader = (req.headers.get("x-cron-secret") ?? "").trim();
+    const esCron = cronSecret.length >= 16 && cronHeader === cronSecret;
+
     // ── 1. Extraer JWT y decodificar user ID directamente ──────────────────
     const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
-    if (!authHeader) return json({ success: false, error: "Sin header de autorización" });
+    if (!authHeader && !esCron) return json({ success: false, error: "Sin header de autorización" });
 
-    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    const jwt = (authHeader ?? "").replace(/^Bearer\s+/i, "");
 
     // Decodificar payload del JWT (base64url) sin verificar firma —
     // Supabase ya verificó el token antes de llegar aquí (auth_user en logs)
-    let userId: string;
+    let userId = "";
     let userEmail: string | undefined;
-    try {
-      const parts = jwt.split(".");
-      if (parts.length !== 3) throw new Error("JWT malformado");
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-      userId    = payload.sub as string;
-      userEmail = payload.email as string | undefined;
-      if (!userId) throw new Error("sin sub");
-    } catch {
-      return json({ success: false, error: "JWT inválido" });
+    // En el cron no hay usuario que decodificar: el remitente es el buzón compartido.
+    if (!esCron) {
+      try {
+        const parts = jwt.split(".");
+        if (parts.length !== 3) throw new Error("JWT malformado");
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+        userId = payload.sub as string;
+        userEmail = payload.email as string | undefined;
+        if (!userId) throw new Error("sin sub");
+      } catch {
+        return json({ success: false, error: "JWT inválido" });
+      }
     }
 
     // ── 2. Obtener email del ejecutivo desde usuarios (service role) ────────
@@ -36,13 +53,18 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: perfil } = await supabaseAdmin
-      .from("usuarios")
-      .select("email, nombre, rol")
-      .eq("auth_id", userId)
-      .single();
+    const { data: perfil } = esCron
+      ? { data: null }
+      : await supabaseAdmin
+          .from("usuarios")
+          .select("email, nombre, rol")
+          .eq("auth_id", userId)
+          .single();
 
-    const profileEmail = perfil?.email ?? userEmail;
+    const sharedMailboxTemprano = (Deno.env.get("GMAIL_SHARED_FROM_EMAIL") ?? "informaciones@asli.cl")
+      .trim()
+      .toLowerCase();
+    const profileEmail = esCron ? sharedMailboxTemprano : (perfil?.email ?? userEmail);
     if (!profileEmail) return json({ success: false, error: "No se encontró el email del usuario" });
 
     // ── 3. Leer cuerpo de la solicitud ────────────────────────────────────
@@ -57,7 +79,7 @@ Deno.serve(async (req) => {
     if (!to || !subject || !body) return json({ success: false, error: "Faltan campos: to, subject, body" });
 
     // Informativos (buzón compartido): solo superadmin mientras el módulo está en desarrollo.
-    if (sendFrom === "informaciones") {
+    if (sendFrom === "informaciones" && !esCron) {
       const rol = String(perfil?.rol ?? "").trim().toLowerCase();
       if (rol !== "superadmin") {
         return json({
@@ -76,7 +98,7 @@ Deno.serve(async (req) => {
     const profileEmailLower = (profileEmail ?? "").trim().toLowerCase();
     const isAsliMailbox = profileEmailLower.endsWith("@asli.cl");
 
-    const wantsShared = sendFrom === "informaciones" || !isAsliMailbox;
+    const wantsShared = esCron || sendFrom === "informaciones" || !isAsliMailbox;
     if (wantsShared) {
       senderEmail = sharedMailbox;
       senderName = sharedFromName;

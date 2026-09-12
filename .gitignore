@@ -56,3 +56,6 @@ contacts_1_corregidos.csv
 
 # Configuración local de MCP (puede contener credenciales; las reglas sí se versionan)
 .cursor/mcp.json
+
+# Respaldos de archivos de entorno: nunca al repo.
+.env*.bak

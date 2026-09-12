@@ -8,5 +8,11 @@
       "source": "/favicon.ico",
       "destination": "/embarques/favicon.ico"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/navitrack/chequeo-diario",
+      "schedule": "0 12 * * *"
+    }
   ]
 }

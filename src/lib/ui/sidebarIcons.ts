@@ -27,6 +27,7 @@ export const SIDEBAR_ICONS: Record<string, string> = {
   temporadas: "lucide:calendar-range",
   "naves-tracking": "lucide:radar",
   tracking: "lucide:map",
+  navitrack: "lucide:compass",
 };
 
 export function sidebarIconFor(id: string): string {

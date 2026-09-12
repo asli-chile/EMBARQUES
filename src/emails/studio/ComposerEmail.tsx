@@ -28,6 +28,7 @@ import {
   resolveSaludo,
 } from "@/lib/email/informativos/saludo";
 import { CATALOG_KINDS, renderCatalogBlock } from "./catalogRender";
+import { SEGUIMIENTO_KINDS, renderSeguimientoBlock } from "./seguimientoRender";
 import { ASLI_TAILWIND, type StudioBlock, type StudioDocument } from "./types";
 import { ASLI_FOOTER } from "./asliFooter";
 import { resolveStudioColor, softTintFromColor } from "./colors";
@@ -78,6 +79,10 @@ function BlockView({
   const align = resolveTextAlign(p.align);
   const accent = resolveStudioColor(p.color, "#11224E");
   const mergeOne = (text: string) => merge(text, nombre, preferPublic);
+
+  if (SEGUIMIENTO_KINDS.has(block.kind)) {
+    return renderSeguimientoBlock(block, { merge: mergeOne, boldParts });
+  }
 
   if (CATALOG_KINDS.has(block.kind)) {
     return renderCatalogBlock(block, {

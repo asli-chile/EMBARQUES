@@ -31,6 +31,9 @@ const LazySobreNosotrosContent = lazy(() =>
 const LazyTrackingContent = lazy(() =>
   import("@/components/tracking/TrackingContent").then((m) => ({ default: m.TrackingContent })),
 );
+const LazyNavitrackContent = lazy(() =>
+  import("@/components/navitrack").then((m) => ({ default: m.NavitrackContent })),
+);
 const LazyRegistrosContent = lazy(() =>
   import("@/components/registros").then((m) => ({ default: m.RegistrosContent })),
 );
@@ -172,6 +175,15 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <Sus>
         <LazyTrackingContent />
       </Sus>
+    ) : pathname === "/navitrack" ? (
+      <ConfigGuard
+        allowAdmin={false}
+        forbiddenMessage="No tienes acceso a NaviTrack. Solo el superadmin puede verlo."
+      >
+        <Sus>
+          <LazyNavitrackContent />
+        </Sus>
+      </ConfigGuard>
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros">
         <Sus>

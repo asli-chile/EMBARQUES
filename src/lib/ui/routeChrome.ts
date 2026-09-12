@@ -21,7 +21,8 @@ const MARKETING_ROUTES = new Set(["/inicio", "/servicios", "/sobre-nosotros"]);
 
 export function getRouteChrome(pathname: string): RouteChrome {
   if (MARKETING_ROUTES.has(pathname)) return "marketing";
-  if (pathname === "/dashboard" || pathname === "/tracking") return "dashboard";
+  if (pathname === "/dashboard" || pathname === "/tracking" || pathname === "/navitrack")
+    return "dashboard";
   return "module";
 }
 

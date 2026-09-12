@@ -42,6 +42,7 @@ import {
 } from "@/lib/email/informativos/render";
 import { DATA_ROW_ICON_OPTIONS, dataRowIconSrc } from "@/lib/email/assets";
 import { STUDIO_COLOR_OPTIONS, resolveStudioColor } from "@/emails/studio/colors";
+import { TONE_OPTIONS } from "@/emails/studio/tones";
 import {
   useNeonTheme,
   type NeonTheme,
@@ -58,6 +59,10 @@ const btnGhost = "inf-btn-ghost";
 const boardBg = "inf-board";
 
 const PRESET_ICONS: Record<BlockKind, string> = {
+  statusBanner: "lucide:alert-triangle",
+  compare: "lucide:arrow-left-right",
+  factSheet: "lucide:table-2",
+  timeline: "lucide:git-commit-horizontal",
   headerAsli: "lucide:panel-top",
   greeting: "lucide:hand",
   heading: "lucide:heading",
@@ -214,6 +219,38 @@ function propFields(
   fallbackColor?: string;
 }[] {
   switch (block.kind) {
+    /* ── Bloques de seguimiento ──────────────────────────────────────────── */
+    case "statusBanner":
+      return [
+        { key: "tone", label: "Severidad", options: TONE_OPTIONS,
+          hint: "El color significa algo: reserva «Crítico» para lo que ya afecta al cliente." },
+        { key: "kicker", label: "Etiqueta superior", hint: "Vacío la oculta." },
+        { key: "title", label: "Titular del estado", multiline: true },
+        { key: "detail", label: "Detalle (opcional)", multiline: true },
+      ];
+    case "compare":
+      return [
+        { key: "tone", label: "Severidad del cambio", options: TONE_OPTIONS,
+          hint: "Tiñe solo el lado derecho, que es el que cambió." },
+        { key: "leftLabel", label: "Etiqueta izquierda" },
+        { key: "leftValue", label: "Valor izquierdo" },
+        { key: "rightLabel", label: "Etiqueta derecha" },
+        { key: "rightValue", label: "Valor derecho" },
+        { key: "arrow", label: "Separador", hint: "Por defecto →. Puede ser ⇒, vs, etc." },
+      ];
+    case "factSheet":
+      return [
+        { key: "rows", label: "Filas", multiline: true,
+          hint: "Una por línea, con formato «Etiqueta | Valor»." },
+        { key: "strongRows", label: "Filas destacadas",
+          hint: "Cuántas van en negrita desde arriba. Las que identifican el caso." },
+      ];
+    case "timeline":
+      return [
+        { key: "tone", label: "Severidad del hito actual", options: TONE_OPTIONS },
+        { key: "items", label: "Hitos", multiline: true,
+          hint: "Uno por línea. «+» cumplido, «*» actual, sin prefijo pendiente. «Título | detalle»." },
+      ];
     case "greeting":
       return [
         {

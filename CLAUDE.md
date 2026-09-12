@@ -32,10 +32,11 @@ src/
 │   │   ├── FacturacionContent.tsx    # Facturación proforma
 │   │   └── FacturasTransporteContent.tsx  # Registro de facturas emitidas
 │   ├── reservas/            # Operaciones de carga
+│   ├── navitrack/           # Seguimiento marítimo nuevo (superadmin) — ver docs/NAVITRACK.md
 │   ├── documentos/          # Generación de documentos
 │   ├── itinerario/          # Itinerarios navieros
 │   ├── ui/                  # Componentes reutilizables (Combobox, etc.)
-│   └── layout/              # AppShell, Header, NavBanner (+ su drawer), guards
+│   └── layout/              # AppShell, Header, AppIconRail (rail lateral), guards
 ├── pages/
 │   ├── index.astro           # Redirect a /inicio o /auth/login
 │   ├── dashboard.astro
@@ -256,6 +257,34 @@ Tabla de listas de valores del sistema (monedas, tipos de carga, etc.).
 
 Las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas operaciones lo tienen cargado) y un guion cuando nadie lo llenó. Es deliberado: `pallets`, `peso_neto` y las cajas de 25/5 kg están casi vacíos en producción, y un cero se leería como un error del dashboard en vez de como un vacío de captura.
 
+## NaviTrack — Seguimiento marítimo (en desarrollo)
+
+`/navitrack` es la **nueva** experiencia de tracking, exclusiva de `superadmin`.
+Convive con `/tracking`, que sigue en producción.
+
+> **Regla:** ningún cambio de NaviTrack toca `src/components/tracking/`. Si algo
+> de ahí hace falta, se copia o se extrae a un módulo compartido.
+
+Documentación completa: **[docs/NAVITRACK.md](docs/NAVITRACK.md)** — datos
+disponibles y los que no, resolución de posición (AIS → manual → estimada),
+etapas y umbrales, jerarquía de la información y cómo extenderlo.
+
+Lo mínimo para no perder tiempo:
+
+- La ruta se cablea en **cinco** archivos (`pages/navitrack.astro`, `AppShell.tsx`,
+  `site.ts`, `routeChrome.ts`, `routePrefetch.ts`); la página Astro es solo un
+  cascarón y `AppShell` resuelve el componente por `pathname`.
+- El AIS se consulta **solo** para el embarque abierto (una llamada al proveedor
+  por lectura). La flota usa posición estimada sobre la ruta.
+- El buque se resuelve por **IMO/MMSI del catálogo `naves`**, no buscando por
+  nombre a mano como en `/tracking`.
+- `operaciones.eta` es columna `date`: **no mostrar horas inventadas**. Solo el
+  ETA del AIS lleva hora.
+- La lógica pura (geodesia, etapa, alertas, timeline) vive en
+  `navitrack-model.ts` y `navitrack-estado.ts`, sin React.
+
+---
+
 ## Módulo de Transportes
 
 ### Flujo completo
@@ -385,8 +414,10 @@ Agregar nuevas claves siempre en **ambos** idiomas (`es` y `en`).
 
 ## Navegación
 
-Los ítems se declaran en `src/lib/site.ts` y los renderiza el drawer de
-`src/components/layout/NavBanner.tsx` (no hay sidebar fijo).
+Los ítems se declaran en `src/lib/site.ts`, se filtran por rol en
+`src/lib/sidebarFilter.ts` y los renderiza el rail lateral
+`src/components/layout/AppIconRail.tsx` (iconos siempre visibles, etiquetas al
+expandir). El ícono de cada ítem sale de `src/lib/ui/sidebarIcons.ts`.
 
 ```typescript
 {
@@ -398,6 +429,8 @@ Los ítems se declaran en `src/lib/site.ts` y los renderiza el drawer de
 ```
 
 Los ítems con `superadminOnly: true` solo aparecen si `isSuperadmin === true`.
+Ocultar el ítem no protege la ruta: el acceso lo impone `ConfigGuard` en
+`AppShell.tsx` y, en última instancia, RLS.
 
 ---
 
@@ -509,7 +542,119 @@ Revoca los `GRANT ALL ... TO anon` que las migraciones iniciales dejaron sobre `
 
 `authenticated` y `service_role` conservan sus privilegios, así que **aplicarla no cambia nada en el funcionamiento del ERP**. Para verificar que quedó aplicada, la propia migración incluye la consulta al final: no debe devolver filas.
 
-Se pueden aplicar con `npm run db:migrate -- <archivo.sql>` si existe `DATABASE_URL` en `.env.local`, o pegando el SQL en el editor de Supabase.
+NaviTrack:
+
+```
+supabase/migrations/20260911000001_navitrack_transbordos.sql
+```
+
+Crea `navitrack_transbordos`, la decisión humana (confirmado / descartado) sobre
+cada alerta de posible transbordo de `/navitrack`. La detección compara el
+destino que declara el AIS con el POD comprometido, y eso es una señal, no un
+hecho: el destino AIS lo escribe la tripulación a mano.
+
+**Aplicada el 11-09-2026** en el proyecto BDASLI. El código tolera que la tabla
+no exista, por si se levanta otro entorno sin ella.
+
+```
+supabase/migrations/20260911000002_navieras_logo.sql
+```
+
+Agrega `navieras.logo_url` para mostrar la marca de la naviera en la cabecera del
+embarque. **Aplicada el 11-09-2026.**
+
+```
+supabase/migrations/20260911000003_navieras_logo_seed.sql
+```
+
+Carga los logos que ya viven en `https://www.asli.cl/img/<naviera>.webp` — mismo
+dominio que sirve el ERP, así que no hay que subirlos de nuevo. **Aplicada el
+11-09-2026**: 10 de las 14 navieras quedaron con logo; EVERGREEN, HAPAG-LLOYD,
+SEABOARD y UNIFER siguen en `NULL` porque esos archivos no existen en el sitio, y
+se muestran con monograma. Al subirlos, basta un `UPDATE` igual a los del
+archivo.
+
+```
+supabase/migrations/20260911000004_navitrack_ais_cache.sql
+supabase/migrations/20260911000005_navitrack_activar_callao_express.sql
+```
+
+Caché de posiciones AIS y control de gasto: agrega `naves.tracking_activo` (lista
+blanca de rastreo) y la tabla `navitrack_ais_lecturas`, donde **cada fila es una
+llamada al proveedor**, o sea un crédito. **Ambas aplicadas el 11-09-2026**, con
+`CALLAO EXPRESS` (IMO 9777606) como única nave habilitada. Ver
+[docs/NAVITRACK.md](docs/NAVITRACK.md) §4 para los tres frenos de gasto.
+
+```
+supabase/migrations/20260911000006_navitrack_lecturas_tipo.sql
+supabase/migrations/20260912000001_navitrack_escalas.sql
+```
+
+Panel de Rastreo e historial de escalas. La primera distingue en
+`navitrack_ais_lecturas.tipo` qué consulta gastó cada crédito (`posicion`,
+`busqueda`, `escalas`); la segunda crea `navitrack_escalas`, el caché de port
+calls que alimenta la pestaña Escalas. **Ambas aplicadas el 12-09-2026.**
+`port-calls-by-vessel` es la consulta más cara: la documentación del proveedor
+dice 1 crédito en una página y 5 en otra, así que el código asume 5 y la cachea
+24 h.
+
+```
+supabase/migrations/20260912000002_navitrack_tramos.sql
+supabase/migrations/20260912000003_navitrack_avisos.sql
+```
+
+Transbordo real y chequeo diario. **Ambas aplicadas el 12-09-2026.**
+
+`navitrack_tramos` es el modelo que faltaba: `operaciones` guarda un solo buque
+(`nave`, `viaje`), así que no había forma de representar un transbordo. La regla
+de lectura es **sin filas = viaje directo; con filas = el viaje son esos tramos,
+en orden**. No toca `operaciones`, que está en producción.
+*Pendiente: todavía ninguna pantalla lee ni escribe esta tabla.*
+
+`navitrack_avisos` registra lo que el chequeo diario ya notificó
+(`UNIQUE (operacion_id, tipo, detalle)`), para que una desviación que dura dos
+semanas no genere catorce correos idénticos. Un destino declarado **distinto**
+sí vuelve a avisar.
+
+### Chequeo diario y alerta por correo
+
+`src/pages/api/navitrack/chequeo-diario.ts` lo dispara el cron de Vercel
+declarado en `vercel.json` (`0 12 * * *` = 08:00 en Chile). Por cada nave con
+`tracking_activo` hace **una** llamada a `get-vessel-location`: 1 crédito por
+nave y por día. Con una nave, 150 créditos alcanzan para meses; con veinte, para
+una semana.
+
+Si el buque declara un destino distinto al POD, avisa por correo a
+`NAVITRACK_ALERTAS_EMAIL` a través de la Edge Function `send-email`.
+
+Para que funcione hay que dejar puestas estas variables:
+
+| Variable | Dónde |
+|----------|-------|
+| `NAVITRACK_CRON_SECRET` (≥16 caracteres) | Vercel **y** secrets de la Edge Function, con el **mismo** valor |
+| `NAVITRACK_ALERTAS_EMAIL` | Vercel |
+| `DATADOCKED_API_KEY` | Vercel y `.env.local` |
+
+`send-email` se extendió con una vía de cron: si llega `x-cron-secret` igual al
+secreto, se salta la búsqueda del usuario y envía siempre desde el buzón
+corporativo, **nunca suplantando a una persona**. El camino del usuario no
+cambió. Esa función la usan Informativos y Documentos en producción, así que el
+deploy (`npx supabase functions deploy send-email`) hay que hacerlo a
+conciencia.
+
+Esos logos son artes **oscuros sobre fondo transparente**, por eso la ficha de la
+naviera va con fondo blanco cuando lleva imagen (`.nt-carrier:has(img)` en
+`navitrack.css`): sobre el navy del tema oscuro desaparecerían.
+
+Se pueden aplicar de tres formas:
+
+- **CLI de Supabase** (el proyecto BDASLI ya está linkeado):
+  `npx supabase db query --linked -f supabase/migrations/<archivo.sql>`.
+  **No usar `supabase db push`**: este repo nunca llevó historial de migraciones
+  en el CLI, así que intentaría re-ejecutar todo `supabase/migrations/`.
+- `npm run db:migrate -- <archivo.sql>`, que necesita `DATABASE_URL` en
+  `.env.local` (hoy no está definida).
+- Pegando el SQL en el editor de Supabase.
 
 ---
 

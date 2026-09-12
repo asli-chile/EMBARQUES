@@ -6,7 +6,17 @@
       "Bash(powershell -Command \"Get-Command msedge -ErrorAction SilentlyContinue; Get-ChildItem 'C:\\\\Program Files \\(x86\\)\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe' -ErrorAction SilentlyContinue; Get-ChildItem 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe' -ErrorAction SilentlyContinue\")",
       "Bash(\"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=\"C:\\\\Users\\\\rodri\\\\OneDrive\\\\Desktop\\\\Plan-Deficit-Calorico-Entrenamiento.pdf\" --print-to-pdf-no-header \"C:\\\\Users\\\\rodri\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rodri-OneDrive-Desktop-DEVELOPER-ASLI-PROGRAMA-DEFINITIVO-EMBARQUES\\\\28444b12-9a1f-4c22-8052-0585f6bffe02\\\\scratchpad\\\\plan.html\")",
       "Bash(ls -la \"C:\\\\Users\\\\rodri\\\\OneDrive\\\\Desktop\\\\Plan-Deficit-Calorico-Entrenamiento.pdf\")",
-      "Read(//c/Users/rodri/OneDrive/Desktop/**)"
+      "Read(//c/Users/rodri/OneDrive/Desktop/**)",
+      "Bash(npm install *)",
+      "Bash(grep -no \"scrollHeight[^;]\\\\{0,80\\\\}\" node_modules/lenis/dist/lenis.mjs)",
+      "Bash(npx astro *)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(grep -o \"onStyleData[?:]*[^;,}]\\\\{0,60\\\\}\" node_modules/react-map-gl/dist/maplibre.d.ts)",
+      "Bash(grep -o \"onIdle[?:]*[^;,}]\\\\{0,40\\\\}\\\\|onLoad[?:]*[^;,}]\\\\{0,40\\\\}\" node_modules/react-map-gl/dist/maplibre.d.ts)",
+      "Bash(npx tsx *)",
+      "Bash(awk 'NR>=615 && NR<=780' src/components/configuracion/NavesTrackingContent.tsx)",
+      "Bash(awk '/<tbody/,/<\\\\/tbody>/' src/components/configuracion/NavesTrackingContent.tsx)"
     ]
   }
 }

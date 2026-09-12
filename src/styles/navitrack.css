@@ -1,0 +1,522 @@
+/**
+ * NaviTrack: piezas visuales propias del seguimiento marítimo.
+ *
+ * Se monta sobre `.dash-neon.tracking-brand`, así que hereda la paleta
+ * corporativa (teal, oliva, navy, crema) y solo agrega lo que el módulo necesita:
+ * el tono por etapa, la barra del viaje, los marcadores del mapa y su leyenda.
+ * Todo se deriva de las variables del tema; ningún color se fija por fuera de
+ * `--nt-accent`, que es justamente lo que cambia entre etapas.
+ */
+
+.navitrack {
+  --nt-accent: var(--dash-neon);
+  --nt-rail-h: 4px;
+}
+
+/* --- Tonos por etapa: los mismos acentos que ya usan los KPI del dashboard --- */
+.navitrack .nt-tone--teal { --nt-accent: var(--dash-neon); }
+.navitrack .nt-tone--emerald { --nt-accent: #34d399; }
+.navitrack .nt-tone--amber { --nt-accent: #f59e0b; }
+.navitrack .nt-tone--orange { --nt-accent: #fb923c; }
+.navitrack .nt-tone--sky { --nt-accent: #38bdf8; }
+.navitrack .nt-tone--rose { --nt-accent: #fb7185; }
+
+/* En claro los mismos tonos a valor nominal no contrastan sobre superficie blanca. */
+.dash-neon[data-theme="light"].navitrack .nt-tone--emerald { --nt-accent: #047857; }
+.dash-neon[data-theme="light"].navitrack .nt-tone--amber { --nt-accent: #b45309; }
+.dash-neon[data-theme="light"].navitrack .nt-tone--orange { --nt-accent: #c2410c; }
+.dash-neon[data-theme="light"].navitrack .nt-tone--sky { --nt-accent: #0369a1; }
+.dash-neon[data-theme="light"].navitrack .nt-tone--rose { --nt-accent: #be123c; }
+
+.navitrack .nt-accent-fg { color: var(--nt-accent); }
+
+/* --------------------------------- Etapa ----------------------------------- */
+
+.navitrack .nt-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--nt-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--nt-accent) 14%, transparent);
+  padding: 0.4rem 0.85rem 0.4rem 0.6rem;
+  color: var(--dash-fg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.navitrack .nt-stage-icon {
+  display: inline-flex;
+  height: 1.9rem;
+  width: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--nt-accent) 24%, transparent);
+  color: var(--nt-accent);
+}
+
+.navitrack .nt-stage--hero {
+  padding: 0.55rem 1.1rem 0.55rem 0.7rem;
+  font-size: 1.05rem;
+}
+
+.navitrack .nt-stage--hero .nt-stage-icon {
+  height: 2.4rem;
+  width: 2.4rem;
+}
+
+/* Punto vivo de la etapa: respira mientras el embarque está en curso. */
+.navitrack .nt-live-dot {
+  position: relative;
+  display: inline-flex;
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+  background: var(--nt-accent);
+}
+
+.navitrack .nt-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -0.3rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--nt-accent) 60%, transparent);
+  animation: nt-breathe 2.4s var(--dash-ease) infinite;
+}
+
+@keyframes nt-breathe {
+  0% { opacity: 0.85; transform: scale(0.75); }
+  70% { opacity: 0; transform: scale(1.5); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* ------------------------------ Barra del viaje ----------------------------- */
+
+.navitrack .nt-rail {
+  position: relative;
+  height: var(--nt-rail-h);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--dash-muted) 22%, transparent);
+  overflow: visible;
+}
+
+.navitrack .nt-rail-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--nt-accent) 45%, transparent),
+    var(--nt-accent)
+  );
+  box-shadow: 0 0 16px -4px color-mix(in srgb, var(--nt-accent) 70%, transparent);
+  transition: width 900ms var(--dash-ease);
+}
+
+/* El buque viaja sobre la barra y se mueve al mismo ritmo que el relleno. */
+.navitrack .nt-rail-ship {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  height: 1.75rem;
+  width: 1.75rem;
+  margin-left: -0.875rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--nt-accent) 55%, transparent);
+  background: var(--dash-surface);
+  color: var(--nt-accent);
+  transform: translateY(-50%);
+  box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--nt-accent) 75%, transparent);
+  transition: left 900ms var(--dash-ease);
+}
+
+.navitrack .nt-rail-node {
+  height: 0.7rem;
+  width: 0.7rem;
+  border-radius: 9999px;
+  border: 2px solid color-mix(in srgb, var(--dash-muted) 55%, transparent);
+  background: var(--dash-surface);
+}
+
+.navitrack .nt-rail-node--done {
+  border-color: var(--nt-accent);
+  background: var(--nt-accent);
+}
+
+/* ------------------------------ Línea de tiempo ----------------------------- */
+
+.navitrack .nt-tl-dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 1.6rem;
+  width: 1.6rem;
+  flex: none;
+  border-radius: 9999px;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-control);
+  color: var(--dash-muted);
+}
+
+.navitrack .nt-tl-dot--done {
+  border-color: color-mix(in srgb, var(--nt-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--nt-accent) 18%, transparent);
+  color: var(--nt-accent);
+}
+
+.navitrack .nt-tl-dot--now {
+  border-color: var(--nt-accent);
+  background: color-mix(in srgb, var(--nt-accent) 26%, transparent);
+  color: var(--nt-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--nt-accent) 14%, transparent);
+}
+
+.navitrack .nt-tl-line {
+  width: 1px;
+  flex: 1;
+  min-height: 0.9rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--dash-muted) 40%, transparent),
+    color-mix(in srgb, var(--dash-muted) 12%, transparent)
+  );
+}
+
+.navitrack .nt-tl-line--done {
+  background: color-mix(in srgb, var(--nt-accent) 45%, transparent);
+}
+
+/* Sello de certeza del evento: real, confirmado o estimado. */
+.navitrack .nt-certainty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--dash-muted) 35%, transparent);
+  color: var(--dash-muted);
+}
+
+.navitrack .nt-certainty--real,
+.navitrack .nt-certainty--confirmado {
+  border-color: color-mix(in srgb, var(--dash-neon) 45%, transparent);
+  color: var(--dash-neon);
+}
+
+/* ---------------------------------- Mapa ------------------------------------ */
+
+.navitrack .nt-map-chip {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 0.4rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, var(--dash-surface) 94%, transparent);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--dash-fg);
+  box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.navitrack .nt-port-dot {
+  display: block;
+  height: 0.7rem;
+  width: 0.7rem;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nt-port) 35%, transparent);
+  background: var(--nt-port);
+}
+
+.navitrack .nt-port-dot--pol { --nt-port: var(--trk-pol); }
+.navitrack .nt-port-dot--pod { --nt-port: var(--trk-pod); }
+
+.navitrack .nt-vessel-pulse {
+  position: absolute;
+  height: 2.6rem;
+  width: 2.6rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--trk-vessel) 28%, transparent);
+  animation: nt-pulse 2.8s var(--dash-ease) infinite;
+}
+
+@keyframes nt-pulse {
+  0% { opacity: 0.6; transform: scale(0.55); }
+  70% { opacity: 0; transform: scale(1.35); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+
+.navitrack .nt-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, var(--dash-surface) 92%, transparent);
+  padding: 0.2rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--dash-muted);
+  backdrop-filter: blur(8px);
+}
+
+.navitrack .nt-legend-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+}
+
+.navitrack .nt-legend-dot--real {
+  background: var(--trk-vessel);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--trk-vessel) 70%, transparent);
+}
+
+.navitrack .nt-legend-dot--est {
+  border: 1px solid var(--trk-vessel-manual);
+  background: transparent;
+}
+
+.navitrack .nt-legend-line {
+  height: 2px;
+  width: 1.1rem;
+  border-radius: 9999px;
+}
+
+.navitrack .nt-legend-line--done { background: var(--trk-vessel); }
+
+.navitrack .nt-legend-line--todo {
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--dash-muted) 70%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/* --------------------------------- Tablas ----------------------------------- */
+
+.navitrack .nt-row {
+  transition:
+    background-color 180ms var(--dash-ease),
+    box-shadow 180ms var(--dash-ease);
+}
+
+.navitrack .nt-row:hover {
+  background: color-mix(in srgb, var(--dash-neon) 8%, transparent);
+}
+
+/* Franja de incidencia: se ve al barrer la tabla sin leer una sola columna. */
+.navitrack .nt-row--flag {
+  box-shadow: inset 3px 0 0 0 var(--nt-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navitrack .nt-live-dot::after,
+  .navitrack .nt-vessel-pulse {
+    animation: none;
+  }
+  .navitrack .nt-rail-fill,
+  .navitrack .nt-rail-ship {
+    transition: none;
+  }
+}
+
+/* -------------------------------- Naviera ----------------------------------- */
+
+/* Marca de la naviera: logo real si existe, monograma si no.
+   El tono llega en `--nv-hue` desde el componente y acá se traduce a color
+   según el tema, para no congelar el aspecto de uno solo de los dos. */
+.navitrack .nt-carrier {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  border: 1px solid hsl(var(--nv-hue) 60% 55% / 0.45);
+  background: hsl(var(--nv-hue) 60% 50% / 0.16);
+  color: hsl(var(--nv-hue) 70% 74%);
+  box-shadow: 0 4px 14px -8px hsl(var(--nv-hue) 60% 50% / 0.7);
+}
+
+.dash-neon[data-theme="light"].navitrack .nt-carrier {
+  border-color: hsl(var(--nv-hue) 55% 42% / 0.4);
+  background: hsl(var(--nv-hue) 55% 45% / 0.12);
+  color: hsl(var(--nv-hue) 60% 32%);
+}
+
+/**
+ * Con logo real, la ficha va blanca en ambos temas.
+ *
+ * Los logos del sitio son artes oscuros sobre fondo transparente: sobre el navy
+ * del tema oscuro desaparecerían. El chip blanco es además como los muestran las
+ * plataformas del rubro. El borde sí se deriva del tema, porque en claro un
+ * blanco sobre blanco necesita que algo lo delimite.
+ */
+.navitrack .nt-carrier:has(img) {
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--dash-fg) 18%, transparent);
+  box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.55);
+}
+
+/* ------------------------- Pizarra del embarque ----------------------------- */
+
+/* Pestañas del panel de ruta. */
+.navitrack .nt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.6rem;
+  border: 1px solid transparent;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dash-muted);
+  white-space: nowrap;
+  transition:
+    background-color 160ms var(--dash-ease),
+    color 160ms var(--dash-ease),
+    border-color 160ms var(--dash-ease);
+}
+
+.navitrack .nt-tab:hover { color: var(--dash-fg); }
+
+.navitrack .nt-tab[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--dash-neon) 45%, transparent);
+  background: color-mix(in srgb, var(--dash-neon) 18%, transparent);
+  color: var(--dash-fg);
+}
+
+/* Controles del mapa: los de MapLibre traen su propio look y desentonan. */
+.navitrack .nt-map-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, var(--dash-surface) 90%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.6);
+}
+
+.navitrack .nt-map-ctrl {
+  display: grid;
+  place-items: center;
+  height: 1.9rem;
+  width: 1.9rem;
+  color: var(--dash-fg);
+  transition: background-color 150ms var(--dash-ease);
+}
+
+.navitrack .nt-map-ctrl:hover {
+  background: color-mix(in srgb, var(--dash-neon) 20%, transparent);
+}
+
+.navitrack .nt-map-ctrl-sep {
+  height: 1px;
+  background: var(--dash-border);
+}
+
+/* Ficha flotante del buque, anclada a su posición en el mapa. */
+.navitrack .nt-vessel-card {
+  position: absolute;
+  bottom: calc(100% + 0.45rem);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 11rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--trk-vessel) 50%, transparent);
+  background: color-mix(in srgb, var(--dash-surface) 95%, transparent);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  color: var(--dash-fg);
+  white-space: nowrap;
+  box-shadow: 0 8px 22px -12px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.navitrack .nt-legend-dot--puerto {
+  background: var(--trk-pol);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--trk-pol) 35%, transparent);
+}
+
+/* Tarjetas de indicador de la franja inferior. */
+.navitrack .nt-stat {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, var(--dash-surface) 90%, transparent);
+  padding: 0.6rem 0.75rem;
+}
+
+.navitrack .nt-stat-icon {
+  display: grid;
+  place-items: center;
+  height: 2rem;
+  width: 2rem;
+  flex: none;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--dash-neon) 35%, transparent);
+  background: color-mix(in srgb, var(--dash-neon) 12%, transparent);
+  color: var(--dash-neon);
+}
+
+.navitrack .nt-stat-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dash-muted);
+}
+
+.navitrack .nt-stat-value {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--dash-fg);
+}
+
+.navitrack .nt-stat-sub {
+  font-size: 0.66rem;
+  color: var(--dash-muted);
+}
+
+/* Barra de progreso del encabezado: más ancha y plana que la del viaje. */
+.navitrack .nt-head-rail {
+  position: relative;
+  height: 6px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--dash-muted) 20%, transparent);
+  overflow: hidden;
+}
+
+.navitrack .nt-head-rail-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--nt-accent) 50%, transparent),
+    var(--nt-accent)
+  );
+  box-shadow: 0 0 14px -3px color-mix(in srgb, var(--nt-accent) 75%, transparent);
+  transition: width 900ms var(--dash-ease);
+}
+
+/* Fila destacada del timeline: el punto en que está el viaje ahora. */
+.navitrack .nt-tl-row--now {
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--nt-accent) 12%, transparent);
+}

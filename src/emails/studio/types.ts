@@ -36,7 +36,13 @@ export type BlockKind =
   | "product"
   | "checkout"
   | "containerBand"
-  | "sectionLayout";
+  | "sectionLayout"
+  // Bloques de seguimiento: nacieron para los avisos de NaviTrack, pero sirven
+  // para cualquier informativo que tenga que mostrar un cambio o un avance.
+  | "statusBanner"
+  | "compare"
+  | "factSheet"
+  | "timeline";
 
 export type StudioBlock = {
   id: string;

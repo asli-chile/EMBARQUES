@@ -1,0 +1,250 @@
+/**
+ * Panel de Rastreo de NaviTrack: qué naves se siguen y cuántos créditos van.
+ *
+ * GET  devuelve el estado (no gasta créditos).
+ * POST ejecuta una acción:
+ *   seguir / dejar   habilita o deshabilita el rastreo de una nave (no gasta)
+ *   resolver         busca el IMO/MMSI de una nave por su nombre (1 crédito)
+ *
+ * Todo lo que gasta queda registrado en `navitrack_ais_lecturas`, así que
+ * contar filas sigue siendo contar créditos.
+ */
+import type { APIRoute } from "astro";
+import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/auth/rateLimit";
+
+const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
+const TTL_MIN = Number(import.meta.env.NAVITRACK_AIS_TTL_MIN ?? 360);
+const MAX_DIA = Number(import.meta.env.NAVITRACK_AIS_MAX_DIA ?? 10);
+/** Días hacia atrás para considerar que una nave todavía tiene viaje vigente. */
+const VENTANA_DIAS = 7;
+
+function json(body: object, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+type Sesion = Awaited<ReturnType<typeof createClient>>;
+
+/** Solo superadmin: es quien puede gastar créditos. */
+async function exigirSuperadmin(supabase: Sesion) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, status: 401, code: "UNAUTHORIZED" };
+  const { data: perfil } = await supabase
+    .from("usuarios")
+    .select("rol, activo")
+    .eq("auth_id", user.id)
+    .eq("activo", true)
+    .single();
+  if (!perfil || String(perfil.rol ?? "").trim() !== "superadmin") {
+    return { ok: false as const, status: 403, code: "FORBIDDEN" };
+  }
+  return { ok: true as const, userId: user.id };
+}
+
+/** Nombre comparable: sin el viaje pegado, pero conservando números propios del barco. */
+function claveNave(raw: string | null | undefined): string {
+  let s = String(raw ?? "").toUpperCase().replace(/\s+/g, " ").trim();
+  s = s.replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+  const ultimo = s.split(" ").pop() ?? "";
+  // "635R" o "W012" son viaje; "512" en "WAN HAI 512" es parte del nombre.
+  if (/\d/.test(ultimo) && /[A-Z]/.test(ultimo) && ultimo.length <= 5 && s.split(" ").length > 1) {
+    s = s.slice(0, s.length - ultimo.length).trim();
+  }
+  return s;
+}
+
+async function creditos(supabase: Sesion) {
+  const medianoche = new Date();
+  medianoche.setHours(0, 0, 0, 0);
+  const [{ count: total }, { count: hoy }] = await Promise.all([
+    supabase.from("navitrack_ais_lecturas").select("id", { count: "exact", head: true }),
+    supabase
+      .from("navitrack_ais_lecturas")
+      .select("id", { count: "exact", head: true })
+      .gte("consultado_at", medianoche.toISOString()),
+  ]);
+  return { total: total ?? 0, hoy: hoy ?? 0 };
+}
+
+export const prerender = false;
+
+/* ────────────────────────────── Estado ─────────────────────────────────── */
+
+export const GET: APIRoute = async ({ cookies }) => {
+  const supabase = createClient(cookies);
+  const auth = await exigirSuperadmin(supabase);
+  if (!auth.ok) return json({ ok: false, code: auth.code }, auth.status);
+
+  const desde = new Date(Date.now() - VENTANA_DIAS * 86_400_000).toISOString().slice(0, 10);
+
+  const [opsRes, navesRes, lecturasRes, gasto] = await Promise.all([
+    supabase
+      .from("operaciones")
+      .select("nave, eta")
+      .is("deleted_at", null)
+      .not("nave", "is", null)
+      .gte("eta", desde)
+      .limit(2000),
+    supabase.from("naves").select("id, nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(2000),
+    supabase
+      .from("navitrack_ais_lecturas")
+      .select("identificador, consultado_at")
+      .eq("tipo", "posicion")
+      .order("consultado_at", { ascending: false })
+      .limit(500),
+    creditos(supabase),
+  ]);
+
+  // Viajes vigentes por nave: son las que vale la pena rastrear.
+  const vigentes = new Map<string, { ops: number; proximaEta: string | null }>();
+  for (const o of (opsRes.data ?? []) as { nave: string | null; eta: string | null }[]) {
+    const k = claveNave(o.nave);
+    if (!k) continue;
+    const a = vigentes.get(k) ?? { ops: 0, proximaEta: null };
+    a.ops += 1;
+    if (o.eta && (!a.proximaEta || o.eta < a.proximaEta)) a.proximaEta = o.eta;
+    vigentes.set(k, a);
+  }
+
+  const ultimaPorIdent = new Map<string, string>();
+  for (const l of (lecturasRes.data ?? []) as { identificador: string; consultado_at: string }[]) {
+    if (!ultimaPorIdent.has(l.identificador)) ultimaPorIdent.set(l.identificador, l.consultado_at);
+  }
+
+  type NaveFila = { id: string; nombre: string; imo: string | null; mmsi: string | null; tracking_activo: boolean };
+  const naves = ((navesRes.data ?? []) as NaveFila[])
+    .map((n) => {
+      const v = vigentes.get(claveNave(n.nombre));
+      const ident = (n.mmsi ?? "").trim() || (n.imo ?? "").trim();
+      const ultima = ident ? (ultimaPorIdent.get(ident) ?? null) : null;
+      return {
+        id: n.id,
+        nombre: n.nombre,
+        imo: n.imo,
+        mmsi: n.mmsi,
+        siguiendo: Boolean(n.tracking_activo),
+        ops: v?.ops ?? 0,
+        proximaEta: v?.proximaEta ?? null,
+        ultimaLectura: ultima,
+      };
+    })
+    // Primero lo que está navegando; dentro de eso, lo ya seguido arriba.
+    .filter((n) => n.ops > 0 || n.siguiendo)
+    .sort((a, b) => Number(b.siguiendo) - Number(a.siguiendo) || b.ops - a.ops || a.nombre.localeCompare(b.nombre));
+
+  return json({
+    ok: true,
+    creditos: gasto,
+    topeDia: MAX_DIA,
+    ttlMin: TTL_MIN,
+    hayClave: Boolean(import.meta.env.DATADOCKED_API_KEY),
+    naves,
+  });
+};
+
+/* ────────────────────────────── Acciones ───────────────────────────────── */
+
+export const POST: APIRoute = async ({ request, cookies }) => {
+  const supabase = createClient(cookies);
+  const auth = await exigirSuperadmin(supabase);
+  if (!auth.ok) return json({ ok: false, code: auth.code }, auth.status);
+
+  const limite = checkRateLimit(`navitrack:rastreo:${auth.userId}`, 40, 60_000);
+  if (!limite.allowed) return json({ ok: false, code: "RATE_LIMIT" }, 429);
+
+  const body = (await request.json().catch(() => ({}))) as {
+    accion?: string;
+    naveId?: string;
+  };
+  const naveId = String(body.naveId ?? "").trim();
+  if (!naveId) return json({ ok: false, code: "VALIDATION" }, 400);
+
+  const { data: nave } = await supabase
+    .from("naves")
+    .select("id, nombre, imo, mmsi, tracking_activo")
+    .eq("id", naveId)
+    .single();
+  if (!nave) return json({ ok: false, code: "NO_ENCONTRADA" }, 404);
+
+  /* ── Habilitar o deshabilitar el rastreo: no cuesta nada ─────────────── */
+
+  if (body.accion === "seguir" || body.accion === "dejar") {
+    const seguir = body.accion === "seguir";
+    // Sin identificador no hay nada que consultar: seguirla sería un botón muerto.
+    if (seguir && !(nave.imo || nave.mmsi)) {
+      return json({ ok: false, code: "SIN_IDENTIFICADOR" }, 400);
+    }
+    const { error } = await supabase
+      .from("naves")
+      .update({ tracking_activo: seguir })
+      .eq("id", naveId);
+    if (error) return json({ ok: false, code: "NO_GUARDADO" }, 500);
+    return json({ ok: true, siguiendo: seguir });
+  }
+
+  /* ── Resolver IMO/MMSI por nombre: 1 crédito ─────────────────────────── */
+
+  if (body.accion === "resolver") {
+    const apiKey = import.meta.env.DATADOCKED_API_KEY;
+    if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
+
+    const gasto = await creditos(supabase);
+    if (gasto.hoy >= MAX_DIA) return json({ ok: false, code: "TOPE_DIARIO" }, 200);
+
+    const nombre = claveNave(nave.nombre as string);
+    try {
+      const r = await fetch(
+        `${DATADOCKED_BASE}/vessels-by-vessel-name?vessel_name=${encodeURIComponent(nombre)}`,
+        { headers: { "x-api-key": apiKey, Accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
+      );
+
+      // El crédito se gasta apenas el proveedor responde, haya match o no.
+      await supabase.from("navitrack_ais_lecturas").insert({
+        identificador: nombre.slice(0, 60),
+        nave_id: nave.id as string,
+        nave_nombre: nave.nombre as string,
+        tipo: "busqueda",
+      });
+
+      if (!r.ok) {
+        const code = r.status === 401 ? "BAD_KEY" : r.status === 403 ? "NO_CREDITS" : "UPSTREAM_ERROR";
+        return json({ ok: false, code }, 200);
+      }
+
+      const data = (await r.json()) as unknown;
+      const lista = Array.isArray(data)
+        ? data
+        : ((data as Record<string, unknown>)?.detail ??
+            (data as Record<string, unknown>)?.data ??
+            (data as Record<string, unknown>)?.vessels ??
+            []);
+      const items = (Array.isArray(lista) ? lista : [lista]) as Record<string, unknown>[];
+
+      for (const v of items) {
+        if (!v || typeof v !== "object") continue;
+        const nom = String(v.name ?? v.vessel_name ?? "");
+        // El nombre debe calzar: un parecido llevaría a seguir otro barco.
+        if (claveNave(nom) !== nombre) continue;
+        const imo = String(v.imo ?? "").replace(/\D/g, "");
+        const mmsi = String(v.mmsi ?? "").replace(/\D/g, "");
+        const cambios: Record<string, string> = {};
+        if (/^\d{7}$/.test(imo)) cambios.imo = imo;
+        if (/^\d{9}$/.test(mmsi)) cambios.mmsi = mmsi;
+        if (Object.keys(cambios).length === 0) break;
+        await supabase.from("naves").update(cambios).eq("id", naveId);
+        return json({ ok: true, imo: cambios.imo ?? null, mmsi: cambios.mmsi ?? null });
+      }
+
+      return json({ ok: false, code: "SIN_RESULTADO" }, 200);
+    } catch {
+      return json({ ok: false, code: "NETWORK" }, 200);
+    }
+  }
+
+  return json({ ok: false, code: "ACCION_INVALIDA" }, 400);
+};

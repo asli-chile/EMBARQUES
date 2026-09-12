@@ -73,6 +73,7 @@ export const siteConfig = {
       ],
     },
     { labelKey: "tracking", id: "tracking", href: "/tracking" },
+    { labelKey: "navitrack", id: "navitrack", href: "/navitrack", superadminOnly: true },
   ],
   authIcon: icons.auth,
   /** Contacto para solicitar usuario y contraseña en la plataforma */
