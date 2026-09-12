@@ -624,3 +624,49 @@
   border-color: color-mix(in srgb, var(--dash-neon) 45%, transparent);
   background: color-mix(in srgb, var(--dash-neon) 12%, transparent);
 }
+
+/* ─── Móvil ─────────────────────────────────────────────────────────────────
+ *
+ * En escritorio las tarjetas de indicador van cinco o seis por fila, y ahí los
+ * cuerpos pequeños funcionan porque el ojo las recorre de un vistazo. En un
+ * teléfono van de a dos, sobra ancho y falta legibilidad: los mismos 9,6px que
+ * en el monitor se leen bien, en la mano no.
+ *
+ * Se suben los cuerpos y se le da aire a la tarjeta. No hay nada que ganar
+ * apretando: el espacio está disponible.
+ */
+@media (max-width: 640px) {
+  .navitrack .nt-stat {
+    gap: 0.55rem;
+    padding: 0.7rem 0.8rem;
+  }
+
+  .navitrack .nt-stat-icon {
+    height: 1.9rem;
+    width: 1.9rem;
+  }
+
+  .navitrack .nt-stat-label {
+    font-size: 0.67rem;
+  }
+
+  .navitrack .nt-stat-value {
+    font-size: 1.02rem;
+  }
+
+  .navitrack .nt-stat-sub {
+    font-size: 0.74rem;
+  }
+
+  /* El chip de etapa es el que dice de qué se trata la fila: no puede ser el
+     texto más chico de la pantalla. */
+  .navitrack .nt-stage {
+    padding: 0.42rem 0.8rem 0.42rem 0.55rem;
+    gap: 0.45rem;
+  }
+
+  /* Toda superficie tocable llega al mínimo cómodo del pulgar. */
+  .navitrack .nt-row {
+    min-height: 44px;
+  }
+}

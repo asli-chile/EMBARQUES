@@ -76,7 +76,9 @@ function Kpi({ label, hint, valor, icon, acento, activo, onClick }: KpiProps) {
         <span className="dash-kpi-value mt-1 block text-[26px] font-extrabold sm:text-[30px]">
           {valor}
         </span>
-        <span className="dash-kpi-hint mt-1 block truncate text-[11px]">{hint}</span>
+        <span className="dash-kpi-hint mt-1 block text-[11.5px] leading-snug sm:truncate">
+          {hint}
+        </span>
       </span>
     </button>
   );
@@ -316,7 +318,7 @@ export function NavitrackFleet({
       </div>
 
       <section className="dash-card dash-card-static flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="dash-section-head flex shrink-0 flex-wrap items-center justify-between gap-2.5 px-3.5 py-3">
+        <div className="dash-section-head flex shrink-0 flex-wrap items-center justify-between gap-2.5 px-3.5 py-3 max-md:flex-col max-md:items-stretch">
           <div className="min-w-0">
             <h2 className="text-[16px] font-extrabold tracking-tight text-dash-fg">{tr.tableTitle}</h2>
             <p className="mt-0.5 text-[12px] text-dash-muted">
@@ -324,14 +326,16 @@ export function NavitrackFleet({
             </p>
           </div>
 
-          <div className="flex shrink-0 rounded-xl border border-dash-border bg-dash-control/80 p-0.5">
+          {/* Pestañas a todo el ancho en móvil: repartidas, cada una es un
+              blanco cómodo para el pulgar en vez de tres pastillas juntas. */}
+          <div className="flex shrink-0 rounded-xl border border-dash-border bg-dash-control/80 p-0.5 max-md:w-full">
             {(["activos", "arribados", "todos"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => onVista(v)}
                 aria-pressed={vista === v}
-                className={`motion-interactive inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-bold ${
+                className={`motion-interactive inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-bold max-md:flex-1 ${
                   vista === v
                     ? "border border-dash-neon/40 bg-dash-neon/25 text-dash-fg"
                     : "border border-transparent text-dash-muted hover:text-dash-fg"
@@ -345,7 +349,7 @@ export function NavitrackFleet({
             ))}
           </div>
 
-          <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-2 max-md:w-full">
             <div className="relative min-w-0 flex-1 sm:max-w-[300px]">
               <Icon
                 icon="lucide:search"
@@ -360,14 +364,14 @@ export function NavitrackFleet({
                 onChange={(e) => onBusqueda(e.target.value)}
                 placeholder={tr.searchPlaceholder}
                 aria-label={tr.searchPlaceholder}
-                className="dash-control w-full py-2 pl-8 pr-2.5 text-[13px] text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+                className="dash-control w-full py-2.5 pl-8 pr-2.5 text-[13.5px] text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
               />
             </div>
             {filtro && (
               <button
                 type="button"
                 onClick={() => onFiltro(null)}
-                className="dash-control motion-interactive inline-flex shrink-0 items-center gap-1.5 px-2.5 py-2 text-[11.5px] font-semibold"
+                className="dash-control motion-interactive inline-flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-[12.5px] font-semibold"
               >
                 <Icon icon="lucide:x" width={13} height={13} aria-hidden />
                 {tr.filterAll}
@@ -397,7 +401,7 @@ export function NavitrackFleet({
             {/* Móvil: la fila se vuelve tarjeta y conserva la jerarquía. */}
             <div className="min-h-0 flex-1 overflow-y-auto md:hidden">
               <ul className="divide-y divide-dash-border">
-                {rows.map((row) => {
+                {visibles.map((row) => {
                   const meta = ETAPA_META[row.estado.etapa];
                   const flag = requiereAtencion(row.estado);
                   return (
@@ -407,34 +411,79 @@ export function NavitrackFleet({
                         onClick={() => onSelect(row.op.id)}
                         className={`nt-row nt-tone--${meta.tono} ${
                           flag ? "nt-row--flag" : ""
-                        } w-full px-3.5 py-3 text-left`}
+                        } w-full px-4 py-3.5 text-left`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-[14px] font-bold text-dash-fg">
+                        {/*
+                          * En móvil no hay columnas que alineen los datos, así
+                          * que la jerarquía la da el tamaño. Antes ruta, nave,
+                          * ETD y ETA compartían una línea de 11,5px envuelta:
+                          * todo igual de pequeño y todo igual de importante,
+                          * que es lo mismo que nada.
+                          */}
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[15.5px] font-extrabold tracking-tight text-dash-fg">
                               {row.op.contenedor || row.op.booking || row.op.ref_asli || "—"}
                             </p>
-                            <p className="mt-0.5 truncate text-[11.5px] text-dash-muted">
+                            <p className="mt-0.5 truncate text-[12.5px] font-medium text-dash-fg/70">
                               {row.op.cliente || "—"}
-                              {/* En móvil no hay columnas: la reserva va detrás
-                                  del cliente, que es como se la nombra al hablar. */}
-                              {row.op.booking ? ` · ${tr.colReserva} ${row.op.booking}` : ""}
                             </p>
                           </div>
                           <EtapaChip row={row} tr={tr} locale={locale} />
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-dash-muted">
-                          <span className="flex min-w-0 items-center gap-1 truncate">
-                            {row.journey.origen.nombre || "—"}
-                            <Icon icon="lucide:arrow-right" width={11} height={11} aria-hidden />
-                            {row.journey.destino.nombre || "—"}
+
+                        {/* Ruta: con banderas, que en pantalla chica orientan
+                            más rápido que leer los nombres. */}
+                        <p className="mt-2.5 flex items-center gap-1.5 truncate text-[13px] font-semibold text-dash-fg">
+                          <BanderaPuerto puerto={row.journey.origen.nombre} />
+                          <span className="truncate">{row.journey.origen.nombre || "—"}</span>
+                          <Icon
+                            icon="lucide:arrow-right"
+                            width={12}
+                            height={12}
+                            className="shrink-0 text-dash-muted"
+                            aria-hidden
+                          />
+                          <BanderaPuerto puerto={row.journey.destino.nombre} />
+                          <span className="truncate">{row.journey.destino.nombre || "—"}</span>
+                        </p>
+
+                        <p className="mt-1 flex items-center gap-1.5 truncate text-[12.5px] text-dash-fg/70">
+                          <Icon
+                            icon="lucide:ship"
+                            width={12}
+                            height={12}
+                            className="shrink-0 text-dash-muted"
+                            aria-hidden
+                          />
+                          <span className="truncate">
+                            {row.journey.naveActual || row.op.nave || "—"}
                           </span>
-                          <span className="truncate">{row.op.nave || "—"}</span>
-                          <span className="tabular-nums">
-                            {tr.colEtd} {fmtFecha(parseOpDate(row.op.etd), locale) ?? "—"}
+                          {row.op.booking && (
+                            <span className="shrink-0 text-dash-fg/45 tabular-nums">
+                              · {row.op.booking}
+                            </span>
+                          )}
+                        </p>
+
+                        {/* Las fechas en su propia fila y rotuladas: pegadas al
+                            resto era imposible saber cuál era cuál. */}
+                        <div className="mt-2.5 flex items-end gap-5 border-t border-dash-border pt-2">
+                          <span className="flex flex-col">
+                            <span className="text-[9.5px] font-bold uppercase tracking-wider text-dash-muted">
+                              {tr.colEtd}
+                            </span>
+                            <span className="text-[13px] font-medium text-dash-fg/65 tabular-nums">
+                              {fmtFecha(parseOpDate(row.op.etd), locale) ?? "—"}
+                            </span>
                           </span>
-                          <span className="font-semibold text-dash-fg tabular-nums">
-                            {tr.colEta} {fmtFecha(row.estado.eta.erp, locale) ?? "—"}
+                          <span className="flex flex-col">
+                            <span className="text-[9.5px] font-bold uppercase tracking-wider text-dash-muted">
+                              {tr.colEta}
+                            </span>
+                            <span className="text-[14.5px] font-extrabold text-dash-fg tabular-nums">
+                              {fmtFecha(row.estado.eta.erp, locale) ?? "—"}
+                            </span>
                           </span>
                         </div>
                       </button>
@@ -652,7 +701,7 @@ export function NavitrackFleet({
                     onClick={() => setPagina((n) => Math.max(1, n - 1))}
                     disabled={paginaActual <= 1}
                     aria-label={tr.paginaAnterior}
-                    className="dash-control motion-interactive flex h-7 w-7 items-center justify-center disabled:opacity-35"
+                    className="dash-control motion-interactive flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
                   >
                     <Icon icon="lucide:chevron-left" width={14} height={14} aria-hidden />
                   </button>
@@ -662,7 +711,7 @@ export function NavitrackFleet({
                       type="button"
                       onClick={() => setPagina(n)}
                       aria-current={n === paginaActual ? "page" : undefined}
-                      className={`motion-interactive h-7 min-w-7 rounded-lg px-2 text-[11.5px] font-bold tabular-nums ${
+                      className={`motion-interactive h-9 min-w-9 rounded-lg px-2.5 text-[12.5px] font-bold tabular-nums sm:h-7 sm:min-w-7 ${
                         n === paginaActual
                           ? "border border-dash-neon/40 bg-dash-neon/25 text-dash-fg"
                           : "border border-dash-border text-dash-muted hover:text-dash-fg"
@@ -676,7 +725,7 @@ export function NavitrackFleet({
                     onClick={() => setPagina((n) => Math.min(paginas, n + 1))}
                     disabled={paginaActual >= paginas}
                     aria-label={tr.paginaSiguiente}
-                    className="dash-control motion-interactive flex h-7 w-7 items-center justify-center disabled:opacity-35"
+                    className="dash-control motion-interactive flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
                   >
                     <Icon icon="lucide:chevron-right" width={14} height={14} aria-hidden />
                   </button>

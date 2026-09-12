@@ -185,7 +185,7 @@ export function NavitrackRecalada({
         </header>
 
         {/* El dato crudo: qué declaró y para cuándo. Es lo que sostiene la pregunta. */}
-        <div className="grid grid-cols-2 gap-2 px-4 py-3">
+        <div className="grid gap-2 px-4 py-3 min-[380px]:grid-cols-2">
           <div className="rounded-xl border border-dash-border bg-dash-control/60 px-3 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
               {tr.recaladaPuerto}
@@ -258,7 +258,7 @@ export function NavitrackRecalada({
                 setBusqueda(e.target.value);
               }}
               placeholder={tr.recaladaNavePlaceholder}
-              className="dash-control mt-1.5 w-full px-3 py-2 text-[13.5px]"
+              className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"
             />
 
             {/* Sugerencias del catálogo: escribir una que ya existe evita
@@ -285,7 +285,7 @@ export function NavitrackRecalada({
               </ul>
             )}
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid gap-2 min-[420px]:grid-cols-2">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
                   {tr.recaladaViaje}
@@ -294,7 +294,7 @@ export function NavitrackRecalada({
                   type="text"
                   value={viaje}
                   onChange={(e) => setViaje(e.target.value)}
-                  className="dash-control mt-1.5 w-full px-3 py-2 text-[13.5px]"
+                  className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"
                 />
               </div>
               <div>
@@ -305,7 +305,7 @@ export function NavitrackRecalada({
                   type="date"
                   value={eta}
                   onChange={(e) => setEta(e.target.value)}
-                  className="dash-control mt-1.5 w-full px-3 py-2 text-[13.5px]"
+                  className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"
                 />
               </div>
             </div>

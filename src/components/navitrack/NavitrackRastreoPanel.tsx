@@ -301,7 +301,7 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
         </header>
 
         {/* Consumo: lo primero que hay que ver antes de apretar nada. */}
-        <div className="grid grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 px-3 py-3 sm:grid-cols-5 sm:px-4">
           {[
             { l: tr.rastreoCreditosHoy, v: `${estado?.creditos.hoy ?? 0} / ${estado?.topeDia ?? 0}` },
             { l: tr.rastreoCreditosTotal, v: String(estado?.creditos.total ?? 0) },
@@ -310,8 +310,12 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
             { l: tr.rastreoSaldo, v: estado?.saldo == null ? "—" : String(estado.saldo) },
           ].map((k) => (
             <div key={k.l} className="rounded-xl border border-dash-border bg-dash-control/60 px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">{k.l}</p>
-              <p className="mt-0.5 text-lg font-extrabold text-dash-fg tabular-nums">{k.v}</p>
+              <p className="text-[10.5px] font-bold uppercase leading-tight tracking-wider text-dash-muted">
+                {k.l}
+              </p>
+              <p className="mt-0.5 text-[17px] font-extrabold text-dash-fg tabular-nums sm:text-lg">
+                {k.v}
+              </p>
             </div>
           ))}
         </div>
@@ -351,7 +355,7 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
           </p>
         )}
 
-        <div className="max-h-[52dvh] overflow-y-auto border-t border-dash-border">
+        <div className="max-h-[58dvh] overflow-y-auto border-t border-dash-border max-sm:max-h-[46dvh]">
           {cargando ? (
             <div className="flex items-center justify-center gap-2 py-10 text-sm text-dash-muted">
               <Icon icon="lucide:loader-2" width={17} height={17} className="animate-spin text-dash-neon" aria-hidden />
@@ -366,7 +370,7 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
                 const esperando = ocupado === n.id;
                 const etapa = ETAPA[n.etapa] ?? ETAPA.sin_fecha;
                 return (
-                  <li key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                  <li key={n.id} className="flex flex-wrap items-center gap-2.5 px-3.5 py-3 sm:px-4 sm:py-2.5">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13.5px] font-bold text-dash-fg">{n.nombre}</p>
                       <p className="truncate text-[11px] text-dash-muted tabular-nums">

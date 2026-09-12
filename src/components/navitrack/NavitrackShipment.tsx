@@ -82,15 +82,17 @@ function Stat({
   valor,
   sub,
   extra,
+  className,
 }: {
   icon: string;
   label: string;
   valor: string;
   sub?: string | null;
   extra?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="nt-stat">
+    <div className={`nt-stat ${className ?? ""}`}>
       <span className="nt-stat-icon">
         <Icon icon={icon} width={15} height={15} aria-hidden />
       </span>
@@ -107,7 +109,7 @@ function Stat({
 function Dato({ label, valor }: { label: string; valor: string | null }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">{label}</p>
+      <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">{label}</p>
       <p className="mt-0.5 truncate text-[13px] font-semibold text-dash-fg tabular-nums">
         {valor || "—"}
       </p>
@@ -377,7 +379,7 @@ export function NavitrackShipment({
               >
                 <Icon icon="lucide:chevron-left" width={15} height={15} aria-hidden />
               </button>
-              <span className="min-w-[4.5rem] text-center text-[11px] font-semibold text-dash-muted tabular-nums">
+              <span className="min-w-[4.5rem] text-center text-[12.5px] font-semibold text-dash-muted tabular-nums sm:text-[11px]">
                 {interpolar(tr.posicionLista, {
                   i: String(indiceEnLista + 1),
                   n: String(totalEnLista),
@@ -420,7 +422,7 @@ export function NavitrackShipment({
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <NavieraLogo nombre={op.naviera} logoUrl={navieraLogoUrl} size={54} />
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-dash-muted">
+              <p className="text-[11.5px] font-bold uppercase tracking-[0.12em] text-dash-muted sm:text-[10px]">
                 {tr.embarque}
               </p>
               <div className="flex items-center gap-1.5">
@@ -435,7 +437,7 @@ export function NavitrackShipment({
               <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {op.booking && (
                   <span className="inline-flex min-w-0 items-baseline gap-1.5">
-                    <span className="text-[9.5px] font-bold uppercase tracking-wider text-dash-muted">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-dash-muted sm:text-[9.5px]">
                       {tr.booking}
                     </span>
                     <span className="truncate text-[13.5px] font-bold text-dash-fg tabular-nums">
@@ -445,7 +447,7 @@ export function NavitrackShipment({
                 )}
                 {op.cliente && (
                   <span className="inline-flex min-w-0 items-baseline gap-1.5">
-                    <span className="text-[9.5px] font-bold uppercase tracking-wider text-dash-muted">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-dash-muted sm:text-[9.5px]">
                       {tr.cliente}
                     </span>
                     <span className="truncate text-[13.5px] font-bold text-dash-fg">
@@ -495,7 +497,7 @@ export function NavitrackShipment({
                   )}
                   {tr[ETAPA_LABEL_KEY[estado.etapa]]}
                 </span>
-                <p className="mt-1 text-center text-[11px] text-dash-muted">
+                <p className="mt-1 text-center text-[12.5px] text-dash-muted sm:text-[11px]">
                   {tr[ETAPA_SUB_KEY[estado.etapa]]}
                 </p>
               </>
@@ -509,7 +511,7 @@ export function NavitrackShipment({
                 {tr.delTrayecto}
               </p>
               {restantes && (
-                <p className="text-[11px] font-semibold text-dash-muted tabular-nums">
+                <p className="text-[12.5px] font-semibold text-dash-muted tabular-nums sm:text-[11px]">
                   {interpolar(tr.restanNm, { nm: restantes })}
                 </p>
               )}
@@ -535,14 +537,14 @@ export function NavitrackShipment({
           </p>
           {etaErp && (
             <p className="flex items-baseline gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+              <span className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
                 {tr.colEta}
               </span>
               <span className="text-[14px] font-extrabold text-dash-fg tabular-nums">{etaErp}</span>
             </p>
           )}
           {op.viaje && (
-            <p className="text-[11.5px] text-dash-muted">
+            <p className="text-[12.5px] text-dash-muted sm:text-[11.5px]">
               {tr.viaje} <span className="font-semibold text-dash-fg">{op.viaje}</span>
             </p>
           )}
@@ -628,7 +630,7 @@ export function NavitrackShipment({
           {pestana === "escalas" && (
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-dash-border px-4 py-2.5">
-                <p className="text-[11.5px] text-dash-muted">
+                <p className="text-[12.5px] text-dash-muted sm:text-[11.5px]">
                   {escalas.length === 0
                     ? tr.escalasVacio
                     : escalasEdadH == null
@@ -656,7 +658,7 @@ export function NavitrackShipment({
                         : tr.escalasActualizar}
                   </button>
                 ) : (
-                  <p className="text-[11px] text-dash-muted">{tr.escalasNoSeguida}</p>
+                  <p className="text-[12.5px] text-dash-muted sm:text-[11px]">{tr.escalasNoSeguida}</p>
                 )}
               </div>
 
@@ -692,7 +694,7 @@ export function NavitrackShipment({
                               )}
                               {enPuerto && <span className="nt-certainty">{tr.escalasEnPuerto}</span>}
                             </div>
-                            <p className="mt-0.5 text-[11.5px] text-dash-muted tabular-nums">
+                            <p className="mt-0.5 text-[12.5px] text-dash-muted sm:text-[11.5px] tabular-nums">
                               {[
                                 arribo ? `${tr.escalasArribo} ${arribo}` : null,
                                 zarpe ? `${tr.escalasZarpe} ${zarpe}` : null,
@@ -742,13 +744,13 @@ export function NavitrackShipment({
                 <p className="text-xl font-extrabold leading-none tracking-tight text-dash-fg tabular-nums">
                   {etaErp ?? "—"}
                 </p>
-                <p className="mt-1 truncate text-[11.5px] text-dash-muted">
+                <p className="mt-1 truncate text-[12.5px] text-dash-muted sm:text-[11.5px]">
                   {[journey.destino.nombre, op.pais].filter(Boolean).join(", ") || "—"}
                 </p>
               </div>
               {etaAis && (
                 <div className="shrink-0 text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                  <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
                     {tr.etaAis}
                   </p>
                   <p className="mt-0.5 text-[12.5px] font-bold text-dash-fg tabular-nums">{etaAis}</p>
@@ -824,7 +826,7 @@ export function NavitrackShipment({
                 */}
               {recaladas.length > 0 && (
                 <section className="mb-3">
-                  <p className="pb-1.5 text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                  <p className="pb-1.5 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
                     {tr.historialRecaladas}
                   </p>
                   <ul className="divide-y divide-dash-border rounded-lg border border-dash-border">
@@ -900,13 +902,14 @@ export function NavitrackShipment({
 
       {/* Franja de indicadores: lo que un operador mira de reojo. */}
       <div
-        className={`grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 ${
+        className={`shrink-0 gap-2 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:grid sm:grid-cols-3 ${
           hayCadena ? "xl:grid-cols-6" : "xl:grid-cols-5"
         }`}
       >
         {/* En un transbordo, de dónde salió la carga es parte de la historia. */}
         {tramoInicial && (
           <Stat
+            className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
             icon="lucide:package-open"
             label={tr.cadenaInicial}
             valor={tramoInicial.nave || "—"}
@@ -929,6 +932,7 @@ export function NavitrackShipment({
           * está en MSC RITA V es falso, aunque el dato exista.
           */}
         <Stat
+          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:ship"
           label={tr.buqueActual}
           valor={journey.naveActual || op.nave || "—"}
@@ -943,6 +947,7 @@ export function NavitrackShipment({
           }
         />
         <Stat
+          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:gauge"
           label={tr.velocidad}
           valor={ais?.speed != null ? `${ais.speed.toFixed(1)} kn` : "—"}
@@ -957,6 +962,7 @@ export function NavitrackShipment({
           * manda por sobre lo calculado, porque es el dato del propio barco.
           */}
         <Stat
+          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:anchor"
           label={tr.ultimoPuerto}
           valor={ais?.lastPort || tramoEnCurso?.pol || journey.origen.nombre || "—"}
@@ -969,6 +975,7 @@ export function NavitrackShipment({
           }
         />
         <Stat
+          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:map-pin"
           label={tr.proximoPuerto}
           valor={tramoEnCurso?.pod || journey.destino.nombre || "—"}
@@ -981,6 +988,7 @@ export function NavitrackShipment({
           }
         />
         <Stat
+          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:crosshair"
           label={tr.posicionActual}
           valor={
