@@ -9,6 +9,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
+import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Horas que el historial de escalas se considera vigente. */
@@ -167,14 +168,14 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       return json({ ok: filas.length > 0, escalas: filas, cache: true, aviso: code });
     }
 
-    const body = (await r.json()) as { detail?: { ports?: unknown; name?: unknown } };
-    const puertos = aplanar(body?.detail?.ports);
+    const body = cuerpoProveedor(await r.json()) ?? {};
+    const puertos = aplanar(body.ports);
 
     const nuevas = puertos
       .map((p) => ({
         identificador: id,
         nave_id: nave.id as string,
-        nave_nombre: str(body?.detail?.name) ?? (nave.nombre as string),
+        nave_nombre: str(body.name) ?? (nave.nombre as string),
         puerto: str(p.portName),
         locode: str(p.portSign),
         arribo: fecha(p.arrived),

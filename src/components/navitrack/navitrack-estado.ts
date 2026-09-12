@@ -9,12 +9,15 @@
 import {
   DAY_MS,
   HOUR_MS,
+  haversineKm,
   parseInstant,
   parseOpDate,
   type AisSnapshot,
   type Journey,
+  type LngLat,
   type NavitrackOperacion,
 } from "./navitrack-model";
+import { getPortCoordinates } from "@/lib/ports-coordinates";
 import { normalizarEstado, ESTADO_META } from "@/lib/operaciones/estados";
 
 /* --------------------------------- Etapas ---------------------------------- */
@@ -106,6 +109,66 @@ export function destinoAisDiscrepa(pod: string | null, destinoAis: string | null
   // Los destinos AIS suelen venir como "CLSAI" o "CL SAI": comparar por tokens.
   const tokensA = new Set(a.split(" ").filter((t) => t.length >= 3));
   return !b.split(" ").some((t) => t.length >= 3 && tokensA.has(t));
+}
+
+/**
+ * Resultado de evaluar el destino que declara el buque.
+ *
+ *   en_ruta        el puerto declarado acerca la carga al POD: es una escala
+ *   fuera_de_ruta  aleja o no acerca: esto sí merece que alguien lo mire
+ *   desconocido    el puerto no está en el catálogo, no hay cómo juzgarlo
+ *   coincide       declara el POD comprometido
+ */
+export type DestinoEvaluado = "coincide" | "en_ruta" | "fuera_de_ruta" | "desconocido";
+
+/**
+ * ¿El destino declarado es un desvío o una escala normal?
+ *
+ * El AIS declara el **próximo puerto**, no el destino final del contenedor. Un
+ * buque que sale de San Antonio hacia Hamburgo declara Callao, después Balboa,
+ * y solo al final Hamburgo. Comparar contra el POD sin más marca desvío en cada
+ * escala: una alerta diaria que siempre grita y nunca acierta.
+ *
+ * La pregunta útil es otra: **¿ir a ese puerto acerca la carga a su destino?**
+ * Si el puerto declarado está más cerca del POD que el buque ahora, es una
+ * escala en ruta. Si no, algo pasa y vale la pena preguntar.
+ *
+ * Es geometría de círculo máximo sobre un mundo con continentes y canales, así
+ * que es una aproximación. Sirve para separar lo evidente —Callao camino a
+ * Europa— de lo que no lo es, y el margen evita que un puerto casi equidistante
+ * dispare la alerta.
+ */
+export function evaluarDestinoAis(
+  pod: string | null,
+  destinoAis: string | null,
+  posicion: LngLat | null,
+  margenKm = 200,
+): DestinoEvaluado {
+  if (!destinoAisDiscrepa(pod, destinoAis)) return "coincide";
+
+  const cPod = getPortCoordinates(pod ?? "");
+  const cDeclarado = getPortCoordinates(destinoAis ?? "");
+  if (!cPod || !cDeclarado || !posicion) return "desconocido";
+
+  const destino = { lng: cPod[0], lat: cPod[1] };
+  const declarado = { lng: cDeclarado[0], lat: cDeclarado[1] };
+
+  const faltaAhora = haversineKm(posicion, destino);
+  const faltaDesdeDeclarado = haversineKm(declarado, destino);
+  const hastaDeclarado = haversineKm(posicion, declarado);
+
+  /*
+   * Dos condiciones, y hacen falta las dos.
+   *
+   * "Acerca" por sí sola no basta: desde Chile, Shanghai también queda más
+   * cerca de Hamburgo en línea recta, y declararlo sería un desvío enorme. La
+   * segunda condición lo descarta —un puerto intermedio no puede estar más
+   * lejos que el destino final— y es la que separa una escala de un disparate.
+   */
+  const acerca = faltaDesdeDeclarado + margenKm < faltaAhora;
+  const estaDeCamino = hastaDeclarado < faltaAhora;
+
+  return acerca && estaDeCamino ? "en_ruta" : "fuera_de_ruta";
 }
 
 /** Decisión humana sobre una alerta de transbordo, guardada en `navitrack_transbordos`. */

@@ -11,7 +11,8 @@
  */
 import type { APIRoute } from "astro";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { destinoAisDiscrepa } from "@/components/navitrack/navitrack-estado";
+import { evaluarDestinoAis } from "@/components/navitrack/navitrack-estado";
+import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 import { correoDesvio } from "@/components/navitrack/navitrack-correo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
@@ -83,7 +84,7 @@ export const GET: APIRoute = async ({ request }) => {
     .eq("activo", true)
     .limit(MAX_NAVES);
 
-  const resultado = { revisadas: 0, creditos: 0, desvios: 0, correos: 0, errores: 0 };
+  const resultado = { revisadas: 0, creditos: 0, desvios: 0, escalas: 0, correos: 0, errores: 0 };
 
   for (const nave of naves ?? []) {
     const id = (String(nave.mmsi ?? "").trim() || String(nave.imo ?? "").trim()).trim();
@@ -101,7 +102,7 @@ export const GET: APIRoute = async ({ request }) => {
         resultado.errores += 1;
         continue;
       }
-      detalle = ((await r.json()) as { detail?: Record<string, unknown> })?.detail ?? null;
+      detalle = cuerpoProveedor(await r.json());
     } catch {
       resultado.errores += 1;
       continue;
@@ -131,6 +132,11 @@ export const GET: APIRoute = async ({ request }) => {
     const destinoAis = str(detalle.destination);
     if (!destinoAis) continue;
 
+    const posicion =
+      num(detalle.latitude) != null && num(detalle.longitude) != null
+        ? { lng: num(detalle.longitude) as number, lat: num(detalle.latitude) as number }
+        : null;
+
     // Operaciones vivas de esa nave: son las que tienen algo que verificar.
     const hoy = new Date().toISOString().slice(0, 10);
     const { data: ops } = await supabase
@@ -143,7 +149,21 @@ export const GET: APIRoute = async ({ request }) => {
 
     for (const op of ops ?? []) {
       if (op.arribo_confirmado) continue;
-      if (!destinoAisDiscrepa(op.pod, destinoAis)) continue;
+
+      /*
+       * El AIS declara el próximo puerto, no el destino final. Callao camino a
+       * Hamburgo es una escala, no un desvío, y avisarlo cada día entrenaría a
+       * todo el mundo a ignorar estos correos.
+       *
+       * Solo se avisa de lo que no acerca la carga a su destino. Un puerto que
+       * no está en el catálogo tampoco se avisa: sin coordenadas no hay forma
+       * de juzgarlo, y una alerta que no se puede sostener es peor que ninguna.
+       */
+      const veredicto = evaluarDestinoAis(op.pod, destinoAis, posicion);
+      if (veredicto !== "fuera_de_ruta") {
+        if (veredicto === "en_ruta") resultado.escalas += 1;
+        continue;
+      }
 
       // Una decisión previa cierra el tema: no se vuelve a avisar.
       const { data: decision } = await supabase

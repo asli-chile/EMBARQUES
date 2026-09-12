@@ -216,6 +216,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         return json({ ok: false, code }, 200);
       }
 
+      // La búsqueda por nombre puede venir como arreglo suelto o envuelta;
+      // por eso aquí no sirve `cuerpoProveedor`, que resuelve objetos.
       const data = (await r.json()) as unknown;
       const lista = Array.isArray(data)
         ? data

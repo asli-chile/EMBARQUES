@@ -17,6 +17,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
+import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 
@@ -244,9 +245,8 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       return json({ ok: false, code }, upstream.status === 404 ? 404 : 502);
     }
 
-    const body = (await upstream.json()) as { detail?: Record<string, unknown> };
-    const d = body?.detail;
-    if (!d || typeof d !== "object") {
+    const d = cuerpoProveedor(await upstream.json());
+    if (!d) {
       return json({ ok: false, code: "BAD_RESPONSE" }, 502);
     }
 

@@ -252,6 +252,27 @@ function pick(raw: Record<string, unknown>, keys: string[]): unknown {
  * todos los modos de uno mismo) los escriben igual: Data Docked usa
  * `latitude`/`etaUtc`/`positionReceived`, otros usan `lat`/`eta`/`received`.
  */
+/**
+ * Saca el cuerpo útil de una respuesta del proveedor AIS.
+ *
+ * Data Docked no es consistente: `get-vessel-location` devuelve los campos en
+ * la raíz del JSON, mientras que otras consultas los envuelven en `detail`.
+ * Asumir uno solo de los dos formatos deja la lectura en null y el dato se
+ * pierde en silencio, que es justo lo que pasó la primera vez que se consultó
+ * de verdad.
+ *
+ * Devuelve `detail` si viene y es un objeto; si no, el objeto de la raíz.
+ */
+export function cuerpoProveedor(json: unknown): Record<string, unknown> | null {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
+  const raiz = json as Record<string, unknown>;
+  const envuelto = raiz.detail;
+  if (envuelto && typeof envuelto === "object" && !Array.isArray(envuelto)) {
+    return envuelto as Record<string, unknown>;
+  }
+  return raiz;
+}
+
 export function parseAisSnapshot(raw: Record<string, unknown> | null): AisSnapshot | null {
   if (!raw) return null;
   return {
