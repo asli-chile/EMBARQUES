@@ -76,6 +76,14 @@ export const GET: APIRoute = async ({ request }) => {
   if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
 
   const destinatario = (import.meta.env.NAVITRACK_ALERTAS_EMAIL ?? "").trim();
+  /*
+   * En copia.
+   *
+   * Un aviso de seguimiento que llega a una sola persona depende de que esa
+   * persona lo vea. La copia no es formalidad: es que la carga no se quede sin
+   * vigilar porque alguien está de vacaciones.
+   */
+  const enCopia = (import.meta.env.NAVITRACK_ALERTAS_CC ?? "hans.vasquez@asli.cl").trim();
   // Para el botón del correo. Sin sitio configurado, el aviso va sin enlace.
   const sitio = (import.meta.env.PUBLIC_SITE_URL ?? "https://www.asli.cl").replace(/\/+$/, "");
   const supabase = createAdminClient();
@@ -256,6 +264,7 @@ export const GET: APIRoute = async ({ request }) => {
         },
         body: JSON.stringify({
           to: destinatario,
+          cc: enCopia || undefined,
           subject: asunto,
           body: cuerpo,
           sendFrom: "informaciones",
@@ -310,6 +319,7 @@ export const GET: APIRoute = async ({ request }) => {
         },
         body: JSON.stringify({
           to: destinatario,
+          cc: enCopia || undefined,
           subject: avisoSeguimiento.asunto,
           body: avisoSeguimiento.cuerpo,
           sendFrom: "informaciones",

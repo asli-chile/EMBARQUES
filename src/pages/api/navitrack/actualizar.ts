@@ -350,6 +350,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const saldoFinal = await consultarSaldo(import.meta.env.DATADOCKED_API_KEY);
 
   const destinatario = (import.meta.env.NAVITRACK_AVISO_GASTO_EMAIL ?? "rodrigo.caceres@asli.cl").trim();
+  // El registro de un gasto manual también va en copia: es la clase de decisión
+  // que conviene que más de una persona vea.
+  const enCopia = (import.meta.env.NAVITRACK_ALERTAS_CC ?? "hans.vasquez@asli.cl").trim();
   const secreto = (import.meta.env.NAVITRACK_CRON_SECRET ?? "").trim();
   let avisado = false;
 
@@ -374,6 +377,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         },
         body: JSON.stringify({
           to: destinatario,
+          cc: enCopia || undefined,
           subject: asunto,
           body: html,
           sendFrom: "informaciones",

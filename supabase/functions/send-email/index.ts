@@ -68,8 +68,11 @@ Deno.serve(async (req) => {
     if (!profileEmail) return json({ success: false, error: "No se encontró el email del usuario" });
 
     // ── 3. Leer cuerpo de la solicitud ────────────────────────────────────
-    const { to, subject, body, attachments, sendFrom, skipSignature } = await req.json() as {
-      to: string; subject: string; body: string;
+    const { to, cc, subject, body, attachments, sendFrom, skipSignature } = await req.json() as {
+      to: string;
+      /** Copia. Los destinatarios en copia ven a todo el resto, como en cualquier correo. */
+      cc?: string;
+      subject: string; body: string;
       attachments?: { name: string; content: string; mimeType: string }[];
       /** Solo "informaciones": envía desde buzón corporativo (delegación Google). */
       sendFrom?: string;
@@ -161,7 +164,7 @@ Deno.serve(async (req) => {
     }
 
     // ── 6. Enviar vía Gmail API como el ejecutivo ──────────────────────────
-    const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments, signatureHtml);
+    const raw = buildRawEmail(senderEmail, senderName ?? senderEmail, to, subject, body, attachments, signatureHtml, cc);
     const gmailRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(senderEmail)}/messages/send`,
       {
@@ -381,6 +384,7 @@ function buildRawEmail(
   to: string, subject: string, body: string,
   attachments?: { name: string; content: string; mimeType: string }[],
   signatureHtml?: string,
+  cc?: string,
 ): string {
   const boundary    = "----=_Part_" + Math.random().toString(36).slice(2);
   const altBoundary = "----=_Alt_"  + Math.random().toString(36).slice(2);
@@ -401,6 +405,9 @@ function buildRawEmail(
   const headers = [
     `From: ${encodeMimeAddress(fromName, fromEmail)}`,
     `To: ${to}`,
+    // La cabecera Cc se omite si viene vacía: un "Cc:" sin valor hace que
+    // algunos servidores rechacen el mensaje entero.
+    ...((cc ?? "").trim() ? [`Cc: ${cc!.trim()}`] : []),
     `Subject: ${encodeRfc2047(subject)}`,
     `MIME-Version: 1.0`,
   ];
