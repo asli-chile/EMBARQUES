@@ -117,6 +117,15 @@ export const GET: APIRoute = async ({ request, url }) => {
     return json({
       ok: true,
       diagnostico: true,
+      /*
+       * Qué sabe hacer este build.
+       *
+       * Sin esto no hay forma de distinguir desde afuera un despliegue nuevo de
+       * uno viejo: el diagnóstico responde igual en ambos. Y confundirlos sale
+       * caro, porque lanzar la prueba contra un build sin `sin_gasto` ejecuta
+       * la corrida de verdad y cobra una consulta por nave.
+       */
+      modoPruebaDisponible: true,
       hayClaveProveedor: Boolean(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY")),
       hayDestinatario: Boolean(textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_EMAIL, "NAVITRACK_ALERTAS_EMAIL")),
       hayServiceRole: Boolean(textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")),
