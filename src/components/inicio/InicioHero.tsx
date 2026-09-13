@@ -5,13 +5,7 @@ import { useLocale } from "@/lib/i18n";
 import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import type { AuthProfile } from "@/lib/auth/AuthContext";
 import { GlassCard, inicioButtonBase, inicioStyles } from "./inicio-ui";
-
-const flowStepIcons = [
-  "lucide:calendar-plus",
-  "lucide:truck",
-  "lucide:ship",
-  "lucide:file-check",
-] as const;
+import { guestModules } from "./inicio-data";
 
 export function InicioHero({
   isLoggedIn,
@@ -28,13 +22,6 @@ export function InicioHero({
   const i = t.inicio;
   const firstName = profile?.nombre?.split(" ")[0] ?? "";
   const dateLocale = locale === "en" ? "en-US" : "es-CL";
-
-  const flowSteps = [
-    { icon: flowStepIcons[0], label: i.heroFlowStep1, sub: i.heroFlowStep1Sub },
-    { icon: flowStepIcons[1], label: i.heroFlowStep2, sub: i.heroFlowStep2Sub },
-    { icon: flowStepIcons[2], label: i.heroFlowStep3, sub: i.heroFlowStep3Sub },
-    { icon: flowStepIcons[3], label: i.heroFlowStep4, sub: i.heroFlowStep4Sub },
-  ];
 
   const quickTiles = isCliente
     ? [
@@ -352,18 +339,39 @@ export function InicioHero({
                   </div>
                 </div>
 
+                {/*
+                  * Los módulos, con el mismo lenguaje que los atajos del inicio
+                  * con sesión: acento de color, marca de agua y pie.
+                  *
+                  * Antes eran casillas apagadas y numeradas, y al entrar el
+                  * usuario se encontraba con otra cosa. Mostrar de antemano lo
+                  * que va a usar vale más que describirlo.
+                  */}
                 <div className="grid grid-cols-2 gap-4">
-                  {flowSteps.map(({ icon, label, sub }, stepIndex) => (
-                    <div key={label} className="inicio-tile relative rounded-lg p-5">
-                      <span className="absolute right-3.5 top-3.5 text-xs font-bold tabular-nums inicio-ink-faint">
-                        {String(stepIndex + 1).padStart(2, "0")}
+                  {guestModules.map(({ key, descKey, footKey, icon, mark, accent }) => (
+                    <AuthFormTrigger
+                      key={key}
+                      mode="login"
+                      as="a"
+                      className={`inicio-shortcut-card inicio-shortcut-card--${accent} group`}
+                    >
+                      <Icon icon={mark} className="inicio-shortcut-mark" width={160} height={160} aria-hidden />
+                      <span className="inicio-shortcut-icon" aria-hidden>
+                        <Icon icon={icon} width={28} height={28} />
                       </span>
-                      <div className="inicio-icon-box mb-3.5 flex h-11 w-11 items-center justify-center rounded-lg">
-                        <Icon icon={icon} width={22} height={22} />
-                      </div>
-                      <p className="text-base font-semibold inicio-ink">{label}</p>
-                      <p className="mt-1 text-sm inicio-ink-mute">{sub}</p>
-                    </div>
+                      <span className="relative z-[1] flex min-w-0 flex-1 flex-col justify-center gap-1 pr-2">
+                        <span className="block text-base font-semibold leading-snug inicio-ink">
+                          {i[key]}
+                        </span>
+                        <span className="block text-[13px] leading-snug inicio-ink-mute">
+                          {i[descKey]}
+                        </span>
+                        <span className="inicio-shortcut-foot mt-2">{i[footKey]}</span>
+                      </span>
+                      <span className="inicio-shortcut-chevron relative z-[1]" aria-hidden>
+                        <Icon icon="lucide:arrow-right" width={16} height={16} />
+                      </span>
+                    </AuthFormTrigger>
                   ))}
                 </div>
 

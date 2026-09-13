@@ -64,6 +64,52 @@ export const workflowSteps = [
   { key: "workflowStep5" as const, descKey: "workflowStep5Desc" as const, icon: "lucide:file-check", num: "05" },
 ] as const;
 
+/**
+ * Los cuatro módulos que se le muestran a una visita.
+ *
+ * Mismo lenguaje visual que los atajos del inicio con sesión —acento de color,
+ * marca de agua y pie— porque son lo mismo visto desde afuera: lo que esta
+ * persona va a usar cuando entre. Enseñarle una versión apagada de lo que
+ * después será otra cosa no ayuda a nadie.
+ *
+ * No llevan a la ruta: abren el formulario de acceso. Mandar a una visita a una
+ * pantalla que el guard va a rebotar es prometer algo que no se cumple.
+ */
+export const guestModules = [
+  {
+    key: "guestModDashboard" as const,
+    descKey: "guestModDashboardDesc" as const,
+    footKey: "guestModDashboardFoot" as const,
+    icon: "lucide:layout-dashboard",
+    mark: "lucide:bar-chart-3",
+    accent: "blue" as const,
+  },
+  {
+    key: "guestModReservas" as const,
+    descKey: "guestModReservasDesc" as const,
+    footKey: "guestModReservasFoot" as const,
+    icon: "lucide:package",
+    mark: "lucide:ship",
+    accent: "teal" as const,
+  },
+  {
+    key: "guestModSeguimiento" as const,
+    descKey: "guestModSeguimientoDesc" as const,
+    footKey: "guestModSeguimientoFoot" as const,
+    icon: "lucide:radar",
+    mark: "lucide:map",
+    accent: "violet" as const,
+  },
+  {
+    key: "guestModDocumentos" as const,
+    descKey: "guestModDocumentosDesc" as const,
+    footKey: "guestModDocumentosFoot" as const,
+    icon: "lucide:file-text",
+    mark: "lucide:files",
+    accent: "amber" as const,
+  },
+] as const;
+
 export const quickLinks = [
   {
     key: "quickDashboard" as const,
