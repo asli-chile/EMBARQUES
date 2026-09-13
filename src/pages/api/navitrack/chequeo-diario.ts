@@ -63,13 +63,69 @@ function fecha(v: unknown): string | null {
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
-  const secreto = (import.meta.env.NAVITRACK_CRON_SECRET ?? "").trim();
+export const GET: APIRoute = async ({ request, url }) => {
+  /*
+   * Autenticación del cron.
+   *
+   * Vercel firma sus llamadas programadas con `Authorization: Bearer <valor>`,
+   * y el valor lo toma de una variable que **tiene que llamarse CRON_SECRET**:
+   * es su convención, no la nuestra. Si solo existe NAVITRACK_CRON_SECRET,
+   * Vercel llama sin ninguna cabecera y el endpoint responde 403 en silencio,
+   * que es exactamente lo que pasó la primera noche.
+   *
+   * Se aceptan las dos para que funcione con cualquiera de las dos puestas.
+   */
+  const secretos = [
+    (import.meta.env.NAVITRACK_CRON_SECRET ?? "").trim(),
+    (import.meta.env.CRON_SECRET ?? "").trim(),
+  ].filter((x) => x.length >= 16);
+
   const enviado =
     (request.headers.get("x-cron-secret") ?? "").trim() ||
     (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-  if (secreto.length < 16 || enviado !== secreto) {
+
+  if (secretos.length === 0 || !secretos.includes(enviado)) {
     return json({ ok: false, code: "FORBIDDEN" }, 403);
+  }
+  const secreto = secretos[0];
+
+  /*
+   * Diagnóstico.
+   *
+   * Dice qué falta para que la corrida funcione **sin llamar al proveedor**, o
+   * sea sin gastar nada. Existe porque la alternativa para averiguar por qué no
+   * corrió era gastar una consulta por nave para verlo fallar.
+   */
+  if (url.searchParams.get("diagnostico") === "1") {
+    const supabaseDiag = createAdminClient();
+    const [{ data: navesDiag }, { data: ultimaDiag }] = await Promise.all([
+      supabaseDiag
+        .from("naves")
+        .select("nombre, imo, mmsi")
+        .eq("tracking_activo", true)
+        .eq("activo", true),
+      supabaseDiag
+        .from("navitrack_ais_lecturas")
+        .select("consultado_at, origen")
+        .order("consultado_at", { ascending: false })
+        .limit(1),
+    ]);
+
+    const seguidas = (navesDiag ?? []) as { nombre: string; imo: string | null; mmsi: string | null }[];
+    return json({
+      ok: true,
+      diagnostico: true,
+      hayClaveProveedor: Boolean(import.meta.env.DATADOCKED_API_KEY),
+      hayDestinatario: Boolean((import.meta.env.NAVITRACK_ALERTAS_EMAIL ?? "").trim()),
+      hayServiceRole: Boolean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY),
+      autenticadoPor: enviado === (import.meta.env.CRON_SECRET ?? "").trim() ? "CRON_SECRET" : "NAVITRACK_CRON_SECRET",
+      navesSeguidas: seguidas.length,
+      sinIdentificador: seguidas
+        .filter((n) => !/^\d{7}$|^\d{9}$/.test((n.mmsi ?? "").trim() || (n.imo ?? "").trim()))
+        .map((n) => n.nombre),
+      costoProximaCorrida: seguidas.length,
+      ultimaLectura: (ultimaDiag ?? [])[0] ?? null,
+    });
   }
 
   const apiKey = import.meta.env.DATADOCKED_API_KEY;
