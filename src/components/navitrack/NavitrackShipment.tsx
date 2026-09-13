@@ -356,14 +356,14 @@ export function NavitrackShipment({
   return (
     <div className="motion-view-section flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2 sm:p-2.5 lg:overflow-hidden">
       {/* Barra superior: salir del detalle y refrescar. */}
-      <div className="flex shrink-0 items-center justify-between gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 max-sm:order-1">
         <button
           type="button"
           onClick={onBack}
           className="motion-interactive inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[12.5px] font-semibold text-dash-muted transition-colors hover:text-dash-fg"
         >
-          <Icon icon="lucide:arrow-left" width={15} height={15} aria-hidden />
-          {tr.volverEmbarques}
+          <Icon icon="lucide:arrow-left" width={16} height={16} aria-hidden />
+          <span className="max-sm:sr-only">{tr.volverEmbarques}</span>
         </button>
         <div className="flex items-center gap-2">
           {/* Recorrer la lista sin volver a ella: es el gesto de revisar la flota. */}
@@ -375,11 +375,11 @@ export function NavitrackShipment({
                 disabled={indiceEnLista <= 0}
                 title={tr.anteriorEmbarque}
                 aria-label={tr.anteriorEmbarque}
-                className="dash-control motion-interactive inline-flex h-7 w-7 items-center justify-center disabled:opacity-35"
+                className="dash-control motion-interactive inline-flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
               >
                 <Icon icon="lucide:chevron-left" width={15} height={15} aria-hidden />
               </button>
-              <span className="min-w-[4.5rem] text-center text-[12.5px] font-semibold text-dash-muted tabular-nums sm:text-[11px]">
+              <span className="min-w-[3.5rem] text-center text-[12.5px] font-semibold text-dash-muted tabular-nums sm:min-w-[4.5rem] sm:text-[11px]">
                 {interpolar(tr.posicionLista, {
                   i: String(indiceEnLista + 1),
                   n: String(totalEnLista),
@@ -391,7 +391,7 @@ export function NavitrackShipment({
                 disabled={indiceEnLista >= totalEnLista - 1}
                 title={tr.siguienteEmbarque}
                 aria-label={tr.siguienteEmbarque}
-                className="dash-control motion-interactive inline-flex h-7 w-7 items-center justify-center disabled:opacity-35"
+                className="dash-control motion-interactive inline-flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
               >
                 <Icon icon="lucide:chevron-right" width={15} height={15} aria-hidden />
               </button>
@@ -402,25 +402,27 @@ export function NavitrackShipment({
             type="button"
             onClick={onRefresh}
             disabled={refrescando}
-            className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] font-semibold disabled:opacity-60"
+            className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-2 text-[12px] font-semibold disabled:opacity-60"
           >
             <Icon
               icon="lucide:refresh-cw"
-              width={13}
-              height={13}
+              width={14}
+              height={14}
               className={refrescando ? "animate-spin" : ""}
               aria-hidden
             />
-            {tr.refresh}
+            <span className="max-sm:sr-only">{tr.refresh}</span>
           </button>
         </div>
       </div>
 
       {/* Encabezado: identidad, etapa y avance en una sola lectura. */}
-      <header className={`dash-card dash-card-static nt-tone--${meta.tono} shrink-0 px-3.5 py-3`}>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <NavieraLogo nombre={op.naviera} logoUrl={navieraLogoUrl} size={54} />
+      <header
+        className={`dash-card dash-card-static nt-tone--${meta.tono} shrink-0 px-3.5 py-3 max-sm:order-2`}
+      >
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:flex-col max-sm:items-stretch">
+          <div className="flex min-w-0 flex-1 items-center gap-3 max-sm:w-full">
+            <NavieraLogo nombre={op.naviera} logoUrl={navieraLogoUrl} size={44} />
             <div className="min-w-0">
               <p className="text-[11.5px] font-bold uppercase tracking-[0.12em] text-dash-muted sm:text-[10px]">
                 {tr.embarque}
@@ -434,7 +436,7 @@ export function NavitrackShipment({
               {/* Booking y cliente son lo que se busca al identificar un embarque:
                   van con etiqueta y valor destacado, no fundidos en una línea gris.
                   La naviera no se repite acá porque ya la dice su marca al lado. */}
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 max-sm:flex-col max-sm:items-start">
                 {op.booking && (
                   <span className="inline-flex min-w-0 items-baseline gap-1.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-dash-muted sm:text-[9.5px]">
@@ -459,7 +461,7 @@ export function NavitrackShipment({
             </div>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 max-sm:w-full">
             {/*
               * El estado es el punto de entrada a la decisión.
               *
@@ -552,7 +554,7 @@ export function NavitrackShipment({
       </header>
 
       {/* Bloque central: se queda con el alto que sobra. */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 max-sm:order-4 lg:grid-cols-[1.6fr_1fr]">
         <section className="dash-card dash-card-static flex min-h-0 flex-col overflow-hidden">
           <div className="dash-section-head flex shrink-0 items-center gap-1 overflow-x-auto px-2 py-1.5">
             {pestanas.map((p) => (
@@ -571,7 +573,7 @@ export function NavitrackShipment({
           </div>
 
           {pestana === "ruta" && (
-            <div className="relative h-[46dvh] w-full shrink-0 lg:h-auto lg:min-h-0 lg:flex-1">
+            <div className="relative h-[52dvh] min-h-[300px] w-full shrink-0 lg:h-auto lg:min-h-0 lg:flex-1">
               <NavitrackMap
                 journey={journey}
                 vesselName={journey.naveActual ?? op.nave ?? ""}
@@ -739,7 +741,7 @@ export function NavitrackShipment({
                 {tr.llegadaEstimada}
               </h2>
             </div>
-            <div className="flex flex-wrap items-start justify-between gap-3 px-3.5 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-3 px-3.5 py-3 max-sm:flex-col max-sm:gap-2.5">
               <div className="min-w-0">
                 <p className="text-xl font-extrabold leading-none tracking-tight text-dash-fg tabular-nums">
                   {etaErp ?? "—"}
@@ -749,16 +751,20 @@ export function NavitrackShipment({
                 </p>
               </div>
               {etaAis && (
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 text-right max-sm:w-full max-sm:border-t max-sm:border-dash-border max-sm:pt-2.5 max-sm:text-left">
                   <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
                     {tr.etaAis}
                   </p>
-                  <p className="mt-0.5 text-[12.5px] font-bold text-dash-fg tabular-nums">{etaAis}</p>
-                  {delta && (
-                    <span className="nt-accent-fg mt-1 inline-block rounded-md border border-[color-mix(in_srgb,var(--nt-accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--nt-accent)_14%,transparent)] px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums">
-                      {delta}
-                    </span>
-                  )}
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <p className="text-[13.5px] font-bold text-dash-fg tabular-nums sm:text-[12.5px]">
+                      {etaAis}
+                    </p>
+                    {delta && (
+                      <span className="nt-accent-fg inline-block rounded-md border border-[color-mix(in_srgb,var(--nt-accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--nt-accent)_14%,transparent)] px-1.5 py-0.5 text-[11.5px] font-extrabold tabular-nums">
+                        {delta}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -902,7 +908,7 @@ export function NavitrackShipment({
 
       {/* Franja de indicadores: lo que un operador mira de reojo. */}
       <div
-        className={`shrink-0 gap-2 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:grid sm:grid-cols-3 ${
+        className={`shrink-0 gap-2 max-sm:order-3 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:grid sm:grid-cols-3 ${
           hayCadena ? "xl:grid-cols-6" : "xl:grid-cols-5"
         }`}
       >
