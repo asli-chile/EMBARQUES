@@ -151,6 +151,8 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
 
   /** Puertos de conexión de un viaje con transbordo. Vacío si es directo. */
   const conexiones = (escalas ?? []).filter((e) => e.tipo === "conexion");
+  /** Puertos que el buque anunció y aún no alcanza. */
+  const previstos = (escalas ?? []).filter((e) => e.tipo === "prevista");
 
   /**
    * Acercarse al buque.
@@ -263,6 +265,7 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
     if (isValidCoord(destino.coord)) pts.push(destino.coord);
     // Sin esto, un transbordo lejos de la recta origen-destino queda fuera de cuadro.
     for (const c of conexiones) if (isValidCoord(c.coord)) pts.push(c.coord);
+    for (const c of previstos) if (isValidCoord(c.coord)) pts.push(c.coord);
     if (position) pts.push(position);
     for (const p of traveled) pts.push(p);
     for (const p of remaining) pts.push(p);
@@ -307,6 +310,7 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
   }, [
     ready,
     enfocado,
+    previstos,
     obtenerMapa,
     anchoContenedor,
     origen.coord,
@@ -427,6 +431,22 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
               * cliente. El chip lleva la nave que zarpa desde ahí, que es lo
               * que convierte el punto en un transbordo y no en una escala más.
               */}
+            {/*
+              * Puerto anunciado.
+              *
+              * Se dibuja hueco y con el chip tenue: es lo que el buque declara
+              * que hará, no algo que ya pasó. Confundirlo con una escala
+              * cumplida sería presentar una intención como un hecho.
+              */}
+            {previstos.map((c) => (
+              <Marker key={`prev-${c.nombre}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="nt-map-chip nt-map-chip--prevista">{c.nombre}</span>
+                  <span className="nt-port-dot nt-port-dot--prevista" aria-hidden />
+                </div>
+              </Marker>
+            ))}
+
             {conexiones.map((c) => (
               <Marker key={`${c.nombre}-${c.coord.lng}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
                 <div className="flex flex-col items-center gap-1">

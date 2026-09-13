@@ -494,7 +494,21 @@ export function NavitrackContent() {
   const detalle = useMemo(() => {
     if (!seleccion) return null;
     const decision = decisiones.get(seleccion.id) ?? null;
-    const journey = buildJourney(seleccion, ais, ahora, tramos.get(seleccion.id) ?? []);
+    /*
+     * Puertos anunciados que aún no se alcanzan, en el orden en que el buque
+     * los fue declarando. Son los que curvan la ruta estimada.
+     */
+    const previstos = recaladas
+      .filter((r) => r.estado === "anunciada" || r.estado === "por_verificar")
+      .map((r) => r.puerto);
+
+    const journey = buildJourney(
+      seleccion,
+      ais,
+      ahora,
+      tramos.get(seleccion.id) ?? [],
+      previstos,
+    );
     const estado = resolverEstado(seleccion, ais, journey, decision, ahora);
     return {
       journey,
@@ -503,7 +517,7 @@ export function NavitrackContent() {
       alertas: construirAlertas(seleccion, ais, journey, estado),
       eventos: construirTimeline(seleccion, ais, estado, decision, ahora, tramos.get(seleccion.id) ?? []),
     };
-  }, [seleccion, ais, decisiones, ahora, tramos]);
+  }, [seleccion, ais, decisiones, ahora, tramos, recaladas]);
 
   /*
    * Enlace profundo: `/navitrack?op=<referencia>`.

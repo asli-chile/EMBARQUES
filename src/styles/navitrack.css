@@ -670,3 +670,25 @@
     min-height: 44px;
   }
 }
+
+/* ─── Puerto anunciado por el buque ─────────────────────────────────────────
+ *
+ * Hueco y tenue a propósito. Un puerto de conexión ya ocurrido y un puerto que
+ * el buque dice que visitará no son la misma clase de dato: el primero es un
+ * hecho, el segundo una intención que la tripulación escribió a mano y puede
+ * cambiar. Dibujarlos igual sería presentar una cosa como la otra.
+ */
+.nt-port-dot--prevista {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1.5px dashed color-mix(in srgb, var(--dash-fg) 55%, transparent);
+}
+
+.nt-map-chip--prevista {
+  font-size: 9.5px;
+  padding: 2px 6px;
+  opacity: 0.78;
+  border-style: dashed;
+}

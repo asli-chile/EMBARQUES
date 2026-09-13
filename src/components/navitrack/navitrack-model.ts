@@ -456,7 +456,11 @@ export const NAVITRACK_TRAMO_SELECT =
 export type Escala = {
   nombre: string;
   coord: LngLat;
-  tipo: "origen" | "conexion" | "destino";
+  /**
+   * `prevista` es un puerto que el buque anunció pero donde todavía no llega.
+   * Se dibuja distinto: es lo que dice la nave, no lo que ya ocurrió.
+   */
+  tipo: "origen" | "conexion" | "destino" | "prevista";
   /** Nave que sale desde aquí. Null en el destino final. */
   nave: string | null;
   /** Ya pasó por aquí. */
@@ -651,6 +655,15 @@ export function buildJourney(
   ais: AisSnapshot | null,
   now = new Date(),
   tramos: Tramo[] = [],
+  /**
+   * Puertos que el buque anunció y todavía no alcanza, en orden.
+   *
+   * Sirven para dibujar por dónde va a pasar. Sin ellos, la línea estimada va
+   * derecho del buque al destino final y cruza lo que sea que haya en medio:
+   * un barco frente a Perú que anunció Callao aparecía con una recta que
+   * atravesaba Bolivia rumbo a Hamburgo.
+   */
+  puertosPrevistos: string[] = [],
 ): Journey {
   /*
    * Con tramos cargados, el viaje son ellos. Sin tramos es directo y vale lo
@@ -711,7 +724,34 @@ export function buildJourney(
        */
       const p = { lng: position.lng, lat: position.lat };
       traveled = curvaMaritima(origen, p);
-      remaining = curvaMaritima(p, destino);
+
+      /*
+       * Lo que falta pasa por los puertos anunciados.
+       *
+       * El buque ya dijo dónde para: dibujar una recta hasta el destino final
+       * ignora ese dato y traza una ruta que nadie va a navegar. Se encadena
+       * buque → cada puerto anunciado → destino, que es lo que el propio barco
+       * está diciendo que hará.
+       *
+       * Se ignoran los puertos sin coordenadas conocidas y los que caen más
+       * lejos del destino que el propio destino: un anuncio mal escrito no debe
+       * torcer la ruta.
+       */
+      const previstos = puertosPrevistos
+        .map((nombre) => {
+          const c = getPortCoordinates(nombre);
+          return c ? { lng: c[0], lat: c[1] } : null;
+        })
+        .filter((c): c is LngLat => c != null && haversineKm(c, destino) < haversineKm(p, destino));
+
+      if (previstos.length > 0) {
+        const puntos = [p, ...previstos, destino];
+        remaining = unirTramos(
+          puntos.slice(0, -1).map((desde, i) => curvaMaritima(desde, puntos[i + 1])),
+        );
+      } else {
+        remaining = curvaMaritima(p, destino);
+      }
 
       /*
        * Los dos tramos se desenrollan por separado, así que el buque puede
@@ -741,6 +781,17 @@ export function buildJourney(
 
   const escalas: Escala[] = [];
   if (origen) escalas.push({ nombre: origenNombre, coord: origen, tipo: "origen", nave: op.nave, cumplida: true });
+
+  // Los puertos anunciados van al mapa como previstos: forman parte del
+  // recorrido que el buque declara, pero todavía no ocurrieron.
+  for (const nombre of puertosPrevistos) {
+    const c = getPortCoordinates(nombre);
+    if (!c) continue;
+    const coord = { lng: c[0], lat: c[1] };
+    if (destino && haversineKm(coord, destino) >= haversineKm(position ?? origen ?? coord, destino)) continue;
+    escalas.push({ nombre, coord, tipo: "prevista", nave: op.nave, cumplida: false });
+  }
+
   if (destino) {
     escalas.push({
       nombre: destinoNombre,
