@@ -118,7 +118,7 @@ const Hero = () => {
                 border-y sm:border border-asli-dark/5 shadow-asli-high"
             >
               <img
-                src="/img/oficina.png"
+                src="/img/oficina.webp"
                 alt={t.hero.imageAlt}
                 width={1252}
                 height={712}

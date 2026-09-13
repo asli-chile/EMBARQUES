@@ -21,6 +21,13 @@ export default function Seo({
   const fullTitle = title.includes('ASLI') ? title : `${title} — ASLI`
   const canonical = absoluteUrl(path)
   const ogImage = image || SITE.ogImage
+  // El tipo tiene que coincidir con el archivo: si no, algunas redes descartan
+  // la vista previa sin decir por qué.
+  const ogImageType = ogImage.endsWith('.jpg') || ogImage.endsWith('.jpeg')
+    ? 'image/jpeg'
+    : ogImage.endsWith('.webp')
+      ? 'image/webp'
+      : 'image/png'
   const ogAlt = imageAlt || SITE.ogImageAlt
   const robots = noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large'
   const localeTag = ogLocale(locale)
@@ -66,7 +73,7 @@ export default function Seo({
       <meta property="og:url" content={withLang(locale === 'es' ? 'es' : locale)} />
       <meta property="og:image" content={ogImage} />
       <meta property="og:image:alt" content={ogAlt} />
-      <meta property="og:image:type" content="image/png" />
+      <meta property="og:image:type" content={ogImageType} />
       <meta property="og:image:width" content={String(SITE.ogImageWidth)} />
       <meta property="og:image:height" content={String(SITE.ogImageHeight)} />
 
@@ -98,7 +105,7 @@ export function buildHomeJsonLd({ inLanguage = SITE.language, description, websi
         name: SITE.name,
         legalName: SITE.legalName,
         url: SITE.url,
-        logo: `${SITE.url}/img/logoasli.png`,
+        logo: `${SITE.url}/img/logoasli.webp`,
         image: SITE.ogImage,
         telephone: SITE.phone,
         email: SITE.email,

@@ -32,7 +32,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
           <div>
             <img
-              src="/img/logoblanco.png"
+              src="/img/logoblanco.webp"
               alt="ASLI"
               width={176}
               height={44}

@@ -26,8 +26,17 @@ export const SITE = {
     longitude: -71.2034765,
   },
   mapsUrl: 'https://maps.app.goo.gl/cGrni677vZDk5pp26',
-  /** Imagen social (PNG preferible a WebP para WhatsApp / LinkedIn). */
-  ogImage: `${SITE_URL}/img/oficina.png`,
+  /*
+   * Imagen social.
+   *
+   * JPEG y no WebP: los rastreadores de WhatsApp y LinkedIn son conservadores
+   * y con WebP algunos no muestran vista previa.
+   *
+   * Recortada a 1200x630 de verdad. Antes se declaraba esa medida pero el
+   * archivo era 1663x946, así que cada red recortaba por su cuenta y el
+   * encuadre quedaba al azar.
+   */
+  ogImage: `${SITE_URL}/img/og-asli.jpg`,
   ogImageAlt: 'Oficinas de ASLI en Curicó, Maule — logística y comercio exterior',
   /** Dimensiones recomendadas para Open Graph (evita recortes en WhatsApp / LinkedIn). */
   ogImageWidth: 1200,

@@ -82,7 +82,7 @@ const Header = () => {
               title="ProChile"
             >
               <img
-                src="/img/prochile-sin-fondo.png"
+                src="/img/prochile-sin-fondo.webp"
                 alt="ProChile"
                 width={160}
                 height={40}
