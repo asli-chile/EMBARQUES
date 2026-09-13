@@ -15,7 +15,7 @@
  * proveedor y está en producción.
  */
 import type { APIRoute } from "astro";
-import { numeroDeEntorno } from "@/lib/navitrack/config";
+import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
@@ -209,7 +209,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     return json({ ok: false, code: "TOPE_DIARIO" }, 200);
   }
 
-  const apiKey = import.meta.env.DATADOCKED_API_KEY;
+  const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
   if (!apiKey) {
     if (ultima) {
       return json({ ok: true, data: comoRespuesta(ultima), cache: true, edadMin: Math.round(edadMin) });

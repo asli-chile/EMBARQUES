@@ -17,6 +17,7 @@
  *      nueva, y la pantalla lo advierte antes de que se apriete el botón.
  */
 import type { APIRoute } from "astro";
+import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
@@ -307,7 +308,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   } else {
     const [alta] = await resolverNavesSinIdentificador(
       supabase,
-      import.meta.env.DATADOCKED_API_KEY,
+      textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY"),
       [naveNombre],
       1,
     );

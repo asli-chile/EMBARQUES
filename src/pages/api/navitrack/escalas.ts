@@ -7,7 +7,7 @@
  * proveedor se contradice entre 1 y 5 créditos, así que se asume 5.
  */
 import type { APIRoute } from "astro";
-import { numeroDeEntorno } from "@/lib/navitrack/config";
+import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
@@ -140,7 +140,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     return json({ ok: true, escalas: filas, cache: true, topeDiario: true });
   }
 
-  const apiKey = import.meta.env.DATADOCKED_API_KEY;
+  const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
   if (!apiKey) {
     return filas.length > 0
       ? json({ ok: true, escalas: filas, cache: true })

@@ -18,7 +18,7 @@
  * embarque, dato que ya está en el ETD, y pagar por saberlo no tiene sentido.
  */
 import type { APIRoute } from "astro";
-import { numeroDeEntorno } from "@/lib/navitrack/config";
+import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
@@ -225,7 +225,7 @@ async function planificar(supabase: Sesion) {
   const ultimaFila = lecturas[0] ?? null;
 
   // El saldo lo dice el proveedor. Consultarlo no cuesta nada.
-  const saldo = await consultarSaldo(import.meta.env.DATADOCKED_API_KEY);
+  const saldo = await consultarSaldo(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY"));
 
   return {
     objetivo,
@@ -263,7 +263,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     })),
     omitidas: p.omitidas.map((n) => ({ nombre: n.nombre, etd: n.etd })),
     ultima: p.ultima,
-    hayClave: Boolean(import.meta.env.DATADOCKED_API_KEY),
+    hayClave: Boolean(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY")),
   });
 };
 
@@ -277,7 +277,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const limite = checkRateLimit(`navitrack-actualizar:${auth.userId}`, 3, 300_000);
   if (!limite.allowed) return json({ ok: false, code: "RATE_LIMIT" }, 429);
 
-  const apiKey = import.meta.env.DATADOCKED_API_KEY;
+  const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
   if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
 
   let cuerpo: { confirmar?: boolean } = {};
@@ -348,13 +348,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
    */
   // Ya se gastó: el saldo cacheado quedó viejo. Se relee para informar el real.
   invalidarSaldo();
-  const saldoFinal = await consultarSaldo(import.meta.env.DATADOCKED_API_KEY);
+  const saldoFinal = await consultarSaldo(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY"));
 
-  const destinatario = (import.meta.env.NAVITRACK_AVISO_GASTO_EMAIL ?? "rodrigo.caceres@asli.cl").trim();
+  const destinatario = (textoDeEntorno(import.meta.env.NAVITRACK_AVISO_GASTO_EMAIL, "NAVITRACK_AVISO_GASTO_EMAIL") ?? "rodrigo.caceres@asli.cl").trim();
   // El registro de un gasto manual también va en copia: es la clase de decisión
   // que conviene que más de una persona vea.
-  const enCopia = (import.meta.env.NAVITRACK_ALERTAS_CC ?? "hans.vasquez@asli.cl").trim();
-  const secreto = (import.meta.env.NAVITRACK_CRON_SECRET ?? "").trim();
+  const enCopia = (textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ?? "hans.vasquez@asli.cl").trim();
+  const secreto = textoDeEntorno(import.meta.env.NAVITRACK_CRON_SECRET, "NAVITRACK_CRON_SECRET");
   let avisado = false;
 
   if (destinatario && secreto.length >= 16) {
@@ -369,10 +369,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       ultima: p.ultima,
     });
     try {
-      const env = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`, {
+      const env = await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${import.meta.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
           "x-cron-secret": secreto,
           "Content-Type": "application/json",
         },

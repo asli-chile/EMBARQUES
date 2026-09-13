@@ -10,7 +10,7 @@
  * nada, porque cualquiera que lo llamara gastaría créditos ajenos.
  */
 import type { APIRoute } from "astro";
-import { numeroDeEntorno } from "@/lib/navitrack/config";
+import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
@@ -77,8 +77,8 @@ export const GET: APIRoute = async ({ request, url }) => {
    * Se aceptan las dos para que funcione con cualquiera de las dos puestas.
    */
   const secretos = [
-    (import.meta.env.NAVITRACK_CRON_SECRET ?? "").trim(),
-    (import.meta.env.CRON_SECRET ?? "").trim(),
+    textoDeEntorno(import.meta.env.NAVITRACK_CRON_SECRET, "NAVITRACK_CRON_SECRET"),
+    textoDeEntorno(import.meta.env.CRON_SECRET, "CRON_SECRET"),
   ].filter((x) => x.length >= 16);
 
   const enviado =
@@ -116,10 +116,10 @@ export const GET: APIRoute = async ({ request, url }) => {
     return json({
       ok: true,
       diagnostico: true,
-      hayClaveProveedor: Boolean(import.meta.env.DATADOCKED_API_KEY),
-      hayDestinatario: Boolean((import.meta.env.NAVITRACK_ALERTAS_EMAIL ?? "").trim()),
-      hayServiceRole: Boolean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY),
-      autenticadoPor: enviado === (import.meta.env.CRON_SECRET ?? "").trim() ? "CRON_SECRET" : "NAVITRACK_CRON_SECRET",
+      hayClaveProveedor: Boolean(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY")),
+      hayDestinatario: Boolean(textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_EMAIL, "NAVITRACK_ALERTAS_EMAIL")),
+      hayServiceRole: Boolean(textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")),
+      autenticadoPor: enviado === textoDeEntorno(import.meta.env.CRON_SECRET, "CRON_SECRET") ? "CRON_SECRET" : "NAVITRACK_CRON_SECRET",
       navesSeguidas: seguidas.length,
       sinIdentificador: seguidas
         .filter((n) => !/^\d{7}$|^\d{9}$/.test((n.mmsi ?? "").trim() || (n.imo ?? "").trim()))
@@ -129,10 +129,10 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
   }
 
-  const apiKey = import.meta.env.DATADOCKED_API_KEY;
+  const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
   if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
 
-  const destinatario = (import.meta.env.NAVITRACK_ALERTAS_EMAIL ?? "").trim();
+  const destinatario = textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_EMAIL, "NAVITRACK_ALERTAS_EMAIL");
   /*
    * En copia.
    *
@@ -140,9 +140,9 @@ export const GET: APIRoute = async ({ request, url }) => {
    * persona lo vea. La copia no es formalidad: es que la carga no se quede sin
    * vigilar porque alguien está de vacaciones.
    */
-  const enCopia = (import.meta.env.NAVITRACK_ALERTAS_CC ?? "hans.vasquez@asli.cl").trim();
+  const enCopia = (textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ?? "hans.vasquez@asli.cl").trim();
   // Para el botón del correo. Sin sitio configurado, el aviso va sin enlace.
-  const sitio = (import.meta.env.PUBLIC_SITE_URL ?? "https://www.asli.cl").replace(/\/+$/, "");
+  const sitio = (textoDeEntorno(import.meta.env.PUBLIC_SITE_URL, "PUBLIC_SITE_URL") ?? "https://www.asli.cl").replace(/\/+$/, "");
   const supabase = createAdminClient();
 
   /*
@@ -312,10 +312,10 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
 
     try {
-      const env = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`, {
+      const env = await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${import.meta.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
           "x-cron-secret": secreto,
           "Content-Type": "application/json",
         },
@@ -367,10 +367,10 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   if (avisoSeguimiento && destinatario) {
     try {
-      const env = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-email`, {
+      const env = await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${import.meta.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
           "x-cron-secret": secreto,
           "Content-Type": "application/json",
         },

@@ -10,7 +10,7 @@
  * contar filas sigue siendo contar créditos.
  */
 import type { APIRoute } from "astro";
-import { numeroDeEntorno } from "@/lib/navitrack/config";
+import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
@@ -133,7 +133,7 @@ export const GET: APIRoute = async ({ cookies }) => {
       .limit(500),
     creditos(supabase),
     // Saldo real del proveedor. Es gratis y evita mostrar un número inventado.
-    consultarSaldo(import.meta.env.DATADOCKED_API_KEY),
+    consultarSaldo(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY")),
   ]);
 
   // Operaciones con transbordo confirmado: pesan más que las fechas.
@@ -211,11 +211,11 @@ export const GET: APIRoute = async ({ cookies }) => {
     creditos: gasto,
     topeDia: MAX_DIA,
     ttlMin: TTL_MIN,
-    hayClave: Boolean(import.meta.env.DATADOCKED_API_KEY),
+    hayClave: Boolean(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY")),
     /** Saldo que informa el proveedor. Null si no se pudo consultar. */
     saldo: saldo.creditos,
     /** Hora local de la revisión automática, para que el panel no la invente. */
-    revisionDiaria: import.meta.env.NAVITRACK_CHEQUEO_HORA ?? "07:00",
+    revisionDiaria: textoDeEntorno(import.meta.env.NAVITRACK_CHEQUEO_HORA, "NAVITRACK_CHEQUEO_HORA") ?? "07:00",
     naves,
   });
 };
@@ -263,7 +263,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   /* ── Resolver IMO/MMSI por nombre: 1 crédito ─────────────────────────── */
 
   if (body.accion === "resolver") {
-    const apiKey = import.meta.env.DATADOCKED_API_KEY;
+    const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
     if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
 
     const gasto = await creditos(supabase);

@@ -26,3 +26,28 @@ export function numeroDeEntorno(bruto: unknown, porDefecto: number): number {
   // Un negativo tampoco tiene sentido en ninguno de estos ajustes.
   return Number.isFinite(n) && n >= 0 ? n : porDefecto;
 }
+
+/**
+ * Valor de entorno leído también en tiempo de ejecución.
+ *
+ * Astro sustituye `import.meta.env.X` **durante la compilación**: si la
+ * variable no existía cuando Vercel construyó, queda grabada como `undefined`
+ * y ya no hay forma de que aparezca, por más veces que se redespliegue
+ * reutilizando la caché de build.
+ *
+ * Eso convierte "agregué la variable y redesplegué" en un fallo silencioso muy
+ * difícil de ver desde afuera: el endpoint responde 403 como si el secreto
+ * estuviera mal, cuando en realidad nunca llegó a existir dentro del paquete.
+ *
+ * `process.env` sí se lee cuando la función corre, así que sirve de red: se
+ * intenta primero lo compilado y después lo del entorno vivo.
+ */
+export function textoDeEntorno(compilado: unknown, nombre: string): string {
+  const inline = typeof compilado === "string" ? compilado.trim() : "";
+  if (inline) return inline;
+  try {
+    return (process.env?.[nombre] ?? "").trim();
+  } catch {
+    return "";
+  }
+}
