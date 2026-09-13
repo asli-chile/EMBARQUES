@@ -773,8 +773,18 @@ export function NavitrackShipment({
               </div>
               {etaAis && (
                 <div className="shrink-0 text-right max-sm:w-full max-sm:border-t max-sm:border-dash-border max-sm:pt-2.5 max-sm:text-left">
+                  {/*
+                    * La etiqueta nombra el puerto al que se refiere esa hora.
+                    *
+                    * "ETA del buque" a secas, junto al ETA de Hamburgo, se lee
+                    * como si ambas fechas hablaran del mismo destino. Y no:
+                    * mientras el buque anuncia Callao, esa hora es la llegada a
+                    * Callao. Sin el puerto al lado, el dato engaña.
+                    */}
                   <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                    {tr.etaAis}
+                    {proximoPuerto && estado.eta.deltaHoras == null
+                      ? `${tr.etaAisA} ${proximoPuerto.nombre}`
+                      : tr.etaAis}
                   </p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2">
                     <p className="text-[13.5px] font-bold text-dash-fg tabular-nums sm:text-[12.5px]">

@@ -70,10 +70,26 @@ export type EtaComparada = {
   severidad: EtaSeveridad;
 };
 
+/**
+ * Compara la llegada comprometida con la que anuncia el buque.
+ *
+ * **Solo tiene sentido si el buque va al puerto comprometido.** El ETA del AIS
+ * es la llegada a su *próxima escala*, no al destino final: un barco que sale
+ * de San Antonio hacia Hamburgo y anuncia Callao para el 14 de septiembre no
+ * está llegando veintiséis días antes, está llegando a otro puerto.
+ *
+ * Restar esas dos fechas producía un adelanto enorme y falso, y lo peor no era
+ * el número en pantalla sino que alimentaba la detección de retrasos.
+ */
 export function compararEta(op: NavitrackOperacion, ais: AisSnapshot | null): EtaComparada {
   const erp = parseOpDate(op.eta);
   const aisEta = ais?.eta ?? null;
   if (!erp || !aisEta) {
+    return { erp, ais: aisEta, deltaHoras: null, severidad: "en_fecha" };
+  }
+
+  // Si declara otro puerto, su ETA no habla del destino: no hay nada que restar.
+  if (destinoAisDiscrepa(op.pod, ais?.destination ?? null)) {
     return { erp, ais: aisEta, deltaHoras: null, severidad: "en_fecha" };
   }
   const deltaHoras = (aisEta.getTime() - erp.getTime()) / HOUR_MS;
