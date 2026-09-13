@@ -15,7 +15,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
 import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
-import { correoSeguimiento } from "@/components/navitrack/navitrack-correo";
+import { correoSeguimiento, correoResumenCorrida } from "@/components/navitrack/navitrack-correo";
+import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
 import { marcarPorVerificar, registrarAnuncio } from "@/lib/navitrack/recaladas";
 import { correoDesvio } from "@/components/navitrack/navitrack-correo";
 
@@ -129,6 +130,16 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
   }
 
+  /*
+   * Ejecución de prueba.
+   *
+   * Hace el recorrido completo —lista blanca, traspasos, anuncios, correo— pero
+   * sin llamar al proveedor: reutiliza la última lectura guardada de cada nave.
+   * Sirve para comprobar que la cadena entera funciona antes de que llegue la
+   * hora, sin pagar por comprobarlo.
+   */
+  const esPrueba = url.searchParams.get("sin_gasto") === "1";
+
   const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
   if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
 
@@ -195,16 +206,33 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     let detalle: Record<string, unknown> | null = null;
     try {
-      const r = await fetch(
-        `${DATADOCKED_BASE}/get-vessel-location?imo_or_mmsi=${encodeURIComponent(id)}`,
-        { headers: { "x-api-key": apiKey, Accept: "application/json" }, signal: AbortSignal.timeout(15_000) },
-      );
-      resultado.creditos += 1;
-      if (!r.ok) {
-        resultado.errores += 1;
-        continue;
+      if (esPrueba) {
+        // Se reutiliza lo último guardado: mismo recorrido, cero consultas.
+        const { data: previa } = await supabase
+          .from("navitrack_ais_lecturas")
+          .select("crudo")
+          .eq("identificador", id)
+          .eq("tipo", "posicion")
+          .order("consultado_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        detalle = (previa?.crudo as Record<string, unknown> | null) ?? null;
+        if (!detalle) {
+          resultado.errores += 1;
+          continue;
+        }
+      } else {
+        const r = await fetch(
+          `${DATADOCKED_BASE}/get-vessel-location?imo_or_mmsi=${encodeURIComponent(id)}`,
+          { headers: { "x-api-key": apiKey, Accept: "application/json" }, signal: AbortSignal.timeout(15_000) },
+        );
+        resultado.creditos += 1;
+        if (!r.ok) {
+          resultado.errores += 1;
+          continue;
+        }
+        detalle = cuerpoProveedor(await r.json());
       }
-      detalle = cuerpoProveedor(await r.json());
     } catch {
       resultado.errores += 1;
       continue;
@@ -214,8 +242,9 @@ export const GET: APIRoute = async ({ request, url }) => {
       continue;
     }
 
-    // La lectura se guarda igual que las del mapa: alimenta el caché y el contador.
-    await supabase.from("navitrack_ais_lecturas").insert({
+    // La lectura se guarda igual que las del mapa: alimenta el caché y el
+    // contador. En prueba no se guarda: inventaría un gasto que no ocurrió.
+    if (!esPrueba) await supabase.from("navitrack_ais_lecturas").insert({
       identificador: id,
       nave_id: nave.id,
       nave_nombre: str(detalle.name) ?? nave.nombre,
@@ -390,5 +419,76 @@ export const GET: APIRoute = async ({ request, url }) => {
     }
   }
 
-  return json({ ok: true, ...resultado });
+  /*
+   * ── Reporte de la corrida ───────────────────────────────────────────────
+   *
+   * Se manda siempre, con novedades o sin ellas. El primer día el cron estuvo
+   * veinticuatro horas sin correr y nadie se enteró: un sistema que solo
+   * escribe cuando hay problemas se ve igual apagado que funcionando.
+   *
+   * Va al final y fuera de cualquier condición, así que también sale cuando la
+   * corrida fracasó a medias.
+   */
+  const saldoFinal = await consultarSaldo(esPrueba ? undefined : apiKey);
+
+  const detallesPorVerificar: { puerto: string; nave: string | null; embarque: string }[] = [];
+  for (const r of vencidas) {
+    const { data: o } = await supabase
+      .from("operaciones")
+      .select("contenedor, ref_asli")
+      .eq("id", r.operacionId)
+      .maybeSingle();
+    detallesPorVerificar.push({
+      puerto: r.puerto,
+      nave: r.nave,
+      embarque: String(o?.contenedor ?? o?.ref_asli ?? ""),
+    });
+  }
+
+  const problemas: string[] = [];
+  if (resultado.errores > 0) problemas.push(`${resultado.errores} nave(s) sin respuesta del proveedor`);
+  if (!destinatario) problemas.push("No hay destinatario configurado para las alertas");
+  if (saldoFinal.creditos != null && saldoFinal.creditos < 30) {
+    problemas.push(`Saldo bajo: quedan ${saldoFinal.creditos} consultas`);
+  }
+
+  if (destinatario) {
+    const resumen = correoResumenCorrida({
+      ok: resultado.errores === 0,
+      esPrueba,
+      revisadas: resultado.revisadas,
+      creditos: resultado.creditos,
+      saldo: saldoFinal.creditos,
+      puertosNuevos: resultado.escalas,
+      porVerificar: detallesPorVerificar,
+      traspasos: sincro.traspasos.map((t) => ({ desde: t.desde, hacia: t.hacia })),
+      sinSeguimiento: altas.filter((a) => !a.resuelta).map((a) => `${a.nombre}: ${a.motivo ?? "sin identificar"}`),
+      errores: problemas,
+      enlace: sitio ? `${sitio}/navitrack` : null,
+    });
+
+    try {
+      await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
+          "x-cron-secret": secreto,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: destinatario,
+          cc: enCopia || undefined,
+          subject: resumen.asunto,
+          body: resumen.cuerpo,
+          sendFrom: "informaciones",
+          skipSignature: true,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+    } catch {
+      // El reporte es lo último: si falla, la revisión ya se hizo igual.
+    }
+  }
+
+  return json({ ok: true, esPrueba, saldo: saldoFinal.creditos, ...resultado });
 };

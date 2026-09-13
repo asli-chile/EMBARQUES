@@ -468,3 +468,148 @@ ${ok}
 
   return { asunto, cuerpo };
 }
+
+/**
+ * Reporte de cada corrida del chequeo diario.
+ *
+ * Se envía **siempre**, haya novedades o no. La razón es lo que pasó el primer
+ * día: el cron no corrió durante veinticuatro horas y nadie se enteró, porque
+ * un sistema que solo escribe cuando hay problemas se ve exactamente igual
+ * cuando está apagado que cuando todo está en orden.
+ *
+ * Un correo diario que dice "seis naves, sin novedades" es aburrido a
+ * propósito: su valor no está en lo que cuenta, sino en que el día que no
+ * llegue, eso signifique algo.
+ */
+export function correoResumenCorrida(datos: {
+  ok: boolean;
+  esPrueba: boolean;
+  revisadas: number;
+  creditos: number;
+  saldo: number | null;
+  puertosNuevos: number;
+  porVerificar: { puerto: string; nave: string | null; embarque: string }[];
+  traspasos: { desde: string; hacia: string }[];
+  sinSeguimiento: string[];
+  errores: string[];
+  enlace: string | null;
+}): { asunto: string; cuerpo: string } {
+  const hayProblema = datos.errores.length > 0 || !datos.ok;
+  const hayNovedad = datos.porVerificar.length > 0 || datos.traspasos.length > 0 || datos.sinSeguimiento.length > 0;
+
+  const marca = datos.esPrueba ? "[PRUEBA] " : "";
+  const asunto = hayProblema
+    ? `${marca}Seguimiento: la revisión tuvo problemas`
+    : hayNovedad
+      ? `${marca}Seguimiento: ${datos.porVerificar.length + datos.traspasos.length} novedad(es)`
+      : `${marca}Seguimiento al día · ${datos.revisadas} naves sin novedades`;
+
+  const cuando = new Date().toLocaleString("es-CL", {
+    timeZone: "America/Santiago",
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
+  const tono = hayProblema ? AMBAR : TEAL;
+  const fondoTono = hayProblema ? AMBAR_FONDO : "#E8F6F2";
+
+  const lista = (titulo: string, filas: string[], color = TEXTO) =>
+    filas.length
+      ? `
+        <tr>
+          <td style="padding:20px 28px 0">
+            <div style="color:${SUAVE};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding-bottom:7px">${esc(titulo)}</div>
+            <ul style="margin:0;padding-left:18px;color:${color};font-size:13.5px;line-height:1.6">
+              ${filas.map((f) => `<li style="padding:2px 0">${f}</li>`).join("")}
+            </ul>
+          </td>
+        </tr>`
+      : "";
+
+  const cuerpo = `
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">${datos.revisadas} naves revisadas, ${datos.creditos} consultas.</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:${CREMA};padding:24px 12px;font-family:'Segoe UI',Arial,Helvetica,sans-serif">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDE}">
+
+        <tr>
+          <td style="background:${NAVY};padding:20px 28px">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Revisión diaria</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 28px 0">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:${fondoTono};border-left:4px solid ${tono};border-radius:0 10px 10px 0">
+              <tr>
+                <td style="padding:15px 18px">
+                  <div style="color:${tono};font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;padding-bottom:4px">
+                    ${hayProblema ? "Con problemas" : hayNovedad ? "Con novedades" : "Todo en orden"}
+                  </div>
+                  <div style="color:${NAVY};font-size:17px;font-weight:700;line-height:1.35">
+                    ${datos.revisadas} ${datos.revisadas === 1 ? "nave revisada" : "naves revisadas"}
+                  </div>
+                  <div style="color:${TEXTO};font-size:12.5px;padding-top:5px">${esc(cuando)}</div>
+                  ${datos.esPrueba ? `<div style="color:${AMBAR};font-size:12.5px;font-weight:700;padding-top:6px">Ejecución de prueba: no se consultó al proveedor ni se gastaron consultas.</div>` : ""}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:22px 28px 0">
+            <table width="100%" cellpadding="0" cellspacing="0">
+${fila("Consultas usadas", String(datos.creditos), true)}
+${fila("Saldo restante", datos.saldo == null ? "sin dato" : String(datos.saldo), true)}
+${fila("Puertos anunciados nuevos", String(datos.puertosNuevos))}
+${fila("Recaladas por verificar", String(datos.porVerificar.length))}
+            </table>
+          </td>
+        </tr>
+
+${lista(
+  "Requieren verificación",
+  datos.porVerificar.map(
+    (r) => `<strong style="color:${NAVY}">${esc(r.embarque)}</strong> — ${esc(r.nave ?? "")} anuncia <strong>${esc(r.puerto)}</strong>`,
+  ),
+)}
+${lista(
+  "Cambios de nave",
+  datos.traspasos.map((t) => `${esc(t.desde)} → <strong style="color:${NAVY}">${esc(t.hacia)}</strong>`),
+)}
+${lista("Sin seguimiento", datos.sinSeguimiento.map(esc), AMBAR)}
+${lista("Problemas", datos.errores.map(esc), AMBAR)}
+
+${
+  datos.enlace
+    ? `        <tr>
+          <td style="padding:24px 28px 0">
+            <a href="${esc(datos.enlace)}" style="display:inline-block;background:${TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">Abrir NaviTrack</a>
+          </td>
+        </tr>`
+    : ""
+}
+
+        <tr>
+          <td style="padding:26px 28px 24px">
+            <div style="border-top:1px solid ${BORDE};padding-top:14px;color:${SUAVE};font-size:12px;line-height:1.55">
+              Reporte automático · ASLI<br>
+              Llega todos los días, con novedades o sin ellas: si algún día no llega, es que la revisión no corrió.
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>`.trim();
+
+  return { asunto, cuerpo };
+}
