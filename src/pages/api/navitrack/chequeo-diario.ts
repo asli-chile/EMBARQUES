@@ -160,9 +160,23 @@ export const GET: APIRoute = async ({ request, url }) => {
    * persona lo vea. La copia no es formalidad: es que la carga no se quede sin
    * vigilar porque alguien está de vacaciones.
    */
-  const enCopia = (textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ?? "hans.vasquez@asli.cl").trim();
-  // Para el botón del correo. Sin sitio configurado, el aviso va sin enlace.
-  const sitio = (textoDeEntorno(import.meta.env.PUBLIC_SITE_URL, "PUBLIC_SITE_URL") ?? "https://www.asli.cl").replace(/\/+$/, "");
+  const enCopia =
+    textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ||
+    "hans.vasquez@asli.cl, mario.basaez@asli.cl";
+  /*
+   * Base para el botón del correo.
+   *
+   * El ERP se sirve bajo /embarques, no en la raíz: asli.cl/navitrack es 404 y
+   * asli.cl/embarques/navitrack es la pantalla. El enlace de los avisos
+   * apuntaba a la raíz, así que el botón no llevaba a ninguna parte.
+   *
+   * El prefijo se añade solo si la URL configurada no lo trae ya, para que
+   * poner PUBLIC_SITE_URL completa siga funcionando.
+   */
+  const sitioBruto = (
+    textoDeEntorno(import.meta.env.PUBLIC_SITE_URL, "PUBLIC_SITE_URL") || "https://www.asli.cl"
+  ).replace(/\/+$/, "");
+  const sitio = sitioBruto.endsWith("/embarques") ? sitioBruto : `${sitioBruto}/embarques`;
   const supabase = createAdminClient();
 
   /*

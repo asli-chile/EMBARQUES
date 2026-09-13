@@ -353,7 +353,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const destinatario = (textoDeEntorno(import.meta.env.NAVITRACK_AVISO_GASTO_EMAIL, "NAVITRACK_AVISO_GASTO_EMAIL") ?? "rodrigo.caceres@asli.cl").trim();
   // El registro de un gasto manual también va en copia: es la clase de decisión
   // que conviene que más de una persona vea.
-  const enCopia = (textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ?? "hans.vasquez@asli.cl").trim();
+  const enCopia =
+    textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ||
+    "hans.vasquez@asli.cl, mario.basaez@asli.cl";
   const secreto = textoDeEntorno(import.meta.env.NAVITRACK_CRON_SECRET, "NAVITRACK_CRON_SECRET");
   let avisado = false;
 
