@@ -95,6 +95,8 @@ export type NavitrackMapLabels = {
   sinRuta: string;
   pantallaCompleta: string;
   salirPantallaCompleta: string;
+  acercarBuque: string;
+  verRuta: string;
 };
 
 type NavitrackMapProps = {
@@ -106,9 +108,37 @@ type NavitrackMapProps = {
   labels: NavitrackMapLabels;
 };
 
+/** Lo que se usa de la instancia de MapLibre, sin arrastrar todo su tipo. */
+type MapaLibre = {
+  flyTo: (o: object) => void;
+  fitBounds: (b: [[number, number], [number, number]], o?: object) => void;
+};
+
 export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }: NavitrackMapProps) {
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Buque enfocado: el usuario hizo clic para verlo de cerca.
+   *
+   * Mientras dura, el encuadre automático de la ruta se queda quieto. Si no,
+   * cualquier actualización de la posición devolvería la vista a la ruta
+   * completa y el acercamiento duraría un segundo.
+   */
+  const [enfocado, setEnfocado] = useState(false);
+
+  const obtenerMapa = useCallback((): MapaLibre | null => {
+    return (
+      (mapRef.current as unknown as { getMap?: () => MapaLibre } | null)?.getMap?.() ?? null
+    );
+  }, []);
+
+  /** Ancho real del mapa: el relleno del encuadre depende de él. */
+  const anchoContenedor = useCallback(
+    () => containerRef.current?.clientWidth ?? 0,
+    [],
+  );
+
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState(false);
@@ -121,6 +151,25 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
 
   /** Puertos de conexión de un viaje con transbordo. Vacío si es directo. */
   const conexiones = (escalas ?? []).filter((e) => e.tipo === "conexion");
+
+  /**
+   * Acercarse al buque.
+   *
+   * Es el gesto natural sobre un barco en un mapa, y hasta ahora no hacía
+   * nada. El zoom 11 muestra la costa y los puertos cercanos: suficiente para
+   * entender dónde está sin perder toda referencia.
+   */
+  const enfocarBuque = useCallback(() => {
+    if (!position) return;
+    const map = obtenerMapa();
+    if (!map) return;
+    setEnfocado(true);
+    map.flyTo({ center: [position.lng, position.lat], zoom: 11, duration: 1200, essential: true });
+  }, [obtenerMapa, position]);
+
+  /** Vuelve a la ruta completa. */
+  const verRutaCompleta = useCallback(() => setEnfocado(false), []);
+
   const esReal = position?.source === "AIS";
 
   const traveledData = useMemo(
@@ -205,14 +254,8 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
   /** Encuadra la ruta completa: el viaje debe entenderse sin tocar el mapa. */
   useEffect(() => {
     if (!ready) return;
-    const map = (
-      mapRef.current as unknown as {
-        getMap?: () => {
-          flyTo: (o: object) => void;
-          fitBounds: (b: [[number, number], [number, number]], o?: object) => void;
-        };
-      } | null
-    )?.getMap?.();
+    if (enfocado) return;
+    const map = obtenerMapa();
     if (!map) return;
 
     const pts: LngLat[] = [];
@@ -244,12 +287,36 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
           [minLng - padLng, minLat - padLat],
           [maxLng + padLng, maxLat + padLat],
         ],
-        { padding: 56, duration: 1100, maxZoom: 6, essential: true },
+        {
+          /*
+           * El relleno en píxeles tiene que caber en el contenedor.
+           *
+           * 56 px por lado son 112 px de un ancho de 300: más de un tercio de
+           * la pantalla del teléfono se iba en margen, y la ruta quedaba
+           * apretada en el centro y descentrada respecto de los controles.
+           */
+          padding: anchoContenedor() < 520 ? 22 : 56,
+          duration: 1100,
+          maxZoom: 6,
+          essential: true,
+        },
       );
     } catch {
       map.flyTo({ center: [pts[0].lng, pts[0].lat], zoom: 3, duration: 900, essential: true });
     }
-  }, [ready, origen.coord, destino.coord, conexiones, position, traveled, remaining, pantallaCompleta]);
+  }, [
+    ready,
+    enfocado,
+    obtenerMapa,
+    anchoContenedor,
+    origen.coord,
+    destino.coord,
+    conexiones,
+    position,
+    traveled,
+    remaining,
+    pantallaCompleta,
+  ]);
 
   const courseDeg = position?.course != null && Number.isFinite(position.course) ? position.course : 0;
   const sinRuta = !isValidCoord(origen.coord) && !isValidCoord(destino.coord) && !position;
@@ -377,7 +444,32 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
 
             {position && (
               <Marker longitude={position.lng} latitude={position.lat} anchor="center">
-                <div className="relative flex items-center justify-center">
+                {/*
+                  * Clic en el buque: acercarse.
+                  *
+                  * Es el gesto que cualquiera intenta sobre un barco en un
+                  * mapa, y hasta ahora no hacía nada. Desde la vista de ruta
+                  * el buque es un triángulo en medio del océano; de cerca se
+                  * ve contra qué costa y a qué puerto está llegando.
+                  */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  title={enfocado ? labels.verRuta : labels.acercarBuque}
+                  aria-label={enfocado ? labels.verRuta : labels.acercarBuque}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (enfocado) verRutaCompleta();
+                    else enfocarBuque();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    if (enfocado) verRutaCompleta();
+                    else enfocarBuque();
+                  }}
+                  className="relative flex cursor-pointer items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/60"
+                >
                   {/* Ficha del buque: nombre y, si hay AIS, velocidad y rumbo reales. */}
                   <div className="nt-vessel-card">
                     <p className="truncate font-bold">{vesselName || labels.posicionEstimada}</p>
@@ -407,6 +499,19 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
       {/* Controles propios: los de MapLibre traen su propio look y desentonan. */}
       {!mapError && ready && (
         <div className="absolute right-2.5 top-2.5 z-[6] flex flex-col gap-1.5">
+          {/* Volver a la ruta: el clic en el buque alterna, pero tras mover el
+              mapa el buque puede quedar fuera de cuadro y no habría cómo salir. */}
+          {enfocado && (
+            <button
+              type="button"
+              onClick={verRutaCompleta}
+              className="nt-map-ctrl-group motion-interactive mb-1.5 flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] font-bold"
+            >
+              <Icon icon="lucide:minimize-2" width={13} height={13} aria-hidden />
+              {labels.verRuta}
+            </button>
+          )}
+
           <div className="nt-map-ctrl-group">
             <button type="button" onClick={() => zoom(1)} aria-label="Zoom +" className="nt-map-ctrl">
               <Icon icon="lucide:plus" width={15} height={15} aria-hidden />

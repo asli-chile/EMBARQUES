@@ -342,6 +342,8 @@ export function NavitrackShipment({
     sinRuta: tr.mapaSinRuta,
     pantallaCompleta: tr.pantallaCompleta,
     salirPantallaCompleta: tr.salirPantallaCompleta,
+    acercarBuque: tr.mapaAcercarBuque,
+    verRuta: tr.mapaVerRuta,
   };
 
   const pestanas: { id: Pestana; label: string; icon: string }[] = [
@@ -915,7 +917,7 @@ export function NavitrackShipment({
         {/* En un transbordo, de dónde salió la carga es parte de la historia. */}
         {tramoInicial && (
           <Stat
-            className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
+            className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
             icon="lucide:package-open"
             label={tr.cadenaInicial}
             valor={tramoInicial.nave || "—"}
@@ -938,7 +940,7 @@ export function NavitrackShipment({
           * está en MSC RITA V es falso, aunque el dato exista.
           */}
         <Stat
-          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
+          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:ship"
           label={tr.buqueActual}
           valor={journey.naveActual || op.nave || "—"}
@@ -953,7 +955,7 @@ export function NavitrackShipment({
           }
         />
         <Stat
-          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
+          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:gauge"
           label={tr.velocidad}
           valor={ais?.speed != null ? `${ais.speed.toFixed(1)} kn` : "—"}
@@ -968,7 +970,7 @@ export function NavitrackShipment({
           * manda por sobre lo calculado, porque es el dato del propio barco.
           */}
         <Stat
-          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
+          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:anchor"
           label={tr.ultimoPuerto}
           valor={ais?.lastPort || tramoEnCurso?.pol || journey.origen.nombre || "—"}
@@ -981,7 +983,7 @@ export function NavitrackShipment({
           }
         />
         <Stat
-          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
+          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:map-pin"
           label={tr.proximoPuerto}
           valor={tramoEnCurso?.pod || journey.destino.nombre || "—"}
@@ -994,7 +996,7 @@ export function NavitrackShipment({
           }
         />
         <Stat
-          className="max-sm:w-[68vw] max-sm:shrink-0 max-sm:snap-start"
+          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:crosshair"
           label={tr.posicionActual}
           valor={
