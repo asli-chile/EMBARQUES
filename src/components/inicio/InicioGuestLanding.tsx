@@ -5,9 +5,6 @@ import { AuthFormTrigger } from "@/components/auth/AuthFormTrigger";
 import {
   pillars,
   stats,
-  comparisons,
-  workflowSteps,
-  quickLinks,
   kpiConfig,
   type KpiData,
 } from "./inicio-data";
@@ -34,24 +31,30 @@ export function InicioGuestLanding({
             subtitle={t.inicio.pillarsSubtitle}
           />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {pillars.map(({ key, descKey, icon, features }, index) => (
-              <GlassCard key={key} interactive className="p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="inicio-icon-box w-12 h-12 rounded-md flex items-center justify-center">
-                    <Icon icon={icon} width={24} height={24} />
-                  </div>
-                  <span className="inicio-display text-4xl font-black inicio-ink-faint tabular-nums opacity-35">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                </div>
-                <h3 className="inicio-display text-lg font-bold inicio-ink mb-2">{t.inicio[key]}</h3>
-                <p className="inicio-ink-mute text-sm mb-4 leading-relaxed">{t.inicio[descKey]}</p>
-                <div className="flex flex-wrap gap-1.5">
+            {/*
+              * Cada módulo con su acento de color y su marca de agua, los
+              * mismos que tendrá cuando el usuario entre. El número de orden se
+              * fue: numerar del 01 al 04 sugería una secuencia obligatoria, y
+              * estos cuatro se usan a la vez, no uno detrás de otro.
+              */}
+            {pillars.map(({ key, descKey, icon, mark, accent, features }) => (
+              <article key={key} data-inicio-reveal className={`inicio-pillar-card inicio-pillar-card--${accent}`}>
+                <Icon icon={mark} className="inicio-shortcut-mark" width={150} height={150} aria-hidden />
+                <span className="inicio-shortcut-icon relative z-[1]" aria-hidden>
+                  <Icon icon={icon} width={26} height={26} />
+                </span>
+                <h3 className="relative z-[1] mt-4 inicio-display text-lg font-bold inicio-ink">
+                  {t.inicio[key]}
+                </h3>
+                <p className="relative z-[1] mt-1.5 text-sm leading-relaxed inicio-ink-mute">
+                  {t.inicio[descKey]}
+                </p>
+                <div className="relative z-[1] mt-4 flex flex-wrap gap-1.5">
                   {features.map((fKey) => (
                     <FeatureChip key={fKey}>{t.inicio[fKey]}</FeatureChip>
                   ))}
                 </div>
-              </GlassCard>
+              </article>
             ))}
           </div>
         </div>
@@ -75,89 +78,15 @@ export function InicioGuestLanding({
         </div>
       </section>
 
-      {/* Comparación */}
-      <section data-inicio-section className={inicioStyles.section}>
-        <div className={inicioStyles.shell}>
-          <SectionHeader
-            tag={t.inicio.comparisonTag}
-            title={t.inicio.comparisonTitle}
-            subtitle={t.inicio.comparisonSubtitle}
-          />
-          <GlassCard className="hidden sm:block overflow-hidden p-0" reveal>
-            <div className="grid grid-cols-2 border-b inicio-line">
-              <div className="inicio-compare-before px-6 py-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                <Icon icon="lucide:x" width={14} height={14} />
-                {t.inicio.comparisonBefore}
-              </div>
-              <div className="inicio-compare-after px-6 py-4 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                <Icon icon="lucide:check" width={14} height={14} />
-                {t.inicio.comparisonAfter}
-              </div>
-            </div>
-            {comparisons.map(({ beforeKey, afterKey }, i) => (
-              <div key={beforeKey} className={`grid grid-cols-2 ${i < comparisons.length - 1 ? "border-b inicio-line" : ""}`}>
-                <div className="px-6 py-4 border-r inicio-line text-sm inicio-ink-mute">{t.inicio[beforeKey]}</div>
-                <div className="px-6 py-4 text-sm inicio-ink font-medium">{t.inicio[afterKey]}</div>
-              </div>
-            ))}
-          </GlassCard>
-          <div data-inicio-reveal className="sm:hidden space-y-3">
-            {comparisons.map(({ beforeKey, afterKey }) => (
-              <GlassCard key={beforeKey} className="p-0 overflow-hidden" reveal={false}>
-                <div className="inicio-compare-before px-4 py-3 text-xs flex gap-2">
-                  <Icon icon="lucide:x" className="shrink-0 mt-0.5" width={14} height={14} />
-                  {t.inicio[beforeKey]}
-                </div>
-                <div className="px-4 py-3 flex gap-2 text-xs inicio-ink">
-                  <Icon icon="lucide:check" className="inicio-accent-text shrink-0 mt-0.5" width={14} height={14} />
-                  {t.inicio[afterKey]}
-                </div>
-              </GlassCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Workflow */}
-      <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className={inicioStyles.shell}>
-          <SectionHeader tag={t.inicio.workflowTag} title={t.inicio.workflowTitle} subtitle={t.inicio.workflowSubtitle} />
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
-            {workflowSteps.map(({ key, descKey, icon, num }) => (
-              <GlassCard key={key} className="min-w-[200px] snap-start p-5 lg:min-w-0" interactive>
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-xs font-bold inicio-accent-text tabular-nums">{num}</span>
-                  <div className="inicio-icon-box w-10 h-10 rounded-md flex items-center justify-center">
-                    <Icon icon={icon} width={18} height={18} />
-                  </div>
-                </div>
-                <h3 className="inicio-display text-sm font-bold inicio-ink mb-1">{t.inicio[key]}</h3>
-                <p className="inicio-ink-mute text-xs leading-relaxed">{t.inicio[descKey]}</p>
-              </GlassCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Quick links */}
-      <section data-inicio-section className={inicioStyles.section}>
-        <div className={inicioStyles.shell}>
-          <SectionHeader tag={t.inicio.quickLinksTag} title={t.inicio.quickLinksTitle} subtitle={t.inicio.quickLinksSubtitle} />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {quickLinks.map(({ key, descKey, href, icon }) => (
-              <a key={key} href={withBase(href)} data-inicio-reveal className="group">
-                <GlassCard interactive className="flex items-center gap-3 p-4" reveal={false}>
-                  <Icon icon={icon} className="inicio-accent-text shrink-0 transition-transform group-hover:scale-110" width={20} height={20} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold inicio-ink">{t.inicio[key]}</p>
-                    <p className="text-xs inicio-ink-mute truncate">{t.inicio[descKey]}</p>
-                  </div>
-                </GlassCard>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/*
+        * Se quitaron tres secciones: la comparación "antes y después", el flujo
+        * de cinco pasos y los atajos.
+        *
+        * Las tres decían, con más palabras, lo que las cuatro tarjetas de
+        * arriba y los módulos del hero ya muestran. Una página de entrada que
+        * repite su argumento tres veces no convence más: cansa, y lo que
+        * importa queda enterrado al final.
+        */}
 
       {/* KPI preview */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>

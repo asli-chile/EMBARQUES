@@ -14,30 +14,63 @@ export const emptyKpiData = (): KpiData => ({
   operacionesCompletadas: 0,
 });
 
+/**
+ * Los cuatro módulos del sistema, contados a quien todavía no entra.
+ *
+ * En el orden en que el exportador los vive: reserva la carga, arma los
+ * documentos, sigue el barco y controla la operación. No es el orden del menú
+ * ni el del organigrama; es el del trabajo.
+ *
+ * Llevan acento de color como los atajos de adentro, para que la visita
+ * reconozca el módulo cuando lo vea con sesión iniciada.
+ */
 export const pillars = [
   {
-    key: "pillarOperations" as const,
-    descKey: "pillarOperationsDesc" as const,
-    icon: "lucide:ship",
-    features: ["pillarOperationsF1", "pillarOperationsF2", "pillarOperationsF3", "pillarOperationsF4"] as const,
+    key: "pillarReserva" as const,
+    descKey: "pillarReservaDesc" as const,
+    icon: "lucide:package",
+    mark: "lucide:ship",
+    accent: "teal" as const,
+    features: ["pillarReservaF1", "pillarReservaF2", "pillarReservaF3", "pillarReservaF4"] as const,
   },
   {
-    key: "pillarTransport" as const,
-    descKey: "pillarTransportDesc" as const,
-    icon: "lucide:truck",
-    features: ["pillarTransportF1", "pillarTransportF2", "pillarTransportF3", "pillarTransportF4"] as const,
+    key: "pillarDocumentacion" as const,
+    descKey: "pillarDocumentacionDesc" as const,
+    icon: "lucide:file-text",
+    mark: "lucide:files",
+    accent: "amber" as const,
+    features: [
+      "pillarDocumentacionF1",
+      "pillarDocumentacionF2",
+      "pillarDocumentacionF3",
+      "pillarDocumentacionF4",
+    ] as const,
   },
   {
-    key: "pillarDocuments" as const,
-    descKey: "pillarDocumentsDesc" as const,
-    icon: "lucide:file-check",
-    features: ["pillarDocumentsF1", "pillarDocumentsF2", "pillarDocumentsF3", "pillarDocumentsF4"] as const,
+    key: "pillarSeguimiento" as const,
+    descKey: "pillarSeguimientoDesc" as const,
+    icon: "lucide:radar",
+    mark: "lucide:map",
+    accent: "violet" as const,
+    features: [
+      "pillarSeguimientoF1",
+      "pillarSeguimientoF2",
+      "pillarSeguimientoF3",
+      "pillarSeguimientoF4",
+    ] as const,
   },
   {
-    key: "pillarFinance" as const,
-    descKey: "pillarFinanceDesc" as const,
-    icon: "lucide:bar-chart-3",
-    features: ["pillarFinanceF1", "pillarFinanceF2", "pillarFinanceF3", "pillarFinanceF4"] as const,
+    key: "pillarOperaciones" as const,
+    descKey: "pillarOperacionesDesc" as const,
+    icon: "lucide:layout-dashboard",
+    mark: "lucide:bar-chart-3",
+    accent: "blue" as const,
+    features: [
+      "pillarOperacionesF1",
+      "pillarOperacionesF2",
+      "pillarOperacionesF3",
+      "pillarOperacionesF4",
+    ] as const,
   },
 ] as const;
 
@@ -46,22 +79,6 @@ export const stats = [
   { valueKey: "stat2Value" as const, labelKey: "stat2Label" as const, icon: "lucide:clock" },
   { valueKey: "stat3Value" as const, labelKey: "stat3Label" as const, icon: "lucide:shield-check" },
   { valueKey: "stat4Value" as const, labelKey: "stat4Label" as const, icon: "lucide:file-check" },
-] as const;
-
-export const comparisons = [
-  { beforeKey: "comparison1Before" as const, afterKey: "comparison1After" as const },
-  { beforeKey: "comparison2Before" as const, afterKey: "comparison2After" as const },
-  { beforeKey: "comparison3Before" as const, afterKey: "comparison3After" as const },
-  { beforeKey: "comparison4Before" as const, afterKey: "comparison4After" as const },
-  { beforeKey: "comparison5Before" as const, afterKey: "comparison5After" as const },
-] as const;
-
-export const workflowSteps = [
-  { key: "workflowStep1" as const, descKey: "workflowStep1Desc" as const, icon: "lucide:calendar-plus", num: "01" },
-  { key: "workflowStep2" as const, descKey: "workflowStep2Desc" as const, icon: "lucide:truck", num: "02" },
-  { key: "workflowStep3" as const, descKey: "workflowStep3Desc" as const, icon: "lucide:boxes", num: "03" },
-  { key: "workflowStep4" as const, descKey: "workflowStep4Desc" as const, icon: "lucide:ship", num: "04" },
-  { key: "workflowStep5" as const, descKey: "workflowStep5Desc" as const, icon: "lucide:file-check", num: "05" },
 ] as const;
 
 /**
