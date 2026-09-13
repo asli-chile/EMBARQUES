@@ -96,7 +96,7 @@ export function NavitrackRecalada({
     setError(null);
   }, [modo, naveElegida]);
 
-  const guardar = async (decision: "parada" | "transbordo") => {
+  const guardar = async (decision: "parada" | "transbordo" | "directo") => {
     setGuardando(true);
     setError(null);
     try {
@@ -134,6 +134,12 @@ export function NavitrackRecalada({
 
       if (decision === "parada") {
         onGuardado(tr.recaladaGuardadaParada.replace("{{puerto}}", recalada.puerto));
+        return;
+      }
+
+      if (decision === "directo") {
+        const n = (j as { paradas?: string[] }).paradas?.length ?? 0;
+        onGuardado(tr.recaladaGuardadaDirecto.replace("{{n}}", String(n)));
         return;
       }
 
@@ -219,6 +225,30 @@ export function NavitrackRecalada({
                   <span className="block text-[14px] font-bold text-dash-fg">{tr.recaladaSigueTitulo}</span>
                   <span className="mt-0.5 block text-[12px] leading-snug text-dash-muted">
                     {tr.recaladaSigueTexto}
+                  </span>
+                </span>
+              </button>
+
+              {/*
+                * Viaje directo.
+                *
+                * Va entre las otras dos porque es la respuesta de quien ya sabe:
+                * no responde por este puerto sino por todo el viaje, y con eso
+                * deja de preguntarse en cada escala. Seguir preguntando cuando
+                * la respuesta se conoce de antemano es el camino más corto a que
+                * nadie mire las preguntas que sí importan.
+                */}
+              <button
+                type="button"
+                disabled={guardando}
+                onClick={() => void guardar("directo")}
+                className="motion-interactive flex items-start gap-3 rounded-xl border border-dash-border bg-dash-control/60 px-3.5 py-3 text-left hover:border-dash-neon/40 disabled:opacity-50"
+              >
+                <Icon icon="lucide:route" width={18} height={18} className="mt-0.5 shrink-0 text-dash-neon" aria-hidden />
+                <span className="min-w-0">
+                  <span className="block text-[14px] font-bold text-dash-fg">{tr.recaladaDirectoTitulo}</span>
+                  <span className="mt-0.5 block text-[12px] leading-snug text-dash-muted">
+                    {tr.recaladaDirectoTexto}
                   </span>
                 </span>
               </button>

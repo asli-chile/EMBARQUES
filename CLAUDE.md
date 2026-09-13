@@ -658,6 +658,24 @@ Callao con diez días de anticipación no es noticia; que haya llegado a Callao
 sí. La misma regla vale para el estado en pantalla (`resolverEstado`), para que
 correo y pantalla nunca digan cosas distintas.
 
+```
+supabase/migrations/20260913000001_navitrack_viajes.sql
+```
+
+`navitrack_viajes` guarda cómo viaja la carga según una persona: `directo` o
+`con_transbordo`. **Aplicada el 13-09-2026.**
+
+Cada puerto anunciado se pregunta por separado, y con razón: el transbordo
+puede ocurrir en cualquier escala, así que responder por una no dice nada de
+las siguientes. La excepción es cuando el ejecutivo tiene el booking a la vista
+y le consta que la carga viaja directa; ahí seguir preguntando es ruido, y el
+ruido termina en que nadie mira las preguntas que sí importan.
+
+Con `modo = 'directo'`, los puertos que el buque anuncie se registran ya como
+`parada_programada`. Sin fila, el viaje es desconocido y se pregunta en cada
+puerto, que es el comportamiento seguro por defecto. Registrar un transbordo
+pone `con_transbordo` automáticamente: un transbordo desmiente la afirmación.
+
 ### Chequeo diario y alerta por correo
 
 `src/pages/api/navitrack/chequeo-diario.ts` lo dispara el cron de Vercel

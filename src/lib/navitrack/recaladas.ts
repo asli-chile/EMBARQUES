@@ -67,6 +67,20 @@ export async function registrarAnuncio(
   const pod = normalizar(datos.pod);
   if (p && pod && (p.includes(pod) || pod.includes(p))) return "ignorada";
 
+  /*
+   * Viaje marcado como directo.
+   *
+   * Alguien con el booking a la vista afirmó que la carga no cambia de nave.
+   * Los puertos que el buque anuncie se anotan igual —son parte del recorrido y
+   * del historial— pero ya resueltos: no preguntan ni avisan.
+   */
+  const { data: viaje } = await supabase
+    .from("navitrack_viajes")
+    .select("modo")
+    .eq("operacion_id", datos.operacionId)
+    .maybeSingle();
+  const esDirecto = viaje?.modo === "directo";
+
   const { data: existente } = await supabase
     .from("navitrack_recaladas")
     .select("id, estado")
@@ -88,7 +102,9 @@ export async function registrarAnuncio(
     puerto,
     nave: datos.nave,
     eta_anunciada: datos.etaDeclarada,
-    estado: "anunciada",
+    estado: esDirecto ? "parada_programada" : "anunciada",
+    decidido_at: esDirecto ? new Date().toISOString() : null,
+    notas: esDirecto ? "Viaje marcado como directo: no requiere verificación." : null,
   });
   return "nueva";
 }

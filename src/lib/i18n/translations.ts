@@ -2672,6 +2672,11 @@ export const translations = {
       recaladaSigueTitulo: "Siguió en el mismo buque",
       recaladaSigueTexto:
         "El puerto queda en el historial como parada programada del itinerario. No cuesta consultas.",
+      recaladaDirectoTitulo: "Es un viaje directo",
+      recaladaDirectoTexto:
+        "La carga no cambia de nave en todo el viaje. Los puertos que el buque anuncie se registrarán como paradas programadas, sin volver a preguntar.",
+      recaladaGuardadaDirecto:
+        "Marcado como viaje directo: {{n}} puerto(s) quedaron como paradas programadas y no se volverá a preguntar.",
       recaladaTransbordoTitulo: "Hubo transbordo",
       recaladaTransbordoTexto:
         "La carga cambió de nave. Se registra el tramo nuevo y el seguimiento pasa a ese buque.",
@@ -5713,6 +5718,11 @@ export const translations = {
       recaladaSigueTitulo: "Stayed on the same vessel",
       recaladaSigueTexto:
         "The port is kept in the history as a scheduled call. No queries used.",
+      recaladaDirectoTitulo: "It is a direct voyage",
+      recaladaDirectoTexto:
+        "The cargo does not change vessel at any point. Ports the vessel announces will be recorded as scheduled calls, without asking again.",
+      recaladaGuardadaDirecto:
+        "Marked as a direct voyage: {{n}} port(s) became scheduled calls and it will not ask again.",
       recaladaTransbordoTitulo: "There was a transshipment",
       recaladaTransbordoTexto:
         "The cargo changed vessel. The new leg is recorded and tracking moves to that ship.",

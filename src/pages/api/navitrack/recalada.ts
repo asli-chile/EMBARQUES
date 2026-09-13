@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
   const operacionId = (url.searchParams.get("op") ?? "").trim();
   if (!operacionId) return json({ ok: false, code: "BAD_REQUEST" }, 400);
 
-  const [recRes, tramosRes, navesRes] = await Promise.all([
+  const [recRes, tramosRes, navesRes, viajeRes] = await Promise.all([
     supabase
       .from("navitrack_recaladas")
       .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas")
@@ -83,10 +83,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       .eq("activo", true)
       .order("nombre")
       .limit(3000),
+    supabase.from("navitrack_viajes").select("modo").eq("operacion_id", operacionId).maybeSingle(),
   ]);
 
   return json({
     ok: true,
+    modoViaje: (viajeRes.data as { modo?: string } | null)?.modo ?? null,
     recaladas: recRes.data ?? [],
     tramos: tramosRes.data ?? [],
     naves: navesRes.data ?? [],
@@ -110,7 +112,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     puerto?: string;
     etaAnunciada?: string | null;
     nave?: string | null;
-    decision?: "parada" | "transbordo";
+    decision?: "parada" | "transbordo" | "directo";
     naveNombre?: string;
     viaje?: string;
     etd?: string;
@@ -124,7 +126,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const { decision } = body;
-  if (decision !== "parada" && decision !== "transbordo") {
+  if (decision !== "parada" && decision !== "transbordo" && decision !== "directo") {
     return json({ ok: false, code: "BAD_REQUEST" }, 400);
   }
 
@@ -195,6 +197,50 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .eq("id", recaladaId);
 
     return json({ ok: true, estado: "parada_programada" });
+  }
+
+  /* ── Viaje directo: no se vuelve a preguntar por este embarque ──────────── */
+  if (decision === "directo") {
+    /*
+     * Marcar el viaje como directo silencia las preguntas futuras, así que la
+     * afirmación queda con autor y fecha: alguien miró el booking y dijo que
+     * esta carga no cambia de nave.
+     */
+    await supabase.from("navitrack_viajes").upsert(
+      {
+        operacion_id: rec.operacion_id,
+        modo: "directo",
+        decidido_por: auth.usuarioId,
+        decidido_at: ahora,
+        notas: body.notas ?? null,
+      },
+      { onConflict: "operacion_id" },
+    );
+
+    /*
+     * Las recaladas pendientes de este embarque pasan a paradas programadas.
+     *
+     * Incluye la que se estaba verificando y cualquier otra que el buque haya
+     * anunciado antes: si el viaje es directo, todas son escalas del itinerario
+     * por definición.
+     */
+    const { data: resueltas } = await supabase
+      .from("navitrack_recaladas")
+      .update({
+        estado: "parada_programada",
+        decidido_por: auth.usuarioId,
+        decidido_at: ahora,
+        notas: "Viaje marcado como directo.",
+      })
+      .eq("operacion_id", rec.operacion_id)
+      .in("estado", ["anunciada", "por_verificar"])
+      .select("puerto");
+
+    return json({
+      ok: true,
+      estado: "directo",
+      paradas: (resueltas ?? []).map((r: { puerto: string }) => r.puerto),
+    });
   }
 
   /* ── Transbordo: hay que registrar el tramo nuevo ───────────────────────── */
@@ -271,6 +317,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     })
     .select("id")
     .single();
+
+  // Si alguien lo había marcado directo, un transbordo lo desmiente.
+  await supabase.from("navitrack_viajes").upsert(
+    {
+      operacion_id: rec.operacion_id,
+      modo: "con_transbordo",
+      decidido_por: auth.usuarioId,
+      decidido_at: ahora,
+    },
+    { onConflict: "operacion_id" },
+  );
 
   await supabase
     .from("navitrack_recaladas")
