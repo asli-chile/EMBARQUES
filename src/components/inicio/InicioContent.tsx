@@ -286,7 +286,7 @@ export function InicioContent() {
           ) : (
             <>
               <InicioHero isLoggedIn={isLoggedIn} profile={profile} isCliente={isCliente} />
-              <InicioGuestLanding kpiData={kpiData} loadingKpis={loadingKpis} />
+              <InicioGuestLanding />
             </>
           )}
 
