@@ -2626,6 +2626,9 @@ export const translations = {
       cadenaNota:
         "La carga cambió de nave en los puertos de conexión. Lo que se sigue es la carga, no el primer buque.",
       proximoPuerto: "Próximo puerto",
+      puertoDestino: "Puerto de destino",
+      proximoPuertoSinDato: "Sin anunciar",
+      proximoPuertoSegunBuque: "Según declara el buque",
       posicionActual: "Posición actual",
       aisSatelital: "AIS satelital",
       posicionCalculada: "Calculada",
@@ -5662,6 +5665,9 @@ export const translations = {
       cadenaNota:
         "The cargo changed vessel at the connection ports. What is tracked is the cargo, not the first ship.",
       proximoPuerto: "Next port",
+      puertoDestino: "Destination port",
+      proximoPuertoSinDato: "Not announced",
+      proximoPuertoSegunBuque: "As declared by the vessel",
       posicionActual: "Current position",
       aisSatelital: "Satellite AIS",
       posicionCalculada: "Computed",

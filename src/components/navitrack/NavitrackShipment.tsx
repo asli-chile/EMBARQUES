@@ -298,6 +298,25 @@ export function NavitrackShipment({
     ? [...tramos].sort((a, b) => a.orden - b.orden)[0]
     : null;
 
+  /*
+   * Próximo puerto: lo que el buque declara ahora mismo.
+   *
+   * Se prefiere la lectura del AIS porque es la más reciente; si no la hay, la
+   * primera recalada pendiente, que es el mismo dato guardado. Si el buque
+   * declara el destino final, no hay escala intermedia que anunciar.
+   */
+  const proximoPuerto = (() => {
+    const pendiente = recaladas.find((r) => r.estado === "anunciada" || r.estado === "por_verificar");
+    const nombre = (ais?.destination ?? pendiente?.puerto ?? "").trim();
+    if (!nombre) return null;
+    const eta = ais?.destination && ais?.eta
+      ? ais.eta
+      : pendiente?.eta_anunciada
+        ? new Date(pendiente.eta_anunciada)
+        : null;
+    return { nombre, eta };
+  })();
+
   /** Primera recalada sin resolver: es la que el estado ofrece verificar. */
   const recaladaPendiente = recaladas.find((r) => r.estado === "por_verificar") ?? null;
 
@@ -911,7 +930,7 @@ export function NavitrackShipment({
       {/* Franja de indicadores: lo que un operador mira de reojo. */}
       <div
         className={`shrink-0 gap-2 max-sm:order-3 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:grid sm:grid-cols-3 ${
-          hayCadena ? "xl:grid-cols-6" : "xl:grid-cols-5"
+          hayCadena ? "xl:grid-cols-7" : "xl:grid-cols-6"
         }`}
       >
         {/* En un transbordo, de dónde salió la carga es parte de la historia. */}
@@ -982,11 +1001,33 @@ export function NavitrackShipment({
                 : null
           }
         />
+        {/*
+          * Próximo puerto y puerto de destino son dos datos distintos y hasta
+          * ahora se mostraban como uno solo.
+          *
+          * El próximo es el que **declara el buque** y cambia en cada escala;
+          * el de destino es el que se comprometió con el cliente y no cambia.
+          * Mostrar Hamburgo como "próximo puerto" mientras el barco navega
+          * hacia Callao es decir algo que no es cierto.
+          */}
+        <Stat
+          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
+          icon="lucide:navigation"
+          label={tr.proximoPuerto}
+          valor={proximoPuerto?.nombre || tr.proximoPuertoSinDato}
+          sub={
+            proximoPuerto?.eta
+              ? `${tr.colEta}: ${fmtFechaHora(proximoPuerto.eta, locale) ?? "—"}`
+              : proximoPuerto
+                ? tr.proximoPuertoSegunBuque
+                : null
+          }
+        />
         <Stat
           className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:map-pin"
-          label={tr.proximoPuerto}
-          valor={tramoEnCurso?.pod || journey.destino.nombre || "—"}
+          label={tr.puertoDestino}
+          valor={journey.destino.nombre || "—"}
           sub={
             tramoEnCurso?.eta
               ? `${tr.colEta}: ${fmtFecha(parseOpDate(tramoEnCurso.eta), locale) ?? "—"}`
