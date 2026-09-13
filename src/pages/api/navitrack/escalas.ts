@@ -7,14 +7,15 @@
  * proveedor se contradice entre 1 y 5 créditos, así que se asume 5.
  */
 import type { APIRoute } from "astro";
+import { numeroDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Horas que el historial de escalas se considera vigente. */
-const TTL_HORAS = Number(import.meta.env.NAVITRACK_ESCALAS_TTL_H ?? 24);
-const MAX_DIA = Number(import.meta.env.NAVITRACK_AIS_MAX_DIA ?? 10);
+const TTL_HORAS = numeroDeEntorno(import.meta.env.NAVITRACK_ESCALAS_TTL_H, 24);
+const MAX_DIA = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_MAX_DIA, 10);
 
 function json(body: object, status = 200) {
   return new Response(JSON.stringify(body), {

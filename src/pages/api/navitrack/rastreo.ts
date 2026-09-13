@@ -10,13 +10,14 @@
  * contar filas sigue siendo contar créditos.
  */
 import type { APIRoute } from "astro";
+import { numeroDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
-const TTL_MIN = Number(import.meta.env.NAVITRACK_AIS_TTL_MIN ?? 360);
-const MAX_DIA = Number(import.meta.env.NAVITRACK_AIS_MAX_DIA ?? 10);
+const TTL_MIN = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_TTL_MIN, 360);
+const MAX_DIA = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_MAX_DIA, 10);
 /** Días hacia atrás para considerar que una nave todavía tiene viaje vigente. */
 const VENTANA_DIAS = 7;
 

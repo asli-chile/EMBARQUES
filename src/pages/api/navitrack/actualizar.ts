@@ -18,6 +18,7 @@
  * embarque, dato que ya está en el ETD, y pagar por saberlo no tiene sentido.
  */
 import type { APIRoute } from "astro";
+import { numeroDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
@@ -27,7 +28,7 @@ import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Tope duro de esta acción, pase lo que pase con la lista blanca. */
-const MAX_NAVES = Number(import.meta.env.NAVITRACK_ACTUALIZAR_MAX ?? 30);
+const MAX_NAVES = numeroDeEntorno(import.meta.env.NAVITRACK_ACTUALIZAR_MAX, 30);
 /** Días hacia atrás para considerar vigente un viaje. */
 const VENTANA_DIAS = 7;
 

@@ -15,6 +15,7 @@
  * proveedor y está en producción.
  */
 import type { APIRoute } from "astro";
+import { numeroDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
@@ -28,14 +29,14 @@ const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
  * Hamburgo, 30 días) eso son ~120 créditos: alcanza para
  * seguirlo entero con margen. Bajarlo multiplica el gasto en proporción directa.
  */
-const TTL_MIN = Number(import.meta.env.NAVITRACK_AIS_TTL_MIN ?? 360);
+const TTL_MIN = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_TTL_MIN, 360);
 /**
  * Red de seguridad: llamadas al proveedor permitidas por día, sumando naves.
  *
  * El uso normal con una nave son 4; el resto es holgura para refrescos manuales.
  * Existe para que un error nuestro no vacíe el plan en una tarde.
  */
-const MAX_DIA = Number(import.meta.env.NAVITRACK_AIS_MAX_DIA ?? 10);
+const MAX_DIA = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_MAX_DIA, 10);
 /** Freno por usuario contra bucles del cliente. */
 const RATE = { limit: 30, windowMs: 60_000 };
 

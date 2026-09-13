@@ -10,6 +10,7 @@
  * nada, porque cualquiera que lo llamara gastaría créditos ajenos.
  */
 import type { APIRoute } from "astro";
+import { numeroDeEntorno } from "@/lib/navitrack/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
@@ -20,7 +21,7 @@ import { correoDesvio } from "@/components/navitrack/navitrack-correo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Naves que puede revisar una corrida. Freno ante una lista blanca inflada. */
-const MAX_NAVES = Number(import.meta.env.NAVITRACK_CHEQUEO_MAX ?? 25);
+const MAX_NAVES = numeroDeEntorno(import.meta.env.NAVITRACK_CHEQUEO_MAX, 25);
 
 function json(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
