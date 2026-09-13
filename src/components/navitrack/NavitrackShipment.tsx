@@ -8,6 +8,7 @@ import { NavitrackMap } from "./NavitrackMap";
 import { NavieraLogo } from "./NavieraLogo";
 import { NavitrackCadena, NavitrackTimeline, NavitrackTransbordo } from "./NavitrackJourney";
 import { isoDePais, isoDePuerto } from "./navitrack-banderas";
+import { getPortCoordinates } from "@/lib/ports-coordinates";
 import type { Recalada } from "./NavitrackRecalada";
 import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
 import {
@@ -902,6 +903,19 @@ export function NavitrackShipment({
                               {etiqueta}
                               {r.nave ? ` · ${r.nave}` : ""}
                             </span>
+                            {/*
+                              * Puerto sin coordenadas conocidas.
+                              *
+                              * La ruta del mapa lo ignora y se dibuja derecho al
+                              * destino, escondiendo una escala que el buque sí
+                              * anunció. Antes eso pasaba sin que nada lo dijera:
+                              * el mapa quedaba prolijo y equivocado.
+                              */}
+                            {!getPortCoordinates(r.puerto) && (
+                              <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-amber-400">
+                                {tr.puertoSinUbicacion}
+                              </span>
+                            )}
                           </span>
                           {pendiente ? (
                             <button
