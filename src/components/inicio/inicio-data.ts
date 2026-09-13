@@ -75,10 +75,10 @@ export const pillars = [
 ] as const;
 
 export const stats = [
-  { valueKey: "stat1Value" as const, labelKey: "stat1Label" as const, icon: "lucide:package-check" },
-  { valueKey: "stat2Value" as const, labelKey: "stat2Label" as const, icon: "lucide:clock" },
-  { valueKey: "stat3Value" as const, labelKey: "stat3Label" as const, icon: "lucide:shield-check" },
-  { valueKey: "stat4Value" as const, labelKey: "stat4Label" as const, icon: "lucide:file-check" },
+  { valueKey: "stat1Value" as const, labelKey: "stat1Label" as const, icon: "lucide:package-check", accent: "teal" as const },
+  { valueKey: "stat2Value" as const, labelKey: "stat2Label" as const, icon: "lucide:clock", accent: "amber" as const },
+  { valueKey: "stat3Value" as const, labelKey: "stat3Label" as const, icon: "lucide:shield-check", accent: "violet" as const },
+  { valueKey: "stat4Value" as const, labelKey: "stat4Label" as const, icon: "lucide:file-check", accent: "blue" as const },
 ] as const;
 
 /**

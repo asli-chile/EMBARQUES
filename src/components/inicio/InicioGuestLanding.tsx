@@ -8,7 +8,7 @@ import {
   kpiConfig,
   type KpiData,
 } from "./inicio-data";
-import { FeatureChip, GlassCard, inicioButtonBase, inicioStyles, SectionHeader } from "./inicio-ui";
+import { FeatureChip, inicioButtonBase, inicioStyles, SectionHeader } from "./inicio-ui";
 import { KpiSkeletonCard } from "./InicioSkeleton";
 
 export function InicioGuestLanding({
@@ -65,13 +65,27 @@ export function InicioGuestLanding({
         <div className={inicioStyles.shell}>
           <SectionHeader tag={t.inicio.statsTag} title={t.inicio.statsTitle} subtitle={t.inicio.statsSubtitle} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {stats.map(({ valueKey, labelKey, icon }) => (
-              <div key={valueKey} data-inicio-reveal className="inicio-tile rounded-md p-6 text-center">
-                <div className="inicio-icon-box w-11 h-11 mx-auto mb-4 rounded-md flex items-center justify-center">
+            {/*
+              * Mismo lenguaje que los módulos: acento de color y alineación a
+              * la izquierda. Centradas y grises, estas cifras parecían de otra
+              * página; el número es lo que se mira, así que manda él y no el
+              * ícono.
+              */}
+            {stats.map(({ valueKey, labelKey, icon, accent }) => (
+              <div
+                key={valueKey}
+                data-inicio-reveal
+                className={`inicio-pillar-card inicio-pillar-card--${accent} !p-5`}
+              >
+                <span className="inicio-shortcut-icon relative z-[1] !h-10 !w-10" aria-hidden>
                   <Icon icon={icon} width={20} height={20} />
-                </div>
-                <p className="inicio-stat-value text-3xl sm:text-4xl font-bold mb-1">{t.inicio[valueKey]}</p>
-                <p className="text-[11px] sm:text-xs inicio-ink-mute uppercase tracking-wider">{t.inicio[labelKey]}</p>
+                </span>
+                <p className="inicio-stat-value relative z-[1] mt-3.5 text-3xl font-bold tabular-nums sm:text-4xl">
+                  {t.inicio[valueKey]}
+                </p>
+                <p className="relative z-[1] mt-1 text-[11px] uppercase tracking-wider inicio-ink-mute sm:text-xs">
+                  {t.inicio[labelKey]}
+                </p>
               </div>
             ))}
           </div>
@@ -95,18 +109,26 @@ export function InicioGuestLanding({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             {loadingKpis
               ? Array.from({ length: 4 }).map((_, i) => <KpiSkeletonCard key={i} />)
-              : kpiConfig.map(({ key, descKey, dataKey, icon }) => (
-                  <GlassCard key={key} className="p-5">
-                    <Icon icon={icon} className="inicio-accent-text mb-3" width={18} height={18} />
-                    <p className="inicio-stat-value text-3xl font-bold tabular-nums">
+              : kpiConfig.map(({ key, descKey, dataKey, icon }, indice) => (
+                  <div
+                    key={key}
+                    data-inicio-reveal
+                    className={`inicio-pillar-card inicio-pillar-card--${
+                      (["teal", "amber", "violet", "blue"] as const)[indice % 4]
+                    } !p-5`}
+                  >
+                    <span className="inicio-shortcut-icon relative z-[1] !h-10 !w-10" aria-hidden>
+                      <Icon icon={icon} width={18} height={18} />
+                    </span>
+                    <p className="inicio-stat-value relative z-[1] mt-3.5 text-3xl font-bold tabular-nums">
                       {kpiData[dataKey].toLocaleString(undefined)}
                     </p>
-                    <p className="text-xs inicio-ink-soft mt-1">{t.inicio[key]}</p>
-                    <p className="text-[10px] inicio-ink-faint">{t.inicio[descKey]}</p>
-                  </GlassCard>
+                    <p className="relative z-[1] mt-1 text-xs inicio-ink-soft">{t.inicio[key]}</p>
+                    <p className="relative z-[1] text-[10px] inicio-ink-faint">{t.inicio[descKey]}</p>
+                  </div>
                 ))}
           </div>
-          <div data-inicio-reveal className="text-center">
+          <div data-inicio-reveal>
             <a href={withBase("/dashboard")} className={`${inicioButtonBase} inicio-btn-ghost font-medium`}>
               <Icon icon="lucide:layout-dashboard" width={16} height={16} />
               {t.inicio.kpiCta}
