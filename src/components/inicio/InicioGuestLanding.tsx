@@ -27,7 +27,7 @@ export function InicioGuestLanding({
     <>
       {/* Pilares */}
       <section id="pilares" data-inicio-section className={inicioStyles.section}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader
             tag={t.inicio.pillarsTag}
             title={t.inicio.pillarsTitle}
@@ -59,7 +59,7 @@ export function InicioGuestLanding({
 
       {/* Stats */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader tag={t.inicio.statsTag} title={t.inicio.statsTitle} subtitle={t.inicio.statsSubtitle} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {stats.map(({ valueKey, labelKey, icon }) => (
@@ -77,7 +77,7 @@ export function InicioGuestLanding({
 
       {/* Comparación */}
       <section data-inicio-section className={inicioStyles.section}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader
             tag={t.inicio.comparisonTag}
             title={t.inicio.comparisonTitle}
@@ -120,7 +120,7 @@ export function InicioGuestLanding({
 
       {/* Workflow */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader tag={t.inicio.workflowTag} title={t.inicio.workflowTitle} subtitle={t.inicio.workflowSubtitle} />
           <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
             {workflowSteps.map(({ key, descKey, icon, num }) => (
@@ -141,7 +141,7 @@ export function InicioGuestLanding({
 
       {/* Quick links */}
       <section data-inicio-section className={inicioStyles.section}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader tag={t.inicio.quickLinksTag} title={t.inicio.quickLinksTitle} subtitle={t.inicio.quickLinksSubtitle} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {quickLinks.map(({ key, descKey, href, icon }) => (
@@ -161,7 +161,7 @@ export function InicioGuestLanding({
 
       {/* KPI preview */}
       <section data-inicio-section className={inicioStyles.sectionAlt}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <SectionHeader tag={t.inicio.kpiTag} title={t.inicio.kpiTitle} subtitle={t.inicio.kpiSubtitle} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             {loadingKpis
@@ -188,7 +188,7 @@ export function InicioGuestLanding({
 
       {/* CTA */}
       <section data-inicio-section className={`${inicioStyles.section} pb-10`}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10">
+        <div className={inicioStyles.shell}>
           <div data-inicio-reveal className="inicio-cta-panel rounded-lg px-6 py-10 sm:px-12 sm:py-14 text-center text-white">
             <h2 className="inicio-display text-3xl sm:text-4xl font-bold mb-4">{t.inicio.ctaFinalTitle}</h2>
             <p className="text-white/70 text-sm sm:text-base mb-8 max-w-md mx-auto">{t.inicio.ctaFinalSubtitle}</p>

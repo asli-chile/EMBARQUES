@@ -2,39 +2,80 @@ import { Icon } from "@iconify/react";
 import type { ReactNode } from "react";
 
 export const inicioStyles = {
-  section: "relative z-10 py-20 sm:py-24 lg:py-28",
+  /*
+   * Mismo ritmo vertical en las dos caras del inicio.
+   *
+   * El invitado respiraba más que el logueado (py-28 contra py-24), y al
+   * iniciar sesión la página se comprimía de golpe. Son la misma pantalla vista
+   * por dos personas distintas, no dos sitios.
+   */
+  section: "relative z-10 py-16 sm:py-20 lg:py-24",
   sectionAlt: "relative z-10 py-16 sm:py-20 lg:py-24 inicio-band",
-  /** Ancho útil casi full-bleed (logueado / desktop). */
+  /**
+   * Ancho útil, uno solo.
+   *
+   * Antes el invitado usaba un contenedor más angosto, así que el contenido
+   * cambiaba de ancho al iniciar sesión: la misma tarjeta quedaba en otro sitio
+   * de la pantalla y se notaba como un salto.
+   */
   shell:
     "mx-auto w-full max-w-[min(100%,1760px)] px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12",
-  /** Landing invitado: un poco más estrecho para lectura. */
-  shellGuest: "mx-auto w-full max-w-7xl px-6 sm:px-10",
   card: "group relative inicio-card rounded-2xl transition-all duration-300 overflow-hidden",
   cardInteractive: "inicio-card-interactive",
 } as const;
 
+/**
+ * Encabezado de sección.
+ *
+ * Alineado a la izquierda por defecto, igual que en el inicio con sesión. El
+ * centrado es convención de página de marketing y funciona cuando la página es
+ * solo eso; aquí la visita y el usuario logueado entran por la misma puerta, y
+ * que una mitad esté centrada y la otra alineada hace que se sientan dos
+ * productos distintos.
+ *
+ * Misma escala tipográfica y mismos márgenes que `InicioLoggedInHome`, para
+ * que el ritmo vertical no cambie al iniciar sesión.
+ */
 export function SectionHeader({
   tag,
   title,
   subtitle,
-  align = "center",
+  align = "left",
+  extra,
 }: {
   tag: string;
   title: string;
   subtitle?: string;
   align?: "center" | "left";
+  /** Contenido al costado derecho, como el enlace al dashboard del logueado. */
+  extra?: React.ReactNode;
 }) {
-  const alignClass = align === "center" ? "text-center mx-auto items-center" : "text-left items-start";
+  const centrado = align === "center";
   return (
-    <div data-inicio-reveal className={`mb-12 sm:mb-14 max-w-3xl flex flex-col ${alignClass}`}>
-      <span className="inline-flex items-center gap-2.5 mb-4 text-xs font-semibold uppercase tracking-[0.14em] inicio-accent-text">
-        <span className="h-px w-7 bg-[color-mix(in_srgb,var(--inicio-teal)_60%,transparent)]" />
-        {tag}
-      </span>
-      <h2 className="inicio-display inicio-ink text-4xl sm:text-5xl lg:text-[3.15rem] font-bold leading-[1.08]">
-        {title}
-      </h2>
-      {subtitle ? <p className="mt-4 text-base sm:text-lg inicio-ink-mute leading-relaxed max-w-2xl">{subtitle}</p> : null}
+    <div
+      className={`mb-10 flex flex-col gap-6 sm:mb-12 lg:mb-14 ${
+        centrado ? "items-center text-center" : "lg:flex-row lg:items-end lg:justify-between"
+      }`}
+    >
+      <div data-inicio-reveal className={centrado ? "max-w-3xl" : "max-w-2xl"}>
+        <span className="mb-3 inline-flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.14em] inicio-accent-text">
+          <span className="h-px w-7 bg-[color-mix(in_srgb,var(--inicio-teal)_60%,transparent)]" />
+          {tag}
+        </span>
+        <h2 className="inicio-display text-3xl font-bold leading-[1.08] inicio-ink sm:text-4xl lg:text-5xl">
+          {title}
+        </h2>
+        {subtitle ? (
+          <p className="mt-3 max-w-xl text-base leading-relaxed inicio-ink-mute sm:text-lg">
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      {extra ? (
+        <div data-inicio-reveal className="shrink-0">
+          {extra}
+        </div>
+      ) : null}
     </div>
   );
 }

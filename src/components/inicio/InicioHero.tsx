@@ -122,7 +122,7 @@ export function InicioHero({
           : "flex min-h-[calc(100dvh-2.5rem)] items-center justify-center py-12 sm:py-16"
       }`}
     >
-      <div className={compact ? inicioStyles.shell : inicioStyles.shellGuest}>
+      <div className={inicioStyles.shell}>
         <div
           className={`grid w-full items-center gap-10 lg:gap-12 xl:gap-16 ${
             compact
