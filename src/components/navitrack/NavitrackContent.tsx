@@ -104,6 +104,11 @@ export function NavitrackContent() {
   const [recaladaAbierta, setRecaladaAbierta] = useState<Recalada | null>(null);
   const [avisoRecalada, setAvisoRecalada] = useState<string | null>(null);
 
+  /** Recaladas de cada embarque, para que la tabla y la ficha coincidan. */
+  const [recaladasPorOp, setRecaladasPorOp] = useState<Map<string, { puerto: string; estado: string }[]>>(
+    new Map(),
+  );
+
   /** Tramos por operación. Vacío = viaje directo. */
   const [tramos, setTramos] = useState<Map<string, Tramo[]>>(new Map());
 
@@ -134,7 +139,7 @@ export function NavitrackContent() {
     setRefrescando(true);
     const desde = isoHaceDias(VENTANA_DIAS);
 
-    const [opsRes, navesRes, navierasRes, decRes, tramosRes, lecturasRes] = await Promise.all([
+    const [opsRes, navesRes, navierasRes, decRes, tramosRes, recRes, lecturasRes] = await Promise.all([
       supabase
         .from("operaciones")
         .select(NAVITRACK_OP_SELECT)
@@ -154,6 +159,19 @@ export function NavitrackContent() {
        * son esos tramos: es la regla de lectura de `navitrack_tramos`.
        */
       supabase.from("navitrack_tramos").select(NAVITRACK_TRAMO_SELECT).order("orden"),
+      /*
+       * Recaladas de todos los embarques, no solo del abierto.
+       *
+       * El estado de la tabla depende de ellas: sin esto, una recalada resuelta
+       * dejaba de marcar el embarque abierto pero el listado seguía mostrando
+       * "posible transbordo", que es la misma contradicción vista desde otra
+       * pantalla.
+       */
+      supabase
+        .from("navitrack_recaladas")
+        .select("operacion_id, puerto, estado")
+        .in("estado", ["anunciada", "por_verificar", "parada_programada", "transbordo"])
+        .limit(2000),
       /*
        * Últimas posiciones guardadas. Es una lectura de base de datos: no gasta
        * créditos y no llama al proveedor.
@@ -180,6 +198,14 @@ export function NavitrackContent() {
       porOperacion.set(t.operacion_id, lista);
     }
     setTramos(porOperacion);
+
+    const recPorOperacion = new Map<string, { puerto: string; estado: string }[]>();
+    for (const r of (recRes.data ?? []) as { operacion_id: string; puerto: string; estado: string }[]) {
+      const lista = recPorOperacion.get(r.operacion_id) ?? [];
+      lista.push({ puerto: r.puerto, estado: r.estado });
+      recPorOperacion.set(r.operacion_id, lista);
+    }
+    setRecaladasPorOp(recPorOperacion);
 
     // La consulta viene ordenada de más nueva a más vieja: la primera manda.
     const porIdent = new Map<string, AisSnapshot>();
@@ -426,10 +452,17 @@ export function NavitrackContent() {
         const clave = (ident?.mmsi ?? "").trim() || (ident?.imo ?? "").trim();
         const guardada = !estaArribado(op) && clave ? (aisCache.get(clave) ?? null) : null;
         const journey = buildJourney(op, guardada, ahora, tramos.get(op.id) ?? []);
-        const estado = resolverEstado(op, guardada, journey, decisiones.get(op.id) ?? null, ahora);
+        const estado = resolverEstado(
+          op,
+          guardada,
+          journey,
+          decisiones.get(op.id) ?? null,
+          ahora,
+          recaladasPorOp.get(op.id) ?? [],
+        );
         return { op, ais: guardada, journey, estado };
       }),
-    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga],
+    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga, recaladasPorOp],
   );
 
   const conteos = useMemo(() => {
@@ -509,7 +542,7 @@ export function NavitrackContent() {
       tramos.get(seleccion.id) ?? [],
       previstos,
     );
-    const estado = resolverEstado(seleccion, ais, journey, decision, ahora);
+    const estado = resolverEstado(seleccion, ais, journey, decision, ahora, recaladas);
     return {
       journey,
       estado,

@@ -213,12 +213,16 @@ export type EstadoEmbarque = {
   posicionAntigua: boolean;
 };
 
+/** Lo que hace falta saber de una recalada para decidir el estado. */
+export type RecaladaEstado = { puerto: string; estado: string };
+
 export function resolverEstado(
   op: NavitrackOperacion,
   ais: AisSnapshot | null,
   journey: Journey,
   decision: TransbordoDecision | null,
   now = new Date(),
+  recaladas: RecaladaEstado[] = [],
 ): EstadoEmbarque {
   const eta = compararEta(op, ais);
   const etaDate = eta.erp;
@@ -246,10 +250,31 @@ export function resolverEstado(
   const yaLlegoAlPuertoAnunciado =
     llegadaAnunciada == null || llegadaAnunciada.getTime() <= now.getTime();
 
+  /*
+   * Si el puerto que declara el buque ya se resolvió, no hay sospecha.
+   *
+   * Alguien miró esa recalada y dijo qué pasó ahí. Seguir mostrando "posible
+   * transbordo" después de eso es ignorar la respuesta y pedirla de nuevo, que
+   * es la forma más rápida de que las alertas dejen de creerse.
+   *
+   * La lista manda sobre el cálculo: una decisión humana pesa más que una
+   * deducción a partir de fechas.
+   */
+  const declarado = normalizarPuerto(ais?.destination ?? null);
+  const yaResuelto = recaladas.some(
+    (r) =>
+      (r.estado === "parada_programada" || r.estado === "transbordo") &&
+      declarado.length > 0 &&
+      normalizarPuerto(r.puerto) === declarado,
+  );
+  // Una recalada vencida y sin responder es sospecha aunque el AIS ya no la declare.
+  const hayPendiente = recaladas.some((r) => r.estado === "por_verificar");
+
   const sospecha =
     decision?.estado !== "descartado" &&
-    destinoAisDiscrepa(op.pod, ais?.destination ?? null) &&
-    yaLlegoAlPuertoAnunciado;
+    !yaResuelto &&
+    (hayPendiente ||
+      (destinoAisDiscrepa(op.pod, ais?.destination ?? null) && yaLlegoAlPuertoAnunciado));
   const transbordoSospechado = sospecha && decision?.estado !== "confirmado";
 
   const etapa = ((): NavitrackEtapa => {
