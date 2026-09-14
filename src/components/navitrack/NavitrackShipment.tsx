@@ -287,6 +287,9 @@ export function NavitrackShipment({
     haceMinutos: tr.haceMinutos,
     haceHoras: tr.haceHoras,
     haceDias: tr.haceDias,
+    haceUnMinuto: tr.haceUnMinuto,
+    haceUnaHora: tr.haceUnaHora,
+    haceUnDia: tr.haceUnDia,
   };
   const actualizado = fmtRelativo(journey.position?.at ?? null, relativos);
   const actualizadoExacto = fmtFechaHora(journey.position?.at ?? null, locale);
@@ -1116,8 +1119,15 @@ export function NavitrackShipment({
         />
       </div>
 
-      {/* Nota de procedencia: explica el dato sin que nadie tenga que preguntarlo. */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-dash-border bg-dash-control/50 px-3 py-2">
+      {/*
+        * Nota de procedencia: explica el dato sin que nadie tenga que preguntarlo.
+        *
+        * El `order` no es decorativo. Bajo `sm` los bloques se reordenan a mano,
+        * y un hijo sin `order` vale 0, o sea que se va delante de todos: esta
+        * nota aparecía arriba del embarque, antes incluso de saber cuál era. Al
+        * numerar por `order`, los que no se numeran no se quedan en su sitio.
+        */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-dash-border bg-dash-control/50 px-3 py-2 max-sm:order-5">
         <p className="flex min-w-0 items-center gap-2 text-[11px] leading-snug text-dash-muted">
           <Icon icon="lucide:info" width={13} height={13} className="shrink-0 text-dash-neon" aria-hidden />
           <span className="min-w-0">{tr.notaAis}</span>

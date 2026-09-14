@@ -275,6 +275,9 @@ export function NavitrackFleet({
     haceMinutos: tr.haceMinutos,
     haceHoras: tr.haceHoras,
     haceDias: tr.haceDias,
+    haceUnMinuto: tr.haceUnMinuto,
+    haceUnaHora: tr.haceUnaHora,
+    haceUnDia: tr.haceUnDia,
   };
 
   return (

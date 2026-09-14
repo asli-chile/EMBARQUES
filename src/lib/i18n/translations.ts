@@ -2801,8 +2801,11 @@ export const translations = {
       ultimaActualizacion: "Última actualización",
       haceMenosDeUnMinuto: "hace menos de un minuto",
       haceMinutos: "hace {{n}} minutos",
+      haceUnMinuto: "hace un minuto",
       haceHoras: "hace {{n}} horas",
+      haceUnaHora: "hace una hora",
       haceDias: "hace {{n}} días",
+      haceUnDia: "hace un día",
 
       posicionReal: "AIS real",
       posicionEstimada: "Posición estimada",
@@ -5907,8 +5910,11 @@ export const translations = {
       ultimaActualizacion: "Last update",
       haceMenosDeUnMinuto: "less than a minute ago",
       haceMinutos: "{{n}} minutes ago",
+      haceUnMinuto: "a minute ago",
       haceHoras: "{{n}} hours ago",
+      haceUnaHora: "an hour ago",
       haceDias: "{{n}} days ago",
+      haceUnDia: "a day ago",
 
       posicionReal: "Live AIS",
       posicionEstimada: "Estimated position",

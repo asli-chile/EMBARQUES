@@ -51,6 +51,10 @@ export type RelativoTextos = {
   haceMinutos: string;
   haceHoras: string;
   haceDias: string;
+  /* Singulares: sin ellos la pantalla decía "hace 1 horas". */
+  haceUnMinuto?: string;
+  haceUnaHora?: string;
+  haceUnDia?: string;
 };
 
 /** "hace 42 minutos". Usa las claves traducidas, no una librería aparte. */
@@ -58,9 +62,28 @@ export function fmtRelativo(d: Date | null, textos: RelativoTextos, now = new Da
   if (!d) return null;
   const diff = now.getTime() - d.getTime();
   if (diff < 60_000) return textos.haceMenosDeUnMinuto;
-  if (diff < HOUR_MS) return textos.haceMinutos.replace("{{n}}", String(Math.floor(diff / 60_000)));
-  if (diff < DAY_MS) return textos.haceHoras.replace("{{n}}", String(Math.floor(diff / HOUR_MS)));
-  return textos.haceDias.replace("{{n}}", String(Math.floor(diff / DAY_MS)));
+
+  /*
+   * Una unidad se dice en singular.
+   *
+   * El plural fijo delataba que el texto lo arma una plantilla —"hace 1
+   * horas"—, y en una pantalla que se muestra a clientes eso se nota. Los
+   * singulares son opcionales para que un idioma que no los distinga pueda
+   * omitirlos y caer al plural.
+   */
+  if (diff < HOUR_MS) {
+    const min = Math.floor(diff / 60_000);
+    if (min === 1 && textos.haceUnMinuto) return textos.haceUnMinuto;
+    return textos.haceMinutos.replace("{{n}}", String(min));
+  }
+  if (diff < DAY_MS) {
+    const horas = Math.floor(diff / HOUR_MS);
+    if (horas === 1 && textos.haceUnaHora) return textos.haceUnaHora;
+    return textos.haceHoras.replace("{{n}}", String(horas));
+  }
+  const dias = Math.floor(diff / DAY_MS);
+  if (dias === 1 && textos.haceUnDia) return textos.haceUnDia;
+  return textos.haceDias.replace("{{n}}", String(dias));
 }
 
 /** Millas náuticas con separador de miles y sin decimales. */
