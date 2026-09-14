@@ -432,6 +432,20 @@ Los ítems se declaran en `src/lib/site.ts`, se filtran por rol en
 `src/components/layout/AppIconRail.tsx` (iconos siempre visibles, etiquetas al
 expandir). El ícono de cada ítem sale de `src/lib/ui/sidebarIcons.ts`.
 
+**En teléfono el rail no existe** (`hidden md:flex`): esos 64 px son el 16 % del
+ancho y sus etiquetas aparecen al pasar el mouse, gesto que ahí no ocurre. La
+navegación la lleva `AppMobileNav.tsx`, un panel deslizante que se abre desde el
+botón del header y usa **los mismos ítems y el mismo filtrado por rol**; si
+divergieran, alguien vería en el teléfono un módulo que en el escritorio no
+tiene. El header, además, deja a la vista solo notificaciones y cuenta: tema,
+idioma, "ver como" y contadores viven dentro del panel.
+
+Todo el contenido de módulo va envuelto en `ModuleErrorBoundary`. Sin esa
+barrera, un error de render en cualquier pantalla desmonta el árbol entero y
+deja la aplicación en blanco —sin header, sin menú y sin mensaje—, que es
+indistinguible de "no cargó". La ruta hace de llave de reinicio: navegar es el
+reintento.
+
 ```typescript
 {
   labelKey: "claveDeTraducciones",
