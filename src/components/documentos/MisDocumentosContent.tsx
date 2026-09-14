@@ -920,7 +920,7 @@ export function MisDocumentosContent() {
           ? "border-emerald-400/50 bg-emerald-500/10"
           : "border-dash-neon/40"
       }`}>
-        <div className="flex items-start gap-3 px-4 py-3.5">
+        <div className="flex items-start gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-3.5">
           {/*
             * Contenedor, no un icono de progreso.
             *
@@ -958,23 +958,23 @@ export function MisDocumentosContent() {
               * propia: la tarjeta ya es una superficie, y meter otra dentro
               * añade un borde que no separa nada nuevo.
               */}
-            <div className="mt-3 grid grid-cols-4 gap-x-2.5 border-t border-dash-border pt-2.5">
+            <div className="mt-2.5 grid grid-cols-4 gap-x-2 border-t border-dash-border pt-2.5">
               <div className="min-w-0">
                 <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colBooking}</p>
-                <p className="truncate font-mono text-[12px] font-bold text-dash-fg">{operacionActual.booking || "—"}</p>
+                <p className="truncate text-[11.5px] font-bold tabular-nums text-dash-fg sm:text-[12px]">{operacionActual.booking || "—"}</p>
               </div>
-              <div className="min-w-0 border-l border-dash-border pl-2.5">
+              <div className="min-w-0 border-l border-dash-border pl-2">
                 <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colContenedor}</p>
-                <p className="truncate font-mono text-[12px] font-bold text-dash-fg">{operacionActual.contenedor || "—"}</p>
+                <p className="truncate text-[11.5px] font-bold tabular-nums text-dash-fg sm:text-[12px]">{operacionActual.contenedor || "—"}</p>
               </div>
-              <div className="min-w-0 border-l border-dash-border pl-2.5">
+              <div className="min-w-0 border-l border-dash-border pl-2">
                 <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colNaviera}</p>
-                <p className="truncate text-[12px] font-bold text-dash-fg">{operacionActual.naviera || "—"}</p>
+                <p className="truncate text-[11.5px] font-bold text-dash-fg sm:text-[12px]">{operacionActual.naviera || "—"}</p>
               </div>
-              <div className="min-w-0 border-l border-dash-border pl-2.5">
+              <div className="min-w-0 border-l border-dash-border pl-2">
                 <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colRuta}</p>
                 <p
-                  className="truncate text-[12px] font-bold text-dash-fg"
+                  className="truncate text-[11.5px] font-bold text-dash-fg sm:text-[12px]"
                   title={`${operacionActual.pol || "—"} → ${operacionActual.pod || "—"}`}
                 >
                   {operacionActual.pol || "—"} → {operacionActual.pod || "—"}
@@ -1007,7 +1007,7 @@ export function MisDocumentosContent() {
           </div>
         </div>
 
-        <div className="px-4 pb-3.5">
+        <div className="px-3 pb-3 sm:px-4 sm:pb-3.5">
             <div
               className={`flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/60 p-3 ${
                 progressPct === 100 ? "estado--ok" : docsCompletados > 0 ? "estado--curso" : "estado--espera"
@@ -1165,7 +1165,7 @@ export function MisDocumentosContent() {
           </div>
         </div>
 
-        <div className="relative z-10 flex-1 min-h-0 w-full overflow-hidden p-2 sm:p-2.5">
+        <div className="relative z-10 min-h-0 w-full flex-1 overflow-hidden p-1.5 sm:p-2.5">
           <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0 w-full">
 
             {/* Columna operaciones */}
