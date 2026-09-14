@@ -1,4 +1,5 @@
 import { Header } from "./Header";
+import { ModuleErrorBoundary } from "./ModuleErrorBoundary";
 import { ViewAsBanner } from "./ViewAsControl";
 import { AppIconRail } from "./AppIconRail";
 import { ConfigGuard } from "./ConfigGuard";
@@ -383,7 +384,13 @@ function AppChromeFrame({
           className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
           style={topPad > 0 ? { paddingTop: topPad } : undefined}
         >
-          {children}
+          {/*
+            * Sin esta barrera, un error de render en cualquier módulo desmonta
+            * el árbol entero y deja la pantalla en blanco: ni header, ni menú,
+            * ni una palabra de qué pasó. La ruta hace de llave de reinicio, así
+            * que cambiar de pantalla ya es el reintento.
+            */}
+          <ModuleErrorBoundary resetKey={pathname}>{children}</ModuleErrorBoundary>
         </div>
       </div>
     </div>
