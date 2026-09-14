@@ -2049,24 +2049,6 @@ export function MisReservasContent() {
         </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            <div className="flex items-center rounded-lg border border-dash-border bg-dash-control/80 p-0.5">
-              <button
-                type="button"
-                onClick={() => setViewMode("cards")}
-                title={tr.viewCards}
-                className={`rounded-md px-2.5 py-1.5 transition-all ${viewMode === "cards" ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40" : "border border-transparent text-dash-muted hover:text-dash-fg"}`}
-              >
-                <Icon icon="lucide:layout-grid" width={14} height={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("table")}
-                title={tr.viewTable}
-                className={`rounded-md px-2.5 py-1.5 transition-all ${viewMode === "table" ? "bg-dash-neon/25 text-dash-fg border border-dash-neon/40" : "border border-transparent text-dash-muted hover:text-dash-fg"}`}
-              >
-                <Icon icon="lucide:list" width={14} height={14} />
-              </button>
-            </div>
             <a
               href={withBase("/reservas/papelera")}
               className="dash-control rounded-lg p-2 text-dash-muted hover:text-dash-fg"
@@ -2104,6 +2086,65 @@ export function MisReservasContent() {
               </button>
             )}
           </div>
+          {/*
+            * Cliente, naviera y estado, a la vista.
+            *
+            * Eran los tres primeros del panel plegado, así que filtrar por lo
+            * más habitual costaba abrir, elegir y cerrar. El botón de filtros se
+            * queda con el resto —especie, nave, destino, transporte, fechas—,
+            * que se usan de vez en cuando.
+            *
+            * Bajo lg vuelven al panel: en esa anchura no caben tres desplegables
+            * más el buscador sin dejar a todos ilegibles.
+            */}
+          <select
+            value={clienteFilter}
+            onChange={(e) => setClienteFilter(e.target.value)}
+            aria-label={tr.colClient}
+            className={`dash-control hidden shrink-0 rounded-lg border px-2.5 py-2 text-sm lg:block ${
+              clienteFilter ? "border-dash-neon/50 text-dash-fg" : "border-dash-border text-dash-muted"
+            } ${isCliente ? "!hidden" : ""}`}
+          >
+            <option value="">{tr.allClients}</option>
+            {clientes.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={navieraFilter}
+            onChange={(e) => setNavieraFilter(e.target.value)}
+            aria-label={tr.colCarrier}
+            className={`dash-control hidden shrink-0 rounded-lg border px-2.5 py-2 text-sm lg:block ${
+              navieraFilter ? "border-dash-neon/50 text-dash-fg" : "border-dash-border text-dash-muted"
+            }`}
+          >
+            <option value="">{tr.allCarriers}</option>
+            {navieras.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={estadoFilter}
+            onChange={(e) => setEstadoFilter(e.target.value)}
+            aria-label={tr.colStatus}
+            className={`dash-control hidden shrink-0 rounded-lg border px-2.5 py-2 text-sm lg:block ${
+              estadoFilter ? "border-dash-neon/50 text-dash-fg" : "border-dash-border text-dash-muted"
+            }`}
+          >
+            <option value="">{tr.allStates}</option>
+            {estados.map((e) => (
+              <option key={e} value={e!}>
+                {etiquetaEstado(e)}
+              </option>
+            ))}
+          </select>
+
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`inline-flex items-center gap-1.5 px-2.5 py-2 border rounded-lg text-sm font-semibold transition-colors shrink-0 ${
@@ -2113,7 +2154,7 @@ export function MisReservasContent() {
             }`}
           >
             <Icon icon="lucide:sliders-horizontal" width={13} height={13} />
-            <span className="hidden sm:inline">{tr.filters}</span>
+            <span className="hidden sm:inline">{tr.masFiltros}</span>
             {activeFiltersCount > 0 && (
               <span className="min-w-4 h-4 px-1 text-[10px] font-bold bg-dash-neon/25 text-white rounded-full flex items-center justify-center">{activeFiltersCount}</span>
             )}
@@ -2143,6 +2184,41 @@ export function MisReservasContent() {
           >
             <Icon icon="lucide:refresh-cw" width={14} height={14} />
           </button>
+
+        {/*
+            * Tabla o tarjetas, junto a los filtros.
+            *
+            * Es una forma de ver la misma lista, así que pertenece a la barra
+            * que la acota, no al bloque de acciones del embarque.
+            */}
+          <div className="ml-auto flex shrink-0 items-center rounded-lg border border-dash-border bg-dash-control/80 p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              title={tr.viewTable}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-all ${
+                viewMode === "table"
+                  ? "border border-dash-neon/40 bg-dash-neon/25 text-dash-fg"
+                  : "border border-transparent text-dash-muted hover:text-dash-fg"
+              }`}
+            >
+              <Icon icon="lucide:table-2" width={14} height={14} aria-hidden />
+              <span className="hidden sm:inline">{tr.viewTable}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("cards")}
+              title={tr.viewCards}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-semibold transition-all ${
+                viewMode === "cards"
+                  ? "border border-dash-neon/40 bg-dash-neon/25 text-dash-fg"
+                  : "border border-transparent text-dash-muted hover:text-dash-fg"
+              }`}
+            >
+              <Icon icon="lucide:layout-grid" width={14} height={14} aria-hidden />
+              <span className="hidden sm:inline">{tr.viewCards}</span>
+            </button>
+          </div>
         </div>
 
         {/* Barra de selección */}
@@ -2173,6 +2249,7 @@ export function MisReservasContent() {
         )}
 
         {/* Panel de filtros */}
+
         {showFilters && (
           <div className="px-3 sm:px-4 py-2.5 border-t border-dash-border bg-dash-control/70 space-y-2">
             {/* Fila 1: Estado, Cliente, Naviera, Especie, Nave */}
