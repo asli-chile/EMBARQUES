@@ -138,6 +138,14 @@ const GRUPOS_DOCUMENTO = [
   },
 ] as const;
 
+/**
+ * Tipos retirados de la pantalla.
+ *
+ * Se filtran en vez de borrarlos del catálogo: la columna y el histórico siguen
+ * en la base, así que reponerlos es quitar una línea de acá.
+ */
+const TIPOS_FUERA: readonly string[] = ["SOLICITUD_RESERVA"];
+
 const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
@@ -167,15 +175,19 @@ export function MisDocumentosContent() {
   const tr = t.misDocumentos;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   /*
-   * Tipos retirados de la pantalla.
+   * Los tipos visibles, memorizados.
    *
-   * Se filtran en vez de borrarlos del catálogo: la columna y el histórico
-   * siguen existiendo en la base, así que volver a mostrarlos es quitar una
-   * línea. Hoy no hay ningún archivo cargado de estos tipos.
+   * No es una optimización: de esta lista cuelgan un Set, las funciones de
+   * carga y los efectos que llaman a setState. Si se recalcula en cada render
+   * —y `.filter()` devuelve un array nuevo siempre— esa cadena se dispara sola
+   * y React corta con "Maximum update depth exceeded". Antes funcionaba porque
+   * era la constante tal cual, que no cambia de referencia.
    */
-  const TIPOS_FUERA: readonly string[] = ["SOLICITUD_RESERVA"];
-  const visibleTipos = (isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO).filter(
-    (t) => !TIPOS_FUERA.includes(t),
+  const visibleTipos = useMemo(
+    () => (isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO).filter(
+      (t) => !TIPOS_FUERA.includes(t),
+    ),
+    [isCliente],
   );
   const visibleTiposSet = useMemo(() => new Set<string>(visibleTipos), [visibleTipos]);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
