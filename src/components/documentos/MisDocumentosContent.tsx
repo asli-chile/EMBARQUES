@@ -1374,14 +1374,59 @@ export function MisDocumentosContent() {
           <span className="sr-only">{tr.acciones}</span>
         </div>
 
-        <div className="divide-y divide-dash-border/60">
-          {(etapaActiva === "todos"
-            ? visibleTipos
-            : ((GRUPOS_DOCUMENTO.find((g) => g.id === etapaActiva)?.tipos ?? []) as readonly string[]).filter(
-                (t) => (visibleTipos as readonly string[]).includes(t),
-              )
-          ).map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
-        </div>
+        {/*
+          * En "Todos", las filas se agrupan por etapa con su encabezado.
+          *
+          * Once documentos seguidos se leen como una lista sin forma: la
+          * etiqueta de cada fila dice a qué etapa pertenece, pero hay que
+          * leerlas una por una para reconstruir el conjunto. Con el encabezado
+          * y su cuenta, el reparto se ve sin leer ninguna.
+          *
+          * Dentro de una pestaña concreta no hace falta: ahí todas son de la
+          * misma etapa y el encabezado sería repetir el nombre de la pestaña.
+          */}
+        {etapaActiva === "todos" ? (
+          GRUPOS_DOCUMENTO.map((grupo) => {
+            const tipos = (grupo.tipos as readonly string[]).filter((t) =>
+              (visibleTipos as readonly string[]).includes(t),
+            );
+            if (tipos.length === 0) return null;
+            const recibidos = tipos.filter(
+              (t) => documentosPorTipo.has(t as TipoDocumento) && !isTipoMarcadoNoAplica(operacionActual, t),
+            ).length;
+            const exigibles = tipos.filter((t) => !isTipoMarcadoNoAplica(operacionActual, t)).length;
+
+            return (
+              <div key={grupo.id}>
+                <div
+                  className="flex items-center gap-2 border-b border-dash-border/60 bg-dash-control/30 px-3 py-1.5"
+                  style={{ "--grupo": grupo.tono } as React.CSSProperties}
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: "var(--grupo)" }}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-wide text-dash-muted">
+                    {grupo.label}
+                  </span>
+                  <span className="shrink-0 text-[12px] font-bold tabular-nums text-dash-muted">
+                    {recibidos}/{exigibles}
+                  </span>
+                </div>
+                <div className="divide-y divide-dash-border/60">
+                  {tipos.map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="divide-y divide-dash-border/60">
+            {((GRUPOS_DOCUMENTO.find((g) => g.id === etapaActiva)?.tipos ?? []) as readonly string[])
+              .filter((t) => (visibleTipos as readonly string[]).includes(t))
+              .map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
+          </div>
+        )}
       </div>
     </div>
   ) : null;
@@ -1610,7 +1655,13 @@ export function MisDocumentosContent() {
                      * apilarse: cuatro chips en dos filas empujan la lista, que
                      * es lo que se vino a ver.
                      */
-                    <div className="-mx-1 flex w-full shrink-0 items-center gap-1.5 overflow-x-auto px-1 pb-0.5 md:w-auto md:overflow-visible">
+                    /*
+                      * El relleno vertical no es estético: un contenedor con
+                      * overflow recorta lo que sobresale, y el borde y el anillo
+                      * del chip activo sobresalen. Sin este aire se veían
+                      * cortados por arriba y por abajo.
+                      */
+                    <div className="-mx-1 flex w-full shrink-0 items-center gap-1.5 overflow-x-auto px-1 py-1 md:w-auto md:overflow-visible">
                       {(
                         [
                           ["todos", tr.filtroTodos, ""],
