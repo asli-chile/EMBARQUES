@@ -875,13 +875,21 @@ export function MisDocumentosContent() {
 
     return (
       <div key={tipo} className={`relative ${estadoFila.clase}`}>
-        <div className="flex items-center gap-3 px-3 py-1.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
+        <div className="flex items-center gap-3 px-3 py-1 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
           <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
+            {/*
+              * Un solo icono para todos.
+              *
+              * Cada tipo tenía el suyo —barco, hoja, globo— y a tamaño de fila
+              * no se distinguen: parecían ruido de colores distintos delante de
+              * un nombre que ya dice qué es. Lo que sí hay que distinguir de un
+              * vistazo es el estado, y ese tiene su chip.
+              */}
             <Icon
-              icon={meta.icon}
-              width={17}
-              height={17}
-              className="shrink-0 text-dash-muted"
+              icon="lucide:file-text"
+              width={16}
+              height={16}
+              className="shrink-0 text-dash-muted/70"
               aria-hidden
             />
             <span className="min-w-0 truncate text-[13.5px] font-medium text-dash-fg">
@@ -995,7 +1003,7 @@ export function MisDocumentosContent() {
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
             >
               <Icon
-                icon={isUploading ? "lucide:loader-2" : "lucide:more-vertical"}
+                icon={isUploading ? "lucide:loader-2" : "lucide:more-horizontal"}
                 width={16}
                 height={16}
                 className={isUploading ? "animate-spin" : ""}
@@ -1406,26 +1414,22 @@ export function MisDocumentosContent() {
             const exigibles = tipos.filter((t) => !isTipoMarcadoNoAplica(operacionActual, t)).length;
 
             return (
-              <div key={grupo.id}>
-                <div
-                  className="flex items-center gap-2 border-b border-dash-border/60 bg-dash-control/30 px-3 py-1.5"
-                  style={{ "--grupo": grupo.tono } as React.CSSProperties}
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: "var(--grupo)" }}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-wide text-dash-muted">
-                    {grupo.label}
-                  </span>
-                  <span className="shrink-0 text-[12px] font-bold tabular-nums text-dash-muted">
-                    {recibidos}/{exigibles}
-                  </span>
-                </div>
-                <div className="divide-y divide-dash-border/60">
-                  {tipos.map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
-                </div>
+              /*
+               * Los grupos se separan con una línea, sin encabezado.
+               *
+               * La etiqueta de etapa va en cada fila, así que un título encima
+               * repetía la misma palabra cuatro veces seguidas y sumaba una
+               * línea por grupo. La línea basta para que el bloque se lea como
+               * bloque, y la lista queda del alto que cabe en pantalla.
+               *
+               * El contador de cada etapa no se pierde: vive en su pestaña.
+               */
+              <div
+                key={grupo.id}
+                className="divide-y divide-dash-border/60 border-t-2 border-dash-neon/25 first:border-t-0"
+                aria-label={`${grupo.label}: ${recibidos}/${exigibles}`}
+              >
+                {tipos.map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
               </div>
             );
           })
