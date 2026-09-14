@@ -1,5 +1,14 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
----
+/*
+ * El módulo de seguimiento anterior vivía acá. Lo reemplazó NaviTrack.
+ *
+ * La ruta se conserva solo como redirección: estuvo enlazada desde el inicio y
+ * en correos, y un 404 le diría a alguien que el seguimiento desapareció
+ * cuando en realidad cambió de lugar. A diferencia de antes, ya no es pública:
+ * quien no tenga sesión terminará en el login, que es la decisión tomada al
+ * hacer el cambio.
+ */
+import { withBase } from "@/lib/basePath";
 
-<BaseLayout title="Tracking - EMBARQUES" />
+return Astro.redirect(withBase("/navitrack"), 302);
+---

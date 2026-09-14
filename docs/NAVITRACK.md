@@ -11,13 +11,26 @@ Complementa a [ESTILOS-VISUALES.md](./ESTILOS-VISUALES.md) (formas y color) y a
 
 ## 1. La regla
 
-> **`/tracking` está en producción. NaviTrack se construye al lado, no encima.**
+> **NaviTrack es el módulo de seguimiento. Ya no hay otro.**
 
-`/tracking` ([TrackingContent.tsx](../src/components/tracking/TrackingContent.tsx))
-es el módulo que los usuarios ya usan. NaviTrack es la experiencia nueva y vive
-en archivos propios, con ruta propia y acceso propio. **Ningún cambio de
-NaviTrack debe tocar `src/components/tracking/`.** Si algo de ahí hace falta, se
-copia o se extrae a un módulo compartido — nunca se modifica en el lugar.
+Se construyó al lado de `/tracking` para no arriesgar lo que estaba en
+producción, y el **13-09-2026** lo reemplazó: `src/components/tracking/` y
+`/api/shiptracking/*` se eliminaron, y `/tracking` quedó como una redirección a
+`/navitrack`. Lo único que se rescató de ahí es la carga manual de posición,
+hoy [NavitrackCoordsManual.tsx](../src/components/navitrack/NavitrackCoordsManual.tsx).
+
+Tres consecuencias que conviene tener presentes:
+
+- **El seguimiento dejó de ser público.** `/tracking` se podía abrir sin
+  sesión; NaviTrack no, porque todo lo que muestra sale de `operaciones` vía
+  RLS. Fue una decisión, no un efecto secundario.
+- **Lo usa toda la empresa**, no solo el superadmin. Ver §6 bis.
+- **Se perdió la búsqueda libre de buques por nombre.** El módulo viejo dejaba
+  consultar cualquier nombre contra el proveedor; NaviTrack resuelve el buque
+  por IMO/MMSI del catálogo `naves`, que es más confiable y más barato. El
+  Panel de Rastreo **no** la reemplaza: su botón de buscar IMO opera sobre una
+  nave que ya está en el catálogo. Para consultar un buque que no está ahí, hoy
+  hay que darlo de alta primero.
 
 La segunda regla, que define el tono del módulo:
 
@@ -41,6 +54,7 @@ src/components/navitrack/
 ├── NavitrackMap.tsx         # Mapa: ruta recorrida/restante, puertos, buque
 ├── navitrack-model.ts       # Geodesia, posición y viaje (puro, sin React)
 ├── navitrack-estado.ts      # Etapa, ETA comparada, alertas y timeline (puro)
+├── NavitrackCoordsManual.tsx # Posición a mano, heredada del módulo anterior
 ├── navitrack-format.ts      # Fechas, distancias y tiempos relativos
 └── index.ts
 
@@ -311,24 +325,47 @@ que lo llamara gastaría créditos ajenos.
 
 ---
 
-## 6 bis. Las dos vistas: personal y cliente
+## 6 bis. Quién entra, y con cuánto poder
 
-`/navitrack` tiene dos públicos en la misma pantalla. El personal de ASLI lo
-opera; el cliente entra a seguir su carga y **no decide nada**.
+Tres permisos independientes, porque no son el mismo eje. Se resuelven en
+`NavitrackContent.tsx` y se llaman igual en todo el módulo:
 
-La diferencia no se escribe en el JSX: viaja como `NavitrackVista`
-(`"interna" | "cliente"`) hasta `navitrack-estado.ts`, que es donde se define
-qué se muestra. Así etapa, alerta y color no pueden contradecirse entre sí.
+| | `puedeVer` | `puedeDecidir` | `puedeGastar` |
+|---|---|---|---|
+| superadmin | todos | sí | **sí** |
+| admin | todos | sí | no |
+| ejecutivo | los de sus empresas | sí, sobre lo suyo | no |
+| operador | todos | no | no |
+| cliente | los de sus empresas | no | no |
+
+- **`puedeVer`** no decide qué embarques se ven: eso lo hace RLS sobre
+  `operaciones`. La pantalla solo dibuja lo que la base devolvió.
+- **`puedeDecidir`** es resolver una recalada o confirmar un transbordo. Es una
+  afirmación de ASLI sobre el viaje y sale en un correo a su nombre.
+- **`puedeGastar`** es consultar al proveedor AIS. Cada llamada es un crédito y
+  el plan es uno para toda la empresa: quién lo gasta es una decisión, no un
+  permiso más. Por eso un ejecutivo decide sobre el viaje pero no consulta, y
+  su posición sale de la última lectura guardada.
+
+Cuando un ejecutivo registra un transbordo hacia una nave sin IMO, el endpoint
+**guarda igual** y deja la nave sin identificador (`SIN_IDENTIFICADOR_PENDIENTE`),
+en vez de rechazar la decisión: perder el dato por no poder pagar un crédito
+sería el peor de los dos resultados. La ventana lo advierte antes de guardar.
+
+### Además, el cliente ve menos
+
+`modo` (`NavitrackVista`: `"interna" | "cliente"`) no es permiso sino criterio
+de contenido, y viaja hasta `navitrack-estado.ts` para que etapa, alerta y color
+no puedan contradecirse.
 
 | | Personal | Cliente |
 |---|---|---|
-| Embarques | Todos | Los de sus empresas, por RLS |
 | Sospecha de transbordo | La ve y la resuelve | **No la ve** |
 | Transbordo confirmado | Sí | Sí: cadena de tramos e historia del viaje |
-| Recaladas | Todas, y las decide | Solo las ya resueltas |
-| Posición AIS | Consulta al proveedor | La última guardada, sin gastar |
-| Pestaña Escalas | Sí | No |
-| Panel de Rastreo | Sí | No |
+| Recaladas | Todas | Solo las ya resueltas |
+| Alerta "puerto sin ubicación" | Sí | No: es para quien mantiene el catálogo |
+| Pestaña Escalas y Panel de Rastreo | Solo quien gasta | No |
+| Título del módulo | NaviTrack | Seguimiento de embarques |
 
 **Por qué el cliente no ve la sospecha.** La detección compara el destino que
 la tripulación escribe a mano contra el POD (§6). Acierta lo suficiente para
@@ -344,14 +381,18 @@ flota, refrescada por el chequeo diario sin que nadie tenga que entrar.
 
 Tres capas, y la de pantalla es la menos importante:
 
-1. **RLS.** `20260913000004_navitrack_cliente_read.sql` da `SELECT` —y nada
-   más— sobre recaladas, tramos, transbordos y viajes de **sus** operaciones,
+1. **RLS.** `20260913000005_navitrack_staff_write.sql` da escritura a admin
+   (todas) y ejecutivo (las de sus empresas, con la misma condición que
+   `operaciones`). `20260913000004_navitrack_cliente_read.sql` da `SELECT` —y
+   nada más— sobre recaladas, tramos, transbordos y viajes de **sus**
+   operaciones,
    resolviendo la pertenencia con `private.get_cliente_nombres_for_user()`, la
    misma función que usan `operaciones` y los documentos. De
    `navitrack_ais_lecturas` solo se abren las filas de tipo `posicion`: no
    cuelgan de una operación y dónde navega un buque es información pública.
-2. **Los endpoints.** Los cinco de `/api/navitrack/*` siguen exigiendo
-   superadmin. El cliente no los llama; si los llamara, 403.
+2. **Los endpoints.** `recalada` acepta a los tres decisores y solo el
+   superadmin gasta; `vessel`, `escalas`, `rastreo` y `actualizar` siguen
+   exigiendo superadmin, porque todos terminan en el proveedor.
 3. **La pantalla.** `soloLectura` apaga acciones y `modo` decide qué se muestra.
 
 Al agregar algo que escriba o gaste, la pregunta es la 1 y la 2, no la 3.

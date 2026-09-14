@@ -72,13 +72,12 @@ export const siteConfig = {
         { labelKey: "navesTracking", id: "naves-tracking", href: "/configuracion/naves-tracking", superadminOnly: true },
       ],
     },
-    { labelKey: "tracking", id: "tracking", href: "/tracking" },
     /*
-     * NaviTrack lo ven el superadmin, que lo opera, y el cliente, que sigue su
-     * carga en modo lectura. El resto del personal sigue con /tracking hasta que
-     * el módulo salga de desarrollo.
+     * Seguimiento. NaviTrack reemplazó al módulo anterior, así que este ítem es
+     * el único: lo ve el personal y también el cliente, que entra en modo
+     * lectura. Cuánto puede hacer cada uno lo resuelve la propia pantalla.
      */
-    { labelKey: "navitrack", id: "navitrack", href: "/navitrack", superadminOnly: true, alsoCliente: true },
+    { labelKey: "navitrack", id: "navitrack", href: "/navitrack", operational: true },
   ],
   authIcon: icons.auth,
   /** Contacto para solicitar usuario y contraseña en la plataforma */

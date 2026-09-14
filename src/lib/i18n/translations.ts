@@ -54,9 +54,7 @@ export const translations = {
       formatosDocumentos: "Formatos de documentos",
       temporadas: "Temporadas",
       navesTracking: "Naves tracking",
-      navitrack: "NaviTrack (en desarrollo)",
-      // El cliente entra al mismo módulo en modo seguimiento: el rótulo interno no le dice nada.
-      seguimiento: "Seguimiento",
+      navitrack: "Seguimiento",
       consignatarios: "Consignatarios",
       usuarios: "Usuarios",
     },
@@ -2550,11 +2548,27 @@ export const translations = {
       deletedCostoExtra: "Costo extra eliminado.",
     },
     navitrack: {
-      title: "NaviTrack (en desarrollo)",
+      title: "NaviTrack",
       subtitle: "Visibilidad de sus embarques, puerta a puerta.",
       // Lo que ve el cliente: su carga, sin el rótulo interno del módulo.
       tituloCliente: "Seguimiento de embarques",
       subtituloCliente: "Dónde va su carga y cuándo llega.",
+      // Posición manual del buque, heredada del módulo de seguimiento anterior.
+      manualCoordsBtn: "Cargar posición del buque",
+      manualModalTitle: "Posición manual en el mapa",
+      manualModalHint: "Grados decimales (WGS84). Si hay posición AIS, el mapa prioriza el AIS.",
+      manualLatLabel: "Latitud",
+      manualLngLabel: "Longitud",
+      manualSave: "Guardar",
+      manualClear: "Quitar posición",
+      manualCancel: "Cerrar",
+      manualInvalid: "Latitud entre -90 y 90; longitud entre -180 y 180. Usa punto o coma decimal.",
+      manualSaved: "Coordenadas guardadas.",
+      manualCleared: "Posición manual eliminada.",
+      manualSaveError: "No se pudo guardar. Revisa permisos o intenta de nuevo.",
+      manualSyncGroup:
+        "Misma nave: se actualizan las operaciones del mismo viaje y las que tienen viaje vacío.",
+      manualSyncSingle: "Sin nombre de nave: solo se actualiza este embarque.",
       loading: "Cargando embarques…",
       loginRequired: "Inicia sesión para continuar.",
       superadminOnly: "Tu cuenta no tiene acceso a este módulo.",
@@ -2731,6 +2745,9 @@ export const translations = {
         "{{nueva}} no está en el catálogo con identificador. Guardar gastará 1 consulta para buscar su IMO y MMSI.",
       recaladaAvisoYaExiste:
         "{{nueva}} ya tiene identificador, así que guardar no cuesta consultas. Desde mañana se deja de seguir a {{anterior}} y se sigue a {{nueva}}.",
+      // Quien no gasta créditos igual registra el transbordo: lo que queda pendiente es el identificador.
+      recaladaAvisoSinCredito:
+        "{{nueva}} no está en el catálogo con identificador. El transbordo se registra igual y su posición será estimada hasta que se le cargue el IMO.",
       recaladaGuardar: "Registrar transbordo",
       recaladaGuardarConCosto: "Registrar y buscar IMO (1 consulta)",
       recaladaGuardadaParada: "{{puerto}} quedó registrada como parada programada.",
@@ -2739,6 +2756,8 @@ export const translations = {
       recaladaConImo: "Se identificó con IMO {{imo}} y ya se está siguiendo.",
       recaladaSinImo:
         "No se pudo identificar la nave, así que la carga queda sin posición hasta cargar su IMO.",
+      recaladaSinImoPendiente:
+        "La nave quedó sin identificador: su posición será estimada hasta que se le cargue el IMO.",
       recaladaErrorGuardar: "No se pudo guardar la decisión.",
       recaladaVerificar: "Verificar",
       mapaAcercarBuque: "Acercar al buque",
@@ -3140,8 +3159,7 @@ export const translations = {
       formatosDocumentos: "Document formats",
       temporadas: "Seasons",
       navesTracking: "Vessel tracking",
-      navitrack: "NaviTrack (in development)",
-      seguimiento: "Tracking",
+      navitrack: "Tracking",
       consignatarios: "Consignees",
       usuarios: "Users",
     },
@@ -5636,12 +5654,27 @@ export const translations = {
       deletedCostoExtra: "Extra cost deleted.",
     },
     navitrack: {
-      title: "NaviTrack (in development)",
+      title: "NaviTrack",
       subtitle: "Visibility of your shipments, door to door.",
       loading: "Loading shipments…",
       loginRequired: "Sign in to continue.",
       tituloCliente: "Shipment tracking",
       subtituloCliente: "Where your cargo is and when it arrives.",
+      manualCoordsBtn: "Set vessel position",
+      manualModalTitle: "Manual position on map",
+      manualModalHint: "Decimal degrees (WGS84). When there is an AIS position, the map prefers AIS.",
+      manualLatLabel: "Latitude",
+      manualLngLabel: "Longitude",
+      manualSave: "Save",
+      manualClear: "Clear position",
+      manualCancel: "Close",
+      manualInvalid: "Latitude must be between -90 and 90; longitude between -180 and 180. Use dot or comma.",
+      manualSaved: "Coordinates saved.",
+      manualCleared: "Manual position cleared.",
+      manualSaveError: "Could not save. Check permissions or try again.",
+      manualSyncGroup:
+        "Same vessel: updates operations with the same voyage and those with a blank voyage.",
+      manualSyncSingle: "No vessel name: only this shipment is updated.",
       superadminOnly: "Your account does not have access to this module.",
       refresh: "Refresh",
       back: "Back",
@@ -5816,6 +5849,8 @@ export const translations = {
         "{{nueva}} is not in the catalog with an identifier. Saving will use 1 query to find its IMO and MMSI.",
       recaladaAvisoYaExiste:
         "{{nueva}} already has an identifier, so saving uses no queries. From tomorrow {{anterior}} is no longer tracked and {{nueva}} is.",
+      recaladaAvisoSinCredito:
+        "{{nueva}} is not in the catalog with an identifier. The transshipment is recorded anyway and its position will be estimated until an IMO is loaded.",
       recaladaGuardar: "Record transshipment",
       recaladaGuardarConCosto: "Record and find IMO (1 query)",
       recaladaGuardadaParada: "{{puerto}} was recorded as a scheduled call.",
@@ -5824,6 +5859,8 @@ export const translations = {
       recaladaConImo: "Identified with IMO {{imo}} and already being tracked.",
       recaladaSinImo:
         "The vessel could not be identified, so the cargo has no position until its IMO is loaded.",
+      recaladaSinImoPendiente:
+        "The vessel has no identifier: its position will be estimated until an IMO is loaded.",
       recaladaErrorGuardar: "The decision could not be saved.",
       recaladaVerificar: "Verify",
       mapaAcercarBuque: "Zoom to vessel",

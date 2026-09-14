@@ -9,12 +9,17 @@
  *   transbordo  la carga cambió de barco; se registra el tramo nuevo y el
  *               seguimiento pasa a la nave siguiente
  *
- * Nadie más que un superadmin decide esto, porque la segunda respuesta cambia
- * qué buque se consulta y por lo tanto en qué se gastan los créditos.
+ * Lo deciden superadmin, admin y ejecutivo. El ejecutivo solo alcanza sus
+ * operaciones, y no porque se compruebe acá: RLS no le deja ver ni escribir
+ * las demás.
+ *
+ * Gastar es otro permiso. La segunda respuesta cambia qué buque se consulta, y
+ * si esa nave no tiene IMO hay que pedírselo al proveedor. Eso lo hace solo el
+ * superadmin; para el resto la decisión se guarda igual y la nave queda
+ * esperando identificador, que es preferible a no poder responder.
  *
  * GET  devuelve lo que la pantalla necesita para preguntar (no gasta nada).
- * POST guarda la decisión. Solo gasta si hay que buscar el IMO de una nave
- *      nueva, y la pantalla lo advierte antes de que se apriete el botón.
+ * POST guarda la decisión.
  */
 import type { APIRoute } from "astro";
 import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
@@ -31,7 +36,10 @@ function json(body: object, status = 200) {
 
 type Sesion = Awaited<ReturnType<typeof createClient>>;
 
-async function exigirSuperadmin(supabase: Sesion) {
+/** Roles que pueden responder qué pasó en un puerto. */
+const DECISORES = ["superadmin", "admin", "ejecutivo"];
+
+async function exigirDecisor(supabase: Sesion) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -42,10 +50,17 @@ async function exigirSuperadmin(supabase: Sesion) {
     .eq("auth_id", user.id)
     .eq("activo", true)
     .single();
-  if (!perfil || String(perfil.rol ?? "").trim() !== "superadmin") {
+  const rol = String(perfil?.rol ?? "").trim();
+  if (!perfil || !DECISORES.includes(rol)) {
     return { ok: false as const, status: 403, code: "FORBIDDEN" };
   }
-  return { ok: true as const, usuarioId: perfil.id as string, authId: user.id };
+  return {
+    ok: true as const,
+    usuarioId: perfil.id as string,
+    authId: user.id,
+    rol,
+    puedeGastar: rol === "superadmin",
+  };
 }
 
 export const prerender = false;
@@ -53,7 +68,7 @@ export const prerender = false;
 /** Lo que la pantalla necesita para preguntar. No gasta créditos. */
 export const GET: APIRoute = async ({ url, cookies }) => {
   const supabase = createClient(cookies);
-  const auth = await exigirSuperadmin(supabase);
+  const auth = await exigirDecisor(supabase);
   if (!auth.ok) return json({ ok: false, code: auth.code }, auth.status);
 
   const operacionId = (url.searchParams.get("op") ?? "").trim();
@@ -97,7 +112,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const supabase = createClient(cookies);
-  const auth = await exigirSuperadmin(supabase);
+  const auth = await exigirDecisor(supabase);
   if (!auth.ok) return json({ ok: false, code: auth.code }, auth.status);
 
   const limite = checkRateLimit(`navitrack-recalada:${auth.authId}`, 20, 60_000);
@@ -362,6 +377,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     await supabase.from("naves").update({ tracking_activo: true }).eq("id", existente.id);
     identificador = { imo: existente.imo, mmsi: existente.mmsi };
     aviso = "YA_TENIA_IMO";
+  } else if (!auth.puedeGastar) {
+    /*
+     * La nave no tiene identificador y quien decidió no gasta créditos.
+     *
+     * El transbordo queda guardado igual —es lo que de verdad importa— y la
+     * nave, sin IMO: hasta que alguien se lo busque, su posición será estimada.
+     * La alternativa era rechazar la decisión, y perder el dato por no poder
+     * pagar un crédito sería el peor de los dos resultados.
+     */
+    aviso = "SIN_IDENTIFICADOR_PENDIENTE";
   } else {
     const [alta] = await resolverNavesSinIdentificador(
       supabase,

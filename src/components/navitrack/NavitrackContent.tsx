@@ -19,6 +19,7 @@ import {
 import { NavitrackShipment, type Escala } from "./NavitrackShipment";
 import { NavitrackRecalada, type NaveCatalogo, type Recalada } from "./NavitrackRecalada";
 import { NavitrackRastreoPanel } from "./NavitrackRastreoPanel";
+import { NavitrackCoordsManual } from "./NavitrackCoordsManual";
 import {
   NAVITRACK_OP_SELECT,
   buildJourney,
@@ -66,23 +67,46 @@ function claveNave(raw: string | null | undefined): string {
 export function NavitrackContent() {
   const { t, locale } = useLocale();
   const tr = t.navitrack as unknown as Record<string, string>;
-  const { user, profile, isSuperadmin, isCliente, isLoading: authLoading } = useAuth();
+  const {
+    user,
+    profile,
+    isSuperadmin,
+    isAdmin,
+    isEjecutivo,
+    isCliente,
+    isStaff,
+    isLoading: authLoading,
+  } = useAuth();
 
   /*
-   * Dos públicos en la misma pantalla.
+   * Quién entra, y con cuánto poder.
    *
-   * El personal de ASLI opera NaviTrack: resuelve recaladas, confirma
-   * transbordos y decide cuándo gastar un crédito del proveedor. El cliente
-   * entra a seguir su carga y no decide nada: ve lo que ya está guardado.
+   * NaviTrack reemplazó al módulo de seguimiento, así que ya no lo mira solo
+   * el superadmin: lo usa toda la empresa y también el cliente. Tres permisos
+   * independientes, porque no son el mismo eje:
    *
-   * `modo` viaja hasta la lógica pura, que es donde se define qué se muestra;
-   * `soloLectura` apaga acciones en la pantalla. La barrera de verdad no es
-   * ninguna de las dos: son las políticas RLS y los endpoints, que siguen
-   * exigiendo superadmin para todo lo que escribe o gasta.
+   * - `puedeVer`     cualquier cuenta con rol activo. QUÉ embarques ve no lo
+   *                  decide esta pantalla sino RLS: el ejecutivo y el cliente
+   *                  solo alcanzan los de sus empresas.
+   * - `puedeDecidir` resolver una recalada o confirmar un transbordo. Es una
+   *                  afirmación de ASLI sobre el viaje y sale en un correo a su
+   *                  nombre, así que la firman superadmin, admin y ejecutivo
+   *                  —este último solo sobre lo suyo, por RLS—. El operador
+   *                  mira; el cliente, menos todavía.
+   * - `puedeGastar`  consultar al proveedor AIS. Cada llamada es un crédito y
+   *                  el plan es uno solo para toda la empresa: quién lo gasta
+   *                  es una decisión, no un permiso más. Se queda en superadmin.
+   *
+   * `modo` es otra cosa: no es permiso sino criterio de qué mostrar, y viaja
+   * hasta la lógica pura para que etapa, alerta y color no se contradigan.
+   *
+   * Nada de esto es una barrera: las de verdad son RLS y los endpoints.
    */
-  const modo: NavitrackVista = isSuperadmin ? "interna" : "cliente";
-  const soloLectura = !isSuperadmin;
-  const puedeVer = isSuperadmin || isCliente;
+  const modo: NavitrackVista = isCliente ? "cliente" : "interna";
+  const puedeVer = isStaff || isCliente;
+  const puedeDecidir = isSuperadmin || isAdmin || isEjecutivo;
+  const puedeGastar = isSuperadmin;
+  const soloLectura = !puedeDecidir;
   const [theme] = useNeonTheme();
   const apiPrefix = useMemo(() => getApiOriginPrefix(), []);
 
@@ -138,6 +162,9 @@ export function NavitrackContent() {
   const [escalas, setEscalas] = useState<Escala[]>([]);
   const [escalasCargando, setEscalasCargando] = useState(false);
   const [escalasEdadH, setEscalasEdadH] = useState<number | null>(null);
+
+  /** Ventana de posición manual del buque, para cuando no hay AIS. */
+  const [coordsAbiertas, setCoordsAbiertas] = useState(false);
 
   const [transbordoGuardando, setTransbordoGuardando] = useState(false);
   const [transbordoError, setTransbordoError] = useState<string | null>(null);
@@ -374,13 +401,13 @@ export function NavitrackContent() {
      * alimenta la tabla de flota—, que el chequeo diario refresca sin que
      * nadie tenga que abrir la pantalla.
      */
-    if (soloLectura) {
+    if (!puedeGastar) {
       const clave = (identSeleccion.mmsi ?? "").trim() || (identSeleccion.imo ?? "").trim();
       setAis(clave ? (aisCache.get(clave) ?? null) : null);
       return;
     }
     void consultarAis(identSeleccion, false);
-  }, [seleccionId, identSeleccion, user, consultarAis, soloLectura, aisCache]);
+  }, [seleccionId, identSeleccion, user, consultarAis, puedeGastar, aisCache]);
 
   /**
    * Escalas del buque.
@@ -419,13 +446,13 @@ export function NavitrackContent() {
   useEffect(() => {
     // El historial de port calls es la consulta más cara del plan y su endpoint
     // exige superadmin: para el cliente la pestaña no existe.
-    if (!seleccionId || !identSeleccion || !user || soloLectura) {
+    if (!seleccionId || !identSeleccion || !user || !puedeGastar) {
       setEscalas([]);
       setEscalasEdadH(null);
       return;
     }
     void cargarEscalas(false);
-  }, [seleccionId, identSeleccion, user, cargarEscalas, soloLectura]);
+  }, [seleccionId, identSeleccion, user, cargarEscalas, puedeGastar]);
 
   /**
    * Recaladas del embarque abierto y catálogo de naves para el selector.
@@ -439,22 +466,23 @@ export function NavitrackContent() {
       return;
     }
     /*
-     * El cliente las lee directo de la base, y solo las que ya se respondieron.
+     * Quien no decide las lee directo de la base.
      *
-     * Dos razones distintas para lo mismo: el endpoint exige superadmin porque
-     * también sirve el catálogo de naves del formulario de decisión, y un
-     * puerto anunciado sin revisar todavía no es parte del viaje —es la
-     * pregunta que ASLI tiene abierta—. Lo que el cliente ve son las escalas
-     * que alguien ya confirmó.
+     * El endpoint sirve además el catálogo de naves del formulario de decisión,
+     * que a esta altura no le sirve a nadie más. La diferencia está en cuáles:
+     * el operador ve el viaje completo, pendientes incluidas, porque trabaja
+     * acá; el cliente solo las que alguien ya respondió, porque un puerto
+     * anunciado sin revisar todavía no es parte del viaje sino la pregunta que
+     * ASLI tiene abierta.
      */
-    if (soloLectura) {
+    if (!puedeDecidir) {
       if (!supabase) return;
-      const { data } = await supabase
+      let q = supabase
         .from("navitrack_recaladas")
         .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas")
-        .eq("operacion_id", seleccionId)
-        .in("estado", ["parada_programada", "transbordo"])
-        .order("anunciado_at");
+        .eq("operacion_id", seleccionId);
+      if (modo === "cliente") q = q.in("estado", ["parada_programada", "transbordo"]);
+      const { data } = await q.order("anunciado_at");
       setRecaladas((data ?? []) as Recalada[]);
       setCatalogoNaves([]);
       return;
@@ -469,7 +497,7 @@ export function NavitrackContent() {
     } catch {
       setRecaladas([]);
     }
-  }, [apiPrefix, seleccionId, soloLectura, supabase]);
+  }, [apiPrefix, seleccionId, puedeDecidir, modo, supabase]);
 
   useEffect(() => {
     if (!user) return;
@@ -701,6 +729,76 @@ export function NavitrackContent() {
     [supabase, seleccion, ais, profile, tr],
   );
 
+  /* ---------------------------- Posición manual ---------------------------- */
+
+  /*
+   * Cuando el buque no emite AIS, alguien pone la posición a mano.
+   *
+   * Viene del módulo de seguimiento anterior y se conserva tal cual, RPC
+   * incluida: `sync_operaciones_tracking_manual` propaga la coordenada a las
+   * demás operaciones del mismo buque y viaje, que es lo correcto —una posición
+   * es del barco, no del contenedor— y ahorra cargarla embarque por embarque.
+   * Si la RPC falla o la operación no tiene nave, se escribe solo esta fila.
+   */
+  const guardarCoords = useCallback(
+    async (lat: number, lng: number) => {
+      if (!supabase || !seleccion) return { ok: false as const, message: tr.manualSaveError };
+      if (String(seleccion.nave ?? "").trim()) {
+        const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
+          p_nave: seleccion.nave ?? "",
+          p_viaje: seleccion.viaje ?? "",
+          p_lat: lat,
+          p_lng: lng,
+          p_clear: false,
+        });
+        if (!error) {
+          await cargar();
+          return { ok: true as const };
+        }
+      }
+      const { error } = await supabase
+        .from("operaciones")
+        .update({
+          tracking_manual_lat: lat,
+          tracking_manual_lng: lng,
+          tracking_manual_updated_at: new Date().toISOString(),
+        })
+        .eq("id", seleccion.id);
+      if (error) return { ok: false as const, message: tr.manualSaveError };
+      await cargar();
+      return { ok: true as const };
+    },
+    [supabase, seleccion, cargar, tr],
+  );
+
+  const borrarCoords = useCallback(async () => {
+    if (!supabase || !seleccion) return { ok: false as const, message: tr.manualSaveError };
+    if (String(seleccion.nave ?? "").trim()) {
+      const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
+        p_nave: seleccion.nave ?? "",
+        p_viaje: seleccion.viaje ?? "",
+        p_lat: 0,
+        p_lng: 0,
+        p_clear: true,
+      });
+      if (!error) {
+        await cargar();
+        return { ok: true as const };
+      }
+    }
+    const { error } = await supabase
+      .from("operaciones")
+      .update({
+        tracking_manual_lat: null,
+        tracking_manual_lng: null,
+        tracking_manual_updated_at: null,
+      })
+      .eq("id", seleccion.id);
+    if (error) return { ok: false as const, message: tr.manualSaveError };
+    await cargar();
+    return { ok: true as const };
+  }, [supabase, seleccion, cargar, tr]);
+
   /* --------------------------------- Render -------------------------------- */
 
   if (authLoading) return <ModuleSoftFallback chrome="dashboard" />;
@@ -743,7 +841,7 @@ export function NavitrackContent() {
 
             {/* Panel de Rastreo: créditos, gasto y lista blanca de naves. Es
                 administración del proveedor, no seguimiento de una carga. */}
-            {!soloLectura && (
+            {puedeGastar && (
             <button
               type="button"
               onClick={() => setPanelRastreo(true)}
@@ -781,9 +879,11 @@ export function NavitrackContent() {
           {seleccion && detalle ? (
             <NavitrackShipment
               soloLectura={soloLectura}
+              puedeGastar={puedeGastar}
               tramos={tramos.get(seleccion.id) ?? []}
               recaladas={recaladas}
               onVerificarRecalada={soloLectura ? undefined : (r: Recalada) => setRecaladaAbierta(r)}
+              onCargarCoords={soloLectura ? undefined : () => setCoordsAbiertas(true)}
               avisoRecalada={avisoRecalada}
               op={seleccion}
               ais={ais}
@@ -808,7 +908,7 @@ export function NavitrackContent() {
               onRefresh={() => {
                 // Para el cliente, Actualizar vuelve a leer la base: trae lo que
                 // el chequeo diario y el trabajo interno hayan guardado, gratis.
-                if (identSeleccion && !soloLectura) void consultarAis(identSeleccion, false);
+                if (identSeleccion && puedeGastar) void consultarAis(identSeleccion, false);
                 void cargar();
               }}
               refrescando={aisCargando || refrescando}
@@ -850,6 +950,25 @@ export function NavitrackContent() {
           )}
         </div>
 
+        {/* Posición del buque cargada a mano, para cuando no hay AIS. */}
+        {seleccion && (
+          <NavitrackCoordsManual
+            open={coordsAbiertas}
+            onClose={() => setCoordsAbiertas(false)}
+            initialLat={seleccion.tracking_manual_lat ?? null}
+            initialLng={seleccion.tracking_manual_lng ?? null}
+            vesselLabel={[seleccion.nave, seleccion.viaje, seleccion.contenedor]
+              .filter(Boolean)
+              .join(" · ")}
+            groupHint={
+              String(seleccion.nave ?? "").trim() ? tr.manualSyncGroup : tr.manualSyncSingle
+            }
+            tr={tr as unknown as Parameters<typeof NavitrackCoordsManual>[0]["tr"]}
+            onSave={guardarCoords}
+            onClear={borrarCoords}
+          />
+        )}
+
         {/* Decisión sobre una recalada: qué pasó en el puerto anunciado. */}
       {recaladaAbierta && (
         <NavitrackRecalada
@@ -857,6 +976,7 @@ export function NavitrackContent() {
           naves={catalogoNaves}
           operacionId={seleccionId ?? ""}
           naveActual={detalle?.journey.naveActual ?? seleccion?.nave ?? null}
+          puedeGastar={puedeGastar}
           tr={tr}
           apiPrefix={apiPrefix}
           onCerrar={() => setRecaladaAbierta(null)}

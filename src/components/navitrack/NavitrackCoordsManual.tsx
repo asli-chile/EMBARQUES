@@ -3,7 +3,18 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 
-type TrackingPageTr = {
+/*
+ * Carga manual de la posición del buque.
+ *
+ * Viene del módulo de seguimiento anterior, que NaviTrack reemplazó. Es la
+ * única forma de darle posición a una carga cuyo buque no emite AIS o no está
+ * en el catálogo, y sin ella esos embarques se quedaban con la estimación
+ * sobre la ruta y nadie podía corregirla.
+ *
+ * El componente no sabe guardar: recibe `onSave` y `onClear`. Quién puede
+ * llamarlos lo decide la pantalla, y lo impone RLS sobre `operaciones`.
+ */
+type CoordsTr = {
   manualModalTitle: string;
   manualModalHint: string;
   manualLatLabel: string;
@@ -25,7 +36,7 @@ type Props = {
   vesselLabel: string;
   /** Sincronización por nave/víaje vs solo operación actual */
   groupHint?: string | null;
-  tr: TrackingPageTr;
+  tr: CoordsTr;
   onSave: (lat: number, lng: number) => Promise<{ ok: boolean; message?: string }>;
   onClear: () => Promise<{ ok: boolean; message?: string }>;
 };
@@ -37,7 +48,7 @@ function parseCoord(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function ManualTrackingCoordsModal({
+export function NavitrackCoordsManual({
   open,
   onClose,
   initialLat,

@@ -259,12 +259,24 @@ Las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas ope
 
 ## NaviTrack — Seguimiento marítimo (en desarrollo)
 
-`/navitrack` es la **nueva** experiencia de tracking. La usan el `superadmin`,
-que la opera, y el `cliente`, que entra en modo seguimiento: ve sus embarques y
-**solo los ve**. Convive con `/tracking`, que sigue en producción.
+`/navitrack` es **el** módulo de seguimiento: el 13-09-2026 reemplazó a
+`/tracking`, que se eliminó (`src/components/tracking/` y `/api/shiptracking/*`).
+`/tracking` sobrevive solo como redirección, y **ya no es una ruta pública**:
+para seguir un embarque hay que iniciar sesión.
 
-> **Regla:** ningún cambio de NaviTrack toca `src/components/tracking/`. Si algo
-> de ahí hace falta, se copia o se extrae a un módulo compartido.
+Quién entra y con cuánto poder:
+
+| Rol | Ve | Decide recaladas y transbordos | Gasta créditos AIS |
+|-----|----|-------------------------------|--------------------|
+| `superadmin` | todos | sí | **sí, el único** |
+| `admin` | todos | sí | no |
+| `ejecutivo` | los de sus empresas | sí, sobre lo suyo | no |
+| `operador` | todos | no | no |
+| `cliente` | los de sus empresas | no | no |
+
+Qué embarques ve cada uno **no lo decide la pantalla**: lo decide RLS sobre
+`operaciones`. Gastar es un eje aparte de decidir, porque el plan de créditos es
+uno solo para toda la empresa.
 
 Documentación completa: **[docs/NAVITRACK.md](docs/NAVITRACK.md)** — datos
 disponibles y los que no, resolución de posición (AIS → manual → estimada),
@@ -635,12 +647,19 @@ Abre NaviTrack al cliente en modo lectura: `SELECT` —y nada más— sobre las
 recaladas, tramos, transbordos y viajes de **sus** operaciones, más las
 posiciones AIS guardadas. La pertenencia la resuelve
 `private.get_cliente_nombres_for_user()`, la misma función con la que
-`operaciones` y los documentos deciden qué ve un cliente.
+`operaciones` y los documentos deciden qué ve un cliente. **Aplicada el
+13-09-2026.**
 
-**Mientras no se aplique, un cliente que entre a `/navitrack` verá sus
-embarques pero sin el detalle del viaje**: ni recaladas resueltas, ni cadena de
-transbordo, ni la última posición del buque. Los endpoints siguen exigiendo
-superadmin, así que no hay nada que el cliente pueda escribir ni gastar.
+```
+supabase/migrations/20260913000005_navitrack_staff_write.sql
+```
+
+Acompaña al reemplazo de `/tracking`: da escritura sobre las cuatro tablas de
+NaviTrack (recaladas, tramos, transbordos, viajes) a `admin` —todas— y a
+`ejecutivo` —las de sus empresas, con la misma condición que usa `operaciones`—.
+Antes solo escribía el `superadmin`, que era razonable en un módulo en pruebas y
+deja de serlo cuando lo usa toda la empresa. **Aplicada el 13-09-2026**: trece
+políticas en total con las del cliente, verificadas en `pg_policies`.
 
 ### El saldo de créditos no se configura
 

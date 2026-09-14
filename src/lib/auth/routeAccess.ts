@@ -17,7 +17,6 @@ const PUBLIC_ROUTES = new Set([
   "/inicio",
   "/servicios",
   "/sobre-nosotros",
-  "/tracking",
   "/auth/login",
   "/auth/registro",
   // Redirects legacy (solo redirigen a inicio)
@@ -58,6 +57,10 @@ const ROUTE_RULES: Record<string, RouteRule> = {
   "/configuracion/naves-tracking": { kind: "superadmin" },
   "/cartolas-nubox": { kind: "cartolasNubox" },
   "/cliente": { kind: "operational" },
+  // Seguimiento: todo el personal y el cliente, cada uno con lo que RLS le deja ver.
+  "/navitrack": { kind: "operational" },
+  // Ruta del módulo anterior: solo redirige a /navitrack, pero ya no sin sesión.
+  "/tracking": { kind: "operational" },
 };
 
 export function normalizeRoutePath(pathname: string): string {

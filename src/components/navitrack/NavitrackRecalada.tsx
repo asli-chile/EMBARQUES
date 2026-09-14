@@ -42,6 +42,15 @@ type Props = {
   naves: NaveCatalogo[];
   /** Nave que lleva la carga hasta este puerto. */
   naveActual: string | null;
+  /**
+   * Quien decide puede además consultar al proveedor (solo el superadmin).
+   *
+   * Cambia lo que esta ventana promete antes de guardar: con crédito, la nave
+   * nueva queda identificada al instante; sin él, el transbordo se registra
+   * igual y el identificador queda pendiente. Decir eso antes es el punto de
+   * este componente.
+   */
+  puedeGastar?: boolean;
   tr: Record<string, string>;
   onCerrar: () => void;
   onGuardado: (mensaje: string) => void;
@@ -61,6 +70,7 @@ export function NavitrackRecalada({
   recalada,
   naves,
   naveActual,
+  puedeGastar = false,
   tr,
   onCerrar,
   onGuardado,
@@ -149,7 +159,9 @@ export function NavitrackRecalada({
         .replace("{{anterior}}", j.naveAnterior ?? "—")
         .replace("{{nueva}}", j.naveNueva ?? "—");
       const detalle =
-        j.aviso === "SIN_IDENTIFICADOR"
+        j.aviso === "SIN_IDENTIFICADOR_PENDIENTE"
+          ? ` ${tr.recaladaSinImoPendiente}`
+          : j.aviso === "SIN_IDENTIFICADOR"
           ? ` ${tr.recaladaSinImo}`
           : j.identificador?.imo
             ? ` ${tr.recaladaConImo.replace("{{imo}}", j.identificador.imo)}`
@@ -370,7 +382,10 @@ export function NavitrackRecalada({
                   ? tr.recaladaAvisoYaExiste
                       .replace("{{anterior}}", naveActual ?? "—")
                       .replace("{{nueva}}", naveElegida.trim())
-                  : tr.recaladaAvisoCosto.replace("{{nueva}}", naveElegida.trim())}
+                  : (puedeGastar ? tr.recaladaAvisoCosto : tr.recaladaAvisoSinCredito).replace(
+                      "{{nueva}}",
+                      naveElegida.trim(),
+                    )}
               </p>
             )}
 
@@ -396,7 +411,7 @@ export function NavitrackRecalada({
               >
                 {guardando
                   ? tr.loading
-                  : tieneIdentificador
+                  : tieneIdentificador || !puedeGastar
                     ? tr.recaladaGuardar
                     : tr.recaladaGuardarConCosto}
               </button>

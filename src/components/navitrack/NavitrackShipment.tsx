@@ -170,12 +170,21 @@ type ShipmentProps = {
    * va, cuándo llega y qué ha pasado hasta ahora.
    */
   soloLectura?: boolean;
+  /**
+   * Puede consultar al proveedor AIS, o sea gastar créditos. Solo el superadmin.
+   *
+   * Es un eje distinto de `soloLectura`: un ejecutivo decide sobre el viaje pero
+   * no gasta, así que ve la pizarra completa sin la pestaña de escalas.
+   */
+  puedeGastar?: boolean;
   /** Tramos del viaje. Vacío = viaje directo. */
   tramos: Tramo[];
   /** Puertos que el buque fue anunciando, con su decisión si ya se tomó. */
   recaladas: Recalada[];
   /** Abre la ventana para decidir qué pasó en ese puerto. Ausente en solo lectura. */
   onVerificarRecalada?: (r: Recalada) => void;
+  /** Abre la carga manual de posición. Ausente para quien no edita. */
+  onCargarCoords?: () => void;
   /** Resultado de la última decisión, para confirmarla en pantalla. */
   avisoRecalada: string | null;
   op: NavitrackOperacion;
@@ -222,6 +231,7 @@ type ShipmentProps = {
  */
 export function NavitrackShipment({
   soloLectura = false,
+  puedeGastar = false,
   op,
   ais,
   journey,
@@ -230,6 +240,7 @@ export function NavitrackShipment({
   tramos,
   recaladas,
   onVerificarRecalada,
+  onCargarCoords,
   avisoRecalada,
   eventos,
   decision,
@@ -384,10 +395,11 @@ export function NavitrackShipment({
   const pestanas: { id: Pestana; label: string; icon: string }[] = [
     { id: "ruta", label: tr.tabRuta, icon: "lucide:map" },
     { id: "buque", label: tr.tabBuque, icon: "lucide:ship" },
-    // Escalas consulta el historial del buque al proveedor: interna.
-    ...(soloLectura
-      ? []
-      : [{ id: "escalas" as const, label: tr.tabEscalas, icon: "lucide:anchor" }]),
+    // Escalas le pide al proveedor el historial del buque: es la consulta más
+    // cara del plan, así que la ve quien puede gastarla.
+    ...(puedeGastar
+      ? [{ id: "escalas" as const, label: tr.tabEscalas, icon: "lucide:anchor" }]
+      : []),
     ...(mostrarTransbordo
       ? [{ id: "transbordo" as const, label: tr.evTransbordo, icon: "lucide:git-branch" }]
       : []),
@@ -1109,12 +1121,29 @@ export function NavitrackShipment({
           <Icon icon="lucide:info" width={13} height={13} className="shrink-0 text-dash-neon" aria-hidden />
           <span className="min-w-0">{tr.notaAis}</span>
         </p>
-        {actualizado && (
-          <p className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-dash-muted">
-            <Icon icon="lucide:refresh-cw" width={12} height={12} aria-hidden />
-            {tr.ultimaActualizacion}: {actualizado}
-          </p>
-        )}
+        <div className="flex shrink-0 items-center gap-3">
+          {actualizado && (
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-dash-muted">
+              <Icon icon="lucide:refresh-cw" width={12} height={12} aria-hidden />
+              {tr.ultimaActualizacion}: {actualizado}
+            </p>
+          )}
+          {/*
+            * La posición manual vive acá, pegada a la nota que declara de dónde
+            * sale el dato: es justo donde alguien lee "posición estimada" y se
+            * da cuenta de que puede hacer algo al respecto.
+            */}
+          {onCargarCoords && (
+            <button
+              type="button"
+              onClick={onCargarCoords}
+              className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold"
+            >
+              <Icon icon="lucide:map-pin" width={12} height={12} aria-hidden />
+              {tr.manualCoordsBtn}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

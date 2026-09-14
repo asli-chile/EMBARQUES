@@ -28,9 +28,6 @@ const LazyServiciosContent = lazy(() =>
 const LazySobreNosotrosContent = lazy(() =>
   import("@/components/sobre-nosotros").then((m) => ({ default: m.SobreNosotrosContent })),
 );
-const LazyTrackingContent = lazy(() =>
-  import("@/components/tracking/TrackingContent").then((m) => ({ default: m.TrackingContent })),
-);
 const LazyNavitrackContent = lazy(() =>
   import("@/components/navitrack").then((m) => ({ default: m.NavitrackContent })),
 );
@@ -170,10 +167,6 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/sobre-nosotros" ? (
       <Sus>
         <LazySobreNosotrosContent />
-      </Sus>
-    ) : pathname === "/tracking" ? (
-      <Sus>
-        <LazyTrackingContent />
       </Sus>
     ) : pathname === "/navitrack" ? (
       /*

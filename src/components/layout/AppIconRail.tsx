@@ -140,15 +140,22 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           <Icon icon="lucide:layout-dashboard" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
           <span className={labelCls}>{t.nav.dashboardShort}</span>
         </a>
-        <a
-          href={withBase("/tracking")}
-          className={`${navBtn} ${pathname === "/tracking" || pathname.startsWith("/tracking/") ? navActive : ""}`}
-          title={t.nav.tracking}
-          {...navPrefetch("/tracking")}
-        >
-          <Icon icon="lucide:ship" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
-          <span className={labelCls}>{t.sidebar.tracking}</span>
-        </a>
+        {/*
+          * Seguimiento, fijo en el rail. Solo con sesión: NaviTrack reemplazó al
+          * módulo anterior, que sí era público, y todo lo que muestra sale de
+          * las operaciones que RLS le deja ver a cada cuenta.
+          */}
+        {user ? (
+          <a
+            href={withBase("/navitrack")}
+            className={`${navBtn} ${pathname === "/navitrack" ? navActive : ""}`}
+            title={t.sidebar.navitrack}
+            {...navPrefetch("/navitrack")}
+          >
+            <Icon icon="lucide:ship" width={railIcon} height={railIcon} className={iconCls} style={iconStroke} />
+            <span className={labelCls}>{t.sidebar.navitrack}</span>
+          </a>
+        ) : null}
 
         {!user ? (
           <>
@@ -234,7 +241,7 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
 
           if (!item.href) return null;
           // Evitar duplicar: ya van fijos arriba
-          if (item.id === "dashboard" || item.id === "inicio" || item.id === "tracking") return null;
+          if (item.id === "dashboard" || item.id === "inicio" || item.id === "navitrack") return null;
 
           return (
             <a
