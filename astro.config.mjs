@@ -66,6 +66,10 @@ export default defineConfig({
           "src/components/reservas/MisReservasContent.tsx",
           "src/components/reservas/PapeleraContent.tsx",
           "src/components/registros/RegistrosContent.tsx",
+          // Documentos: importa jszip, que es justo la dependencia que llegaba tarde.
+          "src/components/documentos/index.ts",
+          "src/components/documentos/MisDocumentosContent.tsx",
+          "src/components/documentos/CrearProformaContent.tsx",
         ],
       },
     },
@@ -98,6 +102,11 @@ export default defineConfig({
         "ag-grid-community",
         "ag-grid-react",
         "exceljs",
+        // jszip: lo importan Documentos y Formatos. Sin pre-empaquetar, Vite lo
+        // descubría al navegar hasta esa pantalla, re-optimizaba en caliente y
+        // mataba la petición en vuelo: 504 Outdated Optimize Dep y el módulo sin
+        // cargar. Es el mismo motivo por el que está exceljs.
+        "jszip",
         "react-email",
         "@react-email/render",
         "html-react-parser",
