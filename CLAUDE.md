@@ -628,10 +628,11 @@ supabase/migrations/20260911000003_navieras_logo_seed.sql
 
 Carga los logos que ya viven en `https://www.asli.cl/img/<naviera>.webp` — mismo
 dominio que sirve el ERP, así que no hay que subirlos de nuevo. **Aplicada el
-11-09-2026**: 10 de las 14 navieras quedaron con logo; EVERGREEN, HAPAG-LLOYD,
-SEABOARD y UNIFER siguen en `NULL` porque esos archivos no existen en el sitio, y
-se muestran con monograma. Al subirlos, basta un `UPDATE` igual a los del
-archivo.
+11-09-2026**: 10 de las 14 navieras quedaron con logo. EVERGREEN se sumó el
+14-09-2026 (`20260914000002_navieras_logo_evergreen.sql`) cuando su archivo
+apareció en el sitio. HAPAG-LLOYD, SEABOARD y UNIFER siguen en `NULL` porque los
+suyos devuelven 404, y se muestran con monograma. Al subirlos, basta un `UPDATE`
+igual a los del archivo: comprobar antes con `curl -I` que la URL responde.
 
 ```
 supabase/migrations/20260911000004_navitrack_ais_cache.sql
