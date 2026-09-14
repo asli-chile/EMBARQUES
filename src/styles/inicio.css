@@ -998,3 +998,26 @@
 .inicio-surface[data-theme="dark"] .inicio-pillar-card--teal {
   --inicio-shortcut-accent: #2dd4bf;
 }
+
+
+/*
+ * Indicadores en teléfono: dos por fila.
+ *
+ * A una columna, cada tarjeta ocupaba media pantalla y ver los cuatro exigía
+ * recorrer dos pantallas enteras — justo lo contrario de lo que se le pide a un
+ * panel de indicadores, que es decir cómo va todo de un vistazo.
+ *
+ * Con la mitad del ancho, el relleno de escritorio se come el número, que es lo
+ * único que de verdad hay que leer ahí.
+ */
+@media (max-width: 639px) {
+  .inicio-kpi-card {
+    padding: 0.85rem 0.85rem 0.8rem;
+    border-radius: 1rem;
+  }
+
+  .inicio-kpi-icon {
+    height: 1.9rem;
+    width: 1.9rem;
+  }
+}

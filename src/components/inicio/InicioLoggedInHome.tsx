@@ -63,7 +63,7 @@ export function InicioLoggedInHome({
           </a>
         </div>
 
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
           {loadingKpis
             ? Array.from({ length: 4 }).map((_, i) => <KpiSkeletonCard key={i} />)
             : kpiConfig.map(({ key, descKey, dataKey, icon, accent, ...rest }) => {
@@ -95,20 +95,23 @@ export function InicioLoggedInHome({
                           />
                           {delta > 0 ? `+${delta}%` : `${delta}%`}
                         </span>
-                      ) : (
-                        <span className="inicio-kpi-badge inicio-kpi-badge--mute">
-                          {t.inicio.kpiHistoricBadge}
-                        </span>
-                      )}
+                      ) : null}
                     </div>
 
                     <div className="relative z-[1] mt-4 flex items-end justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="inicio-stat-value text-4xl font-bold leading-none tracking-tight tabular-nums sm:text-[2.6rem]">
+                        <p className="inicio-stat-value text-3xl font-bold leading-none tracking-tight tabular-nums sm:text-4xl xl:text-[2.6rem]">
                           {value.toLocaleString(undefined)}
                         </p>
-                        <p className="mt-2.5 text-sm font-semibold inicio-ink">{t.inicio[key]}</p>
-                        <p className="mt-0.5 text-xs leading-snug inicio-ink-mute">
+                        <p className="mt-2 text-[13px] font-semibold leading-tight inicio-ink sm:mt-2.5 sm:text-sm">
+                          {t.inicio[key]}
+                        </p>
+                        {/*
+                          * La glosa es de pantalla ancha. En dos columnas de
+                          * teléfono compite con el número, que es lo que se
+                          * viene a ver, y obliga a partir palabras.
+                          */}
+                        <p className="mt-0.5 hidden text-xs leading-snug inicio-ink-mute sm:block">
                           {t.inicio[descKey]}
                           {compareKey ? (
                             <>
@@ -121,10 +124,12 @@ export function InicioLoggedInHome({
                           ) : null}
                         </p>
                       </div>
-                      <KpiSpark seed={value} />
+                      <span className="hidden sm:block">
+                        <KpiSpark seed={value} />
+                      </span>
                     </div>
 
-                    <span className="inicio-kpi-historic relative z-[1]">
+                    <span className="inicio-kpi-historic relative z-[1] max-sm:!mt-3 max-sm:!text-[9.5px]">
                       {t.inicio.kpiHistoricBadge}
                       <span className="inicio-kpi-historic-arrow" aria-hidden>
                         <Icon icon="lucide:chevron-right" width={12} height={12} />
