@@ -875,7 +875,7 @@ export function MisDocumentosContent() {
 
     return (
       <div key={tipo} className={`relative ${estadoFila.clase}`}>
-        <div className="flex items-center gap-3 px-3 py-2.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem]">
+        <div className="flex items-center gap-3 px-3 py-1.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
           <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
             <Icon
               icon={meta.icon}
@@ -896,6 +896,11 @@ export function MisDocumentosContent() {
             * qué momento del embarque pertenece cada papel. En pantalla angosta
             * se calla, porque ahí la pestaña activa ya lo dice.
             */}
+          <span className="estado-chip inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-bold">
+            <Icon icon={estadoFila.icono} width={11} height={11} aria-hidden />
+            {estadoFila.label}
+          </span>
+
           {grupoDeTipo(tipo) ? (
             <span
               className="hidden w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold lg:inline-flex"
@@ -911,14 +916,18 @@ export function MisDocumentosContent() {
             <span className="hidden lg:block" aria-hidden />
           )}
 
-          {/* La fecha del documento, o un guion: la columna no se mueve. */}
+          {/*
+            * Fecha de recepción.
+            *
+            * El booking que llega con la operación no tiene fila propia en
+            * documentos, así que se mostraba con un guion aunque el archivo
+            * esté: su fecha conocida es la del embarque, y es la que vale como
+            * "cuándo llegó este papel".
+            */}
           <span className="truncate text-[12px] tabular-nums text-dash-muted max-sm:hidden">
-            {doc && !isSyntheticBooking ? formatDate(doc.created_at) : "—"}
-          </span>
-
-          <span className="estado-chip inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[11.5px] font-bold">
-            <Icon icon={estadoFila.icono} width={11} height={11} aria-hidden />
-            {estadoFila.label}
+            {doc
+              ? formatDate(isSyntheticBooking ? operacionActual?.created_at ?? null : doc.created_at)
+              : "—"}
           </span>
 
           {/*
@@ -937,7 +946,7 @@ export function MisDocumentosContent() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
                   title={tr.preview}
-                  className="hidden h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
+                  className="hidden h-7 items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
                 >
                   <Icon icon="lucide:eye" width={14} height={14} aria-hidden />
                   {tr.accionVer}
@@ -946,7 +955,7 @@ export function MisDocumentosContent() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
                   title={tr.download}
-                  className="estado--transito hidden h-8 w-8 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--estado)_40%,transparent)] bg-[color-mix(in_srgb,var(--estado)_14%,transparent)] text-[var(--estado)] transition-colors hover:bg-[color-mix(in_srgb,var(--estado)_25%,transparent)] sm:inline-flex"
+                  className="estado--transito hidden h-7 w-7 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--estado)_40%,transparent)] bg-[color-mix(in_srgb,var(--estado)_14%,transparent)] text-[var(--estado)] transition-colors hover:bg-[color-mix(in_srgb,var(--estado)_25%,transparent)] sm:inline-flex"
                 >
                   <Icon icon="lucide:download" width={14} height={14} aria-hidden />
                 </button>
@@ -954,7 +963,7 @@ export function MisDocumentosContent() {
             ) : !isCliente && !marcadoNoAplica ? (
               <label
                 title={tr.uploadFile}
-                className="hidden h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-border bg-dash-control px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:inline-flex"
+                className="hidden h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-border bg-dash-control px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:inline-flex"
               >
                 <Icon
                   icon={isUploading ? "lucide:loader-2" : "lucide:upload"}
@@ -983,7 +992,7 @@ export function MisDocumentosContent() {
               aria-label={tr.acciones}
               aria-expanded={menuAbierto}
               onClick={() => setMenuTipo(menuAbierto ? null : tipo)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
             >
               <Icon
                 icon={isUploading ? "lucide:loader-2" : "lucide:more-vertical"}
@@ -1366,11 +1375,11 @@ export function MisDocumentosContent() {
           * dejando un vacío en medio. En una rejilla de proporciones el sobrante
           * se reparte entre las columnas y cada dato cae donde su cabecera dice.
           */}
-        <div className="hidden items-center gap-3 border-b border-dash-border px-3 py-2 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem]">
+        <div className="hidden items-center gap-3 border-b border-dash-border px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
           <span className="min-w-0">{tr.colDocumento}</span>
+          <span className="min-w-0">{tr.colEstado}</span>
           <span className="hidden min-w-0 lg:block">{tr.colEtapa}</span>
           <span className="min-w-0">{tr.colFechaRecepcion}</span>
-          <span className="min-w-0">{tr.colEstado}</span>
           <span className="sr-only">{tr.acciones}</span>
         </div>
 
