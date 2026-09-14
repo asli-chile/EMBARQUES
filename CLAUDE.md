@@ -298,6 +298,38 @@ Lo mínimo para no perder tiempo:
 
 ---
 
+## Mis Documentos
+
+`/documentos/mis-documentos` ([MisDocumentosContent.tsx](src/components/documentos/MisDocumentosContent.tsx))
+responde una sola pregunta: **a qué embarque le falta papeleo**.
+
+Dos ejes que se parecen y no son lo mismo:
+
+| | De qué habla | De dónde sale |
+|---|---|---|
+| Estado del papeleo | Completo / en curso / sin documentos | `estadoDocsDe()`, cuenta documentos contra tipos exigibles |
+| Estado del viaje | En tránsito, cancelada, solicitada… | `operaciones.estado_operacion` |
+
+En la **lista** el color de la tarjeta habla del viaje; en la **ficha** de un
+embarque, del papeleo. Mezclarlos deja al lector sin saber cuál está viendo.
+
+- Los once tipos se agrupan en cuatro etapas (`GRUPOS_DOCUMENTO`), en el orden
+  del viaje, que es también el orden en que se buscan. En la pestaña "Todos" los
+  grupos se separan con una línea del color de la etapa.
+- `TIPOS_FUERA` retira tipos de la pantalla **y de la cuenta**. Se filtra en vez
+  de borrar del catálogo: la columna y el histórico siguen en la base. Si se
+  retira uno de la vista sin sacarlo de la cuenta, el contador pide un documento
+  que ya no se muestra.
+- `visibleTipos` va en `useMemo`. No es optimización: de esa lista cuelgan un
+  Set, las funciones de carga y los efectos que llaman a `setState`, así que
+  recalcularla en cada render deja la pantalla en bucle infinito.
+- Los estados usan los tokens de marca (`estado--ok|curso|espera|atencion|transito`).
+
+**Lo que no existe** y conviene no prometer: observaciones por documento,
+estados "en revisión" y "observado", documentos aduaneros (DUA, liberación) y
+"descargar checklist". Aparecen en los mockups pero no hay campo ni tabla
+detrás.
+
 ## Módulo de Transportes
 
 ### Flujo completo
