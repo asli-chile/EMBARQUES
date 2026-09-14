@@ -958,22 +958,25 @@ export function MisDocumentosContent() {
               * propia: la tarjeta ya es una superficie, y meter otra dentro
               * añade un borde que no separa nada nuevo.
               */}
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-dash-border pt-3 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-4 gap-x-2.5 border-t border-dash-border pt-2.5">
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colBooking}</p>
-                <p className="truncate font-mono text-sm font-bold text-dash-fg">{operacionActual.booking || "—"}</p>
+                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colBooking}</p>
+                <p className="truncate font-mono text-[12px] font-bold text-dash-fg">{operacionActual.booking || "—"}</p>
               </div>
-              <div className="min-w-0 sm:border-l sm:border-dash-border sm:pl-4">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colContenedor}</p>
-                <p className="truncate font-mono text-sm font-bold text-dash-fg">{operacionActual.contenedor || "—"}</p>
+              <div className="min-w-0 border-l border-dash-border pl-2.5">
+                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colContenedor}</p>
+                <p className="truncate font-mono text-[12px] font-bold text-dash-fg">{operacionActual.contenedor || "—"}</p>
               </div>
-              <div className="min-w-0 sm:border-l sm:border-dash-border sm:pl-4">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colNaviera}</p>
-                <p className="truncate text-sm font-bold text-dash-fg">{operacionActual.naviera || "—"}</p>
+              <div className="min-w-0 border-l border-dash-border pl-2.5">
+                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colNaviera}</p>
+                <p className="truncate text-[12px] font-bold text-dash-fg">{operacionActual.naviera || "—"}</p>
               </div>
-              <div className="min-w-0 sm:border-l sm:border-dash-border sm:pl-4">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRuta}</p>
-                <p className="truncate text-sm font-bold text-dash-fg">
+              <div className="min-w-0 border-l border-dash-border pl-2.5">
+                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colRuta}</p>
+                <p
+                  className="truncate text-[12px] font-bold text-dash-fg"
+                  title={`${operacionActual.pol || "—"} → ${operacionActual.pod || "—"}`}
+                >
                   {operacionActual.pol || "—"} → {operacionActual.pod || "—"}
                 </p>
               </div>

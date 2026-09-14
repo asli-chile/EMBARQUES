@@ -721,10 +721,14 @@ html[data-erp-neon="light"] {
   --marca-rojo: #b91c1c;
 
   /* Lo que se usa en pantalla, ya legible sobre fondo oscuro. */
-  --estado-ok: color-mix(in srgb, var(--marca-oliva) 62%, #eafff0);
-  --estado-curso: color-mix(in srgb, var(--marca-teal) 55%, #e6ffff);
-  --estado-espera: color-mix(in srgb, var(--marca-gris) 45%, #eef4fb);
-  --estado-error: color-mix(in srgb, var(--marca-rojo) 55%, #ffecec);
+  /*
+   * Se aclaran lo justo para contrastar, no más: con demasiado blanco el teal y
+   * el oliva pierden cuerpo y la pantalla se ve desteñida en vez de corporativa.
+   */
+  --estado-ok: color-mix(in srgb, var(--marca-oliva) 78%, #ffffff);
+  --estado-curso: color-mix(in srgb, var(--marca-teal) 62%, #7ff0f0);
+  --estado-espera: color-mix(in srgb, var(--marca-gris) 55%, #dce7f3);
+  --estado-error: color-mix(in srgb, var(--marca-rojo) 65%, #ffd9d9);
 
   /*
    * Atención: lo único que NO sale del manual de marca.
