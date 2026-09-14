@@ -718,6 +718,37 @@ Se pueden aplicar de tres formas:
 
 ---
 
+## Storage
+
+`storage.objects` tiene RLS activo. **Un bucket sin políticas es un bucket de
+solo lectura**: sin una política que permita la operación, RLS la deniega, y
+Supabase responde **400**, que se lee como "el archivo está mal" cuando en
+realidad falta el permiso.
+
+Cuatro buckets estaban así —`booking-docs`, `formatos-templates`,
+`itinerarios-stacking`, `stacking-navieras`— y subir a ellos fallaba incluso
+siendo superadmin. Como tres son públicos, **leer funcionaba**: fallaba solo al
+escribir, que es lo que menos se prueba.
+
+```
+supabase/migrations/20260913000002_storage_policies_faltantes.sql
+```
+
+**Aplicada el 13-09-2026.** Quién puede escribir en cada uno:
+
+| Bucket | Escritura |
+|--------|-----------|
+| `documentos` | cualquier autenticado (política previa) |
+| `booking-docs` | superadmin, admin, ejecutivo, operador |
+| `itinerarios-stacking`, `stacking-navieras` | superadmin, admin |
+| `formatos-templates` | solo superadmin |
+
+Al crear un bucket nuevo, crear sus políticas en la misma migración. La consulta
+de verificación al final de ese archivo lista los buckets que quedaron sin
+ninguna.
+
+---
+
 ## Convenciones
 
 - **Nombres de archivos**: `PascalCase` para componentes React, `kebab-case` para páginas Astro
