@@ -297,6 +297,7 @@ export const translations = {
     },
     auth: {
       modalTitle: "Perfil de usuario",
+      close: "Cerrar",
       name: "Nombre",
       email: "Correo",
       password: "Contraseña",
@@ -3402,6 +3403,7 @@ export const translations = {
     },
     auth: {
       modalTitle: "User profile",
+      close: "Close",
       name: "Name",
       email: "Email",
       password: "Password",

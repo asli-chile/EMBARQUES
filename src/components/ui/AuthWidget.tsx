@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "@iconify/react";
-import { AuthModal, type AuthUser } from "./AuthModal";
+import { AuthAccountPanel, type AuthUser } from "./AuthAccountPanel";
 import { siteConfig } from "@/lib/site";
 import { useLocale } from "@/lib/i18n";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
@@ -24,6 +24,8 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
   const { user, profile, isLoading } = useAuth();
   const { openAuthForm } = useAuthFormModal();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  /* El panel se cuelga de este botón en escritorio. */
+  const botonRef = useRef<HTMLButtonElement>(null);
   const dark = tone === "dark";
 
   const handleOpen = () => setIsModalOpen(true);
@@ -76,6 +78,7 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
     return (
       <>
         <button
+          ref={botonRef}
           type="button"
           onClick={handleOpen}
           className="asli-no-drag group relative inline-flex h-10 items-center pl-0 pr-0 transition-opacity hover:opacity-95"
@@ -85,7 +88,11 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
           <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a3a6e] text-[14px] font-bold text-white ring-2 ring-[#0B1A3D]/50">
             <span aria-hidden>{initial}</span>
           </span>
-          <span className="-ml-3 flex h-9 items-center gap-1.5 rounded-full border border-sky-300/35 bg-[#122847]/80 pl-5 pr-3 text-[13px] font-medium text-white/95 backdrop-blur-sm">
+          {/*
+            * El nombre es de escritorio: en un teléfono competía por el ancho
+            * con el logo, y la inicial ya identifica la cuenta.
+            */}
+          <span className="-ml-3 hidden h-9 items-center gap-1.5 rounded-full border border-sky-300/35 bg-[#122847]/80 pl-5 pr-3 text-[13px] font-medium text-white/95 backdrop-blur-sm sm:flex">
             <span className="max-w-[8.5rem] truncate">{firstName}</span>
             <Icon
               icon="lucide:chevron-down"
@@ -96,7 +103,12 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
             />
           </span>
         </button>
-        <AuthModal isOpen={isModalOpen} onClose={handleClose} user={authUser} />
+        <AuthAccountPanel
+          isOpen={isModalOpen}
+          onClose={handleClose}
+          user={authUser}
+          anchorRef={botonRef}
+        />
       </>
     );
   }
@@ -104,6 +116,7 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
   return (
     <>
       <button
+        ref={botonRef}
         type="button"
         onClick={handleOpen}
         className="asli-no-drag flex h-8 w-8 items-center justify-center rounded-sm bg-brand-blue text-[12px] font-bold text-white transition-colors hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
@@ -112,7 +125,12 @@ export function AuthWidget({ tone = "light" }: { tone?: HeaderChromeTone }) {
       >
         <span aria-hidden>{initial}</span>
       </button>
-      <AuthModal isOpen={isModalOpen} onClose={handleClose} user={authUser} />
+      <AuthAccountPanel
+        isOpen={isModalOpen}
+        onClose={handleClose}
+        user={authUser}
+        anchorRef={botonRef}
+      />
     </>
   );
 }
