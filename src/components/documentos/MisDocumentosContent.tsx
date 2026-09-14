@@ -551,7 +551,7 @@ export function MisDocumentosContent() {
     : Math.round((docsCompletados / progressDenom) * 100);
   const totalTipos = visibleTipos.length;
 
-  const docsBadge = (opId: string) => {
+  const docsBadge = (opId: string, compacto = false) => {
     const op = operaciones.find((o) => o.id === opId);
     const naCount = countTiposNoAplica(op, visibleTipos);
     const denom = Math.max(totalTipos - naCount, 1);
@@ -571,15 +571,19 @@ export function MisDocumentosContent() {
         }`}
       >
         {count}/{totalTipos - naCount}
-        <span className="opacity-70 font-semibold">({pct}%)</span>
+        {/* "1/12 (8%)" dice dos veces lo mismo, y en una tarjeta angosta el
+            porcentaje le quita sitio a los datos del embarque. */}
+        {!compacto && <span className="opacity-70 font-semibold">({pct}%)</span>}
       </span>
     );
   };
 
   const paginationBar = (
     <div className={`border-t border-dash-border flex flex-col gap-2 bg-dash-control/40 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
-      <div className={`flex flex-wrap items-center gap-2 text-base text-dash-muted ${hasSelection ? "justify-center" : ""}`}>
-        {!hasSelection && <span className="font-semibold text-dash-muted">{tr.rowsPerPage}</span>}
+      <div className={`flex flex-wrap items-center gap-2 text-[13px] sm:text-base text-dash-muted ${hasSelection ? "justify-center" : ""}`}>
+        {/* "Ver de a" es una etiqueta de escritorio: en el teléfono los tres
+            números al lado del rango ya se explican solos. */}
+        {!hasSelection && <span className="hidden font-semibold text-dash-muted sm:inline">{tr.rowsPerPage}</span>}
         <div className="inline-flex rounded-lg border border-dash-border overflow-hidden bg-dash-control">
           {PAGE_SIZE_OPTIONS.map((size) => (
             <button
@@ -587,7 +591,7 @@ export function MisDocumentosContent() {
               type="button"
               onClick={() => handlePageSizeChange(size)}
               className={`font-bold transition-colors ${
-                hasSelection ? "px-2 py-1 text-sm" : "px-3 py-1.5 text-base"
+                hasSelection ? "px-2 py-1 text-sm" : "px-3 py-1.5 text-[13px] sm:text-base"
               } ${
                 pageSize === size
                   ? "bg-dash-neon/25 text-dash-fg border-dash-neon/40"
@@ -599,7 +603,7 @@ export function MisDocumentosContent() {
           ))}
         </div>
         {!hasSelection && (
-          <span className="text-dash-muted tabular-nums">
+          <span className="text-dash-muted tabular-nums text-[12.5px] sm:text-base">
             {tr.showingRange
               .replace("{from}", String(rangeFrom))
               .replace("{to}", String(rangeTo))
@@ -613,13 +617,13 @@ export function MisDocumentosContent() {
           type="button"
           disabled={safePage <= 1}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
-          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          className="inline-flex min-h-10 items-center justify-center gap-1 px-3 py-2 text-[13px] sm:text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
           title={tr.prevPage}
         >
           <Icon icon="lucide:chevron-left" width={16} height={16} />
-          {!hasSelection && tr.prevPage}
+          {!hasSelection && <span className="max-sm:sr-only">{tr.prevPage}</span>}
         </button>
-        <span className="text-base font-bold text-dash-fg tabular-nums px-1.5">
+        <span className="text-[13px] sm:text-base font-bold text-dash-fg tabular-nums px-1.5">
           {hasSelection
             ? `${safePage}/${totalPages}`
             : tr.pageOf.replace("{page}", String(safePage)).replace("{pages}", String(totalPages))}
@@ -628,10 +632,10 @@ export function MisDocumentosContent() {
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          className="inline-flex min-h-10 items-center justify-center gap-1 px-3 py-2 text-[13px] sm:text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
           title={tr.nextPage}
         >
-          {!hasSelection && tr.nextPage}
+          {!hasSelection && <span className="max-sm:sr-only">{tr.nextPage}</span>}
           <Icon icon="lucide:chevron-right" width={16} height={16} />
         </button>
       </div>
@@ -1015,26 +1019,49 @@ export function MisDocumentosContent() {
                               key={op.id}
                               type="button"
                               onClick={() => handleSelectOperacion(op.id)}
-                              className="w-full text-left p-3.5 transition-colors bg-transparent hover:bg-dash-neon/10"
+                              className="flex w-full items-center gap-2.5 bg-transparent p-3.5 text-left transition-colors hover:bg-dash-neon/10"
                             >
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <div className="min-w-0">
-                                  <p className="text-[1.1rem] font-bold text-dash-fg">{opRef(op)}</p>
-                                  <p className="text-[15.4px] text-dash-muted truncate mt-0.5">
-                                    <span className="text-dash-muted/70">{tr.colRefExterna}:</span>{" "}
-                                    {op.referencia_externa || "—"}
-                                  </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-[16px] font-bold leading-tight text-dash-fg">
+                                      {opRef(op)}
+                                    </p>
+                                    <p className="mt-0.5 truncate text-[13.5px] text-dash-fg/75">
+                                      {op.cliente || "-"}
+                                    </p>
+                                  </div>
+                                  {docsBadge(op.id, true)}
                                 </div>
-                                {docsBadge(op.id)}
+
+                                {/*
+                                  * Contenedor y booking son con lo que se busca un
+                                  * embarque, así que van juntos y destacados sobre
+                                  * la naviera, que se repite en toda la lista.
+                                  */}
+                                <p className="mt-2 truncate text-[13px] font-semibold tabular-nums text-dash-fg/90">
+                                  {[op.contenedor, op.booking].filter(Boolean).join(" · ") || "—"}
+                                </p>
+                                <p className="mt-0.5 truncate text-[12px] text-dash-muted">
+                                  {[op.naviera, op.pod].filter(Boolean).join(" · ") || "-"}
+                                  {op.referencia_externa ? ` · ${op.referencia_externa}` : ""}
+                                  {/* La referencia externa, solo si existe: una línea
+                                      entera para un guion es ruido en cada tarjeta. */}
+                                </p>
+                                <p className="mt-1 text-[11.5px] text-dash-muted/80">
+                                  {formatDate(op.created_at)}
+                                </p>
                               </div>
-                              <p className="text-base text-dash-fg/80 truncate">{op.cliente || "-"}</p>
-                              <p className="text-base text-dash-muted mt-0.5 truncate">
-                                {op.naviera || "-"}
-                                {op.booking ? ` · ${op.booking}` : ""}
-                                {op.contenedor ? ` · ${op.contenedor}` : ""}
-                                {op.pod ? ` · ${op.pod}` : ""}
-                              </p>
-                              <p className="text-base text-dash-muted mt-1">{tr.colDate}: {formatDate(op.created_at)}</p>
+
+                              {/* Que la tarjeta abre algo hay que decirlo: sin esto
+                                  parece una ficha de solo lectura. */}
+                              <Icon
+                                icon="lucide:chevron-right"
+                                width={18}
+                                height={18}
+                                className="shrink-0 text-dash-muted/60"
+                                aria-hidden
+                              />
                             </button>
                           ))
                         )}
