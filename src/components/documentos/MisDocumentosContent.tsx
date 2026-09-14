@@ -146,6 +146,11 @@ const GRUPOS_DOCUMENTO = [
  */
 const TIPOS_FUERA: readonly string[] = ["SOLICITUD_RESERVA"];
 
+/** Etapa a la que pertenece un documento, para etiquetarlo fuera de su grupo. */
+function grupoDeTipo(tipo: string) {
+  return GRUPOS_DOCUMENTO.find((g) => (g.tipos as readonly string[]).includes(tipo)) ?? null;
+}
+
 const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
@@ -215,6 +220,9 @@ export function MisDocumentosContent() {
   const [gruposCerrados, setGruposCerrados] = useState<Record<string, boolean>>({});
   /** Fila con su menú de acciones desplegado. Solo uno a la vez. */
   const [menuTipo, setMenuTipo] = useState<string | null>(null);
+
+  /** Etapa que se está mirando en la ficha del embarque. */
+  const [etapaActiva, setEtapaActiva] = useState<string>("todos");
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(1);
@@ -872,6 +880,26 @@ export function MisDocumentosContent() {
             {tipoLabel}
           </span>
 
+          {/*
+            * Etapa del documento.
+            *
+            * En la lista plana hace falta: sin el grupo alrededor, nada diría a
+            * qué momento del embarque pertenece cada papel. En pantalla angosta
+            * se calla, porque ahí la pestaña activa ya lo dice.
+            */}
+          {grupoDeTipo(tipo) && (
+            <span
+              className="hidden shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold lg:inline-flex"
+              style={{
+                background: `color-mix(in srgb, ${grupoDeTipo(tipo)!.tono} 16%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${grupoDeTipo(tipo)!.tono} 40%, transparent)`,
+                color: grupoDeTipo(tipo)!.tono,
+              }}
+            >
+              {grupoDeTipo(tipo)!.label}
+            </span>
+          )}
+
           {/* La fecha del documento, o un guion: la columna no se mueve. */}
           <span className="shrink-0 text-[12px] tabular-nums text-dash-muted max-sm:hidden">
             {doc && !isSyntheticBooking ? formatDate(doc.created_at) : "—"}
@@ -1196,78 +1224,76 @@ export function MisDocumentosContent() {
       )}
 
       {/*
-        * Los documentos, por grupos plegables.
+        * Pestañas por etapa y lista plana.
         *
-        * Doce tarjetas seguidas obligan a recorrerlas todas para saber qué
-        * falta; con el contador de cada grupo eso se ve sin abrir nada. Los
-        * grupos completos se pliegan solos: lo que ya está no necesita sitio.
+        * Los grupos plegables obligaban a abrir y cerrar para comparar; con
+        * pestañas se ve una etapa completa de una vez y "Todos" sigue dando la
+        * vista entera, que es como se revisa antes de cerrar un embarque.
+        *
+        * El contador de cada pestaña es lo que antes decía la cabecera del
+        * grupo: cuántos hay y cuántos faltan sin entrar.
         */}
-      <div className="space-y-2">
-        {GRUPOS_DOCUMENTO.map((grupo) => {
-          const tipos = grupo.tipos.filter((t) =>
-            (visibleTipos as readonly string[]).includes(t),
-          ) as unknown as TipoDocumento[];
-          if (tipos.length === 0) return null;
-
-          const exigibles = tipos.filter((t) => !isTipoMarcadoNoAplica(operacionActual, t));
-          const recibidos = exigibles.filter((t) => documentosPorTipo.has(t)).length;
-          const completo = exigibles.length > 0 && recibidos === exigibles.length;
-          const abierto = gruposCerrados[grupo.id] ?? !completo;
-
-          return (
-            <section
-              key={grupo.id}
-              style={{ "--grupo": grupo.tono } as React.CSSProperties}
-              className="relative overflow-hidden rounded-xl border border-dash-border bg-dash-surface/60"
-            >
-              {/* Franja del color de la etapa: identifica el grupo aun plegado. */}
-              <span
-                className="absolute inset-y-0 left-0 w-1"
-                style={{ background: "var(--grupo)" }}
-                aria-hidden
-              />
+      <div className="flex flex-wrap items-center gap-1.5">
+        {([
+          { id: "todos", label: tr.filtroTodos, tono: "var(--dash-neon)", tipos: null },
+          ...GRUPOS_DOCUMENTO.map((g) => ({
+            id: g.id as string,
+            label: g.label as string,
+            tono: g.tono as string,
+            tipos: g.tipos as readonly string[] | null,
+          })),
+        ] as { id: string; label: string; tono: string; tipos: readonly string[] | null }[])
+          .map((tab) => {
+            const tipos = (tab.tipos ?? visibleTipos).filter((t) =>
+              (visibleTipos as readonly string[]).includes(t),
+            );
+            if (tipos.length === 0) return null;
+            const activa = etapaActiva === tab.id;
+            return (
               <button
+                key={tab.id}
                 type="button"
-                aria-expanded={abierto}
-                onClick={() =>
-                  setGruposCerrados((prev) => ({ ...prev, [grupo.id]: !abierto }))
-                }
-                className="flex w-full items-center gap-2.5 py-2.5 pl-4 pr-3 text-left transition-colors hover:bg-dash-neon/10"
+                aria-pressed={activa}
+                onClick={() => setEtapaActiva(tab.id)}
+                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] font-bold transition-colors ${
+                  activa
+                    ? "border-dash-neon/50 bg-dash-neon/20 text-dash-fg"
+                    : "border-dash-border bg-dash-control/50 text-dash-muted hover:text-dash-fg"
+                }`}
               >
                 <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                  style={{
-                    background: "color-mix(in srgb, var(--grupo) 16%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--grupo) 40%, transparent)",
-                    color: "var(--grupo)",
-                  }}
-                >
-                  <Icon icon={grupo.icon} width={16} height={16} aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-dash-fg">
-                  {grupo.label}
-                </span>
-                {/* Contador en texto: el color ya lo gastó la etapa. */}
-                <span className="shrink-0 text-[13px] font-bold tabular-nums text-dash-muted">
-                  {recibidos}/{exigibles.length}
-                </span>
-                <Icon
-                  icon="lucide:chevron-down"
-                  width={16}
-                  height={16}
-                  className={`shrink-0 text-dash-muted transition-transform ${abierto ? "rotate-180" : ""}`}
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: tab.tono }}
                   aria-hidden
                 />
+                {tab.label}
+                <span className="text-[12px] font-semibold tabular-nums opacity-70">
+                  ({tipos.length})
+                </span>
               </button>
+            );
+          })}
+      </div>
 
-              {abierto && (
-                <div className="divide-y divide-dash-border/60 border-t border-dash-border/70">
-                  {tipos.map((tipo) => renderTipoDocumento(tipo))}
-                </div>
-              )}
-            </section>
-          );
-        })}
+      <div className="overflow-hidden rounded-xl border border-dash-border bg-dash-surface/40">
+        {/* Cabecera de columnas: solo donde hay ancho para que signifiquen algo. */}
+        <div className="hidden items-center gap-2.5 border-b border-dash-border px-3 py-2 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:flex">
+          <span className="w-[17px] shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">{tr.colDocumento}</span>
+          <span className="hidden w-[9.5rem] shrink-0 lg:block">{tr.colEtapa}</span>
+          <span className="w-[6.5rem] shrink-0">{tr.colFechaRecepcion}</span>
+          <span className="w-[6.5rem] shrink-0">{tr.colEstado}</span>
+          <span className="w-8 shrink-0 text-right">{tr.acciones}</span>
+        </div>
+
+        <div className="divide-y divide-dash-border/60">
+          {(etapaActiva === "todos"
+            ? visibleTipos
+            : ((GRUPOS_DOCUMENTO.find((g) => g.id === etapaActiva)?.tipos ?? []) as readonly string[]).filter(
+                (t) => (visibleTipos as readonly string[]).includes(t),
+              )
+          ).map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
+        </div>
       </div>
     </div>
   ) : null;
