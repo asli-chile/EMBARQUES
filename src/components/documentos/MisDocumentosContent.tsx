@@ -107,16 +107,10 @@ const TIPOS_DOCUMENTO_CLIENTE: readonly TipoDocumento[] = [
  */
 const GRUPOS_DOCUMENTO = [
   {
-    id: "reserva",
-    label: "Reserva y embarque",
-    icon: "lucide:clipboard-list",
-    tipos: ["BOOKING", "SOLICITUD_RESERVA", "INSTRUCTIVO_EMBARQUE"],
-  },
-  {
     id: "comerciales",
     label: "Comerciales",
     icon: "lucide:receipt",
-    tipos: ["FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
+    tipos: ["BOOKING", "SOLICITUD_RESERVA", "FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
   },
   {
     id: "origen",
@@ -126,9 +120,9 @@ const GRUPOS_DOCUMENTO = [
   },
   {
     id: "transporte",
-    label: "Transporte y nave",
+    label: "Transporte y Nave",
     icon: "lucide:ship",
-    tipos: ["BL_TELEX_SWB_AWB", "FACTURA_GATE_OUT"],
+    tipos: ["INSTRUCTIVO_EMBARQUE", "BL_TELEX_SWB_AWB", "FACTURA_GATE_OUT"],
   },
   {
     id: "cierre",
@@ -191,6 +185,8 @@ export function MisDocumentosContent() {
    * regla, que para eso se tomó.
    */
   const [gruposCerrados, setGruposCerrados] = useState<Record<string, boolean>>({});
+  /** Fila con su menú de acciones desplegado. Solo uno a la vez. */
+  const [menuTipo, setMenuTipo] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(1);
@@ -739,149 +735,168 @@ export function MisDocumentosContent() {
    * poder dibujarla dentro de cada grupo: la tarjeta no cambió, cambió quién
    * decide en qué orden y bajo qué título aparece.
    */
+  /**
+   * Una fila por documento.
+   *
+   * Antes cada tipo era una tarjeta con su zona de carga desplegada; doce de
+   * ellas convertían la pantalla en un formulario largo donde no se veía el
+   * conjunto. La fila dice lo único que se consulta de un vistazo —si el
+   * documento está y de cuándo es— y guarda las acciones en su menú.
+   *
+   * Subir sigue a un toque para quien puede: en una fila pendiente, el menú se
+   * abre directamente sobre la acción de cargar.
+   */
   const renderTipoDocumento = (tipo: TipoDocumento) => {
-          const doc = documentosPorTipo.get(tipo);
-          const isUploading = uploading === tipo;
-          const meta = TIPO_META[tipo];
-          const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
-          const tipoLabel = tr.tipoLabels[tipo as keyof typeof tr.tipoLabels] ?? meta.label;
-          const marcadoNoAplica = isTipoMarcadoNoAplica(operacionActual, tipo);
-          const puedeMarcarNoAplica = !isCliente && isTipoNoAplicaEligible(tipo);
+    const doc = documentosPorTipo.get(tipo);
+    const isUploading = uploading === tipo;
+    const meta = TIPO_META[tipo];
+    const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
+    const tipoLabel = tr.tipoLabels[tipo as keyof typeof tr.tipoLabels] ?? meta.label;
+    const marcadoNoAplica = isTipoMarcadoNoAplica(operacionActual, tipo);
+    const puedeMarcarNoAplica = !isCliente && isTipoNoAplicaEligible(tipo);
+    const menuAbierto = menuTipo === tipo;
 
-          return (
-            <div key={tipo} className={`dash-card rounded-xl border-2 overflow-hidden transition-all ${
-              marcadoNoAplica
-                ? "border-dash-border"
-                : doc
-                  ? "border-emerald-400/40"
-                  : "border-dash-border"
-            }`}>
-              <div className={`h-1.5 ${
-                marcadoNoAplica
-                  ? "bg-dash-border"
-                  : doc
-                    ? "bg-gradient-to-r from-emerald-400 to-teal-400"
-                    : "bg-gradient-to-r from-dash-neon/40 to-dash-neon/10"
-              }`} />
-              <div className="px-4 py-3 flex items-center gap-3 border-b border-dash-border">
-                <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border ${
-                  marcadoNoAplica
-                    ? "bg-dash-control border-dash-border"
-                    : doc
-                      ? "bg-emerald-500/15 border-emerald-400/35"
-                      : `${meta.color.split(" ")[1]} border-dash-border`
-                }`}>
-                  <Icon
-                    icon={marcadoNoAplica ? "lucide:minus-circle" : doc ? "lucide:check" : meta.icon}
-                    className={`w-4.5 h-4.5 ${
-                      marcadoNoAplica
-                        ? "text-dash-muted"
-                        : doc
-                          ? "text-emerald-300"
-                          : meta.color.split(" ")[0]
-                    }`}
-                    width={18}
-                    height={18}
-                  />
-                </span>
-                <h3 className="text-base font-bold text-dash-fg leading-tight flex-1 min-w-0">{tipoLabel}</h3>
-                {marcadoNoAplica && (
-                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-dash-muted bg-dash-control border border-dash-border px-2 py-0.5 rounded-sm">
-                    {tr.noAplica}
-                  </span>
-                )}
-              </div>
-              <div className="p-3 space-y-2.5">
-                {puedeMarcarNoAplica && (
-                  <label
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-dash-border bg-dash-control cursor-pointer hover:bg-dash-neon/10 transition-colors"
-                    title={tr.noAplicaHint}
+    const estadoFila = marcadoNoAplica
+      ? { clase: "estado--espera", label: tr.noAplica, icono: "lucide:minus-circle" }
+      : doc
+        ? { clase: "estado--ok", label: tr.estadoRecibido, icono: "lucide:check-circle" }
+        : { clase: "estado--atencion", label: tr.estadoPendienteDoc, icono: "lucide:clock" };
+
+    return (
+      <div key={tipo} className={`relative ${estadoFila.clase}`}>
+        <div className="flex items-center gap-2.5 px-3 py-2.5">
+          <Icon
+            icon={meta.icon}
+            width={17}
+            height={17}
+            className="shrink-0 text-dash-muted"
+            aria-hidden
+          />
+
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-dash-fg">
+            {tipoLabel}
+          </span>
+
+          {/* La fecha del documento, o un guion: la columna no se mueve. */}
+          <span className="shrink-0 text-[12px] tabular-nums text-dash-muted max-sm:hidden">
+            {doc && !isSyntheticBooking ? formatDate(doc.created_at) : "—"}
+          </span>
+
+          <span className="estado-chip inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11.5px] font-bold">
+            <Icon icon={estadoFila.icono} width={11} height={11} aria-hidden />
+            {estadoFila.label}
+          </span>
+
+          <button
+            type="button"
+            aria-label={tr.acciones}
+            aria-expanded={menuAbierto}
+            onClick={() => setMenuTipo(menuAbierto ? null : tipo)}
+            className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+          >
+            <Icon icon={isUploading ? "lucide:loader-2" : "lucide:more-vertical"} width={16} height={16} className={isUploading ? "animate-spin" : ""} aria-hidden />
+          </button>
+        </div>
+
+        {menuAbierto && (
+          <>
+            {/* Tocar fuera cierra: en un teléfono no hay dónde “hacer clic al lado”. */}
+            <button
+              type="button"
+              aria-hidden
+              tabIndex={-1}
+              onClick={() => setMenuTipo(null)}
+              className="fixed inset-0 z-[60] cursor-default"
+            />
+            <div className="absolute right-2 top-11 z-[61] w-56 overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-xl">
+              {doc ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setMenuTipo(null); handlePreview(doc); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15"
                   >
-                    <input
-                      type="checkbox"
-                      checked={marcadoNoAplica}
-                      onChange={(e) => void handleToggleNoAplica(tipo, e.target.checked)}
-                      className="w-4 h-4 rounded-sm border-dash-border accent-[var(--dash-neon)] focus:ring-dash-neon/30"
-                    />
-                    <span className="text-sm font-semibold text-dash-fg">{tr.noAplica}</span>
-                    <span className="text-xs text-dash-muted truncate hidden sm:inline">{tr.noAplicaHint}</span>
-                  </label>
-                )}
+                    <Icon icon="lucide:eye" width={15} height={15} aria-hidden />
+                    {tr.preview}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMenuTipo(null); handleDownload(doc); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15"
+                  >
+                    <Icon icon="lucide:download" width={15} height={15} aria-hidden />
+                    {tr.download}
+                  </button>
+                  {!isCliente && !isSyntheticBooking && (
+                    <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15">
+                      <Icon icon="lucide:refresh-cw" width={15} height={15} aria-hidden />
+                      {tr.replace}
+                      <input
+                        type="file"
+                        accept=".pdf,.xls,.xlsx"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUpload(tipo, f);
+                          e.target.value = "";
+                          setMenuTipo(null);
+                        }}
+                      />
+                    </label>
+                  )}
+                  {!isCliente && !isSyntheticBooking && (
+                    <button
+                      type="button"
+                      onClick={() => { setMenuTipo(null); handleDelete(doc); }}
+                      className="estado--error flex w-full items-center gap-2.5 border-t border-dash-border px-3 py-2.5 text-left text-[13px] font-semibold text-[var(--estado)] hover:bg-[color-mix(in_srgb,var(--estado)_12%,transparent)]"
+                    >
+                      <Icon icon="lucide:trash-2" width={15} height={15} aria-hidden />
+                      {tr.deleteDocument}
+                    </button>
+                  )}
+                </>
+              ) : isCliente ? (
+                <p className="px-3 py-3 text-[12.5px] text-dash-muted">{tr.noDocument}</p>
+              ) : (
+                <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15">
+                  <Icon icon="lucide:upload" width={15} height={15} aria-hidden />
+                  {tr.uploadFile}
+                  <input
+                    type="file"
+                    accept=".pdf,.xls,.xlsx"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleUpload(tipo, f);
+                      e.target.value = "";
+                      setMenuTipo(null);
+                    }}
+                  />
+                </label>
+              )}
 
-                {marcadoNoAplica ? (
-                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-dash-border bg-dash-control/50">
-                    <Icon icon="lucide:ban" className="w-5 h-5 text-dash-muted" />
-                    <p className="text-base text-dash-muted font-medium">{tr.noAplicaHint}</p>
-                  </div>
-                ) : doc ? (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-dash-control/70 border border-dash-border">
-                      <Icon icon={doc.mime_type?.includes("pdf") ? "lucide:file-text" : "lucide:file-spreadsheet"}
-                        className={`w-5 h-5 flex-shrink-0 ${doc.mime_type?.includes("pdf") ? "text-red-400" : "text-emerald-300"}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-semibold text-dash-fg truncate leading-tight">{doc.nombre_archivo}</p>
-                        <p className="text-base text-dash-muted mt-0.5">{isSyntheticBooking ? tr.fromOperation : `${formatFileSize(doc.tamano)} · ${formatDate(doc.created_at)}`}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button type="button" onClick={() => handlePreview(doc)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-base font-semibold text-dash-fg bg-dash-neon/15 border border-dash-neon/35 rounded-lg hover:bg-dash-neon/25 transition-colors">
-                        <Icon icon="lucide:eye" className="w-4 h-4" />{tr.preview}
-                      </button>
-                      <button type="button" onClick={() => handleDownload(doc)}
-                        className="inline-flex items-center justify-center w-10 h-10 text-emerald-300 bg-emerald-500/15 rounded-lg hover:bg-emerald-500/25 transition-colors border border-emerald-400/35" title={tr.download}>
-                        <Icon icon="lucide:download" className="w-4 h-4" />
-                      </button>
-                      {!isCliente && !isSyntheticBooking && (
-                        <label className="inline-flex items-center justify-center w-10 h-10 text-dash-muted bg-dash-control rounded-lg hover:bg-dash-neon/15 hover:text-dash-fg transition-colors cursor-pointer border border-dash-border" title={tr.replace}>
-                          <Icon icon="lucide:refresh-cw" className="w-4 h-4" />
-                          <input type="file" accept=".pdf,.xls,.xlsx" className="hidden"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
-                        </label>
-                      )}
-                      {!isCliente && !isSyntheticBooking && (
-                        <button type="button" onClick={() => handleDelete(doc)}
-                          className="inline-flex items-center justify-center w-10 h-10 text-red-400 bg-red-500/15 rounded-lg hover:bg-red-500/25 transition-colors border border-red-400/35" title={tr.deleteDocument}>
-                          <Icon icon="lucide:trash-2" className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ) : isCliente ? (
-                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed border-dash-border">
-                    <Icon icon="lucide:file-x" className="w-5 h-5 text-dash-muted/50" />
-                    <p className="text-base text-dash-muted">{tr.noDocument}</p>
-                  </div>
-                ) : (
-                  <label className={`flex items-center gap-3 px-3 py-3 rounded-lg border border-dashed cursor-pointer transition-all ${
-                    isUploading ? "border-dash-neon bg-dash-neon/10" : "border-dash-border hover:border-dash-neon/50 hover:bg-dash-neon/5"
-                  }`}>
-                    {isUploading ? (
-                      <><Icon icon="lucide:loader-2" className="w-5 h-5 text-dash-neon animate-spin flex-shrink-0" />
-                      <span className="text-base font-semibold text-dash-neon">{tr.uploading}</span></>
-                    ) : (
-                      <><Icon icon="lucide:upload" className="w-5 h-5 text-dash-muted flex-shrink-0" />
-                      <div>
-                        <p className="text-base font-semibold text-dash-fg">{tr.uploadFile}</p>
-                        <p className="text-base text-dash-muted">{tr.fileTypesHint}</p>
-                      </div></>
-                    )}
-                    <input type="file" accept=".pdf,.xls,.xlsx" className="hidden" disabled={isUploading}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(tipo, f); e.target.value = ""; }} />
-                  </label>
-                )}
-              </div>
+              {puedeMarcarNoAplica && (
+                <label
+                  className="flex w-full cursor-pointer items-center gap-2.5 border-t border-dash-border px-3 py-2.5 text-[13px] font-semibold text-dash-muted hover:bg-dash-neon/15"
+                  title={tr.noAplicaHint}
+                >
+                  <input
+                    type="checkbox"
+                    checked={marcadoNoAplica}
+                    onChange={(e) => { void handleToggleNoAplica(tipo, e.target.checked); setMenuTipo(null); }}
+                    className="h-4 w-4 rounded-sm accent-[var(--dash-neon)]"
+                  />
+                  {tr.noAplica}
+                </label>
+              )}
             </div>
+          </>
+        )}
+      </div>
     );
   };
 
-  /**
-   * Estado del viaje para la cabecera.
-   *
-   * `estado_operacion` es texto libre en la base y llega en mayúsculas o
-   * vacío. Se normaliza acá y se le asigna un tono de la paleta: lo cerrado es
-   * logro, lo cancelado es error, lo demás está en curso.
-   */
   const estadoViaje = (() => {
     const bruto = (operacionActual?.estado_operacion ?? "").trim();
     if (!bruto) return { label: tr.sinEstado, clase: "estado--espera" };
@@ -971,20 +986,61 @@ export function MisDocumentosContent() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex-1 h-2.5 rounded-sm overflow-hidden border bg-dash-control border-dash-border">
-                <div
-                  className="h-full rounded-sm transition-all duration-500"
-                  style={{
-                    width: `${progressPct}%`,
-                    background: progressPct === 100
-                      ? "linear-gradient(to right,#10b981,#059669)"
-                      : "linear-gradient(to right, var(--dash-neon), var(--dash-neon-hot))",
-                  }}
-                />
-              </div>
-              <span className={`text-base font-extrabold shrink-0 tabular-nums ${progressPct === 100 ? "text-emerald-300" : "text-dash-fg"}`}>
-                {docsCompletados}/{tiposAplicables} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
+            {/*
+              * El avance del papeleo, con su anillo.
+              *
+              * La fracción y el anillo dicen lo mismo a propósito: el anillo se
+              * lee de lejos y sin contar, la fracción responde "¿cuántos son?".
+              * Debajo, lo que falta en palabras, que es la forma en que se
+              * pregunta.
+              */}
+            <div
+              className={`mt-3 flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/60 p-3 ${
+                progressPct === 100 ? "estado--ok" : docsCompletados > 0 ? "estado--curso" : "estado--espera"
+              }`}
+            >
+              <span className="relative flex h-14 w-14 shrink-0 items-center justify-center" aria-hidden>
+                <svg viewBox="0 0 44 44" className="h-14 w-14 -rotate-90">
+                  <circle
+                    cx="22"
+                    cy="22"
+                    r="19"
+                    fill="none"
+                    strokeWidth="5"
+                    className="stroke-dash-border"
+                  />
+                  <circle
+                    cx="22"
+                    cy="22"
+                    r="19"
+                    fill="none"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    stroke="var(--estado)"
+                    strokeDasharray={`${(progressPct / 100) * 2 * Math.PI * 19} ${2 * Math.PI * 19}`}
+                    style={{ transition: "stroke-dasharray 500ms var(--dash-ease)" }}
+                  />
+                </svg>
+                <span className="absolute text-[13px] font-extrabold tabular-nums text-dash-fg">
+                  {docsCompletados}/{tiposAplicables}
+                </span>
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-bold text-dash-fg">
+                  {tr.docsRecibidosTitulo}
+                </span>
+                <span className="mt-0.5 block text-[12.5px] text-dash-muted">
+                  {tr.docsRecibidosDetalle
+                    .replace("{recibidos}", String(docsCompletados))
+                    .replace("{pendientes}", String(Math.max(tiposAplicables - docsCompletados, 0)))}
+                </span>
+                <span className="mt-2 block h-2 overflow-hidden rounded-full bg-dash-control">
+                  <span
+                    className="estado-barra block h-full rounded-full transition-all duration-500"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </span>
               </span>
             </div>
           </div>
@@ -1059,7 +1115,7 @@ export function MisDocumentosContent() {
               </button>
 
               {abierto && (
-                <div className="grid grid-cols-1 gap-2 border-t border-dash-border/70 p-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="divide-y divide-dash-border/60 border-t border-dash-border/70">
                   {tipos.map((tipo) => renderTipoDocumento(tipo))}
                 </div>
               )}
