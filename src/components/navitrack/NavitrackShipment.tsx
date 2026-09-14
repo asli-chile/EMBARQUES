@@ -410,7 +410,7 @@ export function NavitrackShipment({
   ];
 
   return (
-    <div className="motion-view-section flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2 sm:p-2.5 lg:overflow-hidden">
+    <div className="motion-view-section flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 pb-5 sm:gap-2 sm:p-2.5 lg:overflow-hidden">
       {/* Barra superior: salir del detalle y refrescar. */}
       <div className="flex shrink-0 items-center justify-between gap-2 max-sm:order-1">
         <button
@@ -474,7 +474,7 @@ export function NavitrackShipment({
 
       {/* Encabezado: identidad, etapa y avance en una sola lectura. */}
       <header
-        className={`dash-card dash-card-static nt-tone--${meta.tono} shrink-0 px-3.5 py-3 max-sm:order-2`}
+        className={`dash-card dash-card-static nt-tone--${meta.tono} shrink-0 px-3.5 py-3 max-sm:order-2 max-sm:px-4 max-sm:py-4`}
       >
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:flex-col max-sm:items-stretch">
           <div className="flex min-w-0 flex-1 items-center gap-3 max-sm:w-full">
@@ -610,9 +610,18 @@ export function NavitrackShipment({
         </div>
       </header>
 
-      {/* Bloque central: se queda con el alto que sobra. */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 max-sm:order-4 lg:grid-cols-[1.6fr_1fr]">
-        <section className="dash-card dash-card-static flex min-h-0 flex-col overflow-hidden">
+      {/*
+        * Bloque central: se queda con el alto que sobra.
+        *
+        * `flex-1 min-h-0` es lo que sostiene la pizarra de escritorio, donde no
+        * hay scroll de página y este bloque absorbe el alto sobrante. En el
+        * teléfono la vista es una columna con scroll, y ahí esa misma pareja
+        * autoriza a encogerse por debajo del contenido: el mapa pedía 52dvh y
+        * la tarjeta, que recorta, lo dejaba en una franja. Bajo `sm` toma su
+        * alto natural y el scroll hace el resto.
+        */}
+      <div className="grid grid-cols-1 gap-3 max-sm:order-4 sm:min-h-0 sm:flex-1 sm:gap-2 lg:grid-cols-[1.6fr_1fr]">
+        <section className="dash-card dash-card-static flex flex-col overflow-hidden sm:min-h-0">
           <div className="dash-section-head flex shrink-0 items-center gap-1 overflow-x-auto px-2 py-1.5">
             {pestanas.map((p) => (
               <button
@@ -988,7 +997,7 @@ export function NavitrackShipment({
 
       {/* Franja de indicadores: lo que un operador mira de reojo. */}
       <div
-        className={`shrink-0 gap-2 max-sm:order-3 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:grid sm:grid-cols-3 ${
+        className={`shrink-0 gap-2.5 max-sm:order-3 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:gap-2 sm:grid sm:grid-cols-3 ${
           hayCadena ? "xl:grid-cols-7" : "xl:grid-cols-6"
         }`}
       >
@@ -1127,7 +1136,7 @@ export function NavitrackShipment({
         * nota aparecía arriba del embarque, antes incluso de saber cuál era. Al
         * numerar por `order`, los que no se numeran no se quedan en su sitio.
         */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-dash-border bg-dash-control/50 px-3 py-2 max-sm:order-5">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-dash-border bg-dash-control/50 px-3 py-2 max-sm:order-5 max-sm:gap-2.5 max-sm:px-3.5 max-sm:py-3">
         <p className="flex min-w-0 items-center gap-2 text-[11px] leading-snug text-dash-muted">
           <Icon icon="lucide:info" width={13} height={13} className="shrink-0 text-dash-neon" aria-hidden />
           <span className="min-w-0">{tr.notaAis}</span>

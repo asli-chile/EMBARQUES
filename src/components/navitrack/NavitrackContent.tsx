@@ -852,7 +852,15 @@ export function NavitrackContent() {
   return (
     <div className="dash-neon tracking-brand navitrack flex min-h-0 flex-1 flex-col" data-theme={theme}>
       <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {/*
+          * Halos de fondo: ambiente para una pantalla grande.
+          *
+          * En un teléfono la vista es una pila de tarjetas, así que el fondo
+          * sólo se ve por las separaciones — y ahí estas manchas de color
+          * aparecen a trozos, como si se transparentara otra pantalla detrás.
+          * El ambiente necesita superficie para leerse como ambiente.
+          */}
+        <div className="pointer-events-none absolute inset-0 hidden overflow-hidden sm:block" aria-hidden>
           <div className="absolute -right-20 top-0 h-80 w-80 rounded-full bg-dash-neon/15 blur-3xl" />
           <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-dash-neon-hot/10 blur-3xl" />
         </div>
