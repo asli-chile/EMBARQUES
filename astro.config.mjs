@@ -20,6 +20,20 @@ export default defineConfig({
   output: "server",
   adapter: vercel({
     devToolbar: { enabled: false },
+    /*
+     * Techo de duración de las funciones.
+     *
+     * Sin esto rige el de Vercel, que son unos pocos segundos: suficiente para
+     * cualquier pantalla, no para el chequeo diario de seguimiento, que habla
+     * con un proveedor externo una vez por nave. La corrida moría a mitad de
+     * camino —faltaba la última nave y nunca se enviaba el reporte, que va al
+     * final— y desde fuera se veía igual que un cron que no corrió.
+     *
+     * Con las consultas ya en paralelo la corrida tarda segundos; el margen es
+     * para que un proveedor lento no vuelva a cortarla. 60 s es el máximo que
+     * admite el plan Hobby, así que sirve en cualquiera de los dos.
+     */
+    maxDuration: 60,
   }),
   // CSRF + proxy (asli.cl/embarques vía Vercel): confía en X-Forwarded-* solo para estos hosts.
   // Sin esto, checkOrigin compara el Origin del navegador contra la URL interna del server → 403 en POST.

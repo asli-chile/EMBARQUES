@@ -271,12 +271,24 @@ export const GET: APIRoute = async ({ request, url }) => {
     resueltas: altas.filter((a) => a.resuelta).map((a) => a.nombre),
   };
 
-  for (const nave of naves ?? []) {
+  /*
+   * Las naves se consultan a la vez, no una tras otra.
+   *
+   * En serie, cada respuesta del proveedor tardaba unos tres segundos y siete
+   * naves se comían veinte, más de lo que dura una función de Vercel: la
+   * corrida moría a mitad del recorrido. Por eso faltaba siempre la última nave
+   * y no llegaba el reporte, que se envía al final.
+   *
+   * El proveedor admite 50 llamadas por minuto, así que siete simultáneas no lo
+   * incomodan. Los contadores se tocan desde varias ramas, pero JavaScript no
+   * interrumpe una expresión a medias: no hay carrera que perder.
+   */
+  await Promise.all((naves ?? []).map(async (nave) => {
     const id = (String(nave.mmsi ?? "").trim() || String(nave.imo ?? "").trim()).trim();
     if (!/^\d{7}$|^\d{9}$/.test(id)) {
       // No es error del proveedor: es un identificador que no se puede consultar.
       sinRespuesta.push({ nave: nave.nombre as string, motivo: `identificador inválido: "${id}"` });
-      continue;
+      return;
     }
     resultado.revisadas += 1;
 
@@ -296,7 +308,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         if (!detalle) {
           resultado.errores += 1;
           sinRespuesta.push({ nave: nave.nombre as string, motivo: "sin lectura previa que reutilizar" });
-          continue;
+          return;
         }
       } else {
         const r = await fetch(
@@ -307,7 +319,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         if (!r.ok) {
           resultado.errores += 1;
           sinRespuesta.push({ nave: nave.nombre as string, motivo: `proveedor respondió ${r.status}` });
-          continue;
+          return;
         }
         detalle = cuerpoProveedor(await r.json());
       }
@@ -318,12 +330,12 @@ export const GET: APIRoute = async ({ request, url }) => {
         nave: nave.nombre as string,
         motivo: e instanceof Error ? e.name : "error de red",
       });
-      continue;
+      return;
     }
     if (!detalle) {
       resultado.errores += 1;
       sinRespuesta.push({ nave: nave.nombre as string, motivo: "respuesta sin datos" });
-      continue;
+      return;
     }
 
     // La lectura se guarda igual que las del mapa: alimenta el caché y el
@@ -346,7 +358,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
 
     const destinoAis = str(detalle.destination);
-    if (!destinoAis) continue;
+    if (!destinoAis) return;
 
     const posicion =
       num(detalle.latitude) != null && num(detalle.longitude) != null
@@ -383,7 +395,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       if (anuncio === "nueva") resultado.escalas += 1;
 
     }
-  }
+  }));
 
   /*
    * ── Las recaladas que vencen hoy ────────────────────────────────────────

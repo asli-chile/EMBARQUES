@@ -734,7 +734,19 @@ pone `con_transbordo` automáticamente: un transbordo desmiente la afirmación.
 
 `src/pages/api/navitrack/chequeo-diario.ts` lo dispara el cron de Vercel
 declarado en `vercel.json` (`0 10 * * *` = 06:00 en Chile; Vercel lo ejecuta con
-holgura, así que la hora real varía unos minutos). Por cada nave con
+holgura, así que la hora real varía unos minutos).
+
+**La corrida tiene un techo de tiempo, y ese techo se alcanzó.** El 14-09-2026
+el chequeo consultaba las naves una tras otra, a unos tres segundos cada una:
+con siete naves se pasaba del límite de duración de la función y moría a mitad
+del recorrido. Desde fuera se veía como dos fallos distintos —faltaba una nave y
+no llegaba el reporte— cuando era uno solo: nunca terminaba. El envío del
+reporte va al final, así que era lo primero en perderse.
+
+Por eso las consultas van **en paralelo** (`Promise.all`; el proveedor admite 50
+por minuto) y `astro.config.mjs` declara `maxDuration: 60` en el adaptador. Al
+sumar naves a la lista blanca, recordar que el costo en tiempo ya no crece en
+serie, pero el de créditos sí: una consulta por nave y por día. Por cada nave con
 `tracking_activo` hace **una** llamada a `get-vessel-location`: 1 crédito por
 nave y por día. Con una nave, 150 créditos alcanzan para meses; con veinte, para
 una semana.
