@@ -598,7 +598,23 @@ export function NavitrackContent() {
           break;
       }
     }
-    return { transito, proximos, retrasos, transbordos, arribados };
+    /*
+     * `transito` cuenta los que navegan; `activos`, los que no han arribado.
+     *
+     * No son lo mismo y confundirlos se veía en pantalla: la pestaña "En
+     * seguimiento" mostraba los navegando, así que un embarque todavía en
+     * origen desaparecía de la cuenta aunque estuviera en la lista, y el número
+     * de la pestaña no calzaba con el de la línea de abajo.
+     */
+    return {
+      transito,
+      proximos,
+      retrasos,
+      transbordos,
+      arribados,
+      activos: filas.length - arribados,
+      todos: filas.length,
+    };
   }, [filas]);
 
   /**

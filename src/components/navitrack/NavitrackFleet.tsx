@@ -66,7 +66,7 @@ function Kpi({ label, hint, valor, icon, acento, activo, onClick }: KpiProps) {
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`dash-card dash-kpi-card dash-kpi-card--${acento} motion-interactive flex items-center gap-3 p-3.5 text-left sm:p-4 ${
+      className={`dash-card dash-kpi-card dash-kpi-card--${acento} motion-interactive flex items-center gap-2.5 p-3 text-left sm:gap-3 sm:p-4 ${
         activo ? "ring-2 ring-[color-mix(in_srgb,var(--dash-kpi-accent)_55%,transparent)]" : ""
       }`}
     >
@@ -75,10 +75,16 @@ function Kpi({ label, hint, valor, icon, acento, activo, onClick }: KpiProps) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="dash-kpi-label block text-dash-muted">{label}</span>
-        <span className="dash-kpi-value mt-1 block text-[26px] font-extrabold sm:text-[30px]">
+        <span className="dash-kpi-value mt-0.5 block text-[24px] font-extrabold sm:mt-1 sm:text-[30px]">
           {valor}
         </span>
-        <span className="dash-kpi-hint mt-1 block text-[11.5px] leading-snug sm:truncate">
+        {/*
+          * La glosa explica el número la primera vez y después es ruido. En un
+          * teléfono ese ruido se paga en alto: cuatro tarjetas con tres líneas
+          * cada una empujan la lista de embarques fuera de la pantalla, y la
+          * lista es a lo que se vino.
+          */}
+        <span className="dash-kpi-hint mt-1 hidden text-[11.5px] leading-snug sm:block sm:truncate">
           {hint}
         </span>
       </span>
@@ -139,6 +145,9 @@ type FleetProps = {
     retrasos: number;
     transbordos: number;
     arribados: number;
+    /** Los que no han arribado: incluye los que aún no zarpan. */
+    activos: number;
+    todos: number;
   };
   vista: FleetVista;
   onVista: (v: FleetVista) => void;
@@ -327,8 +336,15 @@ export function NavitrackFleet({
       <section className="dash-card dash-card-static flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="dash-section-head flex shrink-0 flex-wrap items-center justify-between gap-2.5 px-3.5 py-3 max-md:flex-col max-md:items-stretch">
           <div className="min-w-0">
-            <h2 className="text-[16px] font-extrabold tracking-tight text-dash-fg">{tr.tableTitle}</h2>
-            <p className="mt-0.5 text-[12px] text-dash-muted">
+            {/*
+              * En teléfono, la barra del módulo ya dice "Seguimiento de
+              * embarques" tres centímetros más arriba. Repetirlo acá gasta la
+              * única pantalla que hay para decir dos veces lo mismo.
+              */}
+            <h2 className="hidden text-[16px] font-extrabold tracking-tight text-dash-fg md:block">
+              {tr.tableTitle}
+            </h2>
+            <p className="text-[12px] text-dash-muted md:mt-0.5">
               {interpolar(tr.tableSubtitle, { n: String(total) })}
             </p>
           </div>
@@ -350,7 +366,17 @@ export function NavitrackFleet({
               >
                 {v === "activos" ? tr.vistaActivos : v === "arribados" ? tr.vistaArribados : tr.vistaTodos}
                 <span className="tabular-nums opacity-70">
-                  {v === "activos" ? conteos.transito : v === "arribados" ? conteos.arribados : total}
+                  {/*
+                    * Cada pestaña dice cuántos tiene ELLA, no cuántos tiene la
+                    * vista abierta. Con `total` —que sigue a la vista— "Todos"
+                    * mostraba el número de los activos y quedaba por debajo de
+                    * "Arribados", que es imposible.
+                    */}
+                  {v === "activos"
+                    ? conteos.activos
+                    : v === "arribados"
+                      ? conteos.arribados
+                      : conteos.todos}
                 </span>
               </button>
             ))}
