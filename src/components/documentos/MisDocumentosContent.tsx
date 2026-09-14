@@ -1426,7 +1426,17 @@ export function MisDocumentosContent() {
                */
               <div
                 key={grupo.id}
-                className="divide-y divide-dash-border/60 border-t-2 border-dash-neon/25 first:border-t-0"
+                /*
+                 * La línea lleva el color de la etapa que empieza.
+                 *
+                 * Un separador neutro y fino se perdía entre las divisiones de
+                 * fila, que son del mismo gris: había que contar para saber
+                 * dónde terminaba un grupo. Con el color del grupo, la división
+                 * se ve y además dice cuál empieza, que es lo que el encabezado
+                 * decía antes de quitarlo.
+                 */
+                style={{ borderTopColor: `color-mix(in srgb, ${grupo.tono} 75%, transparent)` }}
+                className="divide-y divide-dash-border/60 border-t-[3px] first:border-t-0"
                 aria-label={`${grupo.label}: ${recibidos}/${exigibles}`}
               >
                 {tipos.map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
