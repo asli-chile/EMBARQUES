@@ -15,6 +15,10 @@ export const translations = {
       guest: "Invitado",
       home: "Inicio",
       dashboardShort: "Dashboard",
+      // Menú de teléfono: el rail no cabe y sus etiquetas piden un mouse que no hay.
+      menu: "Menú",
+      close: "Cerrar",
+      theme: "Tema",
     },
     sidebar: {
       dashboard: "Dashboard",
@@ -3118,6 +3122,9 @@ export const translations = {
       guest: "Guest",
       home: "Home",
       dashboardShort: "Dashboard",
+      menu: "Menu",
+      close: "Close",
+      theme: "Theme",
     },
     sidebar: {
       dashboard: "Dashboard",

@@ -91,7 +91,12 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
 
   return (
     <nav
-      className="group/rail z-40 flex h-full w-[64px] shrink-0 flex-col overflow-hidden border-r border-black/20 bg-[#0B1A3D] text-white transition-[width] duration-200 ease-out hover:w-[248px] focus-within:w-[248px]"
+      /*
+       * Oculto bajo `md`: en un teléfono estos 64 px son el 16 % del ancho y
+       * sus etiquetas sólo aparecen al pasar el mouse, que ahí no existe. La
+       * navegación en ese tamaño la lleva AppMobileNav.
+       */
+      className="group/rail z-40 hidden h-full w-[64px] shrink-0 flex-col overflow-hidden border-r border-black/20 bg-[#0B1A3D] text-white transition-[width] duration-200 ease-out hover:w-[248px] focus-within:w-[248px] md:flex"
       aria-label="Navegación ERP"
       onMouseEnter={openRail}
       onMouseLeave={closeRail}

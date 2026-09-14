@@ -141,7 +141,15 @@ export function InicioLoggedInHome({
   const shortcuts = (
     <section
       data-inicio-section
-      className="relative z-10 flex min-h-dvh flex-col justify-center py-16 sm:py-20 lg:py-24 inicio-shortcuts-band"
+      /*
+       * Pantalla completa solo desde tablet.
+       *
+       * En un teléfono, forzar `min-h-dvh` con este relleno obliga a recorrer
+       * una pantalla entera para ver tres accesos: la sección se estira sin
+       * mostrar más. Con la altura natural, los accesos quedan uno tras otro y
+       * se llega antes.
+       */
+      className="relative z-10 flex flex-col justify-center py-10 sm:min-h-dvh sm:py-20 lg:py-24 inicio-shortcuts-band"
     >
       <div className={`${inicioStyles.shell} w-full`}>
         <div className="mb-10 flex flex-col gap-6 sm:mb-12 lg:mb-14 lg:flex-row lg:items-end lg:justify-between">
