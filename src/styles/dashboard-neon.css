@@ -669,3 +669,30 @@ html[data-erp-neon="light"] {
   background: color-mix(in srgb, var(--erp-neon) 28%, transparent) !important;
   color: var(--erp-fg) !important;
 }
+
+
+/* ── Desplegables nativos ───────────────────────────────────────────────────
+ *
+ * El selector de temporada no se leía: la lista salía oscura sobre oscura.
+ *
+ * Dos causas sumadas. `.dash-control` pinta el fondo con `color-mix(...
+ * transparent)`, y un `<option>` no sabe componer transparencias — hereda un
+ * fondo que el navegador resuelve como le parece. Y encima las opciones traían
+ * texto oscuro escrito a mano, pensado para cuando el panel era claro.
+ *
+ * `color-scheme` es lo que le dice al navegador con qué esquema dibujar el
+ * desplegable, que es cosa suya y no del CSS de la página; el resto asegura que
+ * cada opción tenga fondo opaco y el color del tema.
+ */
+.dash-neon select.dash-control {
+  color-scheme: dark;
+}
+
+.dash-neon select.dash-control option {
+  background-color: var(--dash-control);
+  color: var(--dash-fg);
+}
+
+.dash-neon[data-theme="light"] select.dash-control {
+  color-scheme: light;
+}

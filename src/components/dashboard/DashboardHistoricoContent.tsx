@@ -486,11 +486,11 @@ export function DashboardHistoricoContent({
               onChange={(e) => setTemporadaSel(e.target.value || TEMPORADA_TODAS)}
               className="dash-control rounded-lg px-3 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
             >
-              <option value={TEMPORADA_TODAS} className="text-neutral-800">
+              <option value={TEMPORADA_TODAS}>
                 {tr.seasonAll}
               </option>
               {temporadas.map((tp) => (
-                <option key={tp.id} value={tp.nombre} className="text-neutral-800">
+                <option key={tp.id} value={tp.nombre}>
                   {tp.nombre}
                 </option>
               ))}
