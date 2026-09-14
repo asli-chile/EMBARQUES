@@ -757,7 +757,7 @@ export function MisDocumentosContent() {
             </button>
           ))}
         </div>
-        {!hasSelection && (
+        {(
           <span className="text-dash-muted tabular-nums text-[12.5px] sm:text-base">
             {tr.showingRange
               .replace("{from}", String(rangeFrom))
@@ -789,11 +789,7 @@ export function MisDocumentosContent() {
           * Con el panel de una operación abierto la columna es angosta y vuelve
           * la fracción, que ocupa lo que hay.
           */}
-        {hasSelection ? (
-          <span className="px-1.5 text-[13px] font-bold tabular-nums text-dash-fg">
-            {safePage}/{totalPages}
-          </span>
-        ) : (
+        {(
           <span className="flex items-center gap-1">
             {(() => {
               const ventana = 5;
@@ -1375,7 +1371,7 @@ export function MisDocumentosContent() {
             <div
               className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
                 hasSelection
-                  ? "hidden lg:flex lg:w-[280px] xl:w-[300px] lg:shrink-0"
+                  ? "hidden lg:flex lg:w-[330px] xl:w-[350px] lg:shrink-0"
                   : "w-full flex-1"
               }`}
             >
@@ -1458,7 +1454,7 @@ export function MisDocumentosContent() {
                       />
                     </div>
                   )}
-                  {!hasSelection && (
+                  {(
                     /*
                      * Filtros por avance del papeleo: es la pregunta que trae a
                      * esta pantalla ("¿a cuáles les falta algo?"), y responderla
@@ -1494,6 +1490,17 @@ export function MisDocumentosContent() {
                               <span className={`estado-barra h-1.5 w-1.5 rounded-full ${punto}`} aria-hidden />
                             ) : null}
                             {etiqueta}
+                            {/* La cuenta de cada filtro: sin ella hay que
+                                probarlos uno por uno para saber si traen algo. */}
+                            <span className="rounded-md bg-dash-control px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-dash-muted">
+                              {clave === "todos"
+                                ? resumenDocs.total
+                                : clave === "completos"
+                                  ? resumenDocs.completas
+                                  : clave === "curso"
+                                    ? resumenDocs.curso
+                                    : resumenDocs.pendientes}
+                            </span>
                           </button>
                         );
                       })}
@@ -1514,48 +1521,82 @@ export function MisDocumentosContent() {
                 <div className="flex-1 min-h-0 overflow-auto w-full">
                   {/* Lista compacta (selección activa): Ref ASLI, Ref Externa, Booking, Contenedor */}
                   {hasSelection ? (
-                    <div className="divide-y divide-dash-border">
+                    /*
+                     * Lista de al lado, con una operación abierta.
+                     *
+                     * Antes repetía los mismos campos que la tabla —referencia
+                     * externa, contenedor— en una columna de 300 px, así que
+                     * todo se partía en dos líneas. Acá solo va lo que sirve
+                     * para saltar de un embarque a otro: cuál es, de quién, su
+                     * booking y cuánto le falta.
+                     */
+                    <div className="space-y-2 p-2">
                       {pagedOperaciones.length === 0 ? (
                         <div className="py-8 px-3 text-center text-dash-muted text-base">{tr.noOperations}</div>
                       ) : (
                         pagedOperaciones.map((op) => {
                           const isActive = selectedOperacion === op.id;
+                          const viaje = estadoViajeDe(op);
+                          const total = docsExigiblesDe(op.id);
+                          const hechos = Math.min(docsRecibidosDe(op.id), total);
+                          const pct = total === 0 ? 0 : Math.round((hechos / total) * 100);
                           return (
                             <button
                               key={op.id}
                               type="button"
                               onClick={() => handleSelectOperacion(op.id)}
-                              className={`w-full text-left px-2.5 py-2.5 transition-all relative ${
+                              className={`relative w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
                                 isActive
-                                  ? "bg-dash-neon/15 text-dash-fg ring-1 ring-inset ring-dash-neon/40"
-                                  : "hover:bg-dash-neon/10 border-l-[3px] border-l-transparent text-dash-fg"
+                                  ? "border-dash-neon/50 bg-dash-neon/12 ring-1 ring-inset ring-dash-neon/30"
+                                  : "border-dash-border bg-dash-control/30 hover:bg-dash-neon/10"
                               }`}
                             >
-                              {isActive && (
-                                <span className="absolute inset-y-0 left-0 w-[3px] bg-dash-neon" aria-hidden />
-                              )}
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-[1.1rem] font-extrabold break-all text-dash-fg">
-                                  {opRef(op)}
-                                </p>
-                                {isActive && (
-                                  <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold uppercase tracking-wide bg-dash-neon/25 text-dash-fg border border-dash-neon/40">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-dash-neon animate-pulse" />
-                                    {tr.activeOp}
+                              <div className="flex items-start gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[15px] font-extrabold leading-tight text-dash-fg">
+                                    {opRef(op)}
+                                  </p>
+                                  <p className="mt-0.5 truncate text-[12.5px] font-semibold text-dash-muted">
+                                    {op.cliente || "-"}
+                                  </p>
+                                  <p className="mt-0.5 truncate text-[12px] text-dash-muted/80">
+                                    <span className="text-dash-muted/60">{tr.colBooking}:</span>{" "}
+                                    <span className="tabular-nums">{op.booking || "—"}</span>
+                                  </p>
+                                </div>
+
+                                <div className={`flex shrink-0 flex-col items-end gap-1.5 ${viaje.clase}`}>
+                                  <span className="estado-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold">
+                                    <Icon icon={viaje.icono} width={10} height={10} aria-hidden />
+                                    {viaje.label}
                                   </span>
-                                )}
+                                  <Icon
+                                    icon="lucide:chevron-right"
+                                    width={16}
+                                    height={16}
+                                    className="text-dash-muted/60"
+                                    aria-hidden
+                                  />
+                                </div>
                               </div>
-                              <p className="text-[15.4px] font-bold break-all mt-0.5 text-dash-fg/90">
-                                {op.referencia_externa || "—"}
-                              </p>
-                              <p className="text-[15.4px] break-all mt-0.5 text-dash-muted">
-                                <span className="text-dash-muted/70">{tr.colBooking}:</span>{" "}
-                                {op.booking || "—"}
-                              </p>
-                              <p className="text-[15.4px] break-all mt-0.5 text-dash-muted">
-                                <span className="text-dash-muted/70">{tr.colContenedor}:</span>{" "}
-                                {op.contenedor || "—"}
-                              </p>
+
+                              {/* Avance: la fracción y la barra, que es lo que
+                                  deja comparar embarques sin abrirlos. */}
+                              <div
+                                className={`mt-1.5 ${
+                                  pct === 100 ? "estado--transito" : hechos > 0 ? "estado--curso" : "estado--espera"
+                                }`}
+                              >
+                                <p className="text-[12px] font-bold tabular-nums text-dash-fg">
+                                  {hechos}/{total}
+                                </p>
+                                <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-dash-control">
+                                  <span
+                                    className="estado-barra block h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </span>
+                              </div>
                             </button>
                           );
                         })
