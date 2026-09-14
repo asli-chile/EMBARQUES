@@ -875,7 +875,7 @@ export function MisDocumentosContent() {
 
     return (
       <div key={tipo} className={`relative ${estadoFila.clase}`}>
-        <div className="flex items-center gap-3 px-3 py-1 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
+        <div className="flex items-center gap-3 px-3.5 py-2.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
           <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
             {/*
               * Un solo icono para todos.
@@ -892,7 +892,7 @@ export function MisDocumentosContent() {
               className="shrink-0 text-dash-muted/70"
               aria-hidden
             />
-            <span className="min-w-0 truncate text-[13.5px] font-medium text-dash-fg">
+            <span className="min-w-0 truncate text-[14px] font-semibold text-dash-fg">
               {tipoLabel}
             </span>
           </span>
@@ -904,8 +904,8 @@ export function MisDocumentosContent() {
             * qué momento del embarque pertenece cada papel. En pantalla angosta
             * se calla, porque ahí la pestaña activa ya lo dice.
             */}
-          <span className="estado-chip inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-bold">
-            <Icon icon={estadoFila.icono} width={11} height={11} aria-hidden />
+          <span className="estado-chip inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold">
+            <Icon icon={estadoFila.icono} width={12} height={12} aria-hidden />
             {estadoFila.label}
           </span>
 
@@ -954,24 +954,24 @@ export function MisDocumentosContent() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
                   title={tr.preview}
-                  className="hidden h-7 items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
+                  className="hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/50 bg-dash-neon/25 px-3 text-[12.5px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/40 sm:inline-flex"
                 >
-                  <Icon icon="lucide:eye" width={14} height={14} aria-hidden />
+                  <Icon icon="lucide:eye" width={15} height={15} aria-hidden />
                   {tr.accionVer}
                 </button>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
                   title={tr.download}
-                  className="estado--transito hidden h-7 w-7 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--estado)_40%,transparent)] bg-[color-mix(in_srgb,var(--estado)_14%,transparent)] text-[var(--estado)] transition-colors hover:bg-[color-mix(in_srgb,var(--estado)_25%,transparent)] sm:inline-flex"
+                  className="estado--transito hidden h-9 w-9 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_22%,transparent)] text-[var(--estado)] transition-colors hover:bg-[color-mix(in_srgb,var(--estado)_35%,transparent)] sm:inline-flex"
                 >
-                  <Icon icon="lucide:download" width={14} height={14} aria-hidden />
+                  <Icon icon="lucide:download" width={15} height={15} aria-hidden />
                 </button>
               </>
             ) : !isCliente && !marcadoNoAplica ? (
               <label
                 title={tr.uploadFile}
-                className="hidden h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-border bg-dash-control px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:inline-flex"
+                className="hidden h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/40 bg-dash-neon/12 px-3 text-[12.5px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
               >
                 <Icon
                   icon={isUploading ? "lucide:loader-2" : "lucide:upload"}
@@ -1000,7 +1000,7 @@ export function MisDocumentosContent() {
               aria-label={tr.acciones}
               aria-expanded={menuAbierto}
               onClick={() => setMenuTipo(menuAbierto ? null : tipo)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
             >
               <Icon
                 icon={isUploading ? "lucide:loader-2" : "lucide:more-horizontal"}
@@ -1383,7 +1383,7 @@ export function MisDocumentosContent() {
           * dejando un vacío en medio. En una rejilla de proporciones el sobrante
           * se reparte entre las columnas y cada dato cae donde su cabecera dice.
           */}
-        <div className="hidden items-center gap-3 border-b border-dash-border px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
+        <div className="hidden items-center gap-3 border-b border-dash-border px-3.5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
           <span className="min-w-0">{tr.colDocumento}</span>
           <span className="min-w-0">{tr.colEstado}</span>
           <span className="hidden min-w-0 lg:block">{tr.colEtapa}</span>
