@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import "@/styles/naviera-logo.css";
 
 /**
  * Marca de la naviera.

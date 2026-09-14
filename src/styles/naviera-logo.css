@@ -1,0 +1,50 @@
+/**
+ * Marca de la naviera: logo real si existe, monograma si no.
+ *
+ * Estas reglas vivían dentro de `.navitrack`, que es donde nació el componente.
+ * Al reutilizarlo en Mis Reservas quedó sin ninguna: el logo —un arte oscuro
+ * sobre fondo transparente— se pintaba directamente sobre el navy del panel y
+ * prácticamente no se veía. El estilo viaja ahora con el componente, que es
+ * quien importa este archivo.
+ *
+ * El tono llega en `--nv-hue` desde el componente y acá se traduce a color según
+ * el tema, para no congelar el aspecto de uno solo de los dos.
+ */
+.nt-carrier {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  border: 1px solid hsl(var(--nv-hue) 60% 55% / 0.45);
+  background: hsl(var(--nv-hue) 60% 50% / 0.16);
+  color: hsl(var(--nv-hue) 70% 74%);
+  box-shadow: 0 4px 14px -8px hsl(var(--nv-hue) 60% 50% / 0.7);
+}
+
+/* En tema claro el mismo tono, más contenido. */
+.dash-neon[data-theme="light"] .nt-carrier {
+  border-color: hsl(var(--nv-hue) 55% 42% / 0.4);
+  background: hsl(var(--nv-hue) 55% 45% / 0.12);
+  color: hsl(var(--nv-hue) 60% 32%);
+}
+
+/**
+ * Con logo real, la ficha va blanca en ambos temas.
+ *
+ * Los logos del sitio son artes oscuros sobre fondo transparente: sobre el navy
+ * del tema oscuro desaparecerían. El chip blanco es además como los muestran las
+ * plataformas del rubro. El borde sí se deriva del tema, porque en claro un
+ * blanco sobre blanco necesita que algo lo delimite.
+ */
+.nt-carrier:has(img) {
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--dash-fg) 18%, transparent);
+  box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.55);
+}
+
+/* Un respiro alrededor del arte: pegado al borde el logo se lee como recortado. */
+.nt-carrier img {
+  padding: 12%;
+  object-fit: contain;
+}

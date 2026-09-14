@@ -922,7 +922,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       <td className="px-3 py-2">
         <span className="flex items-center justify-center gap-2">
           {op.naviera ? (
-            <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={22} />
+            <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={28} />
           ) : null}
           <span className="truncate text-[14px] font-medium text-dash-muted">{op.naviera || "—"}</span>
         </span>
