@@ -747,6 +747,32 @@ Al crear un bucket nuevo, crear sus políticas en la misma migración. La consul
 de verificación al final de ese archivo lista los buckets que quedaron sin
 ninguna.
 
+### Documentos por cliente
+
+```
+supabase/migrations/20260913000003_storage_documentos_por_cliente.sql
+```
+
+**Aplicada el 13-09-2026.** Las políticas de `documentos` decían solo
+`bucket_id = 'documentos'`, sin mirar quién pedía ni de quién era el archivo.
+Cualquier cuenta de cliente podía listar y descargar los BL y facturas de todos
+los demás, y **borrar los 208 archivos**. El bucket guarda juegos completos de
+BL —título sobre la carga— y facturas comerciales.
+
+Ahora: el **cliente ve y descarga solo los documentos de sus operaciones**, y no
+sube, modifica ni borra. El personal interno mantiene el acceso completo.
+
+La pertenencia sale de `public.storage_doc_es_del_cliente(name)`, que extrae el
+id de operación de la ruta y lo compara con
+`private.get_cliente_nombres_for_user()` — la misma función con la que
+`operaciones` decide qué ve un cliente, para que documentos y operaciones nunca
+digan cosas distintas.
+
+**Al personal interno no se le aplica pertenencia** a propósito: de los 57 ids
+de operación que hay en las rutas, 56 apuntan a operaciones que ya no existen
+(huérfanas de importaciones anteriores), y atarlos a esa relación dejaría 207
+de 208 archivos inaccesibles para quien trabaja con ellos.
+
 ---
 
 ## Convenciones
