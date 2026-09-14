@@ -289,6 +289,7 @@ export function NavitrackShipment({
     haceDias: tr.haceDias,
   };
   const actualizado = fmtRelativo(journey.position?.at ?? null, relativos);
+  const actualizadoExacto = fmtFechaHora(journey.position?.at ?? null, locale);
 
   const etaErp = fmtFecha(estado.eta.erp, locale);
   const etaAis = fmtFechaHora(estado.eta.ais, locale);
@@ -1125,7 +1126,11 @@ export function NavitrackShipment({
           {actualizado && (
             <p className="flex items-center gap-1.5 text-[11px] font-semibold text-dash-muted">
               <Icon icon="lucide:refresh-cw" width={12} height={12} aria-hidden />
-              {tr.ultimaActualizacion}: {actualizado}
+              {tr.ultimaActualizacion}:{" "}
+              {/* El dato exacto, al pasar el mouse: igual que en la tabla. */}
+              <span className="nt-tip" data-tip={actualizadoExacto ?? ""}>
+                {actualizado}
+              </span>
             </p>
           )}
           {/*

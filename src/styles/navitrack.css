@@ -692,3 +692,71 @@
   opacity: 0.78;
   border-style: dashed;
 }
+
+
+/* ── Globo con el dato exacto ───────────────────────────────────────────────
+ *
+ * La tabla muestra "hace 3 horas", que es lo que se lee de un vistazo. La fecha
+ * y hora exactas aparecen al pasar el mouse: hacen falta cuando algo no cuadra,
+ * no todo el tiempo, y ocupar una columna con ellas sería pagar ancho por una
+ * precisión que casi nunca se mira.
+ *
+ * Fondo claro a propósito: sobre el navy del módulo es lo que de verdad
+ * destaca, y deja claro que es una capa por encima de la tabla, no una celda
+ * más.
+ */
+.navitrack .nt-tip {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted color-mix(in srgb, var(--dash-fg) 35%, transparent);
+}
+
+.navitrack .nt-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  right: 0;
+  z-index: 40;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #0b1a3d;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.65);
+  opacity: 0;
+  transform: translateY(3px);
+  pointer-events: none;
+  transition: opacity 0.13s ease, transform 0.13s ease;
+}
+
+.navitrack .nt-tip:hover::after,
+.navitrack .nt-tip:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Sin dato que mostrar no hay globo: un recuadro vacío es peor que nada. */
+.navitrack .nt-tip[data-tip=""]::after {
+  content: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navitrack .nt-tip::after {
+    transition: none;
+  }
+}
+
+/*
+ * En tema claro se invierte: un globo blanco sobre fondo claro no se ve.
+ *
+ * Sin espacio antes de .navitrack: la clase va en el MISMO elemento que
+ * .dash-neon (ver docs/NAVITRACK.md, "Trampa conocida de CSS").
+ */
+.dash-neon[data-theme="light"].navitrack .nt-tip::after {
+  background: #0b1a3d;
+  color: #ffffff;
+  box-shadow: 0 8px 22px -10px rgba(11, 26, 61, 0.5);
+}

@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 import { NavieraLogo } from "./NavieraLogo";
 import type { Locale } from "@/lib/i18n/translations";
 import { ETAPA_LABEL_KEY } from "./NavitrackShipment";
-import { fmtFecha, fmtRelativo, interpolar } from "./navitrack-format";
+import { fmtFecha, fmtFechaHora, fmtRelativo, interpolar } from "./navitrack-format";
 import { parseOpDate, type AisSnapshot, type Journey, type NavitrackOperacion } from "./navitrack-model";
 import { ETAPA_META, PROXIMO_DIAS, type EstadoEmbarque } from "./navitrack-estado";
 import { isoDePuerto } from "./navitrack-banderas";
@@ -585,6 +585,13 @@ export function NavitrackFleet({
                     const meta = ETAPA_META[row.estado.etapa];
                     const flag = requiereAtencion(row.estado);
                     const actualizado = fmtRelativo(row.journey.position?.at ?? null, relativos);
+                    /*
+                     * "Hace 3 horas" se lee de un vistazo, pero cuando algo no
+                     * cuadra hace falta el dato exacto. Va en el tooltip para
+                     * no gastar ancho de columna con una precisión que casi
+                     * nunca se necesita.
+                     */
+                    const actualizadoExacto = fmtFechaHora(row.journey.position?.at ?? null, locale);
                     return (
                       <tr
                         key={row.op.id}
@@ -691,11 +698,14 @@ export function NavitrackFleet({
                         </td>
                         {/* Solo el valor, sin repetir la etiqueta: el ícono de
                             la cabecera ya dice de qué se trata. */}
-                        <td
-                          className="whitespace-nowrap px-1.5 py-2.5 text-center text-[11px] font-medium text-dash-fg/55"
-                          title={actualizado ?? undefined}
-                        >
-                          {actualizado ?? "—"}
+                        <td className="whitespace-nowrap px-1.5 py-2.5 text-center text-[11px] font-medium text-dash-fg/55">
+                          {actualizado ? (
+                            <span className="nt-tip" data-tip={actualizadoExacto ?? ""}>
+                              {actualizado}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-2.5 py-2.5 text-center">
                           {/* La fila entera ya abre el embarque; el botón está
