@@ -1466,6 +1466,39 @@ export function MisReservasContent() {
     [operaciones, deferredSearch, estadoFilter, clienteFilter, navieraFilter, especieFilter, podFilter, naveFilter, etdDesde, etdHasta, transporteFilter]
   );
 
+  /**
+   * Cuántas reservas hay en cada estado.
+   *
+   * Se cuenta sobre TODAS las reservas visibles para el usuario, no sobre las
+   * filtradas: un indicador que cambia al filtrar deja de ser un total y pasa a
+   * repetir lo que la tabla ya muestra.
+   *
+   * Los estados son los que usa la base —SOLICITADA, RESERVA_CONFIRMADA,
+   * OPERACION_CERRADA, CANCELADA—, no una lista propia: si mañana aparece uno
+   * nuevo, entra en el total y no se pierde en un "otros" invisible.
+   */
+  const resumenEstados = useMemo(() => {
+    const cuenta = (estado: string) =>
+      operaciones.filter((op) => (op.estado_operacion ?? "").trim().toUpperCase() === estado).length;
+    const total = operaciones.length;
+    const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
+    const confirmadas = cuenta("RESERVA_CONFIRMADA");
+    const solicitadas = cuenta("SOLICITADA");
+    const cerradas = cuenta("OPERACION_CERRADA");
+    const canceladas = cuenta("CANCELADA");
+    return {
+      total,
+      confirmadas,
+      solicitadas,
+      cerradas,
+      canceladas,
+      pctConfirmadas: pct(confirmadas),
+      pctSolicitadas: pct(solicitadas),
+      pctCerradas: pct(cerradas),
+      pctCanceladas: pct(canceladas),
+    };
+  }, [operaciones]);
+
   const filteredOperaciones = useMemo(() => {
     let result = getFilteredData();
     if (sortField) {
@@ -1931,6 +1964,62 @@ export function MisReservasContent() {
 
       {/* ── Toolbar ── */}
       <div className="dash-toolbar relative z-10 shrink-0">
+        {/*
+          * Indicadores por estado.
+          *
+          * Es la primera pregunta de esta pantalla: cuántas reservas hay y en
+          * qué situación están. Cada uno filtra la tabla —y vuelve a quitarlo si
+          * ya estaba activo—, así que además son el atajo a cada grupo.
+          *
+          * Ocultos en teléfono: ahí ese alto es la lista, y el filtro de estado
+          * sigue estando en la barra.
+          */}
+        <div className="hidden gap-2.5 px-4 pt-3 sm:px-5 md:grid md:grid-cols-5">
+          {(
+            [
+              { estado: "", label: tr.kpiTotal, valor: resumenEstados.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
+              { estado: "RESERVA_CONFIRMADA", label: tr.kpiConfirmadas, valor: resumenEstados.confirmadas, pct: resumenEstados.pctConfirmadas, tono: "estado--transito", icon: "lucide:check-circle" },
+              { estado: "SOLICITADA", label: tr.kpiSolicitadas, valor: resumenEstados.solicitadas, pct: resumenEstados.pctSolicitadas, tono: "estado--atencion", icon: "lucide:clock" },
+              { estado: "OPERACION_CERRADA", label: tr.kpiCerradas, valor: resumenEstados.cerradas, pct: resumenEstados.pctCerradas, tono: "estado--curso", icon: "lucide:archive" },
+              { estado: "CANCELADA", label: tr.kpiCanceladas, valor: resumenEstados.canceladas, pct: resumenEstados.pctCanceladas, tono: "estado--error", icon: "lucide:x-circle" },
+            ] as const
+          ).map((k) => {
+            const activo = estadoFilter === k.estado && k.estado !== "";
+            return (
+              <button
+                key={k.label}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => setEstadoFilter(activo ? "" : k.estado)}
+                className={`${k.tono} flex items-center gap-3 rounded-xl border bg-dash-control/40 px-3.5 py-2.5 text-left transition-colors hover:bg-dash-neon/10 ${
+                  activo
+                    ? "border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_10%,transparent)]"
+                    : "border-dash-border"
+                }`}
+              >
+                <span className="estado-icono flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                  <Icon icon={k.icon} width={18} height={18} aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-[20px] font-extrabold leading-none tabular-nums text-dash-fg">
+                      {k.valor}
+                    </span>
+                    {k.pct !== null && (
+                      <span className="text-[11.5px] font-semibold tabular-nums text-dash-muted">
+                        {k.pct}%
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[12px] font-semibold text-dash-muted">
+                    {k.label}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <button
