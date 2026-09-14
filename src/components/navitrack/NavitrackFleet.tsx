@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { NavieraLogo } from "./NavieraLogo";
 import type { Locale } from "@/lib/i18n/translations";
 import { ETAPA_LABEL_KEY } from "./NavitrackShipment";
 import { fmtFecha, fmtRelativo, interpolar } from "./navitrack-format";
@@ -39,6 +40,7 @@ type Orden =
   | "reserva"
   | "cliente"
   | "ruta"
+  | "naviera"
   | "buque"
   | "etd"
   | "eta"
@@ -105,7 +107,7 @@ function EtapaChip({ row, tr, locale }: { row: FleetRow; tr: Textos; locale: Loc
   return (
     <span className="inline-flex flex-col items-center gap-0.5">
       <span
-        className={`nt-tone--${meta.tono} nt-stage text-[12.5px]`}
+        className={`nt-tone--${meta.tono} nt-stage text-[11.5px]`}
         title={puerto ? `${puerto}${llegada ? ` · ${llegada}` : ""}` : undefined}
       >
         <span className="nt-stage-icon !h-6 !w-6">
@@ -148,6 +150,8 @@ type FleetProps = {
   tr: Textos;
   onSelect: (id: string) => void;
   cargando: boolean;
+  /** Logos por naviera en mayúsculas. Sin entrada, el logo cae al monograma. */
+  logosNaviera?: Map<string, string>;
 };
 
 /** Texto por el que se ordena cada columna. Las fechas ya vienen comparables en ISO. */
@@ -161,6 +165,8 @@ function valorDeOrden(row: FleetRow, col: Orden, tr: Record<string, string>): st
       return (row.op.cliente ?? "").toUpperCase();
     case "ruta":
       return `${row.journey.origen.nombre}${row.journey.destino.nombre}`.toUpperCase();
+    case "naviera":
+      return (row.op.naviera ?? "").toUpperCase();
     case "buque":
       return (row.journey.naveActual || row.op.nave || "").toUpperCase();
     case "etd":
@@ -215,6 +221,7 @@ export function NavitrackFleet({
   tr,
   onSelect,
   cargando,
+  logosNaviera,
 }: FleetProps) {
   /*
    * Orden y paginación viven aquí, no en el contenedor.
@@ -449,13 +456,23 @@ export function NavitrackFleet({
                         </p>
 
                         <p className="mt-1 flex items-center gap-1.5 truncate text-[12.5px] text-dash-fg/70">
-                          <Icon
-                            icon="lucide:ship"
-                            width={12}
-                            height={12}
-                            className="shrink-0 text-dash-muted"
-                            aria-hidden
-                          />
+                          {/* En la tarjeta la naviera acompaña al buque en la
+                              misma línea: son la misma pregunta, quién lo mueve. */}
+                          {row.op.naviera ? (
+                            <NavieraLogo
+                              nombre={row.op.naviera}
+                              logoUrl={logosNaviera?.get(row.op.naviera.trim().toUpperCase()) ?? null}
+                              size={16}
+                            />
+                          ) : (
+                            <Icon
+                              icon="lucide:ship"
+                              width={12}
+                              height={12}
+                              className="shrink-0 text-dash-muted"
+                              aria-hidden
+                            />
+                          )}
                           <span className="truncate">
                             {row.journey.naveActual || row.op.nave || "—"}
                           </span>
@@ -494,7 +511,7 @@ export function NavitrackFleet({
             </div>
 
             <div className="hidden min-h-0 flex-1 overflow-auto md:block">
-              <table className="nt-tabla w-full border-collapse text-left text-[14.5px]">
+              <table className="nt-tabla w-full border-collapse text-left text-[13px]">
                 <thead className="sticky top-0 z-[1] backdrop-blur">
                   <tr className="border-b border-dash-border">
                     {(
@@ -503,6 +520,7 @@ export function NavitrackFleet({
                         ["reserva", tr.colReserva],
                         ["cliente", tr.colCliente],
                         ["ruta", tr.colRuta],
+                        ["naviera", tr.colNaviera],
                         ["buque", tr.colBuque],
                         ["etd", tr.colEtd],
                         ["eta", tr.colEta],
@@ -516,8 +534,8 @@ export function NavitrackFleet({
                           key={col}
                           scope="col"
                           aria-sort={activa ? (orden.desc ? "descending" : "ascending") : "none"}
-                          className={`whitespace-nowrap py-3.5 text-center text-[12.5px] font-semibold uppercase tracking-[0.07em] text-dash-fg/60 ${
-                            col === "actualizado" ? "px-2" : "px-3.5"
+                          className={`whitespace-nowrap py-2.5 text-center text-[11.5px] font-semibold uppercase tracking-[0.07em] text-dash-fg/60 ${
+                            col === "actualizado" ? "px-1.5" : "px-2.5"
                           }`}
                         >
                           <button
@@ -556,7 +574,7 @@ export function NavitrackFleet({
                     })}
                     <th
                       scope="col"
-                      className="whitespace-nowrap px-3.5 py-3.5 text-center text-[12.5px] font-semibold uppercase tracking-[0.07em] text-dash-fg/60"
+                      className="whitespace-nowrap px-2.5 py-2.5 text-center text-[11.5px] font-semibold uppercase tracking-[0.07em] text-dash-fg/60"
                     >
                       {tr.colAcciones}
                     </th>
@@ -584,28 +602,28 @@ export function NavitrackFleet({
                           flag ? "nt-row--flag" : ""
                         } cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/50`}
                       >
-                        <td className="px-3.5 py-3 text-center">
-                          <span className="mx-auto block max-w-[170px] truncate text-[15px] font-bold tracking-tight text-dash-fg">
+                        <td className="px-2.5 py-2.5 text-center">
+                          <span className="mx-auto block max-w-[140px] truncate text-[13.5px] font-bold tracking-tight text-dash-fg">
                             {row.op.contenedor || row.op.booking || row.op.ref_asli || "—"}
                           </span>
                         </td>
-                        <td className="px-3.5 py-3">
+                        <td className="px-2.5 py-2.5">
                           {/* El booking es como la naviera y el cliente nombran
                               el embarque; el contenedor es lo que se mueve. Se
                               muestran los dos porque cada área busca por el suyo. */}
-                          <span className="mx-auto block max-w-[150px] truncate font-semibold text-dash-fg/85 tabular-nums">
+                          <span className="mx-auto block max-w-[125px] truncate font-semibold text-dash-fg/85 tabular-nums">
                             {row.op.booking || "—"}
                           </span>
                         </td>
-                        <td className="px-3.5 py-3">
-                          <span className="mx-auto block max-w-[170px] truncate font-medium text-dash-fg/75">
+                        <td className="px-2.5 py-2.5">
+                          <span className="mx-auto block max-w-[130px] truncate font-medium text-dash-fg/75">
                             {row.op.cliente || "—"}
                           </span>
                         </td>
-                        <td className="px-3.5 py-3">
+                        <td className="px-2.5 py-2.5">
                           {/* Las banderas se leen antes que el texto: de un
                               vistazo se ve de dónde a dónde va la carga. */}
-                          <span className="mx-auto flex max-w-[260px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg">
+                          <span className="mx-auto flex max-w-[225px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg">
                             <BanderaPuerto puerto={row.journey.origen.nombre} />
                             <span className="truncate">{row.journey.origen.nombre || "—"}</span>
                             <Icon
@@ -619,8 +637,24 @@ export function NavitrackFleet({
                             <span className="truncate">{row.journey.destino.nombre || "—"}</span>
                           </span>
                         </td>
-                        <td className="px-3.5 py-3">
-                          <span className="mx-auto flex max-w-[180px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg/90">
+                        <td className="px-2.5 py-2.5">
+                          {/* La naviera antes del buque: es quién responde por
+                              el embarque, y el barco es con qué lo mueve. */}
+                          <span className="mx-auto flex max-w-[140px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg/80">
+                            {row.op.naviera ? (
+                              <NavieraLogo
+                                nombre={row.op.naviera}
+                                logoUrl={
+                                  logosNaviera?.get(row.op.naviera.trim().toUpperCase()) ?? null
+                                }
+                                size={18}
+                              />
+                            ) : null}
+                            <span className="truncate">{row.op.naviera || "—"}</span>
+                          </span>
+                        </td>
+                        <td className="px-2.5 py-2.5">
+                          <span className="mx-auto flex max-w-[165px] items-center justify-center gap-1.5 truncate font-semibold text-dash-fg/90">
                             <Icon
                               icon="lucide:ship"
                               width={13}
@@ -644,26 +678,26 @@ export function NavitrackFleet({
                             )}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-3.5 py-3 text-center text-[13px] font-medium text-dash-fg/60 tabular-nums">
+                        <td className="whitespace-nowrap px-2.5 py-2.5 text-center text-[12px] font-medium text-dash-fg/60 tabular-nums">
                           {fmtFecha(parseOpDate(row.op.etd), locale) ?? "—"}
                         </td>
                         {/* El ETA es el compromiso con el cliente: es el dato
                             que más se mira, y se nota. */}
-                        <td className="whitespace-nowrap px-3.5 py-3 text-center text-[15px] font-bold text-dash-fg tabular-nums">
+                        <td className="whitespace-nowrap px-2.5 py-2.5 text-center text-[14px] font-bold text-dash-fg tabular-nums">
                           {fmtFecha(row.estado.eta.erp, locale) ?? "—"}
                         </td>
-                        <td className="px-3.5 py-3 text-center">
+                        <td className="px-2.5 py-2.5 text-center">
                           <EtapaChip row={row} tr={tr} locale={locale} />
                         </td>
                         {/* Solo el valor, sin repetir la etiqueta: el ícono de
                             la cabecera ya dice de qué se trata. */}
                         <td
-                          className="whitespace-nowrap px-2 py-3 text-center text-[12px] font-medium text-dash-fg/55"
+                          className="whitespace-nowrap px-1.5 py-2.5 text-center text-[11px] font-medium text-dash-fg/55"
                           title={actualizado ?? undefined}
                         >
                           {actualizado ?? "—"}
                         </td>
-                        <td className="whitespace-nowrap px-3.5 py-3 text-center">
+                        <td className="whitespace-nowrap px-2.5 py-2.5 text-center">
                           {/* La fila entera ya abre el embarque; el botón está
                               para quien navega con teclado o busca el gesto
                               explícito. */}

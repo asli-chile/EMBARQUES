@@ -941,6 +941,7 @@ export function NavitrackContent() {
             />
           ) : (
             <NavitrackFleet
+              logosNaviera={logosNaviera}
               rows={filasVisibles}
               total={
                 vista === "todos"
