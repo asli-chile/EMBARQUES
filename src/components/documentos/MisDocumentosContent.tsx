@@ -865,7 +865,7 @@ export function MisDocumentosContent() {
 
     return (
       <div key={tipo} className={`relative ${estadoFila.clase}`}>
-        <div className="flex items-center gap-3 px-3 py-2.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem]">
+        <div className="flex items-center gap-3 px-3 py-2.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem]">
           <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
             <Icon
               icon={meta.icon}
@@ -911,15 +911,79 @@ export function MisDocumentosContent() {
             {estadoFila.label}
           </span>
 
-          <button
-            type="button"
-            aria-label={tr.acciones}
-            aria-expanded={menuAbierto}
-            onClick={() => setMenuTipo(menuAbierto ? null : tipo)}
-            className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-          >
-            <Icon icon={isUploading ? "lucide:loader-2" : "lucide:more-vertical"} width={16} height={16} className={isUploading ? "animate-spin" : ""} aria-hidden />
-          </button>
+          {/*
+            * Acciones a la vista, no dentro de un menú.
+            *
+            * En escritorio sobra ancho y lo que se hace con un documento es
+            * siempre lo mismo: verlo, bajarlo o subirlo. Tenerlas escondidas
+            * tras tres puntos cobraba dos toques por cada archivo. El menú se
+            * queda con lo que no es de todos los días —reemplazar, eliminar,
+            * marcar no aplica— y con el teléfono, donde no cabe una barra.
+            */}
+          <span className="flex shrink-0 items-center justify-end gap-1">
+            {doc ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
+                  title={tr.preview}
+                  className="hidden h-8 items-center gap-1.5 rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
+                >
+                  <Icon icon="lucide:eye" width={14} height={14} aria-hidden />
+                  {tr.preview}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
+                  title={tr.download}
+                  className="estado--transito hidden h-8 w-8 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--estado)_40%,transparent)] bg-[color-mix(in_srgb,var(--estado)_14%,transparent)] text-[var(--estado)] transition-colors hover:bg-[color-mix(in_srgb,var(--estado)_25%,transparent)] sm:inline-flex"
+                >
+                  <Icon icon="lucide:download" width={14} height={14} aria-hidden />
+                </button>
+              </>
+            ) : !isCliente && !marcadoNoAplica ? (
+              <label
+                title={tr.uploadFile}
+                className="hidden h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:inline-flex"
+              >
+                <Icon
+                  icon={isUploading ? "lucide:loader-2" : "lucide:upload"}
+                  width={14}
+                  height={14}
+                  className={isUploading ? "animate-spin" : ""}
+                  aria-hidden
+                />
+                {isUploading ? tr.uploading : tr.uploadFile}
+                <input
+                  type="file"
+                  accept=".pdf,.xls,.xlsx"
+                  className="hidden"
+                  disabled={isUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload(tipo, f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            ) : null}
+
+            <button
+              type="button"
+              aria-label={tr.acciones}
+              aria-expanded={menuAbierto}
+              onClick={() => setMenuTipo(menuAbierto ? null : tipo)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+            >
+              <Icon
+                icon={isUploading ? "lucide:loader-2" : "lucide:more-vertical"}
+                width={16}
+                height={16}
+                className={isUploading ? "animate-spin" : ""}
+                aria-hidden
+              />
+            </button>
+          </span>
         </div>
 
         {menuAbierto && (
@@ -1292,7 +1356,7 @@ export function MisDocumentosContent() {
           * dejando un vacío en medio. En una rejilla de proporciones el sobrante
           * se reparte entre las columnas y cada dato cae donde su cabecera dice.
           */}
-        <div className="hidden items-center gap-3 border-b border-dash-border px-3 py-2 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem]">
+        <div className="hidden items-center gap-3 border-b border-dash-border px-3 py-2 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9.5rem]">
           <span className="min-w-0">{tr.colDocumento}</span>
           <span className="hidden min-w-0 lg:block">{tr.colEtapa}</span>
           <span className="min-w-0">{tr.colFechaRecepcion}</span>
