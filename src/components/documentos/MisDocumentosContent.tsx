@@ -920,82 +920,93 @@ export function MisDocumentosContent() {
           ? "border-emerald-400/50 bg-emerald-500/10"
           : "border-dash-neon/40"
       }`}>
-        <div className="px-4 py-3.5 flex items-start gap-3">
-          <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border ${
-            progressPct === 100
-              ? "bg-emerald-500/15 border-emerald-400/35"
-              : "bg-dash-neon/15 border-dash-neon/40"
-          }`}>
-            <Icon
-              icon={progressPct === 100 ? "lucide:check-circle" : "lucide:focus"}
-              width={24}
-              height={24}
-              className={progressPct === 100 ? "text-emerald-300" : "text-dash-neon"}
-            />
+        <div className="flex items-start gap-3 px-4 py-3.5">
+          {/*
+            * Contenedor, no un icono de progreso.
+            *
+            * Es la cabecera del embarque: lo que identifica es la carga. El
+            * avance tiene su propio bloque justo debajo y no necesita decirlo
+            * dos veces. El tono sale del estado del viaje.
+            */}
+          <div
+            className={`estado-icono flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${estadoViaje.clase}`}
+          >
+            <Icon icon="lucide:container" width={24} height={24} aria-hidden />
           </div>
+
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              {/*
-                * Estado del viaje, no del papeleo.
-                *
-                * Son dos preguntas distintas y conviven bien separadas: acá
-                * arriba, cómo va el embarque; más abajo, cómo va su
-                * documentación. Antes este espacio lo ocupaba un "trabajando
-                * en" que no informaba de nada.
-                */}
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-2xl font-extrabold leading-none tracking-tight text-dash-fg sm:text-[1.65rem]">
+                {opRef(operacionActual)}
+              </p>
               <span
-                className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${
-                  estadoViaje.clase
-                }`}
+                className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${estadoViaje.clase}`}
               >
                 <span className="estado-barra h-1.5 w-1.5 rounded-full" />
                 {estadoViaje.label}
               </span>
-              {operacionActual.cliente ? (
-                <span className="text-sm font-semibold truncate text-dash-muted">
-                  {operacionActual.cliente}
-                </span>
-              ) : null}
             </div>
-            <p className={`text-2xl sm:text-[1.65rem] font-extrabold tracking-tight truncate leading-none mb-2.5 ${
-              progressPct === 100 ? "text-emerald-300" : "text-dash-fg"
-            }`}>
-              {opRef(operacionActual)}
-            </p>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-dash-border bg-dash-control/70 px-3 py-2.5 sm:grid-cols-3 lg:grid-cols-5">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRefExterna}</p>
-                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.referencia_externa || "—"}</p>
-              </div>
+
+            {operacionActual.cliente ? (
+              <p className="mt-1 truncate text-sm font-semibold text-dash-muted">
+                {operacionActual.cliente}
+              </p>
+            ) : null}
+
+            {/*
+              * Los cuatro datos con los que se reconoce el embarque, sin caja
+              * propia: la tarjeta ya es una superficie, y meter otra dentro
+              * añade un borde que no separa nada nuevo.
+              */}
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-dash-border pt-3 sm:grid-cols-4">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colBooking}</p>
-                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.booking || "—"}</p>
+                <p className="truncate font-mono text-sm font-bold text-dash-fg">{operacionActual.booking || "—"}</p>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 sm:border-l sm:border-dash-border sm:pl-4">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colContenedor}</p>
-                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.contenedor || "—"}</p>
+                <p className="truncate font-mono text-sm font-bold text-dash-fg">{operacionActual.contenedor || "—"}</p>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 sm:border-l sm:border-dash-border sm:pl-4">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colNaviera}</p>
-                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.naviera || "—"}</p>
+                <p className="truncate text-sm font-bold text-dash-fg">{operacionActual.naviera || "—"}</p>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 sm:border-l sm:border-dash-border sm:pl-4">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRuta}</p>
                 <p className="truncate text-sm font-bold text-dash-fg">
                   {operacionActual.pol || "—"} → {operacionActual.pod || "—"}
                 </p>
               </div>
             </div>
-            {/*
-              * El avance del papeleo, con su anillo.
-              *
-              * La fracción y el anillo dicen lo mismo a propósito: el anillo se
-              * lee de lejos y sin contar, la fracción responde "¿cuántos son?".
-              * Debajo, lo que falta en palabras, que es la forma en que se
-              * pregunta.
-              */}
+          </div>
+
+          {/*
+            * La flecha del mockup, con destino: la ficha del embarque en
+            * Seguimiento. Un chevron que no lleva a ninguna parte promete algo
+            * que no ocurre.
+            */}
+          <div className="flex shrink-0 items-center gap-0.5">
+            <a
+              href={`${withBase("/navitrack")}?op=${encodeURIComponent(opRef(operacionActual))}`}
+              title={tr.accionTracking}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+            >
+              <Icon icon="lucide:chevron-right" width={20} height={20} aria-hidden />
+            </a>
+            <button
+              type="button"
+              onClick={() => setSelectedOperacion("")}
+              className="-mr-1 flex h-9 w-9 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+              title={tr.closeSelection}
+            >
+              <Icon icon="lucide:x" width={18} height={18} aria-hidden />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-4 pb-3.5">
             <div
-              className={`mt-3 flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/60 p-3 ${
+              className={`flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/60 p-3 ${
                 progressPct === 100 ? "estado--ok" : docsCompletados > 0 ? "estado--curso" : "estado--espera"
               }`}
             >
@@ -1043,15 +1054,6 @@ export function MisDocumentosContent() {
                 </span>
               </span>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSelectedOperacion("")}
-            className="shrink-0 p-2 rounded-lg transition-colors text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15"
-            title={tr.closeSelection}
-          >
-            <Icon icon="lucide:x" width={18} height={18} />
-          </button>
         </div>
       </div>
 
