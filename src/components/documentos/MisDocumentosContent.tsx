@@ -1142,8 +1142,36 @@ export function MisDocumentosContent() {
 
         <div className="dash-toolbar relative z-10 shrink-0">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+              {/*
+                * Volver.
+                *
+                * Con una operación abierta devuelve a la lista, que es de donde
+                * se vino; sin selección, al inicio. Un mismo control con dos
+                * destinos según dónde estás, en lugar de una flecha que a veces
+                * no lleva a ninguna parte.
+                */}
+              {hasSelection ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedOperacion("")}
+                  aria-label={tr.backToList}
+                  title={tr.backToList}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                >
+                  <Icon icon="lucide:arrow-left" width={20} height={20} aria-hidden />
+                </button>
+              ) : (
+                <a
+                  href={withBase("/inicio")}
+                  aria-label={tr.backHome}
+                  title={tr.backHome}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                >
+                  <Icon icon="lucide:arrow-left" width={20} height={20} aria-hidden />
+                </a>
+              )}
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)] max-sm:hidden">
                 <Icon icon="lucide:folder-open" width={22} height={22} className="text-dash-neon" aria-hidden />
               </div>
               <div className="min-w-0">

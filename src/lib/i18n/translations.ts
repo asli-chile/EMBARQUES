@@ -1674,6 +1674,8 @@ export const translations = {
       searchPlaceholderCorto: "Buscar embarque o documento",
       // Estado del papeleo, que es de lo que trata esta pantalla.
       colRuta: "Ruta",
+      backToList: "Volver a la lista",
+      backHome: "Volver al inicio",
       acciones: "Acciones",
       estadoRecibido: "Recibido",
       estadoPendienteDoc: "Pendiente",
@@ -4801,6 +4803,8 @@ export const translations = {
       searchPlaceholder: "Search by reference, client, booking, container...",
       searchPlaceholderCorto: "Search shipment or document",
       colRuta: "Route",
+      backToList: "Back to the list",
+      backHome: "Back to home",
       acciones: "Actions",
       estadoRecibido: "Received",
       estadoPendienteDoc: "Pending",
