@@ -2548,11 +2548,8 @@ export const translations = {
       deletedCostoExtra: "Costo extra eliminado.",
     },
     navitrack: {
-      title: "NaviTrack",
-      subtitle: "Visibilidad de sus embarques, puerta a puerta.",
-      // Lo que ve el cliente: su carga, sin el rótulo interno del módulo.
-      tituloCliente: "Seguimiento de embarques",
-      subtituloCliente: "Dónde va su carga y cuándo llega.",
+      title: "Seguimiento de embarques",
+      subtitle: "Dónde va su carga y cuándo llega.",
       // Posición manual del buque, heredada del módulo de seguimiento anterior.
       manualCoordsBtn: "Cargar posición del buque",
       manualModalTitle: "Posición manual en el mapa",
@@ -5655,12 +5652,10 @@ export const translations = {
       deletedCostoExtra: "Extra cost deleted.",
     },
     navitrack: {
-      title: "NaviTrack",
-      subtitle: "Visibility of your shipments, door to door.",
+      title: "Shipment tracking",
+      subtitle: "Where your cargo is and when it arrives.",
       loading: "Loading shipments…",
       loginRequired: "Sign in to continue.",
-      tituloCliente: "Shipment tracking",
-      subtituloCliente: "Where your cargo is and when it arrives.",
       manualCoordsBtn: "Set vessel position",
       manualModalTitle: "Manual position on map",
       manualModalHint: "Decimal degrees (WGS84). When there is an AIS position, the map prefers AIS.",

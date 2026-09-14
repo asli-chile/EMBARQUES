@@ -83,7 +83,7 @@ export function correoDesvio(op: AvisoDesvio): { asunto: string; cuerpo: string 
     ? `
             <tr>
               <td style="padding:26px 0 4px">
-                <a href="${esc(op.enlace)}" style="display:inline-block;background:${TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 26px;border-radius:8px">Ver el embarque en NaviTrack</a>
+                <a href="${esc(op.enlace)}" style="display:inline-block;background:${TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 26px;border-radius:8px">Ver el embarque</a>
               </td>
             </tr>`
     : "";
@@ -99,7 +99,7 @@ export function correoDesvio(op: AvisoDesvio): { asunto: string; cuerpo: string 
           <td style="background:${NAVY};padding:20px 28px">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">Seguimiento de embarques</td>
                 <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Seguimiento marítimo</td>
               </tr>
             </table>
@@ -263,7 +263,7 @@ export function correoActualizacionManual(datos: {
           <td style="background:${NAVY};padding:20px 28px">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">Seguimiento de embarques</td>
                 <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Registro de consumo</td>
               </tr>
             </table>
@@ -444,7 +444,7 @@ ${datos.traspasos
           <td style="background:${NAVY};padding:20px 28px">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">Seguimiento de embarques</td>
                 <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Transbordo</td>
               </tr>
             </table>
@@ -537,7 +537,7 @@ export function correoResumenCorrida(datos: {
           <td style="background:${NAVY};padding:20px 28px">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">NaviTrack</td>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">Seguimiento de embarques</td>
                 <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Revisión diaria</td>
               </tr>
             </table>
@@ -591,7 +591,7 @@ ${
   datos.enlace
     ? `        <tr>
           <td style="padding:24px 28px 0">
-            <a href="${esc(datos.enlace)}" style="display:inline-block;background:${TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">Abrir NaviTrack</a>
+            <a href="${esc(datos.enlace)}" style="display:inline-block;background:${TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">Abrir el seguimiento</a>
           </td>
         </tr>`
     : ""

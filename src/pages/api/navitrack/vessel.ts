@@ -119,7 +119,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     .eq("activo", true)
     .single();
   if (!perfil || String(perfil.rol ?? "").trim() !== "superadmin") {
-    return json({ ok: false, code: "FORBIDDEN", message: "Sin acceso a NaviTrack" }, 403);
+    return json({ ok: false, code: "FORBIDDEN", message: "Sin acceso al seguimiento" }, 403);
   }
 
   const id = (url.searchParams.get("id") ?? "").trim();

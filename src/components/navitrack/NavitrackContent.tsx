@@ -849,11 +849,9 @@ export function NavitrackContent() {
               </div>
               <div className="min-w-0">
                 <h1 className="dash-title truncate text-lg font-bold tracking-tight sm:text-xl">
-                  {soloLectura ? tr.tituloCliente : tr.title}
+                  {tr.title}
                 </h1>
-                <p className="dash-subtitle mt-0.5 line-clamp-1 text-xs sm:text-sm">
-                  {soloLectura ? tr.subtituloCliente : tr.subtitle}
-                </p>
+                <p className="dash-subtitle mt-0.5 line-clamp-1 text-xs sm:text-sm">{tr.subtitle}</p>
               </div>
             </div>
 

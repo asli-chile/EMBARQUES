@@ -1,7 +1,12 @@
-# NaviTrack — Seguimiento marítimo (en desarrollo)
+# NaviTrack — Seguimiento de embarques
 
-Guía del módulo `/navitrack`: qué es, por qué está separado de `/tracking`, qué
-datos tiene de verdad y cómo extenderlo sin romper su carácter.
+Guía del módulo `/navitrack`: qué es, qué datos tiene de verdad y cómo
+extenderlo sin romper su carácter.
+
+**En pantalla se llama "Seguimiento de embarques"**, para todos los roles.
+`NaviTrack` quedó como nombre interno: la ruta, las tablas `navitrack_*`, los
+archivos y esta guía. Renombrar eso costaría migraciones y memoria del equipo a
+cambio de nada que el usuario note.
 
 Complementa a [ESTILOS-VISUALES.md](./ESTILOS-VISUALES.md) (formas y color) y a
 [MOTION-DESIGN.md](./MOTION-DESIGN.md) (movimiento). Este documento define el
@@ -370,7 +375,6 @@ no puedan contradecirse.
 | Recaladas | Todas | Solo las ya resueltas |
 | Alerta "puerto sin ubicación" | Sí | No: es para quien mantiene el catálogo |
 | Pestaña Escalas y Panel de Rastreo | Solo quien gasta | No |
-| Título del módulo | NaviTrack | Seguimiento de embarques |
 
 **Por qué el cliente no ve la sospecha.** La detección compara el destino que
 la tripulación escribe a mano contra el POD (§6). Acierta lo suficiente para
