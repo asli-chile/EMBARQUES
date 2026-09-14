@@ -651,6 +651,24 @@ posiciones AIS guardadas. La pertenencia la resuelve
 13-09-2026.**
 
 ```
+supabase/migrations/20260914000001_navitrack_corridas.sql
+```
+
+Una fila por corrida del chequeo diario: naves seguidas y revisadas, créditos,
+errores con el motivo de cada nave, y si el reporte se envió. **Aplicada el
+14-09-2026.**
+
+Existe porque el chequeo contaba lo que hacía **solo por correo**: cuando el
+correo era justamente lo que fallaba, la corrida se veía idéntica a un cron que
+no corrió, y averiguarlo exigía ejecutarla de nuevo gastando una consulta por
+nave. Para ver la última:
+
+```sql
+SELECT corrida_at, seguidas, revisadas, errores, reporte_enviado, fallo_correo, detalle
+  FROM public.navitrack_corridas ORDER BY corrida_at DESC LIMIT 5;
+```
+
+```
 supabase/migrations/20260913000005_navitrack_staff_write.sql
 ```
 
@@ -715,7 +733,8 @@ pone `con_transbordo` automáticamente: un transbordo desmiente la afirmación.
 ### Chequeo diario y alerta por correo
 
 `src/pages/api/navitrack/chequeo-diario.ts` lo dispara el cron de Vercel
-declarado en `vercel.json` (`0 12 * * *` = 08:00 en Chile). Por cada nave con
+declarado en `vercel.json` (`0 10 * * *` = 06:00 en Chile; Vercel lo ejecuta con
+holgura, así que la hora real varía unos minutos). Por cada nave con
 `tracking_activo` hace **una** llamada a `get-vessel-location`: 1 crédito por
 nave y por día. Con una nave, 150 créditos alcanzan para meses; con veinte, para
 una semana.
@@ -728,6 +747,7 @@ Para que funcione hay que dejar puestas estas variables:
 | Variable | Dónde |
 |----------|-------|
 | `NAVITRACK_CRON_SECRET` (≥16 caracteres) | Vercel **y** secrets de la Edge Function, con el **mismo** valor |
+| `CRON_SECRET` | Vercel, si se usa la firma propia de Vercel. **Si están las dos, con el mismo valor**: son puertas distintas (Vercel entra con la suya, la Edge Function exige la suya) y tenerlas distintas hacía que el reporte se firmara con el secreto equivocado |
 | `NAVITRACK_ALERTAS_EMAIL` | Vercel |
 | `DATADOCKED_API_KEY` | Vercel y `.env.local` |
 

@@ -89,7 +89,44 @@ export const GET: APIRoute = async ({ request, url }) => {
   if (secretos.length === 0 || !secretos.includes(enviado)) {
     return json({ ok: false, code: "FORBIDDEN" }, 403);
   }
-  const secreto = secretos[0];
+  /*
+   * El secreto con el que se le habla a `send-email` no es necesariamente el
+   * mismo con el que Vercel entra acá.
+   *
+   * Son dos puertas distintas: Vercel firma su llamada con CRON_SECRET (su
+   * convención) y la Edge Function exige NAVITRACK_CRON_SECRET (de sus propios
+   * secrets). Si las dos variables existen en Vercel con valores distintos, el
+   * reporte salía firmado con el que no era y la función lo rechazaba por JWT
+   * inválido, sin que nadie se enterara: el envío vive dentro de un catch.
+   *
+   * En vez de adivinar cuál es, se prueban los que haya. Son dos como mucho.
+   */
+  const enviarCorreo = async (payload: Record<string, unknown>): Promise<{ ok: boolean; error: string | null }> => {
+    let ultimo = "sin intento";
+    for (const s of secretos) {
+      try {
+        const env = await fetch(
+          `${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
+              "x-cron-secret": s,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(20_000),
+          },
+        );
+        const j = (await env.json()) as { success?: boolean; error?: string };
+        if (j?.success) return { ok: true, error: null };
+        ultimo = j?.error ?? `HTTP ${env.status}`;
+      } catch (e) {
+        ultimo = e instanceof Error ? e.message : "error de red";
+      }
+    }
+    return { ok: false, error: ultimo };
+  };
 
   /*
    * Diagnóstico.
@@ -206,6 +243,18 @@ export const GET: APIRoute = async ({ request, url }) => {
     .eq("activo", true)
     .limit(MAX_NAVES);
 
+  /** Lo que pasó con el correo, para que un fallo de envío deje rastro. */
+  let reporteEnviado = false;
+  let falloCorreo: string | null = null;
+  /*
+   * Naves que no devolvieron posición, con el motivo.
+   *
+   * Antes solo se contaban: "1 nave sin respuesta" no dice cuál ni por qué, y
+   * al día siguiente hay que adivinar si fue el proveedor, el identificador o
+   * un corte de red.
+   */
+  const sinRespuesta: { nave: string; motivo: string }[] = [];
+
   const resultado = {
     porVerificar: 0,
     revisadas: 0,
@@ -224,7 +273,11 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   for (const nave of naves ?? []) {
     const id = (String(nave.mmsi ?? "").trim() || String(nave.imo ?? "").trim()).trim();
-    if (!/^\d{7}$|^\d{9}$/.test(id)) continue;
+    if (!/^\d{7}$|^\d{9}$/.test(id)) {
+      // No es error del proveedor: es un identificador que no se puede consultar.
+      sinRespuesta.push({ nave: nave.nombre as string, motivo: `identificador inválido: "${id}"` });
+      continue;
+    }
     resultado.revisadas += 1;
 
     let detalle: Record<string, unknown> | null = null;
@@ -242,6 +295,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         detalle = (previa?.crudo as Record<string, unknown> | null) ?? null;
         if (!detalle) {
           resultado.errores += 1;
+          sinRespuesta.push({ nave: nave.nombre as string, motivo: "sin lectura previa que reutilizar" });
           continue;
         }
       } else {
@@ -252,16 +306,23 @@ export const GET: APIRoute = async ({ request, url }) => {
         resultado.creditos += 1;
         if (!r.ok) {
           resultado.errores += 1;
+          sinRespuesta.push({ nave: nave.nombre as string, motivo: `proveedor respondió ${r.status}` });
           continue;
         }
         detalle = cuerpoProveedor(await r.json());
       }
-    } catch {
+    } catch (e) {
       resultado.errores += 1;
+      // Casi siempre es el timeout de 15 s, y conviene poder distinguirlo.
+      sinRespuesta.push({
+        nave: nave.nombre as string,
+        motivo: e instanceof Error ? e.name : "error de red",
+      });
       continue;
     }
     if (!detalle) {
       resultado.errores += 1;
+      sinRespuesta.push({ nave: nave.nombre as string, motivo: "respuesta sin datos" });
       continue;
     }
 
@@ -363,38 +424,26 @@ export const GET: APIRoute = async ({ request, url }) => {
         : null,
     });
 
-    try {
-      const env = await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
-          "x-cron-secret": secreto,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: destinatario,
-          cc: enCopia || undefined,
-          subject: asunto,
-          body: cuerpo,
-          sendFrom: "informaciones",
-          skipSignature: true,
-        }),
-        signal: AbortSignal.timeout(20_000),
+    const envio = await enviarCorreo({
+      to: destinatario,
+      cc: enCopia || undefined,
+      subject: asunto,
+      body: cuerpo,
+      sendFrom: "informaciones",
+      skipSignature: true,
+    });
+    if (envio.ok) {
+      resultado.correos += 1;
+      resultado.desvios += 1;
+      await supabase.from("navitrack_avisos").insert({
+        operacion_id: r.operacionId,
+        tipo: "desvio",
+        detalle: r.puerto,
+        enviado_a: destinatario,
       });
-      if (((await env.json()) as { success?: boolean })?.success) {
-        resultado.correos += 1;
-        resultado.desvios += 1;
-        await supabase.from("navitrack_avisos").insert({
-          operacion_id: r.operacionId,
-          tipo: "desvio",
-          detalle: r.puerto,
-          enviado_a: destinatario,
-        });
-      } else {
-        resultado.errores += 1;
-      }
-    } catch {
+    } else {
       resultado.errores += 1;
+      falloCorreo = envio.error;
     }
   }
 
@@ -418,27 +467,18 @@ export const GET: APIRoute = async ({ request, url }) => {
   });
 
   if (avisoSeguimiento && destinatario) {
-    try {
-      const env = await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
-          "x-cron-secret": secreto,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: destinatario,
-          cc: enCopia || undefined,
-          subject: avisoSeguimiento.asunto,
-          body: avisoSeguimiento.cuerpo,
-          sendFrom: "informaciones",
-          skipSignature: true,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (((await env.json()) as { success?: boolean })?.success) resultado.correos += 1;
-    } catch {
+    const envio = await enviarCorreo({
+      to: destinatario,
+      cc: enCopia || undefined,
+      subject: avisoSeguimiento.asunto,
+      body: avisoSeguimiento.cuerpo,
+      sendFrom: "informaciones",
+      skipSignature: true,
+    });
+    if (envio.ok) resultado.correos += 1;
+    else {
       resultado.errores += 1;
+      falloCorreo = envio.error;
     }
   }
 
@@ -469,7 +509,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   const problemas: string[] = [];
-  if (resultado.errores > 0) problemas.push(`${resultado.errores} nave(s) sin respuesta del proveedor`);
+  for (const f of sinRespuesta) problemas.push(`${f.nave}: ${f.motivo}`);
   if (!destinatario) problemas.push("No hay destinatario configurado para las alertas");
   if (saldoFinal.creditos != null && saldoFinal.creditos < 30) {
     problemas.push(`Saldo bajo: quedan ${saldoFinal.creditos} consultas`);
@@ -490,28 +530,52 @@ export const GET: APIRoute = async ({ request, url }) => {
       enlace: sitio ? `${sitio}/navitrack` : null,
     });
 
-    try {
-      await fetch(`${textoDeEntorno(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL")}/functions/v1/send-email`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${textoDeEntorno(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY")}`,
-          "x-cron-secret": secreto,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: destinatario,
-          cc: enCopia || undefined,
-          subject: resumen.asunto,
-          body: resumen.cuerpo,
-          sendFrom: "informaciones",
-          skipSignature: true,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      });
-    } catch {
-      // El reporte es lo último: si falla, la revisión ya se hizo igual.
-    }
+    const envio = await enviarCorreo({
+      to: destinatario,
+      cc: enCopia || undefined,
+      subject: resumen.asunto,
+      body: resumen.cuerpo,
+      sendFrom: "informaciones",
+      skipSignature: true,
+    });
+    reporteEnviado = envio.ok;
+    if (!envio.ok) falloCorreo = envio.error;
   }
 
-  return json({ ok: true, esPrueba, saldo: saldoFinal.creditos, ...resultado });
+  /*
+   * Queda registro de la corrida, haya ido bien o mal.
+   *
+   * El reporte se manda por correo, así que un fallo del correo se veía igual
+   * que un cron que no corrió: sin nada que mirar. Esta fila es lo que permite
+   * responder "¿qué pasó anoche?" sin gastar una consulta por nave para verlo
+   * fallar de nuevo.
+   */
+  await supabase.from("navitrack_corridas").insert({
+    es_prueba: esPrueba,
+    revisadas: resultado.revisadas,
+    seguidas: (naves ?? []).length,
+    creditos: resultado.creditos,
+    errores: resultado.errores,
+    correos: resultado.correos,
+    reporte_enviado: reporteEnviado,
+    fallo_correo: falloCorreo,
+    saldo: saldoFinal.creditos,
+    detalle: {
+      sinRespuesta,
+      problemas,
+      traspasos: sincro.traspasos,
+      porVerificar: detallesPorVerificar,
+      sinSeguimiento: resultado.sinSeguimiento,
+    },
+  });
+
+  return json({
+    ok: true,
+    esPrueba,
+    saldo: saldoFinal.creditos,
+    reporteEnviado,
+    falloCorreo,
+    sinRespuesta,
+    ...resultado,
+  });
 };
