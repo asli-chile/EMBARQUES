@@ -1677,6 +1677,9 @@ export const translations = {
       colDocumento: "Documento",
       colEtapa: "Etapa",
       colEta: "ETA",
+      // Verbo solo: en la fila no cabe "Subir archivo" y parte la línea en dos.
+      accionSubir: "Subir",
+      accionVer: "Ver",
       colFechaRecepcion: "Fecha recepción",
       colEstado: "Estado",
       kpiTotal: "Total operaciones",
@@ -4812,6 +4815,8 @@ export const translations = {
       colDocumento: "Document",
       colEtapa: "Stage",
       colEta: "ETA",
+      accionSubir: "Upload",
+      accionVer: "View",
       colFechaRecepcion: "Received on",
       colEstado: "Status",
       kpiTotal: "Total operations",

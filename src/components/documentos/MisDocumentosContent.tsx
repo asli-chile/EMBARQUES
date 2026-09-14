@@ -927,10 +927,10 @@ export function MisDocumentosContent() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
                   title={tr.preview}
-                  className="hidden h-8 items-center gap-1.5 rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
+                  className="hidden h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/35 bg-dash-neon/15 px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
                 >
                   <Icon icon="lucide:eye" width={14} height={14} aria-hidden />
-                  {tr.preview}
+                  {tr.accionVer}
                 </button>
                 <button
                   type="button"
@@ -944,7 +944,7 @@ export function MisDocumentosContent() {
             ) : !isCliente && !marcadoNoAplica ? (
               <label
                 title={tr.uploadFile}
-                className="hidden h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:inline-flex"
+                className="hidden h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-border bg-dash-control px-2.5 text-[12px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/15 sm:inline-flex"
               >
                 <Icon
                   icon={isUploading ? "lucide:loader-2" : "lucide:upload"}
@@ -953,7 +953,7 @@ export function MisDocumentosContent() {
                   className={isUploading ? "animate-spin" : ""}
                   aria-hidden
                 />
-                {isUploading ? tr.uploading : tr.uploadFile}
+                {isUploading ? tr.uploading : tr.accionSubir}
                 <input
                   type="file"
                   accept=".pdf,.xls,.xlsx"
