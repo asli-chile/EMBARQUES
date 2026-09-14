@@ -419,6 +419,37 @@ export function MisDocumentosContent() {
     return count > 0 ? "curso" : "pendiente";
   };
 
+  /**
+   * Cuántas operaciones hay en cada estado de papeleo.
+   *
+   * Es la fila de indicadores de escritorio. Se calcula sobre TODAS las
+   * operaciones, no sobre las filtradas: un indicador que cambia al filtrar
+   * deja de ser un total y se vuelve un eco de lo que ya se ve en la tabla.
+   */
+  const resumenDocs = useMemo(() => {
+    let completas = 0;
+    let curso = 0;
+    let pendientes = 0;
+    for (const op of operaciones) {
+      const e = estadoDocsDe(op.id);
+      if (e === "completo") completas += 1;
+      else if (e === "curso") curso += 1;
+      else pendientes += 1;
+    }
+    const pct = (n: number) =>
+      operaciones.length === 0 ? 0 : Math.round((n / operaciones.length) * 100);
+    return {
+      total: operaciones.length,
+      completas,
+      curso,
+      pendientes,
+      pctCompletas: pct(completas),
+      pctCurso: pct(curso),
+      pctPendientes: pct(pendientes),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operaciones, docCounts, visibleTipos]);
+
   const filteredOperaciones = useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
     const porEstado = (op: { id: string }) => {
@@ -737,11 +768,47 @@ export function MisDocumentosContent() {
           <Icon icon="lucide:chevron-left" width={16} height={16} />
           {!hasSelection && <span className="max-sm:sr-only">{tr.prevPage}</span>}
         </button>
-        <span className="text-[13px] sm:text-base font-bold text-dash-fg tabular-nums px-1.5">
-          {hasSelection
-            ? `${safePage}/${totalPages}`
-            : tr.pageOf.replace("{page}", String(safePage)).replace("{pages}", String(totalPages))}
-        </span>
+        {/*
+          * Páginas numeradas.
+          *
+          * "Página 3 de 5" obliga a pulsar Siguiente dos veces para llegar a la
+          * cinco. Con pocas caben todas; con muchas se muestra una ventana
+          * alrededor de la actual, que es lo que hace falta para moverse sin
+          * perder de vista dónde se está.
+          *
+          * Con el panel de una operación abierto la columna es angosta y vuelve
+          * la fracción, que ocupa lo que hay.
+          */}
+        {hasSelection ? (
+          <span className="px-1.5 text-[13px] font-bold tabular-nums text-dash-fg">
+            {safePage}/{totalPages}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1">
+            {(() => {
+              const ventana = 5;
+              const hasta = Math.min(totalPages, Math.max(ventana, safePage + Math.floor(ventana / 2)));
+              const desde = Math.max(1, Math.min(safePage - Math.floor(ventana / 2), hasta - ventana + 1));
+              const paginas: number[] = [];
+              for (let n = Math.max(1, desde); n <= hasta; n += 1) paginas.push(n);
+              return paginas.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPage(n)}
+                  aria-current={n === safePage ? "page" : undefined}
+                  className={`min-h-9 min-w-9 rounded-lg px-2 text-[13px] font-bold tabular-nums transition-colors ${
+                    n === safePage
+                      ? "bg-dash-neon/25 text-dash-fg ring-1 ring-dash-neon/40"
+                      : "text-dash-muted hover:bg-dash-neon/10 hover:text-dash-fg"
+                  }`}
+                >
+                  {n}
+                </button>
+              ));
+            })()}
+          </span>
+        )}
         <button
           type="button"
           disabled={safePage >= totalPages}
@@ -1279,6 +1346,63 @@ export function MisDocumentosContent() {
               }`}
             >
               <div className="dash-card-static flex flex-col min-h-0 h-full w-full rounded-xl border border-dash-border overflow-hidden">
+                {/*
+                  * Indicadores de escritorio.
+                  *
+                  * En una pantalla ancha sobra sitio arriba y la pregunta que
+                  * se hace primero es cuánto falta en total, no de un embarque.
+                  * Cada uno filtra la tabla: son el mismo criterio que los chips
+                  * del teléfono, con otra forma.
+                  *
+                  * No están en móvil: ahí ese alto es la lista.
+                  */}
+                {!hasSelection && (
+                  <div className="hidden shrink-0 gap-2.5 border-b border-dash-border p-2.5 md:grid md:grid-cols-4 xl:gap-3">
+                    {(
+                      [
+                        { clave: "todos" as const, label: tr.kpiTotal, valor: resumenDocs.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
+                        { clave: "completos" as const, label: tr.filtroCompletados, valor: resumenDocs.completas, pct: resumenDocs.pctCompletas, tono: "estado--transito", icon: "lucide:check-circle" },
+                        { clave: "curso" as const, label: tr.filtroEnCurso, valor: resumenDocs.curso, pct: resumenDocs.pctCurso, tono: "estado--curso", icon: "lucide:clock" },
+                        { clave: "pendientes" as const, label: tr.filtroPendientes, valor: resumenDocs.pendientes, pct: resumenDocs.pctPendientes, tono: "estado--atencion", icon: "lucide:alert-circle" },
+                      ]
+                    ).map((k) => {
+                      const activo = filtroDocs === k.clave;
+                      return (
+                        <button
+                          key={k.clave}
+                          type="button"
+                          aria-pressed={activo}
+                          onClick={() => setFiltroDocs(k.clave)}
+                          className={`${k.tono} flex items-center gap-3 rounded-xl border bg-dash-control/40 px-3.5 py-3 text-left transition-colors hover:bg-dash-neon/10 ${
+                            activo
+                              ? "border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_10%,transparent)]"
+                              : "border-dash-border"
+                          }`}
+                        >
+                          <span className="estado-icono flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                            <Icon icon={k.icon} width={20} height={20} aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[12.5px] font-semibold text-dash-muted">
+                              {k.label}
+                            </span>
+                            <span className="flex items-baseline gap-1.5">
+                              <span className="text-[22px] font-extrabold leading-none tabular-nums text-dash-fg">
+                                {k.valor}
+                              </span>
+                              {k.pct !== null && (
+                                <span className="text-[12px] font-semibold tabular-nums text-dash-muted">
+                                  {k.pct}%
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div className={`border-b border-dash-border flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
                   <Icon icon="lucide:history" width={hasSelection ? 16 : 18} height={hasSelection ? 16 : 18} className="text-dash-neon shrink-0" />
                   <div className="min-w-0 flex-1 basis-[8rem]">
@@ -1547,21 +1671,21 @@ export function MisDocumentosContent() {
                       <div className="hidden md:block w-full overflow-x-auto">
                         <table className="w-full table-fixed text-left text-base">
                           <colgroup>
+                            <col className="w-[7%]" />
+                            <col className="w-[9%]" />
                             <col className="w-[8%]" />
-                            <col className="w-[11%]" />
-                            <col className="w-[13%]" />
-                            <col className="w-[11%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[12%]" />
+                            <col className="w-[10%]" />
                             <col className="w-[10%]" />
                             <col className="w-[9%]" />
-                            <col className="w-[7%]" />
-                            <col className="w-[7%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[17%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[4%]" />
                           </colgroup>
                           <thead>
                             <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] border-b border-dash-border">
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colRef}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colRefExterna}</th>
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colCliente}</th>
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colNaviera}</th>
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colBooking}</th>
@@ -1570,12 +1694,14 @@ export function MisDocumentosContent() {
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colEtd}</th>
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colDocs}</th>
                               <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colDate}</th>
+                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colEstado}</th>
+                              <th className="px-3 py-2.5 text-right text-sm font-bold text-dash-muted">{tr.acciones}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-dash-border">
                             {pagedOperaciones.length === 0 ? (
                               <tr>
-                                <td colSpan={10} className="px-4 py-12 text-center text-dash-muted text-base">
+                                <td colSpan={11} className="px-4 py-12 text-center text-dash-muted text-base">
                                   {tr.noOperations}
                                 </td>
                               </tr>
@@ -1590,16 +1716,73 @@ export function MisDocumentosContent() {
                                       : "bg-dash-control/30 hover:bg-dash-neon/10"
                                   }`}
                                 >
-                                  <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-dash-fg">{opRef(op)}</td>
-                                  <td className="px-3 py-2.5 text-[1.1rem] font-bold truncate text-dash-fg">{op.referencia_externa || "—"}</td>
-                                  <td className="px-3 py-2.5 text-dash-fg/80 truncate">{op.cliente || "-"}</td>
-                                  <td className="px-3 py-2.5 text-dash-muted truncate">{op.naviera || "-"}</td>
-                                  <td className="px-3 py-2.5 text-dash-muted truncate">{op.booking || "-"}</td>
-                                  <td className="px-3 py-2.5 text-dash-muted truncate font-mono">{op.contenedor || "-"}</td>
-                                  <td className="px-3 py-2.5 text-dash-muted truncate">{op.pod || "-"}</td>
-                                  <td className="px-3 py-2.5 text-dash-muted truncate">{formatDate(op.etd)}</td>
-                                  <td className="px-3 py-2.5">{docsBadge(op.id)}</td>
-                                  <td className="px-3 py-2.5 text-dash-muted truncate">{formatDate(op.created_at)}</td>
+                                  <td className="truncate px-3 py-2.5 text-[15px] font-bold text-dash-fg">{opRef(op)}</td>
+                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-fg/80">{op.cliente || "-"}</td>
+                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-muted">{op.naviera || "-"}</td>
+                                  <td className="truncate px-3 py-2.5 text-[14px] tabular-nums text-dash-muted">{op.booking || "-"}</td>
+                                  <td className="truncate px-3 py-2.5 text-[14px] tabular-nums text-dash-muted">{op.contenedor || "—"}</td>
+                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-muted">{op.pod || "-"}</td>
+                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-muted">{formatDate(op.etd)}</td>
+                                  {/*
+                                    * Documentos: fracción, barra y porcentaje.
+                                    *
+                                    * La fracción dice cuántos faltan y la barra
+                                    * deja comparar filas de un vistazo, que es
+                                    * lo que una tabla larga necesita.
+                                    */}
+                                  <td className="px-3 py-2.5">
+                                    {(() => {
+                                      const total = docsExigiblesDe(op.id);
+                                      const hechos = Math.min(docsRecibidosDe(op.id), total);
+                                      const pct = total === 0 ? 0 : Math.round((hechos / total) * 100);
+                                      const tono =
+                                        pct === 100 ? "estado--transito" : hechos > 0 ? "estado--curso" : "estado--espera";
+                                      return (
+                                        <span className={`flex items-center gap-2 ${tono}`}>
+                                          <span className="shrink-0 text-[13px] font-bold tabular-nums text-dash-fg">
+                                            {hechos}/{total}
+                                          </span>
+                                          <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-dash-control">
+                                            <span
+                                              className="estado-barra block h-full rounded-full"
+                                              style={{ width: `${pct}%` }}
+                                            />
+                                          </span>
+                                          <span className="shrink-0 text-[12px] font-semibold tabular-nums text-dash-muted">
+                                            {pct}%
+                                          </span>
+                                        </span>
+                                      );
+                                    })()}
+                                  </td>
+                                  <td className="truncate px-3 py-2.5 text-[13.5px] text-dash-muted">{formatDate(op.created_at)}</td>
+                                  <td className="px-3 py-2.5">
+                                    {(() => {
+                                      const e = estadoDocsDe(op.id);
+                                      const meta =
+                                        e === "completo"
+                                          ? { clase: "estado--transito", label: tr.estadoCompleto, icon: "lucide:check-circle" }
+                                          : e === "curso"
+                                            ? { clase: "estado--curso", label: tr.estadoEnCurso, icon: "lucide:clock" }
+                                            : { clase: "estado--atencion", label: tr.estadoPendiente, icon: "lucide:clock" };
+                                      return (
+                                        <span
+                                          className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-bold ${meta.clase}`}
+                                        >
+                                          <Icon icon={meta.icon} width={13} height={13} aria-hidden />
+                                          {meta.label}
+                                        </span>
+                                      );
+                                    })()}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-right">
+                                    <span
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                                      title={tr.acciones}
+                                    >
+                                      <Icon icon="lucide:more-vertical" width={16} height={16} aria-hidden />
+                                    </span>
+                                  </td>
                                 </tr>
                               ))
                             )}
