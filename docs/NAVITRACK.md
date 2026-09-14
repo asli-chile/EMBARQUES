@@ -311,6 +311,53 @@ que lo llamara gastaría créditos ajenos.
 
 ---
 
+## 6 bis. Las dos vistas: personal y cliente
+
+`/navitrack` tiene dos públicos en la misma pantalla. El personal de ASLI lo
+opera; el cliente entra a seguir su carga y **no decide nada**.
+
+La diferencia no se escribe en el JSX: viaja como `NavitrackVista`
+(`"interna" | "cliente"`) hasta `navitrack-estado.ts`, que es donde se define
+qué se muestra. Así etapa, alerta y color no pueden contradecirse entre sí.
+
+| | Personal | Cliente |
+|---|---|---|
+| Embarques | Todos | Los de sus empresas, por RLS |
+| Sospecha de transbordo | La ve y la resuelve | **No la ve** |
+| Transbordo confirmado | Sí | Sí: cadena de tramos e historia del viaje |
+| Recaladas | Todas, y las decide | Solo las ya resueltas |
+| Posición AIS | Consulta al proveedor | La última guardada, sin gastar |
+| Pestaña Escalas | Sí | No |
+| Panel de Rastreo | Sí | No |
+
+**Por qué el cliente no ve la sospecha.** La detección compara el destino que
+la tripulación escribe a mano contra el POD (§6). Acierta lo suficiente para
+que alguien mire, no para anunciarle a un cliente un problema que la mayoría de
+las veces no existe. Lo que ya se revisó sí se muestra.
+
+**Por qué el cliente no gasta créditos.** Cada lectura del proveedor es un
+crédito y el gasto es una decisión de ASLI, no de quien abre la pantalla. El
+cliente lee la última posición guardada — la misma que alimenta la tabla de
+flota, refrescada por el chequeo diario sin que nadie tenga que entrar.
+
+### Cómo se sostiene
+
+Tres capas, y la de pantalla es la menos importante:
+
+1. **RLS.** `20260913000004_navitrack_cliente_read.sql` da `SELECT` —y nada
+   más— sobre recaladas, tramos, transbordos y viajes de **sus** operaciones,
+   resolviendo la pertenencia con `private.get_cliente_nombres_for_user()`, la
+   misma función que usan `operaciones` y los documentos. De
+   `navitrack_ais_lecturas` solo se abren las filas de tipo `posicion`: no
+   cuelgan de una operación y dónde navega un buque es información pública.
+2. **Los endpoints.** Los cinco de `/api/navitrack/*` siguen exigiendo
+   superadmin. El cliente no los llama; si los llamara, 403.
+3. **La pantalla.** `soloLectura` apaga acciones y `modo` decide qué se muestra.
+
+Al agregar algo que escriba o gaste, la pregunta es la 1 y la 2, no la 3.
+
+---
+
 ## 7. Jerarquía de la información
 
 El orden no es decorativo; es el orden en que un operador necesita las respuestas:

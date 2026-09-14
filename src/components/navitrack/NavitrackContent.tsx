@@ -34,6 +34,7 @@ import {
   construirTimeline,
   estaArribado,
   resolverEstado,
+  type NavitrackVista,
   type TransbordoDecision,
 } from "./navitrack-estado";
 
@@ -65,7 +66,23 @@ function claveNave(raw: string | null | undefined): string {
 export function NavitrackContent() {
   const { t, locale } = useLocale();
   const tr = t.navitrack as unknown as Record<string, string>;
-  const { user, profile, isSuperadmin, isLoading: authLoading } = useAuth();
+  const { user, profile, isSuperadmin, isCliente, isLoading: authLoading } = useAuth();
+
+  /*
+   * Dos públicos en la misma pantalla.
+   *
+   * El personal de ASLI opera NaviTrack: resuelve recaladas, confirma
+   * transbordos y decide cuándo gastar un crédito del proveedor. El cliente
+   * entra a seguir su carga y no decide nada: ve lo que ya está guardado.
+   *
+   * `modo` viaja hasta la lógica pura, que es donde se define qué se muestra;
+   * `soloLectura` apaga acciones en la pantalla. La barrera de verdad no es
+   * ninguna de las dos: son las políticas RLS y los endpoints, que siguen
+   * exigiendo superadmin para todo lo que escribe o gasta.
+   */
+  const modo: NavitrackVista = isSuperadmin ? "interna" : "cliente";
+  const soloLectura = !isSuperadmin;
+  const puedeVer = isSuperadmin || isCliente;
   const [theme] = useNeonTheme();
   const apiPrefix = useMemo(() => getApiOriginPrefix(), []);
 
@@ -135,7 +152,7 @@ export function NavitrackContent() {
   /* ------------------------------- Carga ---------------------------------- */
 
   const cargar = useCallback(async () => {
-    if (!supabase || !isSuperadmin) return;
+    if (!supabase || !puedeVer) return;
     setRefrescando(true);
     const desde = isoHaceDias(VENTANA_DIAS);
 
@@ -261,16 +278,16 @@ export function NavitrackContent() {
 
     setCargando(false);
     setRefrescando(false);
-  }, [supabase, isSuperadmin]);
+  }, [supabase, puedeVer]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isSuperadmin) {
+    if (!puedeVer) {
       setCargando(false);
       return;
     }
     void cargar();
-  }, [authLoading, isSuperadmin, cargar]);
+  }, [authLoading, puedeVer, cargar]);
 
   /* --------------------------------- AIS ----------------------------------- */
 
@@ -349,8 +366,21 @@ export function NavitrackContent() {
     setAis(null);
     setTransbordoError(null);
     if (!seleccionId || !identSeleccion || !user) return;
+    /*
+     * El cliente no dispara consultas al proveedor.
+     *
+     * Cada una es un crédito, y quién y cuándo se gasta es una decisión de
+     * ASLI. Su posición sale de la última lectura guardada —la misma que
+     * alimenta la tabla de flota—, que el chequeo diario refresca sin que
+     * nadie tenga que abrir la pantalla.
+     */
+    if (soloLectura) {
+      const clave = (identSeleccion.mmsi ?? "").trim() || (identSeleccion.imo ?? "").trim();
+      setAis(clave ? (aisCache.get(clave) ?? null) : null);
+      return;
+    }
     void consultarAis(identSeleccion, false);
-  }, [seleccionId, identSeleccion, user, consultarAis]);
+  }, [seleccionId, identSeleccion, user, consultarAis, soloLectura, aisCache]);
 
   /**
    * Escalas del buque.
@@ -387,13 +417,15 @@ export function NavitrackContent() {
   );
 
   useEffect(() => {
-    if (!seleccionId || !identSeleccion || !user) {
+    // El historial de port calls es la consulta más cara del plan y su endpoint
+    // exige superadmin: para el cliente la pestaña no existe.
+    if (!seleccionId || !identSeleccion || !user || soloLectura) {
       setEscalas([]);
       setEscalasEdadH(null);
       return;
     }
     void cargarEscalas(false);
-  }, [seleccionId, identSeleccion, user, cargarEscalas]);
+  }, [seleccionId, identSeleccion, user, cargarEscalas, soloLectura]);
 
   /**
    * Recaladas del embarque abierto y catálogo de naves para el selector.
@@ -406,6 +438,27 @@ export function NavitrackContent() {
       setRecaladas([]);
       return;
     }
+    /*
+     * El cliente las lee directo de la base, y solo las que ya se respondieron.
+     *
+     * Dos razones distintas para lo mismo: el endpoint exige superadmin porque
+     * también sirve el catálogo de naves del formulario de decisión, y un
+     * puerto anunciado sin revisar todavía no es parte del viaje —es la
+     * pregunta que ASLI tiene abierta—. Lo que el cliente ve son las escalas
+     * que alguien ya confirmó.
+     */
+    if (soloLectura) {
+      if (!supabase) return;
+      const { data } = await supabase
+        .from("navitrack_recaladas")
+        .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas")
+        .eq("operacion_id", seleccionId)
+        .in("estado", ["parada_programada", "transbordo"])
+        .order("anunciado_at");
+      setRecaladas((data ?? []) as Recalada[]);
+      setCatalogoNaves([]);
+      return;
+    }
     try {
       const r = await fetch(`${apiPrefix}/api/navitrack/recalada?op=${encodeURIComponent(seleccionId)}`, {
         credentials: "same-origin",
@@ -416,7 +469,7 @@ export function NavitrackContent() {
     } catch {
       setRecaladas([]);
     }
-  }, [apiPrefix, seleccionId]);
+  }, [apiPrefix, seleccionId, soloLectura, supabase]);
 
   useEffect(() => {
     if (!user) return;
@@ -459,10 +512,11 @@ export function NavitrackContent() {
           decisiones.get(op.id) ?? null,
           ahora,
           recaladasPorOp.get(op.id) ?? [],
+          modo,
         );
         return { op, ais: guardada, journey, estado };
       }),
-    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga, recaladasPorOp],
+    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga, recaladasPorOp, modo],
   );
 
   const conteos = useMemo(() => {
@@ -542,15 +596,15 @@ export function NavitrackContent() {
       tramos.get(seleccion.id) ?? [],
       previstos,
     );
-    const estado = resolverEstado(seleccion, ais, journey, decision, ahora, recaladas);
+    const estado = resolverEstado(seleccion, ais, journey, decision, ahora, recaladas, modo);
     return {
       journey,
       estado,
       decision,
-      alertas: construirAlertas(seleccion, ais, journey, estado),
+      alertas: construirAlertas(seleccion, ais, journey, estado, modo),
       eventos: construirTimeline(seleccion, ais, estado, decision, ahora, tramos.get(seleccion.id) ?? []),
     };
-  }, [seleccion, ais, decisiones, ahora, tramos, recaladas]);
+  }, [seleccion, ais, decisiones, ahora, tramos, recaladas, modo]);
 
   /*
    * Enlace profundo: `/navitrack?op=<referencia>`.
@@ -651,7 +705,7 @@ export function NavitrackContent() {
 
   if (authLoading) return <ModuleSoftFallback chrome="dashboard" />;
 
-  if (!profile || !isSuperadmin) {
+  if (!profile || !puedeVer) {
     return (
       <div className="dash-neon tracking-brand navitrack flex min-h-0 flex-1 flex-col" data-theme={theme}>
         <main className="dash-page flex flex-1 items-center justify-center p-6" role="main">
@@ -679,12 +733,17 @@ export function NavitrackContent() {
               </div>
               <div className="min-w-0">
                 <h1 className="dash-title truncate text-lg font-bold tracking-tight sm:text-xl">
-                  {tr.title}
+                  {soloLectura ? tr.tituloCliente : tr.title}
                 </h1>
-                <p className="dash-subtitle mt-0.5 line-clamp-1 text-xs sm:text-sm">{tr.subtitle}</p>
+                <p className="dash-subtitle mt-0.5 line-clamp-1 text-xs sm:text-sm">
+                  {soloLectura ? tr.subtituloCliente : tr.subtitle}
+                </p>
               </div>
             </div>
 
+            {/* Panel de Rastreo: créditos, gasto y lista blanca de naves. Es
+                administración del proveedor, no seguimiento de una carga. */}
+            {!soloLectura && (
             <button
               type="button"
               onClick={() => setPanelRastreo(true)}
@@ -694,6 +753,7 @@ export function NavitrackContent() {
               <Icon icon="lucide:satellite-dish" width={14} height={14} aria-hidden />
               <span className="hidden sm:inline">{tr.rastreoTitulo}</span>
             </button>
+            )}
 
             {/* En el detalle el botón vive en su barra, junto a la navegación:
                 tenerlo también acá eran dos "Actualizar" en la misma pantalla. */}
@@ -720,9 +780,10 @@ export function NavitrackContent() {
         <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
           {seleccion && detalle ? (
             <NavitrackShipment
+              soloLectura={soloLectura}
               tramos={tramos.get(seleccion.id) ?? []}
               recaladas={recaladas}
-              onVerificarRecalada={(r: Recalada) => setRecaladaAbierta(r)}
+              onVerificarRecalada={soloLectura ? undefined : (r: Recalada) => setRecaladaAbierta(r)}
               avisoRecalada={avisoRecalada}
               op={seleccion}
               ais={ais}
@@ -745,7 +806,9 @@ export function NavitrackContent() {
               tr={tr}
               onBack={() => setSeleccionId(null)}
               onRefresh={() => {
-                if (identSeleccion) void consultarAis(identSeleccion, false);
+                // Para el cliente, Actualizar vuelve a leer la base: trae lo que
+                // el chequeo diario y el trabajo interno hayan guardado, gratis.
+                if (identSeleccion && !soloLectura) void consultarAis(identSeleccion, false);
                 void cargar();
               }}
               refrescando={aisCargando || refrescando}

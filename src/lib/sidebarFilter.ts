@@ -10,6 +10,8 @@ type SidebarItem = {
   ejecutivoAndAbove?: boolean;
   adminAndAbove?: boolean;
   superadminOnly?: boolean;
+  /** Además del superadmin, lo ve el cliente. Para módulos con vista de solo lectura. */
+  alsoCliente?: boolean;
   staffOnly?: boolean;
   operational?: boolean;
 };
@@ -36,6 +38,10 @@ export function resolveSidebarLabel(
   if (isCliente && labelKey === "crearReserva") {
     return sidebar.solicitarReserva ?? sidebar.crearReserva ?? labelKey;
   }
+  // "NaviTrack (en desarrollo)" es el nombre del proyecto, no el del servicio.
+  if (isCliente && labelKey === "navitrack") {
+    return sidebar.seguimiento ?? sidebar.navitrack ?? labelKey;
+  }
   return sidebar[labelKey] ?? labelKey;
 }
 
@@ -59,7 +65,7 @@ export function getVisibleSidebarItems(access: SidebarAccess): SidebarItem[] {
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
 
   const itemAllowed = (item: SidebarItem): boolean => {
-    if (item.superadminOnly && !isSuperadmin) return false;
+    if (item.superadminOnly && !isSuperadmin && !(item.alsoCliente && isCliente)) return false;
     if (item.adminAndAbove && !canAccessAdminAndAbove) return false;
     if (item.ejecutivoAndAbove && !canAccessEjecutivoAndAbove) return false;
     if (item.staffOnly && !isStaff) return false;

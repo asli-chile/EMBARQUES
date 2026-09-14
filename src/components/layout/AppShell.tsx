@@ -176,14 +176,16 @@ export function AppShell({ children, pathname }: AppShellProps) {
         <LazyTrackingContent />
       </Sus>
     ) : pathname === "/navitrack" ? (
-      <ConfigGuard
-        allowAdmin={false}
-        forbiddenMessage="No tienes acceso a NaviTrack. Solo el superadmin puede verlo."
-      >
-        <Sus>
-          <LazyNavitrackContent />
-        </Sus>
-      </ConfigGuard>
+      /*
+       * Sin ConfigGuard a propósito: NaviTrack tiene dos públicos —el personal
+       * que lo opera y el cliente que sigue su carga— y el guard solo sabe de
+       * superadmin y admin. Quién entra y en qué modo lo decide el propio
+       * componente, en un solo lugar; lo que puede leerse y escribirse de
+       * verdad lo imponen RLS y los endpoints.
+       */
+      <Sus>
+        <LazyNavitrackContent />
+      </Sus>
     ) : pathname === "/registros" ? (
       <ModuleWithVisitorInfo moduleKey="registros">
         <Sus>

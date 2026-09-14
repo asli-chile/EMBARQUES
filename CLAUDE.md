@@ -259,8 +259,9 @@ Las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas ope
 
 ## NaviTrack — Seguimiento marítimo (en desarrollo)
 
-`/navitrack` es la **nueva** experiencia de tracking, exclusiva de `superadmin`.
-Convive con `/tracking`, que sigue en producción.
+`/navitrack` es la **nueva** experiencia de tracking. La usan el `superadmin`,
+que la opera, y el `cliente`, que entra en modo seguimiento: ve sus embarques y
+**solo los ve**. Convive con `/tracking`, que sigue en producción.
 
 > **Regla:** ningún cambio de NaviTrack toca `src/components/tracking/`. Si algo
 > de ahí hace falta, se copia o se extrae a un módulo compartido.
@@ -609,7 +610,8 @@ Transbordo real y chequeo diario. **Ambas aplicadas el 12-09-2026.**
 (`nave`, `viaje`), así que no había forma de representar un transbordo. La regla
 de lectura es **sin filas = viaje directo; con filas = el viaje son esos tramos,
 en orden**. No toca `operaciones`, que está en producción.
-*Pendiente: todavía ninguna pantalla lee ni escribe esta tabla.*
+Desde el 12-09-2026 la escribe el flujo de recaladas (`api/navitrack/recalada.ts`)
+y la leen la ficha del embarque y la tabla de flota.
 
 `navitrack_avisos` registra lo que el chequeo diario ya notificó
 (`UNIQUE (operacion_id, tipo, detalle)`), para que una desviación que dura dos
@@ -624,6 +626,21 @@ Agrega `navitrack_ais_lecturas.origen` (`cron`, `manual`, `pantalla`) para saber
 **quién** pidió cada consulta. **Aplicada el 12-09-2026.** Sin esa columna, una
 consulta automática y una que alguien disparó a mano se ven iguales, y el gasto
 manual —que es una decisión, no presupuesto— no se puede auditar.
+
+```
+supabase/migrations/20260913000004_navitrack_cliente_read.sql
+```
+
+Abre NaviTrack al cliente en modo lectura: `SELECT` —y nada más— sobre las
+recaladas, tramos, transbordos y viajes de **sus** operaciones, más las
+posiciones AIS guardadas. La pertenencia la resuelve
+`private.get_cliente_nombres_for_user()`, la misma función con la que
+`operaciones` y los documentos deciden qué ve un cliente.
+
+**Mientras no se aplique, un cliente que entre a `/navitrack` verá sus
+embarques pero sin el detalle del viaje**: ni recaladas resueltas, ni cadena de
+transbordo, ni la última posición del buque. Los endpoints siguen exigiendo
+superadmin, así que no hay nada que el cliente pueda escribir ni gastar.
 
 ### El saldo de créditos no se configura
 

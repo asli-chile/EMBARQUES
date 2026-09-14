@@ -162,12 +162,20 @@ export type Escala = {
 };
 
 type ShipmentProps = {
+  /**
+   * Vista del cliente: sigue su carga y no decide sobre ella.
+   *
+   * Apaga lo que resuelve o gasta —decidir una recalada, el flujo de
+   * transbordo, traer escalas del proveedor— y deja la pizarra completa: dónde
+   * va, cuándo llega y qué ha pasado hasta ahora.
+   */
+  soloLectura?: boolean;
   /** Tramos del viaje. Vacío = viaje directo. */
   tramos: Tramo[];
   /** Puertos que el buque fue anunciando, con su decisión si ya se tomó. */
   recaladas: Recalada[];
-  /** Abre la ventana para decidir qué pasó en ese puerto. */
-  onVerificarRecalada: (r: Recalada) => void;
+  /** Abre la ventana para decidir qué pasó en ese puerto. Ausente en solo lectura. */
+  onVerificarRecalada?: (r: Recalada) => void;
   /** Resultado de la última decisión, para confirmarla en pantalla. */
   avisoRecalada: string | null;
   op: NavitrackOperacion;
@@ -213,6 +221,7 @@ type ShipmentProps = {
  * vuelve a ser una columna con scroll, que es lo honesto en un teléfono.
  */
 export function NavitrackShipment({
+  soloLectura = false,
   op,
   ais,
   journey,
@@ -248,7 +257,13 @@ export function NavitrackShipment({
 }: ShipmentProps) {
   const meta = ETAPA_META[estado.etapa];
   const enCurso = estado.etapa !== "ARRIBADO" && estado.etapa !== "EN_ORIGEN";
-  const mostrarTransbordo = estado.transbordoSospechado || decision?.estado === "confirmado";
+  /*
+   * La pestaña de transbordo es el lugar donde se decide, así que no existe
+   * para el cliente. Que la carga cambió de buque sí lo ve: la cadena de
+   * tramos en "Información del buque" y la historia del viaje lo cuentan.
+   */
+  const mostrarTransbordo =
+    !soloLectura && (estado.transbordoSospechado || decision?.estado === "confirmado");
 
   const [pestana, setPestana] = useState<Pestana>("ruta");
   // Si la sospecha se resuelve estando en esa pestaña, no dejar una vista vacía.
@@ -369,7 +384,10 @@ export function NavitrackShipment({
   const pestanas: { id: Pestana; label: string; icon: string }[] = [
     { id: "ruta", label: tr.tabRuta, icon: "lucide:map" },
     { id: "buque", label: tr.tabBuque, icon: "lucide:ship" },
-    { id: "escalas", label: tr.tabEscalas, icon: "lucide:anchor" },
+    // Escalas consulta el historial del buque al proveedor: interna.
+    ...(soloLectura
+      ? []
+      : [{ id: "escalas" as const, label: tr.tabEscalas, icon: "lucide:anchor" }]),
     ...(mostrarTransbordo
       ? [{ id: "transbordo" as const, label: tr.evTransbordo, icon: "lucide:git-branch" }]
       : []),
@@ -491,10 +509,11 @@ export function NavitrackShipment({
               * afirmando es discutible, así que el propio estado se vuelve el
               * botón para resolverlo: es donde el operador ya está mirando.
               */}
-            {recaladaPendiente || (estado.transbordoSospechado && recaladaAVerificar.puerto) ? (
+            {!soloLectura &&
+            (recaladaPendiente || (estado.transbordoSospechado && recaladaAVerificar.puerto)) ? (
               <button
                 type="button"
-                onClick={() => onVerificarRecalada(recaladaAVerificar)}
+                onClick={() => onVerificarRecalada?.(recaladaAVerificar)}
                 className="motion-interactive block cursor-pointer"
                 title={tr.recaladaVerificar}
               >
@@ -747,7 +766,7 @@ export function NavitrackShipment({
                 error={transbordoError}
                 onConfirmar={onConfirmarTransbordo}
                 onDescartar={onDescartarTransbordo}
-                onVerificar={() => onVerificarRecalada(recaladaAVerificar)}
+                onVerificar={() => onVerificarRecalada?.(recaladaAVerificar)}
                 tr={tr}
               />
             </div>
@@ -917,10 +936,10 @@ export function NavitrackShipment({
                               </span>
                             )}
                           </span>
-                          {pendiente ? (
+                          {pendiente && !soloLectura ? (
                             <button
                               type="button"
-                              onClick={() => onVerificarRecalada(r)}
+                              onClick={() => onVerificarRecalada?.(r)}
                               className="dash-control motion-interactive shrink-0 px-2 py-1 text-[11px] font-bold"
                             >
                               {tr.recaladaVerificar}

@@ -201,6 +201,20 @@ export type TransbordoDecision = {
   nave_siguiente: string | null;
 };
 
+/**
+ * Quién está mirando.
+ *
+ * `interna` es el personal de ASLI y ve el módulo completo. `cliente` es el
+ * dueño de la carga, que entra a la misma pantalla en modo seguimiento.
+ *
+ * La diferencia no es de permisos —eso lo impone RLS— sino de criterio: al
+ * cliente se le muestra lo que ya se sabe del viaje, no lo que ASLI todavía
+ * está averiguando. Una sospecha de transbordo sale de comparar el destino que
+ * la tripulación escribe a mano contra el POD; mostrarla antes de que alguien
+ * la revise es anunciar un problema que la mayoría de las veces no existe.
+ */
+export type NavitrackVista = "interna" | "cliente";
+
 /* --------------------------------- Etapa ------------------------------------ */
 
 export type EstadoEmbarque = {
@@ -223,6 +237,7 @@ export function resolverEstado(
   decision: TransbordoDecision | null,
   now = new Date(),
   recaladas: RecaladaEstado[] = [],
+  vista: NavitrackVista = "interna",
 ): EstadoEmbarque {
   const eta = compararEta(op, ais);
   const etaDate = eta.erp;
@@ -271,6 +286,12 @@ export function resolverEstado(
   const hayPendiente = recaladas.some((r) => r.estado === "por_verificar");
 
   const sospecha =
+    /*
+     * El cliente no ve sospechas: para él, o el transbordo está confirmado o el
+     * viaje sigue su curso. Se corta acá y no en la pantalla para que etapa,
+     * alerta y color no puedan contradecirse entre sí más adelante.
+     */
+    vista === "interna" &&
     decision?.estado !== "descartado" &&
     !yaResuelto &&
     (hayPendiente ||
@@ -343,6 +364,7 @@ export function construirAlertas(
   ais: AisSnapshot | null,
   journey: Journey,
   estado: EstadoEmbarque,
+  vista: NavitrackVista = "interna",
 ): Alerta[] {
   const alertas: Alerta[] = [];
 
@@ -382,7 +404,13 @@ export function construirAlertas(
     alertas.push({ codigo: "SIN_POSICION", severidad: "info", datos: {}, accionable: false });
   }
 
-  if (!journey.origen.coord || !journey.destino.coord) {
+  /*
+   * "No se conoce la coordenada de este puerto" es un aviso para quien mantiene
+   * el catálogo, no para quien espera su carga: el cliente ve el puerto por su
+   * nombre igual, y la nota de procedencia ya explica que la posición es
+   * estimada.
+   */
+  if (vista === "interna" && (!journey.origen.coord || !journey.destino.coord)) {
     alertas.push({
       codigo: "SIN_RUTA",
       severidad: "info",
