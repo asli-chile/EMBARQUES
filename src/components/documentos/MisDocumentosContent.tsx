@@ -110,24 +110,30 @@ const GRUPOS_DOCUMENTO = [
     id: "comerciales",
     label: "Comerciales",
     icon: "lucide:receipt",
+    /* Color de la etapa, fijo. Identifica el grupo de un vistazo aunque esté
+       plegado; cuánto le falta lo dice el contador de al lado. */
+    tono: "#a78bfa",
     tipos: ["BOOKING", "SOLICITUD_RESERVA", "FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
   },
   {
     id: "origen",
     label: "Origen",
     icon: "lucide:stamp",
+    tono: "#60a5fa",
     tipos: ["CERTIFICADO_ORIGEN", "CERTIFICADO_FITOSANITARIO", "DUS"],
   },
   {
     id: "transporte",
     label: "Transporte y Nave",
     icon: "lucide:ship",
+    tono: "#38bdf8",
     tipos: ["INSTRUCTIVO_EMBARQUE", "BL_TELEX_SWB_AWB", "FACTURA_GATE_OUT"],
   },
   {
     id: "cierre",
     label: "Cierre",
     icon: "lucide:flag",
+    tono: "#34d399",
     tipos: ["FULLSET"],
   },
 ] as const;
@@ -759,7 +765,7 @@ export function MisDocumentosContent() {
     const estadoFila = marcadoNoAplica
       ? { clase: "estado--espera", label: tr.noAplica, icono: "lucide:minus-circle" }
       : doc
-        ? { clase: "estado--ok", label: tr.estadoRecibido, icono: "lucide:check-circle" }
+        ? { clase: "estado--transito", label: tr.estadoRecibido, icono: "lucide:check-circle" }
         : { clase: "estado--atencion", label: tr.estadoPendienteDoc, icono: "lucide:clock" };
 
     return (
@@ -1043,7 +1049,7 @@ export function MisDocumentosContent() {
         <div className="px-3 pb-3 sm:px-4 sm:pb-3.5">
             <div
               className={`flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/60 p-3 ${
-                progressPct === 100 ? "estado--ok" : docsCompletados > 0 ? "estado--curso" : "estado--espera"
+                docsCompletados > 0 ? "estado--transito" : "estado--espera"
               }`}
             >
               <span className="relative flex h-14 w-14 shrink-0 items-center justify-center" aria-hidden>
@@ -1122,25 +1128,38 @@ export function MisDocumentosContent() {
           return (
             <section
               key={grupo.id}
-              className={`overflow-hidden rounded-xl border border-dash-border bg-dash-control/30 ${
-                completo ? "estado--ok" : recibidos > 0 ? "estado--curso" : "estado--espera"
-              }`}
+              style={{ "--grupo": grupo.tono } as React.CSSProperties}
+              className="relative overflow-hidden rounded-xl border border-dash-border bg-dash-surface/60"
             >
+              {/* Franja del color de la etapa: identifica el grupo aun plegado. */}
+              <span
+                className="absolute inset-y-0 left-0 w-1"
+                style={{ background: "var(--grupo)" }}
+                aria-hidden
+              />
               <button
                 type="button"
                 aria-expanded={abierto}
                 onClick={() =>
                   setGruposCerrados((prev) => ({ ...prev, [grupo.id]: !abierto }))
                 }
-                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-dash-neon/10"
+                className="flex w-full items-center gap-2.5 py-2.5 pl-4 pr-3 text-left transition-colors hover:bg-dash-neon/10"
               >
-                <span className="estado-icono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{
+                    background: "color-mix(in srgb, var(--grupo) 16%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--grupo) 40%, transparent)",
+                    color: "var(--grupo)",
+                  }}
+                >
                   <Icon icon={grupo.icon} width={16} height={16} aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-dash-fg">
                   {grupo.label}
                 </span>
-                <span className="estado-chip shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold tabular-nums">
+                {/* Contador en texto: el color ya lo gastó la etapa. */}
+                <span className="shrink-0 text-[13px] font-bold tabular-nums text-dash-muted">
                   {recibidos}/{exigibles.length}
                 </span>
                 <Icon
