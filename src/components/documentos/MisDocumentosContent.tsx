@@ -24,6 +24,7 @@ type Operacion = {
   pol: string | null;
   pod: string;
   etd: string | null;
+  eta: string | null;
   /** Estado del viaje. Convive con el del papeleo: son preguntas distintas. */
   estado_operacion: string | null;
   booking_doc_url: string | null;
@@ -280,7 +281,7 @@ export function MisDocumentosContent() {
     if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
     const baseCols =
-      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pol, pod, etd, estado_operacion, booking_doc_url, created_at";
+      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pol, pod, etd, eta, estado_operacion, booking_doc_url, created_at";
     const withNaCols = `${baseCols}, solicitud_reserva_no_aplica, factura_gate_out_no_aplica`;
 
     let q = supabase.from("operaciones").select(withNaCols).is("deleted_at", null);
@@ -319,6 +320,7 @@ export function MisDocumentosContent() {
         pol: (r.pol as string | null) ?? null,
         pod: String(r.pod ?? ""),
         etd: (r.etd as string | null) ?? null,
+        eta: (r.eta as string | null) ?? null,
         estado_operacion: (r.estado_operacion as string | null) ?? null,
         booking_doc_url: (r.booking_doc_url as string | null) ?? null,
         created_at: (r.created_at as string | null) ?? null,
@@ -1076,75 +1078,133 @@ export function MisDocumentosContent() {
           ? "border-emerald-400/50 bg-emerald-500/10"
           : "border-dash-neon/40"
       }`}>
-        <div className="flex items-start gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-3.5">
-          {/*
-            * Contenedor, no un icono de progreso.
-            *
-            * Es la cabecera del embarque: lo que identifica es la carga. El
-            * avance tiene su propio bloque justo debajo y no necesita decirlo
-            * dos veces. El tono sale del estado del viaje.
-            */}
-          <div
-            className={`estado-icono flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${estadoViaje.clase}`}
-          >
-            <Icon icon="lucide:container" width={24} height={24} aria-hidden />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-2xl font-extrabold leading-none tracking-tight text-dash-fg sm:text-[1.65rem]">
-                {opRef(operacionActual)}
-              </p>
-              <span
-                className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${estadoViaje.clase}`}
-              >
-                <span className="estado-barra h-1.5 w-1.5 rounded-full" />
-                {estadoViaje.label}
-              </span>
+        {/*
+          * Banner del embarque.
+          *
+          * Dos zonas: quién es a la izquierda, cómo va su papeleo a la derecha.
+          * En pantalla ancha conviven en una línea; bajo lg el avance baja,
+          * porque partir seis datos y un anillo en 380 px no deja leer ninguno.
+          */}
+        <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 sm:py-3.5 lg:flex-row lg:items-center lg:gap-6">
+          <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
+            <div
+              className={`estado-icono flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${estadoViaje.clase}`}
+            >
+              <Icon icon="lucide:container" width={24} height={24} aria-hidden />
             </div>
 
-            {operacionActual.cliente ? (
-              <p className="mt-1 truncate text-sm font-semibold text-dash-muted">
-                {operacionActual.cliente}
-              </p>
-            ) : null}
-
-            {/*
-              * Los cuatro datos con los que se reconoce el embarque, sin caja
-              * propia: la tarjeta ya es una superficie, y meter otra dentro
-              * añade un borde que no separa nada nuevo.
-              */}
-            <div className="mt-2.5 grid grid-cols-4 gap-x-2 border-t border-dash-border pt-2.5">
-              <div className="min-w-0">
-                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colBooking}</p>
-                <p className="truncate text-[11.5px] font-bold tabular-nums text-dash-fg sm:text-[12px]">{operacionActual.booking || "—"}</p>
-              </div>
-              <div className="min-w-0 border-l border-dash-border pl-2">
-                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colContenedor}</p>
-                <p className="truncate text-[11.5px] font-bold tabular-nums text-dash-fg sm:text-[12px]">{operacionActual.contenedor || "—"}</p>
-              </div>
-              <div className="min-w-0 border-l border-dash-border pl-2">
-                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colNaviera}</p>
-                <p className="truncate text-[11.5px] font-bold text-dash-fg sm:text-[12px]">{operacionActual.naviera || "—"}</p>
-              </div>
-              <div className="min-w-0 border-l border-dash-border pl-2">
-                <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{tr.colRuta}</p>
-                <p
-                  className="truncate text-[11.5px] font-bold text-dash-fg sm:text-[12px]"
-                  title={`${operacionActual.pol || "—"} → ${operacionActual.pod || "—"}`}
-                >
-                  {operacionActual.pol || "—"} → {operacionActual.pod || "—"}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-2xl font-extrabold leading-none tracking-tight text-dash-fg sm:text-[1.65rem]">
+                  {opRef(operacionActual)}
                 </p>
+                <span
+                  className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${estadoViaje.clase}`}
+                >
+                  <span className="estado-barra h-1.5 w-1.5 rounded-full" />
+                  {estadoViaje.label}
+                </span>
+              </div>
+
+              {operacionActual.cliente ? (
+                <p className="mt-1 truncate text-sm font-bold text-dash-neon">
+                  {operacionActual.cliente}
+                </p>
+              ) : null}
+
+              {/* Los seis datos del embarque, en una sola fila cuando cabe. */}
+              <div className="mt-2.5 grid grid-cols-3 gap-x-3 gap-y-2.5 border-t border-dash-border pt-2.5 sm:grid-cols-6">
+                {(
+                  [
+                    [tr.colBooking, operacionActual.booking],
+                    [tr.colContenedor, operacionActual.contenedor],
+                    [tr.colNaviera, operacionActual.naviera],
+                    [
+                      tr.colRuta,
+                      [operacionActual.pol, operacionActual.pod].filter(Boolean).join(" → "),
+                    ],
+                    [tr.colEtd, operacionActual.etd ? formatDate(operacionActual.etd) : null],
+                    [tr.colEta, operacionActual.eta ? formatDate(operacionActual.eta) : null],
+                  ] as [string, string | null][]
+                ).map(([etiqueta, valor]) => (
+                  <div key={etiqueta} className="min-w-0">
+                    <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{etiqueta}</p>
+                    <p className="truncate text-[11.5px] font-bold text-dash-fg sm:text-[12px]" title={valor ?? undefined}>
+                      {valor || "—"}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/*
-            * La flecha del mockup, con destino: la ficha del embarque en
-            * Seguimiento. Un chevron que no lleva a ninguna parte promete algo
-            * que no ocurre.
-            */}
-          <div className="flex shrink-0 items-center gap-0.5">
+          {/* Avance del papeleo. */}
+          <div
+            className={`flex shrink-0 items-center gap-3 lg:w-[22rem] ${
+              docsCompletados > 0 ? "estado--transito" : "estado--espera"
+            }`}
+          >
+            <span className="relative flex h-16 w-16 shrink-0 items-center justify-center" aria-hidden>
+              <svg viewBox="0 0 44 44" className="h-16 w-16 -rotate-90">
+                <circle cx="22" cy="22" r="19" fill="none" strokeWidth="5" className="stroke-dash-border" />
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="19"
+                  fill="none"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  stroke="var(--estado)"
+                  strokeDasharray={`${(progressPct / 100) * 2 * Math.PI * 19} ${2 * Math.PI * 19}`}
+                  style={{ transition: "stroke-dasharray 500ms var(--dash-ease)" }}
+                />
+              </svg>
+              <span className="absolute text-[14px] font-extrabold tabular-nums text-dash-fg">
+                {docsCompletados}/{tiposAplicables}
+              </span>
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-bold text-dash-fg">{tr.docsRecibidosTitulo}</span>
+              <span className="mt-0.5 block text-[12.5px] text-dash-muted">
+                {tr.docsRecibidosDetalle
+                  .replace("{recibidos}", String(docsCompletados))
+                  .replace("{pendientes}", String(Math.max(tiposAplicables - docsCompletados, 0)))}
+              </span>
+              <span className="mt-2 block h-2 overflow-hidden rounded-full bg-dash-control">
+                <span
+                  className="estado-barra block h-full rounded-full transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </span>
+
+              {/*
+                * Leyenda: solo los estados que el sistema distingue de verdad.
+                *
+                * La referencia incluye "En revisión" y "Observados"; no existen
+                * como dato, así que aparecerían clavados en cero para siempre y
+                * prometerían un seguimiento que nadie puede llevar.
+                */}
+              <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold">
+                <span className="estado--transito inline-flex items-center gap-1.5 text-dash-muted">
+                  <span className="estado-barra h-2 w-2 rounded-full" />
+                  {docsCompletados} {tr.estadoRecibido}
+                </span>
+                <span className="estado--atencion inline-flex items-center gap-1.5 text-dash-muted">
+                  <span className="estado-barra h-2 w-2 rounded-full" />
+                  {Math.max(tiposAplicables - docsCompletados, 0)} {tr.estadoPendienteDoc}
+                </span>
+                {visibleTipos.length - tiposAplicables > 0 && (
+                  <span className="estado--espera inline-flex items-center gap-1.5 text-dash-muted">
+                    <span className="estado-barra h-2 w-2 rounded-full" />
+                    {visibleTipos.length - tiposAplicables} {tr.noAplica}
+                  </span>
+                )}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex shrink-0 items-start gap-0.5 max-lg:absolute max-lg:right-3 max-lg:top-3">
             <a
               href={`${withBase("/navitrack")}?op=${encodeURIComponent(opRef(operacionActual))}`}
               title={tr.accionTracking}
@@ -1161,58 +1221,6 @@ export function MisDocumentosContent() {
               <Icon icon="lucide:x" width={18} height={18} aria-hidden />
             </button>
           </div>
-        </div>
-
-        <div className="px-3 pb-3 sm:px-4 sm:pb-3.5">
-            <div
-              className={`flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control/60 p-3 ${
-                docsCompletados > 0 ? "estado--transito" : "estado--espera"
-              }`}
-            >
-              <span className="relative flex h-14 w-14 shrink-0 items-center justify-center" aria-hidden>
-                <svg viewBox="0 0 44 44" className="h-14 w-14 -rotate-90">
-                  <circle
-                    cx="22"
-                    cy="22"
-                    r="19"
-                    fill="none"
-                    strokeWidth="5"
-                    className="stroke-dash-border"
-                  />
-                  <circle
-                    cx="22"
-                    cy="22"
-                    r="19"
-                    fill="none"
-                    strokeWidth="5"
-                    strokeLinecap="round"
-                    stroke="var(--estado)"
-                    strokeDasharray={`${(progressPct / 100) * 2 * Math.PI * 19} ${2 * Math.PI * 19}`}
-                    style={{ transition: "stroke-dasharray 500ms var(--dash-ease)" }}
-                  />
-                </svg>
-                <span className="absolute text-[13px] font-extrabold tabular-nums text-dash-fg">
-                  {docsCompletados}/{tiposAplicables}
-                </span>
-              </span>
-
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-bold text-dash-fg">
-                  {tr.docsRecibidosTitulo}
-                </span>
-                <span className="mt-0.5 block text-[12.5px] text-dash-muted">
-                  {tr.docsRecibidosDetalle
-                    .replace("{recibidos}", String(docsCompletados))
-                    .replace("{pendientes}", String(Math.max(tiposAplicables - docsCompletados, 0)))}
-                </span>
-                <span className="mt-2 block h-2 overflow-hidden rounded-full bg-dash-control">
-                  <span
-                    className="estado-barra block h-full rounded-full transition-all duration-500"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </span>
-              </span>
-            </div>
         </div>
       </div>
 
