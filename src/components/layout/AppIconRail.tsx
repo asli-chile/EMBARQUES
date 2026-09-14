@@ -141,11 +141,15 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
           <span className={labelCls}>{t.nav.dashboardShort}</span>
         </a>
         {/*
-          * Seguimiento, fijo en el rail. Solo con sesión: NaviTrack reemplazó al
-          * módulo anterior, que sí era público, y todo lo que muestra sale de
-          * las operaciones que RLS le deja ver a cada cuenta.
+          * Seguimiento, fijo en el rail para el personal, que entra ahí todo el
+          * día. El cliente no lo ve acá: para él va en su lugar de la lista,
+          * bajo Documentos, siguiendo el orden en que trabaja.
+          *
+          * Solo con sesión, además: NaviTrack reemplazó al módulo anterior, que
+          * sí era público, y todo lo que muestra sale de las operaciones que
+          * RLS le deja ver a cada cuenta.
           */}
-        {user ? (
+        {user && !isCliente ? (
           <a
             href={withBase("/navitrack")}
             className={`${navBtn} ${pathname === "/navitrack" ? navActive : ""}`}
@@ -241,7 +245,9 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
 
           if (!item.href) return null;
           // Evitar duplicar: ya van fijos arriba
-          if (item.id === "dashboard" || item.id === "inicio" || item.id === "navitrack") return null;
+          // Seguimiento va fijo arriba para el personal; para el cliente, acá.
+          if (item.id === "dashboard" || item.id === "inicio") return null;
+          if (item.id === "navitrack" && !isCliente) return null;
 
           return (
             <a

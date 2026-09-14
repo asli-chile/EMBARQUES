@@ -36,6 +36,15 @@ export const siteConfig = {
         { labelKey: "misDocumentos", id: "mis-documentos", href: "/documentos/mis-documentos", operational: true },
       ],
     },
+    /*
+     * Seguimiento, justo debajo de Documentos.
+     *
+     * Es el orden en que trabaja el cliente: primero sus reservas, después los
+     * papeles del embarque y por último dónde va la carga. NaviTrack reemplazó
+     * al módulo anterior, así que este ítem es el único: lo ve el personal y
+     * también el cliente, en modo lectura.
+     */
+    { labelKey: "navitrack", id: "navitrack", href: "/navitrack", operational: true },
     { labelKey: "registros", id: "registros", href: "/registros", staffOnly: true },
     {
       labelKey: "comunicaciones",
@@ -72,12 +81,6 @@ export const siteConfig = {
         { labelKey: "navesTracking", id: "naves-tracking", href: "/configuracion/naves-tracking", superadminOnly: true },
       ],
     },
-    /*
-     * Seguimiento. NaviTrack reemplazó al módulo anterior, así que este ítem es
-     * el único: lo ve el personal y también el cliente, que entra en modo
-     * lectura. Cuánto puede hacer cada uno lo resuelve la propia pantalla.
-     */
-    { labelKey: "navitrack", id: "navitrack", href: "/navitrack", operational: true },
   ],
   authIcon: icons.auth,
   /** Contacto para solicitar usuario y contraseña en la plataforma */
