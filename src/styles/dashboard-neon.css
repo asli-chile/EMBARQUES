@@ -739,6 +739,15 @@ html[data-erp-neon="light"] {
    * que se vea que es una excepción consciente y no un descuido.
    */
   --estado-atencion: #f2b134;
+
+  /*
+   * Verde de "en tránsito", el del mockup aprobado para la lista de embarques.
+   *
+   * Convive con --estado-ok (oliva de marca, que habla del papeleo completo):
+   * uno dice que la carga va navegando, el otro que la documentación está. Son
+   * dos cosas distintas y por eso no comparten tono.
+   */
+  --estado-transito: #34d399;
 }
 
 .dash-neon[data-theme="light"] {
@@ -748,6 +757,7 @@ html[data-erp-neon="light"] {
   --estado-espera: var(--marca-gris);
   --estado-error: var(--marca-rojo);
   --estado-atencion: #b5730a;
+  --estado-transito: #047857;
 }
 
 /*
@@ -768,6 +778,9 @@ html[data-erp-neon="light"] {
 }
 .estado--atencion {
   --estado: var(--estado-atencion);
+}
+.estado--transito {
+  --estado: var(--estado-transito);
 }
 .estado--error {
   --estado: var(--estado-error);

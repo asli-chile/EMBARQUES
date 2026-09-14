@@ -897,6 +897,39 @@ export function MisDocumentosContent() {
     );
   };
 
+  /**
+   * Estado del viaje de una operación cualquiera.
+   *
+   * Verde cuando la carga ya navega o llegó, ámbar mientras no zarpa, rojo si
+   * se canceló. Son los tres desenlaces que le importan a quien mira la lista;
+   * el detalle del estado exacto lo dice la etiqueta.
+   */
+  const estadoViajeDe = (op: Operacion) => {
+    const bruto = (op.estado_operacion ?? "").trim();
+    const norm = bruto.toUpperCase();
+    const label = bruto ? bruto.charAt(0).toUpperCase() + bruto.slice(1).toLowerCase() : tr.sinEstado;
+    if (norm.includes("CANCEL")) return { clase: "estado--error", label, icono: "lucide:x-circle" };
+    if (
+      norm.includes("ZARP") ||
+      norm.includes("TRANS") ||
+      norm.includes("NAVEG") ||
+      norm.includes("ARRIB") ||
+      norm.includes("CERR") ||
+      norm.includes("ENTREG")
+    ) {
+      return { clase: "estado--transito", label, icono: "lucide:ship" };
+    }
+    return { clase: "estado--atencion", label, icono: "lucide:clock" };
+  };
+
+  /** Documentos exigibles de una operación: los visibles menos los "no aplica". */
+  const docsExigiblesDe = (opId: string) => {
+    const op = operaciones.find((o) => o.id === opId);
+    return Math.max(visibleTipos.length - countTiposNoAplica(op, visibleTipos), 0);
+  };
+
+  const docsRecibidosDe = (opId: string) => docCounts.get(opId) ?? 0;
+
   const estadoViaje = (() => {
     const bruto = (operacionActual?.estado_operacion ?? "").trim();
     if (!bruto) return { label: tr.sinEstado, clase: "estado--espera" };
@@ -1332,7 +1365,20 @@ export function MisDocumentosContent() {
                   ) : (
                     <>
                       {/* Cards móvil sin selección */}
-                      <div className="md:hidden divide-y divide-dash-border">
+                      {/*
+                        * Tarjetas de la lista, según el mockup aprobado.
+                        *
+                        * Color por estado del VIAJE, no del papeleo: verde si
+                        * la carga va navegando, ámbar si todavía no. Es la
+                        * lectura que pidió el negocio para esta lista; el
+                        * contador de documentos acompaña con el mismo tono para
+                        * que la tarjeta hable de una sola cosa a la vez.
+                        *
+                        * El borde va completo en vez de una barra al canto: así
+                        * cada embarque se lee como una ficha cerrada y no como
+                        * filas de una tabla.
+                        */}
+                      <div className="space-y-2.5 p-2 md:hidden">
                         {pagedOperaciones.length === 0 ? (
                           <div className="py-12 px-4 text-center">
                             <Icon icon="lucide:folder" width={28} height={28} className="text-dash-neon/40 mx-auto mb-2" />
@@ -1340,93 +1386,62 @@ export function MisDocumentosContent() {
                           </div>
                         ) : (
                           pagedOperaciones.map((op) => {
-                            const estado = estadoDocsDe(op.id);
-                            /*
-                             * Un solo tono por tarjeta: barra lateral, icono y
-                             * chip. Si cada pieza eligiera el suyo, la tarjeta
-                             * diría tres cosas a la vez.
-                             */
-                            const tono =
-                              estado === "completo"
-                                ? {
-                                    clase: "estado--ok",
-                                    label: tr.estadoCompleto,
-                                    ico: "lucide:check-circle",
-                                  }
-                                : estado === "curso"
-                                  ? {
-                                      clase: "estado--curso",
-                                      label: tr.estadoEnCurso,
-                                      ico: "lucide:loader",
-                                    }
-                                  : {
-                                      clase: "estado--espera",
-                                      label: tr.estadoPendiente,
-                                      ico: "lucide:clock",
-                                    };
+                            const viaje = estadoViajeDe(op);
                             const abierto = detalleAbierto === op.id;
 
                             return (
-                              <div key={op.id} className={`relative ${tono.clase}`}>
-                                {/* La barra dice el estado antes de leer nada. */}
-                                <span className="estado-barra absolute inset-y-0 left-0 w-1" aria-hidden />
+                              <article
+                                key={op.id}
+                                className={`overflow-hidden rounded-2xl border bg-dash-surface/80 ${viaje.clase} border-[color-mix(in_srgb,var(--estado)_45%,transparent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--estado)_12%,transparent),0_10px_30px_-18px_color-mix(in_srgb,var(--estado)_60%,transparent)]`}
+                              >
                                 <button
                                   type="button"
                                   onClick={() => handleSelectOperacion(op.id)}
-                                  className="flex w-full items-start gap-3 bg-transparent py-3.5 pl-4 pr-3.5 text-left transition-colors hover:bg-dash-neon/10"
+                                  className="flex w-full items-start gap-3 px-3.5 pb-3 pt-3.5 text-left"
                                 >
-                                  <span
-                                    className="estado-icono mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                                    aria-hidden
-                                  >
-                                    <Icon icon="lucide:container" width={20} height={20} />
+                                  <span className="estado-icono flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+                                    <Icon icon="lucide:container" width={24} height={24} aria-hidden />
                                   </span>
 
                                   <span className="min-w-0 flex-1">
-                                    <span className="flex items-start justify-between gap-2">
-                                      <span className="min-w-0">
-                                        <span className="block truncate text-[16px] font-bold leading-tight text-dash-fg">
-                                          {opRef(op)}
-                                        </span>
-                                        <span className="mt-0.5 block truncate text-[13.5px] text-dash-fg/75">
-                                          {op.cliente || "-"}
-                                        </span>
-                                      </span>
-                                      {docsBadge(op.id, true)}
+                                    <span className="block truncate text-[17px] font-extrabold leading-tight text-dash-fg">
+                                      {opRef(op)}
+                                    </span>
+                                    <span className="mt-0.5 block truncate text-[13px] font-semibold text-dash-muted">
+                                      {op.cliente || "-"}
                                     </span>
 
-                                    <span className="mt-2 block truncate text-[13px] font-semibold tabular-nums text-dash-fg/90">
+                                    <span className="mt-2 block truncate text-[13.5px] font-bold tabular-nums text-dash-fg">
                                       {[op.contenedor, op.booking].filter(Boolean).join(" · ") || "—"}
                                     </span>
-                                    <span className="mt-0.5 block truncate text-[12px] text-dash-muted">
+                                    <span className="mt-1 block truncate text-[12.5px] font-semibold text-dash-muted">
                                       {[op.naviera, op.pod].filter(Boolean).join(" · ") || "-"}
                                     </span>
-
-                                    <span className="mt-2 flex flex-wrap items-center gap-2">
-                                      <span className="text-[11.5px] text-dash-muted/80">
-                                        {formatDate(op.created_at)}
-                                      </span>
-                                      <span className="estado-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold">
-                                        <Icon icon={tono.ico} width={11} height={11} aria-hidden />
-                                        {tono.label}
-                                      </span>
+                                    <span className="mt-1.5 flex items-center gap-1.5 text-[12px] text-dash-muted/80">
+                                      <Icon icon="lucide:calendar" width={12} height={12} aria-hidden />
+                                      {formatDate(op.created_at)}
                                     </span>
                                   </span>
 
-                                  <Icon
-                                    icon="lucide:chevron-right"
-                                    width={18}
-                                    height={18}
-                                    className="mt-3 shrink-0 text-dash-muted/60"
-                                    aria-hidden
-                                  />
+                                  {/* Columna derecha: cuánto papeleo hay, cómo va el viaje, y entrar. */}
+                                  <span className="flex shrink-0 flex-col items-end justify-between gap-3 self-stretch">
+                                    <span className="estado-chip rounded-lg px-2 py-0.5 text-[12.5px] font-extrabold tabular-nums">
+                                      {docsRecibidosDe(op.id)}/{docsExigiblesDe(op.id)}
+                                    </span>
+                                    <Icon
+                                      icon="lucide:chevron-right"
+                                      width={18}
+                                      height={18}
+                                      className="text-dash-muted/60"
+                                      aria-hidden
+                                    />
+                                    <span className="estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold">
+                                      <Icon icon={viaje.icono} width={12} height={12} aria-hidden />
+                                      {viaje.label}
+                                    </span>
+                                  </span>
                                 </button>
 
-                                {/*
-                                  * Detalles despliega acá lo que la tarjeta dejó
-                                  * fuera. Abrir otra pantalla para leer cuatro
-                                  * campos hace perder el sitio en la lista.
-                                  */}
                                 {abierto && (
                                   <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-dash-border/70 bg-dash-control/30 px-4 py-3 text-[12px]">
                                     {[
@@ -1434,16 +1449,12 @@ export function MisDocumentosContent() {
                                       [tr.colNaviera, op.naviera],
                                       [tr.colBooking, op.booking],
                                       [tr.colContenedor, op.contenedor],
-                                      [tr.colPod, op.pod],
+                                      [tr.colRuta, [op.pol, op.pod].filter(Boolean).join(" → ")],
                                       [tr.colEtd, op.etd ? formatDate(op.etd) : null],
                                     ].map(([etiqueta, valor]) => (
                                       <div key={String(etiqueta)} className="min-w-0">
-                                        <dt className="text-[10.5px] font-bold uppercase tracking-wide text-dash-muted/70">
-                                          {etiqueta}
-                                        </dt>
-                                        <dd className="truncate font-semibold text-dash-fg/90">
-                                          {valor || "—"}
-                                        </dd>
+                                        <dt className="text-[10.5px] font-semibold text-dash-muted/70">{etiqueta}</dt>
+                                        <dd className="truncate font-semibold text-dash-fg/90">{valor || "—"}</dd>
                                       </div>
                                     ))}
                                   </dl>
@@ -1457,13 +1468,16 @@ export function MisDocumentosContent() {
                                   >
                                     <Icon icon="lucide:file-text" width={14} height={14} aria-hidden />
                                     {tr.accionDocumentos}
+                                    <span className="rounded-md bg-dash-control px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-dash-muted">
+                                      {docsExigiblesDe(op.id)}
+                                    </span>
                                   </button>
                                   <span className="my-2 w-px bg-dash-border" aria-hidden />
                                   <a
                                     href={`${withBase("/navitrack")}?op=${encodeURIComponent(opRef(op))}`}
                                     className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-dash-fg/85 transition-colors active:bg-dash-neon/15"
                                   >
-                                    <Icon icon="lucide:route" width={14} height={14} aria-hidden />
+                                    <Icon icon="lucide:line-chart" width={14} height={14} aria-hidden />
                                     {tr.accionTracking}
                                   </a>
                                   <span className="my-2 w-px bg-dash-border" aria-hidden />
@@ -1482,7 +1496,7 @@ export function MisDocumentosContent() {
                                     {tr.accionDetalles}
                                   </button>
                                 </div>
-                              </div>
+                              </article>
                             );
                           })
                         )}
