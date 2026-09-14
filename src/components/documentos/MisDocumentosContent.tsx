@@ -21,8 +21,11 @@ type Operacion = {
   naviera: string;
   booking: string;
   contenedor: string | null;
+  pol: string | null;
   pod: string;
   etd: string | null;
+  /** Estado del viaje. Convive con el del papeleo: son preguntas distintas. */
+  estado_operacion: string | null;
   booking_doc_url: string | null;
   created_at: string | null;
   solicitud_reserva_no_aplica: boolean;
@@ -92,6 +95,49 @@ const TIPOS_DOCUMENTO_CLIENTE: readonly TipoDocumento[] = [
   "FULLSET",
 ];
 
+/**
+ * Los documentos, agrupados por el momento del embarque en que aparecen.
+ *
+ * Doce tarjetas seguidas obligan a leerlas todas para saber qué falta. Por
+ * grupos, la pregunta se responde de un vistazo: el papeleo comercial está, el
+ * de origen no.
+ *
+ * El orden es el del viaje —se reserva, se embarca, se certifica el origen, se
+ * emite el B/L, se cierra— y por eso es también el orden en que se buscan.
+ */
+const GRUPOS_DOCUMENTO = [
+  {
+    id: "reserva",
+    label: "Reserva y embarque",
+    icon: "lucide:clipboard-list",
+    tipos: ["BOOKING", "SOLICITUD_RESERVA", "INSTRUCTIVO_EMBARQUE"],
+  },
+  {
+    id: "comerciales",
+    label: "Comerciales",
+    icon: "lucide:receipt",
+    tipos: ["FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
+  },
+  {
+    id: "origen",
+    label: "Origen",
+    icon: "lucide:stamp",
+    tipos: ["CERTIFICADO_ORIGEN", "CERTIFICADO_FITOSANITARIO", "DUS"],
+  },
+  {
+    id: "transporte",
+    label: "Transporte y nave",
+    icon: "lucide:ship",
+    tipos: ["BL_TELEX_SWB_AWB", "FACTURA_GATE_OUT"],
+  },
+  {
+    id: "cierre",
+    label: "Cierre",
+    icon: "lucide:flag",
+    tipos: ["FULLSET"],
+  },
+] as const;
+
 const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
@@ -137,6 +183,14 @@ export function MisDocumentosContent() {
   const [filtroDocs, setFiltroDocs] = useState<"todos" | "pendientes" | "curso" | "completos">("todos");
   /** Tarjeta con los datos del embarque desplegados, en la vista de teléfono. */
   const [detalleAbierto, setDetalleAbierto] = useState<string | null>(null);
+  /**
+   * Grupos que el usuario abrió o cerró a mano.
+   *
+   * Sin entrada, manda el estado del grupo: los completos nacen plegados y los
+   * que tienen algo pendiente, abiertos. Una decisión manual pesa más que esa
+   * regla, que para eso se tomó.
+   */
+  const [gruposCerrados, setGruposCerrados] = useState<Record<string, boolean>>({});
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(1);
@@ -194,7 +248,7 @@ export function MisDocumentosContent() {
     if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
     const baseCols =
-      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pod, etd, booking_doc_url, created_at";
+      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pol, pod, etd, estado_operacion, booking_doc_url, created_at";
     const withNaCols = `${baseCols}, solicitud_reserva_no_aplica, factura_gate_out_no_aplica`;
 
     let q = supabase.from("operaciones").select(withNaCols).is("deleted_at", null);
@@ -230,8 +284,10 @@ export function MisDocumentosContent() {
         naviera: String(r.naviera ?? ""),
         booking: String(r.booking ?? ""),
         contenedor: (r.contenedor as string | null) ?? null,
+        pol: (r.pol as string | null) ?? null,
         pod: String(r.pod ?? ""),
         etd: (r.etd as string | null) ?? null,
+        estado_operacion: (r.estado_operacion as string | null) ?? null,
         booking_doc_url: (r.booking_doc_url as string | null) ?? null,
         created_at: (r.created_at as string | null) ?? null,
         solicitud_reserva_no_aplica: !!r.solicitud_reserva_no_aplica,
@@ -676,102 +732,14 @@ export function MisDocumentosContent() {
     </div>
   );
 
-  const docsPanel = hasSelection && operacionActual ? (
-    <div className="space-y-3">
-      <div className={`dash-card rounded-xl overflow-hidden border-2 ${
-        progressPct === 100
-          ? "border-emerald-400/50 bg-emerald-500/10"
-          : "border-dash-neon/40"
-      }`}>
-        <div className="px-4 py-3.5 flex items-start gap-3">
-          <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border ${
-            progressPct === 100
-              ? "bg-emerald-500/15 border-emerald-400/35"
-              : "bg-dash-neon/15 border-dash-neon/40"
-          }`}>
-            <Icon
-              icon={progressPct === 100 ? "lucide:check-circle" : "lucide:focus"}
-              width={24}
-              height={24}
-              className={progressPct === 100 ? "text-emerald-300" : "text-dash-neon"}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-extrabold uppercase tracking-wider border ${
-                progressPct === 100
-                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/35"
-                  : "bg-dash-neon/15 text-dash-fg border-dash-neon/35"
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${progressPct === 100 ? "bg-emerald-400" : "bg-dash-neon"}`} />
-                {tr.workingOn}
-              </span>
-              {operacionActual.cliente ? (
-                <span className="text-sm font-semibold truncate text-dash-muted">
-                  {operacionActual.cliente}
-                </span>
-              ) : null}
-            </div>
-            <p className={`text-2xl sm:text-[1.65rem] font-extrabold tracking-tight truncate leading-none mb-2.5 ${
-              progressPct === 100 ? "text-emerald-300" : "text-dash-fg"
-            }`}>
-              {opRef(operacionActual)}
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 rounded-lg px-3 py-2.5 bg-dash-control/70 border border-dash-border">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRefExterna}</p>
-                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.referencia_externa || "—"}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colBooking}</p>
-                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.booking || "—"}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colContenedor}</p>
-                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.contenedor || "—"}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colNaviera}</p>
-                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.naviera || "—"}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex-1 h-2.5 rounded-sm overflow-hidden border bg-dash-control border-dash-border">
-                <div
-                  className="h-full rounded-sm transition-all duration-500"
-                  style={{
-                    width: `${progressPct}%`,
-                    background: progressPct === 100
-                      ? "linear-gradient(to right,#10b981,#059669)"
-                      : "linear-gradient(to right, var(--dash-neon), var(--dash-neon-hot))",
-                  }}
-                />
-              </div>
-              <span className={`text-base font-extrabold shrink-0 tabular-nums ${progressPct === 100 ? "text-emerald-300" : "text-dash-fg"}`}>
-                {docsCompletados}/{tiposAplicables} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSelectedOperacion("")}
-            className="shrink-0 p-2 rounded-lg transition-colors text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15"
-            title={tr.closeSelection}
-          >
-            <Icon icon="lucide:x" width={18} height={18} />
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="px-3 py-2 bg-red-500/15 border border-red-400/35 rounded-xl text-red-300 text-base font-medium flex items-center gap-2">
-          <Icon icon="lucide:alert-circle" className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {visibleTipos.map((tipo) => {
+  /**
+   * Tarjeta de un tipo de documento.
+   *
+   * Era el cuerpo del map que recorría los doce tipos. Se le puso nombre para
+   * poder dibujarla dentro de cada grupo: la tarjeta no cambió, cambió quién
+   * decide en qué orden y bajo qué título aparece.
+   */
+  const renderTipoDocumento = (tipo: TipoDocumento) => {
           const doc = documentosPorTipo.get(tipo);
           const isUploading = uploading === tipo;
           const meta = TIPO_META[tipo];
@@ -904,6 +872,198 @@ export function MisDocumentosContent() {
                 )}
               </div>
             </div>
+    );
+  };
+
+  /**
+   * Estado del viaje para la cabecera.
+   *
+   * `estado_operacion` es texto libre en la base y llega en mayúsculas o
+   * vacío. Se normaliza acá y se le asigna un tono de la paleta: lo cerrado es
+   * logro, lo cancelado es error, lo demás está en curso.
+   */
+  const estadoViaje = (() => {
+    const bruto = (operacionActual?.estado_operacion ?? "").trim();
+    if (!bruto) return { label: tr.sinEstado, clase: "estado--espera" };
+    const norm = bruto.toUpperCase();
+    const clase =
+      norm.includes("CANCEL")
+        ? "estado--error"
+        : norm.includes("CERR") || norm.includes("ARRIB") || norm.includes("ENTREG")
+          ? "estado--ok"
+          : "estado--curso";
+    // Se muestra como llega, solo con la primera en mayúscula: inventarle
+    // etiquetas propias haría que esta pantalla nombre los estados distinto
+    // que el resto del ERP.
+    return { label: bruto.charAt(0).toUpperCase() + bruto.slice(1).toLowerCase(), clase };
+  })();
+
+  const docsPanel = hasSelection && operacionActual ? (
+    <div className="space-y-3">
+      <div className={`dash-card rounded-xl overflow-hidden border-2 ${
+        progressPct === 100
+          ? "border-emerald-400/50 bg-emerald-500/10"
+          : "border-dash-neon/40"
+      }`}>
+        <div className="px-4 py-3.5 flex items-start gap-3">
+          <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border ${
+            progressPct === 100
+              ? "bg-emerald-500/15 border-emerald-400/35"
+              : "bg-dash-neon/15 border-dash-neon/40"
+          }`}>
+            <Icon
+              icon={progressPct === 100 ? "lucide:check-circle" : "lucide:focus"}
+              width={24}
+              height={24}
+              className={progressPct === 100 ? "text-emerald-300" : "text-dash-neon"}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              {/*
+                * Estado del viaje, no del papeleo.
+                *
+                * Son dos preguntas distintas y conviven bien separadas: acá
+                * arriba, cómo va el embarque; más abajo, cómo va su
+                * documentación. Antes este espacio lo ocupaba un "trabajando
+                * en" que no informaba de nada.
+                */}
+              <span
+                className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${
+                  estadoViaje.clase
+                }`}
+              >
+                <span className="estado-barra h-1.5 w-1.5 rounded-full" />
+                {estadoViaje.label}
+              </span>
+              {operacionActual.cliente ? (
+                <span className="text-sm font-semibold truncate text-dash-muted">
+                  {operacionActual.cliente}
+                </span>
+              ) : null}
+            </div>
+            <p className={`text-2xl sm:text-[1.65rem] font-extrabold tracking-tight truncate leading-none mb-2.5 ${
+              progressPct === 100 ? "text-emerald-300" : "text-dash-fg"
+            }`}>
+              {opRef(operacionActual)}
+            </p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-dash-border bg-dash-control/70 px-3 py-2.5 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRefExterna}</p>
+                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.referencia_externa || "—"}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colBooking}</p>
+                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.booking || "—"}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colContenedor}</p>
+                <p className="text-sm font-bold truncate font-mono text-dash-fg">{operacionActual.contenedor || "—"}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colNaviera}</p>
+                <p className="text-sm font-bold truncate text-dash-fg">{operacionActual.naviera || "—"}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-dash-muted">{tr.colRuta}</p>
+                <p className="truncate text-sm font-bold text-dash-fg">
+                  {operacionActual.pol || "—"} → {operacionActual.pod || "—"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex-1 h-2.5 rounded-sm overflow-hidden border bg-dash-control border-dash-border">
+                <div
+                  className="h-full rounded-sm transition-all duration-500"
+                  style={{
+                    width: `${progressPct}%`,
+                    background: progressPct === 100
+                      ? "linear-gradient(to right,#10b981,#059669)"
+                      : "linear-gradient(to right, var(--dash-neon), var(--dash-neon-hot))",
+                  }}
+                />
+              </div>
+              <span className={`text-base font-extrabold shrink-0 tabular-nums ${progressPct === 100 ? "text-emerald-300" : "text-dash-fg"}`}>
+                {docsCompletados}/{tiposAplicables} {progressPct === 100 ? "✓" : `(${progressPct}%)`}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedOperacion("")}
+            className="shrink-0 p-2 rounded-lg transition-colors text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15"
+            title={tr.closeSelection}
+          >
+            <Icon icon="lucide:x" width={18} height={18} />
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="px-3 py-2 bg-red-500/15 border border-red-400/35 rounded-xl text-red-300 text-base font-medium flex items-center gap-2">
+          <Icon icon="lucide:alert-circle" className="w-4 h-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/*
+        * Los documentos, por grupos plegables.
+        *
+        * Doce tarjetas seguidas obligan a recorrerlas todas para saber qué
+        * falta; con el contador de cada grupo eso se ve sin abrir nada. Los
+        * grupos completos se pliegan solos: lo que ya está no necesita sitio.
+        */}
+      <div className="space-y-2">
+        {GRUPOS_DOCUMENTO.map((grupo) => {
+          const tipos = grupo.tipos.filter((t) =>
+            (visibleTipos as readonly string[]).includes(t),
+          ) as unknown as TipoDocumento[];
+          if (tipos.length === 0) return null;
+
+          const exigibles = tipos.filter((t) => !isTipoMarcadoNoAplica(operacionActual, t));
+          const recibidos = exigibles.filter((t) => documentosPorTipo.has(t)).length;
+          const completo = exigibles.length > 0 && recibidos === exigibles.length;
+          const abierto = gruposCerrados[grupo.id] ?? !completo;
+
+          return (
+            <section
+              key={grupo.id}
+              className={`overflow-hidden rounded-xl border border-dash-border bg-dash-control/30 ${
+                completo ? "estado--ok" : recibidos > 0 ? "estado--curso" : "estado--espera"
+              }`}
+            >
+              <button
+                type="button"
+                aria-expanded={abierto}
+                onClick={() =>
+                  setGruposCerrados((prev) => ({ ...prev, [grupo.id]: !abierto }))
+                }
+                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-dash-neon/10"
+              >
+                <span className="estado-icono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                  <Icon icon={grupo.icon} width={16} height={16} aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-dash-fg">
+                  {grupo.label}
+                </span>
+                <span className="estado-chip shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold tabular-nums">
+                  {recibidos}/{exigibles.length}
+                </span>
+                <Icon
+                  icon="lucide:chevron-down"
+                  width={16}
+                  height={16}
+                  className={`shrink-0 text-dash-muted transition-transform ${abierto ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+
+              {abierto && (
+                <div className="grid grid-cols-1 gap-2 border-t border-dash-border/70 p-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {tipos.map((tipo) => renderTipoDocumento(tipo))}
+                </div>
+              )}
+            </section>
           );
         })}
       </div>

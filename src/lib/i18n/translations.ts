@@ -1673,6 +1673,8 @@ export const translations = {
       // Teléfono: el largo se corta a media palabra y no cabe ni el primer ejemplo.
       searchPlaceholderCorto: "Buscar embarque o documento",
       // Estado del papeleo, que es de lo que trata esta pantalla.
+      colRuta: "Ruta",
+      sinEstado: "Sin estado",
       filtroTodos: "Todos",
       filtroPendientes: "Pendientes",
       filtroEnCurso: "En curso",
@@ -4793,6 +4795,8 @@ export const translations = {
       selectOperation: "Select operation",
       searchPlaceholder: "Search by reference, client, booking, container...",
       searchPlaceholderCorto: "Search shipment or document",
+      colRuta: "Route",
+      sinEstado: "No status",
       filtroTodos: "All",
       filtroPendientes: "Pending",
       filtroEnCurso: "In progress",
