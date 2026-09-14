@@ -113,7 +113,7 @@ const GRUPOS_DOCUMENTO = [
     /* Color de la etapa, fijo. Identifica el grupo de un vistazo aunque esté
        plegado; cuánto le falta lo dice el contador de al lado. */
     tono: "#a78bfa",
-    tipos: ["BOOKING", "SOLICITUD_RESERVA", "FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
+    tipos: ["BOOKING", "FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
   },
   {
     id: "origen",
@@ -166,7 +166,17 @@ export function MisDocumentosContent() {
   const [theme] = useNeonTheme();
   const tr = t.misDocumentos;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
-  const visibleTipos = isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO;
+  /*
+   * Tipos retirados de la pantalla.
+   *
+   * Se filtran en vez de borrarlos del catálogo: la columna y el histórico
+   * siguen existiendo en la base, así que volver a mostrarlos es quitar una
+   * línea. Hoy no hay ningún archivo cargado de estos tipos.
+   */
+  const TIPOS_FUERA: readonly string[] = ["SOLICITUD_RESERVA"];
+  const visibleTipos = (isCliente ? TIPOS_DOCUMENTO_CLIENTE : TIPOS_DOCUMENTO).filter(
+    (t) => !TIPOS_FUERA.includes(t),
+  );
   const visibleTiposSet = useMemo(() => new Set<string>(visibleTipos), [visibleTipos]);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
