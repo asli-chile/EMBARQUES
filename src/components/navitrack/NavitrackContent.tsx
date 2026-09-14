@@ -75,6 +75,7 @@ export function NavitrackContent() {
     isEjecutivo,
     isCliente,
     isStaff,
+    empresaNombres,
     isLoading: authLoading,
   } = useAuth();
 
@@ -103,6 +104,21 @@ export function NavitrackContent() {
    * Nada de esto es una barrera: las de verdad son RLS y los endpoints.
    */
   const modo: NavitrackVista = isCliente ? "cliente" : "interna";
+
+  /*
+   * Empresas a las que hay que acotar la consulta, o null si no hay que acotar.
+   *
+   * Para un cliente o un ejecutivo de verdad esto es redundante: RLS ya les
+   * devuelve solo lo suyo. Hace falta por "ver como": esa función cambia el
+   * perfil efectivo en el navegador, pero la sesión contra Supabase sigue
+   * siendo la del superadmin, así que la base responde con TODO y la pantalla,
+   * creyéndose cliente, mostraba embarques de otros. El filtro va en la
+   * consulta y no en el render para que ni siquiera lleguen.
+   *
+   * Lista vacía es lista vacía: un cliente sin empresas asignadas no ve nada.
+   * Mostrarle todo sería exactamente el error que esto viene a corregir.
+   */
+  const empresasAcotadas = isCliente || isEjecutivo ? empresaNombres : null;
   const puedeVer = isStaff || isCliente;
   const puedeDecidir = isSuperadmin || isAdmin || isEjecutivo;
   const puedeGastar = isSuperadmin;
@@ -184,15 +200,17 @@ export function NavitrackContent() {
     const desde = isoHaceDias(VENTANA_DIAS);
 
     const [opsRes, navesRes, navierasRes, decRes, tramosRes, recRes, lecturasRes] = await Promise.all([
-      supabase
-        .from("operaciones")
-        .select(NAVITRACK_OP_SELECT)
-        .is("deleted_at", null)
-        .not("nave", "is", null)
-        .or("estado_operacion.is.null,estado_operacion.neq.CANCELADA")
-        .or(`eta.gte.${desde},eta.is.null`)
-        .order("eta", { ascending: true })
-        .limit(500),
+      (() => {
+        let q = supabase
+          .from("operaciones")
+          .select(NAVITRACK_OP_SELECT)
+          .is("deleted_at", null)
+          .not("nave", "is", null)
+          .or("estado_operacion.is.null,estado_operacion.neq.CANCELADA")
+          .or(`eta.gte.${desde},eta.is.null`);
+        if (empresasAcotadas) q = q.in("cliente", empresasAcotadas);
+        return q.order("eta", { ascending: true }).limit(500);
+      })(),
       supabase.from("naves").select("nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(5000),
       supabase.from("navieras").select("nombre, logo_url"),
       supabase.from("navitrack_transbordos").select("operacion_id, estado, puerto, nave_siguiente"),
@@ -305,7 +323,7 @@ export function NavitrackContent() {
 
     setCargando(false);
     setRefrescando(false);
-  }, [supabase, puedeVer]);
+  }, [supabase, puedeVer, empresasAcotadas]);
 
   useEffect(() => {
     if (authLoading) return;

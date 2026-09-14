@@ -339,7 +339,12 @@ Tres permisos independientes, porque no son el mismo eje. Se resuelven en
 | cliente | los de sus empresas | no | no |
 
 - **`puedeVer`** no decide qué embarques se ven: eso lo hace RLS sobre
-  `operaciones`. La pantalla solo dibuja lo que la base devolvió.
+  `operaciones`. La pantalla solo dibuja lo que la base devolvió, **con una
+  excepción**: "ver como" cambia el perfil efectivo en el navegador pero no la
+  sesión contra Supabase, así que la base sigue respondiendo como superadmin.
+  Por eso la consulta se acota además por `empresaNombres` cuando el rol
+  efectivo es cliente o ejecutivo (`empresasAcotadas` en `NavitrackContent`).
+  Sin eso, un superadmin mirando "como cliente" veía los embarques de todos.
 - **`puedeDecidir`** es resolver una recalada o confirmar un transbordo. Es una
   afirmación de ASLI sobre el viaje y sale en un correo a su nombre.
 - **`puedeGastar`** es consultar al proveedor AIS. Cada llamada es un crédito y
