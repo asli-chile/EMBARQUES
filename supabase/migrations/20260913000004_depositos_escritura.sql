@@ -35,6 +35,21 @@ CREATE POLICY "depositos_staff_write" ON public.depositos
     )
   );
 
+/*
+ * El permiso de tabla, que es lo que faltaba de verdad.
+ *
+ * RLS no llega a evaluarse si el GRANT no existe: PostgREST responde 403 antes,
+ * con "permission denied for table". Por eso agregar la política sola no
+ * arregló nada — son dos capas distintas y hacen falta las dos.
+ *
+ * `depositos` solo tenía SELECT. Se iguala a `puertos_origen`, que sí funciona:
+ * INSERT y UPDATE, sin DELETE. Un catálogo se corrige, no se borra: hay
+ * operaciones viejas que apuntan a esos nombres.
+ *
+ * El id es gen_random_uuid(), así que no hay secuencia que permisar.
+ */
+GRANT INSERT, UPDATE ON public.depositos TO authenticated;
+
 -- Verificación: ningún catálogo de Registros debe quedar sin escritura.
 -- WITH t(nombre) AS (VALUES ('navieras'),('especies'),('plantas'),('depositos'),
 --   ('puertos_origen'),('empresas'),('destinos'),('consignatarios'),('contratos'))

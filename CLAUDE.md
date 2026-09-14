@@ -775,6 +775,47 @@ de 208 archivos inaccesibles para quien trabaja con ellos.
 
 ---
 
+## Permisos: son dos capas, no una
+
+Un 403 al escribir puede venir de **dos sitios distintos**, y arreglar uno solo
+no sirve:
+
+1. **El GRANT de tabla.** Si `authenticated` no tiene `INSERT`/`UPDATE`,
+   PostgREST responde 403 **antes** de mirar RLS.
+2. **La política RLS.** Con el GRANT puesto, decide quién puede.
+
+`depositos` tenía política de lectura y ningún GRANT de escritura: editar la
+celda en Registros daba 403 aunque el usuario fuera superadmin. Agregar la
+política no bastó; hacía falta también el GRANT.
+
+Al crear una tabla que se escriba desde el navegador, van las dos cosas en la
+misma migración. Esta consulta lista las que tienen política de escritura sin
+el GRANT que la habilita:
+
+```sql
+SELECT c.relname
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_policies p ON p.schemaname = 'public' AND p.tablename = c.relname
+ WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
+   AND p.cmd IN ('ALL','INSERT','UPDATE','DELETE')
+ GROUP BY c.relname
+HAVING NOT EXISTS (
+   SELECT 1 FROM information_schema.role_table_grants g
+    WHERE g.table_schema = 'public' AND g.table_name = c.relname
+      AND g.grantee = 'authenticated'
+      AND g.privilege_type IN ('INSERT','UPDATE','DELETE'));
+```
+
+Hoy devuelve ocho tablas, pero **ninguna es un error**: `clientes`,
+`consorcios`, `servicios_unicos*` y `usuarios` solo se escriben desde endpoints
+con `service_role`, que no pasa por RLS ni por GRANTs, y
+`conteo_visitas` tiene la política en `false` a propósito porque el contador
+sube por función. Antes de conceder permisos, comprobar si la tabla se escribe
+de verdad desde el navegador.
+
+---
+
 ## Convenciones
 
 - **Nombres de archivos**: `PascalCase` para componentes React, `kebab-case` para páginas Astro
