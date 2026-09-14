@@ -20,7 +20,7 @@ import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 // Banderas y logos ya resueltos en Seguimiento: el mismo puerto y la misma
 // naviera deben verse igual en las dos pantallas.
-import { banderaDePuerto } from "@/components/navitrack/navitrack-banderas";
+import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
 import { NavieraLogo } from "@/components/navitrack/NavieraLogo";
 import {
   etiquetaEstado,
@@ -732,6 +732,21 @@ const ReservaCard = memo(function ReservaCard({
   );
 });
 
+/**
+ * Bandera de un puerto.
+ *
+ * `isoDePuerto` da el código de país; el dibujo lo pone el set `circle-flags`,
+ * igual que en Seguimiento. Escribir el código en texto —"cl", "pt"— no es una
+ * bandera: es ruido delante del nombre del puerto.
+ */
+function BanderaPuerto({ puerto }: { puerto: string | null | undefined }) {
+  const iso = isoDePuerto(puerto);
+  if (!iso) return null;
+  return (
+    <Icon icon={`circle-flags:${iso.toLowerCase()}`} width={16} height={16} className="shrink-0" aria-hidden />
+  );
+}
+
 type TableRowProps = {
   op: Operacion;
   /** Logos por naviera en mayúsculas; sin entrada, se dibuja el monograma. */
@@ -836,7 +851,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       )}
       <td className={`px-3 py-2 text-center ${isCliente ? "relative" : ""}`}>
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
-        <span className="font-bold text-dash-fg text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
+        <span className="font-bold text-dash-fg text-[14px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
       </td>
       <td className="px-3 py-2 min-w-[10rem] text-center">
         {!isCliente ? (
@@ -897,19 +912,19 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
             </span>
           </button>
         ) : op.contenedor ? (
-          <span className="text-[12px] font-mono font-semibold text-dash-fg tracking-tight">{op.contenedor}</span>
+          <span className="text-[13px] font-mono font-semibold text-dash-fg tracking-tight">{op.contenedor}</span>
         ) : (
           <span className="text-dash-muted text-xs">—</span>
         )}
       </td>
-      <td className="px-3 py-2 text-center text-[13px] text-dash-fg font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
+      <td className="px-3 py-2.5 text-center text-[14px] text-dash-fg font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
       {/* La naviera con su marca: se reconoce antes por el logo que por el nombre. */}
       <td className="px-3 py-2">
         <span className="flex items-center justify-center gap-2">
           {op.naviera ? (
             <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={22} />
           ) : null}
-          <span className="truncate text-[13px] text-dash-muted">{op.naviera || "—"}</span>
+          <span className="truncate text-[14px] font-medium text-dash-muted">{op.naviera || "—"}</span>
         </span>
       </td>
       {/*
@@ -924,7 +939,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         */}
       <td className="px-3 py-2">
         <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
-          <span className="shrink-0 text-[15px] leading-none">{banderaDePuerto(op.pol) ?? ""}</span>
+          <BanderaPuerto puerto={op.pol} />
           <EmptyInlineCell
             value={op.pol}
             canEdit={canInlineEdit}
@@ -932,7 +947,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
             onSave={(next) => onInlineSave(op, "pol", next)}
           />
           <Icon icon="lucide:arrow-right" width={13} height={13} className="shrink-0 text-dash-muted/60" aria-hidden />
-          <span className="shrink-0 text-[15px] leading-none">{banderaDePuerto(op.pod) ?? ""}</span>
+          <BanderaPuerto puerto={op.pod} />
           <EmptyInlineCell
             value={op.pod}
             canEdit={canInlineEdit}
@@ -941,8 +956,8 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           />
         </span>
       </td>
-      <td className="px-3 py-2 text-center text-[12px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
-      <td className="px-3 py-2 text-center text-[12px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
+      <td className="px-3 py-2.5 text-center text-[13.5px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
+      <td className="px-3 py-2.5 text-center text-[13.5px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
       <td className="px-3 py-2 text-center">
         {op.tt !== null ? (
           <span className="text-[11px] font-bold text-dash-fg tabular-nums">{op.tt}d</span>
@@ -2366,7 +2381,7 @@ export function MisReservasContent() {
         {viewMode === "table" && (
           <div className="dash-card-static flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]" style={{ minHeight: 300 }}>
             <div className="overflow-auto flex-1 min-h-0">
-              <table className="w-full text-sm">
+              <table className="w-full text-[13.5px]">
                 <thead>
                   <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
                     {!isCliente && (
