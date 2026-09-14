@@ -1964,63 +1964,7 @@ export function MisReservasContent() {
 
       {/* ── Toolbar ── */}
       <div className="dash-toolbar relative z-10 shrink-0">
-        {/*
-          * Indicadores por estado.
-          *
-          * Es la primera pregunta de esta pantalla: cuántas reservas hay y en
-          * qué situación están. Cada uno filtra la tabla —y vuelve a quitarlo si
-          * ya estaba activo—, así que además son el atajo a cada grupo.
-          *
-          * Ocultos en teléfono: ahí ese alto es la lista, y el filtro de estado
-          * sigue estando en la barra.
-          */}
-        <div className="hidden gap-2.5 px-4 pt-3 sm:px-5 md:grid md:grid-cols-5">
-          {(
-            [
-              { estado: "", label: tr.kpiTotal, valor: resumenEstados.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
-              { estado: "RESERVA_CONFIRMADA", label: tr.kpiConfirmadas, valor: resumenEstados.confirmadas, pct: resumenEstados.pctConfirmadas, tono: "estado--transito", icon: "lucide:check-circle" },
-              { estado: "SOLICITADA", label: tr.kpiSolicitadas, valor: resumenEstados.solicitadas, pct: resumenEstados.pctSolicitadas, tono: "estado--atencion", icon: "lucide:clock" },
-              { estado: "OPERACION_CERRADA", label: tr.kpiCerradas, valor: resumenEstados.cerradas, pct: resumenEstados.pctCerradas, tono: "estado--curso", icon: "lucide:archive" },
-              { estado: "CANCELADA", label: tr.kpiCanceladas, valor: resumenEstados.canceladas, pct: resumenEstados.pctCanceladas, tono: "estado--error", icon: "lucide:x-circle" },
-            ] as const
-          ).map((k) => {
-            const activo = estadoFilter === k.estado && k.estado !== "";
-            return (
-              <button
-                key={k.label}
-                type="button"
-                aria-pressed={activo}
-                onClick={() => setEstadoFilter(activo ? "" : k.estado)}
-                className={`${k.tono} flex items-center gap-3 rounded-xl border bg-dash-control/40 px-3.5 py-2.5 text-left transition-colors hover:bg-dash-neon/10 ${
-                  activo
-                    ? "border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_10%,transparent)]"
-                    : "border-dash-border"
-                }`}
-              >
-                <span className="estado-icono flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
-                  <Icon icon={k.icon} width={18} height={18} aria-hidden />
-                </span>
-                <span className="min-w-0">
-                  <span className="flex items-baseline gap-1.5">
-                    <span className="text-[20px] font-extrabold leading-none tabular-nums text-dash-fg">
-                      {k.valor}
-                    </span>
-                    {k.pct !== null && (
-                      <span className="text-[11.5px] font-semibold tabular-nums text-dash-muted">
-                        {k.pct}%
-                      </span>
-                    )}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[12px] font-semibold text-dash-muted">
-                    {k.label}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -2037,15 +1981,73 @@ export function MisReservasContent() {
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg sm:text-xl">{t.sidebar.misReservas}</h1>
-              <p className="mt-0.5 text-xs text-dash-muted">
-                <span className="font-semibold tabular-nums text-dash-neon">{filteredOperaciones.length}</span>
-                {filteredOperaciones.length !== operaciones.length
-                  ? <span className="text-dash-muted/70"> / {operaciones.length}</span>
-                  : null
-                } {tr.records}
+              <p className="mt-0.5 truncate text-xs text-dash-muted">
+                {tr.subtitulo}
+                {filteredOperaciones.length !== operaciones.length ? (
+                  /* Solo cuando hay filtro puesto: si no, el total ya está arriba. */
+                  <span className="ml-1.5 font-semibold tabular-nums text-dash-neon">
+                    {filteredOperaciones.length}/{operaciones.length}
+                  </span>
+                ) : null}
               </p>
             </div>
           </div>
+        {/*
+          * Indicadores por estado.
+          *
+          * Es la primera pregunta de esta pantalla: cuántas reservas hay y en
+          * qué situación están. Cada uno filtra la tabla —y vuelve a quitarlo si
+          * ya estaba activo—, así que además son el atajo a cada grupo.
+          *
+          * Ocultos en teléfono: ahí ese alto es la lista, y el filtro de estado
+          * sigue estando en la barra.
+          */}
+        <div className="hidden min-w-0 flex-1 gap-2 md:grid md:grid-cols-5 xl:gap-2.5">
+          {(
+            [
+              { estado: "", label: tr.kpiTotal, valor: resumenEstados.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
+              { estado: "RESERVA_CONFIRMADA", label: tr.kpiConfirmadas, valor: resumenEstados.confirmadas, pct: resumenEstados.pctConfirmadas, tono: "estado--transito", icon: "lucide:check-circle" },
+              { estado: "SOLICITADA", label: tr.kpiSolicitadas, valor: resumenEstados.solicitadas, pct: resumenEstados.pctSolicitadas, tono: "estado--atencion", icon: "lucide:clock" },
+              { estado: "OPERACION_CERRADA", label: tr.kpiCerradas, valor: resumenEstados.cerradas, pct: resumenEstados.pctCerradas, tono: "estado--curso", icon: "lucide:archive" },
+              { estado: "CANCELADA", label: tr.kpiCanceladas, valor: resumenEstados.canceladas, pct: resumenEstados.pctCanceladas, tono: "estado--error", icon: "lucide:x-circle" },
+            ] as const
+          ).map((k) => {
+            const activo = estadoFilter === k.estado && k.estado !== "";
+            return (
+              <button
+                key={k.label}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => setEstadoFilter(activo ? "" : k.estado)}
+                className={`${k.tono} flex items-center gap-2.5 rounded-xl border bg-dash-control/40 px-2.5 py-2 text-left transition-colors hover:bg-dash-neon/10 ${
+                  activo
+                    ? "border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_10%,transparent)]"
+                    : "border-dash-border"
+                }`}
+              >
+                <span className="estado-icono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                  <Icon icon={k.icon} width={16} height={16} aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-[18px] font-extrabold leading-none tabular-nums text-dash-fg">
+                      {k.valor}
+                    </span>
+                    {k.pct !== null && (
+                      <span className="text-[11.5px] font-semibold tabular-nums text-dash-muted">
+                        {k.pct}%
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] font-semibold text-dash-muted">
+                    {k.label}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
           <div className="flex shrink-0 items-center gap-1.5">
             <div className="flex items-center rounded-lg border border-dash-border bg-dash-control/80 p-0.5">
               <button
