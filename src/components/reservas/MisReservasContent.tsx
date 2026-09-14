@@ -920,7 +920,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       <td className="px-3 py-2.5 text-center text-[14px] text-dash-fg font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
       {/* La naviera con su marca: se reconoce antes por el logo que por el nombre. */}
       <td className="px-3 py-2">
-        <span className="flex items-center justify-center gap-2">
+        <span className="flex items-center justify-start gap-2">
           {op.naviera ? (
             <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={28} />
           ) : null}
@@ -938,7 +938,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         * dato no.
         */}
       <td className="px-3 py-2">
-        <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+        <span className="flex items-center justify-start gap-1.5 whitespace-nowrap">
           <BanderaPuerto puerto={op.pol} />
           <EmptyInlineCell
             value={op.pol}
