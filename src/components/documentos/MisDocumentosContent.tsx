@@ -865,17 +865,18 @@ export function MisDocumentosContent() {
 
     return (
       <div key={tipo} className={`relative ${estadoFila.clase}`}>
-        <div className="flex items-center gap-2.5 px-3 py-2.5">
-          <Icon
-            icon={meta.icon}
-            width={17}
-            height={17}
-            className="shrink-0 text-dash-muted"
-            aria-hidden
-          />
-
-          <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-dash-fg">
-            {tipoLabel}
+        <div className="flex items-center gap-3 px-3 py-2.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem]">
+          <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
+            <Icon
+              icon={meta.icon}
+              width={17}
+              height={17}
+              className="shrink-0 text-dash-muted"
+              aria-hidden
+            />
+            <span className="min-w-0 truncate text-[13.5px] font-medium text-dash-fg">
+              {tipoLabel}
+            </span>
           </span>
 
           {/*
@@ -885,9 +886,9 @@ export function MisDocumentosContent() {
             * qué momento del embarque pertenece cada papel. En pantalla angosta
             * se calla, porque ahí la pestaña activa ya lo dice.
             */}
-          {grupoDeTipo(tipo) && (
+          {grupoDeTipo(tipo) ? (
             <span
-              className="hidden shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold lg:inline-flex"
+              className="hidden w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold lg:inline-flex"
               style={{
                 background: `color-mix(in srgb, ${grupoDeTipo(tipo)!.tono} 16%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${grupoDeTipo(tipo)!.tono} 40%, transparent)`,
@@ -896,14 +897,16 @@ export function MisDocumentosContent() {
             >
               {grupoDeTipo(tipo)!.label}
             </span>
+          ) : (
+            <span className="hidden lg:block" aria-hidden />
           )}
 
           {/* La fecha del documento, o un guion: la columna no se mueve. */}
-          <span className="shrink-0 text-[12px] tabular-nums text-dash-muted max-sm:hidden">
+          <span className="truncate text-[12px] tabular-nums text-dash-muted max-sm:hidden">
             {doc && !isSyntheticBooking ? formatDate(doc.created_at) : "—"}
           </span>
 
-          <span className="estado-chip inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11.5px] font-bold">
+          <span className="estado-chip inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[11.5px] font-bold">
             <Icon icon={estadoFila.icono} width={11} height={11} aria-hidden />
             {estadoFila.label}
           </span>
@@ -1281,13 +1284,20 @@ export function MisDocumentosContent() {
 
       <div className="overflow-hidden rounded-xl border border-dash-border bg-dash-surface/40">
         {/* Cabecera de columnas: solo donde hay ancho para que signifiquen algo. */}
-        <div className="hidden items-center gap-2.5 border-b border-dash-border px-3 py-2 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:flex">
-          <span className="w-[17px] shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1">{tr.colDocumento}</span>
-          <span className="hidden w-[9.5rem] shrink-0 lg:block">{tr.colEtapa}</span>
-          <span className="w-[6.5rem] shrink-0">{tr.colFechaRecepcion}</span>
-          <span className="w-[6.5rem] shrink-0">{tr.colEstado}</span>
-          <span className="w-8 shrink-0 text-right">{tr.acciones}</span>
+        {/*
+          * Rejilla, no flex.
+          *
+          * Con `flex-1` el nombre del documento se quedaba con todo el espacio
+          * sobrante y empujaba etapa, fecha y estado contra el borde derecho,
+          * dejando un vacío en medio. En una rejilla de proporciones el sobrante
+          * se reparte entre las columnas y cada dato cae donde su cabecera dice.
+          */}
+        <div className="hidden items-center gap-3 border-b border-dash-border px-3 py-2 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.25rem]">
+          <span className="min-w-0">{tr.colDocumento}</span>
+          <span className="hidden min-w-0 lg:block">{tr.colEtapa}</span>
+          <span className="min-w-0">{tr.colFechaRecepcion}</span>
+          <span className="min-w-0">{tr.colEstado}</span>
+          <span className="sr-only">{tr.acciones}</span>
         </div>
 
         <div className="divide-y divide-dash-border/60">
