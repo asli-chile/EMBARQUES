@@ -224,6 +224,15 @@ export function MisDocumentosContent() {
 
   /** Etapa que se está mirando en la ficha del embarque. */
   const [etapaActiva, setEtapaActiva] = useState<string>("todos");
+
+  /**
+   * Lista lateral plegada.
+   *
+   * Es para revisar un embarque con toda la pantalla; la operación abierta no
+   * se toca. Al cerrar la operación se despliega sola: plegada y sin ficha al
+   * lado, la pantalla quedaría vacía.
+   */
+  const [listaColapsada, setListaColapsada] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(1);
@@ -682,6 +691,7 @@ export function MisDocumentosContent() {
   };
 
   const handleSelectOperacion = (id: string) => {
+    if (!id) setListaColapsada(false);
     setSelectedOperacion(id);
   };
 
@@ -1445,10 +1455,29 @@ export function MisDocumentosContent() {
             <div
               className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
                 hasSelection
-                  ? "hidden lg:flex lg:w-[330px] xl:w-[350px] lg:shrink-0"
+                  ? listaColapsada
+                    ? "hidden lg:flex lg:w-[3.25rem] lg:shrink-0"
+                    : "hidden lg:flex lg:w-[330px] xl:w-[350px] lg:shrink-0"
                   : "w-full flex-1"
               }`}
             >
+              {hasSelection && listaColapsada ? (
+                <div className="dash-card-static flex h-full w-full flex-col items-center gap-2 rounded-xl border border-dash-border py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setListaColapsada(false)}
+                    title={tr.expandOperations}
+                    aria-label={tr.expandOperations}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                  >
+                    <Icon icon="lucide:panel-left-open" width={18} height={18} aria-hidden />
+                  </button>
+                  {/* Cuántas operaciones esperan al otro lado, sin abrir la lista. */}
+                  <span className="rounded-md bg-dash-control px-1.5 py-1 text-[11px] font-bold tabular-nums text-dash-muted">
+                    {filteredOperaciones.length}
+                  </span>
+                </div>
+              ) : (
               <div className="dash-card-static flex flex-col min-h-0 h-full w-full rounded-xl border border-dash-border overflow-hidden">
                 {/*
                   * Indicadores de escritorio.
@@ -1507,16 +1536,59 @@ export function MisDocumentosContent() {
                   </div>
                 )}
 
-                <div className={`border-b border-dash-border flex flex-wrap items-center gap-2 shrink-0 ${hasSelection ? "px-2 py-2" : "px-3 py-2.5"}`}>
-                  <Icon icon="lucide:history" width={hasSelection ? 16 : 18} height={hasSelection ? 16 : 18} className="text-dash-neon shrink-0" />
-                  <div className="min-w-0 flex-1 basis-[8rem]">
-                    <p className={`font-bold text-dash-fg ${hasSelection ? "text-sm" : "text-base"}`}>{tr.recentMovements}</p>
-                    {!hasSelection && (
-                      <p className="text-base text-dash-muted truncate hidden sm:block">{tr.selectOperationPrompt}</p>
+                {/*
+                  * Cabecera de la lista en dos líneas.
+                  *
+                  * Antes el título, el buscador, los filtros y el botón de
+                  * plegar compartían una fila que se desbordaba, así que el
+                  * botón terminaba solo debajo de los filtros, lejos de lo que
+                  * controla. Arriba va lo que identifica la lista y su control;
+                  * abajo, con qué se acota.
+                  */}
+                <div className={`shrink-0 border-b border-dash-border ${hasSelection ? "px-2.5 py-2.5" : "px-3 py-2.5"}`}>
+                  <div className="flex items-center gap-2">
+                    <Icon
+                      icon="lucide:history"
+                      width={hasSelection ? 16 : 18}
+                      height={hasSelection ? 16 : 18}
+                      className="shrink-0 text-dash-neon"
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-bold text-dash-fg ${hasSelection ? "text-[13.5px]" : "text-base"}`}>
+                        {tr.recentMovements}
+                      </p>
+                      {!hasSelection && (
+                        <p className="hidden truncate text-base text-dash-muted sm:block">
+                          {tr.selectOperationPrompt}
+                        </p>
+                      )}
+                    </div>
+
+                    {hasSelection && (
+                      /*
+                       * Plegar la lista, no cerrar la operación.
+                       *
+                       * Este botón decía "Ampliar operaciones" y ejecutaba
+                       * setSelectedOperacion(""): devolvía a la lista y perdía
+                       * el embarque abierto. Lo que promete —y ahora hace— es
+                       * darle toda la pantalla a los documentos.
+                       */
+                      <button
+                        type="button"
+                        onClick={() => setListaColapsada(true)}
+                        className="shrink-0 rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+                        title={tr.colapsarLista}
+                        aria-label={tr.colapsarLista}
+                      >
+                        <Icon icon="lucide:panel-left-close" width={16} height={16} aria-hidden />
+                      </button>
                     )}
                   </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                   {!hasSelection && (
-                    <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl order-last sm:order-none">
+                    <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl">
                       <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted w-4 h-4 pointer-events-none" />
                       <input
                         type="text"
@@ -1580,16 +1652,7 @@ export function MisDocumentosContent() {
                       })}
                     </div>
                   )}
-                  {hasSelection && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOperacion("")}
-                      className="shrink-0 p-1.5 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors"
-                      title={tr.expandOperations}
-                    >
-                      <Icon icon="lucide:panel-left-open" width={16} height={16} />
-                    </button>
-                  )}
+                  </div>
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-auto w-full">
@@ -1944,6 +2007,7 @@ export function MisDocumentosContent() {
 
                 <div className="shrink-0">{paginationBar}</div>
               </div>
+              )}
             </div>
 
             {/* Columna documentos — solo visible con selección */}
