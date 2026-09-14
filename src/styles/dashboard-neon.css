@@ -696,3 +696,91 @@ html[data-erp-neon="light"] {
 .dash-neon[data-theme="light"] select.dash-control {
   color-scheme: light;
 }
+
+
+/* ── Estados con la paleta de ASLI ──────────────────────────────────────────
+ *
+ * Los estados del ERP venían de la paleta de Tailwind (emerald, amber), que no
+ * es la de la empresa. Acá se derivan de los hex del manual —los mismos de
+ * `src/lib/brand.ts`— para que identidad y pantalla no discrepen.
+ *
+ * Los tonos de marca están pensados para papel y fondo claro: el oliva y el
+ * teal sobre el navy del ERP quedan por debajo del contraste legible. Por eso
+ * cada estado se ACLARA con `color-mix` en vez de escribir un hex nuevo a mano:
+ * el origen sigue siendo el color corporativo y basta cambiarlo en un sitio.
+ *
+ * En tema claro no hace falta aclarar nada: ahí va el hex tal cual.
+ */
+:root,
+.dash-neon {
+  /* Hex del manual de marca. No tocar sin actualizar src/lib/brand.ts. */
+  --marca-oliva: #669900;
+  --marca-teal: #007a7b;
+  --marca-navy: #11224e;
+  --marca-gris: #6b7280;
+  --marca-rojo: #b91c1c;
+
+  /* Lo que se usa en pantalla, ya legible sobre fondo oscuro. */
+  --estado-ok: color-mix(in srgb, var(--marca-oliva) 62%, #eafff0);
+  --estado-curso: color-mix(in srgb, var(--marca-teal) 55%, #e6ffff);
+  --estado-espera: color-mix(in srgb, var(--marca-gris) 45%, #eef4fb);
+  --estado-error: color-mix(in srgb, var(--marca-rojo) 55%, #ffecec);
+
+  /*
+   * Atención: lo único que NO sale del manual de marca.
+   *
+   * La paleta de ASLI no tiene un ámbar, y "algo que hay que mirar hoy" no es
+   * ni éxito ni error ni espera: pintarlo con un color corporativo lo haría
+   * pasar por otra cosa. Se conserva como color funcional, declarado aquí para
+   * que se vea que es una excepción consciente y no un descuido.
+   */
+  --estado-atencion: #f2b134;
+}
+
+.dash-neon[data-theme="light"] {
+  /* Sobre fondo claro, el color de marca contrasta solo. */
+  --estado-ok: var(--marca-oliva);
+  --estado-curso: var(--marca-teal);
+  --estado-espera: var(--marca-gris);
+  --estado-error: var(--marca-rojo);
+  --estado-atencion: #b5730a;
+}
+
+/*
+ * Piezas que consumen el estado.
+ *
+ * `--estado` es la variable que cada modificador fija una sola vez; chip, barra
+ * e icono la leen. Así una tarjeta no puede terminar con el chip de un estado y
+ * la barra de otro, que es justo lo que pasa cuando cada pieza elige su color.
+ */
+.estado--ok {
+  --estado: var(--estado-ok);
+}
+.estado--curso {
+  --estado: var(--estado-curso);
+}
+.estado--espera {
+  --estado: var(--estado-espera);
+}
+.estado--atencion {
+  --estado: var(--estado-atencion);
+}
+.estado--error {
+  --estado: var(--estado-error);
+}
+
+.estado-chip {
+  border: 1px solid color-mix(in srgb, var(--estado) 38%, transparent);
+  background: color-mix(in srgb, var(--estado) 14%, transparent);
+  color: var(--estado);
+}
+
+.estado-barra {
+  background: var(--estado);
+}
+
+.estado-icono {
+  border: 1px solid color-mix(in srgb, var(--estado) 35%, transparent);
+  background: color-mix(in srgb, var(--estado) 13%, transparent);
+  color: var(--estado);
+}

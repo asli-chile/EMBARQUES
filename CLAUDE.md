@@ -887,7 +887,18 @@ de verdad desde el navegador.
 ## Convenciones
 
 - **Nombres de archivos**: `PascalCase` para componentes React, `kebab-case` para páginas Astro
-- **Estilos de estado**: emerald = ok/pagado, amber = pendiente, red = error/cancelado, brand-blue = activo/seleccionado
+- **Estilos de estado**: salen de la paleta de ASLI, no de la de Tailwind. Los
+  tokens viven en `src/styles/dashboard-neon.css`: `--estado-ok` (oliva
+  #669900), `--estado-curso` (teal #007A7B), `--estado-espera` (gris #6B7280) y
+  `--estado-error` (rojo #B91C1C). Se derivan con `color-mix` de los hex del
+  manual (`src/lib/brand.ts`) porque esos tonos, pensados para papel, no
+  contrastan sobre el navy del ERP; en tema claro se usa el hex tal cual.
+  Se aplican con las clases `estado--ok|curso|espera|error` en el contenedor y
+  `estado-chip` / `estado-barra` / `estado-icono` en las piezas, para que una
+  tarjeta no pueda mostrar el chip de un estado y la barra de otro.
+  **`--estado-atencion` (ámbar) es la única excepción**: la paleta corporativa
+  no tiene un tono para "algo que mirar hoy", y pintarlo con un color de marca
+  lo haría pasar por éxito o por error.
 - **Soft delete**: `deleted_at IS NULL` en operaciones — nunca borrar físicamente
 - **Fechas**: almacenar en ISO 8601, mostrar con `date-fns` + locale `es`
 - **Monedas**: CLP sin decimales, USD/EUR con 2 decimales

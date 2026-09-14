@@ -14,19 +14,27 @@
 }
 
 /* --- Tonos por etapa: los mismos acentos que ya usan los KPI del dashboard --- */
-.navitrack .nt-tone--teal { --nt-accent: var(--dash-neon); }
-.navitrack .nt-tone--emerald { --nt-accent: #34d399; }
-.navitrack .nt-tone--amber { --nt-accent: #f59e0b; }
-.navitrack .nt-tone--orange { --nt-accent: #fb923c; }
-.navitrack .nt-tone--sky { --nt-accent: #38bdf8; }
-.navitrack .nt-tone--rose { --nt-accent: #fb7185; }
+/*
+ * Las etapas se pintan con la paleta de ASLI, no con la de Tailwind.
+ *
+ * Los nombres (emerald, amber…) se conservan porque son los que usa
+ * `navitrack-estado.ts` para nombrar la etapa; lo que cambió es de dónde sale
+ * el color. Renombrarlos obligaría a tocar la lógica sin que nadie viera nada
+ * distinto en pantalla.
+ *
+ * `orange` y `amber` comparten el tono de atención: son dos grados de la misma
+ * pregunta —algo que mirar hoy— y la paleta corporativa no distingue entre
+ * ellos. Ver el comentario de `--estado-atencion` en dashboard-neon.css.
+ */
+.navitrack .nt-tone--teal { --nt-accent: var(--estado-curso); }
+.navitrack .nt-tone--emerald { --nt-accent: var(--estado-ok); }
+.navitrack .nt-tone--amber { --nt-accent: var(--estado-atencion); }
+.navitrack .nt-tone--orange { --nt-accent: var(--estado-atencion); }
+.navitrack .nt-tone--sky { --nt-accent: var(--estado-curso); }
+.navitrack .nt-tone--rose { --nt-accent: var(--estado-error); }
 
 /* En claro los mismos tonos a valor nominal no contrastan sobre superficie blanca. */
-.dash-neon[data-theme="light"].navitrack .nt-tone--emerald { --nt-accent: #047857; }
-.dash-neon[data-theme="light"].navitrack .nt-tone--amber { --nt-accent: #b45309; }
-.dash-neon[data-theme="light"].navitrack .nt-tone--orange { --nt-accent: #c2410c; }
-.dash-neon[data-theme="light"].navitrack .nt-tone--sky { --nt-accent: #0369a1; }
-.dash-neon[data-theme="light"].navitrack .nt-tone--rose { --nt-accent: #be123c; }
+/* Sin overrides por tema: cada token de estado ya trae su variante clara. */
 
 .navitrack .nt-accent-fg { color: var(--nt-accent); }
 

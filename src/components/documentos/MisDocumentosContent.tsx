@@ -600,12 +600,8 @@ export function MisDocumentosContent() {
       : Math.min(100, Math.round((count / denom) * 100));
     return (
       <span
-        className={`inline-flex items-center gap-1 text-base font-extrabold px-2 py-0.5 rounded-sm border tabular-nums ${
-          completo
-            ? "text-emerald-300 bg-emerald-500/15 border-emerald-400/35"
-            : count > 0
-              ? "text-dash-fg bg-dash-neon/15 border-dash-neon/35"
-              : "text-dash-muted bg-dash-control border-dash-border"
+        className={`estado-chip inline-flex items-center gap-1 text-base font-extrabold px-2 py-0.5 rounded-sm tabular-nums ${
+          completo ? "estado--ok" : count > 0 ? "estado--curso" : "estado--espera"
         }`}
       >
         {count}/{totalTipos - naCount}
@@ -995,9 +991,9 @@ export function MisDocumentosContent() {
                       {(
                         [
                           ["todos", tr.filtroTodos, ""],
-                          ["pendientes", tr.filtroPendientes, "bg-amber-400"],
-                          ["curso", tr.filtroEnCurso, "bg-dash-neon"],
-                          ["completos", tr.filtroCompletados, "bg-emerald-400"],
+                          ["pendientes", tr.filtroPendientes, "estado--espera"],
+                          ["curso", tr.filtroEnCurso, "estado--curso"],
+                          ["completos", tr.filtroCompletados, "estado--ok"],
                         ] as const
                       ).map(([clave, etiqueta, punto]) => {
                         const activo = filtroDocs === clave;
@@ -1014,7 +1010,7 @@ export function MisDocumentosContent() {
                             }`}
                           >
                             {punto ? (
-                              <span className={`h-1.5 w-1.5 rounded-full ${punto}`} aria-hidden />
+                              <span className={`estado-barra h-1.5 w-1.5 rounded-full ${punto}`} aria-hidden />
                             ) : null}
                             {etiqueta}
                           </button>
@@ -1104,43 +1100,34 @@ export function MisDocumentosContent() {
                             const tono =
                               estado === "completo"
                                 ? {
-                                    barra: "bg-emerald-400",
-                                    icono: "border-emerald-400/35 bg-emerald-500/15 text-emerald-300",
-                                    chip: "border-emerald-400/35 bg-emerald-500/15 text-emerald-300",
+                                    clase: "estado--ok",
                                     label: tr.estadoCompleto,
                                     ico: "lucide:check-circle",
                                   }
                                 : estado === "curso"
                                   ? {
-                                      barra: "bg-dash-neon",
-                                      icono: "border-dash-neon/35 bg-dash-neon/15 text-dash-neon",
-                                      chip: "border-dash-neon/35 bg-dash-neon/15 text-dash-fg",
+                                      clase: "estado--curso",
                                       label: tr.estadoEnCurso,
                                       ico: "lucide:loader",
                                     }
                                   : {
-                                      barra: "bg-amber-400",
-                                      icono: "border-amber-400/35 bg-amber-400/12 text-amber-300",
-                                      chip: "border-amber-400/35 bg-amber-400/12 text-amber-300",
+                                      clase: "estado--espera",
                                       label: tr.estadoPendiente,
                                       ico: "lucide:clock",
                                     };
                             const abierto = detalleAbierto === op.id;
 
                             return (
-                              <div key={op.id} className="relative">
+                              <div key={op.id} className={`relative ${tono.clase}`}>
                                 {/* La barra dice el estado antes de leer nada. */}
-                                <span
-                                  className={`absolute inset-y-0 left-0 w-1 ${tono.barra}`}
-                                  aria-hidden
-                                />
+                                <span className="estado-barra absolute inset-y-0 left-0 w-1" aria-hidden />
                                 <button
                                   type="button"
                                   onClick={() => handleSelectOperacion(op.id)}
                                   className="flex w-full items-start gap-3 bg-transparent py-3.5 pl-4 pr-3.5 text-left transition-colors hover:bg-dash-neon/10"
                                 >
                                   <span
-                                    className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${tono.icono}`}
+                                    className="estado-icono mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
                                     aria-hidden
                                   >
                                     <Icon icon="lucide:container" width={20} height={20} />
@@ -1170,9 +1157,7 @@ export function MisDocumentosContent() {
                                       <span className="text-[11.5px] text-dash-muted/80">
                                         {formatDate(op.created_at)}
                                       </span>
-                                      <span
-                                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${tono.chip}`}
-                                      >
+                                      <span className="estado-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold">
                                         <Icon icon={tono.ico} width={11} height={11} aria-hidden />
                                         {tono.label}
                                       </span>
