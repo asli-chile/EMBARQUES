@@ -18,6 +18,10 @@ import { withBase } from "@/lib/basePath";
 import { goBackOr } from "@/lib/navigation";
 import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
+// Banderas y logos ya resueltos en Seguimiento: el mismo puerto y la misma
+// naviera deben verse igual en las dos pantallas.
+import { banderaDePuerto } from "@/components/navitrack/navitrack-banderas";
+import { NavieraLogo } from "@/components/navitrack/NavieraLogo";
 import {
   etiquetaEstado,
   normalizarEstado,
@@ -730,6 +734,8 @@ const ReservaCard = memo(function ReservaCard({
 
 type TableRowProps = {
   op: Operacion;
+  /** Logos por naviera en mayúsculas; sin entrada, se dibuja el monograma. */
+  logosNaviera: Map<string, string>;
   idx: number;
   selected: boolean;
   isCliente: boolean;
@@ -785,6 +791,7 @@ const tableActionBtnClass =
   "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dash-border/70 bg-dash-control text-dash-muted transition-all duration-150 hover:border-dash-neon/45 hover:bg-dash-neon/15 hover:text-dash-fg active:scale-[0.96]";
 
 const MisReservasTableRow = memo(function MisReservasTableRow({
+  logosNaviera,
   op,
   idx,
   selected,
@@ -830,14 +837,6 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       <td className={`px-3 py-2 text-center ${isCliente ? "relative" : ""}`}>
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
         <span className="font-bold text-dash-fg text-[13px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
-      </td>
-      <td className="px-3 py-2 text-center max-w-[9rem]">
-        <EmptyInlineCell
-          value={op.referencia_externa}
-          canEdit={canInlineEdit}
-          addLabel={addEmptyLabel}
-          onSave={(next) => onInlineSave(op, "referencia_externa", next)}
-        />
       </td>
       <td className="px-3 py-2 min-w-[10rem] text-center">
         {!isCliente ? (
@@ -904,31 +903,43 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         )}
       </td>
       <td className="px-3 py-2 text-center text-[13px] text-dash-fg font-medium whitespace-nowrap max-w-[10rem] truncate">{op.cliente || "—"}</td>
-      <td className="px-3 py-2 text-center text-[13px] text-dash-muted max-w-[8rem] truncate">{op.especie || "—"}</td>
-      <td className="px-3 py-2 text-center text-[13px] text-dash-muted whitespace-nowrap">{op.naviera || "—"}</td>
-      <td className="px-3 py-2 text-center max-w-[9rem]">
-        <EmptyInlineCell
-          value={op.nave}
-          canEdit={canInlineEdit}
-          addLabel={addEmptyLabel}
-          onSave={(next) => onInlineSave(op, "nave", next)}
-        />
+      {/* La naviera con su marca: se reconoce antes por el logo que por el nombre. */}
+      <td className="px-3 py-2">
+        <span className="flex items-center justify-center gap-2">
+          {op.naviera ? (
+            <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={22} />
+          ) : null}
+          <span className="truncate text-[13px] text-dash-muted">{op.naviera || "—"}</span>
+        </span>
       </td>
-      <td className="px-3 py-2 text-center">
-        <EmptyInlineCell
-          value={op.pol}
-          canEdit={canInlineEdit}
-          addLabel={addEmptyLabel}
-          onSave={(next) => onInlineSave(op, "pol", next)}
-        />
-      </td>
-      <td className="px-3 py-2 text-center">
-        <EmptyInlineCell
-          value={op.pod}
-          canEdit={canInlineEdit}
-          addLabel={addEmptyLabel}
-          onSave={(next) => onInlineSave(op, "pod", next)}
-        />
+      {/*
+        * Origen y destino en una celda.
+        *
+        * Eran dos columnas seguidas que siempre se leen juntas —un viaje es de
+        * dónde a dónde—, y separadas obligaban a cruzar la vista dos veces. Las
+        * banderas se reconocen antes que el nombre del puerto.
+        *
+        * Cada extremo sigue siendo editable por separado: la columna cambió, el
+        * dato no.
+        */}
+      <td className="px-3 py-2">
+        <span className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+          <span className="shrink-0 text-[15px] leading-none">{banderaDePuerto(op.pol) ?? ""}</span>
+          <EmptyInlineCell
+            value={op.pol}
+            canEdit={canInlineEdit}
+            addLabel={addEmptyLabel}
+            onSave={(next) => onInlineSave(op, "pol", next)}
+          />
+          <Icon icon="lucide:arrow-right" width={13} height={13} className="shrink-0 text-dash-muted/60" aria-hidden />
+          <span className="shrink-0 text-[15px] leading-none">{banderaDePuerto(op.pod) ?? ""}</span>
+          <EmptyInlineCell
+            value={op.pod}
+            canEdit={canInlineEdit}
+            addLabel={addEmptyLabel}
+            onSave={(next) => onInlineSave(op, "pod", next)}
+          />
+        </span>
       </td>
       <td className="px-3 py-2 text-center text-[12px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
       <td className="px-3 py-2 text-center text-[12px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
@@ -1498,6 +1509,29 @@ export function MisReservasContent() {
       pctCanceladas: pct(canceladas),
     };
   }, [operaciones]);
+
+  /**
+   * Logos por naviera, en mayúsculas.
+   *
+   * `navieras` es un catálogo corto y de lectura pública, así que traerlo entero
+   * cuesta una consulta y evita que cada fila resuelva su marca por su cuenta.
+   * Sin logo, NavieraLogo dibuja el monograma.
+   */
+  const [logosNaviera, setLogosNaviera] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase
+      .from("navieras")
+      .select("nombre, logo_url")
+      .then(({ data }) => {
+        const mapa = new Map<string, string>();
+        for (const n of (data ?? []) as { nombre: string | null; logo_url: string | null }[]) {
+          const nombre = (n.nombre ?? "").trim().toUpperCase();
+          if (nombre && n.logo_url) mapa.set(nombre, n.logo_url);
+        }
+        setLogosNaviera(mapa);
+      });
+  }, [supabase]);
 
   const filteredOperaciones = useMemo(() => {
     let result = getFilteredData();
@@ -2341,15 +2375,12 @@ export function MisReservasContent() {
                       </th>
                     )}
                     <SortableHeader field="ref_asli" label={tr.colRef} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="referencia_externa" label={tr.colRefExterna} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[7rem]" />
                     <SortableHeader field="booking" label={tr.colBooking} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[9rem]" />
                     <SortableHeader field="contenedor" label={tr.colContainer} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[8rem]" />
                     <SortableHeader field="cliente" label={tr.colClient} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="especie" label={tr.colSpecies} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="naviera" label={tr.colCarrier} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="nave" label={tr.colVessel} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="pol" label={tr.colPOL} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <SortableHeader field="pod" label={tr.colPOD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    {/* Origen y destino juntos: un viaje se nombra por sus dos extremos. */}
+                    <SortableHeader field="pol" label={tr.colRuta} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[14rem]" />
                     <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -2379,6 +2410,7 @@ export function MisReservasContent() {
                       <MisReservasTableRow
                         key={op.id}
                         op={op}
+                        logosNaviera={logosNaviera}
                         idx={idx}
                         selected={selectedIds.has(op.id)}
                         isCliente={isCliente}
