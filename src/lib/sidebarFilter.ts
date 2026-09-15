@@ -10,6 +10,8 @@ type SidebarItem = {
   ejecutivoAndAbove?: boolean;
   adminAndAbove?: boolean;
   superadminOnly?: boolean;
+  /** Fuera del menú para todos, sin tocar el acceso a la ruta. */
+  oculto?: boolean;
   staffOnly?: boolean;
   operational?: boolean;
 };
@@ -59,6 +61,7 @@ export function getVisibleSidebarItems(access: SidebarAccess): SidebarItem[] {
   const canAccessEjecutivoAndAbove = isSuperadmin || isAdmin || isEjecutivo;
 
   const itemAllowed = (item: SidebarItem): boolean => {
+    if (item.oculto) return false;
     if (item.superadminOnly && !isSuperadmin) return false;
     if (item.adminAndAbove && !canAccessAdminAndAbove) return false;
     if (item.ejecutivoAndAbove && !canAccessEjecutivoAndAbove) return false;

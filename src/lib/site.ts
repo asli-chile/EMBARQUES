@@ -9,7 +9,14 @@ export const siteConfig = {
   companyTitle: brand.companyTitle,
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
-    { labelKey: "tareas", id: "tareas", href: "/tareas", superadminOnly: true },
+    /*
+     * Tareas, fuera del menú para todos.
+     *
+     * Se marca oculto en vez de borrarlo: el módulo sigue existiendo y la ruta
+     * sigue siendo del superadmin, así que se puede entrar por URL mientras se
+     * decide su futuro. Para devolverlo al menú basta quitar `oculto`.
+     */
+    { labelKey: "tareas", id: "tareas", href: "/tareas", superadminOnly: true, oculto: true },
     {
       labelKey: "reservas",
       id: "reservas",
