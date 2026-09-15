@@ -25,27 +25,46 @@
       '<div class="erp-busy-veil">' +
       '  <div class="erp-busy-card">' +
       '    <span class="erp-busy-spin" aria-hidden="true"></span>' +
-      '    <div>' +
+      '    <div class="erp-busy-txt">' +
       '      <strong>Cargando</strong>' +
-      '      <span>La aplicación está trabajando…</span>' +
+      '      <span>Un momento…</span>' +
       "    </div>" +
       "  </div>" +
       "</div>";
     var style = document.createElement("style");
+    /*
+     * El aspecto va acá y no en una hoja del proyecto porque este script corre
+     * antes de que exista React: cuando aparece, ninguna clase del ERP está
+     * cargada todavía.
+     *
+     * Colores escritos a mano por lo mismo —no hay tokens disponibles— pero son
+     * los de la casa: navy #11224E de fondo y el cian del panel como acento. La
+     * tarjeta blanca anterior venía del tema claro y sobre el ERP oscuro se veía
+     * como un cuadro de diálogo de otra aplicación.
+     */
     style.textContent =
-      "#erp-busy{position:fixed;inset:0;z-index:2147483646;pointer-events:none;display:none}" +
+      "#erp-busy{position:fixed;inset:0;z-index:2147483646;pointer-events:none;display:none;font-family:'Open Sans',system-ui,sans-serif}" +
       "#erp-busy.is-on{display:block}" +
       "#erp-busy.is-nav{pointer-events:auto}" +
-      "#erp-busy .erp-busy-bar{position:absolute;top:0;left:0;height:3px;width:100%;overflow:hidden;background:rgba(17,34,78,.12)}" +
-      "#erp-busy .erp-busy-bar:after{content:'';position:absolute;inset:0 auto 0 0;width:38%;background:#1d4ed8;animation:erp-busy-slide 1.05s ease-in-out infinite}" +
-      "#erp-busy .erp-busy-veil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(12,16,24,.28);opacity:0;transition:opacity .15s ease}" +
+      "#erp-busy .erp-busy-bar{position:absolute;top:0;left:0;height:3px;width:100%;overflow:hidden;background:rgba(0,232,255,.14)}" +
+      "#erp-busy .erp-busy-bar:after{content:'';position:absolute;inset:0 auto 0 0;width:38%;background:linear-gradient(90deg,rgba(0,232,255,0),#00e8ff 45%,#7ef0ff);box-shadow:0 0 12px rgba(0,232,255,.65);animation:erp-busy-slide 1.05s ease-in-out infinite}" +
+      "#erp-busy .erp-busy-veil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,9,20,.55);backdrop-filter:blur(2px);opacity:0;transition:opacity .15s ease}" +
       "#erp-busy.is-nav .erp-busy-veil{opacity:1}" +
-      "#erp-busy .erp-busy-card{display:flex;align-items:center;gap:12px;min-width:min(320px,calc(100vw - 32px));padding:14px 16px;border-radius:12px;background:#fff;box-shadow:0 18px 40px rgba(0,0,0,.22);color:#11224e;font-family:system-ui,sans-serif}" +
-      "#erp-busy .erp-busy-card strong{display:block;font-size:14px;font-weight:650}" +
-      "#erp-busy .erp-busy-card span{display:block;margin-top:2px;font-size:12px;color:#5b6578}" +
-      "#erp-busy .erp-busy-spin{width:22px;height:22px;border-radius:99px;border:2px solid #dbe4f5;border-top-color:#1d4ed8;animation:erp-busy-rot .7s linear infinite;flex:0 0 auto}" +
+      "#erp-busy .erp-busy-card{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:16px;border:1px solid rgba(0,232,255,.28);background:linear-gradient(180deg,#0f1c3a,#0b152c);box-shadow:0 24px 60px -20px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.04) inset;color:#f4fbff}" +
+      "#erp-busy .erp-busy-txt strong{display:block;font-size:14.5px;font-weight:700;letter-spacing:.01em}" +
+      "#erp-busy .erp-busy-txt span{display:block;margin-top:2px;font-size:12.5px;color:#8ec8dc}" +
+      "#erp-busy .erp-busy-spin{position:relative;width:26px;height:26px;border-radius:99px;border:2.5px solid rgba(142,200,220,.22);border-top-color:#00e8ff;animation:erp-busy-rot .7s linear infinite;flex:0 0 auto}" +
       "@keyframes erp-busy-slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}" +
-      "@keyframes erp-busy-rot{to{transform:rotate(360deg)}}";
+      "@keyframes erp-busy-rot{to{transform:rotate(360deg)}}" +
+      /*
+       * Con movimiento reducido, nada gira ni se desliza: el indicador late,
+       * que sigue diciendo "esto sigue vivo" sin marear a quien pidió calma.
+       */
+      "@media (prefers-reduced-motion:reduce){" +
+      "#erp-busy .erp-busy-bar:after{animation:none;width:100%}" +
+      "#erp-busy .erp-busy-spin{animation:erp-busy-pulse 1.4s ease-in-out infinite;border-top-color:rgba(0,232,255,.9)}" +
+      "}" +
+      "@keyframes erp-busy-pulse{0%,100%{opacity:.35}50%{opacity:1}}";
     (document.head || document.documentElement).appendChild(style);
     (document.body || document.documentElement).appendChild(root);
     return root;
