@@ -21,6 +21,7 @@ import { NavitrackRecalada, type NaveCatalogo, type Recalada } from "./Navitrack
 import { NavitrackRastreoPanel } from "./NavitrackRastreoPanel";
 import { NavitrackCoordsManual } from "./NavitrackCoordsManual";
 import {
+  yaZarpo,
   NAVITRACK_OP_SELECT,
   buildJourney,
   parseAisSnapshot,
@@ -366,10 +367,17 @@ export function NavitrackContent() {
     // Embarque cerrado: no se consulta al proveedor. El buque ya zarpó en otro
     // viaje y su posición actual no tiene nada que ver con esta carga.
     if (estaArribado(seleccion)) return null;
+    /*
+     * Tampoco antes de zarpar, por la misma razón vista del otro lado: el buque
+     * que vendrá a buscar la carga está haciendo un viaje ajeno, así que su
+     * posición no dice nada de este embarque y pagarla es gastar un crédito en
+     * un dato que no se puede mostrar.
+     */
+    if (!yaZarpo(seleccion, ahora)) return null;
     const nave = naveDeLaCarga(seleccion);
     if (!nave) return null;
     return naves.get(claveNave(nave)) ?? null;
-  }, [seleccion, naves, naveDeLaCarga]);
+  }, [seleccion, naves, naveDeLaCarga, ahora]);
 
   /**
    * El AIS se consulta solo para el embarque abierto.

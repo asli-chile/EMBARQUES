@@ -199,6 +199,13 @@ ese dato. Entonces:
   posición AIS ya no describe esta carga y mostrarla sería un dato falso. Por eso
   la vista del embarque cerrado lo dice en vez de dibujar un buque en cualquier
   parte del mundo.
+- **Antes del zarpe: tampoco.** Misma razón, vista del otro lado: el buque que
+  vendrá a buscar la carga está haciendo un viaje ajeno. Lo corta `yaZarpo()`
+  (en `navitrack-model.ts`, que es de donde lo leen también la etapa y el
+  progreso). Mientras la carga no sale, el avance es **0 %** y la posición es el
+  puerto de origen: con la posición del buque, un contenedor que todavía
+  esperaba en San Antonio mostraba "30 % del trayecto" y el barco a mitad del
+  Pacífico.
 
 El buque se identifica por **IMO/MMSI del catálogo `naves`**, cruzando por nombre
 normalizado (`claveNave()` quita acentos y el viaje pegado: `MSC BRUNELLA 635R` →

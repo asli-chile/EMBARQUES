@@ -7,6 +7,7 @@
  */
 
 import {
+  yaZarpo,
   DAY_MS,
   HOUR_MS,
   haversineKm,
@@ -305,11 +306,7 @@ export function resolverEstado(
     const meta = codigo ? ESTADO_META[codigo] : null;
     if (meta?.esFinal) return "ARRIBADO";
 
-    const etd = parseOpDate(op.etd);
-    const yaZarpo =
-      (meta != null && meta.orden >= ESTADO_META.ZARPADA.orden && meta.grupo !== "EXCEPCION") ||
-      (etd != null && etd.getTime() <= now.getTime());
-    if (!yaZarpo) return "EN_ORIGEN";
+    if (!yaZarpo(op, now)) return "EN_ORIGEN";
 
     if (decision?.estado === "confirmado") return "TRANSBORDO_CONFIRMADO";
     if (transbordoSospechado) return "POSIBLE_TRANSBORDO";

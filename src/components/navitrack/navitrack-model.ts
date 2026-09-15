@@ -8,6 +8,7 @@
  */
 
 import { getPortCoordinates } from "@/lib/ports-coordinates";
+import { normalizarEstado, ESTADO_META } from "@/lib/operaciones/estados";
 
 export type LngLat = { lng: number; lat: number };
 
@@ -382,6 +383,23 @@ export type TrackPosition = {
   at: Date | null;
 };
 
+/**
+ * Si la carga ya salió del puerto de origen.
+ *
+ * Manda el estado de la operación cuando lo dice explícitamente; si no, la
+ * fecha de zarpe. Vive acá y se exporta porque no es solo cosa de la etapa: el
+ * modelo lo necesita para no contar como avance el viaje que el buque está
+ * haciendo con otra carga.
+ */
+export function yaZarpo(op: NavitrackOperacion, now = new Date()): boolean {
+  const codigo = normalizarEstado(op.estado_operacion);
+  const meta = codigo ? ESTADO_META[codigo] : null;
+  if (meta?.esFinal) return true;
+  if (meta != null && meta.orden >= ESTADO_META.ZARPADA.orden && meta.grupo !== "EXCEPCION") return true;
+  const etd = parseOpDate(op.etd);
+  return etd != null && etd.getTime() <= now.getTime();
+}
+
 /** Avance del viaje por calendario (ETD a ETA). Null si falta alguna fecha. */
 export function timeFraction(
   op: Pick<NavitrackOperacion, "etd" | "eta">,
@@ -681,7 +699,19 @@ export function buildJourney(
   const origen = oc ? { lng: oc[0], lat: oc[1] } : null;
   const destino = dc ? { lng: dc[0], lat: dc[1] } : null;
 
-  const position = resolvePosition(op, ais, { origen, destino }, now);
+  /*
+   * Antes del zarpe se ignora el AIS.
+   *
+   * Es el mismo criterio que con los arribados: el buque anda en otro viaje y
+   * su posición no describe esta carga. Lo que se muestra es el puerto de
+   * origen, que es donde la carga está de verdad.
+   */
+  const zarpado = yaZarpo(op, now);
+  const position = zarpado
+    ? resolvePosition(op, ais, { origen, destino }, now)
+    : origen
+      ? { lng: origen.lng, lat: origen.lat, source: "ESTIMADA" as const, at: null, course: null, speed: null }
+      : null;
 
   let progress: JourneyProgress | null = null;
   let traveled: LngLat[] = [];
@@ -694,7 +724,18 @@ export function buildJourney(
     totalNm = haversineKm(origen, destino) * KM_TO_NM;
 
     let f: number | null = null;
-    if (position && position.source !== "ESTIMADA") {
+    if (!zarpado) {
+      /*
+       * Antes del zarpe el viaje no ha empezado.
+       *
+       * El buque que vendrá a buscar la carga está haciendo otro viaje, así que
+       * su posición AIS mide el avance de un embarque ajeno: un contenedor que
+       * todavía espera en San Antonio aparecía con "30 % del trayecto" y el
+       * barco a mitad del Pacífico. Cero es el único número honesto acá.
+       */
+      f = 0;
+      progress = { pct: 0, basis: "tiempo" };
+    } else if (position && position.source !== "ESTIMADA") {
       f = routeFraction(origen, destino, position);
       progress = { pct: Math.round(f * 100), basis: "posicion" };
     } else {
