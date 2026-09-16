@@ -98,6 +98,8 @@ function comoRespuesta(l: Lectura) {
     navigationalStatus: l.nav_status,
     etaUtc: l.eta,
     positionReceived: l.posicion_recibida_at,
+    // Cuándo se consultó, aparte de cuándo transmitió el buque.
+    consultadoAt: l.consultado_at,
     // El puerto del que viene el buque no tiene columna propia: se lee del
     // crudo, que se guarda en toda lectura. Así también lo tienen las viejas.
     lastPort: str(l.crudo?.lastPort),

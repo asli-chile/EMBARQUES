@@ -70,6 +70,15 @@ export type AisSnapshot = {
    * una fecha inventada es peor que ninguna.
    */
   departedAt: Date | null;
+  /**
+   * Cuándo **preguntamos** nosotros, que no es cuándo transmitió el buque.
+   *
+   * Un barco fuera de cobertura puede pasar días sin emitir: la consulta del
+   * día sale bien, gasta su crédito y devuelve una posición de hace tres días.
+   * Sin este dato las dos cosas se confunden en una sola fecha y una lectura
+   * fresca de un buque callado se lee como si el sistema no hubiera corrido.
+   */
+  queriedAt: Date | null;
   vesselName: string | null;
 };
 
@@ -423,6 +432,7 @@ export function parseAisSnapshot(raw: Record<string, unknown> | null): AisSnapsh
     // puerto en null aunque viniera en la respuesta.
     lastPort: str(pick(raw, ["lastPort", "last_port", "lastport", "departure_port"])),
     departedAt: parseInstant(pick(raw, ["atdUtc", "atd", "atd_utc", "departed"])),
+    queriedAt: parseInstant(pick(raw, ["consultadoAt", "consultado_at", "queriedAt"])),
     vesselName: str(pick(raw, ["vessel_name", "name", "shipname"])),
   };
 }

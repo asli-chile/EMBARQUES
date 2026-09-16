@@ -621,6 +621,28 @@ export function NavitrackFleet({
                      * nunca se necesita.
                      */
                     const actualizadoExacto = fmtFechaHora(row.journey.position?.at ?? null, locale);
+                    /*
+                     * Cuándo se consultó, si difiere de cuándo transmitió.
+                     *
+                     * La columna muestra la edad de la **posición**, que es lo
+                     * que importa para creerle al punto del mapa. Pero un buque
+                     * fuera de cobertura pasa días sin emitir, y entonces
+                     * "hace 3 días" se lee como que el sistema no corrió,
+                     * cuando sí corrió y gastó su crédito. El tooltip aclara las
+                     * dos fechas en cuanto se separan más de una hora.
+                     */
+                    const consultadoEn = row.ais?.queriedAt ?? null;
+                    const posicionEn = row.journey.position?.at ?? null;
+                    const desfasadas =
+                      consultadoEn != null &&
+                      posicionEn != null &&
+                      consultadoEn.getTime() - posicionEn.getTime() > 3_600_000;
+                    const tip = desfasadas
+                      ? `${interpolar(tr.posicionDe, { fecha: actualizadoExacto ?? "" })} · ${interpolar(
+                          tr.consultadaHace,
+                          { hace: fmtRelativo(consultadoEn, relativos) ?? "" },
+                        )}`
+                      : (actualizadoExacto ?? "");
                     return (
                       <tr
                         key={row.op.id}
@@ -729,7 +751,7 @@ export function NavitrackFleet({
                             la cabecera ya dice de qué se trata. */}
                         <td className="whitespace-nowrap px-1.5 py-2.5 text-center text-[11px] font-medium text-dash-fg/55">
                           {actualizado ? (
-                            <span className="nt-tip" data-tip={actualizadoExacto ?? ""}>
+                            <span className="nt-tip" data-tip={tip}>
                               {actualizado}
                             </span>
                           ) : (

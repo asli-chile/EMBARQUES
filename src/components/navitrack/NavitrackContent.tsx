@@ -315,6 +315,7 @@ export function NavitrackContent() {
         navigationalStatus: l.nav_status,
         etaUtc: l.eta,
         positionReceived: l.posicion_recibida_at ?? l.consultado_at,
+        consultadoAt: l.consultado_at,
         name: l.nave_nombre,
         // Sin columna propia: el puerto de procedencia solo está en el crudo.
         lastPort: (l.crudo as Record<string, unknown> | null)?.lastPort,
