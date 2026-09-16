@@ -23,6 +23,17 @@ CREATE TRIGGER consignatarios_updated_at
 
 -- ─── Políticas ──────────────────────────────────────────────────────────────
 
+-- Lectura pública heredada: hay que QUITARLA, no basta con agregar las de abajo.
+--
+-- Esta línea faltaba y el archivo entero quedó sirviendo de coartada: se aplicó,
+-- dejó RLS activo y tres políticas correctas, y la tabla siguió leyéndose entera
+-- sin sesión con la anon key. Las políticas se **suman**: una sola con
+-- `USING (true)` para el rol `public` anula a todas las demás.
+--
+-- Se repite acá y en 20260915000002 a propósito: el que corra este archivo solo
+-- tiene que quedar con la tabla cerrada, sin depender de acordarse del otro.
+DROP POLICY IF EXISTS "Lectura pública consignatarios" ON public.consignatarios;
+
 -- Superadmin y admin: acceso total
 DROP POLICY IF EXISTS "consignatarios_admin_all" ON public.consignatarios;
 CREATE POLICY "consignatarios_admin_all"
@@ -60,4 +71,9 @@ CREATE POLICY "consignatarios_ejecutivo_read"
   );
 
 -- Grants
+--
+-- `anon` no debe tener ninguno: es la primera capa y PostgREST corta ahí, antes
+-- de mirar RLS. Sin este REVOKE, la tabla queda dependiendo de que ninguna
+-- política futura la exponga por descuido.
+REVOKE ALL ON public.consignatarios FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.consignatarios TO authenticated;
