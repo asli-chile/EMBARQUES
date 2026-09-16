@@ -4,8 +4,28 @@ import { useLocale } from '../hooks/useLocale'
 import { htmlLang, ogLocale } from '../lib/i18n/locale'
 
 /**
- * Meta SEO + Open Graph + Twitter + hreflang + opcional JSON-LD.
+ * Meta SEO + Open Graph + Twitter + opcional JSON-LD.
  * Usar una sola instancia por página.
+ *
+ * NO lleva hreflang, y es deliberado.
+ *
+ * El idioma acá se resuelve en el navegador: `?lang=` solo fija la preferencia
+ * en localStorage (ver src/lib/i18n/locale.js) y React vuelve a renderizar con
+ * el diccionario. El servidor devuelve **el mismo HTML en español** para
+ * cualquier valor de `?lang`, y quien ya eligió chino ve chino en la URL limpia,
+ * sin parámetro. Es decir: no hay una URL por idioma, hay una URL y tres
+ * lecturas de ella.
+ *
+ * Hubo un bloque de `rel="alternate"` apuntando a `?lang=zh` / `?lang=en`.
+ * Se quitó porque se contradecía con el canonical de esas mismas URLs, que
+ * apunta a la versión sin parámetro: un alternate de hreflang tiene que ser
+ * auto-canónico. Google descartaba el grupo entero —no publicaba nada en
+ * chino— y de paso archivaba `?lang=zh` como duplicado de la página española.
+ * Lo único que enlazaba esas URLs era este bloque.
+ *
+ * Si algún día se quiere posicionar de verdad en chino, el camino no es volver
+ * a poner hreflang: es servir el idioma desde el servidor con URLs propias
+ * (/zh/...), y recién ahí las anotaciones significan algo.
  */
 export default function Seo({
   title,
@@ -33,13 +53,6 @@ export default function Seo({
   const localeTag = ogLocale(locale)
   const langAttr = htmlLang(locale)
 
-  const withLang = (lang) => {
-    const base = canonical
-    if (lang === 'es') return base
-    const join = base.includes('?') ? '&' : '?'
-    return `${base}${join}lang=${lang}`
-  }
-
   const graph = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : null
   const payload = graph
     ? graph.length === 1 && graph[0]['@context']
@@ -57,11 +70,6 @@ export default function Seo({
       <meta httpEquiv="content-language" content={langAttr} />
       <link rel="canonical" href={canonical} />
 
-      <link rel="alternate" hrefLang="es" href={withLang('es')} />
-      <link rel="alternate" hrefLang="zh-CN" href={withLang('zh')} />
-      <link rel="alternate" hrefLang="en" href={withLang('en')} />
-      <link rel="alternate" hrefLang="x-default" href={withLang('es')} />
-
       <meta property="og:type" content={type} />
       <meta property="og:locale" content={localeTag} />
       <meta property="og:locale:alternate" content="es_CL" />
@@ -70,7 +78,7 @@ export default function Seo({
       <meta property="og:site_name" content={SITE.name} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      <meta property="og:url" content={withLang(locale === 'es' ? 'es' : locale)} />
+      <meta property="og:url" content={canonical} />
       <meta property="og:image" content={ogImage} />
       <meta property="og:image:alt" content={ogAlt} />
       <meta property="og:image:type" content={ogImageType} />

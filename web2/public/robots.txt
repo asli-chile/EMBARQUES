@@ -1,10 +1,25 @@
 User-agent: *
 Allow: /
 
-# ERP / rutas internas (proxy) — no útiles para SEO público
+# ERP / rutas internas (proxy) — no útiles para SEO público.
+# La lista tiene que seguir a los rewrites de next.config.js: cada ruta que se
+# proxea al ERP responde 200 con la pantalla de login, así que sin esto es
+# rastreable. Al agregar un rewrite nuevo hacia embarquesBase, agregarlo aquí.
 Disallow: /embarques
 Disallow: /auth
 Disallow: /dashboard
+Disallow: /documentos
+Disallow: /facturas
+Disallow: /facturar-preview
+Disallow: /indicadores
+Disallow: /itinerario
+Disallow: /itinerario-asli
+Disallow: /mantenimiento
+Disallow: /profile
+Disallow: /registros
+Disallow: /tablas-personalizadas
+Disallow: /transportes
+Disallow: /vessel-diagnose
 Disallow: /api/
 Disallow: /seo-preview
 
