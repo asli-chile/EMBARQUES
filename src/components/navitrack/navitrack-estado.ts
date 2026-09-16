@@ -287,9 +287,20 @@ export function resolverEstado(
    * deducción a partir de fechas.
    */
   const declarado = normalizarPuerto(ais?.destination ?? null);
+  /*
+   * `transbordo_anunciado` cuenta como resuelto.
+   *
+   * Es una decisión humana igual que las otras dos: alguien miró la web de la
+   * naviera y dijo qué pasa en ese puerto. Faltaba en esta lista, así que
+   * después de registrar el transbordo la pantalla seguía mostrando "posible
+   * transbordo detectado · verificar" sobre el puerto recién resuelto, que es
+   * pedir de nuevo una respuesta ya dada.
+   */
   const yaResuelto = recaladas.some(
     (r) =>
-      (r.estado === "parada_programada" || r.estado === "transbordo") &&
+      (r.estado === "parada_programada" ||
+        r.estado === "transbordo" ||
+        r.estado === "transbordo_anunciado") &&
       declarado.length > 0 &&
       normalizarPuerto(r.puerto) === declarado,
   );
@@ -597,7 +608,16 @@ export function construirTimeline(
         : anterior.confirmado
           ? "CONFIRMADO"
           : "ESTIMADO",
-      cumplido: pasado(cuando),
+      /*
+       * Un transbordo anunciado nunca está cumplido, aunque la fecha calce.
+       *
+       * `cumplido` se decidía solo por fecha, y la del tramo que termina en el
+       * puerto de conexión suele ser hoy mismo: el transbordo aparecía con el
+       * tilde de hecho consumado y se ordenaba entre lo pasado, debajo del
+       * arribo. Que la carga cambie de barco no lo dice el calendario; lo dice
+       * el tramo siguiente, y mientras no esté confirmado no ocurrió.
+       */
+      cumplido: siguiente.confirmado && pasado(cuando),
       actual: false,
     });
   }
