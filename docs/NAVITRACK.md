@@ -311,7 +311,7 @@ acento que ya usan los KPI del dashboard — no una paleta nueva.
 |---|---|---|
 | `EN_ORIGEN` | teal | Aún no zarpa |
 | `EN_TRANSITO` | emerald | Navegando, ETA lejos |
-| `PROXIMO_DESTINO` | amber | Arriba dentro de `PROXIMO_DIAS` (5) |
+| `PROXIMO_DESTINO` | amber | Arriba dentro de `PROXIMO_DIAS` (1): hoy o mañana |
 | `POSIBLE_TRANSBORDO` | orange | Destino AIS ≠ POD, sin resolver |
 | `TRANSBORDO_CONFIRMADO` | sky | Alguien confirmó el transbordo |
 | `POSIBLE_RETRASO` | rose | ETA AIS ≥ `RETRASO_HORAS` (24) tarde, o ETA ya pasó |

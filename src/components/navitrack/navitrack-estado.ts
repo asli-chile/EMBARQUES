@@ -55,8 +55,13 @@ export const ETAPA_META: Record<
 
 /** Horas de atraso desde las que el embarque deja de considerarse en fecha. */
 export const RETRASO_HORAS = 24;
-/** Días antes del ETA en que el embarque pasa a "próximo a llegar". */
-export const PROXIMO_DIAS = 5;
+/**
+ * Días antes del ETA en que el embarque pasa a "próximo a llegar".
+ *
+ * Uno: el aviso sale la víspera. Con cinco, siete de nueve embarques vivían
+ * permanentemente en "próximo a destino" y el estado dejaba de distinguir nada.
+ */
+export const PROXIMO_DIAS = 1;
 /** Horas sin lectura AIS tras las que la posición se marca como antigua. */
 export const POSICION_ANTIGUA_HORAS = 12;
 
@@ -241,6 +246,13 @@ export type RecaladaViaje = {
   zarpe_at?: string | null;
 };
 
+/** Días enteros de calendario entre dos fechas, en hora local. */
+function diferenciaEnDias(desde: Date, hasta: Date): number {
+  const a = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+  const b = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate());
+  return Math.round((b.getTime() - a.getTime()) / DAY_MS);
+}
+
 export function resolverEstado(
   op: NavitrackOperacion,
   ais: AisSnapshot | null,
@@ -252,7 +264,16 @@ export function resolverEstado(
 ): EstadoEmbarque {
   const eta = compararEta(op, ais);
   const etaDate = eta.erp;
-  const diasParaEta = etaDate ? Math.round((etaDate.getTime() - now.getTime()) / DAY_MS) : null;
+  /*
+   * Días de calendario hasta el ETA, no horas redondeadas.
+   *
+   * `operaciones.eta` es columna `date` y `parseOpDate` la sitúa a mediodía, así
+   * que restando instantes la víspera del arribo daba 2 por la mañana y 1 desde
+   * las 12:00: el mismo día, contado distinto según la hora. Con el umbral en
+   * cinco días nadie lo notaba; con el aviso pegado a la víspera, decide si sale
+   * o no. Se comparan los días, que es como lo cuenta una persona.
+   */
+  const diasParaEta = etaDate ? diferenciaEnDias(now, etaDate) : null;
 
   const posAt = journey.position?.at ?? null;
   const posicionAntigua =

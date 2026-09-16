@@ -301,7 +301,12 @@ export function NavitrackFleet({
           {
             key: "proximos" as const,
             label: tr.kpiProximos,
-            hint: interpolar(tr.kpiProximosHint, { dias: String(PROXIMO_DIAS) }),
+            /* Con el umbral en un día, "dentro de 1 días" delata la plantilla.
+               El texto propio además dice mejor lo que significa. */
+            hint:
+              PROXIMO_DIAS === 1
+                ? tr.kpiProximosHintUnDia
+                : interpolar(tr.kpiProximosHint, { dias: String(PROXIMO_DIAS) }),
             valor: conteos.proximos,
             icon: "lucide:flag",
             acento: "amber",
