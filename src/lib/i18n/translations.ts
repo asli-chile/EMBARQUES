@@ -2784,6 +2784,10 @@ export const translations = {
       recaladaTransbordoTexto:
         "La carga cambió de nave. Se registra el tramo nuevo y el seguimiento pasa a ese buque.",
       recaladaNaveNueva: "Nave que recibe la carga",
+      recaladaNaveIdentificador: "IMO o MMSI (opcional)",
+      recaladaNaveIdentificadorPlaceholder: "7 dígitos (IMO) o 9 (MMSI)",
+      recaladaIdentificadorInvalido:
+        "Un IMO tiene 7 dígitos y un MMSI 9. Con otro largo se guarda la nave sin identificador.",
       recaladaAnunciadoTitulo: "Transbordo anunciado",
       recaladaAnunciadoTexto:
         "La naviera ya informó el cambio de nave, pero todavía no ocurre. Se registra el tramo y el seguimiento pasa al buque nuevo el día de la conexión, no hoy.",
@@ -5955,6 +5959,10 @@ export const translations = {
       recaladaTransbordoTexto:
         "The cargo changed vessel. The new leg is recorded and tracking moves to that ship.",
       recaladaNaveNueva: "Vessel receiving the cargo",
+      recaladaNaveIdentificador: "IMO or MMSI (optional)",
+      recaladaNaveIdentificadorPlaceholder: "7 digits (IMO) or 9 (MMSI)",
+      recaladaIdentificadorInvalido:
+        "An IMO has 7 digits and an MMSI 9. With any other length the vessel is saved without an identifier.",
       recaladaAnunciadoTitulo: "Announced transhipment",
       recaladaAnunciadoTexto:
         "The carrier has already reported the vessel change, but it has not happened yet. The leg is recorded and tracking moves to the new vessel on the connection date, not today.",

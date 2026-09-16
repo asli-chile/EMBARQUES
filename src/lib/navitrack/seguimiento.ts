@@ -22,6 +22,8 @@
  * - Nunca enciende una nave sin IMO ni MMSI, porque no se podría consultar.
  */
 
+import { mismoPuerto } from "@/components/navitrack/navitrack-model";
+
 type Cliente = {
   from: (tabla: string) => any;
 };
@@ -73,22 +75,60 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
   const vacio: ResultadoSincronia = { traspasos: [], encendidas: [], apagadas: [], sinCatalogo: [] };
   const hoy = new Date().toISOString().slice(0, 10);
 
-  const [tramosRes, opsRes, navesRes] = await Promise.all([
-    supabase.from("navitrack_tramos").select("operacion_id, orden, nave, eta").order("orden"),
+  const [tramosRes, opsRes, navesRes, recRes] = await Promise.all([
+    supabase.from("navitrack_tramos").select("operacion_id, orden, nave, pod, eta").order("orden"),
     supabase
       .from("operaciones")
       .select("id, ref_asli, contenedor, nave, arribo_confirmado")
       .is("deleted_at", null),
     supabase.from("naves").select("id, nombre, imo, mmsi, tracking_activo").eq("activo", true),
+    /*
+     * Puertos donde consta que el buque paró.
+     *
+     * Son el respaldo cuando el tramo no tiene fechas: ver `tramoCerrado`.
+     */
+    supabase
+      .from("navitrack_recaladas")
+      .select("operacion_id, puerto")
+      .not("recalado_at", "is", null),
   ]);
 
   const tramos = (tramosRes.data ?? []) as {
     operacion_id: string;
     orden: number;
     nave: string | null;
+    pod: string | null;
     eta: string | null;
   }[];
   if (!tramos.length) return vacio;
+
+  /** Puertos ya recalados, por operación. */
+  const recaladoEn = new Map<string, string[]>();
+  for (const r of (recRes.data ?? []) as { operacion_id: string; puerto: string }[]) {
+    const lista = recaladoEn.get(r.operacion_id) ?? [];
+    lista.push(r.puerto);
+    recaladoEn.set(r.operacion_id, lista);
+  }
+
+  /*
+   * Un tramo terminó si venció su ETA **o** si consta que el buque llegó.
+   *
+   * La fecha sola no alcanza: el transbordo se suele anunciar sin decir cuándo
+   * llega el buque al puerto de conexión ni cuándo zarpa al siguiente. Con la
+   * ETA en null el tramo no vencía nunca, así que el tramo 1 quedaba vigente
+   * para siempre y el traspaso de seguimiento no ocurría jamás —justo en el
+   * caso que la función existe para resolver—.
+   *
+   * El respaldo es el propio AIS, que ya se paga y se guarda: cuando el buque
+   * declara como último puerto el de conexión, la recalada queda anotada y eso
+   * cierra el tramo aunque nadie supiera la fecha de antemano.
+   */
+  const tramoCerrado = (t: { operacion_id: string; pod: string | null; eta: string | null }) => {
+    if (t.eta && t.eta < hoy) return true;
+    const pod = (t.pod ?? "").trim();
+    if (!pod) return false;
+    return (recaladoEn.get(t.operacion_id) ?? []).some((p) => mismoPuerto(p, pod));
+  };
 
   const ops = new Map(
     ((opsRes.data ?? []) as {
@@ -131,7 +171,7 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
     if (!op || op.arribo_confirmado) continue;
 
     const ordenados = [...lista].sort((a, b) => a.orden - b.orden);
-    const indice = ordenados.findIndex((t) => !(t.eta && t.eta < hoy));
+    const indice = ordenados.findIndex((t) => !tramoCerrado(t));
     const actual = ordenados[indice < 0 ? ordenados.length - 1 : indice];
     if (!actual?.nave) continue;
 

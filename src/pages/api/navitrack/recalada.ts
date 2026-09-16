@@ -144,6 +144,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     nave?: string | null;
     decision?: "parada" | "transbordo" | "directo" | "anunciado";
     naveNombre?: string;
+    /** IMO (7 dígitos) o MMSI (9) de la nave nueva, si el operador lo conoce. */
+    naveIdentificador?: string;
     viaje?: string;
     etd?: string;
     eta?: string;
@@ -298,6 +300,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   /* El catálogo de naves va en mayúsculas y la búsqueda de duplicados compara
      texto: normalizar acá evita que una nave entre dos veces con distinta caja. */
   const naveNombre = (body.naveNombre ?? "").trim().toUpperCase();
+
+  /*
+   * Identificador escrito a mano.
+   *
+   * Es exactamente el dato por el que se gastaría un crédito preguntándole al
+   * proveedor. Si viene, se guarda y no se busca nada. Se valida la forma —IMO
+   * son 7 dígitos y MMSI 9— porque un número mal copiado haría consultar por un
+   * buque ajeno: cuesta igual y devuelve la posición equivocada.
+   */
+  const identBruto = (body.naveIdentificador ?? "").trim();
+  const identValido = /^\d{7}$|^\d{9}$/.test(identBruto) ? identBruto : null;
+  const campoIdent: { imo: string } | { mmsi: string } | null = identValido
+    ? identValido.length === 7
+      ? { imo: identValido }
+      : { mmsi: identValido }
+    : null;
   if (!naveNombre) return json({ ok: false, code: "FALTA_NAVE" }, 400);
 
   const { data: op } = await supabase
@@ -435,10 +453,40 @@ export const POST: APIRoute = async ({ request, cookies }) => {
      * hay que pagarlo por adelantado.
      */
     if (!existente) {
-      await supabase.from("naves").insert({ nombre: naveNombre, activo: true, tracking_activo: false });
+      await supabase
+        .from("naves")
+        .insert({ nombre: naveNombre, activo: true, tracking_activo: false, ...(campoIdent ?? {}) });
+    } else if (campoIdent && !(existente.imo ?? "").trim() && !(existente.mmsi ?? "").trim()) {
+      // Estaba en el catálogo pero sin identificador: se completa, no se pisa.
+      await supabase.from("naves").update(campoIdent).eq("id", existente.id);
     }
-    identificador = { imo: existente?.imo ?? null, mmsi: existente?.mmsi ?? null };
+    identificador = {
+      imo: (campoIdent && "imo" in campoIdent ? campoIdent.imo : null) ?? existente?.imo ?? null,
+      mmsi: (campoIdent && "mmsi" in campoIdent ? campoIdent.mmsi : null) ?? existente?.mmsi ?? null,
+    };
     aviso = "TRASPASO_PROGRAMADO";
+  } else if (campoIdent) {
+    /*
+     * Lo escribió el operador: no hay nada que preguntarle al proveedor.
+     *
+     * Se completa la nave y se enciende su seguimiento, que es lo mismo que
+     * haría la búsqueda pagada, sin el crédito.
+     */
+    if (existente) {
+      await supabase
+        .from("naves")
+        .update({ tracking_activo: true, ...campoIdent })
+        .eq("id", existente.id);
+    } else {
+      await supabase
+        .from("naves")
+        .insert({ nombre: naveNombre, activo: true, tracking_activo: true, ...campoIdent });
+    }
+    identificador = {
+      imo: "imo" in campoIdent ? campoIdent.imo : (existente?.imo ?? null),
+      mmsi: "mmsi" in campoIdent ? campoIdent.mmsi : (existente?.mmsi ?? null),
+    };
+    aviso = "IDENTIFICADOR_DADO";
   } else if (existente && ((existente.imo ?? "").trim() || (existente.mmsi ?? "").trim())) {
     await supabase.from("naves").update({ tracking_activo: true }).eq("id", existente.id);
     identificador = { imo: existente.imo, mmsi: existente.mmsi };

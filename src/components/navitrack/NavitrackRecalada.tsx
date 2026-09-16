@@ -124,6 +124,9 @@ export function NavitrackRecalada({
   const [llegada, setLlegada] = useState((recalada.eta_anunciada ?? "").slice(0, 10));
   const [etd, setEtd] = useState("");
   const [puertoBuscado, setPuertoBuscado] = useState("");
+  /* IMO o MMSI de la nave nueva, si se conoce. Opcional: sin él la nave se
+     guarda igual y el identificador queda pendiente. */
+  const [identNave, setIdentNave] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [naveElegida, setNaveElegida] = useState("");
   const [viaje, setViaje] = useState("");
@@ -200,7 +203,13 @@ export function NavitrackRecalada({
           etaAnunciada: recalada.id ? undefined : llegada || null,
           nave: recalada.id ? undefined : recalada.nave,
           decision,
-          naveNombre: decision === "transbordo" ? naveElegida.trim() : undefined,
+          naveNombre:
+            decision === "transbordo" || decision === "anunciado"
+              ? naveElegida.trim()
+              : undefined,
+          // Si el operador lo tiene a mano, no hay que pagarle una búsqueda al
+          // proveedor: es el mismo dato por el que se gastaría el crédito.
+          naveIdentificador: identNave.trim() || undefined,
           viaje: viaje.trim() || undefined,
           // Zarpe del tramo nuevo. La API ya lo aceptaba; el formulario no lo
           // pedía, así que el tramo quedaba sin fecha de salida y el viaje se
@@ -549,6 +558,31 @@ export function NavitrackRecalada({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {/*
+              * IMO o MMSI, opcional.
+              *
+              * Es lo que el sistema buscaría pagando un crédito. Cuando el
+              * operador ya lo tiene —lo mira en la misma web de la naviera donde
+              * vio el transbordo— escribirlo acá lo ahorra y deja la nave lista
+              * para seguirse desde el primer día.
+              */}
+            <label className="mt-3 block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+              {tr.recaladaNaveIdentificador}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={identNave}
+              onChange={(e) => setIdentNave(e.target.value.replace(/\D/g, "").slice(0, 9))}
+              placeholder={tr.recaladaNaveIdentificadorPlaceholder}
+              className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px] tabular-nums"
+            />
+            {identNave.trim().length > 0 && !/^\d{7}$|^\d{9}$/.test(identNave.trim()) && (
+              <p className="mt-1 text-[11.5px] leading-snug text-amber-400">
+                {tr.recaladaIdentificadorInvalido}
+              </p>
             )}
 
             <div className="mt-3 grid gap-2 min-[420px]:grid-cols-3">
