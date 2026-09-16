@@ -157,6 +157,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ ok: false, code: "BAD_REQUEST" }, 400);
   }
 
+  /*
+   * Una fecha sin hora se guarda a mediodía UTC.
+   *
+   * El formulario manda "2026-09-18" y la columna es `timestamptz`: guardado
+   * tal cual queda en medianoche UTC, que en Chile —tres horas atrás— es el 17.
+   * El operador escribía 18 y la pantalla mostraba 17, el mismo desfase que ya
+   * apareció en el diálogo. Mediodía deja el día intacto en todo el continente.
+   */
+  const fechaAnunciada = (v: string | null | undefined): string | null => {
+    const t = (v ?? "").trim();
+    if (!t) return null;
+    return /^\d{4}-\d{2}-\d{2}$/.test(t) ? `${t}T12:00:00Z` : t;
+  };
+
   const { decision } = body;
   if (
     decision !== "parada" &&
@@ -207,7 +221,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
      */
     if (rec) {
       const puertoNuevo = (body.puerto ?? "").trim();
-      const etaNueva = body.etaAnunciada ?? null;
+      const etaNueva = body.etaAnunciada === undefined ? undefined : fechaAnunciada(body.etaAnunciada);
       const cambia: Record<string, unknown> = {};
       if (puertoNuevo && puertoNuevo !== rec.puerto) cambia.puerto = puertoNuevo;
       if (etaNueva !== undefined && etaNueva !== rec.eta_anunciada) cambia.eta_anunciada = etaNueva;
@@ -250,7 +264,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           operacion_id: body.operacionId,
           puerto,
           nave: body.nave ?? null,
-          eta_anunciada: body.etaAnunciada ?? null,
+          eta_anunciada: fechaAnunciada(body.etaAnunciada),
           estado: "por_verificar",
         })
         .select("id, operacion_id, puerto, nave, eta_anunciada")

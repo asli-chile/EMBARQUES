@@ -492,6 +492,7 @@ export type EventoCodigo =
   | "ZARPE"
   | "RECALADA"
   | "ANUNCIADO"
+  | "PARADA"
   | "TRANSITO"
   | "TRANSBORDO"
   | "ARRIBO";
@@ -767,11 +768,20 @@ export function construirTimeline(
     if (yaEnTransbordo.some((l) => mismoPuerto(l, puerto))) continue;
     if (paradas.some((x) => mismoPuerto(x, puerto))) continue;
 
+    /*
+     * Anunciado y decidido no son lo mismo.
+     *
+     * `parada_programada` la respondió una persona: el buque para ahí y la
+     * carga sigue a bordo. Mostrarla como "puerto anunciado · estimado" —lo
+     * que hacía— le quita el respaldo de esa decisión y la deja pareciendo una
+     * suposición del AIS, que es justo lo contrario de lo que es.
+     */
+    const decidida = r.estado === "parada_programada";
     eventos.push({
-      codigo: "ANUNCIADO",
+      codigo: decidida ? "PARADA" : "ANUNCIADO",
       fecha: parseInstant(r.eta_anunciada),
       lugar: puerto,
-      certeza: "ESTIMADO",
+      certeza: decidida ? "CONFIRMADO" : "ESTIMADO",
       cumplido: false,
       actual: false,
     });

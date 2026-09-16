@@ -394,6 +394,8 @@ export function NavitrackShipment({
 
   /** Primera recalada sin resolver: es la que el estado ofrece verificar. */
   const recaladaPendiente = recaladas.find((r) => r.estado === "por_verificar") ?? null;
+  /** Lo que espera una respuesta: es lo único que justifica una lista aparte. */
+  const pendientesDeVerificar = recaladas.filter((r) => r.estado === "por_verificar");
 
   /*
    * Sobre qué se decide.
@@ -928,6 +930,18 @@ export function NavitrackShipment({
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-dash-fg">
                 {tr.historiaViaje}
               </h2>
+              {/* Lo que agrega —una escala, un transbordo— es historia del viaje,
+                  así que el botón vive junto a ella y no en una caja aparte. */}
+              {onAgregarRecalada && (
+                <button
+                  type="button"
+                  onClick={onAgregarRecalada}
+                  className="dash-control motion-interactive ml-auto inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
+                >
+                  <Icon icon="lucide:plus" width={12} height={12} aria-hidden />
+                  {tr.recaladaAgregar}
+                </button>
+              )}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">
               {/*
@@ -950,40 +964,28 @@ export function NavitrackShipment({
               />
 
               {/*
-                * Detalle de los puertos del recorrido.
+                * Lo que falta decidir. No es una segunda lista del viaje.
                 *
-                * Va **después** del historial, no antes. Arriba se leía como la
-                * cabeza de la línea de tiempo: un puerto anunciado para el
-                * 24-SEP quedaba por encima del arribo del 01-OCT, o sea después
-                * de llegar al destino. La cronología la cuenta el historial;
-                * esto es el detalle —la nave, si el puerto tiene ubicación
-                * conocida— y el lugar donde se resuelve lo que está por
-                * verificar.
+                * Antes esta caja repetía **todos** los puertos que la línea de
+                * tiempo ya cuenta, con otro vocabulario: "Recalada" arriba y
+                * "Recaló aquí" abajo, "Puerto anunciado" arriba y "Anunciada"
+                * abajo. Los mismos cuatro puertos, dos veces, en dos órdenes
+                * distintos, y una columna de fecha que a veces era la llegada
+                * prevista y a veces el día en que alguien hizo clic.
+                *
+                * Ahora solo aparece lo que espera respuesta, que es lo único
+                * que pedía una lista aparte: hay algo que hacer y está acá. El
+                * viaje lo cuenta el historial, una sola vez.
                 */}
-              {(recaladas.length > 0 || onAgregarRecalada) && (
+              {pendientesDeVerificar.length > 0 && (
                 <section className="mt-4">
                   <div className="flex items-center justify-between gap-2 pb-1.5">
                     <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                      {tr.historialRecaladas}
+                      {tr.historialPendientes}
                     </p>
-                    {onAgregarRecalada && (
-                      <button
-                        type="button"
-                        onClick={onAgregarRecalada}
-                        className="dash-control motion-interactive inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
-                      >
-                        <Icon icon="lucide:plus" width={12} height={12} aria-hidden />
-                        {tr.recaladaAgregar}
-                      </button>
-                    )}
                   </div>
-                  {recaladas.length === 0 && (
-                    <p className="rounded-lg border border-dashed border-dash-border px-3 py-2.5 text-[12px] leading-snug text-dash-muted">
-                      {tr.recaladaVacio}
-                    </p>
-                  )}
-                  <ul className="divide-y divide-dash-border rounded-lg border border-dash-border empty:hidden">
-                    {recaladas.map((r) => {
+                  <ul className="divide-y divide-dash-border rounded-lg border border-dash-border">
+                    {pendientesDeVerificar.map((r) => {
                       const pendiente = r.estado === "por_verificar";
                       /*
                        * Manda el hecho por sobre la decisión.
