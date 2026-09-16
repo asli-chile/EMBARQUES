@@ -315,7 +315,13 @@ embarque, del papeleo. Mezclarlos deja al lector sin saber cuál está viendo.
 
 - Los once tipos se agrupan en cuatro etapas (`GRUPOS_DOCUMENTO`), en el orden
   del viaje, que es también el orden en que se buscan. En la pestaña "Todos" los
-  grupos se separan con una línea del color de la etapa.
+  grupos se separan con una línea más gruesa del borde de siempre.
+- **La etapa no tiene color propio.** Lo tuvo —violeta, azul, celeste y
+  esmeralda de Tailwind— y era lo único así en todo el ERP: acá el color
+  significa **estado** (`--estado-*`) o selección (`--dash-neon`), nunca
+  categoría. Cuatro tonos más, por bien elegidos que estén, desentonan con el
+  resto y además compiten con el chip de estado de la misma fila. El grupo se
+  identifica por su nombre y su contador.
 - `TIPOS_FUERA` retira tipos de la pantalla **y de la cuenta**. Se filtra en vez
   de borrar del catálogo: la columna y el histórico siguen en la base. Si se
   retira uno de la vista sin sacarlo de la cuenta, el contador pide un documento
@@ -534,17 +540,6 @@ Complemento recomendado en Supabase Dashboard (Auth → Policies): activar la de
 
 ## Migraciones Pendientes
 
-La siguiente migración fue creada pero debe aplicarse manualmente en Supabase SQL Editor:
-
-```
-supabase/migrations/20260317000010_consignatarios_rls.sql
-```
-
-Aplica RLS a la tabla `consignatarios`:
-- `superadmin`/`admin`: acceso total
-- `ejecutivo`/`operador`: solo lectura
-- `cliente`: sin acceso
-
 Temporadas (aplicar en orden):
 
 ```
@@ -601,130 +596,31 @@ Revoca los `GRANT ALL ... TO anon` que las migraciones iniciales dejaron sobre `
 
 `authenticated` y `service_role` conservan sus privilegios, así que **aplicarla no cambia nada en el funcionamiento del ERP**. Para verificar que quedó aplicada, la propia migración incluye la consulta al final: no debe devolver filas.
 
-NaviTrack:
+Se pueden aplicar de tres formas:
 
-```
-supabase/migrations/20260911000001_navitrack_transbordos.sql
-```
+- **CLI de Supabase** (el proyecto BDASLI ya está linkeado):
+  `npx supabase db query --linked -f supabase/migrations/<archivo.sql>`.
+  **No usar `supabase db push`**: este repo nunca llevó historial de migraciones
+  en el CLI, así que intentaría re-ejecutar todo `supabase/migrations/`.
+- `npm run db:migrate -- <archivo.sql>`, que necesita `DATABASE_URL` en
+  `.env.local` (hoy no está definida).
+- Pegando el SQL en el editor de Supabase.
 
-Crea `navitrack_transbordos`, la decisión humana (confirmado / descartado) sobre
-cada alerta de posible transbordo de `/navitrack`. La detección compara el
-destino que declara el AIS con el POD comprometido, y eso es una señal, no un
-hecho: el destino AIS lo escribe la tripulación a mano.
+### Migraciones aplicadas
 
-**Aplicada el 11-09-2026** en el proyecto BDASLI. El código tolera que la tabla
-no exista, por si se levanta otro entorno sin ella.
+El historial —qué se aplicó, cuándo y por qué— vive en la bóveda de Obsidian
+`C:\Users\rodri\OneDrive\Documentos\obsidian\ASLI` → `Migraciones/00 - Bitácora.md`,
+no aquí: son ~25 migraciones ya corridas y este archivo se lee entero en cada sesión.
+La bóveda está **fuera del repo** a propósito: guarda también reglas de negocio y
+notas de cliente que no deben commitearse.
 
-```
-supabase/migrations/20260911000002_navieras_logo.sql
-```
+Lo aplicado hasta el 14-09-2026: todas las tablas de NaviTrack (`transbordos`,
+`ais_lecturas`, `escalas`, `tramos`, `avisos`, `recaladas`, `viajes`, `corridas`),
+`navieras.logo_url` con su siembra, y las políticas RLS de NaviTrack para cliente
+(lectura) y para `admin`/`ejecutivo` (escritura).
 
-Agrega `navieras.logo_url` para mostrar la marca de la naviera en la cabecera del
-embarque. **Aplicada el 11-09-2026.**
-
-```
-supabase/migrations/20260911000003_navieras_logo_seed.sql
-```
-
-Carga los logos que ya viven en `https://www.asli.cl/img/<naviera>.webp` — mismo
-dominio que sirve el ERP, así que no hay que subirlos de nuevo. **Aplicada el
-11-09-2026**: 10 de las 14 navieras quedaron con logo. EVERGREEN se sumó el
-14-09-2026 (`20260914000002_navieras_logo_evergreen.sql`) cuando su archivo
-apareció en el sitio. HAPAG-LLOYD, SEABOARD y UNIFER siguen en `NULL` porque los
-suyos devuelven 404, y se muestran con monograma. Al subirlos, basta un `UPDATE`
-igual a los del archivo: comprobar antes con `curl -I` que la URL responde.
-
-```
-supabase/migrations/20260911000004_navitrack_ais_cache.sql
-supabase/migrations/20260911000005_navitrack_activar_callao_express.sql
-```
-
-Caché de posiciones AIS y control de gasto: agrega `naves.tracking_activo` (lista
-blanca de rastreo) y la tabla `navitrack_ais_lecturas`, donde **cada fila es una
-llamada al proveedor**, o sea un crédito. **Ambas aplicadas el 11-09-2026**, con
-`CALLAO EXPRESS` (IMO 9777606) como única nave habilitada. Ver
-[docs/NAVITRACK.md](docs/NAVITRACK.md) §4 para los tres frenos de gasto.
-
-```
-supabase/migrations/20260911000006_navitrack_lecturas_tipo.sql
-supabase/migrations/20260912000001_navitrack_escalas.sql
-```
-
-Panel de Rastreo e historial de escalas. La primera distingue en
-`navitrack_ais_lecturas.tipo` qué consulta gastó cada crédito (`posicion`,
-`busqueda`, `escalas`); la segunda crea `navitrack_escalas`, el caché de port
-calls que alimenta la pestaña Escalas. **Ambas aplicadas el 12-09-2026.**
-`port-calls-by-vessel` es la consulta más cara: la documentación del proveedor
-dice 1 crédito en una página y 5 en otra, así que el código asume 5 y la cachea
-24 h.
-
-```
-supabase/migrations/20260912000002_navitrack_tramos.sql
-supabase/migrations/20260912000003_navitrack_avisos.sql
-```
-
-Transbordo real y chequeo diario. **Ambas aplicadas el 12-09-2026.**
-
-`navitrack_tramos` es el modelo que faltaba: `operaciones` guarda un solo buque
-(`nave`, `viaje`), así que no había forma de representar un transbordo. La regla
-de lectura es **sin filas = viaje directo; con filas = el viaje son esos tramos,
-en orden**. No toca `operaciones`, que está en producción.
-Desde el 12-09-2026 la escribe el flujo de recaladas (`api/navitrack/recalada.ts`)
-y la leen la ficha del embarque y la tabla de flota.
-
-`navitrack_avisos` registra lo que el chequeo diario ya notificó
-(`UNIQUE (operacion_id, tipo, detalle)`), para que una desviación que dura dos
-semanas no genere catorce correos idénticos. Un destino declarado **distinto**
-sí vuelve a avisar.
-
-```
-supabase/migrations/20260912000004_navitrack_lecturas_origen.sql
-```
-
-Agrega `navitrack_ais_lecturas.origen` (`cron`, `manual`, `pantalla`) para saber
-**quién** pidió cada consulta. **Aplicada el 12-09-2026.** Sin esa columna, una
-consulta automática y una que alguien disparó a mano se ven iguales, y el gasto
-manual —que es una decisión, no presupuesto— no se puede auditar.
-
-```
-supabase/migrations/20260913000004_navitrack_cliente_read.sql
-```
-
-Abre NaviTrack al cliente en modo lectura: `SELECT` —y nada más— sobre las
-recaladas, tramos, transbordos y viajes de **sus** operaciones, más las
-posiciones AIS guardadas. La pertenencia la resuelve
-`private.get_cliente_nombres_for_user()`, la misma función con la que
-`operaciones` y los documentos deciden qué ve un cliente. **Aplicada el
-13-09-2026.**
-
-```
-supabase/migrations/20260914000001_navitrack_corridas.sql
-```
-
-Una fila por corrida del chequeo diario: naves seguidas y revisadas, créditos,
-errores con el motivo de cada nave, y si el reporte se envió. **Aplicada el
-14-09-2026.**
-
-Existe porque el chequeo contaba lo que hacía **solo por correo**: cuando el
-correo era justamente lo que fallaba, la corrida se veía idéntica a un cron que
-no corrió, y averiguarlo exigía ejecutarla de nuevo gastando una consulta por
-nave. Para ver la última:
-
-```sql
-SELECT corrida_at, seguidas, revisadas, errores, reporte_enviado, fallo_correo, detalle
-  FROM public.navitrack_corridas ORDER BY corrida_at DESC LIMIT 5;
-```
-
-```
-supabase/migrations/20260913000005_navitrack_staff_write.sql
-```
-
-Acompaña al reemplazo de `/tracking`: da escritura sobre las cuatro tablas de
-NaviTrack (recaladas, tramos, transbordos, viajes) a `admin` —todas— y a
-`ejecutivo` —las de sus empresas, con la misma condición que usa `operaciones`—.
-Antes solo escribía el `superadmin`, que era razonable en un módulo en pruebas y
-deja de serlo cuando lo usa toda la empresa. **Aplicada el 13-09-2026**: trece
-políticas en total con las del cliente, verificadas en `pg_policies`.
+> Que una migración esté en `supabase/migrations/` **no significa que esté aplicada**.
+> La bitácora es el único registro de qué corrió de verdad.
 
 ### El saldo de créditos no se configura
 
@@ -737,45 +633,6 @@ Antes el panel calculaba `plan contratado − filas registradas`. Ese número so
 ve las consultas que pasan por los endpoints: mostraba 148 cuando el saldo real
 era 216. **Si el proveedor no responde se muestra "—", nunca un número
 estimado.**
-
-```
-supabase/migrations/20260912000005_navitrack_recaladas.sql
-```
-
-Crea `navitrack_recaladas`: los puertos que el buque va anunciando y la decisión
-humana sobre cada uno. **Aplicada el 12-09-2026.**
-
-El AIS declara el **próximo puerto**, no el destino final, así que un viaje
-anuncia varios puertos y cada uno abre la misma pregunta: ¿parada del itinerario
-o transbordo? Esa pregunta se responde una vez **por puerto**, no una vez por
-embarque, y por eso no alcanzaba `navitrack_transbordos`.
-
-Ciclo: `anunciada` → `por_verificar` (llegó la fecha anunciada) →
-`parada_programada` o `transbordo`. Solo `por_verificar` genera correo y cambia
-el estado en pantalla; el resto es historial del viaje.
-
-**El aviso lo dispara la fecha, no la discrepancia.** Un buque que anuncia
-Callao con diez días de anticipación no es noticia; que haya llegado a Callao
-sí. La misma regla vale para el estado en pantalla (`resolverEstado`), para que
-correo y pantalla nunca digan cosas distintas.
-
-```
-supabase/migrations/20260913000001_navitrack_viajes.sql
-```
-
-`navitrack_viajes` guarda cómo viaja la carga según una persona: `directo` o
-`con_transbordo`. **Aplicada el 13-09-2026.**
-
-Cada puerto anunciado se pregunta por separado, y con razón: el transbordo
-puede ocurrir en cualquier escala, así que responder por una no dice nada de
-las siguientes. La excepción es cuando el ejecutivo tiene el booking a la vista
-y le consta que la carga viaja directa; ahí seguir preguntando es ruido, y el
-ruido termina en que nadie mira las preguntas que sí importan.
-
-Con `modo = 'directo'`, los puertos que el buque anuncie se registran ya como
-`parada_programada`. Sin fila, el viaje es desconocido y se pregunta en cada
-puerto, que es el comportamiento seguro por defecto. Registrar un transbordo
-pone `con_transbordo` automáticamente: un transbordo desmiente la afirmación.
 
 ### Chequeo diario y alerta por correo
 
@@ -816,20 +673,6 @@ corporativo, **nunca suplantando a una persona**. El camino del usuario no
 cambió. Esa función la usan Informativos y Documentos en producción, así que el
 deploy (`npx supabase functions deploy send-email`) hay que hacerlo a
 conciencia.
-
-Esos logos son artes **oscuros sobre fondo transparente**, por eso la ficha de la
-naviera va con fondo blanco cuando lleva imagen (`.nt-carrier:has(img)` en
-`navitrack.css`): sobre el navy del tema oscuro desaparecerían.
-
-Se pueden aplicar de tres formas:
-
-- **CLI de Supabase** (el proyecto BDASLI ya está linkeado):
-  `npx supabase db query --linked -f supabase/migrations/<archivo.sql>`.
-  **No usar `supabase db push`**: este repo nunca llevó historial de migraciones
-  en el CLI, así que intentaría re-ejecutar todo `supabase/migrations/`.
-- `npm run db:migrate -- <archivo.sql>`, que necesita `DATABASE_URL` en
-  `.env.local` (hoy no está definida).
-- Pegando el SQL en el editor de Supabase.
 
 ---
 
@@ -921,6 +764,73 @@ HAVING NOT EXISTS (
       AND g.grantee = 'authenticated'
       AND g.privilege_type IN ('INSERT','UPDATE','DELETE'));
 ```
+
+### RLS activo no significa cerrado
+
+`consignatarios` tenía RLS activo, tres políticas correctas por rol y su
+migración "aplicada", y aun así se leía **entera sin iniciar sesión**: 2 de 2
+filas con la anon key, que es pública por diseño y viaja en el navegador de
+cualquiera. La tabla guarda consignee y notify de los clientes —empresa,
+dirección, contacto, correo, teléfono, USCC—.
+
+La culpable era una política heredada que nadie quitó:
+
+```
+"Lectura pública consignatarios"  SELECT  roles={public}  USING (true)
+```
+
+Dos cosas que conviene no olvidar:
+
+1. **Las políticas se suman.** Una sola con `USING (true)` para `public` anula a
+   todas las demás por bien escritas que estén. Agregar políticas nunca cierra
+   nada: hay que **quitar** la que abre.
+2. **`public` incluye a `anon`.** No es "los usuarios de la aplicación": es
+   todo el mundo.
+
+Y el corolario incómodo: el advisor de seguridad de Supabase **no marca esto**.
+Mira si RLS está activo, y acá lo estaba. Un aviso limpio de Supabase no es
+prueba de que una tabla esté cerrada.
+
+La única comprobación que vale es pedir la tabla por HTTP con la anon key y ver
+qué responde:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}
+"   "$PUBLIC_SUPABASE_URL/rest/v1/<tabla>?select=*&limit=1"   -H "apikey: $PUBLIC_SUPABASE_ANON_KEY" -H "Authorization: Bearer $PUBLIC_SUPABASE_ANON_KEY"
+# 401 = cerrada.  200 = lo que devuelva lo ve cualquiera.
+```
+
+Cerrado el 15-09-2026 en `20260915000002_consignatarios_cerrar_lectura_publica.sql`,
+por las dos capas: se quitó la política y se revocó el GRANT de `anon`.
+
+### Qué puede leer `anon`, y nada más
+
+La anon key va en el navegador de cualquiera: **lo que `anon` pueda leer es
+público**. Seis tablas lo necesitan, porque las consultan de verdad los
+endpoints de `/api/public/*` con `createAnonClient()`:
+
+```
+itinerarios   itinerario_escalas   naves   navieras   navieras_naves   destinos
+```
+
+Más `conteo_visitas`, que es un contador de una fila sin dato de nadie y lo lee
+el header antes de iniciar sesión. **Esa es la lista completa.** El
+15-09-2026 se revocó `anon` de todo lo demás
+(`20260915000003_revocar_anon_tablas_internas.sql`): `empresas`, `plantas`,
+`depositos`, `especies`, `catalogos`, `puertos_origen`, `documentos` y
+`sesiones_activas`.
+
+El permiso se decide por lo que la tabla **es**, no por lo que tiene cargado
+hoy. `plantas` estaba expuesta y sus columnas de contacto, teléfono y correo
+venían vacías; con eso se argumentó que no había nada publicado. Es un mal
+argumento: la tabla existe para llenarse, y el día que alguien cargue los
+contactos quedan publicados sin que nada avise.
+
+Revocar `anon` no rompe el ERP: las pantallas internas entran como
+`authenticated`, que tiene sus propios GRANT. Y no hay carrera de arranque —
+`_getAccessToken()` de supabase-js hace `await auth.getSession()` en **cada**
+petición y solo cae a la anon key si no hay sesión, así que una consulta
+disparada antes de que termine de montar el guard igual viaja con el JWT.
 
 Hoy devuelve ocho tablas, pero **ninguna es un error**: `clientes`,
 `consorcios`, `servicios_unicos*` y `usuarios` solo se escriben desde endpoints
