@@ -11,6 +11,7 @@ import {
   DAY_MS,
   HOUR_MS,
   haversineKm,
+  mismoPuerto,
   parseInstant,
   parseOpDate,
   type AisSnapshot,
@@ -231,6 +232,15 @@ export type EstadoEmbarque = {
 /** Lo que hace falta saber de una recalada para decidir el estado. */
 export type RecaladaEstado = { puerto: string; estado: string };
 
+/** Una parada, para el historial: dónde fue, si consta y cuándo se anunció. */
+export type RecaladaViaje = {
+  puerto: string;
+  estado?: string;
+  eta_anunciada?: string | null;
+  recalado_at?: string | null;
+  zarpe_at?: string | null;
+};
+
 export function resolverEstado(
   op: NavitrackOperacion,
   ais: AisSnapshot | null,
@@ -433,13 +443,23 @@ export function formatearDelta(horas: number): string {
 
 /* ------------------------------ Línea de tiempo ----------------------------- */
 
-export type EventoCerteza = "REAL" | "CONFIRMADO" | "ESTIMADO";
+/**
+ * De dónde sale la certeza de un hito.
+ *
+ * `ANUNCIADO` no es un punto medio entre confirmado y estimado: es otra cosa.
+ * Dice que el dato lo dio la naviera —puerto, fecha y nave— y que el hecho
+ * todavía no ocurrió. Un transbordo así es más fiable que una estimación y, al
+ * mismo tiempo, no puede contarse como pasado.
+ */
+export type EventoCerteza = "REAL" | "CONFIRMADO" | "ANUNCIADO" | "ESTIMADO";
 
 export type EventoCodigo =
   | "STACKING"
   | "CORTE_DOCUMENTAL"
   | "FIN_STACKING"
   | "ZARPE"
+  | "RECALADA"
+  | "ANUNCIADO"
   | "TRANSITO"
   | "TRANSBORDO"
   | "ARRIBO";
@@ -474,6 +494,14 @@ export function construirTimeline(
   decision: TransbordoDecision | null,
   now = new Date(),
   tramos: Tramo[] = [],
+  /**
+   * Paradas que constan, de la base.
+   *
+   * El AIS solo informa la última, así que sin esta lista el historial olvida
+   * cada puerto en cuanto el buque toca el siguiente: el cliente vería un
+   * recorrido que se borra solo.
+   */
+  recaladas: RecaladaViaje[] = [],
 ): EventoViaje[] {
   const pol = (op.pol ?? "").trim();
   const pod = (op.pod ?? "").trim();
@@ -556,7 +584,19 @@ export function construirTimeline(
       lugar: siguiente.pol ?? anterior.pod ?? "",
       nave: siguiente.nave,
       naveAnterior: anterior.nave,
-      certeza: anterior.confirmado ? "CONFIRMADO" : "ESTIMADO",
+      /*
+       * Manda el tramo que **empieza** aquí, no el que termina.
+       *
+       * El hito dice que la carga se pasó a la nave del tramo siguiente; si ese
+       * tramo aún no es un hecho, el transbordo tampoco. Mirando el anterior,
+       * un transbordo anunciado para dentro de dos semanas salía "confirmado"
+       * solo porque el viaje en curso sí lo estaba.
+       */
+      certeza: !siguiente.confirmado
+        ? "ANUNCIADO"
+        : anterior.confirmado
+          ? "CONFIRMADO"
+          : "ESTIMADO",
       cumplido: pasado(cuando),
       actual: false,
     });
@@ -584,6 +624,55 @@ export function construirTimeline(
     });
   }
 
+  /*
+   * Puertos donde el buque ya paró.
+   *
+   * El historial listaba los puertos que el buque **anuncia** y ninguno de los
+   * que ya tocó: un embarque que pasó por Caucedo mostraba Rotterdam por
+   * verificar y, del Caribe, nada.
+   *
+   * Salen de la base, no de la lectura: el AIS solo informa la última parada, y
+   * leerla directo hacía que cada puerto desapareciera del historial en cuanto
+   * el buque tocaba el siguiente. La lectura actual se suma igual, por si el
+   * chequeo diario todavía no la anotó.
+   *
+   * Se descartan el origen y el destino, que ya tienen su propio hito.
+   */
+  const paradas: string[] = [];
+  const sumarParada = (puerto: string | null | undefined) => {
+    const nombre = (puerto ?? "").trim();
+    if (!nombre) return;
+    if (mismoPuerto(nombre, pol) || mismoPuerto(nombre, pod)) return;
+    if (paradas.some((x) => mismoPuerto(x, nombre))) return;
+    paradas.push(nombre);
+  };
+
+  for (const r of recaladas) {
+    if (!r.recalado_at) continue; // Anunciada pero no visitada: no es historia.
+    sumarParada(r.puerto);
+  }
+  if (zarpado) sumarParada(ais?.lastPort);
+
+  for (const puerto of paradas) {
+    eventos.push({
+      codigo: "RECALADA",
+      /*
+       * Sin fecha, a propósito.
+       *
+       * Del AIS consta **que** el buque paró ahí, no cuándo: `atdUtc` no
+       * acompaña a `lastPort` (ver `AisSnapshot`), y la hora en que lo leímos
+       * es cuándo nos enteramos, no cuándo atracó. Poner cualquiera de las dos
+       * con el sello REAL sería firmar como dato lo que es una suposición; el
+       * hito se ordena igual, anclado al presente por estar cumplido.
+       */
+      fecha: null,
+      lugar: puerto,
+      certeza: "REAL",
+      cumplido: true,
+      actual: false,
+    });
+  }
+
   const enTransito =
     estado.etapa === "EN_TRANSITO" ||
     estado.etapa === "PROXIMO_DESTINO" ||
@@ -602,6 +691,51 @@ export function construirTimeline(
     });
   }
 
+  /*
+   * Puertos que el buque anunció y todavía no alcanza.
+   *
+   * Vivían solo en la caja de arriba de la pantalla, fuera de la línea de
+   * tiempo, y ahí se leían al revés: un puerto anunciado para el 24-SEP
+   * aparecía por encima del arribo del 01-OCT, o sea después de llegar al
+   * destino. Son parte del recorrido y tienen fecha propia, así que van en el
+   * historial, en el lugar que les toca.
+   *
+   * No se repite el que ya cuenta un transbordo: ahí el hito dice algo más
+   * fuerte —que la carga cambia de barco— y duplicarlo sería listar dos veces
+   * la misma parada diciendo dos cosas distintas.
+   */
+  const yaEnTransbordo = eventos
+    .filter((e) => e.codigo === "TRANSBORDO")
+    .map((e) => e.lugar)
+    .filter(Boolean);
+
+  for (const r of recaladas) {
+    /*
+     * Antes del zarpe no se anuncia nada.
+     *
+     * Lo que el buque declare mientras viene a buscar la carga pertenece a su
+     * viaje de entrada. Pintarlo en el historial de este embarque le promete al
+     * cliente una escala de un viaje que no es el suyo.
+     */
+    if (!zarpado) break;
+    if (r.recalado_at) continue; // Ya pasó: es recalada, no anuncio.
+    if (r.estado === "transbordo") continue;
+    const puerto = (r.puerto ?? "").trim();
+    if (!puerto) continue;
+    if (mismoPuerto(puerto, pol) || mismoPuerto(puerto, pod)) continue;
+    if (yaEnTransbordo.some((l) => mismoPuerto(l, puerto))) continue;
+    if (paradas.some((x) => mismoPuerto(x, puerto))) continue;
+
+    eventos.push({
+      codigo: "ANUNCIADO",
+      fecha: parseInstant(r.eta_anunciada),
+      lugar: puerto,
+      certeza: "ESTIMADO",
+      cumplido: false,
+      actual: false,
+    });
+  }
+
   const eta = parseOpDate(op.eta);
   eventos.push({
     codigo: "ARRIBO",
@@ -612,7 +746,55 @@ export function construirTimeline(
     actual: estado.etapa === "ARRIBADO",
   });
 
-  return eventos;
+  /*
+   * El historial se ordena por fecha, no por orden de construcción.
+   *
+   * Los hitos se empujan agrupados por tipo, y eso alcanzaba mientras todos
+   * tuvieran fecha. El transbordo sospechado no la tiene —el AIS dice dónde,
+   * no cuándo— y quedaba encajado entre "En tránsito" y el zarpe, o sea leído
+   * como algo que ya pasó, cuando es justamente lo que falta por ocurrir.
+   *
+   * Lo que no tiene fecha se ancla al presente según lo único que se sabe de
+   * él: si está cumplido cae del lado del pasado, y si no, del futuro.
+   */
+  /*
+   * El presente lo marca el hito actual, no el reloj.
+   *
+   * "En tránsito" se fecha con la última lectura del AIS, que es de hace horas.
+   * Anclando al reloj, una recalada sin fecha caía **después** de esa lectura y
+   * el historial la mostraba encima: un puerto que el buque ya dejó atrás
+   * leyéndose como lo último que pasó.
+   */
+  const presente = eventos.find((e) => e.actual)?.fecha?.getTime() ?? now.getTime();
+
+  /*
+   * La fecha ordena, pero no manda sobre lo ocurrido.
+   *
+   * Un puerto anunciado con la ETA vencida seguía teniendo fecha de hoy a las
+   * 03:12 mientras la lectura de tránsito era de las 14:01, así que caía por
+   * debajo y quedaba intercalado entre hechos cumplidos: Livorno, al que el
+   * buque no ha llegado, aparecía antes de una recalada que sí ocurrió. Que una
+   * previsión se atrase no la convierte en pasado.
+   *
+   * Entonces la fecha ordena **dentro** de su lado: lo cumplido por debajo del
+   * presente, lo pendiente por encima. El hito actual es la frontera.
+   */
+  const clave = (ev: EventoViaje) => {
+    if (ev.actual) return presente;
+    const base = ev.fecha ? ev.fecha.getTime() : presente;
+    return ev.cumplido ? Math.min(base, presente - 1) : Math.max(base, presente + 1);
+  };
+
+  /*
+   * El arribo se queda al final pase lo que pase: es el cierre del viaje.
+   * Ordenarlo por fecha mandaría el ETA vencido de un embarque retrasado al
+   * medio del historial, diciendo que la carga llegó cuando sigue navegando.
+   */
+  const arribo = eventos.filter((e) => e.codigo === "ARRIBO");
+  const resto = eventos.filter((e) => e.codigo !== "ARRIBO");
+  resto.sort((a, b) => clave(a) - clave(b));
+
+  return [...resto, ...arribo];
 }
 
 /** Momento de la última actualización mostrable del embarque. */

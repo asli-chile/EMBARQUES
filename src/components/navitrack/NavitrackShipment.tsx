@@ -11,6 +11,7 @@ import { isoDePais, isoDePuerto } from "./navitrack-banderas";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
 import type { Recalada } from "./NavitrackRecalada";
 import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
+import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 import {
   parseOpDate,
   type AisSnapshot,
@@ -87,7 +88,7 @@ function Stat({
 }: {
   icon: string;
   label: string;
-  valor: string;
+  valor: React.ReactNode;
   sub?: string | null;
   extra?: React.ReactNode;
   className?: string;
@@ -107,7 +108,7 @@ function Stat({
   );
 }
 
-function Dato({ label, valor }: { label: string; valor: string | null }) {
+function Dato({ label, valor }: { label: string; valor: React.ReactNode }) {
   return (
     <div className="min-w-0">
       <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">{label}</p>
@@ -115,6 +116,33 @@ function Dato({ label, valor }: { label: string; valor: string | null }) {
         {valor || "—"}
       </p>
     </div>
+  );
+}
+
+/**
+ * La velocidad, que cambia de unidad al hacer clic.
+ *
+ * El AIS habla en nudos y el ejecutivo también; el cliente que sigue su carga,
+ * casi nunca. Es el mismo dato en otra escala, así que en vez de mostrar las dos
+ * —y gastar el doble de ancho en una tarjeta que ya va apretada— se alterna.
+ *
+ * Es un `button` de verdad y no un `span` con `onClick`: así se alcanza con el
+ * teclado y el lector de pantalla anuncia que hay algo que hacer acá.
+ */
+function Velocidad({ nudos, tr }: { nudos: number | null | undefined; tr: Textos }) {
+  const { unidad, alternar } = useUnidadVelocidad();
+  const texto = formatearVelocidad(nudos, unidad);
+  if (texto == null) return <>—</>;
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      title={tr.velocidadCambiarUnidad}
+      aria-label={`${tr.velocidad} ${texto} — ${tr.velocidadCambiarUnidad}`}
+      className="cursor-pointer rounded px-0.5 underline decoration-dotted decoration-dash-muted/60 underline-offset-[3px] transition-colors hover:text-dash-neon focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/60"
+    >
+      {texto}
+    </button>
   );
 }
 
@@ -183,6 +211,14 @@ type ShipmentProps = {
   recaladas: Recalada[];
   /** Abre la ventana para decidir qué pasó en ese puerto. Ausente en solo lectura. */
   onVerificarRecalada?: (r: Recalada) => void;
+  /**
+   * Alta a mano de una recalada o transbordo que todavía nadie anunció.
+   *
+   * El operador lo ve en la web de la naviera días antes de que el buque lo
+   * declare por AIS. Sin esto había que esperar ese anuncio, y mientras tanto
+   * la pantalla mostraba un viaje directo que ya se sabía falso.
+   */
+  onAgregarRecalada?: () => void;
   /** Abre la carga manual de posición. Ausente para quien no edita. */
   onCargarCoords?: () => void;
   /** Resultado de la última decisión, para confirmarla en pantalla. */
@@ -240,6 +276,7 @@ export function NavitrackShipment({
   tramos,
   recaladas,
   onVerificarRecalada,
+  onAgregarRecalada,
   onCargarCoords,
   avisoRecalada,
   eventos,
@@ -301,7 +338,14 @@ export function NavitrackShipment({
     estado.eta.severidad === "alta" ? "rose" : estado.eta.severidad === "leve" ? "amber" : "teal";
 
   const titulo = op.contenedor || op.booking || op.ref_asli || tr.embarque;
-  const pct = journey.progress?.pct ?? 0;
+  /*
+   * Sin avance calculado no se muestra un cero.
+   *
+   * `progress` viene en null mientras la primera lectura AIS está en vuelo, y
+   * un 0 % ahí afirma que la carga no se ha movido, que es tan falso como el
+   * 105 % que se mostraba antes. La barra queda vacía y el número, en guion.
+   */
+  const pct = journey.progress?.pct ?? null;
   const restantes = fmtNm(journey.remainingNm, locale);
   /*
    * Tramo en curso: el primero cuya llegada todavía no pasó.
@@ -566,7 +610,9 @@ export function NavitrackShipment({
           <div className="min-w-[min(100%,260px)] flex-1">
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-[12.5px] text-dash-muted">
-                <span className="nt-accent-fg text-base font-extrabold tabular-nums">{pct}%</span>{" "}
+                <span className="nt-accent-fg text-base font-extrabold tabular-nums">
+                  {pct == null ? "—" : `${pct}%`}
+                </span>{" "}
                 {tr.delTrayecto}
               </p>
               {restantes && (
@@ -576,7 +622,7 @@ export function NavitrackShipment({
               )}
             </div>
             <div className="nt-head-rail mt-1.5">
-              <div className="nt-head-rail-fill" style={{ width: `${pct}%` }} />
+              <div className="nt-head-rail-fill" style={{ width: `${pct ?? 0}%` }} />
             </div>
           </div>
         </div>
@@ -672,10 +718,7 @@ export function NavitrackShipment({
                 <Dato label="IMO" valor={naveIdent?.imo ?? null} />
                 <Dato label="MMSI" valor={naveIdent?.mmsi ?? null} />
                 <Dato label={tr.viaje} valor={op.viaje} />
-                <Dato
-                  label={tr.velocidad}
-                  valor={ais?.speed != null ? `${ais.speed.toFixed(1)} kn` : null}
-                />
+                <Dato label={tr.velocidad} valor={<Velocidad nudos={ais?.speed} tr={tr} />} />
                 <Dato
                   label={tr.rumbo}
                   valor={ais?.course != null ? `${Math.round(ais.course)}°` : null}
@@ -899,36 +942,77 @@ export function NavitrackShipment({
                 </p>
               )}
 
+              <NavitrackTimeline
+                eventos={eventosRecientes}
+                etapa={estado.etapa}
+                locale={locale}
+                tr={tr}
+              />
+
               {/*
-                * Puertos que el buque fue anunciando.
+                * Detalle de los puertos del recorrido.
                 *
-                * Es la parte del historial que el AIS conoce y el ERP no: dónde
-                * dijo el buque que iba parando. Lo que está por verificar se
-                * puede resolver desde aquí mismo.
+                * Va **después** del historial, no antes. Arriba se leía como la
+                * cabeza de la línea de tiempo: un puerto anunciado para el
+                * 24-SEP quedaba por encima del arribo del 01-OCT, o sea después
+                * de llegar al destino. La cronología la cuenta el historial;
+                * esto es el detalle —la nave, si el puerto tiene ubicación
+                * conocida— y el lugar donde se resuelve lo que está por
+                * verificar.
                 */}
-              {recaladas.length > 0 && (
-                <section className="mb-3">
-                  <p className="pb-1.5 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                    {tr.historialRecaladas}
-                  </p>
-                  <ul className="divide-y divide-dash-border rounded-lg border border-dash-border">
+              {(recaladas.length > 0 || onAgregarRecalada) && (
+                <section className="mt-4">
+                  <div className="flex items-center justify-between gap-2 pb-1.5">
+                    <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
+                      {tr.historialRecaladas}
+                    </p>
+                    {onAgregarRecalada && (
+                      <button
+                        type="button"
+                        onClick={onAgregarRecalada}
+                        className="dash-control motion-interactive inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
+                      >
+                        <Icon icon="lucide:plus" width={12} height={12} aria-hidden />
+                        {tr.recaladaAgregar}
+                      </button>
+                    )}
+                  </div>
+                  {recaladas.length === 0 && (
+                    <p className="rounded-lg border border-dashed border-dash-border px-3 py-2.5 text-[12px] leading-snug text-dash-muted">
+                      {tr.recaladaVacio}
+                    </p>
+                  )}
+                  <ul className="divide-y divide-dash-border rounded-lg border border-dash-border empty:hidden">
                     {recaladas.map((r) => {
                       const pendiente = r.estado === "por_verificar";
+                      /*
+                       * Manda el hecho por sobre la decisión.
+                       *
+                       * Que el buque haya parado ahí consta; qué pasó con la
+                       * carga puede seguir sin verificarse. Rotular "anunciada"
+                       * un puerto por el que ya pasó sería decirle al cliente
+                       * que su embarque todavía no llega a donde ya estuvo.
+                       */
+                      const recalado = Boolean(r.recalado_at);
                       const etiqueta =
-                        r.estado === "transbordo"
+                        r.estado === "transbordo_anunciado"
+                          ? tr.historialTransbordoAnunciado
+                          : r.estado === "transbordo"
                           ? tr.historialTransbordo
-                          : r.estado === "parada_programada"
-                            ? tr.historialParada
-                            : pendiente
-                              ? tr.historialPorVerificar
-                              : tr.historialAnunciada;
+                          : recalado
+                            ? tr.historialRecalada
+                            : r.estado === "parada_programada"
+                              ? tr.historialParada
+                              : pendiente
+                                ? tr.historialPorVerificar
+                                : tr.historialAnunciada;
                       return (
                         <li key={r.id} className="flex items-center gap-2 px-2.5 py-2">
                           <Icon
                             icon={
-                              r.estado === "transbordo"
+                              r.estado === "transbordo" || r.estado === "transbordo_anunciado"
                                 ? "lucide:git-branch"
-                                : r.estado === "parada_programada"
+                                : recalado || r.estado === "parada_programada"
                                   ? "lucide:anchor"
                                   : "lucide:help-circle"
                             }
@@ -971,10 +1055,19 @@ export function NavitrackShipment({
                             </button>
                           ) : (
                             <span className="shrink-0 text-[10.5px] text-dash-muted tabular-nums">
-                              {fmtFecha(
-                                r.decidido_at ? new Date(r.decidido_at) : parseOpDate(r.eta_anunciada),
-                                locale,
-                              ) ?? "—"}
+                              {/*
+                                * Una recalada no lleva fecha: consta que el
+                                * buque paró ahí, no cuándo (`atdUtc` no
+                                * acompaña a `lastPort`, ver `AisSnapshot`).
+                                * Las demás sí, porque su fecha es la decisión
+                                * o la previsión, que son datos nuestros.
+                                */}
+                              {recalado
+                                ? ""
+                                : (fmtFecha(
+                                    r.decidido_at ? new Date(r.decidido_at) : parseOpDate(r.eta_anunciada),
+                                    locale,
+                                  ) ?? "—")}
                             </span>
                           )}
                         </li>
@@ -983,13 +1076,6 @@ export function NavitrackShipment({
                   </ul>
                 </section>
               )}
-
-              <NavitrackTimeline
-                eventos={eventosRecientes}
-                etapa={estado.etapa}
-                locale={locale}
-                tr={tr}
-              />
             </div>
           </section>
         </div>
@@ -1045,7 +1131,7 @@ export function NavitrackShipment({
           className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
           icon="lucide:gauge"
           label={tr.velocidad}
-          valor={ais?.speed != null ? `${ais.speed.toFixed(1)} kn` : "—"}
+          valor={<Velocidad nudos={ais?.speed} tr={tr} />}
           sub={ais?.course != null ? `${tr.rumbo} ${Math.round(ais.course)}°` : null}
         />
         {/*
@@ -1061,12 +1147,25 @@ export function NavitrackShipment({
           icon="lucide:anchor"
           label={tr.ultimoPuerto}
           valor={ais?.lastPort || tramoEnCurso?.pol || journey.origen.nombre || "—"}
+          /*
+           * Cuando el puerto lo pone el AIS, va sin fecha.
+           *
+           * El ETD del tramo es el zarpe del **origen**: mostrarlo bajo un
+           * puerto que el buque tocó a media ruta juntaba dos puertos y dos
+           * semanas distintas en una línea. El `atdUtc` del proveedor tampoco
+           * sirve —ver la nota en `parseAisSnapshot`: no acompaña a `lastPort`—,
+           * así que acá no hay fecha que decir y se calla, que es lo único
+           * honesto. La fecha del tramo se sigue usando cuando el puerto es el
+           * calculado, donde sí le corresponde.
+           */
           sub={
-            tramoEnCurso?.etd
-              ? `${tr.evZarpe}: ${fmtFecha(parseOpDate(tramoEnCurso.etd), locale) ?? "—"}`
-              : etdFmt
-                ? `${tr.evZarpe}: ${etdFmt}`
-                : null
+            ais?.lastPort
+              ? null
+              : tramoEnCurso?.etd
+                ? `${tr.evZarpe}: ${fmtFecha(parseOpDate(tramoEnCurso.etd), locale) ?? "—"}`
+                : etdFmt
+                  ? `${tr.evZarpe}: ${etdFmt}`
+                  : null
           }
         />
         {/*

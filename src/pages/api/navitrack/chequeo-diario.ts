@@ -12,13 +12,13 @@
 import type { APIRoute } from "astro";
 import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
+import { cuerpoProveedor, enVentanaDeSeguimiento } from "@/components/navitrack/navitrack-model";
 import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
 import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
-import { correoSeguimiento, correoResumenCorrida } from "@/components/navitrack/navitrack-correo";
+import { correoResumenCorrida } from "@/components/navitrack/navitrack-correo";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
-import { marcarPorVerificar, registrarAnuncio } from "@/lib/navitrack/recaladas";
-import { correoDesvio } from "@/components/navitrack/navitrack-correo";
+import { marcarPorVerificar, registrarAnuncio, registrarRecalada } from "@/lib/navitrack/recaladas";
+import { correoRecaladas } from "@/components/navitrack/navitrack-correo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Naves que puede revisar una corrida. Freno ante una lista blanca inflada. */
@@ -261,6 +261,10 @@ export const GET: APIRoute = async ({ request, url }) => {
     creditos: 0,
     desvios: 0,
     escalas: 0,
+    /** Puertos donde consta que el buque paró, vistos por primera vez hoy. */
+    recaladas: 0,
+    /** Embarques saltados por no haber zarpado todavía. */
+    fueraDeVentana: 0,
     correos: 0,
     errores: 0,
     traspasos: sincro.traspasos.length,
@@ -358,7 +362,11 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
 
     const destinoAis = str(detalle.destination);
-    if (!destinoAis) return;
+    const ultimoPuerto = str(detalle.lastPort);
+    // Sin ninguno de los dos no hay nada que anotar: ni por dónde pasó ni a
+    // dónde va. Antes bastaba con que faltara el destino para perder también el
+    // puerto de procedencia, que venía en la misma lectura ya pagada.
+    if (!destinoAis && !ultimoPuerto) return;
 
     const posicion =
       num(detalle.latitude) != null && num(detalle.longitude) != null
@@ -369,7 +377,9 @@ export const GET: APIRoute = async ({ request, url }) => {
     const hoy = new Date().toISOString().slice(0, 10);
     const { data: ops } = await supabase
       .from("operaciones")
-      .select("id, ref_asli, contenedor, cliente, nave, naviera, pol, pod, eta, arribo_confirmado")
+      .select(
+        "id, ref_asli, contenedor, cliente, nave, naviera, pol, pod, etd, eta, estado_operacion, arribo_confirmado",
+      )
       .is("deleted_at", null)
       .ilike("nave", `${nave.nombre}%`)
       .gte("eta", hoy)
@@ -379,20 +389,58 @@ export const GET: APIRoute = async ({ request, url }) => {
       if (op.arribo_confirmado) continue;
 
       /*
+       * Antes del zarpe, este buque anda en otro viaje.
+       *
+       * Viene hacia Chile a buscar la carga, así que lo que declara describe
+       * ese viaje y no este embarque. Sin este corte, el chequeo anotaba los
+       * puertos de la ruta de entrada como recaladas de la carga —que seguía en
+       * tierra— y avisaba "destino distinto al comprometido" por un desvío que
+       * no existe. Se abre dos días antes del ETD: ver
+       * `enVentanaDeSeguimiento`.
+       */
+      if (!enVentanaDeSeguimiento(op, new Date())) {
+        resultado.fueraDeVentana += 1;
+        continue;
+      }
+
+      /*
        * El puerto declarado se anota, no se avisa todavía.
        *
        * Que un buque anuncie Callao con diez días de anticipación no es noticia;
        * que haya llegado a Callao sí. El aviso sale el día que se cumple la
        * fecha anunciada, y lo dispara `marcarPorVerificar`.
        */
-      const anuncio = await registrarAnuncio(supabase, {
-        operacionId: op.id,
-        puertoDeclarado: destinoAis,
-        nave: String(op.nave ?? nave.nombre),
-        etaDeclarada: fecha(detalle.etaUtc),
-        pod: op.pod,
-      });
-      if (anuncio === "nueva") resultado.escalas += 1;
+      if (destinoAis) {
+        const anuncio = await registrarAnuncio(supabase, {
+          operacionId: op.id,
+          puertoDeclarado: destinoAis,
+          nave: String(op.nave ?? nave.nombre),
+          etaDeclarada: fecha(detalle.etaUtc),
+          pod: op.pod,
+        });
+        if (anuncio === "nueva") resultado.escalas += 1;
+      }
+
+      /*
+       * El puerto del que viene el buque, en la misma lectura.
+       *
+       * Es lo que convierte el historial en recorrido: el AIS solo informa la
+       * última parada, así que si esta corrida no la anota, mañana el buque
+       * declara otra y la de hoy se pierde para siempre. No cuesta un crédito
+       * extra —viene en la lectura que ya se pagó— y se anota igual en los
+       * viajes marcados como directos.
+       */
+      if (ultimoPuerto) {
+        const rec = await registrarRecalada(supabase, {
+          operacionId: op.id,
+          puerto: ultimoPuerto,
+          nave: String(op.nave ?? nave.nombre),
+          zarpeAt: fecha(detalle.atdUtc),
+          pol: op.pol,
+          pod: op.pod,
+        });
+        if (rec === "nueva") resultado.recaladas += 1;
+      }
 
     }
   }));
@@ -410,6 +458,17 @@ export const GET: APIRoute = async ({ request, url }) => {
   const vencidas = await marcarPorVerificar(supabase);
   resultado.porVerificar = vencidas.length;
 
+  /*
+   * Todas las recaladas del día en **un** correo.
+   *
+   * Antes salía uno por embarque: una mañana con cuatro vencidas eran cuatro
+   * correos y, con el reporte y el aviso de seguimiento, seis. El aviso que
+   * llega seis veces se deja de leer, y entonces deja de servir justamente
+   * cuando hace falta.
+   */
+  const paraAvisar: Parameters<typeof correoRecaladas>[0] = [];
+  const avisadas: { operacionId: string; puerto: string }[] = [];
+
   for (const r of vencidas) {
     if (!destinatario) break;
 
@@ -420,7 +479,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       .maybeSingle();
     if (!op) continue;
 
-    const { asunto, cuerpo } = correoDesvio({
+    paraAvisar.push({
       referencia: String(op.ref_asli ?? ""),
       contenedor: String(op.contenedor ?? ""),
       cliente: String(op.cliente ?? ""),
@@ -430,29 +489,37 @@ export const GET: APIRoute = async ({ request, url }) => {
       pod: String(op.pod ?? ""),
       eta: fechaLarga(op.eta),
       destinoAis: r.puerto,
-      // Al embarque concreto: quien recibe el aviso quiere ver ese contenedor.
+      // Al embarque concreto: quien lee la fila quiere ver ese contenedor.
       enlace: sitio
         ? `${sitio}/navitrack?op=${encodeURIComponent(String(op.ref_asli ?? r.operacionId))}`
         : null,
     });
+    avisadas.push({ operacionId: r.operacionId, puerto: r.puerto });
+  }
 
+  const avisoRecaladas = correoRecaladas(paraAvisar);
+  if (avisoRecaladas && destinatario) {
     const envio = await enviarCorreo({
       to: destinatario,
       cc: enCopia || undefined,
-      subject: asunto,
-      body: cuerpo,
+      subject: avisoRecaladas.asunto,
+      body: avisoRecaladas.cuerpo,
       sendFrom: "informaciones",
       skipSignature: true,
     });
     if (envio.ok) {
       resultado.correos += 1;
-      resultado.desvios += 1;
-      await supabase.from("navitrack_avisos").insert({
-        operacion_id: r.operacionId,
-        tipo: "desvio",
-        detalle: r.puerto,
-        enviado_a: destinatario,
-      });
+      resultado.desvios += avisadas.length;
+      // Una fila por recalada avisada, aunque el correo sea uno: el registro es
+      // de qué se avisó, no de cuántos mensajes salieron.
+      await supabase.from("navitrack_avisos").insert(
+        avisadas.map((a) => ({
+          operacion_id: a.operacionId,
+          tipo: "desvio",
+          detalle: a.puerto,
+          enviado_a: destinatario,
+        })),
+      );
     } else {
       resultado.errores += 1;
       falloCorreo = envio.error;
@@ -460,39 +527,20 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   /*
-   * Aviso de transbordo.
+   * El transbordo ya no manda correo propio: va dentro del reporte.
    *
-   * Va aparte del aviso de desvío porque responde otra pregunta: no "¿este
-   * buque se está desviando?", sino "¿esta carga sigue estando vigilada?". Y se
-   * envía sobre todo cuando la respuesta es no.
+   * Eran tres canales para un mismo chequeo —desvíos, seguimiento y reporte— y
+   * el de seguimiento además se repetía todos los días: `traspasos` se
+   * recalcula desde los tramos en cada corrida, así que un embarque con cambio
+   * de nave "estrenaba" su traspaso cada mañana hasta arribar. El reporte ya
+   * recibe `traspasos` y `sinSeguimiento`, de modo que no se pierde nada.
+   *
+   * Por eso el traspaso solo se lista cuando **esta** corrida movió algo: las
+   * naves encendidas y apagadas sí son cambios de estado, no una relectura de
+   * lo mismo. Sin ese filtro, el reporte anunciaría una novedad que ocurrió
+   * hace semanas, y una novedad que se repite deja de leerse.
    */
-  const avisoSeguimiento = correoSeguimiento({
-    traspasos: sincro.traspasos,
-    resueltas: altas.filter((a) => a.resuelta).map((a) => ({ nombre: a.nombre, imo: a.imo })),
-    sinSeguimiento: altas
-      .filter((a) => !a.resuelta)
-      .map((a) => ({
-        nombre: a.nombre,
-        motivo: a.motivo,
-        reemplazaA: sincro.traspasos.find((t) => t.hacia === a.nombre)?.desde ?? null,
-      })),
-  });
-
-  if (avisoSeguimiento && destinatario) {
-    const envio = await enviarCorreo({
-      to: destinatario,
-      cc: enCopia || undefined,
-      subject: avisoSeguimiento.asunto,
-      body: avisoSeguimiento.cuerpo,
-      sendFrom: "informaciones",
-      skipSignature: true,
-    });
-    if (envio.ok) resultado.correos += 1;
-    else {
-      resultado.errores += 1;
-      falloCorreo = envio.error;
-    }
-  }
+  const huboCambioDeSeguimiento = sincro.encendidas.length > 0 || sincro.apagadas.length > 0;
 
   /*
    * ── Reporte de la corrida ───────────────────────────────────────────────
@@ -535,8 +583,11 @@ export const GET: APIRoute = async ({ request, url }) => {
       creditos: resultado.creditos,
       saldo: saldoFinal.creditos,
       puertosNuevos: resultado.escalas,
+      recaladasNuevas: resultado.recaladas,
       porVerificar: detallesPorVerificar,
-      traspasos: sincro.traspasos.map((t) => ({ desde: t.desde, hacia: t.hacia })),
+      traspasos: huboCambioDeSeguimiento
+        ? sincro.traspasos.map((t) => ({ desde: t.desde, hacia: t.hacia }))
+        : [],
       sinSeguimiento: altas.filter((a) => !a.resuelta).map((a) => `${a.nombre}: ${a.motivo ?? "sin identificar"}`),
       errores: problemas,
       enlace: sitio ? `${sitio}/navitrack` : null,

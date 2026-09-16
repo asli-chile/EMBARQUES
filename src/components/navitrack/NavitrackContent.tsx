@@ -17,13 +17,19 @@ import {
   type FleetVista,
 } from "./NavitrackFleet";
 import { NavitrackShipment, type Escala } from "./NavitrackShipment";
-import { NavitrackRecalada, type NaveCatalogo, type Recalada } from "./NavitrackRecalada";
+import {
+  NavitrackRecalada,
+  type NaveCatalogo,
+  type PuertoCatalogo,
+  type Recalada,
+} from "./NavitrackRecalada";
 import { NavitrackRastreoPanel } from "./NavitrackRastreoPanel";
 import { NavitrackCoordsManual } from "./NavitrackCoordsManual";
 import {
   yaZarpo,
   NAVITRACK_OP_SELECT,
   buildJourney,
+  mismoPuerto,
   parseAisSnapshot,
   NAVITRACK_TRAMO_SELECT,
   type Tramo,
@@ -157,9 +163,28 @@ export function NavitrackContent() {
    * y traerlas de los 300 embarques sería pedir una tabla entera para mostrar
    * una línea de tiempo.
    */
-  const [recaladas, setRecaladas] = useState<Recalada[]>([]);
+  /*
+   * Los datos del embarque abierto van etiquetados con **cuál** es.
+   *
+   * Al pasar de un embarque a otro, esto seguía teniendo lo del anterior hasta
+   * que llegaba la consulta nueva, así que durante un momento el mapa dibujaba
+   * el recorrido de otro viaje y después se corregía solo. Guardar el id junto
+   * a las filas lo resuelve de raíz: la pantalla no puede usar lo que no le
+   * corresponde, aunque la respuesta llegue tarde. Limpiar con un efecto no
+   * bastaba —siempre queda un cuadro pintado de por medio— y además no cubre
+   * dos clics seguidos, donde la respuesta del primer embarque puede aterrizar
+   * después de la del segundo y pisarla.
+   */
+  const [recaladasDe, setRecaladasDe] = useState<{ opId: string | null; filas: Recalada[] }>({
+    opId: null,
+    filas: [],
+  });
   const [catalogoNaves, setCatalogoNaves] = useState<NaveCatalogo[]>([]);
+  /** Catálogo de puertos para el alta a mano; llega junto al de naves. */
+  const [catalogoPuertos, setCatalogoPuertos] = useState<PuertoCatalogo[]>([]);
   const [recaladaAbierta, setRecaladaAbierta] = useState<Recalada | null>(null);
+  /* El alta a mano usa el mismo diálogo, con el puerto en blanco y editable. */
+  const [recaladaManual, setRecaladaManual] = useState(false);
   const [avisoRecalada, setAvisoRecalada] = useState<string | null>(null);
 
   /** Recaladas de cada embarque, para que la tabla y la ficha coincidan. */
@@ -176,7 +201,10 @@ export function NavitrackContent() {
   const [ais, setAis] = useState<AisSnapshot | null>(null);
   const [aisCargando, setAisCargando] = useState(false);
 
-  const [escalas, setEscalas] = useState<Escala[]>([]);
+  const [escalasDe, setEscalasDe] = useState<{ opId: string | null; filas: Escala[] }>({
+    opId: null,
+    filas: [],
+  });
   const [escalasCargando, setEscalasCargando] = useState(false);
   const [escalasEdadH, setEscalasEdadH] = useState<number | null>(null);
 
@@ -245,7 +273,7 @@ export function NavitrackContent() {
        */
       supabase
         .from("navitrack_ais_lecturas")
-        .select("identificador, lat, lng, speed, course, destino, nav_status, eta, posicion_recibida_at, consultado_at, nave_nombre")
+        .select("identificador, lat, lng, speed, course, destino, nav_status, eta, posicion_recibida_at, consultado_at, nave_nombre, crudo")
         .eq("tipo", "posicion")
         .order("consultado_at", { ascending: false })
         .limit(600),
@@ -285,6 +313,9 @@ export function NavitrackContent() {
         etaUtc: l.eta,
         positionReceived: l.posicion_recibida_at ?? l.consultado_at,
         name: l.nave_nombre,
+        // Sin columna propia: el puerto de procedencia solo está en el crudo.
+        lastPort: (l.crudo as Record<string, unknown> | null)?.lastPort,
+        atdUtc: (l.crudo as Record<string, unknown> | null)?.atdUtc,
       });
       if (snap) porIdent.set(ident, snap);
     }
@@ -447,33 +478,36 @@ export function NavitrackContent() {
       const ident = identSeleccion;
       const id = (ident?.mmsi ?? "").trim() || (ident?.imo ?? "").trim();
       if (!id) {
-        setEscalas([]);
+        setEscalasDe({ opId: seleccionId, filas: [] });
         setEscalasEdadH(null);
         return;
       }
       if (desdeProveedor) setEscalasCargando(true);
+      // El id se captura ahora, no al volver: si mientras tanto se abrió otro
+      // embarque, esta respuesta queda etiquetada con el suyo y se descarta.
+      const pedidoPara = seleccionId;
       try {
         const qs = desdeProveedor ? "forzar=1" : "solo_cache=1";
         const r = await fetch(`${apiPrefix}/api/navitrack/escalas?id=${encodeURIComponent(id)}&${qs}`, {
           credentials: "same-origin",
         });
         const j = (await r.json()) as { ok: boolean; escalas?: Escala[]; edadH?: number | null };
-        setEscalas(Array.isArray(j.escalas) ? j.escalas : []);
+        setEscalasDe({ opId: pedidoPara, filas: Array.isArray(j.escalas) ? j.escalas : [] });
         setEscalasEdadH(desdeProveedor ? null : (j.edadH ?? null));
       } catch {
-        setEscalas([]);
+        setEscalasDe({ opId: pedidoPara, filas: [] });
       } finally {
         setEscalasCargando(false);
       }
     },
-    [apiPrefix, identSeleccion],
+    [apiPrefix, identSeleccion, seleccionId],
   );
 
   useEffect(() => {
     // El historial de port calls es la consulta más cara del plan y su endpoint
     // exige superadmin: para el cliente la pestaña no existe.
     if (!seleccionId || !identSeleccion || !user || !puedeGastar) {
-      setEscalas([]);
+      setEscalasDe({ opId: seleccionId, filas: [] });
       setEscalasEdadH(null);
       return;
     }
@@ -488,9 +522,11 @@ export function NavitrackContent() {
    */
   const cargarRecaladas = useCallback(async () => {
     if (!seleccionId) {
-      setRecaladas([]);
+      setRecaladasDe({ opId: null, filas: [] });
       return;
     }
+    // Igual que con las escalas: el id se fija al pedir, no al recibir.
+    const pedidoPara = seleccionId;
     /*
      * Quien no decide las lee directo de la base.
      *
@@ -505,11 +541,21 @@ export function NavitrackContent() {
       if (!supabase) return;
       let q = supabase
         .from("navitrack_recaladas")
-        .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas")
+        .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas, recalado_at, zarpe_at")
         .eq("operacion_id", seleccionId);
-      if (modo === "cliente") q = q.in("estado", ["parada_programada", "transbordo"]);
+      /*
+       * Al cliente se le muestra lo que consta, no lo que se está averiguando.
+       *
+       * `anunciada` y `por_verificar` son preguntas internas abiertas —¿cambió
+       * la carga de barco aquí?— y mostrárselas solo genera una llamada. Una
+       * `recalada` es distinta: es un puerto donde el buque efectivamente paró,
+       * y es justamente lo que el cliente quiere saber de su embarque.
+       */
+      if (modo === "cliente") {
+        q = q.in("estado", ["parada_programada", "transbordo", "recalada"]);
+      }
       const { data } = await q.order("anunciado_at");
-      setRecaladas((data ?? []) as Recalada[]);
+      setRecaladasDe({ opId: pedidoPara, filas: (data ?? []) as Recalada[] });
       setCatalogoNaves([]);
       return;
     }
@@ -517,11 +563,20 @@ export function NavitrackContent() {
       const r = await fetch(`${apiPrefix}/api/navitrack/recalada?op=${encodeURIComponent(seleccionId)}`, {
         credentials: "same-origin",
       });
-      const j = (await r.json()) as { ok: boolean; recaladas?: Recalada[]; naves?: NaveCatalogo[] };
-      setRecaladas(j.ok && Array.isArray(j.recaladas) ? j.recaladas : []);
+      const j = (await r.json()) as {
+        ok: boolean;
+        recaladas?: Recalada[];
+        naves?: NaveCatalogo[];
+        puertos?: PuertoCatalogo[];
+      };
+      setRecaladasDe({
+        opId: pedidoPara,
+        filas: j.ok && Array.isArray(j.recaladas) ? j.recaladas : [],
+      });
       if (j.ok && Array.isArray(j.naves)) setCatalogoNaves(j.naves);
+      if (j.ok && Array.isArray(j.puertos)) setCatalogoPuertos(j.puertos);
     } catch {
-      setRecaladas([]);
+      setRecaladasDe({ opId: pedidoPara, filas: [] });
     }
   }, [apiPrefix, seleccionId, puedeDecidir, modo, supabase]);
 
@@ -647,6 +702,51 @@ export function NavitrackContent() {
     });
   }, [filas, busqueda, filtro, vista]);
 
+  /*
+   * Lo guardado solo cuenta si es de este embarque. Si es del anterior —porque
+   * su consulta todavía no vuelve— la pantalla ve una lista vacía, que es la
+   * verdad disponible en ese instante, y no el viaje de otra carga.
+   */
+  const recaladas = useMemo(
+    () => (recaladasDe.opId === seleccionId ? recaladasDe.filas : []),
+    [recaladasDe, seleccionId],
+  );
+  const escalas = useMemo(
+    () => (escalasDe.opId === seleccionId ? escalasDe.filas : []),
+    [escalasDe, seleccionId],
+  );
+
+  /*
+   * Una fila por puerto, aunque el buque lo haya nombrado de dos maneras.
+   *
+   * El registro ya evita anotarlo dos veces, pero lo anotado antes de esa
+   * corrección sigue en la base: sin colapsarlo acá, el historial muestra el
+   * mismo Rotterdam dos veces y el mapa clava dos marcadores en el mismo punto.
+   * Gana la fila vista más recientemente, que es la que lleva el rótulo actual
+   * del buque y la ETA más nueva; si una ya fue decidida, gana esa, porque
+   * tiene detrás el criterio de una persona.
+   */
+  const recaladasUnicas = useMemo(() => {
+    const salida: Recalada[] = [];
+    for (const r of recaladas) {
+      const i = salida.findIndex((x) => mismoPuerto(x.puerto, r.puerto));
+      if (i < 0) {
+        salida.push(r);
+        continue;
+      }
+      const previa = salida[i];
+      const decidida = (x: Recalada) => Boolean(x.decidido_at);
+      if (decidida(previa) && !decidida(r)) continue;
+      if (!decidida(previa) && decidida(r)) {
+        salida[i] = r;
+        continue;
+      }
+      const cuando = (x: Recalada) => new Date(x.visto_at ?? x.anunciado_at ?? 0).getTime();
+      if (cuando(r) >= cuando(previa)) salida[i] = r;
+    }
+    return salida;
+  }, [recaladas]);
+
   /** El embarque abierto sí usa el AIS: es el único que lo pidió. */
   const detalle = useMemo(() => {
     if (!seleccion) return null;
@@ -655,26 +755,96 @@ export function NavitrackContent() {
      * Puertos anunciados que aún no se alcanzan, en el orden en que el buque
      * los fue declarando. Son los que curvan la ruta estimada.
      */
-    const previstos = recaladas
-      .filter((r) => r.estado === "anunciada" || r.estado === "por_verificar")
+    /*
+     * Puertos donde el buque todavía no llega. Los dibuja el mapa y doblan la
+     * ruta pendiente.
+     *
+     * Lo que manda es `recalado_at` —si ya pasó o no—, no el estado. El estado
+     * responde otra pregunta: qué se decidió sobre **la carga**. Marcar el
+     * viaje como directo mueve los puertos a `parada_programada`, y al filtrar
+     * por estado desaparecían del mapa: la ficha decía "puerto anunciado:
+     * Rotterdam" mientras el mapa no mostraba al buque yendo hacia allá.
+     *
+     * Directo significa que la carga no cambia de barco, no que el barco no
+     * pare. La parada programada es, de hecho, la más segura de todas: alguien
+     * la confirmó.
+     *
+     * Se excluye `transbordo` porque ese puerto ya entra por los tramos, con su
+     * nave y su fecha, y dibujarlo dos veces lo contaría como dos escalas.
+     */
+    const previstos = recaladasUnicas
+      .filter((r) => !r.recalado_at && r.estado !== "transbordo")
       .map((r) => r.puerto);
 
-    const journey = buildJourney(
+    /*
+     * Los puertos donde el buque ya paró, en orden de recorrido.
+     *
+     * Se separan de los previstos por `recalado_at`, no por estado: un puerto
+     * puede estar recalado y con el transbordo todavía sin verificar, y
+     * dibujarlo por delante del buque sería decir que aún no llegó.
+     */
+    const recalados = recaladasUnicas
+      .filter((r) => Boolean(r.recalado_at))
+      .sort((a, b) => (a.recalado_at ?? "").localeCompare(b.recalado_at ?? ""))
+      .map((r) => r.puerto);
+
+    const calculado = buildJourney(
       seleccion,
       ais,
       ahora,
       tramos.get(seleccion.id) ?? [],
       previstos,
+      recalados,
     );
-    const estado = resolverEstado(seleccion, ais, journey, decision, ahora, recaladas, modo);
+
+    /*
+     * Mientras la primera lectura AIS está en vuelo, la pantalla no afirma una
+     * posición.
+     *
+     * Sin AIS todavía, la posición sale del respaldo: la coordenada cargada a
+     * mano o la estimada. El A00042 tenía una cargada el 11-SEP en Amberes
+     * —fuera de la ruta a Génova— y al abrirlo mostraba "105 % del trayecto",
+     * "0 MN restantes" y el buque donde no estaba, hasta que llegaba el AIS y
+     * todo se corregía solo. El respaldo existe para cuando el AIS **no está**,
+     * no para rellenar el segundo que tarda en llegar.
+     *
+     * Se apagan **las dos líneas**, no solo la recorrida: el tramo pendiente
+     * también se calcula desde la posición, así que dejarlo dibujaba una
+     * punteada saliendo de un buque que ya no se muestra. Quedaban trozos de
+     * ruta flotando hasta que llegaba el AIS.
+     *
+     * Los puertos, las fechas y el resto de la ficha se quedan: no dependen del
+     * AIS y no hay razón para dejar el mapa en blanco.
+     */
+    const journey =
+      aisCargando && !ais
+        ? {
+            ...calculado,
+            position: null,
+            progress: null,
+            traveled: [],
+            remaining: [],
+            remainingNm: null,
+          }
+        : calculado;
+
+    const estado = resolverEstado(seleccion, ais, journey, decision, ahora, recaladasUnicas, modo);
     return {
       journey,
       estado,
       decision,
       alertas: construirAlertas(seleccion, ais, journey, estado, modo),
-      eventos: construirTimeline(seleccion, ais, estado, decision, ahora, tramos.get(seleccion.id) ?? []),
+      eventos: construirTimeline(
+        seleccion,
+        ais,
+        estado,
+        decision,
+        ahora,
+        tramos.get(seleccion.id) ?? [],
+        recaladasUnicas,
+      ),
     };
-  }, [seleccion, ais, decisiones, ahora, tramos, recaladas, modo]);
+  }, [seleccion, ais, aisCargando, decisiones, ahora, tramos, recaladasUnicas, modo]);
 
   /*
    * Enlace profundo: `/navitrack?op=<referencia>`.
@@ -929,8 +1099,37 @@ export function NavitrackContent() {
               soloLectura={soloLectura}
               puedeGastar={puedeGastar}
               tramos={tramos.get(seleccion.id) ?? []}
-              recaladas={recaladas}
-              onVerificarRecalada={soloLectura ? undefined : (r: Recalada) => setRecaladaAbierta(r)}
+              recaladas={recaladasUnicas}
+              onVerificarRecalada={
+                soloLectura
+                  ? undefined
+                  : (r: Recalada) => {
+                      setRecaladaManual(false);
+                      setRecaladaAbierta(r);
+                    }
+              }
+              /*
+               * Alta a mano. Solo para quien decide: crea tramos y puede
+               * encender el seguimiento de otra nave, que es gasto.
+               */
+              onAgregarRecalada={
+                soloLectura || !puedeDecidir || !seleccion
+                  ? undefined
+                  : () => {
+                      setRecaladaManual(true);
+                      setRecaladaAbierta({
+                        id: 0,
+                        puerto: "",
+                        nave: detalle?.journey.naveActual ?? seleccion.nave ?? null,
+                        anunciado_at: new Date().toISOString(),
+                        eta_anunciada: null,
+                        visto_at: new Date().toISOString(),
+                        estado: "por_verificar",
+                        decidido_at: null,
+                        notas: null,
+                      });
+                    }
+              }
               onCargarCoords={soloLectura ? undefined : () => setCoordsAbiertas(true)}
               avisoRecalada={avisoRecalada}
               op={seleccion}
@@ -1023,14 +1222,20 @@ export function NavitrackContent() {
         <NavitrackRecalada
           recalada={recaladaAbierta}
           naves={catalogoNaves}
+          puertos={catalogoPuertos}
           operacionId={seleccionId ?? ""}
           naveActual={detalle?.journey.naveActual ?? seleccion?.nave ?? null}
           puedeGastar={puedeGastar}
+          manual={recaladaManual}
           tr={tr}
           apiPrefix={apiPrefix}
-          onCerrar={() => setRecaladaAbierta(null)}
+          onCerrar={() => {
+            setRecaladaAbierta(null);
+            setRecaladaManual(false);
+          }}
           onGuardado={(mensaje) => {
             setRecaladaAbierta(null);
+            setRecaladaManual(false);
             setAvisoRecalada(mensaje);
             // El cambio toca tramos, naves y el propio historial: se recarga todo.
             void cargarRecaladas();

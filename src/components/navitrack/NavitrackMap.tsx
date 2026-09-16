@@ -8,6 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { MapWebGLErrorBoundary } from "@/components/itinerario/MapWebGLErrorBoundary";
 import type { NeonTheme } from "@/lib/ui/neonTheme";
 import { isValidCoord, type Journey, type LngLat } from "./navitrack-model";
+import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 
 const MAP_STYLE_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const MAP_STYLE_LIGHT = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
@@ -102,7 +103,8 @@ export type NavitrackMapLabels = {
 type NavitrackMapProps = {
   journey: Journey;
   vesselName: string;
-  /** Velocidad en nudos, para la etiqueta del buque. */
+  /** Velocidad en nudos tal como la entrega el AIS; la etiqueta la convierte
+   * a la unidad que el usuario haya elegido en la ficha. */
   vesselSpeed: number | null;
   theme: NeonTheme;
   labels: NavitrackMapLabels;
@@ -117,6 +119,11 @@ type MapaLibre = {
 export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }: NavitrackMapProps) {
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // La unidad la elige el usuario en la ficha del embarque; el mapa la sigue
+  // para que las dos vistas del mismo buque no muestren cifras distintas.
+  const { unidad } = useUnidadVelocidad();
+  const velocidadTexto = formatearVelocidad(vesselSpeed, unidad);
 
   /**
    * Buque enfocado: el usuario hizo clic para verlo de cerca.
@@ -149,8 +156,13 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
 
   const { origen, destino, position, traveled, remaining, escalas } = journey;
 
-  /** Puertos de conexión de un viaje con transbordo. Vacío si es directo. */
-  const conexiones = (escalas ?? []).filter((e) => e.tipo === "conexion");
+  /*
+   * Puertos intermedios ya visitados: conexiones de un transbordo y recaladas
+   * declaradas por el AIS. Se dibujan igual —un punto en el camino— y el chip
+   * los distingue solo, porque la conexión lleva el nombre de la nave que zarpa
+   * desde ahí y la recalada no cambia de nave.
+   */
+  const conexiones = (escalas ?? []).filter((e) => e.tipo === "conexion" || e.tipo === "recalada");
   /** Puertos que el buque anunció y aún no alcanza. */
   const previstos = (escalas ?? []).filter((e) => e.tipo === "prevista");
 
@@ -495,7 +507,13 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
                     <p className="truncate font-bold">{vesselName || labels.posicionEstimada}</p>
                     {esReal && (vesselSpeed != null || position.course != null) && (
                       <p className="mt-0.5 flex items-center gap-2 text-[10px] font-medium opacity-80">
-                        {vesselSpeed != null && <span>{vesselSpeed.toFixed(1)} kn</span>}
+                        {/*
+                          * Acá la velocidad se muestra pero no se alterna: el clic
+                          * de esta ficha ya centra el mapa en el buque, y un botón
+                          * dentro de otro botón deja al usuario sin saber qué hará.
+                          * La unidad se cambia en la tarjeta o en la pestaña Buque.
+                          */}
+                        {velocidadTexto != null && <span>{velocidadTexto}</span>}
                         {position.course != null && <span>{Math.round(position.course)}°</span>}
                       </p>
                     )}

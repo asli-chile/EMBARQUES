@@ -57,17 +57,52 @@ export type AisSnapshot = {
   eta: Date | null;
   navStatus: string | null;
   lastPort: string | null;
+  /**
+   * `atdUtc` del proveedor. **No es el zarpe de `lastPort`.**
+   *
+   * Parecía serlo y no lo es: en la serie guardada, 6 de 7 naves cambiaron de
+   * `lastPort` más veces de las que cambió su `atdUtc`. El CMA CGM CARL ANTOINE
+   * declaró Posorja y después Caucedo con el mismo `atdUtc` del 06-SEP: dos
+   * puertos, una sola fecha, así que a lo más una de las dos parejas es cierta.
+   *
+   * Se conserva porque viene en la lectura ya pagada y puede servir cuando se
+   * entienda a qué se refiere, pero **no se muestra como fecha de la escala**:
+   * una fecha inventada es peor que ninguna.
+   */
+  departedAt: Date | null;
   vesselName: string | null;
 };
 
 /* --------------------------------- Geodesia -------------------------------- */
 
 const R_EARTH_KM = 6371;
+/**
+ * Dos coordenadas más cerca que esto son el mismo puerto.
+ *
+ * El catálogo apunta al centro del recinto y el AIS a la posición del buque
+ * dentro de él; además "Rotterdam" y "Rotterdam anch" son el mismo lugar con
+ * dos nombres. 30 km cubre esa holgura sin tragarse puertos vecinos reales.
+ */
+const MISMO_PUERTO_KM = 30;
 const KM_TO_NM = 0.539957;
 const toRad = (d: number) => (d * Math.PI) / 180;
 const toDeg = (r: number) => (r * 180) / Math.PI;
 
 export const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+
+/**
+ * Porcentaje de avance, acotado a 0-100.
+ *
+ * Ninguna de las fuentes viene acotada: `routeFraction` pasa de 1 cuando la
+ * posición queda más allá del destino. Sin acotar, un embarque con una
+ * coordenada cargada a mano en Amberes y destino Génova mostraba **105 % del
+ * trayecto** y 0 MN restantes.
+ *
+ * Un porcentaje sobre 100 no es un dato más fino: es una cuenta que se pasó, y
+ * en pantalla se lee como un error del sistema justo donde el cliente busca
+ * certeza.
+ */
+export const pctDe = (fraccion: number) => Math.round(clamp01(fraccion) * 100);
 
 export function isValidCoord(p: LngLat | null | undefined): p is LngLat {
   if (!p) return false;
@@ -205,8 +240,26 @@ function curvaMaritima(a: LngLat, b: LngLat, steps = 96): LngLat[] {
   const haciaTierraY = masCerca.lat - medio.lat;
   const signo = perpX * haciaTierraX + perpY * haciaTierraY > 0 ? -1 : 1;
 
-  // Proporcional al tramo y con tope: una comba enorme sería tan falsa como la recta.
-  const amplitud = Math.min(14, (largoKm / 111) * 0.16);
+  /*
+   * La comba se mide por la tierra que hay que esquivar, no por el largo.
+   *
+   * Antes crecía solo con la distancia —`(largoKm / 111) * 0.16`, tope 14°—, así
+   * que un salto atlántico de 7.000 km se combaba 10 grados: más de mil
+   * kilómetros de desvío sobre mar abierto, donde no hay nada que esquivar. El
+   * arco se veía tan inventado como la recta que vino a arreglar.
+   *
+   * Ahora se atenúa según lo lejos que quede el tramo del continente más
+   * cercano. Un tramo pegado a la costa —Valparaíso a Cristóbal, que si no
+   * cruza Perú y Colombia por tierra— conserva casi toda su comba; uno que
+   * cruza el océano se endereza.
+   *
+   * `mejor` es la distancia al continente más cercano, ya calculada arriba para
+   * decidir el lado. Los centroides son gruesos a propósito: esto gradúa un
+   * adorno, no mide nada.
+   */
+  const LEJOS_DE_TIERRA_KM = 5000;
+  const cercania = clamp01((LEJOS_DE_TIERRA_KM - mejor) / LEJOS_DE_TIERRA_KM);
+  const amplitud = Math.min(8, (largoKm / 111) * 0.16 * cercania);
 
   return base.map((p, i) => {
     const t = i / (base.length - 1);
@@ -365,9 +418,48 @@ export function parseAisSnapshot(raw: Record<string, unknown> | null): AisSnapsh
     ),
     eta: parseInstant(pick(raw, ["etaUtc", "eta", "eta_utc", "eta_predicted"])),
     navStatus: str(pick(raw, ["navigationalStatus", "nav_status", "navstat", "status"])),
-    lastPort: str(pick(raw, ["last_port", "lastport", "departure_port"])),
+    // Data Docked lo escribe en camelCase (`lastPort`); las otras formas quedan
+    // por si cambia de proveedor. Buscar solo las snake_case dejaba el último
+    // puerto en null aunque viniera en la respuesta.
+    lastPort: str(pick(raw, ["lastPort", "last_port", "lastport", "departure_port"])),
+    departedAt: parseInstant(pick(raw, ["atdUtc", "atd", "atd_utc", "departed"])),
     vesselName: str(pick(raw, ["vessel_name", "name", "shipname"])),
   };
+}
+
+/**
+ * Si dos nombres de puerto hablan del mismo lugar.
+ *
+ * El AIS reescribe el destino a medida que el buque se acerca: el mismo
+ * embarque declaró "Rotterdam Netherlands" y, dos días después, "Rotterdam anch
+ * Netherlands" (anch = fondeadero). Comparando el texto tal cual, eso son dos
+ * puertos: se anotaban dos recaladas, se pedían dos verificaciones y el mapa
+ * dibujaba dos marcadores encima del otro.
+ *
+ * Primero el texto normalizado y después la coordenada del catálogo, que es la
+ * misma resolución que usa el mapa. Dos nombres que caen en el mismo punto son
+ * el mismo puerto; si el catálogo no conoce alguno, manda el texto.
+ */
+export function mismoPuerto(a: string | null | undefined, b: string | null | undefined): boolean {
+  const na = normalizarPuertoTexto(a);
+  const nb = normalizarPuertoTexto(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+
+  const ca = getPortCoordinates(na);
+  const cb = getPortCoordinates(nb);
+  if (!ca || !cb) return false;
+  return haversineKm({ lng: ca[0], lat: ca[1] }, { lng: cb[0], lat: cb[1] }) < MISMO_PUERTO_KM;
+}
+
+function normalizarPuertoTexto(v: string | null | undefined): string {
+  return String(v ?? "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^A-Z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /* --------------------------------- Posición -------------------------------- */
@@ -391,6 +483,49 @@ export type TrackPosition = {
  * modelo lo necesita para no contar como avance el viaje que el buque está
  * haciendo con otra carga.
  */
+export const DIAS_ANTES_ZARPE = 2;
+
+/**
+ * Si este embarque ya entra en la ventana de seguimiento.
+ *
+ * Antes del zarpe, el buque asignado está haciendo **otro** viaje: viene hacia
+ * Chile a buscar la carga. Su AIS describe ese viaje, no este. El A00052
+ * —San Antonio → Leixões, zarpe el 25 de septiembre— disparó un aviso de
+ * "destino distinto al comprometido" porque el buque declaraba Posorja: cierto
+ * del barco, falso del embarque. Y peor que el correo: se anotaron Buenaventura
+ * y Posorja como recaladas del embarque, o sea puertos que la carga nunca
+ * tocó, porque todavía estaba en tierra.
+ *
+ * La pantalla ya lo resolvía con `yaZarpo()`; el chequeo diario no miraba el
+ * ETD y por eso escribía y avisaba igual.
+ *
+ * Se abre dos días antes y no el día exacto porque el zarpe se corre: con la
+ * ventana pegada al ETD, un adelanto de un día deja la carga sin seguir
+ * justo cuando empieza a moverse.
+ */
+export function enVentanaDeSeguimiento(
+  op: { etd: string | null; estado_operacion: string | null },
+  now = new Date(),
+  diasAntes = DIAS_ANTES_ZARPE,
+): boolean {
+  if (yaZarpo(op as NavitrackOperacion, now)) return true;
+  const etd = parseOpDate(op.etd);
+  if (!etd) return false; // Sin fecha de zarpe no hay ventana que abrir.
+
+  /*
+   * La ventana abre al **empezar** el día, no a la hora del ETD.
+   *
+   * `etd` es columna `date` y `parseOpDate` la sitúa a mediodía para que no se
+   * corra de día por zona horaria. Restarle dos días tal cual dejaba la ventana
+   * abriendo a las 12:00, y el cron corre a las 06:00: el día que tocaba entrar,
+   * el embarque todavía quedaba fuera y recién entraba al día siguiente.
+   */
+  const apertura = new Date(etd);
+  apertura.setDate(apertura.getDate() - diasAntes);
+  apertura.setHours(0, 0, 0, 0);
+  return now.getTime() >= apertura.getTime();
+}
+
 export function yaZarpo(op: NavitrackOperacion, now = new Date()): boolean {
   const codigo = normalizarEstado(op.estado_operacion);
   const meta = codigo ? ESTADO_META[codigo] : null;
@@ -477,8 +612,12 @@ export type Escala = {
   /**
    * `prevista` es un puerto que el buque anunció pero donde todavía no llega.
    * Se dibuja distinto: es lo que dice la nave, no lo que ya ocurrió.
+   *
+   * `recalada` es un puerto donde el buque ya paró, según el AIS. No es una
+   * `conexion`: ahí la carga cambia de nave, acá sigue en la misma. Mezclarlos
+   * haría aparecer un transbordo que no ocurrió.
    */
-  tipo: "origen" | "conexion" | "destino" | "prevista";
+  tipo: "origen" | "conexion" | "destino" | "prevista" | "recalada";
   /** Nave que sale desde aquí. Null en el destino final. */
   nave: string | null;
   /** Ya pasó por aquí. */
@@ -657,7 +796,7 @@ function viajePorTramos(
     position: posicion,
     progress: totalKm > 0
       ? {
-          pct: op.arribo_confirmado ? 100 : Math.round((recorridoKm / totalKm) * 100),
+          pct: op.arribo_confirmado ? 100 : pctDe(recorridoKm / totalKm),
           basis: posicion && posicion.source !== "ESTIMADA" ? "posicion" : "tiempo",
         }
       : null,
@@ -682,6 +821,15 @@ export function buildJourney(
    * atravesaba Bolivia rumbo a Hamburgo.
    */
   puertosPrevistos: string[] = [],
+  /**
+   * Puertos donde consta que el buque paró, en orden de recorrido.
+   *
+   * Son el espejo de `puertosPrevistos`: lo anunciado dobla la línea de lo que
+   * falta, lo recalado dobla la de lo recorrido. Vienen de la base porque el
+   * AIS solo informa la última parada: sin persistirlas, el recorrido se
+   * borraría solo cada vez que el buque toca un puerto nuevo.
+   */
+  puertosRecalados: string[] = [],
 ): Journey {
   /*
    * Con tramos cargados, el viaje son ellos. Sin tramos es directo y vale lo
@@ -719,6 +867,45 @@ export function buildJourney(
   let totalNm: number | null = null;
   let remainingNm: number | null = null;
 
+  /*
+   * Por dónde pasó el buque.
+   *
+   * Las recaladas guardadas, más la última que informa el AIS por si todavía no
+   * se anotó. Sin esto la pantalla decía "Último puerto: Caucedo" mientras el
+   * mapa dibujaba una recta San Antonio → Rotterdam que no se acerca al Caribe:
+   * los dos datos salían de la misma lectura y se contradecían.
+   *
+   * Cada una tiene que resolver coordenada, no ser el origen ni el destino
+   * —que ya tienen su propio punto— y quedar **detrás** del buque: un puerto
+   * por delante no es por donde pasó, es por donde va a pasar. Un buque
+   * todavía en el muelle de carga declara ese mismo puerto como `lastPort`, y
+   * sin el filtro del origen duplicaría el punto de partida.
+   */
+  const recaladas = ((): { nombre: string; coord: LngLat }[] => {
+    if (!zarpado || !isValidCoord(destino) || !isValidCoord(position)) return [];
+    const nombres = [...puertosRecalados];
+    const ultimo = ais?.lastPort?.trim();
+    if (ultimo && !nombres.some((n) => mismoPuerto(n, ultimo))) nombres.push(ultimo);
+
+    const salida: { nombre: string; coord: LngLat }[] = [];
+    for (const nombre of nombres) {
+      const c = getPortCoordinates(nombre);
+      if (!c) continue;
+      const coord = { lng: c[0], lat: c[1] };
+      if (isValidCoord(origen) && haversineKm(coord, origen) < MISMO_PUERTO_KM) continue;
+      if (haversineKm(coord, destino) < MISMO_PUERTO_KM) continue;
+      if (haversineKm(coord, destino) <= haversineKm(position, destino)) continue;
+      if (salida.some((x) => haversineKm(x.coord, coord) < MISMO_PUERTO_KM)) continue;
+      salida.push({ nombre, coord });
+    }
+    /*
+     * Se ordenan por cercanía al destino, de más lejos a más cerca, y no por la
+     * fecha en que se anotaron: la línea tiene que avanzar hacia el destino.
+     * Un par de anuncios llegados fuera de orden dibujarían un zigzag.
+     */
+    return salida.sort((a, b) => haversineKm(b.coord, destino) - haversineKm(a.coord, destino));
+  })();
+
   if (isValidCoord(origen) && isValidCoord(destino)) {
     const full = curvaMaritima(origen, destino);
     totalNm = haversineKm(origen, destino) * KM_TO_NM;
@@ -737,12 +924,12 @@ export function buildJourney(
       progress = { pct: 0, basis: "tiempo" };
     } else if (position && position.source !== "ESTIMADA") {
       f = routeFraction(origen, destino, position);
-      progress = { pct: Math.round(f * 100), basis: "posicion" };
+      progress = { pct: pctDe(f), basis: "posicion" };
     } else {
       const tf = timeFraction(op, now);
       if (tf != null) {
         f = tf;
-        progress = { pct: Math.round(tf * 100), basis: "tiempo" };
+        progress = { pct: pctDe(tf), basis: "tiempo" };
       }
     }
 
@@ -764,7 +951,14 @@ export function buildJourney(
        * es coherente: una sola línea continua que pasa por donde está el buque.
        */
       const p = { lng: position.lng, lat: position.lat };
-      traveled = curvaMaritima(origen, p);
+      if (recaladas.length > 0) {
+        const puntos = [origen, ...recaladas.map((r) => r.coord), p];
+        traveled = unirTramos(
+          puntos.slice(0, -1).map((desde, i) => curvaMaritima(desde, puntos[i + 1])),
+        );
+      } else {
+        traveled = curvaMaritima(origen, p);
+      }
 
       /*
        * Lo que falta pasa por los puertos anunciados.
@@ -822,6 +1016,12 @@ export function buildJourney(
 
   const escalas: Escala[] = [];
   if (origen) escalas.push({ nombre: origenNombre, coord: origen, tipo: "origen", nave: op.nave, cumplida: true });
+
+  // La recalada va después del origen y antes de lo anunciado: es lo último que
+  // ya ocurrió. `nave` queda en null porque la carga no cambió de buque ahí.
+  for (const r of recaladas) {
+    escalas.push({ ...r, tipo: "recalada", nave: null, cumplida: true });
+  }
 
   // Los puertos anunciados van al mapa como previstos: forman parte del
   // recorrido que el buque declara, pero todavía no ocurrieron.

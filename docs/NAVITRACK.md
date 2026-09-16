@@ -116,10 +116,14 @@ De `naves`: `imo` y `mmsi`, que es lo que permite resolver el AIS **solo**.
 
 ### No existe (y por qué importa)
 
-1. **Port calls intermedios.** El ERP no guarda escalas. Por eso el timeline
-   muestra stacking → corte → zarpe → tránsito → arribo, y **no** "Singapur ✓,
-   Panamá ✓". El mapa tampoco dibuja puertos de conexión. Cuando aparezca esa
-   fuente, `construirTimeline()` ya está hecho para recibir más eventos.
+1. **La hora de cada escala.** Desde el 15-09-2026 sí se guardan los port calls
+   intermedios (ver "El recorrido real" más abajo), pero solo el **hecho**: que
+   el buque paró ahí. Cuándo atracó y cuándo zarpó no se saben, así que la
+   escala se muestra **sin fecha**. El `atdUtc` del proveedor parece el zarpe de
+   ese puerto y no lo es: en la serie guardada, 6 de 7 naves cambiaron de
+   `lastPort` más veces de las que cambió su `atdUtc`, y el CMA CGM CARL ANTOINE
+   declaró Posorja y luego Caucedo con el mismo 06-SEP. Se guarda en
+   `zarpe_at` por si algún día se entiende, pero **no se muestra**.
 2. **Hora en el ETA.** `operaciones.eta` es columna `date`. La ETA del embarque
    se muestra solo con día; la del AIS, que sí trae hora, se muestra completa.
    **No agregar una hora inventada:** haría que el módulo se lea preciso justo
@@ -145,6 +149,57 @@ AIS real  →  coordenada cargada a mano  →  estimación sobre la ruta
 La estimación interpola el círculo máximo POL→POD según el avance del
 calendario. **Siempre se declara su procedencia en pantalla** (`● AIS real` /
 `○ Posición estimada`), con tono neutro: transparencia sin generar desconfianza.
+
+### El recorrido real del buque
+
+El AIS informa **dos** puertos en cada lectura y durante un tiempo se usó solo
+uno: `destination`, el que el buque anuncia. `lastPort`, el que acaba de dejar,
+se descartaba dentro del JSON crudo. La pantalla quedaba con un historial que
+solo hablaba del futuro: "Rotterdam, por verificar" y, del Caribe por donde ya
+había pasado el embarque, nada.
+
+Son dos ejes y conviene no mezclarlos:
+
+| | Qué dice | Dónde vive |
+|---|---|---|
+| `estado` | Qué se decidió sobre la **carga**: anunciada, por_verificar, parada_programada, transbordo, recalada | Decisión humana (o la falta de ella) |
+| `recalado_at` | Qué hizo el **buque**: consta que paró aquí | Hecho del AIS |
+
+Un puerto puede estar recalado y con el transbordo aún sin verificar. Por eso
+`registrarRecalada()` **no** cierra una verificación pendiente: que el buque
+haya parado no dice nada sobre si la carga se bajó ahí.
+
+Tres reglas que no conviene tocar sin entender el costo:
+
+- **Se anota siempre, también en un viaje marcado directo.** Directo significa
+  "no preguntes", no "no lo cuentes": el cliente igual necesita saber por dónde
+  pasó su carga. Marcar un viaje directo mueve `anunciada`/`por_verificar` a
+  `parada_programada` y **no toca** las filas `recalada`.
+- **El cliente las ve.** Es la única excepción a que solo vea lo decidido: una
+  recalada es un hecho, no una averiguación interna en curso.
+- **Hay que persistirlas.** El AIS solo informa la última parada: sin guardarla,
+  cada puerto desaparece del historial en cuanto el buque toca el siguiente. Lo
+  hace el chequeo diario, con la lectura ya pagada, sin créditos extra.
+
+Para reconstruir lo anterior a esto desde las lecturas ya guardadas:
+
+```bash
+npm run navitrack:recaladas             # simulacro, no escribe
+npm run navitrack:recaladas -- --aplicar
+```
+
+Está en TypeScript para importar `mismoPuerto()` del propio ERP. La primera
+versión era `.mjs` con su propia regla de comparación y anotó "Buenaventura" y
+"Buenaventura anch" como dos puertos: exactamente el bug que venía a arreglar.
+
+### Un solo criterio de "mismo puerto"
+
+`mismoPuerto()` (en `navitrack-model.ts`) es la única regla: texto normalizado
+y, si eso no basta, la coordenada del catálogo, con 30 km de holgura. El AIS
+reescribe el destino a medida que el buque se acerca —"Rotterdam Netherlands"
+pasó a "Rotterdam anch Netherlands"— y comparando texto exacto eso son dos
+puertos: se anotaban dos recaladas, se pedían dos verificaciones y el mapa
+clavaba dos marcadores en el mismo punto.
 
 ### El proveedor y el gasto
 

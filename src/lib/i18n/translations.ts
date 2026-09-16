@@ -2763,6 +2763,11 @@ export const translations = {
       colReserva: "Reserva",
       recaladaTitulo: "Verificar recalada",
       recaladaSubtitulo: "{{nave}} anunció que recalaría en {{puerto}}.",
+      recaladaTituloManual: "Agregar recalada o transbordo",
+      recaladaSubtituloManual:
+        "Carga acá lo que ya sabes de {{nave}}, aunque el buque todavía no lo haya anunciado.",
+      recaladaPreguntaManual:
+        "¿Qué va a pasar con la carga en ese puerto?",
       recaladaPuerto: "Puerto anunciado",
       recaladaLlegadaAnunciada: "Llegada anunciada",
       recaladaPregunta:
@@ -2779,10 +2784,24 @@ export const translations = {
       recaladaTransbordoTexto:
         "La carga cambió de nave. Se registra el tramo nuevo y el seguimiento pasa a ese buque.",
       recaladaNaveNueva: "Nave que recibe la carga",
+      recaladaAnunciadoTitulo: "Transbordo anunciado",
+      recaladaAnunciadoTexto:
+        "La naviera ya informó el cambio de nave, pero todavía no ocurre. Se registra el tramo y el seguimiento pasa al buque nuevo el día de la conexión, no hoy.",
+      recaladaAvisoProgramado:
+        "La carga sigue en {{anterior}} hasta {{fecha}}. Ese día el seguimiento pasa solo a {{nueva}}; hoy no se consulta ni se gasta nada.",
+      recaladaGuardadaAnunciado:
+        "Transbordo anunciado: {{anterior}} → {{nueva}}. El seguimiento cambiará el día de la conexión.",
       recaladaNavePlaceholder: "Escribe o elige del catálogo",
       recaladaSinImoCorto: "sin IMO",
       recaladaViaje: "Viaje",
       recaladaNuevaEta: "Nueva llegada estimada",
+      recaladaNuevoEtd: "Zarpe del tramo",
+      recaladaAgregar: "Agregar",
+      recaladaVacio:
+        "Todavía no hay puertos registrados para este embarque. Si ya sabes de una escala o un transbordo, agrégalo con el botón de arriba.",
+      recaladaPuertoPlaceholder: "Ej. Cartagena Colombia",
+      recaladaPuertoSinUbicacion:
+        "El catálogo no ubica este puerto: se guarda igual, pero el mapa no podrá dibujarlo.",
       recaladaNotas: "Notas (opcional)",
       recaladaAvisoCosto:
         "{{nueva}} no está en el catálogo con identificador. Guardar gastará 1 consulta para buscar su IMO y MMSI.",
@@ -2805,9 +2824,11 @@ export const translations = {
       recaladaVerificar: "Verificar",
       mapaAcercarBuque: "Acercar al buque",
       mapaVerRuta: "Ver la ruta completa",
-      historialRecaladas: "Puertos anunciados",
+      historialRecaladas: "Puertos del recorrido",
       historialParada: "Parada programada",
+      historialRecalada: "Recaló aquí",
       historialTransbordo: "Transbordo",
+      historialTransbordoAnunciado: "Transbordo anunciado",
       historialAnunciada: "Anunciada",
       historialPorVerificar: "Por verificar",
       vistaTodos: "Todos",
@@ -2866,11 +2887,14 @@ export const translations = {
       evCorte: "Corte documental",
       evFinStacking: "Fin de stacking",
       evZarpe: "Zarpe",
+      evRecalada: "Recalada",
+      evAnunciado: "Puerto anunciado",
       evTransito: "En tránsito",
       evTransbordo: "Transbordo",
       evArribo: "Arribo",
       certezaReal: "Real",
       certezaConfirmado: "Confirmado",
+      certezaAnunciado: "Anunciado",
       certezaEstimado: "Estimado",
 
       buqueTitle: "Buque",
@@ -2879,6 +2903,7 @@ export const translations = {
       buqueViajeCerrado:
         "El seguimiento terminó con el arribo. El buque ya continuó con otro viaje, así que su posición actual no corresponde a este embarque.",
       velocidad: "Velocidad",
+      velocidadCambiarUnidad: "Clic para cambiar entre nudos y km/h",
       rumbo: "Rumbo",
       destinoAis: "Destino declarado",
       ultimoPuerto: "Último puerto",
@@ -5910,6 +5935,10 @@ export const translations = {
       colReserva: "Booking",
       recaladaTitulo: "Verify port call",
       recaladaSubtitulo: "{{nave}} announced it would call at {{puerto}}.",
+      recaladaTituloManual: "Add port call or transhipment",
+      recaladaSubtituloManual:
+        "Record what you already know about {{nave}}, even if the vessel has not announced it yet.",
+      recaladaPreguntaManual: "What will happen to the cargo at that port?",
       recaladaPuerto: "Announced port",
       recaladaLlegadaAnunciada: "Announced arrival",
       recaladaPregunta:
@@ -5926,10 +5955,24 @@ export const translations = {
       recaladaTransbordoTexto:
         "The cargo changed vessel. The new leg is recorded and tracking moves to that ship.",
       recaladaNaveNueva: "Vessel receiving the cargo",
+      recaladaAnunciadoTitulo: "Announced transhipment",
+      recaladaAnunciadoTexto:
+        "The carrier has already reported the vessel change, but it has not happened yet. The leg is recorded and tracking moves to the new vessel on the connection date, not today.",
+      recaladaAvisoProgramado:
+        "The cargo stays on {{anterior}} until {{fecha}}. On that day tracking moves to {{nueva}} on its own; nothing is queried or spent today.",
+      recaladaGuardadaAnunciado:
+        "Announced transhipment: {{anterior}} → {{nueva}}. Tracking will switch on the connection date.",
       recaladaNavePlaceholder: "Type or pick from the catalog",
       recaladaSinImoCorto: "no IMO",
       recaladaViaje: "Voyage",
       recaladaNuevaEta: "New estimated arrival",
+      recaladaNuevoEtd: "Leg departure",
+      recaladaAgregar: "Add",
+      recaladaVacio:
+        "No ports recorded for this shipment yet. If you already know of a call or a transhipment, add it with the button above.",
+      recaladaPuertoPlaceholder: "e.g. Cartagena Colombia",
+      recaladaPuertoSinUbicacion:
+        "The catalogue cannot locate this port: it will still be saved, but the map will not be able to draw it.",
       recaladaNotas: "Notes (optional)",
       recaladaAvisoCosto:
         "{{nueva}} is not in the catalog with an identifier. Saving will use 1 query to find its IMO and MMSI.",
@@ -5951,9 +5994,11 @@ export const translations = {
       recaladaVerificar: "Verify",
       mapaAcercarBuque: "Zoom to vessel",
       mapaVerRuta: "See full route",
-      historialRecaladas: "Announced ports",
+      historialRecaladas: "Ports on the route",
       historialParada: "Scheduled call",
+      historialRecalada: "Called here",
       historialTransbordo: "Transshipment",
+      historialTransbordoAnunciado: "Announced transhipment",
       historialAnunciada: "Announced",
       historialPorVerificar: "To verify",
       vistaTodos: "All",
@@ -6012,11 +6057,14 @@ export const translations = {
       evCorte: "Documentation cut-off",
       evFinStacking: "Stacking end",
       evZarpe: "Departure",
+      evRecalada: "Port call",
+      evAnunciado: "Announced port",
       evTransito: "In transit",
       evTransbordo: "Transshipment",
       evArribo: "Arrival",
       certezaReal: "Actual",
       certezaConfirmado: "Confirmed",
+      certezaAnunciado: "Announced",
       certezaEstimado: "Estimated",
 
       buqueTitle: "Vessel",
@@ -6025,6 +6073,7 @@ export const translations = {
       buqueViajeCerrado:
         "Tracking ended on arrival. The vessel has moved on to another voyage, so its current position does not belong to this shipment.",
       velocidad: "Speed",
+      velocidadCambiarUnidad: "Click to switch between knots and km/h",
       rumbo: "Course",
       destinoAis: "Declared destination",
       ultimoPuerto: "Last port",

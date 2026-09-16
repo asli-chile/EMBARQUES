@@ -16,6 +16,8 @@ const EVENTO_ICON: Record<string, string> = {
   CORTE_DOCUMENTAL: "lucide:file-check",
   FIN_STACKING: "lucide:package-check",
   ZARPE: "lucide:ship",
+  RECALADA: "lucide:anchor",
+  ANUNCIADO: "lucide:megaphone",
   TRANSITO: "lucide:waves",
   TRANSBORDO: "lucide:git-branch",
   ARRIBO: "lucide:map-pin",
@@ -26,6 +28,8 @@ const EVENTO_LABEL: Record<string, string> = {
   CORTE_DOCUMENTAL: "evCorte",
   FIN_STACKING: "evFinStacking",
   ZARPE: "evZarpe",
+  RECALADA: "evRecalada",
+  ANUNCIADO: "evAnunciado",
   TRANSITO: "evTransito",
   TRANSBORDO: "evTransbordo",
   ARRIBO: "evArribo",
@@ -50,7 +54,9 @@ export function NavitrackTimeline({ eventos, etapa, locale, tr }: TimelineProps)
             ? "certezaReal"
             : ev.certeza === "CONFIRMADO"
               ? "certezaConfirmado"
-              : "certezaEstimado";
+              : ev.certeza === "ANUNCIADO"
+                ? "certezaAnunciado"
+                : "certezaEstimado";
         const fecha = ev.codigo === "TRANSITO" ? fmtFechaHora(ev.fecha, locale) : fmtFechaCorta(ev.fecha, locale);
 
         return (
@@ -84,7 +90,7 @@ export function NavitrackTimeline({ eventos, etapa, locale, tr }: TimelineProps)
                   className={`nt-certainty ${
                     ev.certeza === "REAL"
                       ? "nt-certainty--real"
-                      : ev.certeza === "CONFIRMADO"
+                      : ev.certeza === "CONFIRMADO" || ev.certeza === "ANUNCIADO"
                         ? "nt-certainty--confirmado"
                         : ""
                   }`}
@@ -209,13 +215,20 @@ export function NavitrackCadena({
   tramoActual: number | null;
   tr: Record<string, string>;
 }) {
+  /*
+   * Las recaladas del AIS no entran: esta cadena describe en qué nave viaja la
+   * carga en cada tramo, y en una recalada la nave es la misma. Contarlas
+   * partiría un viaje directo en dos tramos y lo haría pasar por transbordo.
+   */
+  const puertos = escalas.filter((e) => e.tipo !== "recalada");
+
   // Cada tramo es el trayecto entre una escala y la siguiente.
-  const tramos = escalas.slice(0, -1).map((e, i) => ({
+  const tramos = puertos.slice(0, -1).map((e, i) => ({
     n: i + 1,
     nave: e.nave,
     desde: e.nombre,
-    hasta: escalas[i + 1]?.nombre ?? "",
-    cumplido: escalas[i + 1]?.cumplida ?? false,
+    hasta: puertos[i + 1]?.nombre ?? "",
+    cumplido: puertos[i + 1]?.cumplida ?? false,
     actual: tramoActual === i + 1,
   }));
 

@@ -24,6 +24,7 @@
 import type { APIRoute } from "astro";
 import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
+import { mismoPuerto } from "@/components/navitrack/navitrack-model";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
 
@@ -74,10 +75,10 @@ export const GET: APIRoute = async ({ url, cookies }) => {
   const operacionId = (url.searchParams.get("op") ?? "").trim();
   if (!operacionId) return json({ ok: false, code: "BAD_REQUEST" }, 400);
 
-  const [recRes, tramosRes, navesRes, viajeRes] = await Promise.all([
+  const [recRes, tramosRes, navesRes, viajeRes, puertosRes] = await Promise.all([
     supabase
       .from("navitrack_recaladas")
-      .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas")
+      .select("id, puerto, nave, anunciado_at, eta_anunciada, visto_at, estado, decidido_at, notas, recalado_at, zarpe_at")
       .eq("operacion_id", operacionId)
       .order("anunciado_at"),
     supabase
@@ -99,6 +100,19 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       .order("nombre")
       .limit(3000),
     supabase.from("navitrack_viajes").select("modo").eq("operacion_id", operacionId).maybeSingle(),
+    /*
+     * Catálogo de puertos para el alta a mano.
+     *
+     * Va acá y no en una consulta aparte porque se necesita en el mismo momento
+     * que el de naves y tiene el mismo permiso. Son ~180 filas: se mandan
+     * enteras y el filtrado es en el cliente, igual que con las naves.
+     */
+    supabase
+      .from("destinos")
+      .select("id, nombre, pais, codigo_puerto")
+      .eq("activo", true)
+      .order("nombre")
+      .limit(2000),
   ]);
 
   return json({
@@ -107,6 +121,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     recaladas: recRes.data ?? [],
     tramos: tramosRes.data ?? [],
     naves: navesRes.data ?? [],
+    puertos: puertosRes.data ?? [],
   });
 };
 
@@ -127,7 +142,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     puerto?: string;
     etaAnunciada?: string | null;
     nave?: string | null;
-    decision?: "parada" | "transbordo" | "directo";
+    decision?: "parada" | "transbordo" | "directo" | "anunciado";
     naveNombre?: string;
     viaje?: string;
     etd?: string;
@@ -141,9 +156,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const { decision } = body;
-  if (decision !== "parada" && decision !== "transbordo" && decision !== "directo") {
+  if (
+    decision !== "parada" &&
+    decision !== "transbordo" &&
+    decision !== "directo" &&
+    decision !== "anunciado"
+  ) {
     return json({ ok: false, code: "BAD_REQUEST" }, 400);
   }
+  /*
+   * Transbordo ya ocurrido y transbordo anunciado comparten casi todo: los dos
+   * crean el tramo nuevo y cierran la pregunta. Se separan en una sola cosa, y
+   * es la que importa: quién lleva la carga **hoy**.
+   */
+  const esAnunciado = decision === "anunciado";
 
   /*
    * La recalada, ya registrada o creada al vuelo.
@@ -152,13 +178,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
    * momento; obligarlo a esperar a que el cron lo anote sería pedirle que
    * espere a mañana para responder algo que ya sabe hoy.
    */
-  let rec: {
+  type RecaladaFila = {
     id: number;
     operacion_id: string;
     puerto: string;
     nave: string | null;
     eta_anunciada: string | null;
-  } | null = null;
+  };
+  let rec: RecaladaFila | null = null;
 
   if (body.recaladaId) {
     const { data } = await supabase
@@ -169,12 +196,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     rec = data ?? null;
   } else if (body.operacionId && (body.puerto ?? "").trim()) {
     const puerto = (body.puerto ?? "").trim();
-    const { data: previa } = await supabase
+    /*
+     * El puerto ya anotado se busca por identidad de lugar, no por texto.
+     *
+     * Comparando el texto exacto, escribir "Cartagena Colombia" donde ya había
+     * "Cartagena" abría una segunda fila para la misma escala: dos puertos en
+     * el historial y dos marcadores encimados en el mapa. Es el mismo criterio
+     * que usa `registrarAnuncio`.
+     */
+    const { data: anotadas } = await supabase
       .from("navitrack_recaladas")
       .select("id, operacion_id, puerto, nave, eta_anunciada")
-      .eq("operacion_id", body.operacionId)
-      .eq("puerto", puerto)
-      .maybeSingle();
+      .eq("operacion_id", body.operacionId);
+
+    const previa =
+      ((anotadas ?? []) as RecaladaFila[]).find((r) => mismoPuerto(r.puerto, puerto)) ?? null;
 
     if (previa) {
       rec = previa;
@@ -326,7 +362,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       etd: (body.etd ?? "").trim() || null,
       eta: (body.eta ?? "").trim() || null,
       origen: "manual",
-      confirmado: true,
+      /*
+       * `confirmado` dice si el tramo ya es un hecho, no si el dato es fiable.
+       *
+       * Un transbordo anunciado por la naviera es información de primera mano,
+       * pero la carga todavía no se subió a ese buque. Marcarlo confirmado
+       * haría que el historial lo contara como ocurrido y que el traspaso de
+       * seguimiento se adelantara: `sincronizarSeguimiento` da por cerrado el
+       * tramo cuyo ETA venció, y el de arriba aún no zarpa.
+       */
+      confirmado: !esAnunciado,
       creado_por: auth.usuarioId,
       notas: body.notas ?? null,
     })
@@ -347,7 +392,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   await supabase
     .from("navitrack_recaladas")
     .update({
-      estado: "transbordo",
+      estado: esAnunciado ? "transbordo_anunciado" : "transbordo",
       decidido_por: auth.usuarioId,
       decidido_at: ahora,
       notas: body.notas ?? null,
@@ -373,7 +418,26 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   let identificador: { imo: string | null; mmsi: string | null } = { imo: null, mmsi: null };
   let aviso: string | null = null;
 
-  if (existente && ((existente.imo ?? "").trim() || (existente.mmsi ?? "").trim())) {
+  if (esAnunciado) {
+    /*
+     * Anunciado: la nave se anota, pero el seguimiento **no se mueve hoy**.
+     *
+     * La carga sigue en el buque anterior hasta la fecha del transbordo, así
+     * que encender el nuevo ahora mostraría la posición de un barco que todavía
+     * no la lleva —y apagaría el que sí—. Peor: gastaría un crédito diario en
+     * seguir un viaje ajeno durante los días que falten.
+     *
+     * El traspaso lo hace el chequeo diario el día en que este tramo pasa a ser
+     * el vigente, que es exactamente la fecha anunciada de llegada al puerto de
+     * conexión. Ese mismo chequeo le busca el IMO si le falta, así que tampoco
+     * hay que pagarlo por adelantado.
+     */
+    if (!existente) {
+      await supabase.from("naves").insert({ nombre: naveNombre, activo: true, tracking_activo: false });
+    }
+    identificador = { imo: existente?.imo ?? null, mmsi: existente?.mmsi ?? null };
+    aviso = "TRASPASO_PROGRAMADO";
+  } else if (existente && ((existente.imo ?? "").trim() || (existente.mmsi ?? "").trim())) {
     await supabase.from("naves").update({ tracking_activo: true }).eq("id", existente.id);
     identificador = { imo: existente.imo, mmsi: existente.mmsi };
     aviso = "YA_TENIA_IMO";
@@ -401,7 +465,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   return json({
     ok: true,
-    estado: "transbordo",
+    estado: esAnunciado ? "transbordo_anunciado" : "transbordo",
     naveAnterior: previos[previos.length - 1]?.nave ?? op.nave,
     naveNueva: naveNombre,
     identificador,

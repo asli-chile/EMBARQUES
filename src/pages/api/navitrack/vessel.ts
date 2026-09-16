@@ -51,6 +51,8 @@ type Lectura = {
   posicion_recibida_at: string | null;
   consultado_at: string;
   nave_nombre: string | null;
+  /** Respuesta completa del proveedor. El último puerto vive solo acá. */
+  crudo: Record<string, unknown> | null;
 };
 
 function json(body: object, status = 200) {
@@ -96,6 +98,13 @@ function comoRespuesta(l: Lectura) {
     navigationalStatus: l.nav_status,
     etaUtc: l.eta,
     positionReceived: l.posicion_recibida_at,
+    // El puerto del que viene el buque no tiene columna propia: se lee del
+    // crudo, que se guarda en toda lectura. Así también lo tienen las viejas.
+    lastPort: str(l.crudo?.lastPort),
+    unlocodeLastport: str(l.crudo?.unlocodeLastport),
+    // Zarpe real de ese puerto. Sin él la pantalla fecha el último puerto con
+    // el ETD del origen, que es otro puerto.
+    atdUtc: fecha(l.crudo?.atdUtc),
   };
 }
 
@@ -137,7 +146,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
   const { data: ultimaFila } = await supabase
     .from("navitrack_ais_lecturas")
     .select(
-      "lat, lng, speed, course, destino, nav_status, eta, posicion_recibida_at, consultado_at, nave_nombre",
+      "lat, lng, speed, course, destino, nav_status, eta, posicion_recibida_at, consultado_at, nave_nombre, crudo",
     )
     .eq("identificador", id)
     .order("consultado_at", { ascending: false })
