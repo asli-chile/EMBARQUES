@@ -196,6 +196,33 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .eq("id", body.recaladaId)
       .maybeSingle();
     rec = data ?? null;
+
+    /*
+     * Lo que corrigió el operador manda sobre lo que anunció el AIS.
+     *
+     * La ventana deja cambiar el puerto y la fecha de llegada porque la naviera
+     * suele saber más que la declaración del buque: otro terminal, o dos días
+     * después. Si no se guardaran, el tramo se crearía con la fecha del AIS y
+     * el traspaso de seguimiento se dispararía el día equivocado.
+     */
+    if (rec) {
+      const puertoNuevo = (body.puerto ?? "").trim();
+      const etaNueva = body.etaAnunciada ?? null;
+      const cambia: Record<string, unknown> = {};
+      if (puertoNuevo && puertoNuevo !== rec.puerto) cambia.puerto = puertoNuevo;
+      if (etaNueva !== undefined && etaNueva !== rec.eta_anunciada) cambia.eta_anunciada = etaNueva;
+
+      if (Object.keys(cambia).length > 0) {
+        await supabase.from("navitrack_recaladas").update(cambia).eq("id", rec.id);
+        rec = {
+          ...rec,
+          puerto: (cambia.puerto as string) ?? rec.puerto,
+          eta_anunciada: ("eta_anunciada" in cambia
+            ? (cambia.eta_anunciada as string | null)
+            : rec.eta_anunciada),
+        };
+      }
+    }
   } else if (body.operacionId && (body.puerto ?? "").trim()) {
     const puerto = (body.puerto ?? "").trim();
     /*
@@ -365,6 +392,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .select("id, orden")
       .single();
     if (creado) previos.push({ id: creado.id, orden: 1, nave: op.nave, pod: rec.puerto, eta: null });
+  } else {
+    /*
+     * El tramo que llega al puerto de conexión también se corrige.
+     *
+     * Su ETA es la que decide cuándo pasa el seguimiento a la nave siguiente.
+     * Si alguien vuelve a decidir con una fecha distinta y solo se actualizara
+     * la recalada, el traspaso seguiría disparándose el día viejo y la pantalla
+     * mostraría dos fechas para el mismo transbordo.
+     */
+    const llegada = rec.eta_anunciada ? String(rec.eta_anunciada).slice(0, 10) : null;
+    const tramoDeLlegada = previos.find((t) => t.pod && mismoPuerto(t.pod, rec.puerto));
+    if (tramoDeLlegada && llegada && tramoDeLlegada.eta !== llegada) {
+      await supabase.from("navitrack_tramos").update({ eta: llegada }).eq("id", tramoDeLlegada.id);
+    }
   }
 
   const ordenNuevo = Math.max(...previos.map((t) => t.orden), 0) + 1;

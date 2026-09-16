@@ -211,8 +211,19 @@ export function NavitrackRecalada({
         body: JSON.stringify({
           recaladaId: recalada.id || undefined,
           operacionId: recalada.id ? undefined : operacionId,
-          puerto: recalada.id ? undefined : puerto.trim(),
-          etaAnunciada: recalada.id ? undefined : llegada || null,
+          /*
+           * El puerto y la fecha se mandan siempre que se hayan podido editar.
+           *
+           * Antes iban solo al crear la recalada: sobre una ya existente —la
+           * que anunció el AIS— se enviaban como `undefined` y el servidor
+           * conservaba sus valores. El formulario aceptaba un puerto y una
+           * fecha nuevos y los descartaba en silencio: se anunció una recalada
+           * para el 18 y quedó guardada con el 16 que traía el AIS.
+           *
+           * Un campo editable que no se guarda es peor que no tenerlo.
+           */
+          puerto: puertoEditable || !recalada.id ? puerto.trim() : undefined,
+          etaAnunciada: puertoEditable || !recalada.id ? llegada || null : undefined,
           nave: recalada.id ? undefined : recalada.nave,
           decision,
           naveNombre:
