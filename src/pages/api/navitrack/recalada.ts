@@ -295,7 +295,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   /* ── Transbordo: hay que registrar el tramo nuevo ───────────────────────── */
-  const naveNombre = (body.naveNombre ?? "").trim();
+  /* El catálogo de naves va en mayúsculas y la búsqueda de duplicados compara
+     texto: normalizar acá evita que una nave entre dos veces con distinta caja. */
+  const naveNombre = (body.naveNombre ?? "").trim().toUpperCase();
   if (!naveNombre) return json({ ok: false, code: "FALTA_NAVE" }, 400);
 
   const { data: op } = await supabase

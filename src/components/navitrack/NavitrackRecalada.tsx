@@ -505,12 +505,23 @@ export function NavitrackRecalada({
             <label className="block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
               {tr.recaladaNaveNueva}
             </label>
+            {/*
+              * El nombre se escribe en mayúsculas.
+              *
+              * El catálogo las usa —225 de 228 naves— y la comparación con lo
+              * existente es por texto: escribir "msc serena" creaba una nave
+              * nueva junto a "MSC SERENA". Así quedaron en la base
+              * "Cma Cgm Carl Antonie" y dos más, duplicando las que ya estaban.
+              * Se transforma al teclear, no al guardar, para que lo que se ve
+              * sea lo que se va a grabar.
+              */}
             <input
               type="text"
               value={naveElegida}
               onChange={(e) => {
-                setNaveElegida(e.target.value);
-                setBusqueda(e.target.value);
+                const v = e.target.value.toUpperCase();
+                setNaveElegida(v);
+                setBusqueda(v);
               }}
               placeholder={tr.recaladaNavePlaceholder}
               className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"

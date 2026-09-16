@@ -85,9 +85,16 @@ export async function resolverNavesSinIdentificador(
 
     if (!fila) {
       // Alta mínima: el nombre viene del tramo, que lo escribió una persona.
+      // En mayúsculas, como el resto del catálogo: la búsqueda de duplicados es
+      // por texto y una nave en caja distinta entra como si fuera otra.
       const { data: creada } = await supabase
         .from("naves")
-        .insert({ nombre, activo: true, modo_transporte: "maritimo", tracking_activo: false })
+        .insert({
+          nombre: nombre.toUpperCase(),
+          activo: true,
+          modo_transporte: "maritimo",
+          tracking_activo: false,
+        })
         .select("id, nombre, imo, mmsi")
         .single();
       fila = creada ?? undefined;
