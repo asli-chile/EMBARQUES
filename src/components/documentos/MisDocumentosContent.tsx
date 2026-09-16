@@ -111,30 +111,26 @@ const GRUPOS_DOCUMENTO = [
     id: "comerciales",
     label: "Comerciales",
     icon: "lucide:receipt",
-    /* Color de la etapa, fijo. Identifica el grupo de un vistazo aunque esté
-       plegado; cuánto le falta lo dice el contador de al lado. */
-    tono: "#a78bfa",
+    /* Sin color propio: en el ERP el color significa estado, no categoría. El
+       grupo se identifica por su nombre y su contador. */
     tipos: ["BOOKING", "FACTURA_PROFORMA", "FACTURA_COMERCIAL", "PACKING_LIST"],
   },
   {
     id: "origen",
     label: "Origen",
     icon: "lucide:stamp",
-    tono: "#60a5fa",
     tipos: ["CERTIFICADO_ORIGEN", "CERTIFICADO_FITOSANITARIO", "DUS"],
   },
   {
     id: "transporte",
     label: "Transporte y Nave",
     icon: "lucide:ship",
-    tono: "#38bdf8",
     tipos: ["INSTRUCTIVO_EMBARQUE", "BL_TELEX_SWB_AWB", "FACTURA_GATE_OUT"],
   },
   {
     id: "cierre",
     label: "Cierre",
     icon: "lucide:flag",
-    tono: "#34d399",
     tipos: ["FULLSET"],
   },
 ] as const;
@@ -909,15 +905,19 @@ export function MisDocumentosContent() {
             {estadoFila.label}
           </span>
 
+          {/*
+            * Chip neutro, no un color por etapa.
+            *
+            * En el ERP el color significa **estado**: los tokens `--estado-*` y
+            * el acento, y nada más. La etapa es una categoría, no un estado, y
+            * pintarla con un tono propio metía una cuarta familia de colores
+            * que no existe en ninguna otra pantalla. Además compite con el chip
+            * de estado que va justo al lado, en la misma fila.
+            *
+            * El nombre de la etapa ya la identifica; el color sobraba.
+            */}
           {grupoDeTipo(tipo) ? (
-            <span
-              className="hidden w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold lg:inline-flex"
-              style={{
-                background: `color-mix(in srgb, ${grupoDeTipo(tipo)!.tono} 16%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${grupoDeTipo(tipo)!.tono} 40%, transparent)`,
-                color: grupoDeTipo(tipo)!.tono,
-              }}
-            >
+            <span className="hidden w-fit items-center gap-1.5 rounded-full border border-dash-border bg-dash-control/60 px-2 py-0.5 text-[11.5px] font-bold text-dash-muted lg:inline-flex">
               {grupoDeTipo(tipo)!.label}
             </span>
           ) : (
@@ -1333,14 +1333,13 @@ export function MisDocumentosContent() {
         */}
       <div className="flex flex-wrap items-center gap-1.5">
         {([
-          { id: "todos", label: tr.filtroTodos, tono: "var(--dash-neon)", tipos: null },
+          { id: "todos", label: tr.filtroTodos, tipos: null },
           ...GRUPOS_DOCUMENTO.map((g) => ({
             id: g.id as string,
             label: g.label as string,
-            tono: g.tono as string,
             tipos: g.tipos as readonly string[] | null,
           })),
-        ] as { id: string; label: string; tono: string; tipos: readonly string[] | null }[])
+        ] as { id: string; label: string; tipos: readonly string[] | null }[])
           .map((tab) => {
             const tipos = (tab.tipos ?? visibleTipos).filter((t) =>
               (visibleTipos as readonly string[]).includes(t),
@@ -1359,9 +1358,15 @@ export function MisDocumentosContent() {
                     : "border-dash-border bg-dash-control/50 text-dash-muted hover:text-dash-fg"
                 }`}
               >
+                {/*
+                  * El punto toma el acento cuando la pestaña está activa y se
+                  * apaga cuando no, igual que las pestañas del resto del ERP
+                  * (`nt-tab`). Antes llevaba el color de la etapa: cuatro
+                  * colores fijos que no cambiaban nada al seleccionar, así que
+                  * no decían qué estaba activo y sí desentonaban.
+                  */}
                 <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: tab.tono }}
+                  className={`h-2 w-2 rounded-full ${activa ? "bg-dash-neon" : "bg-dash-muted/45"}`}
                   aria-hidden
                 />
                 {tab.label}
@@ -1427,16 +1432,16 @@ export function MisDocumentosContent() {
               <div
                 key={grupo.id}
                 /*
-                 * La línea lleva el color de la etapa que empieza.
+                 * El separador se distingue por grosor, no por color.
                  *
-                 * Un separador neutro y fino se perdía entre las divisiones de
-                 * fila, que son del mismo gris: había que contar para saber
-                 * dónde terminaba un grupo. Con el color del grupo, la división
-                 * se ve y además dice cuál empieza, que es lo que el encabezado
-                 * decía antes de quitarlo.
+                 * Una línea fina y neutra se perdía entre las divisiones de
+                 * fila, que son del mismo gris, y había que contar para saber
+                 * dónde termina un grupo. Se resolvía con el color de la etapa,
+                 * pero eso traía a la tabla una familia de colores que el ERP
+                 * no usa para categorías. Tres píxeles del borde de siempre
+                 * separan igual de bien y no inventan un código de color.
                  */
-                style={{ borderTopColor: `color-mix(in srgb, ${grupo.tono} 75%, transparent)` }}
-                className="divide-y divide-dash-border/60 border-t-[3px] first:border-t-0"
+                className="divide-y divide-dash-border/60 border-t-[3px] border-t-dash-border first:border-t-0"
                 aria-label={`${grupo.label}: ${recibidos}/${exigibles}`}
               >
                 {tipos.map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
