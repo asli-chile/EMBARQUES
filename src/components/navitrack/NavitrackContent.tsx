@@ -257,12 +257,15 @@ export function NavitrackContent() {
        * dejaba de marcar el embarque abierto pero el listado seguía mostrando
        * "posible transbordo", que es la misma contradicción vista desde otra
        * pantalla.
+       *
+       * Se traen **todas**, sin filtrar por estado. Antes había una lista de
+       * cuatro que había que recordar actualizar, y al agregar
+       * `transbordo_anunciado` nadie la actualizó: la ficha daba el transbordo
+       * por resuelto y la tabla seguía pidiendo verificarlo, otra vez la misma
+       * contradicción. Quién resuelve y quién no lo decide `resolverEstado`,
+       * que es donde vive esa regla; acá solo se le entregan los datos.
        */
-      supabase
-        .from("navitrack_recaladas")
-        .select("operacion_id, puerto, estado")
-        .in("estado", ["anunciada", "por_verificar", "parada_programada", "transbordo"])
-        .limit(2000),
+      supabase.from("navitrack_recaladas").select("operacion_id, puerto, estado").limit(2000),
       /*
        * Últimas posiciones guardadas. Es una lectura de base de datos: no gasta
        * créditos y no llama al proveedor.
