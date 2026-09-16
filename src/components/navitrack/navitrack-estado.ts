@@ -680,6 +680,24 @@ export function construirTimeline(
    *
    * Se descartan el origen y el destino, que ya tienen su propio hito.
    */
+  /*
+   * Si un puerto quedó a popa del buque, medido contra el destino.
+   *
+   * Sin posición real no se afirma nada: devuelve false y el puerto se sigue
+   * mostrando como pendiente, que es lo único que se sabe.
+   */
+  const quedoAtras = (puerto: string): boolean => {
+    if (ais?.lat == null || ais?.lng == null) return false;
+    const cd = getPortCoordinates(pod);
+    const cp = getPortCoordinates(puerto);
+    if (!cd || !cp) return false;
+    const destino = { lng: cd[0], lat: cd[1] };
+    return (
+      haversineKm({ lng: cp[0], lat: cp[1] }, destino) >
+      haversineKm({ lng: ais.lng, lat: ais.lat }, destino)
+    );
+  };
+
   const paradas: string[] = [];
   const sumarParada = (puerto: string | null | undefined) => {
     const nombre = (puerto ?? "").trim();
@@ -812,7 +830,20 @@ export function construirTimeline(
       fecha: parseInstant(r.eta_anunciada),
       lugar: puerto,
       certeza: decidida ? "CONFIRMADO" : "ESTIMADO",
-      cumplido: false,
+      /*
+       * Un puerto que quedó atrás no es algo que falte.
+       *
+       * Caucedo figuraba entre lo pendiente mientras el buque navegaba rumbo a
+       * Europa con Caucedo 230 km a su espalda: el mapa ya no lo dibujaba como
+       * puerto por venir y el historial seguía anunciándolo. La misma pantalla
+       * decía dos cosas distintas.
+       *
+       * Se usa la geometría, no el calendario: si el puerto está más lejos del
+       * destino que el propio buque, ya se pasó. Sigue como `CONFIRMADO` y no
+       * como `REAL`, que es la diferencia honesta: consta la decisión de que el
+       * buque para ahí, no una lectura del AIS que lo haya visto llegar.
+       */
+      cumplido: quedoAtras(puerto),
       actual: false,
     });
   }
