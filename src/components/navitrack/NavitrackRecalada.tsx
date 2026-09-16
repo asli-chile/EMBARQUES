@@ -99,7 +99,16 @@ type Props = {
 
 function fechaCorta(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso);
+  /*
+   * Una fecha sin hora se sitúa a mediodía.
+   *
+   * "2026-09-16" se interpreta como medianoche UTC, y en Chile —tres horas
+   * atrás— eso cae el 15. La ventana anunciaba "hasta 15 sept" un transbordo
+   * cargado para el 16: un día de diferencia en el dato que decide cuándo
+   * cambia el buque que se está mirando.
+   */
+  const texto = String(iso);
+  const d = new Date(texto.includes("T") ? texto : `${texto}T12:00:00`);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
 }
@@ -171,6 +180,9 @@ export function NavitrackRecalada({
   }, [naveElegida, naves]);
 
   const tieneIdentificador = Boolean((enCatalogo?.imo ?? "").trim() || (enCatalogo?.mmsi ?? "").trim());
+
+  /** El operador escribió un IMO o MMSI con forma válida: no hay qué buscar. */
+  const identificadorDado = /^\d{7}$|^\d{9}$/.test(identNave.trim());
 
   /* Sin puerto no hay recalada que registrar, y todos los caminos la necesitan. */
   const faltaPuerto = !puerto.trim();
@@ -695,9 +707,18 @@ export function NavitrackRecalada({
                 onClick={() => void guardar(modo === "anunciado" ? "anunciado" : "transbordo")}
                 className="dash-cta motion-interactive px-3.5 py-2 text-xs disabled:opacity-40"
               >
+                {/*
+                  * El botón dice lo que va a costar, y en el anunciado no cuesta.
+                  *
+                  * Anunciar no consulta al proveedor: el identificador se busca
+                  * el día del transbordo, si hace falta. Y si el operador lo
+                  * escribió, tampoco se busca nunca. Prometer "1 consulta" en
+                  * cualquiera de esos casos es cobrar de mentira, que es la
+                  * forma más rápida de que el aviso deje de creerse.
+                  */}
                 {guardando
                   ? tr.loading
-                  : tieneIdentificador || !puedeGastar
+                  : modo === "anunciado" || identificadorDado || tieneIdentificador || !puedeGastar
                     ? tr.recaladaGuardar
                     : tr.recaladaGuardarConCosto}
               </button>
