@@ -695,6 +695,36 @@ export function construirTimeline(
   }
   if (zarpado) sumarParada(ais?.lastPort);
 
+  /*
+   * Las recaladas se ordenan por avance de ruta, no por cuándo las vimos.
+   *
+   * El proveedor alterna `lastPort` entre dos puertos para la misma lectura:
+   * el GUAYAQUIL EXPRESS declaró Caucedo, después Posorja, después Caucedo otra
+   * vez, todo con la misma posición. Anotando en el orden en que llegan, Posorja
+   * —la primera escala del viaje— quedó registrada después de Cartagena y el
+   * historial la mostraba como la más reciente.
+   *
+   * La ruta no se equivoca: lo que está más lejos del destino se tocó antes.
+   * Los puertos que el catálogo no ubica conservan el orden en que se vieron,
+   * que es lo único que se sabe de ellos.
+   */
+  const destinoCoord = (() => {
+    const c = getPortCoordinates(pod);
+    return c ? { lng: c[0], lat: c[1] } : null;
+  })();
+  if (destinoCoord) {
+    const distancia = (puerto: string) => {
+      const c = getPortCoordinates(puerto);
+      return c ? haversineKm({ lng: c[0], lat: c[1] }, destinoCoord) : -1;
+    };
+    paradas.sort((a, b) => {
+      const da = distancia(a);
+      const db = distancia(b);
+      if (da < 0 || db < 0) return 0;
+      return db - da;
+    });
+  }
+
   for (const puerto of paradas) {
     eventos.push({
       codigo: "RECALADA",
