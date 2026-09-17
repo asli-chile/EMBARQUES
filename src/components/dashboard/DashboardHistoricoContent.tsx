@@ -354,16 +354,6 @@ export function DashboardHistoricoContent({
       numeric: cumplimiento.mediana ?? 0,
     },
     {
-      key: "pallets",
-      label: tr.volumePallets,
-      value: totales.cobertura.pallets > 0 ? fmt(totales.suma.pallets) : "—",
-      hint: coberturaHint(totales.cobertura.pallets),
-      icon: "lucide:package",
-      iconAlt: "lucide:package-open",
-      tone: "emerald",
-      numeric: totales.suma.pallets,
-    },
-    {
       key: "kg",
       label: tr.volumeNetKg,
       value: totales.cobertura.pesoNeto > 0 ? fmt(totales.suma.pesoNeto) : "—",
