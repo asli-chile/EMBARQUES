@@ -738,12 +738,32 @@ function viajePorTramos(
   let indiceActual = pasos.findIndex((p) => !(p.t.eta && p.t.eta < hoy));
   if (indiceActual < 0) indiceActual = pasos.length - 1;
 
-  const posicion = resolvePosition(
-    op,
-    ais,
-    { origen: pasos[indiceActual].desde, destino: pasos[indiceActual].hasta },
-    now,
-  );
+  /*
+   * Después del arribo el buque no se dibuja.
+   *
+   * Es la misma regla que ya aplican `estaArribado` y el chequeo diario, y acá
+   * faltaba: el viaje se armaba igual que uno en curso, con la línea pasando
+   * por donde esté la nave **hoy**. Un embarque Valparaíso → Génova ya
+   * entregado, con el MSC RITA V navegando el mar del Norte, se dibujaba con el
+   * trazo subiendo desde Gioia Tauro, pasándose de largo Génova, cruzando
+   * Francia hasta el barco, y otro de vuelta al destino. La ruta decía que la
+   * carga se pasó de Génova y volvía.
+   *
+   * La posición del buque es real; lo falso es atribuírsela a esta carga, que
+   * bajó en Génova. Sin marcador y con la ruta entera recorrida, el mapa dice
+   * lo único que consta.
+   */
+  const arribado = Boolean(op.arribo_confirmado);
+  if (arribado) indiceActual = pasos.length - 1;
+
+  const posicion = arribado
+    ? null
+    : resolvePosition(
+        op,
+        ais,
+        { origen: pasos[indiceActual].desde, destino: pasos[indiceActual].hasta },
+        now,
+      );
 
   const anteriores = pasos.slice(0, indiceActual).map((p) => curvaMaritima(p.desde, p.hasta));
   const posteriores = pasos.slice(indiceActual + 1).map((p) => curvaMaritima(p.desde, p.hasta));
@@ -752,7 +772,11 @@ function viajePorTramos(
   let traveled: LngLat[];
   let remaining: LngLat[];
 
-  if (isValidCoord(posicion)) {
+  if (arribado) {
+    // La cadena completa, de punta a punta: no queda nada por navegar.
+    traveled = unirTramos(pasos.map((p) => curvaMaritima(p.desde, p.hasta)));
+    remaining = [];
+  } else if (isValidCoord(posicion)) {
     const aqui = { lng: posicion.lng, lat: posicion.lat };
     traveled = unirTramos([...anteriores, curvaMaritima(actual.desde, aqui)]);
     remaining = unirTramos([curvaMaritima(aqui, actual.hasta), ...posteriores]);
@@ -779,7 +803,9 @@ function viajePorTramos(
 
   let recorridoKm = 0;
   for (let i = 0; i < indiceActual; i += 1) recorridoKm += kmDeTramo(i);
-  if (isValidCoord(posicion)) {
+  if (arribado) {
+    recorridoKm = totalKm;
+  } else if (isValidCoord(posicion)) {
     recorridoKm += haversineKm(actual.desde, { lng: posicion.lng, lat: posicion.lat });
   }
   const faltaKm = Math.max(0, totalKm - recorridoKm);
@@ -789,7 +815,8 @@ function viajePorTramos(
     coord: p.desde,
     tipo: i === 0 ? "origen" : "conexion",
     nave: p.t.nave,
-    cumplida: i < indiceActual,
+    // Con el arribo, hasta el último puerto de conexión quedó atrás.
+    cumplida: arribado || i < indiceActual,
   }));
   const ultimo = pasos[pasos.length - 1];
   escalas.push({
@@ -869,11 +896,19 @@ export function buildJourney(
    * origen, que es donde la carga está de verdad.
    */
   const zarpado = yaZarpo(op, now);
-  const position = zarpado
-    ? resolvePosition(op, ais, { origen, destino }, now)
-    : origen
-      ? { lng: origen.lng, lat: origen.lat, source: "ESTIMADA" as const, at: null, course: null, speed: null }
-      : null;
+  /*
+   * Después del arribo tampoco se dibuja el buque, por lo mismo que antes del
+   * zarpe: la nave sigue viaje a otro destino y su posición, aunque real, ya no
+   * describe esta carga. Ver la nota en `viajePorTramos`.
+   */
+  const arribado = Boolean(op.arribo_confirmado);
+  const position = arribado
+    ? null
+    : zarpado
+      ? resolvePosition(op, ais, { origen, destino }, now)
+      : origen
+        ? { lng: origen.lng, lat: origen.lat, source: "ESTIMADA" as const, at: null, course: null, speed: null }
+        : null;
 
   let progress: JourneyProgress | null = null;
   let traveled: LngLat[] = [];
@@ -925,7 +960,12 @@ export function buildJourney(
     totalNm = haversineKm(origen, destino) * KM_TO_NM;
 
     let f: number | null = null;
-    if (!zarpado) {
+    if (arribado) {
+      // Ruta entera recorrida: el corte cae en el último punto y no queda tramo
+      // pendiente que pintar.
+      f = 1;
+      progress = { pct: 100, basis: "tiempo" };
+    } else if (!zarpado) {
       /*
        * Antes del zarpe el viaje no ha empezado.
        *
