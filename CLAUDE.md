@@ -650,10 +650,14 @@ reporte va al final, así que era lo primero en perderse.
 Por eso las consultas van **en paralelo** (`Promise.all`; el proveedor admite 50
 por minuto) y `astro.config.mjs` declara `maxDuration: 60` en el adaptador. Al
 sumar naves a la lista blanca, recordar que el costo en tiempo ya no crece en
-serie, pero el de créditos sí: una consulta por nave y por día. Por cada nave con
-`tracking_activo` hace **una** llamada a `get-vessel-location`: 1 crédito por
-nave y por día. Con una nave, 150 créditos alcanzan para meses; con veinte, para
-una semana.
+serie, pero el de créditos sí: una consulta por nave y por día.
+
+Se consulta **solo a las naves que llevan carga dentro de la ventana de
+seguimiento** (`enVentanaDeSeguimiento`, dos días antes del zarpe), no a todas
+las que tienen `tracking_activo`. La ventana existía pero se aplicaba después de
+pagar: una nave con zarpe a ocho días gastaba ocho créditos para descartar ocho
+respuestas. Con una nave, 150 créditos alcanzan para meses; con veinte, para una
+semana.
 
 Si el buque declara un destino distinto al POD, avisa por correo a
 `NAVITRACK_ALERTAS_EMAIL` a través de la Edge Function `send-email`.

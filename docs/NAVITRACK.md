@@ -385,8 +385,24 @@ todavía es previsión.
 
 `src/pages/api/navitrack/chequeo-diario.ts` corre una vez al día por cron de
 Vercel (`0 12 * * *`, 08:00 en Chile). Es el uso más barato del proveedor:
-**una** llamada a `get-vessel-location` por nave con `tracking_activo`, o sea
-1 crédito por nave y por día.
+**una** llamada a `get-vessel-location` por nave, o sea 1 crédito por nave y por
+día.
+
+No por cada nave con `tracking_activo`, sino por las que **llevan carga dentro
+de la ventana de seguimiento** —`enVentanaDeSeguimiento`, que abre dos días
+antes del zarpe—. La regla existía pero se aplicaba después de pagar: se
+consultaba al buque y recién entonces se descartaban sus embarques por no haber
+zarpado. Una nave con zarpe a ocho días gastaba ocho créditos para tirar ocho
+respuestas. Y no era solo gasto de más: antes del zarpe el buque hace otro
+viaje, así que esa posición mide un embarque ajeno y `resolvePosition` la ignora
+—se pagaba por un dato que después no se puede mostrar—.
+
+Las naves saltadas se nombran en el reporte ("Todavía sin zarpar") y quedan en
+`navitrack_corridas.detalle`: una nave que desaparece del correo sin explicación
+se lee como que falló.
+
+La actualización manual (`/api/navitrack/actualizar`) ya lo hacía bien: su
+`planificar()` solo apunta a las naves cuya carga zarpó.
 
 Cuando el destino declarado no calza con el POD, avisa por correo. Tres cosas lo
 callan a propósito:

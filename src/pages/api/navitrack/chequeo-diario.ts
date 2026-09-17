@@ -243,6 +243,71 @@ export const GET: APIRoute = async ({ request, url }) => {
     .eq("activo", true)
     .limit(MAX_NAVES);
 
+  /*
+   * Qué naves tienen carga que valga la pena consultar hoy.
+   *
+   * La ventana de seguimiento —abre dos días antes del zarpe— ya existía, pero
+   * se aplicaba **después** de pagar: se le preguntaba al proveedor dónde
+   * estaba el buque y recién entonces se descartaban sus embarques por no haber
+   * zarpado. El CMA CGM ESTELLE, con zarpe el 25-09, gastaba un crédito diario
+   * desde el 17 para tirar la respuesta a la basura ocho veces.
+   *
+   * Antes del zarpe la lectura no solo es inútil: es engañosa. El buque está
+   * haciendo otro viaje, así que su posición mide el avance de un embarque
+   * ajeno —por eso `resolvePosition` la ignora—. Se paga por un dato que
+   * después no se puede mostrar.
+   *
+   * Se consulta en bloque, antes del bucle, para no sumar una consulta por nave
+   * a una corrida que ya tuvo problemas de duración.
+   */
+  const ahoraVentana = new Date();
+  const [opsVivasRes, tramosVivosRes] = await Promise.all([
+    supabase
+      .from("operaciones")
+      .select("id, nave, etd, estado_operacion")
+      .is("deleted_at", null)
+      .eq("arribo_confirmado", false)
+      .not("nave", "is", null)
+      .limit(2000),
+    /*
+     * Los tramos cuentan igual que la columna.
+     *
+     * En un viaje con transbordo, `operaciones.nave` guarda la nave del primer
+     * tramo: la que lleva la caja hoy solo aparece acá. Sin esto, la nave que
+     * recibe la carga quedaría fuera de la ventana y no se consultaría nunca.
+     */
+    supabase.from("navitrack_tramos").select("nave, operacion_id").not("nave", "is", null).limit(2000),
+  ]);
+
+  /** Clave comparable de nave: el catálogo y las operaciones no siempre coinciden en caja. */
+  const claveDeNave = (v: unknown) => String(v ?? "").trim().toUpperCase();
+
+  /** Naves con al menos un embarque dentro de la ventana. */
+  const conCargaEnVentana = new Set<string>();
+  /** Operaciones vivas que ya entraron en ventana, para cruzarlas con los tramos. */
+  const opsEnVentana = new Set<string>();
+
+  for (const o of (opsVivasRes.data ?? []) as {
+    id: string;
+    nave: string | null;
+    etd: string | null;
+    estado_operacion: string | null;
+  }[]) {
+    if (!enVentanaDeSeguimiento(o, ahoraVentana)) continue;
+    opsEnVentana.add(o.id);
+    const k = claveDeNave(o.nave);
+    if (k) conCargaEnVentana.add(k);
+  }
+
+  for (const t of (tramosVivosRes.data ?? []) as { nave: string | null; operacion_id: string }[]) {
+    if (!opsEnVentana.has(t.operacion_id)) continue;
+    const k = claveDeNave(t.nave);
+    if (k) conCargaEnVentana.add(k);
+  }
+
+  /** Naves omitidas por no tener carga en ventana, para que el reporte lo diga. */
+  const fueraDeVentanaNaves: string[] = [];
+
   /** Lo que pasó con el correo, para que un fallo de envío deje rastro. */
   let reporteEnviado = false;
   let falloCorreo: string | null = null;
@@ -265,6 +330,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     recaladas: 0,
     /** Embarques saltados por no haber zarpado todavía. */
     fueraDeVentana: 0,
+    /** Naves no consultadas por no llevar ninguna carga en ventana. */
+    naveFueraDeVentana: fueraDeVentanaNaves,
     correos: 0,
     errores: 0,
     traspasos: sincro.traspasos.length,
@@ -294,6 +361,25 @@ export const GET: APIRoute = async ({ request, url }) => {
       sinRespuesta.push({ nave: nave.nombre as string, motivo: `identificador inválido: "${id}"` });
       return;
     }
+
+    /*
+     * Sin carga en ventana no se consulta: es la decisión de gastar o no.
+     *
+     * El cruce es por prefijo y no por igualdad porque la operación suele traer
+     * el viaje pegado al nombre ("CMA CGM ESTELLE V.0FABCS1MA"), igual que hace
+     * la consulta de embarques de más abajo con su `ilike`.
+     *
+     * No es un error ni un hueco: es una nave cuya carga todavía no zarpa. Se
+     * anota para que el reporte lo diga —una nave que deja de aparecer sin
+     * explicación se lee como que falló—.
+     */
+    const claveCatalogo = claveDeNave(nave.nombre);
+    const tieneCarga = [...conCargaEnVentana].some((k) => k.startsWith(claveCatalogo));
+    if (!tieneCarga) {
+      fueraDeVentanaNaves.push(nave.nombre as string);
+      return;
+    }
+
     resultado.revisadas += 1;
 
     let detalle: Record<string, unknown> | null = null;
@@ -589,6 +675,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         ? sincro.traspasos.map((t) => ({ desde: t.desde, hacia: t.hacia }))
         : [],
       sinSeguimiento: altas.filter((a) => !a.resuelta).map((a) => `${a.nombre}: ${a.motivo ?? "sin identificar"}`),
+      fueraDeVentana: fueraDeVentanaNaves,
       errores: problemas,
       enlace: sitio ? `${sitio}/navitrack` : null,
     });
@@ -625,6 +712,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     saldo: saldoFinal.creditos,
     detalle: {
       sinRespuesta,
+      // Por qué la corrida consultó menos naves de las que están en la lista.
+      naveFueraDeVentana: fueraDeVentanaNaves,
       problemas,
       traspasos: sincro.traspasos,
       porVerificar: detallesPorVerificar,

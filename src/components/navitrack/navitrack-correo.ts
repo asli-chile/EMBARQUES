@@ -644,6 +644,15 @@ export function correoResumenCorrida(datos: {
   porVerificar: { puerto: string; nave: string | null; embarque: string }[];
   traspasos: { desde: string; hacia: string }[];
   sinSeguimiento: string[];
+  /**
+   * Naves de la lista blanca que hoy no se consultaron.
+   *
+   * Su carga todavía no entra en la ventana de seguimiento —abre dos días antes
+   * del zarpe—, así que preguntarle al proveedor dónde están sería pagar por la
+   * posición de otro viaje. No es un problema ni un hueco, pero se nombra: una
+   * nave que desaparece del reporte sin explicación se lee como que falló.
+   */
+  fueraDeVentana: string[];
   errores: string[];
   enlace: string | null;
 }): { asunto: string; cuerpo: string } {
@@ -744,6 +753,7 @@ ${lista(
   datos.traspasos.map((t) => `${esc(t.desde)} → <strong style="color:${NAVY}">${esc(t.hacia)}</strong>`),
 )}
 ${lista("Sin seguimiento", datos.sinSeguimiento.map(esc), AMBAR)}
+${lista("Todavía sin zarpar (no se consultaron)", datos.fueraDeVentana.map(esc), SUAVE)}
 ${lista("Problemas", datos.errores.map(esc), AMBAR)}
 
 ${
