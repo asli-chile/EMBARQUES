@@ -706,6 +706,20 @@ function viajePorTramos(
   tramos: Tramo[],
   ais: AisSnapshot | null,
   now: Date,
+  /**
+   * Puertos del recorrido que no son extremos de ningún tramo.
+   *
+   * Son las recaladas: paradas del itinerario donde la carga **no** cambia de
+   * nave. Los tramos solo conocen los puertos donde el viaje se parte —ahí
+   * empieza y termina cada buque—, así que sin esto un embarque con transbordo
+   * perdía del mapa todas sus escalas: la ficha decía "parada programada ·
+   * Livorno · confirmada" y el mapa no la dibujaba en ninguna parte.
+   *
+   * `recalados` ya ocurrieron; `previstos`, no. Es la misma pareja que usa el
+   * camino directo de `buildJourney`.
+   */
+  puertosPrevistos: string[] = [],
+  puertosRecalados: string[] = [],
 ): Journey | null {
   const ordenados = [...tramos].sort((a, b) => a.orden - b.orden);
 
@@ -756,6 +770,63 @@ function viajePorTramos(
   const arribado = Boolean(op.arribo_confirmado);
   if (arribado) indiceActual = pasos.length - 1;
 
+  /*
+   * Las recaladas, repartidas en el tramo al que pertenecen.
+   *
+   * No traen fecha fiable ni número de tramo: lo único que se sabe de ellas es
+   * dónde quedan. Así que se ubican por geometría —dentro del arco de un tramo
+   * está la que queda más cerca de los dos extremos que ellos entre sí— y se
+   * ordenan por cercanía al final de ese tramo, que es el sentido de la marcha.
+   * Ordenarlas por la fecha en que se anotaron dibujaría un zigzag cada vez que
+   * dos anuncios llegan fuera de orden; es el mismo criterio del camino directo.
+   */
+  type Intermedio = { nombre: string; coord: LngLat; previsto: boolean };
+  const extremos = new Set<string>();
+  for (const p of pasos) {
+    extremos.add(p.nombreDesde);
+    extremos.add(p.nombreHasta);
+  }
+
+  const intermedios: Intermedio[] = [];
+  for (const [nombres, previsto] of [
+    [puertosRecalados, false],
+    [puertosPrevistos, true],
+  ] as const) {
+    for (const nombre of nombres) {
+      const limpio = (nombre ?? "").trim();
+      if (!limpio) continue;
+      // Un puerto que ya es extremo de un tramo se dibujaría dos veces: una
+      // como conexión y otra como escala, contando un transbordo de más.
+      if ([...extremos].some((e) => mismoPuerto(e, limpio))) continue;
+      if (intermedios.some((x) => mismoPuerto(x.nombre, limpio))) continue;
+      const c = getPortCoordinates(limpio);
+      if (!c) continue;
+      intermedios.push({ nombre: limpio, coord: { lng: c[0], lat: c[1] }, previsto });
+    }
+  }
+
+  /** Los que caen dentro de un tramo, en orden de recorrido. */
+  const dentroDe = (desde: LngLat, hasta: LngLat): Intermedio[] => {
+    const largo = haversineKm(desde, hasta);
+    return intermedios
+      .filter(
+        (x) =>
+          haversineKm(x.coord, hasta) < largo &&
+          haversineKm(x.coord, desde) < largo &&
+          haversineKm(x.coord, desde) > MISMO_PUERTO_KM &&
+          haversineKm(x.coord, hasta) > MISMO_PUERTO_KM,
+      )
+      .sort((a, b) => haversineKm(b.coord, hasta) - haversineKm(a.coord, hasta));
+  };
+
+  /** La curva de un tramo, doblada por las escalas que tenga en medio. */
+  const curvaDePaso = (desde: LngLat, hasta: LngLat): LngLat[] => {
+    const medio = dentroDe(desde, hasta);
+    if (medio.length === 0) return curvaMaritima(desde, hasta);
+    const puntos = [desde, ...medio.map((x) => x.coord), hasta];
+    return unirTramos(puntos.slice(0, -1).map((a, i) => curvaMaritima(a, puntos[i + 1])));
+  };
+
   const posicion = arribado
     ? null
     : resolvePosition(
@@ -765,8 +836,8 @@ function viajePorTramos(
         now,
       );
 
-  const anteriores = pasos.slice(0, indiceActual).map((p) => curvaMaritima(p.desde, p.hasta));
-  const posteriores = pasos.slice(indiceActual + 1).map((p) => curvaMaritima(p.desde, p.hasta));
+  const anteriores = pasos.slice(0, indiceActual).map((p) => curvaDePaso(p.desde, p.hasta));
+  const posteriores = pasos.slice(indiceActual + 1).map((p) => curvaDePaso(p.desde, p.hasta));
   const actual = pasos[indiceActual];
 
   let traveled: LngLat[];
@@ -774,15 +845,20 @@ function viajePorTramos(
 
   if (arribado) {
     // La cadena completa, de punta a punta: no queda nada por navegar.
-    traveled = unirTramos(pasos.map((p) => curvaMaritima(p.desde, p.hasta)));
+    traveled = unirTramos(pasos.map((p) => curvaDePaso(p.desde, p.hasta)));
     remaining = [];
   } else if (isValidCoord(posicion)) {
+    /*
+     * El tramo en curso se parte en el buque, y sus escalas caen de un lado o
+     * del otro según si ya quedaron atrás. Dibujarlas todas por delante haría
+     * que el barco pareciera ir a un puerto que ya dejó.
+     */
     const aqui = { lng: posicion.lng, lat: posicion.lat };
-    traveled = unirTramos([...anteriores, curvaMaritima(actual.desde, aqui)]);
-    remaining = unirTramos([curvaMaritima(aqui, actual.hasta), ...posteriores]);
+    traveled = unirTramos([...anteriores, curvaDePaso(actual.desde, aqui)]);
+    remaining = unirTramos([curvaDePaso(aqui, actual.hasta), ...posteriores]);
   } else {
     traveled = unirTramos(anteriores);
-    remaining = unirTramos([curvaMaritima(actual.desde, actual.hasta), ...posteriores]);
+    remaining = unirTramos([curvaDePaso(actual.desde, actual.hasta), ...posteriores]);
   }
 
   // La línea es una sola: el tramo restante arranca donde terminó el recorrido.
@@ -810,21 +886,51 @@ function viajePorTramos(
   }
   const faltaKm = Math.max(0, totalKm - recorridoKm);
 
-  const escalas: Escala[] = pasos.map((p, i) => ({
-    nombre: p.nombreDesde,
-    coord: p.desde,
-    tipo: i === 0 ? "origen" : "conexion",
-    nave: p.t.nave,
-    // Con el arribo, hasta el último puerto de conexión quedó atrás.
-    cumplida: arribado || i < indiceActual,
-  }));
+  const escalas: Escala[] = [];
   const ultimo = pasos[pasos.length - 1];
+  /** Hasta dónde llegó la carga: el buque, o el destino si ya arribó. */
+  const frente = arribado ? ultimo.hasta : isValidCoord(posicion) ? posicion : null;
+
+  pasos.forEach((p, i) => {
+    escalas.push({
+      nombre: p.nombreDesde,
+      coord: p.desde,
+      tipo: i === 0 ? "origen" : "conexion",
+      nave: p.t.nave,
+      // Con el arribo, hasta el último puerto de conexión quedó atrás.
+      cumplida: arribado || i < indiceActual,
+    });
+
+    /*
+     * Las escalas del tramo van entre sus dos extremos, en el mismo orden en
+     * que las dobla la línea. Sin esto se dibujaba la línea pasando por
+     * Livorno y no había marcador que dijera qué puerto era.
+     *
+     * `cumplida` no sale del estado de la recalada sino de la geometría: una
+     * parada programada puede estar decidida y todavía por delante del buque.
+     * Lo que decide es si quedó atrás, igual que en el historial del viaje.
+     */
+    for (const x of dentroDe(p.desde, p.hasta)) {
+      escalas.push({
+        nombre: x.nombre,
+        coord: x.coord,
+        tipo: x.previsto ? "prevista" : "recalada",
+        // La carga sigue en el mismo buque: la nave no cambia acá.
+        nave: null,
+        cumplida:
+          arribado ||
+          i < indiceActual ||
+          (frente != null && haversineKm(x.coord, ultimo.hasta) > haversineKm(frente, ultimo.hasta)),
+      });
+    }
+  });
+
   escalas.push({
     nombre: ultimo.nombreHasta,
     coord: ultimo.hasta,
     tipo: "destino",
     nave: null,
-    cumplida: Boolean(op.arribo_confirmado),
+    cumplida: arribado,
   });
 
   return {
@@ -877,7 +983,7 @@ export function buildJourney(
    * que dice la operación: es la misma regla de lectura que define la tabla.
    */
   if (tramos.length > 0) {
-    const porTramos = viajePorTramos(op, tramos, ais, now);
+    const porTramos = viajePorTramos(op, tramos, ais, now, puertosPrevistos, puertosRecalados);
     if (porTramos) return porTramos;
   }
 
