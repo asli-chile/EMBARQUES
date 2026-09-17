@@ -255,7 +255,9 @@ Tabla de listas de valores del sistema (monedas, tipos de carga, etc.).
 | **En curso** | `DashboardContent` | Operación del día: alertas de corte documental y fin de stacking, próximos zarpes a 7 días, transporte pendiente, mapa de puertos. Filtra por la temporada activa. |
 | **Histórico** | `DashboardHistoricoContent` | Volumen acumulado con selector de temporada: operaciones, contenedores, pallets, kilos netos y cajas, más desglose por mes de zarpe, tipo de unidad y especie. Excluye las canceladas, porque nunca movieron carga. |
 
-Las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas operaciones lo tienen cargado) y un guion cuando nadie lo llenó. Es deliberado: `pallets`, `peso_neto` y las cajas de 25/5 kg están casi vacíos en producción, y un cero se leería como un error del dashboard en vez de como un vacío de captura.
+Las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas operaciones lo tienen cargado) y un guion cuando nadie lo llenó. Es deliberado: `peso_neto` está casi vacío en producción, y un cero se leería como un error del dashboard en vez de como un vacío de captura.
+
+Los indicadores de **pallets y de cajas de 25/5 kg se retiraron** el 17-09-2026: llevaban tanto tiempo en guion que ocupaban cuatro de las seis tarjetas de primera línea para no decir nada. `pallets` sobrevive como contexto —promedio por operación en la cabecera del gráfico mensual, y detalle de las barras y del ranking por especie—; las cajas ya no se consultan. Si algún día se capturan de verdad, la tarjeta se vuelve a agregar con su cobertura, como el resto.
 
 ## NaviTrack — Seguimiento marítimo (en desarrollo)
 

@@ -19,8 +19,6 @@ type OperacionVolumen = {
   contenedor: string | null;
   pallets: number | null;
   peso_neto: number | null;
-  total_cajas_25kg: number | null;
-  total_cajas_5kg: number | null;
   estado_operacion: string | null;
   cliente: string | null;
   pod: string | null;
@@ -42,7 +40,7 @@ const TEMPORADA_TODAS = "__all__";
 
 /** Anotado como `string` a propósito: con el literal, el genérico de PostgREST hace explotar la inferencia. */
 const COLUMNAS: string =
-  "etd, especie, tipo_unidad, contenedor, pallets, peso_neto, total_cajas_25kg, total_cajas_5kg, estado_operacion, cliente, pod, eta, eta_original, eta_original_heredada, arribo_confirmado, arribo_at";
+  "etd, especie, tipo_unidad, contenedor, pallets, peso_neto, estado_operacion, cliente, pod, eta, eta_original, eta_original_heredada, arribo_confirmado, arribo_at";
 
 type KpiTone = "cyan" | "sky" | "emerald" | "violet" | "amber" | "rose" | "blue";
 
@@ -196,8 +194,8 @@ export function DashboardHistoricoContent({
    */
   const totales = useMemo(() => {
     const contenedores = new Set<string>();
-    const suma = { pallets: 0, pesoNeto: 0, cajas25: 0, cajas5: 0 };
-    const cobertura = { pallets: 0, pesoNeto: 0, cajas25: 0, cajas5: 0 };
+    const suma = { pallets: 0, pesoNeto: 0 };
+    const cobertura = { pallets: 0, pesoNeto: 0 };
     let sinEtd = 0;
 
     const acumular = (campo: keyof typeof suma, valor: number | null) => {
@@ -211,8 +209,6 @@ export function DashboardHistoricoContent({
       if (cont) contenedores.add(cont);
       acumular("pallets", op.pallets);
       acumular("pesoNeto", op.peso_neto);
-      acumular("cajas25", op.total_cajas_25kg);
-      acumular("cajas5", op.total_cajas_5kg);
       if (!parseEtd(op.etd)) sinEtd += 1;
     }
 
@@ -363,26 +359,6 @@ export function DashboardHistoricoContent({
       tone: "violet",
       numeric: totales.suma.pesoNeto,
     },
-    {
-      key: "c25",
-      label: tr.volumeBoxes25,
-      value: totales.cobertura.cajas25 > 0 ? fmt(totales.suma.cajas25) : "—",
-      hint: coberturaHint(totales.cobertura.cajas25),
-      icon: "lucide:box",
-      iconAlt: "lucide:square-stack",
-      tone: "amber",
-      numeric: totales.suma.cajas25,
-    },
-    {
-      key: "c5",
-      label: tr.volumeBoxes5,
-      value: totales.cobertura.cajas5 > 0 ? fmt(totales.suma.cajas5) : "—",
-      hint: coberturaHint(totales.cobertura.cajas5),
-      icon: "lucide:boxes",
-      iconAlt: "lucide:layout-grid",
-      tone: "rose",
-      numeric: totales.suma.cajas5,
-    },
   ];
 
   if (showEmpresaInsights && porEmpresa && porDestino) {
@@ -412,9 +388,12 @@ export function DashboardHistoricoContent({
     );
   }
 
+  /* Las columnas siguen a cuántas tarjetas hay: seis con los desgloses de
+     empresa y destino, cuatro sin ellos. Dejarlo en ocho estiraba las que
+     quedan hasta dejarlas huecas. */
   const kpiGridClass = showEmpresaInsights
-    ? "grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5 lg:gap-3"
-    : "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 lg:gap-3";
+    ? "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 lg:gap-3"
+    : "grid grid-cols-2 sm:grid-cols-4 gap-2.5 lg:gap-3";
 
   const rankingTable = (
     ranking: NonNullable<typeof porEmpresa>,
