@@ -75,7 +75,7 @@
     },
     {
       "id": "terreno",
-      "label": "Transporte y planta"
+      "label": "Transporte terrestre y planta"
     },
     {
       "id": "asli",
@@ -122,7 +122,8 @@
       "zarpe"
     ],
     "allowedTerminals": [
-      "legaliza"
+      "legaliza",
+      "tra"
     ]
   },
   "nodes": [
@@ -177,7 +178,7 @@
       "col": 2,
       "type": "external",
       "label": "Asigna la unidad",
-      "tag": "contenedor y sello",
+      "tag": "queda en Reserva ASLI",
       "width": 168
     },
     {
@@ -232,6 +233,15 @@
       "type": "external",
       "label": "Legaliza el DUS",
       "tag": "y envía físicos",
+      "width": 168
+    },
+    {
+      "id": "tra",
+      "lane": "terreno",
+      "col": 4,
+      "type": "database",
+      "label": "Proforma de transporte",
+      "tag": "numera TRAxxxx",
       "width": 168
     }
   ],
@@ -329,6 +339,12 @@
       "to": "legaliza",
       "label": "factura para legalizar",
       "role": "branch"
+    },
+    {
+      "from": "transporte",
+      "to": "tra",
+      "label": "si el transporte es de ASLI",
+      "role": "branch"
     }
   ],
   "cards": [
@@ -347,7 +363,7 @@
       "items": [
         "Naviera, aduana, transporte y planta se coordinan por correo, no por pantalla",
         "El sistema guarda el resultado —booking, documentos, datos de la unidad—, no la conversación",
-        "El transporte terrestre solo entra si el cliente lo pidió en la solicitud"
+        "Si el transporte lo pone ASLI se factura con serie TRA; si es de terceros entra por Reserva externa"
       ]
     },
     {
