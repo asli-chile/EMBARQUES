@@ -805,27 +805,63 @@ function viajePorTramos(
     }
   }
 
-  /** Los que caen dentro de un tramo, en orden de recorrido. */
-  const dentroDe = (desde: LngLat, hasta: LngLat): Intermedio[] => {
-    const largo = haversineKm(desde, hasta);
-    return intermedios
-      .filter(
-        (x) =>
-          haversineKm(x.coord, hasta) < largo &&
-          haversineKm(x.coord, desde) < largo &&
-          haversineKm(x.coord, desde) > MISMO_PUERTO_KM &&
-          haversineKm(x.coord, hasta) > MISMO_PUERTO_KM,
-      )
-      .sort((a, b) => haversineKm(b.coord, hasta) - haversineKm(a.coord, hasta));
+  /**
+   * Cuánto se desvía un punto de la recta entre dos puertos.
+   *
+   * Ir de A a B pasando por X cuesta `AX + XB`; el rodeo es lo que eso excede
+   * al trayecto directo. Vale cero sobre la línea y crece al alejarse, así que
+   * sirve para preguntar sobre **qué** tramo cae una escala.
+   */
+  const rodeoKm = (desde: LngLat, hasta: LngLat, x: LngLat) =>
+    haversineKm(desde, x) + haversineKm(x, hasta) - haversineKm(desde, hasta);
+
+  /*
+   * Cada escala pertenece a un solo tramo: aquel del que menos se desvía.
+   *
+   * Antes se le preguntaba a cada tramo si la escala le quedaba "en medio", y
+   * un tramo largo dice que sí a casi cualquier puerto de la región: Livorno
+   * cae a 200 km de la línea Cristóbal → Gioia Tauro, que mide 8.500. Así
+   * Livorno entraba en los dos tramos y la ruta se dibujaba subiendo a Livorno,
+   * bajando a Gioia Tauro y volviendo a subir. En el mapa el orden salía al
+   * revés del real, y el marcador aparecía dos veces encimado.
+   *
+   * Comparando los tramos entre sí gana el que de verdad la contiene: sobre
+   * Gioia Tauro → Génova el rodeo de Livorno es de ~30 km.
+   */
+  const porPaso = new Map<number, Intermedio[]>();
+  for (const x of intermedios) {
+    let mejor = -1;
+    let menor = Number.POSITIVE_INFINITY;
+    pasos.forEach((p, i) => {
+      const r = rodeoKm(p.desde, p.hasta, x.coord);
+      if (r < menor) {
+        menor = r;
+        mejor = i;
+      }
+    });
+    if (mejor < 0) continue;
+    const lista = porPaso.get(mejor) ?? [];
+    lista.push(x);
+    porPaso.set(mejor, lista);
+  }
+  // Dentro del tramo, en orden de marcha: de la salida hacia la llegada.
+  for (const [i, lista] of porPaso) {
+    lista.sort((a, b) => haversineKm(pasos[i].desde, a.coord) - haversineKm(pasos[i].desde, b.coord));
+  }
+
+  /** Escalas del tramo `i`, en orden de recorrido. */
+  const escalasDe = (i: number): Intermedio[] => porPaso.get(i) ?? [];
+
+  /** Una curva que pasa por los puntos dados, en orden. */
+  const curvaPor = (desde: LngLat, medio: LngLat[], hasta: LngLat): LngLat[] => {
+    if (medio.length === 0) return curvaMaritima(desde, hasta);
+    const puntos = [desde, ...medio, hasta];
+    return unirTramos(puntos.slice(0, -1).map((a, k) => curvaMaritima(a, puntos[k + 1])));
   };
 
-  /** La curva de un tramo, doblada por las escalas que tenga en medio. */
-  const curvaDePaso = (desde: LngLat, hasta: LngLat): LngLat[] => {
-    const medio = dentroDe(desde, hasta);
-    if (medio.length === 0) return curvaMaritima(desde, hasta);
-    const puntos = [desde, ...medio.map((x) => x.coord), hasta];
-    return unirTramos(puntos.slice(0, -1).map((a, i) => curvaMaritima(a, puntos[i + 1])));
-  };
+  /** La curva completa de un tramo, doblada por sus escalas. */
+  const curvaDePaso = (i: number): LngLat[] =>
+    curvaPor(pasos[i].desde, escalasDe(i).map((x) => x.coord), pasos[i].hasta);
 
   const posicion = arribado
     ? null
@@ -836,8 +872,8 @@ function viajePorTramos(
         now,
       );
 
-  const anteriores = pasos.slice(0, indiceActual).map((p) => curvaDePaso(p.desde, p.hasta));
-  const posteriores = pasos.slice(indiceActual + 1).map((p) => curvaDePaso(p.desde, p.hasta));
+  const anteriores = pasos.slice(0, indiceActual).map((_p, i) => curvaDePaso(i));
+  const posteriores = pasos.slice(indiceActual + 1).map((_p, i) => curvaDePaso(indiceActual + 1 + i));
   const actual = pasos[indiceActual];
 
   let traveled: LngLat[];
@@ -845,7 +881,7 @@ function viajePorTramos(
 
   if (arribado) {
     // La cadena completa, de punta a punta: no queda nada por navegar.
-    traveled = unirTramos(pasos.map((p) => curvaDePaso(p.desde, p.hasta)));
+    traveled = unirTramos(pasos.map((_p, i) => curvaDePaso(i)));
     remaining = [];
   } else if (isValidCoord(posicion)) {
     /*
@@ -854,11 +890,21 @@ function viajePorTramos(
      * que el barco pareciera ir a un puerto que ya dejó.
      */
     const aqui = { lng: posicion.lng, lat: posicion.lat };
-    traveled = unirTramos([...anteriores, curvaDePaso(actual.desde, aqui)]);
-    remaining = unirTramos([curvaDePaso(aqui, actual.hasta), ...posteriores]);
+    const enCurso = escalasDe(indiceActual);
+    /* Las escalas del tramo caen de un lado o del otro del buque según si ya
+       quedaron atrás: dibujarlas todas por delante haría que el barco pareciera
+       ir a un puerto que ya dejó. */
+    const avance = haversineKm(actual.desde, aqui);
+    const atras = enCurso.filter((x) => haversineKm(actual.desde, x.coord) <= avance);
+    const porDelante = enCurso.filter((x) => haversineKm(actual.desde, x.coord) > avance);
+    traveled = unirTramos([...anteriores, curvaPor(actual.desde, atras.map((x) => x.coord), aqui)]);
+    remaining = unirTramos([
+      curvaPor(aqui, porDelante.map((x) => x.coord), actual.hasta),
+      ...posteriores,
+    ]);
   } else {
     traveled = unirTramos(anteriores);
-    remaining = unirTramos([curvaDePaso(actual.desde, actual.hasta), ...posteriores]);
+    remaining = unirTramos([curvaDePaso(indiceActual), ...posteriores]);
   }
 
   // La línea es una sola: el tramo restante arranca donde terminó el recorrido.
@@ -910,7 +956,7 @@ function viajePorTramos(
      * parada programada puede estar decidida y todavía por delante del buque.
      * Lo que decide es si quedó atrás, igual que en el historial del viaje.
      */
-    for (const x of dentroDe(p.desde, p.hasta)) {
+    for (const x of escalasDe(i)) {
       escalas.push({
         nombre: x.nombre,
         coord: x.coord,
