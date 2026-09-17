@@ -3,7 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "ASLI — flujo de una operación de exportación",
-    "output": "docs/flujo-operacion.html",
+    "output": "public/flujo/index.html",
     "quality_profile": "showcase",
     "viewBox": [
       1640,
