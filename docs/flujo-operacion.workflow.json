@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "viewBox": [
       1640,
-      660
+      790
     ],
     "legend": {
       "mode": "auto",
@@ -74,6 +74,10 @@
       "label": "Cliente"
     },
     {
+      "id": "navitrack",
+      "label": "NaviTrack — automático"
+    },
+    {
       "id": "terreno",
       "label": "Transporte terrestre y planta"
     },
@@ -119,11 +123,13 @@
   "semanticChecks": {
     "allowedRoots": [
       "solicita",
-      "zarpe"
+      "zarpe",
+      "ais"
     ],
     "allowedTerminals": [
       "legaliza",
-      "tra"
+      "tra",
+      "consulta"
     ]
   },
   "nodes": [
@@ -243,6 +249,42 @@
       "label": "Proforma de transporte",
       "tag": "numera TRAxxxx",
       "width": 168
+    },
+    {
+      "id": "ais",
+      "lane": "navitrack",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Posición del buque",
+      "tag": "consulta diaria",
+      "width": 168
+    },
+    {
+      "id": "condiciones",
+      "lane": "navitrack",
+      "col": 4,
+      "type": "backend",
+      "label": "Evalúa condiciones",
+      "tag": "etapa y alertas",
+      "width": 168
+    },
+    {
+      "id": "estado",
+      "lane": "navitrack",
+      "col": 5,
+      "type": "database",
+      "label": "Actualiza el estado",
+      "tag": "sin acción manual",
+      "width": 168
+    },
+    {
+      "id": "consulta",
+      "lane": "cliente",
+      "col": 5,
+      "type": "frontend",
+      "label": "Consulta el embarque",
+      "tag": "solo lectura",
+      "width": 168
     }
   ],
   "edges": [
@@ -345,6 +387,27 @@
       "to": "tra",
       "label": "si el transporte es de ASLI",
       "role": "branch"
+    },
+    {
+      "from": "ais",
+      "to": "condiciones",
+      "label": "geográfico",
+      "role": "async",
+      "variant": "dashed"
+    },
+    {
+      "from": "condiciones",
+      "to": "estado",
+      "label": "cambio automático",
+      "role": "async",
+      "variant": "dashed"
+    },
+    {
+      "from": "estado",
+      "to": "consulta",
+      "label": "lo ve el cliente",
+      "role": "async",
+      "variant": "dashed"
     }
   ],
   "cards": [
@@ -352,27 +415,27 @@
       "dot": "cyan",
       "title": "Quién hace qué",
       "items": [
-        "El cliente solicita y consulta; no edita ni elimina nada de la operación",
-        "El ejecutivo gestiona y actualiza, solo sobre los clientes que tiene asignados",
-        "El superadmin administra todo: usuarios, asignaciones, catálogos y NaviTrack"
+        "El cliente solicita y consulta; no edita nada",
+        "El ejecutivo gestiona, solo sobre sus clientes asignados",
+        "El superadmin asigna, configura y administra"
       ]
     },
     {
       "dot": "amber",
-      "title": "Lo que ocurre fuera del sistema",
+      "title": "Fuera del sistema",
       "items": [
-        "Naviera, aduana, transporte y planta se coordinan por correo, no por pantalla",
-        "El sistema guarda el resultado —booking, documentos, datos de la unidad—, no la conversación",
-        "Si el transporte lo pone ASLI se factura con serie TRA; si es de terceros entra por Reserva externa"
+        "Naviera, aduana, transporte y planta se coordinan por correo",
+        "El ERP guarda el resultado, no la conversación",
+        "Transporte de ASLI factura serie TRA; el de terceros va por Reserva externa"
       ]
     },
     {
       "dot": "emerald",
       "title": "Cuándo está cerrada",
       "items": [
-        "Seis documentos: BL, proforma, packing list, origen, fitosanitario y DUS legalizado",
-        "Cinco días desde el zarpe para reunir BL y certificados: es el tramo que más se atrasa",
-        "Cerrado el papeleo, la aduana envía los físicos al consignatario"
+        "BL, proforma, packing list, origen, fitosanitario y DUS legalizado",
+        "Cinco días desde el zarpe: el tramo que más se atrasa",
+        "Cerrado el papeleo, la aduana envía los físicos"
       ]
     }
   ]
