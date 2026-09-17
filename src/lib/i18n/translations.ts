@@ -2844,12 +2844,19 @@ export const translations = {
         "Este embarque no tiene puerto de destino cargado. El arribo se registra igual, pero conviene completarlo en la reserva.",
       arriboAvisoEstado:
         "El estado de la operación no cambia: el arribo se muestra aparte, en Mis Reservas y en Registros. La operación cierra con el fullset.",
+      arriboAvisoSeguimiento:
+        "Si {{nave}} se queda sin otra carga pendiente, dejará de seguirse y de gastar consultas.",
       arriboGuardarAnunciado: "Anunciar arribo",
       arriboGuardarConfirmado: "Registrar arribo",
       arriboGuardadoAnunciado:
         "Arribo anunciado a {{pod}} para el {{fecha}}. El seguimiento sigue igual hasta ese día.",
       arriboGuardadoConfirmado:
         "Arribo registrado: la carga llegó a {{pod}} el {{fecha}}.",
+      // Se dice solo cuando ocurre: apagar el seguimiento es lo que deja de
+      // gastar un crédito diario, y conviene que se vea que pasó.
+      arriboSeguimientoApagado:
+        "{{nave}} se quedó sin carga pendiente, así que dejó de seguirse: no gasta más consultas.",
+      arriboSeguimientoEncendido: "{{nave}} vuelve a seguirse.",
       arriboDeshacer: "Deshacer el arribo",
       arriboDeshecho: "Se deshizo el arribo: la carga vuelve a contar como en tránsito.",
       arriboYaRegistrado: "Este embarque ya figura como arribado el {{fecha}}.",
@@ -6051,11 +6058,16 @@ export const translations = {
         "This shipment has no destination port on file. The arrival is recorded anyway, but it is worth completing it on the booking.",
       arriboAvisoEstado:
         "The operation status does not change: the arrival is shown separately in My Bookings and Records. The operation closes with the full set.",
+      arriboAvisoSeguimiento:
+        "If {{nave}} is left with no other pending cargo, it will stop being tracked and spending queries.",
       arriboGuardarAnunciado: "Announce arrival",
       arriboGuardarConfirmado: "Record arrival",
       arriboGuardadoAnunciado:
         "Arrival at {{pod}} announced for {{fecha}}. Tracking continues unchanged until then.",
       arriboGuardadoConfirmado: "Arrival recorded: the cargo reached {{pod}} on {{fecha}}.",
+      arriboSeguimientoApagado:
+        "{{nave}} has no pending cargo left, so it stopped being tracked: no more queries spent on it.",
+      arriboSeguimientoEncendido: "{{nave}} is being tracked again.",
       arriboDeshacer: "Undo the arrival",
       arriboDeshecho: "Arrival undone: the cargo counts as in transit again.",
       arriboYaRegistrado: "This shipment is already recorded as arrived on {{fecha}}.",

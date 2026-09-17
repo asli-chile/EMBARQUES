@@ -276,14 +276,28 @@ export function NavitrackRecalada({
           recaladaId: decision === "confirmado" && recalada.id ? recalada.id : undefined,
         }),
       });
-      const j = (await r.json()) as { ok: boolean; code?: string; fecha?: string | null };
+      const j = (await r.json()) as {
+        ok: boolean;
+        code?: string;
+        fecha?: string | null;
+        nave?: string | null;
+        seguimientoApagado?: boolean;
+        seguimientoEncendido?: boolean;
+      };
       if (!j.ok) {
         setError(tr.arriboErrorGuardar);
         return;
       }
 
+      const buque = (j.nave ?? naveActual ?? "").trim() || "—";
+
       if (decision === "deshacer") {
-        onGuardado(tr.arriboDeshecho);
+        onGuardado(
+          tr.arriboDeshecho +
+            (j.seguimientoEncendido
+              ? ` ${tr.arriboSeguimientoEncendido.replace("{{nave}}", buque)}`
+              : ""),
+        );
         return;
       }
 
@@ -292,7 +306,12 @@ export function NavitrackRecalada({
       onGuardado(
         plantilla
           .replace("{{pod}}", destino)
-          .replace("{{fecha}}", fechaCorta(j.fecha ?? fechaArribo)),
+          .replace("{{fecha}}", fechaCorta(j.fecha ?? fechaArribo)) +
+          // Apagar el seguimiento es lo que deja de costar un crédito diario:
+          // se dice cuando pasa, no se promete cuando no.
+          (j.seguimientoApagado
+            ? ` ${tr.arriboSeguimientoApagado.replace("{{nave}}", buque)}`
+            : ""),
       );
     } catch {
       setError(tr.arriboErrorGuardar);
@@ -763,6 +782,15 @@ export function NavitrackRecalada({
               <Icon icon="lucide:info" width={13} height={13} className="mr-1.5 inline align-[-2px]" aria-hidden />
               {tr.arriboAvisoEstado}
             </p>
+
+            {/* Lo que sí cambia, y cuesta: el arribo puede sacar al buque de la
+                lista blanca. Solo aplica al arribo consumado. */}
+            {modo === "arribo" && (naveActual ?? "").trim() && (
+              <p className="mt-2 rounded-lg border border-dash-border bg-dash-control/60 px-3 py-2 text-[12.5px] leading-snug text-dash-fg">
+                <Icon icon="lucide:satellite-dish" width={13} height={13} className="mr-1.5 inline align-[-2px]" aria-hidden />
+                {tr.arriboAvisoSeguimiento.replace("{{nave}}", (naveActual ?? "").trim())}
+              </p>
+            )}
 
             {error && (
               <p className="mt-3 rounded-lg border border-dash-border bg-dash-control/70 px-3 py-2 text-[12px] text-dash-fg">

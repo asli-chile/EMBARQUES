@@ -5,9 +5,10 @@
  *
  *   anunciado   la naviera dijo para cuándo llega. Todavía no pasó: el buque
  *               se sigue consultando y la carga sigue en tránsito.
- *   confirmado  llegó. El embarque deja de verificarse: después del arribo el
- *               buque sigue viaje a otro destino y su posición, aunque real, ya
- *               no dice nada de esta carga.
+ *   confirmado  llegó. El embarque deja de verificarse, y si esa nave se quedó
+ *               sin ninguna carga viva, sale de la lista blanca: después del
+ *               arribo sigue viaje a otro destino y su posición, aunque real,
+ *               ya no dice nada de esta carga.
  *
  * Va aparte de `/api/navitrack/recalada` a propósito. Esa ruta responde qué
  * pasó con la **carga en un puerto** —si cambió de barco o no—; esta registra
@@ -55,6 +56,75 @@ async function exigirDecisor(supabase: Sesion) {
     return { ok: false as const, status: 403, code: "FORBIDDEN" };
   }
   return { ok: true as const, usuarioId: perfil.id as string, authId: user.id, rol };
+}
+
+/**
+ * Embarques vivos que lleva una nave: los que no han arribado.
+ *
+ * Mira los dos caminos por los que una carga apunta a un buque —la columna
+ * `operaciones.nave` y los tramos de NaviTrack—, porque en un viaje con
+ * transbordo la columna guarda la nave del **primer** tramo y la que lleva la
+ * caja hoy solo aparece en `navitrack_tramos`.
+ *
+ * `excluir` deja fuera la operación que se acaba de marcar: la lectura de
+ * `operaciones` puede no reflejar todavía el update recién hecho.
+ */
+async function cargasVivasDe(
+  supabase: Sesion,
+  nave: string,
+  excluir: string,
+): Promise<number> {
+  const patron = `${nave.trim()}%`;
+  if (!nave.trim()) return 0;
+
+  const [porColumna, porTramo] = await Promise.all([
+    supabase
+      .from("operaciones")
+      .select("id")
+      .is("deleted_at", null)
+      .eq("arribo_confirmado", false)
+      .neq("id", excluir)
+      .ilike("nave", patron)
+      .limit(50),
+    supabase.from("navitrack_tramos").select("operacion_id").ilike("nave", patron).limit(200),
+  ]);
+
+  const ids = new Set<string>(((porColumna.data ?? []) as { id: string }[]).map((o) => o.id));
+
+  const candidatos = [
+    ...new Set(
+      ((porTramo.data ?? []) as { operacion_id: string }[])
+        .map((t) => t.operacion_id)
+        .filter((id) => id && id !== excluir && !ids.has(id)),
+    ),
+  ];
+  if (candidatos.length > 0) {
+    const { data } = await supabase
+      .from("operaciones")
+      .select("id")
+      .is("deleted_at", null)
+      .eq("arribo_confirmado", false)
+      .in("id", candidatos);
+    for (const o of (data ?? []) as { id: string }[]) ids.add(o.id);
+  }
+
+  return ids.size;
+}
+
+/** La nave que lleva la carga: el último tramo, o la columna si no hay tramos. */
+async function naveDeLaCarga(
+  supabase: Sesion,
+  operacionId: string,
+  naveOperacion: string | null,
+): Promise<string> {
+  const { data } = await supabase
+    .from("navitrack_tramos")
+    .select("nave, orden")
+    .eq("operacion_id", operacionId)
+    .order("orden", { ascending: false })
+    .limit(1);
+  const ultima = ((data ?? []) as { nave: string | null }[])[0]?.nave;
+  return (ultima ?? naveOperacion ?? "").trim();
 }
 
 export const prerender = false;
@@ -144,7 +214,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .eq("id", operacionId);
     if (error) return json({ ok: false, code: "ERROR_GUARDAR" }, 500);
 
-    return json({ ok: true, estado: "deshecho" });
+    /*
+     * La carga vuelve a estar viva, así que su nave vuelve a la lista blanca.
+     *
+     * Solo si se puede consultar: encender una nave sin IMO ni MMSI gastaría
+     * la corrida en una búsqueda que no tiene a qué preguntarle.
+     */
+    const nave = await naveDeLaCarga(supabase, operacionId, op.nave);
+    let seguimientoEncendido = false;
+    if (nave) {
+      const { data: fila } = await supabase
+        .from("naves")
+        .select("id, imo, mmsi, tracking_activo, activo")
+        .ilike("nombre", nave)
+        .maybeSingle();
+      const ident = ((fila?.mmsi ?? "").trim() || (fila?.imo ?? "").trim());
+      if (fila && fila.activo && !fila.tracking_activo && /^\d{7}$|^\d{9}$/.test(ident)) {
+        await supabase.from("naves").update({ tracking_activo: true }).eq("id", fila.id);
+        seguimientoEncendido = true;
+      }
+    }
+
+    return json({ ok: true, estado: "deshecho", nave: nave || null, seguimientoEncendido });
   }
 
   /* ── Confirmado: la carga llegó ─────────────────────────────────────────── */
@@ -183,13 +274,43 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   /*
-   * La lista blanca de naves no se toca acá.
+   * La nave se apaga solo si se quedó sin nada que llevar.
    *
-   * El chequeo diario ya salta las operaciones arribadas, así que este embarque
-   * deja de verificarse solo. Pero el crédito se gasta **por nave**, no por
-   * embarque: apagar el buque porque esta carga llegó le quitaría la posición a
-   * las otras que sigue llevando. Quién está en la lista blanca es decisión del
-   * usuario, en el panel de rastreo, y sigue siéndolo.
+   * El crédito se gasta **por nave**, no por embarque, así que apagarla porque
+   * esta carga llegó le quitaría la posición a las otras que sigue llevando. Y
+   * dejarla encendida sin carga es pagar un crédito diario por un viaje ajeno:
+   * el chequeo salta la operación arribada, pero igual le pregunta al proveedor
+   * dónde está el buque.
+   *
+   * El criterio no es "esta carga llegó" sino "no queda ninguna". Se comprueba
+   * acá y no en `sincronizarSeguimiento` porque esa función solo actúa sobre
+   * cadenas de transbordo —apaga al que entregó y enciende al que recibió— y
+   * nunca apaga una nave sin sucesor, que es justo este caso.
+   *
+   * Se dispara solo al confirmar un arribo, no en cada corrida: una nave que
+   * alguien puso a mano en la lista blanca sin carga todavía no se toca.
    */
-  return json({ ok: true, estado: "confirmado", fecha, pod: op.pod ?? null, nave: op.nave ?? null });
+  const nave = await naveDeLaCarga(supabase, operacionId, op.nave);
+  let seguimientoApagado = false;
+  if (nave) {
+    const vivas = await cargasVivasDe(supabase, nave, operacionId);
+    if (vivas === 0) {
+      const { data: apagada } = await supabase
+        .from("naves")
+        .update({ tracking_activo: false })
+        .ilike("nombre", nave)
+        .eq("tracking_activo", true)
+        .select("id");
+      seguimientoApagado = (apagada ?? []).length > 0;
+    }
+  }
+
+  return json({
+    ok: true,
+    estado: "confirmado",
+    fecha,
+    pod: op.pod ?? null,
+    nave: nave || op.nave || null,
+    seguimientoApagado,
+  });
 };

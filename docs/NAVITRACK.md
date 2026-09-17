@@ -509,10 +509,16 @@ Tres cosas que no hace, y conviene no prometer:
   puede llegar estando ya en `DOCUMENTACION_EN_REVISION`. Escribirlo ahí la haría
   retroceder en el papeleo. Mis Reservas y Registros lo muestran **al lado** del
   badge de estado, con `ArriboChip`.
-- **No apaga la nave.** El crédito se gasta por nave, no por embarque: sacarla de
-  la lista blanca porque esta carga llegó le quitaría la posición a las otras que
-  sigue llevando. Quién está en la lista sigue siendo decisión del usuario, en el
-  panel de rastreo.
+- **No apaga la nave por esta carga.** El crédito se gasta por nave, no por
+  embarque: sacarla de la lista blanca porque esta carga llegó le quitaría la
+  posición a las otras que sigue llevando. Sí la apaga cuando **no le queda
+  ninguna**, contando los dos caminos por los que una carga apunta a un buque —la
+  columna `operaciones.nave` y `navitrack_tramos`—; si no, quedaría pagando un
+  crédito diario por un viaje ajeno. Se comprueba solo al confirmar un arribo, no
+  en cada corrida, para no tocar una nave que alguien puso a mano en la lista sin
+  carga todavía. `sincronizarSeguimiento` no cubre este caso: solo actúa sobre
+  cadenas de transbordo y nunca apaga una nave sin sucesor. Deshacer el arribo la
+  vuelve a encender, si tiene identificador con el que consultarla.
 - **No avisa al cliente.** `arribo_avisado_at` existe desde la migración de
   estados y nadie lo escribe todavía.
 
