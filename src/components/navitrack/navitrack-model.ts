@@ -32,6 +32,15 @@ export type NavitrackOperacion = {
   tt: number | null;
   estado_operacion: string | null;
   arribo_confirmado: boolean | null;
+  /**
+   * La promesa de la reserva: el cero contra el que se mide el desvío.
+   *
+   * No es `eta`. Cuando la naviera reprograma, alguien actualiza `eta` y la
+   * fecha prometida desaparece; esta la congela un trigger. Ver `desvioEta`.
+   */
+  eta_original: string | null;
+  /** La promesa se reconstruyó del eta vigente y puede venir ya revisada. */
+  eta_original_heredada: boolean | null;
   /** Fecha del arribo, cuando consta. Acompaña a `arribo_confirmado`. */
   arribo_at: string | null;
   /** Llegada a destino anunciada por la naviera y todavía no ocurrida. */
@@ -45,7 +54,7 @@ export type NavitrackOperacion = {
 };
 
 export const NAVITRACK_OP_SELECT =
-  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, eta, tt, estado_operacion, arribo_confirmado, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
+  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, eta, tt, estado_operacion, arribo_confirmado, eta_original, eta_original_heredada, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
 
 /** Identificadores del catálogo `naves`: permiten resolver el AIS sin buscar a mano. */
 export type NaveIdent = { nombre: string; imo: string | null; mmsi: string | null };

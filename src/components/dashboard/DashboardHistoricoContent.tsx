@@ -9,6 +9,7 @@ import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "
 import { aplicarFiltroTemporada, listarTemporadas, type Temporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { normalizarEstado } from "@/lib/operaciones/estados";
+import { desvioEta, formatoDesvio, resumirDesvios, type Desvio } from "@/lib/operaciones/desvioEta";
 import { DashboardViewTabs, type DashboardView } from "./DashboardViewTabs";
 
 type OperacionVolumen = {
@@ -23,6 +24,12 @@ type OperacionVolumen = {
   estado_operacion: string | null;
   cliente: string | null;
   pod: string | null;
+  /* Prometido contra real: `eta_original` es el cero de la reserva. Ver `desvioEta`. */
+  eta: string | null;
+  eta_original: string | null;
+  eta_original_heredada: boolean | null;
+  arribo_confirmado: boolean | null;
+  arribo_at: string | null;
 };
 
 type Props = {
@@ -35,7 +42,7 @@ const TEMPORADA_TODAS = "__all__";
 
 /** Anotado como `string` a propósito: con el literal, el genérico de PostgREST hace explotar la inferencia. */
 const COLUMNAS: string =
-  "etd, especie, tipo_unidad, contenedor, pallets, peso_neto, total_cajas_25kg, total_cajas_5kg, estado_operacion, cliente, pod";
+  "etd, especie, tipo_unidad, contenedor, pallets, peso_neto, total_cajas_25kg, total_cajas_5kg, estado_operacion, cliente, pod, eta, eta_original, eta_original_heredada, arribo_confirmado, arribo_at";
 
 type KpiTone = "cyan" | "sky" | "emerald" | "violet" | "amber" | "rose" | "blue";
 
@@ -219,6 +226,19 @@ export function DashboardHistoricoContent({
     };
   }, [embarcadas]);
 
+  /*
+   * Cumplimiento de la llegada: el arribo real contra lo prometido en la
+   * reserva. El cero es `eta_original` y el desvío va en días con signo.
+   *
+   * Es la única tarjeta de esta pantalla que no mide volumen, y por eso encaja:
+   * su cobertura se lee igual que la de pallets o kilos —cuántas operaciones
+   * tienen el dato— y el guion cuando nadie lo llenó significa lo mismo.
+   */
+  const cumplimiento = useMemo(
+    () => resumirDesvios(embarcadas.map((op) => desvioEta(op)).filter((d): d is Desvio => d != null)),
+    [embarcadas],
+  );
+
   const porMes = useMemo(() => {
     const buckets = new Map<string, { inicio: Date; operaciones: number; pallets: number }>();
     for (const op of embarcadas) {
@@ -314,6 +334,24 @@ export function DashboardHistoricoContent({
       iconAlt: "lucide:box",
       tone: "sky",
       numeric: totales.contenedores,
+    },
+    {
+      /*
+       * Desvío típico: mediana y no promedio, porque un embarque con un mes de
+       * atraso arrastraría el número de toda la temporada.
+       */
+      key: "desvio",
+      label: tr.volumeDeviation,
+      value: cumplimiento.mediana != null ? formatoDesvio(cumplimiento.mediana) : "—",
+      hint:
+        cumplimiento.total === 0
+          ? tr.volumeNoCoverage
+          : `${fmt(cumplimiento.total)}/${fmt(totales.operaciones)} ${tr.volumeCoverage}`,
+      icon: "lucide:target",
+      iconAlt: "lucide:crosshair",
+      // Ámbar: es lo que hay que mirar, no un éxito ni un error.
+      tone: "amber",
+      numeric: cumplimiento.mediana ?? 0,
     },
     {
       key: "pallets",

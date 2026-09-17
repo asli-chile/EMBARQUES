@@ -14,6 +14,13 @@ import {
   normalizarEstado,
   type GrupoEstado,
 } from "@/lib/operaciones/estados";
+import {
+  desvioEta,
+  estadoDesvio,
+  formatoDesvio,
+  resumirDesvios,
+  type Desvio,
+} from "@/lib/operaciones/desvioEta";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 
@@ -28,6 +35,13 @@ type DbOperacion = {
   peso_neto: number | null;
   monto_facturado: number | null;
   margen_real: number | null;
+  /* Prometido contra real. `eta_original` es el cero —la promesa congelada de
+     la reserva— y `eta` la última revisión. Ver `desvioEta`. */
+  eta: string | null;
+  eta_original: string | null;
+  eta_original_heredada: boolean | null;
+  arribo_confirmado: boolean | null;
+  arribo_at: string | null;
 };
 
 type ReportesFilters = {
@@ -102,7 +116,9 @@ export function ReportesContent() {
 
     let baseQuery = supabase
       .from("operaciones")
-      .select("id, ingreso, semana, estado_operacion, cliente, naviera, pallets, peso_neto, monto_facturado, margen_real")
+      .select(
+        "id, ingreso, semana, estado_operacion, cliente, naviera, pallets, peso_neto, monto_facturado, margen_real, eta, eta_original, eta_original_heredada, arribo_confirmado, arribo_at",
+      )
       .is("deleted_at", null);
     if (empresaNombres.length > 0) baseQuery = baseQuery.in("cliente", empresaNombres);
 
@@ -187,6 +203,44 @@ export function ReportesContent() {
       map.set(key, c);
     }
     return [...map.values()].sort((a, b) => b.totalMontoFacturado - a.totalMontoFacturado).slice(0, 8);
+  }, [filteredRows]);
+
+  /*
+   * Cumplimiento: lo prometido en la reserva contra lo que de verdad pasó.
+   *
+   * Solo entran los embarques arribados **con fecha**. Los que navegan todavía
+   * no tienen desvío, y contarlos como cero los haría pasar por cumplidos.
+   */
+  const desvios = useMemo(
+    () =>
+      filteredRows
+        .map((r) => desvioEta(r))
+        .filter((d): d is Desvio => d != null),
+    [filteredRows],
+  );
+
+  const cumplimiento = useMemo(() => resumirDesvios(desvios), [desvios]);
+
+  /*
+   * Por naviera, que es la pregunta que motiva la pantalla: quién cumple.
+   *
+   * Se ordena por el peor promedio y no por volumen: una naviera con dos
+   * embarques y quince días de atraso importa más que una con veinte en fecha.
+   * Se piden al menos dos embarques para no coronar a la peor con un caso
+   * suelto, y las que tienen uno se cuentan aparte para no esconderlas.
+   */
+  const cumplimientoPorNaviera = useMemo(() => {
+    const map = new Map<string, Desvio[]>();
+    for (const r of filteredRows) {
+      const d = desvioEta(r);
+      if (!d) continue;
+      const key = (r.naviera ?? "").trim() || "—";
+      map.set(key, [...(map.get(key) ?? []), d]);
+    }
+    return [...map.entries()]
+      .map(([key, lista]) => ({ key, ...resumirDesvios(lista) }))
+      .sort((a, b) => (b.mediana ?? 0) - (a.mediana ?? 0) || b.total - a.total)
+      .slice(0, 8);
   }, [filteredRows]);
 
   const byStatus = useMemo(() => {
@@ -546,6 +600,125 @@ export function ReportesContent() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/*
+              * Cumplimiento: prometido en la reserva contra lo que pasó.
+              *
+              * Va al final y en su propio bloque porque no es volumen como el
+              * resto de la pantalla: es la única medida de servicio que hay. El
+              * cero es el ETA de la reserva y el desvío se cuenta en días con
+              * signo, sin banda de tolerancia.
+              */}
+            <div className="dash-card mt-4 overflow-hidden rounded-xl">
+              <div className="dash-section-head flex flex-wrap items-center gap-2 px-4 py-3">
+                <span className="h-4 w-1 flex-shrink-0 rounded-full bg-dash-neon" />
+                <Icon icon="lucide:target" width={17} height={17} className="text-dash-neon" />
+                <h2 className="text-sm font-bold text-dash-fg">{tr.cumplimientoTitulo}</h2>
+                <span className="text-[11.5px] text-dash-muted">
+                  {tr.cumplimientoBase.replace("{{n}}", String(cumplimiento.total))}
+                </span>
+              </div>
+
+              {cumplimiento.total === 0 ? (
+                /* Sin arribos con fecha no hay nada que medir. Decirlo es mejor
+                   que dibujar un cero: un promedio de cero se lee como
+                   puntualidad perfecta. */
+                <p className="px-4 py-6 text-center text-[13px] leading-snug text-dash-muted">
+                  {tr.cumplimientoVacio}
+                </p>
+              ) : (
+                <>
+                  <div className="grid gap-3 border-b border-dash-border p-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      {
+                        etiqueta: tr.cumplimientoMediana,
+                        valor: cumplimiento.mediana != null ? formatoDesvio(cumplimiento.mediana) : "—",
+                        pie: tr.cumplimientoMedianaPie,
+                        estado: cumplimiento.mediana != null ? estadoDesvio(cumplimiento.mediana) : "espera",
+                      },
+                      {
+                        etiqueta: tr.cumplimientoEnFecha,
+                        valor: String(cumplimiento.enFecha),
+                        pie: tr.cumplimientoDeTotal.replace("{{n}}", String(cumplimiento.total)),
+                        estado: "ok" as const,
+                      },
+                      {
+                        etiqueta: tr.cumplimientoAtrasados,
+                        valor: String(cumplimiento.atrasados),
+                        pie:
+                          cumplimiento.peorAtraso != null
+                            ? tr.cumplimientoPeor.replace("{{d}}", formatoDesvio(cumplimiento.peorAtraso))
+                            : "—",
+                        estado: "atencion" as const,
+                      },
+                      {
+                        etiqueta: tr.cumplimientoAdelantados,
+                        valor: String(cumplimiento.adelantados),
+                        pie:
+                          cumplimiento.mayorAdelanto != null
+                            ? tr.cumplimientoMayor.replace("{{d}}", formatoDesvio(cumplimiento.mayorAdelanto))
+                            : "—",
+                        estado: "curso" as const,
+                      },
+                    ].map((k) => (
+                      <div
+                        key={k.etiqueta}
+                        className={`estado--${k.estado} rounded-xl border border-dash-border bg-dash-control/40 px-3.5 py-3`}
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                          {k.etiqueta}
+                        </p>
+                        <p className="estado-chip mt-1.5 inline-block rounded-md border px-2 py-0.5 text-[17px] font-extrabold leading-tight tabular-nums">
+                          {k.valor}
+                        </p>
+                        <p className="mt-1.5 text-[11.5px] leading-snug text-dash-muted">{k.pie}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+                      {tr.cumplimientoPorNaviera}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {cumplimientoPorNaviera.map((n) => (
+                        <div
+                          key={n.key}
+                          className={`estado--${n.mediana != null ? estadoDesvio(n.mediana) : "espera"} flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-dash-border bg-dash-control/40 px-3 py-2`}
+                        >
+                          <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-dash-fg">
+                            {n.key}
+                          </span>
+                          <span className="shrink-0 text-[11.5px] text-dash-muted tabular-nums">
+                            {n.total} {tr.opsUnit}
+                          </span>
+                          <span className="estado-chip shrink-0 rounded-md border px-1.5 py-0.5 text-[12px] font-extrabold tabular-nums">
+                            {n.mediana != null ? formatoDesvio(n.mediana) : "—"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/*
+                    * Una promesa reconstruida no puede presentarse como promesa.
+                    *
+                    * Las operaciones anteriores al 17-09-2026 heredaron su
+                    * `eta_original` del eta vigente, que pudo venir ya revisado:
+                    * su desvío subestima el atraso. Sin este aviso, el resumen
+                    * se lee mejor de lo que fue.
+                    */}
+                  {cumplimiento.heredados > 0 && (
+                    <p className="border-t border-dash-border px-4 py-3 text-[11.5px] leading-snug text-dash-muted">
+                      <Icon icon="lucide:info" width={12} height={12} className="mr-1 inline align-[-2px]" aria-hidden />
+                      {tr.cumplimientoHeredados
+                        .replace("{{n}}", String(cumplimiento.heredados))
+                        .replace("{{total}}", String(cumplimiento.total))}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           </>
         )}

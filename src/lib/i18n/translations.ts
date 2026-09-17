@@ -1126,6 +1126,8 @@ export const translations = {
       volumeNoEtd: "sin ETD",
       volumeCoverage: "con dato",
       volumeNoCoverage: "Sin datos cargados",
+      // Mediana de días entre el ETA de la reserva y el arribo real.
+      volumeDeviation: "Desvío típico de llegada",
     },
     finanzasPage: {
       title: "Finanzas",
@@ -2712,6 +2714,21 @@ export const translations = {
       subPosibleRetraso: "Llegaría después de lo comprometido",
       subArribado: "Carga en destino",
       llegadaEstimada: "Llegada estimada",
+      // ── Promesa contra realidad ───────────────────────────────────────
+      // El cero es el ETA de la reserva, y el desvío se cuenta en días con
+      // signo. Sin banda de tolerancia: dos días tarde es +2, no "a tiempo".
+      desvioTitulo: "Prometido contra real",
+      desvioEtaReserva: "ETA de la reserva",
+      desvioEtaVigente: "ETA vigente",
+      desvioArriboReal: "Arribo real",
+      desvioReprogramado: "reprogramado {{dias}}",
+      desvioSinReprogramar: "sin reprogramar",
+      desvioEnFecha: "Llegó en la fecha prometida.",
+      desvioAdelanto: "Llegó {{dias}} días antes de lo prometido.",
+      desvioAtraso: "Llegó {{dias}} días después de lo prometido.",
+      desvioHeredado:
+        "La promesa de este embarque se reconstruyó con el ETA vigente al crear la columna, así que puede venir ya revisada: el desvío real pudo ser mayor.",
+      desvioVsVigente: "Contra el ETA vigente: {{desvio}}",
       historiaViaje: "Historia del viaje",
       actualidad: "Actualidad",
       buqueActual: "Buque actual",
@@ -3126,6 +3143,23 @@ export const translations = {
       totalMargin: "Margen real",
       byClient: "Por cliente",
       byCarrier: "Por naviera",
+      // ── Cumplimiento ──────────────────────────────────────────────────
+      // El cero es el ETA de la reserva; el desvío va en días con signo.
+      cumplimientoTitulo: "Cumplimiento de la llegada",
+      cumplimientoBase: "{{n}} embarques arribados con fecha",
+      cumplimientoVacio:
+        "Todavía no hay embarques arribados con fecha registrada. La comparación aparece a medida que se vayan marcando los arribos en Seguimiento.",
+      cumplimientoMediana: "Desvío típico",
+      cumplimientoMedianaPie: "Mediana de días respecto del ETA de la reserva",
+      cumplimientoEnFecha: "En la fecha",
+      cumplimientoDeTotal: "de {{n}} embarques",
+      cumplimientoAtrasados: "Atrasados",
+      cumplimientoAdelantados: "Adelantados",
+      cumplimientoPeor: "el peor, {{d}}",
+      cumplimientoMayor: "el mayor, {{d}}",
+      cumplimientoPorNaviera: "Desvío típico por naviera",
+      cumplimientoHeredados:
+        "{{n}} de {{total}} apoyan su cero en una promesa reconstruida el 17-09-2026 con el ETA vigente, que pudo venir ya revisado: el atraso real pudo ser mayor.",
       byStatus: "Por estado",
       byMonth: "Tendencia mensual",
       noData: "No hay datos para los filtros seleccionados.",
@@ -4348,6 +4382,7 @@ export const translations = {
       volumeNoEtd: "without ETD",
       volumeCoverage: "with data",
       volumeNoCoverage: "No data captured",
+      volumeDeviation: "Typical arrival deviation",
     },
     finanzasPage: {
       title: "Finance",
@@ -5932,6 +5967,18 @@ export const translations = {
       subPosibleRetraso: "Would arrive later than committed",
       subArribado: "Cargo at destination",
       llegadaEstimada: "Estimated arrival",
+      desvioTitulo: "Promised vs actual",
+      desvioEtaReserva: "Booking ETA",
+      desvioEtaVigente: "Current ETA",
+      desvioArriboReal: "Actual arrival",
+      desvioReprogramado: "rescheduled {{dias}}",
+      desvioSinReprogramar: "never rescheduled",
+      desvioEnFecha: "Arrived on the promised date.",
+      desvioAdelanto: "Arrived {{dias}} days before the promised date.",
+      desvioAtraso: "Arrived {{dias}} days after the promised date.",
+      desvioHeredado:
+        "This shipment's promise was reconstructed from the current ETA when the column was created, so it may already be a revised one: the real deviation could be larger.",
+      desvioVsVigente: "Against the current ETA: {{desvio}}",
       historiaViaje: "Voyage history",
       actualidad: "Now",
       buqueActual: "Current vessel",
@@ -6337,6 +6384,21 @@ export const translations = {
       totalMargin: "Real margin",
       byClient: "By client",
       byCarrier: "By carrier",
+      cumplimientoTitulo: "Arrival performance",
+      cumplimientoBase: "{{n}} shipments arrived with a date",
+      cumplimientoVacio:
+        "No shipments have been recorded as arrived with a date yet. The comparison fills in as arrivals get marked in Tracking.",
+      cumplimientoMediana: "Typical deviation",
+      cumplimientoMedianaPie: "Median days against the booking ETA",
+      cumplimientoEnFecha: "On the date",
+      cumplimientoDeTotal: "of {{n}} shipments",
+      cumplimientoAtrasados: "Late",
+      cumplimientoAdelantados: "Early",
+      cumplimientoPeor: "worst, {{d}}",
+      cumplimientoMayor: "largest, {{d}}",
+      cumplimientoPorNaviera: "Typical deviation by carrier",
+      cumplimientoHeredados:
+        "{{n}} of {{total}} rest their zero on a promise reconstructed on 17-09-2026 from the current ETA, which may already be a revised one: the real delay could be larger.",
       byStatus: "By status",
       byMonth: "Monthly trend",
       noData: "No data for the selected filters.",

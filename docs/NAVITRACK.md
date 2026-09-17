@@ -541,6 +541,48 @@ Tres cosas que no hace, y conviene no prometer:
 Se puede deshacer: la ventana ofrece "Deshacer el arribo" en lugar de repetir la
 pregunta cuando el embarque ya figura arribado.
 
+### Prometido contra real
+
+Con el arribo fechado se puede medir lo único que no se medía: si la llegada
+cumplió lo que se dijo en la reserva. El cálculo vive en
+`src/lib/operaciones/desvioEta.ts` —módulo puro, sin React ni Supabase— y lo
+consumen la ficha del embarque, Reportes y el dashboard histórico, para que las
+tres den el mismo número.
+
+**El cero es `eta_original`, no `eta`.** Son cosas distintas:
+
+| Columna | Qué es |
+|---|---|
+| `eta_original` | La primera fecha de llegada que se supo del embarque: la promesa. La congela un trigger y el camino normal no la toca |
+| `eta` | El ETA vigente, que la naviera reprograma y alguien actualiza |
+
+Medir contra `eta` da siempre una desviación cercana a cero: cuando el buque se
+atrasa, el ETA se corrige y la promesa anterior desaparece. Eso mide si avisaron,
+no si cumplieron. Por eso la migración `20260917000002` agrega `eta_original` y
+un trigger que además registra **cada** cambio de `eta` en `operaciones_cambios`
+—en la base y no en la pantalla, porque `eta` se escribe desde la grilla, desde
+Mis Reservas, desde las importaciones y desde endpoints con `service_role`, y
+auditarlo en el cliente solo habría cubierto el primero: eso es exactamente lo
+que pasó hasta ahora, con 45 filas de auditoría y todas de `estado_operacion`—.
+
+El desvío va en **días con signo y sin banda de tolerancia**: negativo si llegó
+antes, positivo si después, cero solo el día exacto. Llegar antes no es un
+problema pero tampoco es cumplir —mueve stacking, bodega y retiro igual que un
+atraso—, así que adelanto y atraso no comparten color y el verde se reserva para
+el día exacto.
+
+Dos honestidades que las pantallas tienen que mantener:
+
+- **`eta_original_heredada`.** Las 110 operaciones anteriores al 17-09-2026
+  rellenaron su cero con el `eta` vigente, que pudo venir ya revisado. Su desvío
+  subestima el atraso y se dice donde se muestre.
+- **Sin arribo fechado no hay desvío.** Un arribo marcado sin día —los que vienen
+  del estado `ARRIBADO` legado— no entra en el cálculo. Poner cero los contaría
+  como cumplidos.
+
+Los resúmenes usan **mediana**, no promedio: un embarque con un mes de atraso
+arrastraría el número de toda la temporada.
+
 ---
 
 ## 7. Jerarquía de la información

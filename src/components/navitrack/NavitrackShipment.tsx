@@ -10,6 +10,7 @@ import { NavitrackCadena, NavitrackTimeline, NavitrackTransbordo } from "./Navit
 import { isoDePais, isoDePuerto } from "./navitrack-banderas";
 import { getPortCoordinates } from "@/lib/ports-coordinates";
 import type { Recalada } from "./NavitrackRecalada";
+import { desvioEta, estadoDesvio, formatoDesvio, sentidoDesvio } from "@/lib/operaciones/desvioEta";
 import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 import {
@@ -889,6 +890,85 @@ export function NavitrackShipment({
                 </div>
               )}
             </div>
+
+            {/*
+              * Prometido contra real.
+              *
+              * Solo aparece cuando el embarque arribó con fecha: antes no hay
+              * nada que comparar, y un cero mientras navega se leería como que
+              * va en hora. Las dos referencias van juntas a propósito —la
+              * promesa de la reserva y el ETA vigente— porque el segundo suele
+              * haberse movido detrás del primero, y esa distancia es la que
+              * explica por qué un atraso grande no se vio venir.
+              */}
+            {(() => {
+              const d = desvioEta(op);
+              if (!d) return null;
+              const sentido = sentidoDesvio(d.dias);
+              /* `parseOpDate` sitúa a mediodía: una columna `date` no se corre
+                 de día por zona horaria, y `arribo_at` ya viene a mediodía. */
+              const fecha = (v: string | null) => fmtFecha(parseOpDate(v), locale) ?? "—";
+              const fila = (etiqueta: string, valor: string, extra?: string) => (
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+                    {etiqueta}
+                  </span>
+                  <span className="min-w-0 text-right">
+                    <span className="text-[13px] font-bold text-dash-fg tabular-nums">{valor}</span>
+                    {extra && (
+                      <span className="ml-1.5 text-[11.5px] text-dash-muted tabular-nums">{extra}</span>
+                    )}
+                  </span>
+                </div>
+              );
+
+              return (
+                <div className="border-t border-dash-border px-3.5 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                    {tr.desvioTitulo}
+                  </p>
+                  <div className="mt-2 space-y-1.5">
+                    {fila(tr.desvioEtaReserva, fecha(op.eta_original))}
+                    {fila(
+                      tr.desvioEtaVigente,
+                      fecha(op.eta),
+                      d.diasReprogramado != null && d.diasReprogramado !== 0
+                        ? tr.desvioReprogramado.replace("{{dias}}", formatoDesvio(d.diasReprogramado))
+                        : tr.desvioSinReprogramar,
+                    )}
+                    {fila(tr.desvioArriboReal, fecha(op.arribo_at))}
+                  </div>
+
+                  <div
+                    className={`estado--${estadoDesvio(d.dias)} mt-2.5 flex items-center gap-2 rounded-lg px-2.5 py-2`}
+                    style={{
+                      border: "1px solid color-mix(in srgb, var(--estado) 38%, transparent)",
+                      background: "color-mix(in srgb, var(--estado) 12%, transparent)",
+                    }}
+                  >
+                    <span className="estado-chip shrink-0 rounded-md border px-1.5 py-0.5 text-[12px] font-extrabold tabular-nums">
+                      {formatoDesvio(d.dias)}
+                    </span>
+                    <span className="min-w-0 text-[12px] leading-snug text-dash-fg">
+                      {sentido === "en_fecha"
+                        ? tr.desvioEnFecha
+                        : (sentido === "adelanto" ? tr.desvioAdelanto : tr.desvioAtraso).replace(
+                            "{{dias}}",
+                            String(Math.abs(d.dias)),
+                          )}
+                    </span>
+                  </div>
+
+                  {/* Una promesa reconstruida no puede presentarse como promesa. */}
+                  {d.heredada && (
+                    <p className="mt-2 text-[11.5px] leading-snug text-dash-muted">
+                      <Icon icon="lucide:info" width={12} height={12} className="mr-1 inline align-[-2px]" aria-hidden />
+                      {tr.desvioHeredado}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Incidencias en línea: visibles sin robarle alto al resto. */}
             {alertas.length > 0 && (
