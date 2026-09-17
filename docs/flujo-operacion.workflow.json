@@ -1,0 +1,363 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ASLI — flujo de una operación de exportación",
+    "output": "docs/flujo-operacion.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1640,
+      660
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Pantalla del sistema"
+        },
+        "backend": {
+          "label": "Trabajo del ejecutivo"
+        },
+        "database": {
+          "label": "Queda en Documentos"
+        },
+        "security": {
+          "label": "Plazo o hito crítico"
+        },
+        "messagebus": {
+          "label": "Correo de coordinación"
+        },
+        "external": {
+          "label": "Actor externo"
+        }
+      }
+    },
+    "views": [
+      {
+        "id": "solicitud",
+        "label": "Solicitud y reserva",
+        "focus": [
+          "solicita",
+          "recibe",
+          "confirma",
+          "coordina"
+        ],
+        "note": "El cliente pide; el ejecutivo coordina con la naviera y registra el booking."
+      },
+      {
+        "id": "coordinacion",
+        "label": "Coordinación de actores",
+        "focus": [
+          "coordina",
+          "aduana",
+          "transporte",
+          "planta"
+        ],
+        "note": "Un solo correo mueve aduana, transporte y planta."
+      },
+      {
+        "id": "cierre",
+        "label": "Del zarpe al cierre",
+        "focus": [
+          "zarpe",
+          "proforma",
+          "recopila",
+          "legaliza"
+        ],
+        "note": "Cinco días para reunir BL y certificados; el DUS se legaliza después."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "cliente",
+      "label": "Cliente"
+    },
+    {
+      "id": "terreno",
+      "label": "Transporte y planta"
+    },
+    {
+      "id": "asli",
+      "label": "Ejecutivo ASLI"
+    },
+    {
+      "id": "externos",
+      "label": "Naviera, aduana y contable"
+    }
+  ],
+  "phases": [
+    {
+      "id": "pedir",
+      "label": "Solicitud",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "coordinar",
+      "label": "Coordinación y carga",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "cerrar",
+      "label": "Zarpe y cierre documental",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "solicita",
+    "recibe",
+    "coordina",
+    "actualiza",
+    "proforma",
+    "recopila"
+  ],
+  "semanticChecks": {
+    "allowedRoots": [
+      "solicita",
+      "zarpe"
+    ],
+    "allowedTerminals": [
+      "legaliza"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "solicita",
+      "lane": "cliente",
+      "col": 0,
+      "type": "frontend",
+      "label": "Solicitar reserva",
+      "tag": "vista previa",
+      "width": 168
+    },
+    {
+      "id": "recibe",
+      "lane": "asli",
+      "col": 1,
+      "type": "backend",
+      "label": "Recibe la solicitud",
+      "tag": "correo + Excel",
+      "width": 168
+    },
+    {
+      "id": "confirma",
+      "lane": "externos",
+      "col": 1,
+      "type": "external",
+      "label": "Naviera confirma",
+      "tag": "booking",
+      "width": 168
+    },
+    {
+      "id": "coordina",
+      "lane": "asli",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Correo de coordinación",
+      "tag": "stacking y límites",
+      "width": 168
+    },
+    {
+      "id": "aduana",
+      "lane": "externos",
+      "col": 2,
+      "type": "external",
+      "label": "Gate Out, DUS y SPS",
+      "tag": "agencia de aduana",
+      "width": 168
+    },
+    {
+      "id": "transporte",
+      "lane": "terreno",
+      "col": 2,
+      "type": "external",
+      "label": "Asigna la unidad",
+      "tag": "contenedor y sello",
+      "width": 168
+    },
+    {
+      "id": "actualiza",
+      "lane": "asli",
+      "col": 3,
+      "type": "backend",
+      "label": "Actualiza la operación",
+      "tag": "instructivo",
+      "width": 168
+    },
+    {
+      "id": "planta",
+      "lane": "terreno",
+      "col": 3,
+      "type": "external",
+      "label": "Carga y Packing List",
+      "tag": "día de carga",
+      "width": 168
+    },
+    {
+      "id": "proforma",
+      "lane": "asli",
+      "col": 4,
+      "type": "database",
+      "label": "Factura proforma",
+      "tag": "desde el packing",
+      "width": 168
+    },
+    {
+      "id": "zarpe",
+      "lane": "externos",
+      "col": 4,
+      "type": "security",
+      "label": "Zarpe de la nave",
+      "tag": "empieza el plazo",
+      "width": 168
+    },
+    {
+      "id": "recopila",
+      "lane": "asli",
+      "col": 5,
+      "type": "security",
+      "label": "BL y certificados",
+      "tag": "5 días",
+      "width": 168
+    },
+    {
+      "id": "legaliza",
+      "lane": "externos",
+      "col": 5,
+      "type": "external",
+      "label": "Legaliza el DUS",
+      "tag": "y envía físicos",
+      "width": 168
+    }
+  ],
+  "edges": [
+    {
+      "from": "solicita",
+      "to": "recibe",
+      "label": "al ejecutivo asignado",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "recibe",
+      "to": "confirma",
+      "label": "pide cupo",
+      "role": "branch"
+    },
+    {
+      "from": "confirma",
+      "to": "coordina",
+      "label": "booking y PDF",
+      "role": "branch"
+    },
+    {
+      "from": "recibe",
+      "to": "coordina",
+      "label": "arma el instructivo",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "coordina",
+      "to": "aduana",
+      "label": "solicita gestiones",
+      "role": "branch"
+    },
+    {
+      "from": "coordina",
+      "to": "transporte",
+      "label": "planta, fecha y hora",
+      "role": "branch"
+    },
+    {
+      "from": "aduana",
+      "to": "actualiza",
+      "label": "entrega Gate Out",
+      "role": "branch"
+    },
+    {
+      "from": "transporte",
+      "to": "actualiza",
+      "label": "datos de la unidad",
+      "role": "branch"
+    },
+    {
+      "from": "coordina",
+      "to": "actualiza",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "actualiza",
+      "to": "planta",
+      "label": "confirma la carga",
+      "role": "branch"
+    },
+    {
+      "from": "planta",
+      "to": "proforma",
+      "label": "Packing List",
+      "role": "branch"
+    },
+    {
+      "from": "actualiza",
+      "to": "proforma",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "proforma",
+      "to": "recopila",
+      "label": "tras el zarpe",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "zarpe",
+      "to": "recopila",
+      "label": "cuenta 5 días",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "from": "recopila",
+      "to": "legaliza",
+      "label": "factura para legalizar",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Quién hace qué",
+      "items": [
+        "El cliente solicita y consulta; no edita ni elimina nada de la operación",
+        "El ejecutivo gestiona y actualiza, solo sobre los clientes que tiene asignados",
+        "El superadmin administra todo: usuarios, asignaciones, catálogos y NaviTrack"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Lo que ocurre fuera del sistema",
+      "items": [
+        "Naviera, aduana, transporte y planta se coordinan por correo, no por pantalla",
+        "El sistema guarda el resultado —booking, documentos, datos de la unidad—, no la conversación",
+        "El transporte terrestre solo entra si el cliente lo pidió en la solicitud"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Cuándo está cerrada",
+      "items": [
+        "Seis documentos: BL, proforma, packing list, origen, fitosanitario y DUS legalizado",
+        "Cinco días desde el zarpe para reunir BL y certificados: es el tramo que más se atrasa",
+        "Cerrado el papeleo, la aduana envía los físicos al consignatario"
+      ]
+    }
+  ]
+}
