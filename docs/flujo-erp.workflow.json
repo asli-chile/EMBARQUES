@@ -1,0 +1,299 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "EMBARQUES — flujo de trabajo",
+    "output": "docs/flujo-erp.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "alta",
+        "label": "De la reserva al transporte",
+        "focus": [
+          "crear",
+          "registros",
+          "asli"
+        ],
+        "note": "La operación nace en `operaciones` y recibe chofer, unidad y tramo."
+      },
+      {
+        "id": "papeles",
+        "label": "Documentos y facturación",
+        "focus": [
+          "registros",
+          "docs",
+          "proforma",
+          "facturas"
+        ],
+        "note": "Once tipos de documento en cuatro etapas, y la proforma TRA."
+      },
+      {
+        "id": "viaje",
+        "label": "Seguimiento y decisiones",
+        "focus": [
+          "cron",
+          "navitrack",
+          "decision",
+          "correo"
+        ],
+        "note": "El cron paga los créditos; la pantalla solo lee lo guardado."
+      }
+    ],
+    "viewBox": [
+      1400,
+      660
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Pantalla"
+        },
+        "backend": {
+          "label": "Proceso"
+        },
+        "database": {
+          "label": "Registro guardado"
+        },
+        "security": {
+          "label": "Decisión humana"
+        },
+        "messagebus": {
+          "label": "Automático"
+        },
+        "external": {
+          "label": "Sale del sistema"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "operacion",
+      "label": "Operación y documentos"
+    },
+    {
+      "id": "transporte",
+      "label": "Transporte y facturación"
+    },
+    {
+      "id": "seguimiento",
+      "label": "Seguimiento — NaviTrack"
+    },
+    {
+      "id": "automatico",
+      "label": "Automático — cron y AIS"
+    }
+  ],
+  "mainPath": [
+    "crear",
+    "registros",
+    "asli",
+    "proforma",
+    "navitrack",
+    "decision"
+  ],
+  "semanticChecks": {
+    "allowedRoots": [
+      "crear",
+      "cron"
+    ],
+    "allowedTerminals": [
+      "decision",
+      "facturas",
+      "docs",
+      "correo"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "crear",
+      "lane": "operacion",
+      "col": 0,
+      "type": "frontend",
+      "label": "Crear reserva",
+      "tag": "ejecutivo+",
+      "width": 150
+    },
+    {
+      "id": "registros",
+      "lane": "operacion",
+      "col": 1,
+      "type": "frontend",
+      "label": "Registros",
+      "tag": "interno",
+      "width": 150
+    },
+    {
+      "id": "docs",
+      "lane": "operacion",
+      "col": 3,
+      "type": "database",
+      "label": "Documentos",
+      "tag": "cliente ve",
+      "width": 150
+    },
+    {
+      "id": "asli",
+      "lane": "transporte",
+      "col": 2,
+      "type": "backend",
+      "label": "Reserva ASLI",
+      "tag": "interno",
+      "width": 150
+    },
+    {
+      "id": "proforma",
+      "lane": "transporte",
+      "col": 3,
+      "type": "backend",
+      "label": "Proforma TRA",
+      "tag": "interno",
+      "width": 150
+    },
+    {
+      "id": "facturas",
+      "lane": "transporte",
+      "col": 4,
+      "type": "database",
+      "label": "Facturas",
+      "tag": "interno",
+      "width": 150
+    },
+    {
+      "id": "navitrack",
+      "lane": "seguimiento",
+      "col": 4,
+      "type": "frontend",
+      "label": "NaviTrack",
+      "tag": "todos",
+      "width": 150
+    },
+    {
+      "id": "decision",
+      "lane": "seguimiento",
+      "col": 5,
+      "type": "security",
+      "label": "Decidir",
+      "tag": "ejecutivo+",
+      "width": 150
+    },
+    {
+      "id": "cron",
+      "lane": "automatico",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Chequeo 06:00",
+      "tag": "gasta AIS",
+      "width": 150
+    },
+    {
+      "id": "correo",
+      "lane": "automatico",
+      "col": 5,
+      "type": "external",
+      "label": "Dos correos",
+      "tag": "auto",
+      "width": 150
+    }
+  ],
+  "edges": [
+    {
+      "from": "crear",
+      "to": "registros",
+      "label": "queda viva",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "registros",
+      "to": "asli",
+      "label": "enviada a transporte",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "asli",
+      "to": "proforma",
+      "label": "tramo y moneda",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "proforma",
+      "to": "navitrack",
+      "label": "embarque en curso",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "navitrack",
+      "to": "decision",
+      "label": "puerto por verificar",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "from": "registros",
+      "to": "docs",
+      "label": "papeleo",
+      "role": "branch"
+    },
+    {
+      "from": "proforma",
+      "to": "facturas",
+      "label": "emitida",
+      "role": "branch"
+    },
+    {
+      "from": "cron",
+      "to": "navitrack",
+      "label": "guarda posición",
+      "role": "async",
+      "variant": "dashed"
+    },
+    {
+      "from": "cron",
+      "to": "correo",
+      "label": "avisa",
+      "role": "async",
+      "variant": "dashed"
+    },
+    {
+      "from": "decision",
+      "to": "cron",
+      "label": "cambia la nave seguida",
+      "role": "return",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Quién puede qué",
+      "items": [
+        "El cliente ve sus reservas, documentos y seguimiento; no edita ni decide",
+        "Ejecutivo, admin y superadmin deciden recaladas y transbordos",
+        "Solo el superadmin gasta créditos AIS; qué embarques ve cada uno lo decide RLS"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Qué guarda cada paso",
+      "items": [
+        "Crear reserva abre la operación con su temporada y su ref ASLI; Registros la edita",
+        "Reserva ASLI graba chofer, unidad y tramo; la proforma reserva el número TRAxxxx",
+        "Documentos cuenta once tipos en cuatro etapas; el viaje vive en `navitrack_*`"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Lo que corre solo",
+      "items": [
+        "El chequeo de las 06:00 es el único que paga: una consulta por nave. Navegar no gasta",
+        "El seguimiento pasa al buque siguiente por fecha del tramo o si el AIS confirma la llegada",
+        "Reserva externa, Dashboard, Tarifario y Configuración leen o alimentan, no mueven"
+      ]
+    }
+  ]
+}
