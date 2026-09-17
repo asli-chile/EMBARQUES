@@ -95,6 +95,21 @@ type Props = {
    * crear los tramos, encender el seguimiento— es el mismo camino.
    */
   manual?: boolean;
+  /**
+   * Puerto de destino del embarque. Es a dónde llega la carga, no una escala.
+   *
+   * Se usa para nombrar el arribo en la propia pregunta: "ya arribó" sin decir
+   * a dónde obliga a recordar el embarque de memoria.
+   */
+  pod?: string | null;
+  /** ETA del embarque, como fecha propuesta al anunciar la llegada. */
+  etaOperacion?: string | null;
+  /** El embarque ya figura como arribado. */
+  arriboConfirmado?: boolean;
+  /** Cuándo llegó, si consta. */
+  arriboAt?: string | null;
+  /** Llegada anunciada por la naviera y todavía no ocurrida. */
+  arriboAnunciadoAt?: string | null;
 };
 
 function fechaCorta(iso: string | null | undefined): string {
@@ -125,8 +140,15 @@ export function NavitrackRecalada({
   apiPrefix,
   operacionId,
   manual = false,
+  pod = null,
+  etaOperacion = null,
+  arriboConfirmado = false,
+  arriboAt = null,
+  arriboAnunciadoAt = null,
 }: Props) {
-  const [modo, setModo] = useState<"preguntar" | "transbordo" | "anunciado">("preguntar");
+  const [modo, setModo] = useState<
+    "preguntar" | "transbordo" | "anunciado" | "arribo" | "arribo_anunciado"
+  >("preguntar");
   /* En el alta a mano el puerto y su fecha son campos; en el flujo normal
      vienen del anuncio del buque y no se tocan. */
   const [puerto, setPuerto] = useState(recalada.puerto);
@@ -143,6 +165,9 @@ export function NavitrackRecalada({
   const [notas, setNotas] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Fecha del arribo. Se propone sola: hoy para el que ya ocurrió, la ETA
+     conocida para el que se anuncia. Editable en los dos casos. */
+  const [fechaArribo, setFechaArribo] = useState("");
 
   // El catálogo puede tener miles: se filtra en el cliente porque ya está cargado.
   const sugerencias = useMemo(() => {
@@ -199,6 +224,82 @@ export function NavitrackRecalada({
   useEffect(() => {
     setError(null);
   }, [modo, naveElegida]);
+
+  /*
+   * La fecha del arribo se propone al abrir cada camino, no antes.
+   *
+   * Son dos fechas distintas y proponer una sola para las dos sería peor que no
+   * proponer ninguna: el arribo que ya ocurrió es casi siempre hoy, y el que se
+   * anuncia es la ETA que ya está cargada. Se sobrescribe al entrar a cada modo
+   * para que volver atrás y elegir el otro no arrastre la fecha del anterior.
+   */
+  useEffect(() => {
+    if (modo === "arribo") {
+      setFechaArribo((arriboAt ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10));
+    } else if (modo === "arribo_anunciado") {
+      setFechaArribo(
+        (arriboAnunciadoAt ?? "").slice(0, 10) ||
+          (recalada.eta_anunciada ?? "").slice(0, 10) ||
+          (etaOperacion ?? "").slice(0, 10),
+      );
+    }
+  }, [modo, arriboAt, arriboAnunciadoAt, recalada.eta_anunciada, etaOperacion]);
+
+  /** Nombre del destino para los textos. Sin POD cargado no se inventa uno. */
+  const destino = (pod ?? "").trim() || "—";
+
+  /**
+   * El arribo a destino.
+   *
+   * Va contra `/api/navitrack/arribo`, no contra `/recalada`: aquella ruta
+   * responde qué pasó con la carga **en un puerto**; esta registra un hecho del
+   * embarque. Lo único que comparten es que la respuesta cierra la pregunta
+   * pendiente, y por eso se manda la recalada junto al arribo confirmado.
+   */
+  const guardarArribo = async (decision: "anunciado" | "confirmado" | "deshacer") => {
+    setGuardando(true);
+    setError(null);
+    try {
+      const r = await fetch(`${apiPrefix}/api/navitrack/arribo`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // El arribo es del embarque, así que la operación va siempre —haya o
+          // no una recalada abierta detrás.
+          operacionId,
+          decision,
+          fecha: decision === "deshacer" ? undefined : fechaArribo || null,
+          notas: notas.trim() || undefined,
+          // Solo el arribo consumado responde la pregunta pendiente: si la carga
+          // llegó, ese puerto fue una escala. El anunciado todavía no dice nada.
+          recaladaId: decision === "confirmado" && recalada.id ? recalada.id : undefined,
+        }),
+      });
+      const j = (await r.json()) as { ok: boolean; code?: string; fecha?: string | null };
+      if (!j.ok) {
+        setError(tr.arriboErrorGuardar);
+        return;
+      }
+
+      if (decision === "deshacer") {
+        onGuardado(tr.arriboDeshecho);
+        return;
+      }
+
+      const plantilla =
+        decision === "anunciado" ? tr.arriboGuardadoAnunciado : tr.arriboGuardadoConfirmado;
+      onGuardado(
+        plantilla
+          .replace("{{pod}}", destino)
+          .replace("{{fecha}}", fechaCorta(j.fecha ?? fechaArribo)),
+      );
+    } catch {
+      setError(tr.arriboErrorGuardar);
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const guardar = async (decision: "parada" | "transbordo" | "directo" | "anunciado") => {
     setGuardando(true);
@@ -526,11 +627,170 @@ export function NavitrackRecalada({
               </button>
             </div>
 
+            {/*
+              * Llegada a destino.
+              *
+              * Va separada con su propio encabezado porque responde otra
+              * pregunta: las cuatro de arriba hablan de qué pasa con la carga
+              * **en ese puerto**; estas dos, de que el viaje terminó. Ponerlas
+              * en la misma lista invitaría a marcar el arribo en una escala
+              * intermedia, que es el error que más caro sale: apaga la
+              * verificación de un embarque que sigue navegando.
+              */}
+            <div className="mt-4 border-t border-dash-border pt-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                {tr.arriboSeccion}
+              </p>
+
+              {arriboConfirmado ? (
+                /* Ya está marcado: no se ofrece marcarlo otra vez, se ofrece
+                   deshacerlo. Repetir la acción hecha es ruido; corregir un
+                   arribo puesto por error es lo que de verdad hace falta. */
+                <div className="mt-2 rounded-xl border border-dash-border bg-dash-control/60 px-3.5 py-3">
+                  <p className="text-[12.5px] leading-snug text-dash-fg">
+                    <Icon
+                      icon="lucide:flag"
+                      width={13}
+                      height={13}
+                      className="mr-1.5 inline align-[-2px] text-dash-neon"
+                      aria-hidden
+                    />
+                    {tr.arriboYaRegistrado.replace("{{fecha}}", fechaCorta(arriboAt))}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={guardando}
+                    onClick={() => void guardarArribo("deshacer")}
+                    className="dash-control motion-interactive mt-2.5 px-3 py-1.5 text-[11.5px] font-semibold disabled:opacity-50"
+                  >
+                    {guardando ? tr.loading : tr.arriboDeshacer}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 grid gap-2">
+                  <button
+                    type="button"
+                    disabled={guardando}
+                    onClick={() => setModo("arribo_anunciado")}
+                    className="motion-interactive flex items-start gap-3 rounded-xl border border-dash-border bg-dash-control/60 px-3.5 py-3 text-left hover:border-dash-neon/40 disabled:opacity-50"
+                  >
+                    <Icon icon="lucide:clock-arrow-down" width={18} height={18} className="mt-0.5 shrink-0 text-dash-neon" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block text-[14px] font-bold text-dash-fg">
+                        {tr.arriboAnunciadoTitulo}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-dash-muted">
+                        {tr.arriboAnunciadoTexto.replace("{{pod}}", destino)}
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={guardando}
+                    onClick={() => setModo("arribo")}
+                    className="motion-interactive flex items-start gap-3 rounded-xl border border-dash-border bg-dash-control/60 px-3.5 py-3 text-left hover:border-dash-neon/40 disabled:opacity-50"
+                  >
+                    <Icon icon="lucide:flag" width={18} height={18} className="mt-0.5 shrink-0 text-dash-neon" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block text-[14px] font-bold text-dash-fg">
+                        {tr.arriboConfirmadoTitulo}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-dash-muted">
+                        {tr.arriboConfirmadoTexto.replace("{{pod}}", destino)}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {error && (
               <p className="mt-3 rounded-lg border border-dash-border bg-dash-control/70 px-3 py-2 text-[12px] text-dash-fg">
                 {error}
               </p>
             )}
+          </div>
+        ) : modo === "arribo" || modo === "arribo_anunciado" ? (
+          /*
+            * Registrar el arribo pide una sola cosa: la fecha.
+            *
+            * No hay nave que elegir ni tramo que crear —el viaje termina acá—,
+            * así que el formulario se queda en el dato que de verdad falta. Lo
+            * demás del bloque es lo que el arribo **no** hace, que es lo que
+            * hay que decir antes de guardar y no después.
+            */
+          <div className="px-4 pb-4">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+              {modo === "arribo" ? tr.arriboFechaReal : tr.arriboFechaAnunciada}
+            </label>
+            <input
+              type="date"
+              value={fechaArribo}
+              onChange={(e) => setFechaArribo(e.target.value)}
+              className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"
+            />
+
+            <label className="mt-3 block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+              {tr.arriboNotas}
+            </label>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={2}
+              className="dash-control mt-1.5 w-full px-3 py-2 text-[13px]"
+            />
+
+            {/* Sin POD el arribo se guarda igual, pero el mensaje va a quedar
+                sin decir a dónde llegó: mejor avisarlo antes. */}
+            {!(pod ?? "").trim() && (
+              <p className="mt-3 rounded-lg border border-amber-400/45 bg-amber-400/10 px-3 py-2 text-[12px] leading-snug text-dash-fg">
+                <Icon icon="lucide:map-pin-off" width={13} height={13} className="mr-1.5 inline align-[-2px]" aria-hidden />
+                {tr.arriboSinPod}
+              </p>
+            )}
+
+            {/*
+              * Lo que el arribo no toca.
+              *
+              * Quien lo marca espera ver cambiar el estado de la operación, y
+              * no cambia: el papeleo va por su cuenta y la operación cierra con
+              * el fullset. Decirlo acá evita que alguien lo dé por roto y lo
+              * vuelva a marcar, o que corrija el estado a mano y haga retroceder
+              * el flujo documental.
+              */}
+            <p className="mt-3 rounded-lg border border-dash-border bg-dash-control/60 px-3 py-2 text-[12.5px] leading-snug text-dash-fg">
+              <Icon icon="lucide:info" width={13} height={13} className="mr-1.5 inline align-[-2px]" aria-hidden />
+              {tr.arriboAvisoEstado}
+            </p>
+
+            {error && (
+              <p className="mt-3 rounded-lg border border-dash-border bg-dash-control/70 px-3 py-2 text-[12px] text-dash-fg">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setModo("preguntar")}
+                className="dash-control motion-interactive px-3 py-2 text-xs font-semibold"
+              >
+                {tr.cancelar}
+              </button>
+              <button
+                type="button"
+                disabled={guardando || !fechaArribo}
+                onClick={() => void guardarArribo(modo === "arribo" ? "confirmado" : "anunciado")}
+                className="dash-cta motion-interactive px-3.5 py-2 text-xs disabled:opacity-40"
+              >
+                {guardando
+                  ? tr.loading
+                  : modo === "arribo"
+                    ? tr.arriboGuardarConfirmado
+                    : tr.arriboGuardarAnunciado}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="px-4 pb-4">

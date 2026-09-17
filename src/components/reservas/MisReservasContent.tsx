@@ -18,6 +18,7 @@ import { withBase } from "@/lib/basePath";
 import { goBackOr } from "@/lib/navigation";
 import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
+import { ArriboChip, arriboLabelsDe, type ArriboLabels } from "@/components/ui/ArriboChip";
 // Banderas y logos ya resueltos en Seguimiento: el mismo puerto y la misma
 // naviera deben verse igual en las dos pantallas.
 import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
@@ -109,6 +110,11 @@ type Operacion = {
   enviado_transporte: boolean | null;
   tipo_reserva_transporte: string | null;
   estado_operacion: string | null;
+  /* El arribo a destino es un eje aparte del estado: lo escribe NaviTrack y se
+     muestra al lado del badge, nunca en su lugar. Ver ArriboChip. */
+  arribo_confirmado: boolean | null;
+  arribo_at: string | null;
+  arribo_anunciado_at: string | null;
   solicitud_ventana: string | null;
   created_at: string;
   // campos adicionales para email / tarjeta
@@ -484,6 +490,7 @@ type CardProps = {
   onContenedor: (op: Operacion) => void;
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
   onEstadoSave: (op: Operacion, next: EstadoOperacion) => Promise<boolean>;
+  arriboLabels: ArriboLabels;
 };
 
 const ReservaCard = memo(function ReservaCard({
@@ -502,6 +509,7 @@ const ReservaCard = memo(function ReservaCard({
   onContenedor,
   onContextMenu,
   onEstadoSave,
+  arriboLabels,
 }: CardProps) {
   const [expanded, setExpanded] = useState(false);
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
@@ -549,6 +557,13 @@ const ReservaCard = memo(function ReservaCard({
             allowAny={allowAnyEstado}
             stopCardClick
             onSave={(next) => onEstadoSave(op, next)}
+          />
+          {/* El arribo no reemplaza al estado: va debajo, como segundo dato. */}
+          <ArriboChip
+            arribo_confirmado={op.arribo_confirmado}
+            arribo_at={op.arribo_at}
+            arribo_anunciado_at={op.arribo_anunciado_at}
+            labels={arriboLabels}
           />
           {!isCliente ? (
             <button
@@ -776,6 +791,9 @@ type TableRowProps = {
   onContextMenu: (event: MouseEvent, op: Operacion) => void;
   onInlineSave: (op: Operacion, field: InlineEditableField, next: string) => Promise<boolean>;
   onEstadoSave: (op: Operacion, next: EstadoOperacion) => Promise<boolean>;
+  /* Un solo objeto y no cuatro strings sueltos: la fila está memoizada y las
+     etiquetas viajan juntas, así no se olvida ninguna al agregar una pantalla. */
+  arriboLabels: ArriboLabels;
 };
 
 function bookingChipClass(booking: string | null | undefined, hasDoc: boolean, emptyExtra = ""): string {
@@ -833,6 +851,7 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   onContextMenu,
   onInlineSave,
   onEstadoSave,
+  arriboLabels,
 }: TableRowProps) {
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
   return (
@@ -967,12 +986,21 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         <VentanaBadge value={op.solicitud_ventana} />
       </td>
       <td className="px-3 py-2 text-center">
-        <InlineEstadoSelect
-          value={op.estado_operacion}
-          canEdit={canEditEstado}
-          allowAny={allowAnyEstado}
-          onSave={(next) => onEstadoSave(op, next)}
-        />
+        <div className="inline-flex flex-col items-center gap-1">
+          <InlineEstadoSelect
+            value={op.estado_operacion}
+            canEdit={canEditEstado}
+            allowAny={allowAnyEstado}
+            onSave={(next) => onEstadoSave(op, next)}
+          />
+          <ArriboChip
+            arribo_confirmado={op.arribo_confirmado}
+            arribo_at={op.arribo_at}
+            arribo_anunciado_at={op.arribo_anunciado_at}
+            labels={arriboLabels}
+            dense
+          />
+        </div>
       </td>
       <td className="px-3 py-2 text-center">
         {op.tipo_reserva_transporte === "asli" ? (
@@ -1371,6 +1399,12 @@ export function MisReservasContent() {
   const canEditEstado = !isCliente && isStaff;
   const allowAnyEstado = isSuperadmin;
   const tr = t.misReservas;
+  /* Las etiquetas del arribo viven en el bloque `navitrack`, que es donde se
+     escribe el dato. Se arman una vez: la fila y la tarjeta están memoizadas. */
+  const arriboLabels = useMemo(
+    () => arriboLabelsDe(t.navitrack as unknown as Record<string, string>),
+    [t],
+  );
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -1426,7 +1460,8 @@ export function MisReservasContent() {
       .select(
         `id, correlativo, ref_asli, referencia_externa, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
          booking_doc_url, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara,
-         enviado_transporte, tipo_reserva_transporte, estado_operacion, solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
+         enviado_transporte, tipo_reserva_transporte, estado_operacion, arribo_confirmado, arribo_at, arribo_anunciado_at,
+         solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
          temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
       )
       .is("deleted_at", null);
@@ -2451,6 +2486,7 @@ export function MisReservasContent() {
                         onContextMenu={handleOpenContextMenu}
                         onInlineSave={handleInlineSave}
                         onEstadoSave={handleEstadoSave}
+                        arriboLabels={arriboLabels}
                       />
                     ))
                   )}
@@ -2504,6 +2540,7 @@ export function MisReservasContent() {
                     onContenedor={handleOpenContenedor}
                     onContextMenu={handleOpenContextMenu}
                     onEstadoSave={handleEstadoSave}
+                    arriboLabels={arriboLabels}
                   />
                 ))}
               </div>

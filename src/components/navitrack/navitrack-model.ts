@@ -32,6 +32,10 @@ export type NavitrackOperacion = {
   tt: number | null;
   estado_operacion: string | null;
   arribo_confirmado: boolean | null;
+  /** Fecha del arribo, cuando consta. Acompaña a `arribo_confirmado`. */
+  arribo_at: string | null;
+  /** Llegada a destino anunciada por la naviera y todavía no ocurrida. */
+  arribo_anunciado_at: string | null;
   ingreso_stacking: string | null;
   fin_stacking: string | null;
   corte_documental: string | null;
@@ -41,7 +45,7 @@ export type NavitrackOperacion = {
 };
 
 export const NAVITRACK_OP_SELECT =
-  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, eta, tt, estado_operacion, arribo_confirmado, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
+  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, eta, tt, estado_operacion, arribo_confirmado, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
 
 /** Identificadores del catálogo `naves`: permiten resolver el AIS sin buscar a mano. */
 export type NaveIdent = { nombre: string; imo: string | null; mmsi: string | null };

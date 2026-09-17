@@ -1239,6 +1239,11 @@ export function NavitrackContent() {
           naveActual={detalle?.journey.naveActual ?? seleccion?.nave ?? null}
           puedeGastar={puedeGastar}
           manual={recaladaManual}
+          pod={seleccion?.pod ?? null}
+          etaOperacion={seleccion?.eta ?? null}
+          arriboConfirmado={Boolean(seleccion?.arribo_confirmado)}
+          arriboAt={seleccion?.arribo_at ?? null}
+          arriboAnunciadoAt={seleccion?.arribo_anunciado_at ?? null}
           tr={tr}
           apiPrefix={apiPrefix}
           onCerrar={() => {

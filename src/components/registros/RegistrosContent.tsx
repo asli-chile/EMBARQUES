@@ -15,6 +15,7 @@ import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { formatRefAsli } from "@/lib/refAsli";
 import { EstadoOperacionCellRenderer } from "@/components/registros/EstadoOperacionCellRenderer";
+import { arriboLabelsDe } from "@/components/ui/ArriboChip";
 import { ESTADO_INICIAL, estadosEnOrden, etiquetaEstado } from "@/lib/operaciones/estados";
 import { listarTemporadas, TEMPORADA_TODAS, type Temporada } from "@/lib/temporadas";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
@@ -31,6 +32,11 @@ export type OperacionRow = {
   semana: number | null;
   ejecutivo: string;
   estado_operacion: string;
+  /* El arribo a destino no es un estado del flujo: viaja al lado, en la misma
+     celda, y lo escribe NaviTrack. Ver ArriboChip. */
+  arribo_confirmado: boolean | null;
+  arribo_at: string | null;
+  arribo_anunciado_at: string | null;
   tipo_operacion: string;
   cliente: string;
   consignatario: string;
@@ -133,6 +139,9 @@ type DbOperacion = {
   semana: number | null;
   ejecutivo: string;
   estado_operacion: string;
+  arribo_confirmado: boolean | null;
+  arribo_at: string | null;
+  arribo_anunciado_at: string | null;
   tipo_operacion: string;
   cliente: string;
   consignatario: string | null;
@@ -541,6 +550,9 @@ function createToRow(locale: string) {
       semana: isoWeekFromDate(db.etd),
       ejecutivo: db.ejecutivo,
       estado_operacion: db.estado_operacion,
+      arribo_confirmado: db.arribo_confirmado,
+      arribo_at: db.arribo_at,
+      arribo_anunciado_at: db.arribo_anunciado_at,
       tipo_operacion: db.tipo_operacion,
       cliente: db.cliente,
       consignatario: db.consignatario ?? "",
@@ -1037,6 +1049,13 @@ export function RegistrosContent() {
     else setRowData([]);
   }, [authLoading, fetchOperaciones]);
 
+  /* Las etiquetas del arribo viven en el bloque `navitrack`, que es donde se
+     escribe el dato: Registros solo lo muestra. */
+  const arriboLabels = useMemo(
+    () => arriboLabelsDe(t.navitrack as unknown as Record<string, string>),
+    [t]
+  );
+
   const booleanCellRenderer = useCallback(
     (p: { value: boolean }) => (p.value ? t.registros.yes : t.registros.no),
     [t.registros.yes, t.registros.no]
@@ -1065,6 +1084,7 @@ export function RegistrosContent() {
         editable: canEdit,
         width: Math.max(columnWidths.estadoOperacion, 140),
         cellRenderer: EstadoOperacionCellRenderer,
+        cellRendererParams: { arriboLabels },
         cellEditor: "agSelectCellEditor",
         cellEditorPopup: true,
         cellEditorParams: { values: estadosEnOrden() },
@@ -1291,7 +1311,7 @@ export function RegistrosContent() {
         cellRenderer: booleanCellRenderer, cellEditor: "agSelectCellEditor", cellEditorPopup: true, cellEditorParams: { values: [true, false] },
       },
     ],
-    [t.registros, booleanCellRenderer, contenedorCellRenderer, catalogos, canEdit, temporadas]
+    [t.registros, arriboLabels, booleanCellRenderer, contenedorCellRenderer, catalogos, canEdit, temporadas]
   );
 
   const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {

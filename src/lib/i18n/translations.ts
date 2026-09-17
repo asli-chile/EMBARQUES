@@ -2826,6 +2826,38 @@ export const translations = {
       recaladaSinImoPendiente:
         "La nave quedó sin identificador: su posición será estimada hasta que se le cargue el IMO.",
       recaladaErrorGuardar: "No se pudo guardar la decisión.",
+      // ── Arribo a destino ──────────────────────────────────────────────
+      // Es la última pregunta del viaje y son dos: la llegada que la naviera
+      // anuncia y la que ya ocurrió. Se separan porque solo la segunda da la
+      // carga por entregada.
+      arriboSeccion: "Llegada a destino",
+      arriboAnunciadoTitulo: "Arribo anunciado",
+      arriboAnunciadoTexto:
+        "La naviera informó para cuándo llega a {{pod}}. Queda anotado, pero la carga sigue en tránsito y el buque se sigue consultando.",
+      arriboConfirmadoTitulo: "Ya arribó a destino",
+      arriboConfirmadoTexto:
+        "La carga llegó a {{pod}}. El embarque deja de verificarse: desde aquí el buque sigue otro viaje y su posición ya no habla de esta carga.",
+      arriboFechaAnunciada: "Llegada anunciada",
+      arriboFechaReal: "Fecha de arribo",
+      arriboNotas: "Notas (opcional)",
+      arriboSinPod:
+        "Este embarque no tiene puerto de destino cargado. El arribo se registra igual, pero conviene completarlo en la reserva.",
+      arriboAvisoEstado:
+        "El estado de la operación no cambia: el arribo se muestra aparte, en Mis Reservas y en Registros. La operación cierra con el fullset.",
+      arriboGuardarAnunciado: "Anunciar arribo",
+      arriboGuardarConfirmado: "Registrar arribo",
+      arriboGuardadoAnunciado:
+        "Arribo anunciado a {{pod}} para el {{fecha}}. El seguimiento sigue igual hasta ese día.",
+      arriboGuardadoConfirmado:
+        "Arribo registrado: la carga llegó a {{pod}} el {{fecha}}.",
+      arriboDeshacer: "Deshacer el arribo",
+      arriboDeshecho: "Se deshizo el arribo: la carga vuelve a contar como en tránsito.",
+      arriboYaRegistrado: "Este embarque ya figura como arribado el {{fecha}}.",
+      arriboErrorGuardar: "No se pudo guardar el arribo.",
+      arriboChip: "Arribada",
+      arriboChipAnunciado: "Arribo anunciado",
+      arriboChipTitulo: "Arribó a destino el {{fecha}}",
+      arriboChipAnunciadoTitulo: "Arribo anunciado para el {{fecha}}",
       recaladaVerificar: "Verificar",
       mapaAcercarBuque: "Acercar al buque",
       mapaVerRuta: "Ver la ruta completa",
@@ -6005,6 +6037,33 @@ export const translations = {
       recaladaSinImoPendiente:
         "The vessel has no identifier: its position will be estimated until an IMO is loaded.",
       recaladaErrorGuardar: "The decision could not be saved.",
+      arriboSeccion: "Arrival at destination",
+      arriboAnunciadoTitulo: "Arrival announced",
+      arriboAnunciadoTexto:
+        "The carrier gave an arrival date for {{pod}}. It is recorded, but the cargo is still in transit and the vessel keeps being tracked.",
+      arriboConfirmadoTitulo: "Already arrived",
+      arriboConfirmadoTexto:
+        "The cargo reached {{pod}}. The shipment stops being checked: from here the vessel sails on and its position no longer describes this cargo.",
+      arriboFechaAnunciada: "Announced arrival",
+      arriboFechaReal: "Arrival date",
+      arriboNotas: "Notes (optional)",
+      arriboSinPod:
+        "This shipment has no destination port on file. The arrival is recorded anyway, but it is worth completing it on the booking.",
+      arriboAvisoEstado:
+        "The operation status does not change: the arrival is shown separately in My Bookings and Records. The operation closes with the full set.",
+      arriboGuardarAnunciado: "Announce arrival",
+      arriboGuardarConfirmado: "Record arrival",
+      arriboGuardadoAnunciado:
+        "Arrival at {{pod}} announced for {{fecha}}. Tracking continues unchanged until then.",
+      arriboGuardadoConfirmado: "Arrival recorded: the cargo reached {{pod}} on {{fecha}}.",
+      arriboDeshacer: "Undo the arrival",
+      arriboDeshecho: "Arrival undone: the cargo counts as in transit again.",
+      arriboYaRegistrado: "This shipment is already recorded as arrived on {{fecha}}.",
+      arriboErrorGuardar: "The arrival could not be saved.",
+      arriboChip: "Arrived",
+      arriboChipAnunciado: "Arrival announced",
+      arriboChipTitulo: "Arrived at destination on {{fecha}}",
+      arriboChipAnunciadoTitulo: "Arrival announced for {{fecha}}",
       recaladaVerificar: "Verify",
       mapaAcercarBuque: "Zoom to vessel",
       mapaVerRuta: "See full route",

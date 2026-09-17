@@ -106,6 +106,7 @@ De `operaciones` (ver `NAVITRACK_OP_SELECT` en `navitrack-model.ts`):
 | `nave`, `viaje`, `naviera` | Identidad del buque y cruce con el catálogo |
 | `estado_operacion` | Si ya zarpó (`ZARPADA` en adelante) |
 | `arribo_confirmado` | Cierra el viaje al 100 % |
+| `arribo_at`, `arribo_anunciado_at` | Cuándo llegó y para cuándo se anunció |
 | `ingreso_stacking`, `corte_documental`, `fin_stacking` | Hitos reales del timeline |
 | `tracking_manual_lat/lng` | Posición cargada a mano cuando no hay AIS |
 
@@ -476,6 +477,47 @@ Tres capas, y la de pantalla es la menos importante:
 3. **La pantalla.** `soloLectura` apaga acciones y `modo` decide qué se muestra.
 
 Al agregar algo que escriba o gaste, la pregunta es la 1 y la 2, no la 3.
+
+---
+
+## 6 ter. El arribo a destino
+
+Es la última pregunta del viaje y se responde desde la misma ventana que las
+recaladas (`NavitrackRecalada.tsx`), en un bloque aparte bajo el título
+"Llegada a destino". Aparte, porque las cuatro opciones de arriba hablan de qué
+pasa con la carga **en ese puerto** y estas dos, de que el viaje terminó:
+mezclarlas invita a marcar el arribo en una escala intermedia, que apaga la
+verificación de un embarque que sigue navegando.
+
+Son dos hechos distintos, no uno:
+
+| | Qué dice | Qué cambia |
+|---|---|---|
+| **Arribo anunciado** | La naviera dio fecha de llegada al POD | Solo `arribo_anunciado_at`. La carga sigue en tránsito y el buque se sigue consultando |
+| **Ya arribó a destino** | Llegó, y en qué fecha | `arribo_confirmado = true` + `arribo_at`. El chequeo diario deja de verificar este embarque |
+
+Guarda `POST /api/navitrack/arribo` (`decision`: `anunciado`, `confirmado` o
+`deshacer`). Deciden los mismos que deciden recaladas —superadmin, admin y
+ejecutivo—, y el ejecutivo solo alcanza lo suyo porque RLS no le deja ver el
+resto. Un arribo confirmado **cierra la recalada pendiente** que se estaba
+respondiendo: si la carga llegó a destino, ese puerto fue una escala.
+
+Tres cosas que no hace, y conviene no prometer:
+
+- **No toca `estado_operacion`.** El arribo no es un estado del flujo
+  (FLUJO-DE-TRABAJO.md §4.11): la operación cierra con el fullset, y una carga
+  puede llegar estando ya en `DOCUMENTACION_EN_REVISION`. Escribirlo ahí la haría
+  retroceder en el papeleo. Mis Reservas y Registros lo muestran **al lado** del
+  badge de estado, con `ArriboChip`.
+- **No apaga la nave.** El crédito se gasta por nave, no por embarque: sacarla de
+  la lista blanca porque esta carga llegó le quitaría la posición a las otras que
+  sigue llevando. Quién está en la lista sigue siendo decisión del usuario, en el
+  panel de rastreo.
+- **No avisa al cliente.** `arribo_avisado_at` existe desde la migración de
+  estados y nadie lo escribe todavía.
+
+Se puede deshacer: la ventana ofrece "Deshacer el arribo" en lugar de repetir la
+pregunta cuando el embarque ya figura arribado.
 
 ---
 
