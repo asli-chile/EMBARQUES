@@ -1157,9 +1157,17 @@ export function NavitrackContent() {
               tr={tr}
               onBack={() => setSeleccionId(null)}
               onRefresh={() => {
-                // Para el cliente, Actualizar vuelve a leer la base: trae lo que
-                // el chequeo diario y el trabajo interno hayan guardado, gratis.
-                if (identSeleccion && puedeGastar) void consultarAis(identSeleccion, false);
+                /*
+                 * Actualizar relee la base para todos, y no cuesta nada.
+                 *
+                 * Antes solo lo hacía quien podía gastar, porque entonces podía
+                 * terminar llamando al proveedor. Desde que navegar no gasta,
+                 * este botón trae lo que el chequeo diario y el trabajo interno
+                 * hayan guardado, y no hay razón para negárselo a nadie. Pedir
+                 * una lectura nueva al proveedor es otro acto, con su propia
+                 * pantalla y su propio aviso de costo.
+                 */
+                if (identSeleccion) void consultarAis(identSeleccion, false);
                 void cargar();
               }}
               refrescando={aisCargando || refrescando}

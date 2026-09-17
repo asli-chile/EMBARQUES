@@ -160,11 +160,28 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     ? (Date.now() - new Date(ultima.consultado_at).getTime()) / 60_000
     : Number.POSITIVE_INFINITY;
 
-  // El botón "Actualizar ahora" del panel puede saltarse el TTL, pero no la
-  // lista blanca ni el tope diario: el gasto sigue acotado.
+  /*
+   * Navegar no gasta. Nunca.
+   *
+   * Antes esto decidía por antigüedad: si la lectura pasaba el TTL, abrir el
+   * embarque llamaba al proveedor y costaba un crédito. Como el chequeo diario
+   * corre una vez, a las seis horas de esa corrida cualquier apertura empezaba
+   * a pagar, y el gasto quedaba atado a cuánta gente mirara la pantalla —lo
+   * más difícil de prever y lo que menos debería costar—. Dos o tres créditos
+   * diarios se iban así, y algún día se comían el tope y dejaban al resto
+   * viendo lecturas viejas sin decirlo.
+   *
+   * Ahora quien paga es el cron, que consulta una vez por nave y guarda la
+   * fila. La pantalla sirve esa fila las veces que haga falta, gratis. Pedir
+   * una lectura nueva sigue siendo posible, pero solo como acto deliberado:
+   * `forzar=1`, desde el botón de actualizar de quien puede gastar.
+   *
+   * `edadMin` y `proximaEnMin` se siguen devolviendo para que la pantalla pueda
+   * decir cuán vieja es la posición que está mostrando.
+   */
   const forzar = url.searchParams.get("forzar") === "1";
 
-  if (ultima && edadMin < TTL_MIN && !forzar) {
+  if (ultima && !forzar) {
     return json({
       ok: true,
       data: comoRespuesta(ultima),

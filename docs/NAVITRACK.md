@@ -210,21 +210,30 @@ de `/api/shiptracking/*`, que sirve a `/tracking` con otro proveedor.
 **Cada lectura cuesta un crédito**, así que el orden está invertido: la base
 manda y el proveedor es el último recurso.
 
+**Navegar no gasta.** Quien paga es el chequeo diario; la pantalla solo lee lo
+que él dejó guardado, las veces que haga falta.
+
 ```
-pantalla -> endpoint -> ¿hay lectura fresca en navitrack_ais_lecturas?
-                           sí -> se devuelve, 0 créditos
-                           no -> ¿la nave está en la lista blanca?
-                                 ¿queda cupo diario?
-                                 recién ahí se llama al proveedor
+pantalla  -> endpoint -> devuelve la última fila de navitrack_ais_lecturas
+                         siempre, 0 créditos
+
+cron      -> proveedor -> 1 crédito por nave con tracking_activo, y guarda la fila
+forzar=1  -> proveedor -> acto deliberado de quien puede gastar
 ```
 
-Tres frenos, todos en el servidor, porque la pantalla no puede decidir gastar:
+Hasta el 16-09-2026 el endpoint decidía por antigüedad: pasado el TTL, abrir un
+embarque llamaba al proveedor. Como el cron corre una vez al día, a las seis
+horas de esa corrida cualquier apertura empezaba a pagar, y el gasto quedaba
+atado a cuánta gente mirara la pantalla —lo más difícil de prever y lo que menos
+debería costar—. Se iban dos o tres créditos diarios así.
+
+Los frenos, todos en el servidor, porque la pantalla no puede decidir gastar:
 
 | Freno | Dónde | Efecto |
 |---|---|---|
 | `naves.tracking_activo` | catálogo | Si la nave no está marcada, **nunca** se consulta |
-| `NAVITRACK_AIS_TTL_MIN` (360) | env | Una lectura vale 6 h; son 4 créditos/día por nave |
 | `NAVITRACK_AIS_MAX_DIA` (10) | env | Tope duro diario, red de seguridad ante un bug |
+| `NAVITRACK_AIS_TTL_MIN` (360) | env | Ya no dispara gasto: solo sirve para decir cuánto falta para la próxima lectura del cron |
 
 `navitrack_ais_lecturas` guarda **una fila por llamada real**: contar filas es
 contar créditos. Como además guarda cada posición con su hora, es el insumo para
@@ -234,8 +243,8 @@ Si el proveedor falla o se acaban los créditos, se devuelve la última lectura
 conocida en vez de dejar la pantalla en blanco.
 
 **No hay sondeo automático.** Lo hubo (cada 5 min) y agotaba un plan de pruebas
-en menos de una hora. Hoy se consulta al abrir el embarque y al pulsar
-Actualizar, y el servidor decide si eso sale de la caché o del proveedor.
+en menos de una hora. Hoy el proveedor se consulta una vez al día desde el cron,
+y a mano desde el panel de rastreo, que avisa el costo antes.
 
 ```bash
 npm run ais:probar -- --activas   # qué se está rastreando (no gasta)
@@ -248,7 +257,7 @@ Pedirlo para los ~300 embarques de la tabla gastaría el plan sin que nadie mire
 ese dato. Entonces:
 
 - **Flota**: sin AIS. Etapa y posición salen de fechas, ruta y coordenada cargada.
-- **Detalle**: una llamada al abrir el embarque + refresco cada 5 minutos.
+- **Detalle**: lee la base. Abrirlo cuantas veces se quiera no cuesta nada.
 - **Arribados: nunca.** `estaArribado()` corta la consulta antes de hacerla. No es
   solo ahorro: cerrado el viaje, el buque zarpa en otro destino, así que su
   posición AIS ya no describe esta carga y mostrarla sería un dato falso. Por eso
