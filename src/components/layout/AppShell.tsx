@@ -20,6 +20,9 @@ import { prefetchFrequentRoutes } from "@/lib/routePrefetch";
 const LazyDashboardPanel = lazy(() =>
   import("@/components/dashboard").then((m) => ({ default: m.DashboardPanel })),
 );
+const LazyDashboardClientePanel = lazy(() =>
+  import("@/components/dashboard-cliente").then((m) => ({ default: m.DashboardClientePanel })),
+);
 const LazyInicioContent = lazy(() =>
   import("@/components/inicio").then((m) => ({ default: m.InicioContent })),
 );
@@ -110,6 +113,9 @@ const LazyCartolasNuboxContent = lazy(() =>
 const LazyInformativosContent = lazy(() =>
   import("@/components/comunicaciones").then((m) => ({ default: m.InformativosContent })),
 );
+const LazyMarketingOfficeContent = lazy(() =>
+  import("@/components/marketing-office").then((m) => ({ default: m.MarketingOfficeContent })),
+);
 /**
  * El aspecto de la ruta se pasa por contexto y no como prop de cada `<Sus>`:
  * hay una veintena de llamadas y el valor es el mismo para todas.
@@ -156,6 +162,10 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/dashboard" ? (
       <Sus>
         <LazyDashboardPanel />
+      </Sus>
+    ) : pathname === "/dashboardcliente" ? (
+      <Sus>
+        <LazyDashboardClientePanel />
       </Sus>
     ) : pathname === "/inicio" ? (
       <Sus>
@@ -250,6 +260,15 @@ export function AppShell({ children, pathname }: AppShellProps) {
       <ConfigGuard>
         <Sus>
           <LazyFormatosDocumentosContent />
+        </Sus>
+      </ConfigGuard>
+    ) : pathname === "/marketing" ? (
+      <ConfigGuard
+        allowEjecutivo
+        forbiddenMessage="No tienes acceso a Marketing. Solo superadmin, admin y ejecutivos pueden verla."
+      >
+        <Sus>
+          <LazyMarketingOfficeContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/reservas/crear" ? (

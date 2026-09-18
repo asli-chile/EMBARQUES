@@ -10,6 +10,20 @@ export const siteConfig = {
   sidebarItems: [
     { labelKey: "dashboard", id: "dashboard", href: "/dashboard", operational: true },
     /*
+     * Dashboard del cliente, todavía fuera del menú.
+     *
+     * La ruta existe y la abren cliente y personal (ver DashboardClientePanel),
+     * pero la pantalla aún no muestra nada: ofrecerla en el menú sería mandar
+     * al cliente a una página vacía. Quitar `oculto` cuando tenga contenido.
+     */
+    {
+      labelKey: "dashboardCliente",
+      id: "dashboard-cliente",
+      href: "/dashboardcliente",
+      operational: true,
+      oculto: true,
+    },
+    /*
      * Tareas, fuera del menú para todos.
      *
      * Se marca oculto en vez de borrarlo: el módulo sigue existiendo y la ruta
@@ -65,6 +79,12 @@ export const siteConfig = {
           staffOnly: true,
         },
       ],
+    },
+    {
+      labelKey: "marketing",
+      id: "marketing",
+      href: "/marketing",
+      ejecutivoAndAbove: true,
     },
     {
       labelKey: "cartolasNubox",

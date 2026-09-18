@@ -1,6 +1,7 @@
 /** Íconos Lucide por id de `siteConfig.sidebarItems`. */
 export const SIDEBAR_ICONS: Record<string, string> = {
   dashboard: "lucide:layout-dashboard",
+  "dashboard-cliente": "lucide:layout-panel-left",
   tareas: "lucide:list-checks",
   reservas: "lucide:calendar-plus",
   "crear-reserva": "lucide:plus-circle",
@@ -15,6 +16,7 @@ export const SIDEBAR_ICONS: Record<string, string> = {
   registros: "lucide:table",
   comunicaciones: "lucide:megaphone",
   informativos: "lucide:mail",
+  marketing: "lucide:image",
   "cartolas-nubox": "lucide:wallet-cards",
   configuracion: "lucide:settings",
   usuarios: "lucide:users",

@@ -7,6 +7,7 @@ type PrefetchFn = () => Promise<unknown>;
 
 const prefetchers: Record<string, PrefetchFn> = {
   "/dashboard": () => import("@/components/dashboard"),
+  "/dashboardcliente": () => import("@/components/dashboard-cliente"),
   "/inicio": () => import("@/components/inicio"),
   "/servicios": () => import("@/components/servicios"),
   "/sobre-nosotros": () => import("@/components/sobre-nosotros"),
@@ -35,6 +36,7 @@ const prefetchers: Record<string, PrefetchFn> = {
   "/documentos/crear-instructivo": () => import("@/components/documentos/CrearInstructivoContent"),
   "/cartolas-nubox": () => import("@/components/cartolas-nubox/CartolasNuboxContent"),
   "/comunicaciones/informativos": () => import("@/components/comunicaciones"),
+  "/marketing": () => import("@/components/marketing-office"),
 };
 
 const started = new Set<string>();
