@@ -7,7 +7,6 @@ type PrefetchFn = () => Promise<unknown>;
 
 const prefetchers: Record<string, PrefetchFn> = {
   "/dashboard": () => import("@/components/dashboard"),
-  "/dashboardcliente": () => import("@/components/dashboard-cliente"),
   "/inicio": () => import("@/components/inicio"),
   "/servicios": () => import("@/components/servicios"),
   "/sobre-nosotros": () => import("@/components/sobre-nosotros"),

@@ -20,9 +20,6 @@ import { prefetchFrequentRoutes } from "@/lib/routePrefetch";
 const LazyDashboardPanel = lazy(() =>
   import("@/components/dashboard").then((m) => ({ default: m.DashboardPanel })),
 );
-const LazyDashboardClientePanel = lazy(() =>
-  import("@/components/dashboard-cliente").then((m) => ({ default: m.DashboardClientePanel })),
-);
 const LazyInicioContent = lazy(() =>
   import("@/components/inicio").then((m) => ({ default: m.InicioContent })),
 );
@@ -162,10 +159,6 @@ export function AppShell({ children, pathname }: AppShellProps) {
     ) : pathname === "/dashboard" ? (
       <Sus>
         <LazyDashboardPanel />
-      </Sus>
-    ) : pathname === "/dashboardcliente" ? (
-      <Sus>
-        <LazyDashboardClientePanel />
       </Sus>
     ) : pathname === "/inicio" ? (
       <Sus>
