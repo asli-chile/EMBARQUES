@@ -31,6 +31,24 @@ const neonTextarea = `${neonInput} min-h-[96px] resize-y`;
 
 type ModalMode = "create" | "edit" | null;
 
+/**
+ * Decodifica la imagen antes de subirla.
+ *
+ * Un archivo truncado (guardado a medias desde el navegador, por ejemplo)
+ * pasa la validación de tipo/tamaño sin problema y solo se nota al verlo en
+ * la galería: un recuadro en blanco. `createImageBitmap` falla en ese caso,
+ * así que atajamos el problema antes de gastar la subida.
+ */
+async function isValidImageFile(file: File): Promise<boolean> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    bitmap.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function MarketingOfficeContent() {
   const { user, profile, isSuperadmin, isAdmin, isLoading: authLoading } = useAuth();
   const { t } = useLocale();
@@ -165,6 +183,10 @@ export function MarketingOfficeContent() {
     }
     if (modal === "create" && !formFile) {
       sileo.error({ title: tr.errorImagen });
+      return;
+    }
+    if (formFile && !(await isValidImageFile(formFile))) {
+      sileo.error({ title: tr.errorImagenCorrupta });
       return;
     }
 
