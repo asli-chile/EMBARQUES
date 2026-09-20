@@ -2,7 +2,7 @@
  * Importa DETALLE GF EXPORT 25_26-1.xlsx → public.operaciones.
  *
  * Hoja "GF EXPORT ASLI": cabecera en 2 filas (sección + columnas).
- * Cliente por fila (Lang Hao / Fruit Seeker / Happy Farm).
+ * Cliente fijo: GF EXPORT (el Excel puede traer marcas/consignees distintos).
  *
  * Uso:
  *   node --env-file=.env.local scripts/import-gf-xlsx.mjs --dry-run
@@ -30,6 +30,7 @@ if (existsSync(resolve(root, ".env"))) config({ path: resolve(root, ".env") });
 const DEFAULT_FILE = "DETALLE GF EXPORT 25_26-1.xlsx";
 const ORIGEN = "migracion_gf_xlsx";
 const TEMPORADA = "25-26";
+const CLIENTE = "GF EXPORT";
 
 /** Índices de calibre en la fila de datos (fila 1 = cabeceras). */
 const CAL_25 = { desde: 20, etiquetas: ["J", "2J", "3J", "4J", "5J"], total: 25 };
@@ -210,7 +211,7 @@ function rowToOperacion(row) {
     ejecutivo: "RODRIGO CACERES",
     estado_operacion: cerrada ? "OPERACION_CERRADA" : "RESERVA_CONFIRMADA",
     tipo_operacion: "EXPORTACIÓN MARITIMO",
-    cliente: texto(row.CLIENTE) ?? "GF EXPORT",
+    cliente: CLIENTE,
     referencia_externa: texto(row.IE),
     consignatario: texto(row.CONSIGNEE),
     especie: "CEREZA",
@@ -311,7 +312,7 @@ async function main() {
   const refs = payloads.map((p) => p.referencia_externa).filter(Boolean);
   const { data: existing, error: existErr } = await supabase
     .from("operaciones")
-    .select("id, referencia_externa, cliente, origen_registro")
+    .select("id, referencia_externa")
     .in("referencia_externa", refs)
     .eq("origen_registro", ORIGEN)
     .is("deleted_at", null);
@@ -322,13 +323,10 @@ async function main() {
   }
 
   const existingSet = new Set(
-    (existing ?? []).map((e) => `${String(e.cliente).trim().toUpperCase()}|${String(e.referencia_externa).trim().toUpperCase()}`),
+    (existing ?? []).map((e) => String(e.referencia_externa).trim().toUpperCase()),
   );
   const toInsert = payloads.filter(
-    (p) =>
-      !existingSet.has(
-        `${String(p.cliente).trim().toUpperCase()}|${String(p.referencia_externa).trim().toUpperCase()}`,
-      ),
+    (p) => !existingSet.has(String(p.referencia_externa).trim().toUpperCase()),
   );
   const skipped = payloads.length - toInsert.length;
   if (skipped) console.log("Omitidas (ya migradas GF):", skipped);

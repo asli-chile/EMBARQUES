@@ -10,6 +10,31 @@ import { LocaleToggle } from "./LocaleToggle";
 import { HeaderChrome } from "./HeaderChrome";
 import { ViewAsControl } from "./ViewAsControl";
 import { AppMobileNav } from "./AppMobileNav";
+import { useLocale } from "@/lib/i18n";
+
+/**
+ * Rutas cuyo título se muestra en la barra superior, a la izquierda.
+ *
+ * El valor es la clave de `t.sidebar`, no un texto suelto: el nombre de la
+ * barra y el del menú tienen que ser el mismo, o la pantalla a la que se
+ * llegó parecería otra distinta de la que se eligió.
+ */
+const TITULOS_DE_BARRA: Record<string, string> = {
+  "/dashboardcliente": "dashboardCliente",
+};
+
+function HeaderRouteTitle({ pathname }: { pathname: string }) {
+  const { t } = useLocale();
+  const clave = TITULOS_DE_BARRA[pathname.replace(/\/$/, "") || "/"];
+  if (!clave) return null;
+  const titulo = (t.sidebar as Record<string, string>)[clave];
+  if (!titulo) return null;
+  return (
+    <span className="ml-1 max-w-[42vw] truncate text-sm font-semibold text-white/90 md:ml-2 md:max-w-[220px] md:text-base">
+      {titulo}
+    </span>
+  );
+}
 
 /**
  * Barra superior del ERP (siempre compacta sobre el rail navy).
@@ -32,6 +57,7 @@ export function Header({ pathname = "" }: { pathname?: string } = {}) {
           <VisitCounterBadge tone={tone} />
           <OnlineUsersButton tone={tone} />
         </div>
+        <HeaderRouteTitle pathname={pathname} />
       </div>
 
       <div className="flex h-full min-w-0 items-center justify-self-center">

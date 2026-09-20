@@ -24,6 +24,7 @@ type OperacionResumen = {
   correlativo: number | null;
   cliente: string | null;
   naviera: string | null;
+  nave: string | null;
   pol: string | null;
   pod: string | null;
   etd: string | null;
@@ -152,7 +153,7 @@ export function DashboardContent({
     setLoading(true);
     const [opsRes, carriersRes] = await Promise.all([
       buildFilteredQuery(
-        "id, ref_asli, correlativo, cliente, naviera, pol, pod, etd, estado_operacion, arribo_confirmado, especie, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli"
+        "id, ref_asli, correlativo, cliente, naviera, nave, pol, pod, etd, estado_operacion, arribo_confirmado, especie, contenedor, booking_doc_url, enviado_transporte, transporte, corte_documental, fin_stacking, operacion_critica, prioridad, numero_factura_asli"
       ).limit(2000),
       supabase.from("navieras").select("nombre, modo_transporte"),
     ]);
@@ -260,11 +261,13 @@ export function DashboardContent({
       ref: string;
       cliente: string;
       naviera: string;
+      nave: string;
       pod: string;
       etd: Date;
       days: number;
       critico: boolean;
     }> = [];
+    let nextDeparture: (typeof upcoming)[number] | null = null;
 
     for (const op of mapOperations) {
       total += 1;
@@ -282,23 +285,34 @@ export function DashboardContent({
       if (op.operacion_critica || normText(op.prioridad) === "ALTA") critical += 1;
 
       const etd = parseOpDate(op.etd);
-      if (etd) {
+      if (etd && codigo !== "CANCELADA") {
         const etdDay = startOfDay(etd);
-        if (etdDay >= today && etdDay <= in7) {
-          etdNext7 += 1;
+        if (etdDay >= today) {
           const days = differenceInCalendarDays(etdDay, today);
-          if (days === 0) etdToday += 1;
-          if (days === 1) etdTomorrow += 1;
-          upcoming.push({
+          const item = {
             id: op.id,
             ref: opRefLabel(op),
             cliente: op.cliente ?? "—",
             naviera: op.naviera ?? "—",
+            nave: (op.nave ?? "").trim() || "—",
             pod: op.pod ?? "—",
             etd: etdDay,
             days,
             critico: !!(op.operacion_critica || normText(op.prioridad) === "ALTA"),
-          });
+          };
+          if (
+            !nextDeparture ||
+            etdDay < nextDeparture.etd ||
+            (etdDay.getTime() === nextDeparture.etd.getTime() && item.ref.localeCompare(nextDeparture.ref) < 0)
+          ) {
+            nextDeparture = item;
+          }
+          if (etdDay <= in7) {
+            etdNext7 += 1;
+            if (days === 0) etdToday += 1;
+            if (days === 1) etdTomorrow += 1;
+            upcoming.push(item);
+          }
         }
       }
 
@@ -358,6 +372,7 @@ export function DashboardContent({
       invoicePending,
       statusItems,
       upcoming: upcoming.slice(0, 8),
+      nextDeparture,
     };
   }, [mapOperations]);
 
@@ -556,6 +571,20 @@ export function DashboardContent({
   }
 
   const opsHref = withBase(isCliente ? "/reservas/mis-reservas" : "/registros");
+  const dateLocale = locale === "es" ? es : undefined;
+  const next = operationalKpis.nextDeparture;
+  const nextZarpeValue = next
+    ? next.days === 0
+      ? tr.today
+      : next.days === 1
+        ? tr.tomorrow
+        : format(next.etd, "d MMM yyyy", { locale: dateLocale })
+    : tr.noNextDeparture;
+  const nextZarpeHint = next
+    ? [next.nave !== "—" ? next.nave : null, next.ref, next.pod !== "—" ? next.pod : null]
+        .filter(Boolean)
+        .join(" · ")
+    : tr.noNextDepartureHint;
 
   const kpiCards = [
     {
@@ -580,13 +609,15 @@ export function DashboardContent({
     },
     {
       key: "etd",
-      label: tr.upcomingDepartures,
-      value: operationalKpis.etdNext7,
-      hint: `${operationalKpis.etdToday} ${tr.today} · ${operationalKpis.etdTomorrow} ${tr.tomorrow}`,
+      label: tr.nextDeparture,
+      value: nextZarpeValue,
+      hint: nextZarpeHint,
       icon: "lucide:calendar-check-2",
       iconAlt: "lucide:ship",
       tone: "sky" as const,
       href: opsHref,
+      valueSize: next ? ("lg" as const) : ("sm" as const),
+      sparkSeed: next ? next.days + 1 : 0,
     },
     {
       key: "cutoff",
@@ -620,7 +651,7 @@ export function DashboardContent({
       tone: "red" as const,
       href: opsHref,
     },
-  ] as const;
+  ];
 
   const upcomingRows = operationalKpis.upcoming.slice(0, 5);
   const topClients = clientsWithOperationCount.slice(0, 5);
@@ -681,10 +712,21 @@ export function DashboardContent({
         {/* KPIs */}
         <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
           {kpiCards.map((kpi) => {
+            const sparkSeed = "sparkSeed" in kpi && typeof kpi.sparkSeed === "number"
+              ? kpi.sparkSeed
+              : typeof kpi.value === "number"
+                ? kpi.value
+                : 0;
             const spark = Array.from({ length: 7 }, (_, i) => {
-              const n = ((Math.abs(kpi.value) + 1) * (i + 3) * 19) % 51;
+              const n = ((Math.abs(sparkSeed) + 1) * (i + 3) * 19) % 51;
               return 0.28 + (n / 51) * 0.72;
             });
+            const valueClass =
+              "valueSize" in kpi && kpi.valueSize === "sm"
+                ? "dash-kpi-value text-base font-bold leading-snug sm:text-lg"
+                : typeof kpi.value === "string"
+                  ? "dash-kpi-value text-xl font-bold leading-snug sm:text-2xl"
+                  : "dash-kpi-value text-3xl font-bold sm:text-[2rem]";
             return (
               <a
                 key={kpi.key}
@@ -708,7 +750,7 @@ export function DashboardContent({
                 </p>
                 <div className="relative z-[1] mt-2 flex items-end justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="dash-kpi-value text-3xl font-bold sm:text-[2rem]">{kpi.value}</p>
+                    <p className={`${valueClass} truncate`}>{kpi.value}</p>
                     <p className="dash-kpi-hint mt-1 text-[11px] leading-snug line-clamp-2 sm:text-xs">
                       {kpi.hint}
                     </p>

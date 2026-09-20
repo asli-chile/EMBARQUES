@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { format, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
@@ -6,7 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter, shouldSkipOperacionesForCliente } from "@/lib/auth/operacionesClienteScope";
-import { aplicarFiltroTemporada, listarTemporadas, type Temporada } from "@/lib/temporadas";
+import {
+  aplicarFiltroTemporada,
+  listarTemporadas,
+  TEMPORADA_TODAS,
+  type Temporada,
+} from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { normalizarEstado } from "@/lib/operaciones/estados";
 import { desvioEta, formatoDesvio, resumirDesvios, type Desvio } from "@/lib/operaciones/desvioEta";
@@ -34,9 +39,6 @@ type Props = {
   view: DashboardView;
   onViewChange: (view: DashboardView) => void;
 };
-
-/** Valor del selector histórico: todas las temporadas (sin filtro). */
-const TEMPORADA_TODAS = "__all__";
 
 /** Anotado como `string` a propósito: con el literal, el genérico de PostgREST hace explotar la inferencia. */
 const COLUMNAS: string =
@@ -124,9 +126,12 @@ export function DashboardHistoricoContent({
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [temporadas, setTemporadas] = useState<Temporada[]>([]);
+  /** null = aún no inicializado; no consultar hasta resolver temporada. */
   const [temporadaSel, setTemporadaSel] = useState<string | null>(null);
   const [operaciones, setOperaciones] = useState<OperacionVolumen[]>([]);
   const [loading, setLoading] = useState(true);
+  /** Descarta respuestas viejas si cambia la temporada a mitad de una consulta. */
+  const fetchGen = useRef(0);
 
   /** Indicadores de empresa / destino: solo roles comerciales y administración. */
   const showEmpresaInsights = isSuperadmin || isAdmin || isEjecutivo;
@@ -144,7 +149,7 @@ export function DashboardHistoricoContent({
 
   useEffect(() => {
     if (temporadaLoading) return;
-    setTemporadaSel((actual) => actual ?? temporadaActiva);
+    setTemporadaSel((actual) => actual ?? temporadaActiva ?? TEMPORADA_TODAS);
   }, [temporadaActiva, temporadaLoading]);
 
   useEffect(() => {
@@ -159,27 +164,29 @@ export function DashboardHistoricoContent({
   }, [supabase]);
 
   const fetchVolumen = useCallback(async () => {
-    if (!supabase || authLoading || temporadaLoading) return;
+    if (!supabase || authLoading || temporadaLoading || temporadaSel == null) return;
     if (shouldSkipOperacionesForCliente({ isCliente, isEjecutivo, empresaNombres })) {
       setOperaciones([]);
       setLoading(false);
       return;
     }
+    const gen = ++fetchGen.current;
     setLoading(true);
     let query = supabase.from("operaciones").select(COLUMNAS).is("deleted_at", null);
     query = applyOperacionesClienteFilter(query, { isCliente, isEjecutivo, empresaNombres });
     query = aplicarFiltroTemporada(
       query,
-      temporadaSel && temporadaSel !== TEMPORADA_TODAS ? temporadaSel : null
+      temporadaSel !== TEMPORADA_TODAS ? temporadaSel : null
     );
     const { data } = await query.limit(5000);
+    if (gen !== fetchGen.current) return;
     setOperaciones((data ?? []) as unknown as OperacionVolumen[]);
     setLoading(false);
   }, [supabase, authLoading, temporadaLoading, isCliente, isEjecutivo, empresaNombres, temporadaSel]);
 
   useEffect(() => {
-    if (!authLoading) void fetchVolumen();
-  }, [authLoading, fetchVolumen]);
+    if (!authLoading && temporadaSel != null) void fetchVolumen();
+  }, [authLoading, temporadaSel, fetchVolumen]);
 
   /** El volumen embarcado excluye las canceladas: nunca se movió carga. */
   const embarcadas = useMemo(

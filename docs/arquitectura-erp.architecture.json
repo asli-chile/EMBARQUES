@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "EMBARQUES — arquitectura de ejecución",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1390,
+      796
+    ],
+    "views": [
+      {
+        "id": "camino-principal",
+        "label": "Camino principal",
+        "focus": [
+          "navegador",
+          "vercel",
+          "astro",
+          "appshell",
+          "postgres"
+        ],
+        "note": "Una pantalla del ERP: el navegador pide la ruta, Astro la sirve, AppShell monta el módulo y la base responde con la sesión de quien mira."
+      },
+      {
+        "id": "datos-y-acceso",
+        "label": "Datos y acceso",
+        "focus": [
+          "appshell",
+          "auth",
+          "postgres",
+          "storage"
+        ],
+        "note": "Qué ve cada cuenta lo decide RLS en la base, no la pantalla: Auth entrega el rol y Postgres aplica las políticas."
+      },
+      {
+        "id": "seguimiento-ais",
+        "label": "Seguimiento marítimo",
+        "focus": [
+          "api",
+          "datadocked",
+          "cron",
+          "correo"
+        ],
+        "note": "Cada lectura del proveedor cuesta un crédito: la base responde primero y el cron diario es el único gasto previsible."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "navegador",
+      "type": "external",
+      "label": "Navegador",
+      "sublabel": "Equipo y clientes",
+      "pos": [
+        60,
+        400
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "vercel",
+      "type": "cloud",
+      "label": "Vercel",
+      "sublabel": "asli.cl/embarques",
+      "brand": "vercel",
+      "pos": [
+        305,
+        400
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "astro",
+      "type": "backend",
+      "label": "Astro SSR",
+      "sublabel": "Rutas y sesión",
+      "pos": [
+        550,
+        400
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "appshell",
+      "type": "frontend",
+      "label": "AppShell",
+      "sublabel": "Módulo por ruta",
+      "brand": "react",
+      "pos": [
+        795,
+        400
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "/api/navitrack/*",
+      "sublabel": "Posición y recaladas",
+      "pos": [
+        1040,
+        400
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "cron",
+      "type": "messagebus",
+      "label": "Cron de Vercel",
+      "sublabel": "Diario 06:00",
+      "brand": "vercel",
+      "pos": [
+        1040,
+        120
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "datadocked",
+      "type": "external",
+      "label": "Data Docked",
+      "sublabel": "AIS · 1 crédito",
+      "pos": [
+        1040,
+        680
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "correo",
+      "type": "external",
+      "label": "send-email",
+      "sublabel": "Edge Function",
+      "brand": "supabase",
+      "pos": [
+        795,
+        120
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Supabase Auth",
+      "sublabel": "Sesión y rol",
+      "brand": "supabase",
+      "pos": [
+        305,
+        680
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Operaciones · RLS",
+      "brand": "postgresql",
+      "pos": [
+        550,
+        680
+      ],
+      "size": [
+        160,
+        76
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Storage",
+      "sublabel": "Documentos",
+      "brand": "supabase",
+      "pos": [
+        795,
+        680
+      ],
+      "size": [
+        160,
+        76
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "navegador-vercel",
+      "from": "navegador",
+      "to": "vercel",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vercel-astro",
+      "from": "vercel",
+      "to": "astro",
+      "label": "SSR",
+      "variant": "emphasis"
+    },
+    {
+      "id": "astro-appshell",
+      "from": "astro",
+      "to": "appshell",
+      "label": "islas React",
+      "variant": "emphasis"
+    },
+    {
+      "id": "appshell-api",
+      "from": "appshell",
+      "to": "api",
+      "label": "seguimiento"
+    },
+    {
+      "id": "cron-api",
+      "from": "cron",
+      "to": "api",
+      "label": "1 lectura por nave",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "id": "api-datadocked",
+      "from": "api",
+      "to": "datadocked",
+      "label": "sin lectura fresca",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "id": "api-correo",
+      "from": "api",
+      "to": "correo",
+      "label": "aviso de desvío",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "right"
+    },
+    {
+      "id": "astro-auth",
+      "from": "astro",
+      "to": "auth",
+      "label": "valida cookie",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "auth-postgres",
+      "from": "auth",
+      "to": "postgres",
+      "label": "rol para RLS"
+    },
+    {
+      "id": "appshell-postgres",
+      "from": "appshell",
+      "to": "postgres",
+      "label": "consulta con la sesión",
+      "variant": "emphasis"
+    },
+    {
+      "id": "appshell-storage",
+      "from": "appshell",
+      "to": "storage",
+      "label": "documentos",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Quién ve qué",
+      "items": [
+        "RLS decide en la base, no la pantalla",
+        "El cliente solo alcanza las operaciones de sus empresas"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "El AIS se paga",
+      "items": [
+        "La base responde primero; el proveedor es el último recurso",
+        "Antes del zarpe y tras el arribo no se consulta"
+      ]
+    }
+  ]
+}

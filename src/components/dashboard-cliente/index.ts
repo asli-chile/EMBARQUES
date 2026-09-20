@@ -1,0 +1,1 @@
+export { DashboardClientePanel } from "./DashboardClientePanel";
