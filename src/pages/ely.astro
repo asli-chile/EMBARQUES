@@ -1,0 +1,313 @@
+---
+/**
+ * Pagina personal, fuera del ERP: sin AppShell, sin sesion, sin i18n.
+ * Se sirve en asli.cl/embarques/ely (el sitio entero cuelga de /embarques).
+ */
+export const prerender = true;
+---
+
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Girasoles para Ely</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,600;1,9..144,800&family=Karla:wght@500;700&display=swap">
+<style is:global>
+  :root{
+    --rosa-alto:#FFE3EE;
+    --rosa-bajo:#FFAFCE;
+    --rosa-hondo:#F47FAE;
+    --petalo:#F9B833;
+    --petalo-hondo:#E4890F;
+    --centro:#4A2617;
+    --tinta:#7A1F45;
+    --crema:#FFF6FA;
+    --sombra:rgba(122,31,69,.22);
+    color-scheme: light;
+  }
+
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(120% 90% at 50% 8%, var(--rosa-alto) 0%, var(--rosa-bajo) 58%, var(--rosa-hondo) 100%);
+    color:var(--tinta);
+    font-family:"Karla", ui-sans-serif, system-ui, sans-serif;
+    overflow:hidden;
+  }
+
+  #cielo{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:2;
+  }
+
+  main{
+    position:relative;
+    z-index:1;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(16px,3.6vh,32px);
+    padding-inline:20px;
+    padding-block:24px;
+    text-align:center;
+  }
+
+  .eyebrow{
+    margin:0;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.34em;
+    text-transform:uppercase;
+    color:color-mix(in srgb, var(--tinta) 68%, transparent);
+  }
+
+  .boton{
+    appearance:none;
+    border:0;
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+    line-height:0;
+    border-radius:50%;
+    filter:drop-shadow(0 18px 34px var(--sombra));
+    transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  .boton:hover{transform:scale(1.045);}
+  .boton:active{transform:scale(.96);}
+  .boton:focus-visible{outline:3px dashed var(--crema); outline-offset:14px;}
+
+  .girasol{
+    width:clamp(210px,52vmin,330px);
+    height:auto;
+    max-width:100%;
+    display:block;
+  }
+  #petalos{
+    transform-origin:100px 100px;
+    animation:girar 44s linear infinite;
+  }
+  .boton:hover #petalos{animation-duration:12s;}
+  @keyframes girar{to{transform:rotate(360deg);}}
+
+  .etiqueta{
+    font-family:"Karla", ui-sans-serif, system-ui, sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:.2em;
+    fill:#FFE9B8;
+  }
+
+  .mensaje{
+    margin:0;
+    max-width:14ch;
+    font-family:"Fraunces", Georgia, "Times New Roman", serif;
+    font-style:italic;
+    font-weight:800;
+    font-size:clamp(30px,8vw,58px);
+    line-height:1.02;
+    text-wrap:balance;
+    color:var(--crema);
+    text-shadow:0 6px 22px var(--sombra);
+    opacity:0;
+    transform:translateY(16px) scale(.96);
+    transition:opacity .9s ease, transform .9s cubic-bezier(.22,1,.36,1);
+  }
+  .mensaje.vista{opacity:1; transform:none;}
+
+  .firma{
+    margin:0;
+    font-size:12px;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:color-mix(in srgb, var(--tinta) 62%, transparent);
+    opacity:0;
+    transition:opacity 1.2s ease .3s;
+  }
+  .firma.vista{opacity:1;}
+
+  @media (prefers-reduced-motion: reduce){
+    #petalos{animation:none;}
+    .boton,.mensaje{transition:none;}
+  }
+</style>
+</head>
+<body>
+<canvas id="cielo" aria-hidden="true"></canvas>
+
+<main>
+  <p class="eyebrow">para Ely</p>
+
+  <button class="boton" id="boton" type="button" aria-label="Presione aquí">
+    <svg class="girasol" viewBox="0 0 200 200" role="img" aria-hidden="true">
+      <g id="petalos" fill="#F9B833" stroke="#E4890F" stroke-width="1.5"></g>
+      <circle cx="100" cy="100" r="42" fill="#4A2617"></circle>
+      <circle cx="100" cy="100" r="42" fill="none" stroke="#6B3A22" stroke-width="3"></circle>
+      <text class="etiqueta" x="100" y="95" text-anchor="middle">PRESIONE</text>
+      <text class="etiqueta" x="100" y="117" text-anchor="middle">AQUÍ</text>
+    </svg>
+  </button>
+
+  <p class="mensaje" id="mensaje" aria-live="polite">TE AMO MI AMORCITO HERMOSA</p>
+  <p class="firma" id="firma">apriétalo las veces que quieras</p>
+</main>
+
+<script is:inline>
+(function(){
+  var sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* --- petalos del girasol --- */
+  var g = document.getElementById("petalos");
+  var NS = "http://www.w3.org/2000/svg";
+  for (var i = 0; i < 18; i++){
+    var p = document.createElementNS(NS, "ellipse");
+    p.setAttribute("cx", "100");
+    p.setAttribute("cy", "38");
+    p.setAttribute("rx", "13");
+    p.setAttribute("ry", "31");
+    p.setAttribute("transform", "rotate(" + (i * 20) + " 100 100)");
+    g.appendChild(p);
+  }
+
+  /* --- lienzo --- */
+  var cv = document.getElementById("cielo");
+  var ctx = cv.getContext("2d");
+  var W = 0, H = 0;
+
+  function medir(){
+    var r = window.devicePixelRatio || 1;
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * r);
+    cv.height = Math.round(H * r);
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+  }
+  medir();
+  window.addEventListener("resize", medir);
+
+  /* --- dibujos --- */
+  function girasol(c, s){
+    c.fillStyle = "#F9B833";
+    c.strokeStyle = "#E4890F";
+    c.lineWidth = Math.max(1, s * 0.03);
+    for (var i = 0; i < 12; i++){
+      c.save();
+      c.rotate(i * Math.PI / 6);
+      c.beginPath();
+      c.ellipse(0, -s * 0.72, s * 0.2, s * 0.44, 0, 0, Math.PI * 2);
+      c.fill(); c.stroke();
+      c.restore();
+    }
+    c.beginPath(); c.arc(0, 0, s * 0.44, 0, Math.PI * 2);
+    c.fillStyle = "#4A2617"; c.fill();
+  }
+
+  function corazon(c, s, color){
+    c.beginPath();
+    c.moveTo(0, s * 0.35);
+    c.bezierCurveTo(-s * 1.1, -s * 0.35, -s * 0.45, -s * 1.05, 0, -s * 0.4);
+    c.bezierCurveTo(s * 0.45, -s * 1.05, s * 1.1, -s * 0.35, 0, s * 0.35);
+    c.closePath();
+    c.fillStyle = color; c.fill();
+  }
+
+  function estrella(c, s, tono){
+    var grad = c.createLinearGradient(-s, -s, s, s);
+    grad.addColorStop(0, "hsl(" + tono + ",100%,66%)");
+    grad.addColorStop(0.5, "hsl(" + ((tono + 90) % 360) + ",100%,70%)");
+    grad.addColorStop(1, "hsl(" + ((tono + 200) % 360) + ",100%,68%)");
+    c.beginPath();
+    for (var i = 0; i < 10; i++){
+      var r = (i % 2 === 0) ? s : s * 0.44;
+      var a = (Math.PI / 5) * i - Math.PI / 2;
+      var x = Math.cos(a) * r, y = Math.sin(a) * r;
+      if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.closePath();
+    c.fillStyle = grad; c.fill();
+  }
+
+  /* --- particulas --- */
+  var rosas = ["#FF5FA2", "#FF87B8", "#E5326F", "#FFC2D8", "#C81E62"];
+  var cosas = [];
+  var TOPE = 1800;
+
+  function estallar(x, y, cuantas){
+    for (var i = 0; i < cuantas; i++){
+      var ang = Math.random() * Math.PI * 2;
+      var vel = 7 + Math.random() * 30;
+      var tipo = i % 3 === 0 ? "girasol" : (i % 3 === 1 ? "corazon" : "estrella");
+      cosas.push({
+        x: x, y: y,
+        vx: Math.cos(ang) * vel,
+        vy: Math.sin(ang) * vel - 4,
+        s: 9 + Math.random() * 17,
+        giro: Math.random() * Math.PI * 2,
+        vgiro: (Math.random() - 0.5) * 0.24,
+        vida: 1,
+        baja: 0.0026 + Math.random() * 0.0026,
+        tipo: tipo,
+        color: rosas[(Math.random() * rosas.length) | 0],
+        tono: (Math.random() * 360) | 0
+      });
+    }
+    if (cosas.length > TOPE) cosas.splice(0, cosas.length - TOPE);
+  }
+
+  function pintar(){
+    ctx.clearRect(0, 0, W, H);
+    for (var i = cosas.length - 1; i >= 0; i--){
+      var o = cosas[i];
+      o.vy += 0.13;
+      o.vx *= 0.995;
+      o.x += o.vx;
+      o.y += o.vy;
+      o.giro += o.vgiro;
+      o.vida -= o.baja;
+      if (o.vida <= 0 || o.y > H + 120 || o.x < -180 || o.x > W + 180){ cosas.splice(i, 1); continue; }
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, o.vida * 1.5);
+      ctx.translate(o.x, o.y);
+      ctx.rotate(o.giro);
+      if (o.tipo === "girasol") girasol(ctx, o.s);
+      else if (o.tipo === "corazon") corazon(ctx, o.s, o.color);
+      else estrella(ctx, o.s, o.tono);
+      ctx.restore();
+    }
+    requestAnimationFrame(pintar);
+  }
+  requestAnimationFrame(pintar);
+
+  /* --- el apreton --- */
+  var boton = document.getElementById("boton");
+  var mensaje = document.getElementById("mensaje");
+  var firma = document.getElementById("firma");
+
+  boton.addEventListener("click", function(){
+    var r = boton.getBoundingClientRect();
+    var cx = r.left + r.width / 2;
+    var cy = r.top + r.height / 2;
+
+    estallar(cx, cy, sinMovimiento ? 90 : 320);
+    if (!sinMovimiento){
+      setTimeout(function(){ estallar(cx - r.width * 0.42, cy, 200); }, 120);
+      setTimeout(function(){ estallar(cx + r.width * 0.42, cy, 200); }, 230);
+    }
+
+    mensaje.classList.add("vista");
+    firma.classList.add("vista");
+  });
+})();
+</script>
+</body>
+</html>

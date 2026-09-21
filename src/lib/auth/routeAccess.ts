@@ -19,6 +19,8 @@ const PUBLIC_ROUTES = new Set([
   "/sobre-nosotros",
   "/auth/login",
   "/auth/registro",
+  // Pagina personal, sin datos del ERP.
+  "/ely",
   // Redirects legacy (solo redirigen a inicio)
   "/finanzas",
   "/reportes",
