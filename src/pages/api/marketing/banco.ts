@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   if (!dataUrl || typeof dataUrl !== "string") {
     return json({ error: "Falta la imagen" }, 400);
   }
-  if (tipo !== "foto" && tipo !== "logo") {
+  if (tipo !== "foto" && tipo !== "logo" && tipo !== "correo") {
     return json({ error: "Tipo desconocido" }, 400);
   }
 
@@ -75,7 +75,9 @@ export const POST: APIRoute = async ({ cookies, request }) => {
 
   const ext = subtipo === "jpeg" ? "jpg" : subtipo;
   const archivo = nombreSeguro(nombre, ext);
-  const carpeta = tipo === "logo" ? "logos" : "fotos";
+  // Las piezas de correo van aparte: no son material del banco, son el
+  // adjunto vivo de un envio y tienen que quedar en una URL estable.
+  const carpeta = tipo === "logo" ? "logos" : tipo === "correo" ? "correos" : "fotos";
 
   const subida = await admin.storage.from(BUCKET).upload(`${carpeta}/${archivo}`, bytes, {
     contentType,

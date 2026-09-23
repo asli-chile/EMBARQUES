@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { toPng } from "html-to-image";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { PiezaCanvas } from "./PiezaCanvas";
+import { construirCorreo, slugCampana } from "./correo";
 import {
   CATEGORIAS,
   COLORES_FLECHA,
@@ -223,7 +224,7 @@ export function CreadorPublicidadContent() {
   const [bancoError, setBancoError] = useState<string | null>(null);
   const [categoria, setCategoria] = useState<string>("todas");
   const [mostrarVetadas, setMostrarVetadas] = useState(false);
-  const [exportando, setExportando] = useState<null | "png" | "jpg">(null);
+  const [exportando, setExportando] = useState<null | "png" | "jpg" | "correo">(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [theme] = useNeonTheme();
 
@@ -405,6 +406,66 @@ export function CreadorPublicidadContent() {
     [pieza.dato, pieza.eyebrow, pieza.l2],
   );
 
+  /* ---- correo listo para enviar ---- */
+  const exportarCorreo = useCallback(async () => {
+    const node = canvasRef.current;
+    if (!node) return;
+    setExportando("correo");
+    setAviso(null);
+    try {
+      const fontEmbedCSS = await cargarFuentes();
+      await document.fonts.ready;
+      const opciones = {
+        width: 1080,
+        height: 1350,
+        pixelRatio: 1,
+        cacheBust: true,
+        fontEmbedCSS,
+        style: { transform: "scale(1)", transformOrigin: "top left" },
+      };
+      await toPng(node, opciones);
+      const png = await toPng(node, opciones);
+      const jpg = await aJpegCorreo(png);
+
+      // La pieza tiene que quedar en una URL publica: los clientes de correo
+      // no muestran imagenes en data: URI, y adjuntarla no sirve para una
+      // campana. Se sube al bucket y el HTML apunta ahi.
+      const nombre = slugCampana(pieza.l2 || pieza.eyebrow);
+      const r = await fetch("/embarques/api/marketing/banco", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, tipo: "correo", dataUrl: jpg }),
+      });
+      const d = (await r.json()) as { url?: string; error?: string };
+      if (!r.ok || !d.url) throw new Error(d.error ?? "No se pudo subir la pieza");
+
+      const html = construirCorreo({
+        imagen: d.url,
+        alt: [pieza.eyebrow, pieza.l1, pieza.l2].filter(Boolean).join(" — ") + " — ASLI",
+        titulo: [pieza.l1, pieza.l2].filter(Boolean).join(" ") || pieza.eyebrow,
+        parrafo: pieza.support || pieza.datoEtiqueta || "",
+        boton: pieza.ribbon || "Cotiza tu embarque",
+        campana: nombre,
+      });
+
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      descargar(url, `correo-${nombre}.html`);
+      URL.revokeObjectURL(url);
+
+      try {
+        await navigator.clipboard.writeText(html);
+        setAviso("Correo listo: se descargó el .html y quedó copiado al portapapeles.");
+      } catch {
+        setAviso("Correo listo: se descargó el .html.");
+      }
+    } catch (e: unknown) {
+      setAviso(`No se pudo armar el correo: ${e instanceof Error ? e.message : "error desconocido"}`);
+    } finally {
+      setExportando(null);
+    }
+  }, [pieza.datoEtiqueta, pieza.eyebrow, pieza.l1, pieza.l2, pieza.ribbon, pieza.support]);
+
   /** Los campos de varias líneas se editan como texto y se guardan como lista. */
   const porLineas = (
     campo: "lista" | "pasos" | "colA" | "colB" | "tarjetas" | "barras" | "metricas" | "hitos" | "tabla",
@@ -461,6 +522,18 @@ export function CreadorPublicidadContent() {
                 className={`h-5 w-5 ${exportando === "jpg" ? "animate-spin" : ""}`}
               />
               JPG 600 correo
+            </button>
+            <button
+              type="button"
+              onClick={() => exportarCorreo()}
+              disabled={exportando !== null}
+              className="inline-flex items-center gap-2 rounded-lg border border-dash-border bg-dash-control px-4 py-2.5 text-sm font-bold text-dash-fg transition hover:border-dash-neon/50 disabled:opacity-50"
+            >
+              <Icon
+                icon={exportando === "correo" ? "mdi:loading" : "mdi:language-html5"}
+                className={`h-5 w-5 ${exportando === "correo" ? "animate-spin" : ""}`}
+              />
+              Correo HTML
             </button>
           </div>
         </div>

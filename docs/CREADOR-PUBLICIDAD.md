@@ -184,3 +184,25 @@ responde, y en consola aparece "Failed to fetch dynamically imported module".
 Se arregla arrancando con `npx astro dev --force`, que fuerza a Vite a
 reoptimizar. Si el puerto sigue tomado por una instancia anterior, matarla
 primero: el servidor viejo se queda con el 4321 y el nuevo no llega a levantar.
+
+## Correo HTML
+
+El tercer boton de descarga arma el correo completo: exporta la pieza, la sube
+al bucket en `correos/` y genera un `.html` que apunta a esa URL. Tambien lo
+deja en el portapapeles, para pegarlo directo en Gmail o en el editor de codigo
+de la plataforma de envios.
+
+**La pieza viaja como imagen, no como HTML replicado.** No es comodidad: la
+identidad depende de `clip-path` (la media flecha), de ocho sombras
+superpuestas (el contorno rojo del titular), de `transform` y de tipografias
+web. Outlook de escritorio renderiza con el motor de Word e ignora todo eso, asi
+que una replica en HTML llegaria descuadrada, sin flecha y con el titular en la
+tipografia por defecto. Como imagen llega identica en todos los clientes.
+
+Lo que si va como texto real, fuera de la imagen, es el titular, la bajada y el
+boton: Gmail y Outlook bloquean imagenes por defecto, y asi el mensaje se
+entiende igual y el enlace sigue siendo clickeable. El boton lleva VML para que
+Outlook lo dibuje, y los enlaces llevan UTM con el nombre de la pieza.
+
+La imagen no puede ir como `data:` URI: los clientes de correo no las muestran.
+Por eso hace falta subirla y referenciarla por URL.
